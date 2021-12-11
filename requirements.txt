@@ -6,6 +6,7 @@ certifi==2021.10.8
 charset-normalizer==2.0.9
 Deprecated==1.2.13
 Django==4.0
+djangorestframework==3.12.4
 fcache==0.4.7
 idna==3.3
 mmh3==3.0.0
