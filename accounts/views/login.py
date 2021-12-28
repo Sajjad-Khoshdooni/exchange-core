@@ -16,12 +16,11 @@ class LoginSerializer(serializers.Serializer):
 
 class LoginView(APIView):
     permission_classes = []
-    serializer_class = LoginSerializer
 
     def post(self, request):
 
         if request.user.is_authenticated:
-            return Response({'msg': 'already logged in'})
+            return Response({'msg': 'already logged in', 'code': 1})
 
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -30,9 +29,9 @@ class LoginView(APIView):
 
         if user:
             login(request, user)
-            return Response({'msg': 'success'})
+            return Response({'msg': 'success', 'code': 0})
         else:
-            return Response({'msg': 'authentication failed'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'msg': 'authentication failed', 'code': -1}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class LogoutView(APIView):

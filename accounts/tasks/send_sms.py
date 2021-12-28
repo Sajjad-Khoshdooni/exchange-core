@@ -8,7 +8,7 @@ import jdatetime
 logger = logging.getLogger(__name__)
 
 
-message = ''' کد تایید شما در یکتانت: 
+message = ''' کد تایید شما در کریپتو: 
 {otp}
 
 زمان ارسال: {time} - {date}
@@ -18,14 +18,14 @@ sender = '100045195000'
 
 
 @shared_task(queue='sms')
-def send_verification_code_by_kavenegar(mobile_number, code, created):
+def send_verification_code_by_kavenegar(phone_number, code, created):
     api_key = settings.KAVEHNEGAR_KEY
     _date, _time = change_datetime_to_jalali(created).split(' ')
 
     try:
         api = KavenegarAPI(apikey=api_key)
         params = {
-            'receptor': mobile_number,
+            'receptor': phone_number,
             'message': message.format(otp=code, date=_date, time=_time),
             'sender': sender
         }

@@ -2,11 +2,15 @@ import uuid
 
 from django.db import models
 
-from accounts.models import Account
+from accounts.models import User
 
 AMOUNT_MAX_DIGITS = 20
 COMMISSION_MAX_DIGITS = 12
 AMOUNT_DECIMAL_PLACES = 8
+
+
+class Account(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
 
 
 class Asset(models.Model):
