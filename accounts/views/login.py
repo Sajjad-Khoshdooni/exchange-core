@@ -1,6 +1,5 @@
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from rest_framework import serializers, status
-from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -21,8 +20,8 @@ class LoginView(APIView):
 
     def post(self, request):
 
-        # if request.user.is_authenticated:
-        #     return Response({'msg': 'already logged in'})
+        if request.user.is_authenticated:
+            return Response({'msg': 'already logged in'})
 
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -34,3 +33,9 @@ class LoginView(APIView):
             return Response({'msg': 'success'})
         else:
             return Response({'msg': 'authentication failed'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class LogoutView(APIView):
+    def post(self, request):
+        logout(request)
+        return Response({'msg': 'success'})
