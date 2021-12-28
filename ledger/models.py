@@ -27,8 +27,8 @@ class TransferNetworks(models.Model):
 class AssetConfig(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.PROTECT)
     network = models.ForeignKey(TransferNetworks, on_delete=models.PROTECT)
-    commission = models.DecimalField(max_length=COMMISSION_MAX_DIGITS, decimal_places=AMOUNT_DECIMAL_PLACES)
-    min_transfer = models.DecimalField(max_length=COMMISSION_MAX_DIGITS, decimal_places=AMOUNT_DECIMAL_PLACES)
+    commission = models.DecimalField(max_digits=COMMISSION_MAX_DIGITS, decimal_places=AMOUNT_DECIMAL_PLACES)
+    min_transfer = models.DecimalField(max_digits=COMMISSION_MAX_DIGITS, decimal_places=AMOUNT_DECIMAL_PLACES)
 
     class Meta:
         unique_together = ('asset', 'network')
