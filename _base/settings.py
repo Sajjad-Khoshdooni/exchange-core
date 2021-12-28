@@ -145,3 +145,5 @@ REST_FRAMEWORK = {
 }
 
 AUTH_USER_MODEL = 'accounts.User'
+
+KAVENEGAR_KEY = secret('KAVENEGAR_KEY')
