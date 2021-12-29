@@ -1,6 +1,6 @@
 from django.db import models
 
-from ledger.utils import COMMISSION_MAX_DIGITS, AMOUNT_DECIMAL_PLACES
+from ledger.utils.constants import COMMISSION_MAX_DIGITS, AMOUNT_DECIMAL_PLACES
 
 
 class NetworkAsset(models.Model):

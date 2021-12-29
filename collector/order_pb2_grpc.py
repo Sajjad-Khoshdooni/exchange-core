@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import order_pb2 as order__pb2
+from collector import order_pb2 as order__pb2
 
 
 class OrderStub(object):

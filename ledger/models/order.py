@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from django.db import models
 
-from ledger.utils import AMOUNT_MAX_DIGITS, AMOUNT_DECIMAL_PLACES
+from ledger.utils.constants import AMOUNT_MAX_DIGITS, AMOUNT_DECIMAL_PLACES
 
 
 class Order(models.Model):

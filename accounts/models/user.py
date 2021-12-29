@@ -1,12 +1,19 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.db.models import Q
 
 from accounts.utils import PHONE_MAX_LENGTH
 from accounts.validators import mobile_number_validator
 
 
+class CustomUserManager(UserManager):
+    def create_superuser(self, email=None, password=None, **extra_fields):
+        return super(CustomUserManager, self).create_superuser(extra_fields['phone'], email, password, **extra_fields)
+
+
 class User(AbstractUser):
+    objects = CustomUserManager()
+
     USERNAME_FIELD = 'phone'
 
     phone = models.CharField(

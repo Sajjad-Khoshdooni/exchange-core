@@ -1,6 +1,6 @@
 from django.db import models
 
-from ledger.utils import AMOUNT_MAX_DIGITS, AMOUNT_DECIMAL_PLACES
+from ledger.utils.constants import AMOUNT_MAX_DIGITS, AMOUNT_DECIMAL_PLACES
 
 
 class BalanceLock(models.Model):

@@ -2,14 +2,14 @@ import grpc
 from django.conf import settings
 from yekta_config import secret
 
-import order_pb2
-import order_pb2_grpc
-import trade_pb2
-import trade_pb2_grpc
+from collector import order_pb2
+from collector import order_pb2_grpc
+from collector import trade_pb2
+from collector import trade_pb2_grpc
 
-if not settings.DEBUG:
-    with open('server.crt', 'rb') as f:
-        trusted_certs = f.read()
+# if not settings.DEBUG:
+with open('collector/server.crt', 'rb') as f:
+    trusted_certs = f.read()
 
 
 class gRPCClient(object):
@@ -18,16 +18,16 @@ class gRPCClient(object):
     """
 
     def __init__(self):
-        self.host = secret('collector-server-ip', default='localhost')
+        self.host = '51.178.94.246'
         self.server_port = 50051
 
         # instantiate a channel
-        if settings.DEBUG:
-            self.channel = grpc.insecure_channel(
-                '{}:{}'.format(self.host, self.server_port))
-        else:
-            credentials = grpc.ssl_channel_credentials(root_certificates=trusted_certs)
-            self.channel = grpc.secure_channel('{}:{}'.format(self.host, self.server_port), credentials)
+        # if settings.DEBUG:
+        #     self.channel = grpc.insecure_channel(
+        #         '{}:{}'.format(self.host, self.server_port))
+        # else:
+        credentials = grpc.ssl_channel_credentials(root_certificates=trusted_certs)
+        self.channel = grpc.secure_channel('{}:{}'.format(self.host, self.server_port), credentials)
 
         # bind the client and the server
         self.order_stub = order_pb2_grpc.OrderStub(self.channel)
