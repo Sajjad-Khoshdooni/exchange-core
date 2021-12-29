@@ -12,16 +12,16 @@ class OTPSerializer(serializers.ModelSerializer):
         code = validated_data['code']
         scope = validated_data['scope']
 
-        otp_code = VerificationCode.get_otp_code(
+        otp_code = VerificationCode.get_by_code(
             code=code,
             phone=phone,
             scope=scope
         )
 
         if not otp_code:
-            raise ValidationError({'otp_code': 'کد نامعتبر است.'})
+            raise ValidationError({'code': 'کد نامعتبر است.'})
 
-        otp_code.used = True
+        otp_code.code_used = True
         otp_code.save()
 
         return otp_code

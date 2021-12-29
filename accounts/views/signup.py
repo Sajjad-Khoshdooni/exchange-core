@@ -1,16 +1,13 @@
-from datetime import timedelta
-
 from django.contrib.auth import login
-from django.utils import timezone
-from rest_framework import serializers, status
+from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.generics import CreateAPIView
 
 from accounts.models import User
 from accounts.models.phone_verification import VerificationCode
-from accounts.validators import mobile_number_validator, RegexValidator
+from accounts.validators import mobile_number_validator, password_validator
 
 
 class InitiateSignupSerializer(serializers.Serializer):
@@ -40,19 +37,16 @@ class InitiateSignupView(APIView):
 
 class SignupSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
-    token = serializers.CharField(write_only=True, required=True)
+    token = serializers.UUIDField(write_only=True, required=True)
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
-    password = serializers.CharField(required=True, write_only=True)
+    password = serializers.CharField(required=True, write_only=True, validators=[password_validator])
 
     def create(self, validated_data):
         token = validated_data.pop('token')
-        otp_code = VerificationCode.objects.filter(token=token).first()
+        otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_VERIFY_PHONE)
 
-        if not otp_code \
-                or otp_code.created < timezone.now() - timedelta(hours=1) \
-                or User.objects.filter(phone=otp_code.phone).exists():
-
+        if not otp_code or User.objects.filter(phone=otp_code.phone).exists():
             raise ValidationError({'token': 'توکن نامعتبر است.'})
 
         phone = otp_code.phone

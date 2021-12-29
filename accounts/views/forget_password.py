@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 from django.contrib.auth import login
+from django.utils import timezone
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -8,11 +11,23 @@ from rest_framework.generics import CreateAPIView
 from accounts import codes
 from accounts.models import User
 from accounts.models.phone_verification import VerificationCode
-from accounts.validators import mobile_number_validator, RegexValidator
+from accounts.utils import is_phone
+from accounts.validators import mobile_number_validator, RegexValidator, password_validator
 
 
 class InitiateForgotPasswordSerializer(serializers.Serializer):
-    phone = serializers.CharField(required=True, validators=[mobile_number_validator], trim_whitespace=True)
+    login = serializers.CharField(required=True)
+
+    def create(self, validated_data):
+        login_phrase = validated_data['login']
+        user = User.get_user_from_login(login_phrase)
+
+        if not user:
+            raise ValidationError({'login': 'کاربری یافت نشد.'})
+
+        VerificationCode.send_otp_code(user.phone, VerificationCode.SCOPE_FORGET_PASSWORD)
+
+        return user
 
 
 class InitiateForgetPasswordView(APIView):
@@ -26,46 +41,32 @@ class InitiateForgetPasswordView(APIView):
         serializer = InitiateForgotPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        phone = serializer.validated_data['phone']
-
-        if not User.objects.filter(phone=phone).exists():
-            return Response({'msg': 'no match', 'code': codes.FAILED}, status=status.HTTP_400_BAD_REQUEST)
-
-        VerificationCode.send_otp_code(phone, VerificationCode.SCOPE_FORGET_PASSWORD)
+        serializer.save()
 
         return Response({'msg': 'otp sent', 'code': codes.SUCCESS})
 
 
 class ForgotPasswordSerializer(serializers.Serializer):
-    pass
-#     id = serializers.CharField(read_only=True)
-#     otp_code = serializers.CharField(write_only=True, required=True, validators=[RegexValidator(r'^\d{6}$')])
-#     first_name = serializers.CharField(required=True)
-#     last_name = serializers.CharField(required=True)
-#     password = serializers.CharField(required=True, write_only=True)
-#
-#     def create(self, validated_data):
-#         otp_code = VerificationCode.get_otp_code(validated_data.pop('otp_code'))
-#
-#         if not otp_code:
-#             raise ValidationError({'otp_code': 'کد نامعتبر است.'})
-#
-#         phone = otp_code.phone
-#
-#         otp_code.used = True
-#         otp_code.save()
-#
-#         return User.objects.create_user(
-#             username=phone,
-#             phone=phone,
-#             **validated_data
-#         )
-#
-#
-# class SignupView(CreateAPIView):
-#     permission_classes = []
-#     serializer_class = SignupSerializer
-#
-#     def perform_create(self, serializer):
-#         user = serializer.save()
-#         login(self.request, user)
+    token = serializers.UUIDField(write_only=True, required=True)
+    password = serializers.CharField(required=True, write_only=True, validators=[password_validator])
+
+    def create(self, validated_data):
+        token = validated_data.pop('token')
+        otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_FORGET_PASSWORD)
+
+        if not otp_code:
+            raise ValidationError({'token': 'توکن نامعتبر است.'})
+
+        user = User.objects.get(phone=otp_code.phone)
+        user.set_password(validated_data.pop('password'))
+
+        otp_code.token_used = True
+        otp_code.save()
+
+        return user
+
+
+class ForgetPasswordView(CreateAPIView):
+    authentication_classes = []
+    permission_classes = []
+    serializer_class = ForgotPasswordSerializer

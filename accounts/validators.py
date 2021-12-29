@@ -1,6 +1,7 @@
 import re
 
 from django.core.exceptions import ValidationError
+from django.contrib.auth.password_validation import validate_password
 
 
 class RegexValidator:
@@ -22,6 +23,12 @@ def iran_mobile_number_validator(value):
         raise ValidationError('شماره موبایل برای ایران معتبر نیست.')
 
 
-def password_validator(value):
-    if not len(value) >= 6:
-        raise ValidationError('گذرواژه باید حداقل ۶ حرف باشد.')
+def password_validator(password: str, user=None):
+    errors = []
+    try:
+        validate_password(password=password, user=user)
+    except ValidationError as e:
+        errors.extend(e.messages)
+
+    if errors:
+        raise ValidationError(errors)

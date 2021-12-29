@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.validators import RegexValidator
@@ -35,7 +36,11 @@ class VerificationCode(models.Model):
         validators=[RegexValidator(r'^\d{6}$')]
     )
 
-    used = models.BooleanField(
+    code_used = models.BooleanField(
+        default=False,
+    )
+
+    token_used = models.BooleanField(
         default=False,
     )
 
@@ -51,18 +56,27 @@ class VerificationCode(models.Model):
     )
 
     @classmethod
-    def get_otp_code(cls, code: str, phone: str, scope: str) -> 'VerificationCode':
+    def get_by_code(cls, code: str, phone: str, scope: str) -> 'VerificationCode':
         return VerificationCode.objects.filter(
             code=code,
-            used=False,
+            code_used=False,
             expiration__gt=timezone.now(),
             scope=scope,
             phone=phone
         ).order_by('created').last()
 
     @classmethod
+    def get_by_token(cls, token: str, scope: str) -> 'VerificationCode':
+        return VerificationCode.objects.filter(
+            token=token,
+            token_used=False,
+            created__gte=timezone.now() - timedelta(hours=1),
+            scope=scope,
+        ).first()
+
+    @classmethod
     def send_otp_code(cls, phone: str, scope: str) -> 'VerificationCode':
-        # todo: handle throttling
+        # todo: handle throttling (don't allow to send more than twice in minute per phone / scope)
 
         otp_code = VerificationCode.objects.create(
             phone=phone,
