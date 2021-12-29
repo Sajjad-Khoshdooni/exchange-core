@@ -59,6 +59,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
         user = User.objects.get(phone=otp_code.phone)
         user.set_password(validated_data.pop('password'))
+        user.save()
 
         otp_code.token_used = True
         otp_code.save()
