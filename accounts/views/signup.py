@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 from django.contrib.auth import login
+from django.utils import timezone
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -30,32 +33,33 @@ class InitiateSignupView(APIView):
         if User.objects.filter(phone=phone).exists():
             return Response({'msg': 'user exists', 'code': 2})
 
-        VerificationCode.send_otp_code(phone)
+        VerificationCode.send_otp_code(phone, VerificationCode.SCOPE_VERIFY_PHONE)
 
         return Response({'msg': 'otp sent', 'code': 0})
 
 
 class SignupSerializer(serializers.Serializer):
-    otp_code = serializers.CharField(write_only=True, required=True, validators=[RegexValidator(r'^\d{6}$')])
+    id = serializers.CharField(read_only=True)
+    token = serializers.CharField(write_only=True, required=True)
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
     password = serializers.CharField(required=True, write_only=True)
-    id = serializers.CharField(read_only=True)
 
     def create(self, validated_data):
-        otp_code = VerificationCode.get_otp_code(validated_data.pop('otp_code'))
+        token = validated_data.pop('token')
+        otp_code = VerificationCode.objects.filter(token=token).first()
 
-        if not otp_code:
-            raise ValidationError({'otp_code': 'کد نامعتبر است.'})
+        if not otp_code \
+                or otp_code.created < timezone.now() - timedelta(hours=1) \
+                or User.objects.filter(phone=otp_code.phone).exists():
 
-        phone_number = otp_code.phone_number
+            raise ValidationError({'token': 'توکن نامعتبر است.'})
 
-        otp_code.used = True
-        otp_code.save()
+        phone = otp_code.phone
 
         return User.objects.create_user(
-            username=phone_number,
-            phone=phone_number,
+            username=phone,
+            phone=phone,
             **validated_data
         )
 
