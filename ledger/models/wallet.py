@@ -1,5 +1,6 @@
 from django.db import models
 
+from ledger.models import NetworkAsset
 from ledger.utils.constants import AMOUNT_MAX_DIGITS, AMOUNT_DECIMAL_PLACES
 
 
