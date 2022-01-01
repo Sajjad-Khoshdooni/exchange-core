@@ -1,7 +1,7 @@
 from django.db import models
 
-from accounts.models import Account
-from ledger.models import Wallet, Asset, Order
+from account.models import Account
+from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
 from ledger.utils.random import secure_uuid4
 

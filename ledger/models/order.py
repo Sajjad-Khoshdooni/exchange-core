@@ -2,14 +2,14 @@ from uuid import uuid4
 
 from django.db import models
 
-from ledger.utils.fields import AMOUNT_MAX_DIGITS, AMOUNT_DECIMAL_PLACES, get_amount_field
+from ledger.utils.fields import get_amount_field
 
 
 class Order(models.Model):
     BUY, SELL = 'buy', 'sell'
     ORDER_CHOICES = [(BUY, BUY), (SELL, SELL)]
 
-    PENDING, CANCELLED, DONE = 'pend', 'cancel', 'done'
+    PENDING, CANCELED, DONE = 'pend', 'cancel', 'done'
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -20,7 +20,7 @@ class Order(models.Model):
     status = models.CharField(
         default=PENDING,
         max_length=8,
-        choices=[(PENDING, PENDING), (CANCELLED, CANCELLED), (DONE, DONE)],
+        choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
         db_index=True
     )
 

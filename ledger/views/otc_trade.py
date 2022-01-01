@@ -1,11 +1,10 @@
 from datetime import timedelta
 
 from rest_framework import serializers
-from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.generics import CreateAPIView, get_object_or_404
-from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
+from rest_framework.generics import CreateAPIView
 
-from ledger.models import OTCRequest, Wallet, Order, Asset
+from ledger.models import OTCRequest, Asset
 from ledger.utils.price import get_trading_price
 
 
@@ -60,4 +59,5 @@ class OTCTradeRequestView(CreateAPIView):
     serializer_class = OTCRequestSerializer
 
 
-# class
+class TradeView(CreateAPIView):
+    pass

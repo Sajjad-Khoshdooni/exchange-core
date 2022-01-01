@@ -8,6 +8,6 @@ class Wallet(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
-    account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
+    account = models.ForeignKey('account.Account', on_delete=models.PROTECT)
     balance = get_amount_field()
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)
