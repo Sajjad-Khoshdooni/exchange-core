@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404
@@ -10,6 +12,7 @@ from ledger.utils.price import get_trading_price
 class OTCRequestSerializer(serializers.ModelSerializer):
     src = serializers.CharField(source='src_asset.symbol')
     dest = serializers.CharField(source='dest_asset.symbol')
+    expire = serializers.SerializerMethodField()
 
     def validate(self, attrs):
         src = attrs['src_asset']['symbol']
@@ -44,20 +47,17 @@ class OTCRequestSerializer(serializers.ModelSerializer):
             price=price
         )
 
+    def get_expire(self, otc: OTCRequest):
+        return otc.created + timedelta(seconds=OTCRequest.EXPIRE_TIME)
+
     class Meta:
         model = OTCRequest
-        fields = ('src', 'dest', 'token', 'price')
+        fields = ('src', 'dest', 'token', 'price', 'expire')
         read_only_fields = ('token', 'price')
 
 
 class OTCTradeRequestView(CreateAPIView):
     serializer_class = OTCRequestSerializer
-    # def create(self, request, *args, **kwargs):
-    #     serializer = OTCRequestSerializer(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-    #     otc = serializer.save(account=)
-    #
-    #     serializer = OTCRequestSerializer(instance=otc)
-    #     return Response(serializer.data)
+
 
 # class

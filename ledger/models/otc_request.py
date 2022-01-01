@@ -7,6 +7,8 @@ from ledger.utils.random import secure_uuid4
 
 
 class OTCRequest(models.Model):
+    EXPIRE_TIME = 5
+
     created = models.DateTimeField(auto_now_add=True)
     token = models.UUIDField(default=secure_uuid4, db_index=True)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE)
