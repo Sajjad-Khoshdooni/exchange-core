@@ -1,13 +1,13 @@
 from django.db import models
 
-from ledger.utils.constants import COMMISSION_MAX_DIGITS, AMOUNT_DECIMAL_PLACES
+from ledger.utils.fields import COMMISSION_MAX_DIGITS, AMOUNT_DECIMAL_PLACES, get_amount_field
 
 
 class NetworkAsset(models.Model):
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)
     network = models.ForeignKey('ledger.Network', on_delete=models.PROTECT)
-    commission = models.DecimalField(max_digits=COMMISSION_MAX_DIGITS, decimal_places=AMOUNT_DECIMAL_PLACES)
-    min_transfer = models.DecimalField(max_digits=COMMISSION_MAX_DIGITS, decimal_places=AMOUNT_DECIMAL_PLACES)
+    commission = get_amount_field(max_digits=COMMISSION_MAX_DIGITS)
+    min_transfer = get_amount_field(max_digits=COMMISSION_MAX_DIGITS)
 
     class Meta:
         unique_together = ('asset', 'network')

@@ -33,3 +33,11 @@ class User(AbstractUser):
     @classmethod
     def get_user_from_login(cls, email_or_phone: str) -> 'User':
         return User.objects.filter(Q(phone=email_or_phone) | Q(email=email_or_phone)).first()
+
+    def save(self, *args, **kwargs):
+        creating = not self.id
+        super(User, self).save(*args, **kwargs)
+
+        if creating:
+            from accounts.models import Account
+            Account.objects.create(user=self)

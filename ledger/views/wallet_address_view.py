@@ -1,19 +1,16 @@
-import decimal
-
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError, PermissionDenied
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.response import Response
 
-from ledger.models import NetworkWallet, Asset, Network, NetworkAsset, Wallet
+from ledger.models import NetworkWallet, Asset, Network
 from ledger.models.network_wallet import NetworkWalletSerializer
-from ledger.utils.price import get_all_assets_prices, get_tether_irt_price
 from ledger.utils.wallet import generate_deposit_address
 
 
 class InputAddressSerializer(serializers.Serializer):
-    wallet_id = serializers.IntegerField()
-    network_id = serializers.CharField()
+    coin = serializers.CharField()
+    network = serializers.CharField()
 
 
 class WalletAddressView(RetrieveAPIView):
@@ -24,12 +21,10 @@ class WalletAddressView(RetrieveAPIView):
 
         data = serializer.data
 
-        wallet = get_object_or_404(Wallet, id=data['wallet_id'])
+        asset = get_object_or_404(Asset, symbol=data['coin'])
+        wallet = asset.get_wallet(request.user.account)
 
-        if wallet.account.user != request.user:
-            raise PermissionDenied
-
-        network = get_object_or_404(Network, id=data['network_id'])
+        network = get_object_or_404(Network, symbol=data['network'])
 
         if not network.can_withdraw:
             raise ValidationError({'network': 'withdraw is not supported'})
@@ -41,4 +36,3 @@ class WalletAddressView(RetrieveAPIView):
 
         serializer = NetworkWalletSerializer(instance=network_wallet)
         return Response(data=serializer.data)
-

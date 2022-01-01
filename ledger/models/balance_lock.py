@@ -1,6 +1,6 @@
 from django.db import models
 
-from ledger.utils.constants import AMOUNT_MAX_DIGITS, AMOUNT_DECIMAL_PLACES
+from ledger.utils.fields import AMOUNT_MAX_DIGITS, AMOUNT_DECIMAL_PLACES, get_amount_field
 
 
 class BalanceLock(models.Model):
@@ -8,6 +8,6 @@ class BalanceLock(models.Model):
     release_date = models.DateTimeField()
 
     wallet = models.ForeignKey('ledger.Wallet', on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=AMOUNT_MAX_DIGITS, decimal_places=AMOUNT_DECIMAL_PLACES)
+    amount = get_amount_field()
     freed = models.BooleanField(default=False, db_index=True)
 

@@ -1,7 +1,7 @@
 from django.db import models
 
 from ledger.models import NetworkAsset
-from ledger.utils.constants import AMOUNT_MAX_DIGITS, AMOUNT_DECIMAL_PLACES
+from ledger.utils.fields import AMOUNT_MAX_DIGITS, AMOUNT_DECIMAL_PLACES, get_amount_field
 
 
 class Wallet(models.Model):
@@ -9,5 +9,5 @@ class Wallet(models.Model):
     modified = models.DateTimeField(auto_now=True)
 
     account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
-    balance = models.DecimalField(max_digits=AMOUNT_MAX_DIGITS, decimal_places=AMOUNT_DECIMAL_PLACES)
+    balance = get_amount_field()
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)

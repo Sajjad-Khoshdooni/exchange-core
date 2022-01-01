@@ -1,8 +1,7 @@
 from collector.grpc_client import gRPCClient
 from datetime import datetime
 
-from ledger.models import Asset
-
+from ledger.models import Asset, Order
 
 EXCHANGE_BINANCE = 'binance'
 EXCHANGE_NOBITEX = 'nobitex'
@@ -66,3 +65,21 @@ def get_all_assets_prices(now: datetime = None):
         prices[asset.symbol] = get_price(asset.symbol, now=now)
 
     return prices
+
+
+def get_trading_price(src_symbol: str, dest_symbol: str):
+    assert MARKET_IRT in (src_symbol, dest_symbol)
+    assert src_symbol != dest_symbol
+
+    diff = 0.005
+
+    if src_symbol == MARKET_IRT:
+        coin_symbol = dest_symbol
+        multiplier = 1 + diff
+    else:
+        coin_symbol = src_symbol
+        multiplier = 1 - diff
+
+    price = get_price(coin_symbol) * get_tether_irt_price()
+
+    return price * multiplier

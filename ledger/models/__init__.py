@@ -6,3 +6,4 @@ from .network_wallet import NetworkWallet
 from .trx import Trx
 from .balance_lock import BalanceLock
 from .order import Order
+from .otc_request import OTCRequest

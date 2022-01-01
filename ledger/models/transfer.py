@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from django.db import models
 
-from ledger.utils.constants import AMOUNT_MAX_DIGITS, AMOUNT_DECIMAL_PLACES
+from ledger.utils.fields import AMOUNT_MAX_DIGITS, AMOUNT_DECIMAL_PLACES, get_amount_field
 
 
 class Transfer(models.Model):
@@ -12,7 +12,7 @@ class Transfer(models.Model):
 
     wallet = models.ForeignKey('ledger.Wallet', on_delete=models.CASCADE)
 
-    amount = models.DecimalField(max_digits=AMOUNT_MAX_DIGITS, decimal_places=AMOUNT_DECIMAL_PLACES)
+    amount = get_amount_field()
     group_id = models.UUIDField(default=uuid4, db_index=True)
     status = models.CharField(
         default=PENDING,
