@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 
-from account.models.phone_verification import VerificationCode
+from accounts.models.phone_verification import VerificationCode
 
 
 class OTPSerializer(serializers.ModelSerializer):

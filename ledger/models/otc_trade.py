@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from django.db import models, transaction
 
-from account.models import Account
+from accounts.models import Account
 from ledger.models import OTCRequest, Order, Asset, Trx
 from ledger.utils.fields import get_amount_field
 from provider.exchanges import BinanceHandler

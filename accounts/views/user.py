@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import RetrieveAPIView
 
-from account.models import User
+from accounts.models import User
 
 
 class UserSerializer(serializers.ModelSerializer):

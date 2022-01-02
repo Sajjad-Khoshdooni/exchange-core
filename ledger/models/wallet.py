@@ -10,7 +10,7 @@ class Wallet(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
-    account = models.ForeignKey('account.Account', on_delete=models.PROTECT)
+    account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)
 
     def __str__(self):

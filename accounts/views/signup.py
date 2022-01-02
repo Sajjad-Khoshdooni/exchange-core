@@ -5,9 +5,9 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from account.models import User
-from account.models.phone_verification import VerificationCode
-from account.validators import mobile_number_validator, password_validator
+from accounts.models import User
+from accounts.models.phone_verification import VerificationCode
+from accounts.validators import mobile_number_validator, password_validator
 
 
 class InitiateSignupSerializer(serializers.Serializer):

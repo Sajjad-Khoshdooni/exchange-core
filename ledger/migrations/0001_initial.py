@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('account', '0001_initial'),
+        ('accounts', '0001_initial'),
     ]
 
     operations = [
@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('modified', models.DateTimeField(auto_now=True)),
                 ('balance', models.DecimalField(decimal_places=18, max_digits=30)),
-                ('account', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='account.account')),
+                ('accounts', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='accounts.accounts')),
                 ('asset', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='ledger.asset')),
             ],
         ),
@@ -76,7 +76,7 @@ class Migration(migrations.Migration):
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('token', models.UUIDField(db_index=True, default=ledger.utils.random.secure_uuid4)),
                 ('price', models.DecimalField(decimal_places=18, max_digits=30)),
-                ('account', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='account.account')),
+                ('accounts', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='accounts.accounts')),
                 ('dest_asset', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='dest_otc', to='ledger.asset')),
                 ('src_asset', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='src_otc', to='ledger.asset')),
             ],

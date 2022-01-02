@@ -8,11 +8,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import CreateAPIView
 
-from account import codes
-from account.models import User
-from account.models.phone_verification import VerificationCode
-from account.utils import is_phone
-from account.validators import mobile_number_validator, RegexValidator, password_validator
+from accounts import codes
+from accounts.models import User
+from accounts.models.phone_verification import VerificationCode
+from accounts.utils import is_phone
+from accounts.validators import mobile_number_validator, RegexValidator, password_validator
 
 
 class InitiateForgotPasswordSerializer(serializers.Serializer):

@@ -1,5 +1,5 @@
 from django.db import models
-from account.models import User
+from accounts.models import User
 
 
 class Account(models.Model):

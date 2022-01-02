@@ -5,7 +5,7 @@ import django.db.models.deletion
 
 
 def create_system_accounts(apps, schema_editor):
-    Account = apps.get_model('account', 'Account')
+    Account = apps.get_model('accounts', 'Account')
 
     with transaction.atomic():
         Account.objects.create(type='s')
@@ -13,14 +13,14 @@ def create_system_accounts(apps, schema_editor):
 
 
 def delete_system_accounts(apps, schema_editor):
-    Account = apps.get_model('account', 'Account')
+    Account = apps.get_model('accounts', 'Account')
     Account.objects.exclude(type='').delete()
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('account', '0001_initial'),
+        ('accounts', '0001_initial'),
     ]
 
     operations = [

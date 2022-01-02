@@ -33,7 +33,7 @@ INSTALLED_APPS = [
     'raven.contrib.django.raven_compat',
     'rest_framework',
 
-    'account',
+    'accounts',
     'ledger',
 ]
 
@@ -49,7 +49,7 @@ MIDDLEWARE = [
 ]
 
 if DEBUG:
-    MIDDLEWARE.insert(0, 'account.middleware.DisableCsrfCheck')
+    MIDDLEWARE.insert(0, 'accounts.middleware.DisableCsrfCheck')
 
 ROOT_URLCONF = '_base.urls'
 
@@ -154,7 +154,7 @@ REST_FRAMEWORK = {
     ],
 }
 
-AUTH_USER_MODEL = 'account.User'
-AUTHENTICATION_BACKENDS = ('account.backends.AuthenticationBackend',)
+AUTH_USER_MODEL = 'accounts.User'
+AUTHENTICATION_BACKENDS = ('accounts.backends.AuthenticationBackend',)
 
 KAVENEGAR_KEY = secret('KAVENEGAR_KEY')

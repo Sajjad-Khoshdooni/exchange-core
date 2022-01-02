@@ -2,8 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db.models import Q
 
-from account.utils import PHONE_MAX_LENGTH
-from account.validators import mobile_number_validator
+from accounts.utils import PHONE_MAX_LENGTH
+from accounts.validators import mobile_number_validator
 
 
 class CustomUserManager(UserManager):
@@ -39,5 +39,5 @@ class User(AbstractUser):
         super(User, self).save(*args, **kwargs)
 
         if creating:
-            from account.models import Account
+            from accounts.models import Account
             Account.objects.create(user=self)

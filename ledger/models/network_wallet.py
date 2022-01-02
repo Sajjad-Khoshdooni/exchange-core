@@ -19,6 +19,7 @@ class NetworkWallet(models.Model):
 
 class NetworkWalletSerializer(serializers.ModelSerializer):
     network = NetworkSerializer()
+
     class Meta:
         model = NetworkWallet
         fields = '__all__'

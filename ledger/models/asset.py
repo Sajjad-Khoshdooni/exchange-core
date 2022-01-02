@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.db import models
 from rest_framework import serializers
 
-from account.models import Account
+from accounts.models import Account
 
 
 class Asset(models.Model):

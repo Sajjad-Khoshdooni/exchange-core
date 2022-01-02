@@ -6,9 +6,9 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
 
-from account.utils import generate_random_code, PHONE_MAX_LENGTH, fifteen_minutes_later_datetime, MINUTES
-from account.validators import mobile_number_validator
-from account.tasks import send_verification_code_by_kavenegar
+from accounts.utils import generate_random_code, PHONE_MAX_LENGTH, fifteen_minutes_later_datetime, MINUTES
+from accounts.validators import mobile_number_validator
+from accounts.tasks import send_verification_code_by_kavenegar
 
 
 class VerificationCode(models.Model):
