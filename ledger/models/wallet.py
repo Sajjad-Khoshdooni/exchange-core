@@ -4,7 +4,6 @@ from django.db import models
 from django.db.models import Sum
 
 from ledger.exceptions import InsufficientBalance
-from ledger.utils.fields import get_amount_field
 
 
 class Wallet(models.Model):
@@ -13,6 +12,9 @@ class Wallet(models.Model):
 
     account = models.ForeignKey('account.Account', on_delete=models.PROTECT)
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)
+
+    def __str__(self):
+        return 'Wallet %s [%s]' % (self.asset, self.account)
 
     def get_balance(self) -> Decimal:
         from ledger.models import Trx

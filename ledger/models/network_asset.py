@@ -9,5 +9,8 @@ class NetworkAsset(models.Model):
     commission = get_amount_field(max_digits=COMMISSION_MAX_DIGITS)
     min_transfer = get_amount_field(max_digits=COMMISSION_MAX_DIGITS)
 
+    def __str__(self):
+        return '%s - %s' % (self.network, self.asset)
+
     class Meta:
         unique_together = ('asset', 'network')

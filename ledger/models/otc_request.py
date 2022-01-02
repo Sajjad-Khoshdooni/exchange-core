@@ -16,3 +16,6 @@ class OTCRequest(models.Model):
     coin = models.ForeignKey(to=Asset, on_delete=models.CASCADE)
     side = models.CharField(max_length=8, choices=Order.ORDER_CHOICES)
     price = get_amount_field()
+
+    def __str__(self):
+        return '%s - %s' % (self.coin, self.side)

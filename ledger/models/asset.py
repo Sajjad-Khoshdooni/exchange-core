@@ -21,6 +21,9 @@ class Asset(models.Model):
     min_trade_quantity = models.DecimalField(max_digits=15, decimal_places=5, default=0)
     max_trade_quantity = models.DecimalField(max_digits=15, decimal_places=5, default=1e9)
 
+    def __str__(self):
+        return self.symbol
+
     def get_wallet(self, account: Account):
         from ledger.models import Wallet
 
@@ -28,7 +31,6 @@ class Asset(models.Model):
             asset=self,
             account=account,
             defaults={
-                'balance': 0
             }
         )
 

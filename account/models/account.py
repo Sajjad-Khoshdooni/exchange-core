@@ -23,6 +23,14 @@ class Account(models.Model):
     def out(cls) -> 'Account':
         return Account.objects.get(type=cls.OUT)
 
+    def __str__(self):
+        if self.type == self.SYSTEM:
+            return 'system'
+        elif self.type == self.OUT:
+            return 'out'
+        else:
+            return str(self.user)
+
     def save(self, *args, **kwargs):
         super(Account, self).save(*args, **kwargs)
 

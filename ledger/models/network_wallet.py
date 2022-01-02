@@ -10,6 +10,9 @@ class NetworkWallet(models.Model):
     address = models.CharField(max_length=256)
     address_tag = models.CharField(max_length=32, default='')
 
+    def __str__(self):
+        return '%s - %s' % (self.network, self.wallet)
+
     class Meta:
         unique_together = ('network', 'wallet')
 

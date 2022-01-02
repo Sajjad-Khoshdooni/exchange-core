@@ -25,7 +25,7 @@ class BinanceHandler(BaseExchange):
     @classmethod
     def collect_api(cls, endpoint, method='GET', **kwargs):
         if settings.DEBUG:
-            return
+            return {'orderId': 1}
 
         data = kwargs.get('data', {})
         qp = data.pop('qp', True)

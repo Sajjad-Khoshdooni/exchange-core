@@ -13,3 +13,9 @@ class Trx(models.Model):
     amount = get_amount_field()
 
     group_id = models.UUIDField(default=uuid4, db_index=True)
+
+    def save(self, *args, **kwargs):
+        assert self.sender.asset == self.receiver.asset
+        assert self.sender != self.receiver
+
+        return super(Trx, self).save(*args, **kwargs)

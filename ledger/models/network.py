@@ -9,6 +9,9 @@ class Network(models.Model):
 
     can_withdraw = models.BooleanField(default=False)
 
+    def __str__(self):
+        return self.symbol
+
 
 class NetworkSerializer(serializers.ModelSerializer):
     class Meta:

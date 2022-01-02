@@ -56,7 +56,7 @@ class OTCTrade(models.Model):
                 Trx(
                     sender=irt.get_wallet(coin_receiver),
                     receiver=irt.get_wallet(coin_sender),
-                    amount=self.amount,
+                    amount=self.amount * self.otc_request.price,
                     group_id=self.group_id
                 ),
             ])
@@ -70,6 +70,8 @@ class OTCTrade(models.Model):
         coin = otc_request.coin
         side = otc_request.side
         account = otc_request.account
+
+        # todo: add balance lock
 
         assert coin.is_trade_amount_valid(amount)
 
