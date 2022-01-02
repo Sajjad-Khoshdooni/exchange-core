@@ -10,6 +10,7 @@ from ledger.utils.price import get_all_assets_prices, get_tether_irt_price
 
 
 class WalletSerializer(serializers.ModelSerializer):
+    balance = serializers.SerializerMethodField()
     balance_irt = serializers.SerializerMethodField()
     balance_usdt = serializers.SerializerMethodField()
     networks = serializers.SerializerMethodField()
@@ -18,9 +19,12 @@ class WalletSerializer(serializers.ModelSerializer):
     def get_symbol(self, wallet: Wallet):
         return wallet.asset.symbol
 
+    def get_balance(self, wallet: Wallet):
+        return wallet.get_balance()
+
     def get_balance_usdt(self, wallet: Wallet):
         prices = self.context['prices']
-        return wallet.balance * decimal.Decimal(prices[wallet.asset.symbol])
+        return wallet.get_balance() * decimal.Decimal(prices[wallet.asset.symbol])
 
     def get_balance_irt(self, wallet: Wallet):
         tether_irt = self.context['tether_irt']
