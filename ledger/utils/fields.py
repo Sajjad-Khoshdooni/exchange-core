@@ -4,10 +4,10 @@ AMOUNT_DECIMAL_PLACES = 18
 AMOUNT_MAX_DIGITS = 30
 
 
-def get_amount_field(max_digits: int = None):
+def get_amount_field(max_digits: int = None, decimal_places: int = None):
     from django.db import models
 
     return models.DecimalField(
         max_digits=max_digits or AMOUNT_MAX_DIGITS,
-        decimal_places=AMOUNT_DECIMAL_PLACES,
+        decimal_places=decimal_places or AMOUNT_DECIMAL_PLACES,
     )

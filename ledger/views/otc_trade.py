@@ -2,47 +2,42 @@ from datetime import timedelta
 
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, get_object_or_404
 
-from ledger.models import OTCRequest, Asset
+from ledger.exceptions import InsufficientBalance
+from ledger.models import OTCRequest, Asset, OTCTrade
 from ledger.utils.price import get_trading_price
 
 
 class OTCRequestSerializer(serializers.ModelSerializer):
-    src = serializers.CharField(source='src_asset.symbol')
-    dest = serializers.CharField(source='dest_asset.symbol')
+    coin = serializers.CharField(source='coin.symbol')
     expire = serializers.SerializerMethodField()
 
     def validate(self, attrs):
-        src = attrs['src_asset']['symbol']
-        dest = attrs['dest_asset']['symbol']
+        coin_symbol = attrs['coin']['symbol']
 
-        if Asset.IRT not in (src, dest):
-            raise ValidationError('trade not supported')
-
-        if src == dest:
-            raise ValidationError('src and dest could not be equal')
+        if coin_symbol == Asset.IRT:
+            raise ValidationError('coin can not be IRT')
 
         try:
-            return {
-                'src_asset': Asset.get(src),
-                'dest_asset': Asset.get(dest),
-            }
+            attrs['coin'] = Asset.get(coin_symbol)
         except:
-            raise ValidationError('Invalid src or dest symbol')
+            raise ValidationError('Invalid coin')
+
+        return attrs
 
     def create(self, validated_data):
         request = self.context['request']
 
-        src_asset = validated_data['src_asset']
-        dest_asset = validated_data['dest_asset']
+        coin = validated_data['coin']
+        side = validated_data['side']
 
-        price = get_trading_price(src_asset.symbol, dest_asset.symbol)
+        price = get_trading_price(coin.symbol, side)
 
         return OTCRequest.objects.create(
             account=request.user.account,
-            src_asset=src_asset,
-            dest_asset=dest_asset,
+            coin=coin,
+            side=side,
             price=price
         )
 
@@ -51,7 +46,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OTCRequest
-        fields = ('src', 'dest', 'token', 'price', 'expire')
+        fields = ('coin', 'side', 'token', 'price', 'expire')
         read_only_fields = ('token', 'price')
 
 
@@ -59,5 +54,34 @@ class OTCTradeRequestView(CreateAPIView):
     serializer_class = OTCRequestSerializer
 
 
-class TradeView(CreateAPIView):
-    pass
+class OTCTradeSerializer(serializers.ModelSerializer):
+    token = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = OTCTrade
+        fields = ('id', 'token', 'amount', 'status')
+        read_only_fields = ('id', 'status', )
+
+    def create(self, validated_data):
+        token = validated_data['token']
+        amount = validated_data['amount']
+
+        request = self.context['request']
+
+        otc_request = get_object_or_404(OTCRequest, token=token, account=request.user.account)
+
+        otc_trade = OTCTrade.objects.filter(otc_request=otc_request).first()
+        if otc_trade:
+            return otc_trade
+
+        if not otc_request.coin.is_trade_amount_valid(amount):
+            raise ValidationError({'amount': 'مقدار نامعتبر است.'})
+
+        try:
+            return OTCTrade.create_trade(otc_request, amount)
+        except InsufficientBalance:
+            raise ValidationError({'amount': 'موجودی کافی نیست.'})
+
+
+class OTCTradeView(CreateAPIView):
+    serializer_class = OTCTradeSerializer

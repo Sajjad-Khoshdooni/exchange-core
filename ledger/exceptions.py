@@ -1,0 +1,4 @@
+
+class InsufficientBalance(Exception):
+    pass
+
