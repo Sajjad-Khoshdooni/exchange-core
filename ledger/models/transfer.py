@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from django.db import models
 
-from ledger.utils.fields import AMOUNT_MAX_DIGITS, AMOUNT_DECIMAL_PLACES, get_amount_field
+from ledger.utils.fields import get_amount_field
 
 
 class Transfer(models.Model):

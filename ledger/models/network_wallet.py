@@ -7,7 +7,7 @@ from ledger.models.network import NetworkSerializer
 class NetworkWallet(models.Model):
     network = models.ForeignKey('ledger.Network', on_delete=models.PROTECT)
     wallet = models.ForeignKey('ledger.Wallet', on_delete=models.PROTECT, related_name='networks')
-    address = models.CharField(max_length=256)
+    address = models.CharField(max_length=256, db_index=True)
     address_tag = models.CharField(max_length=32, default='')
 
     def __str__(self):

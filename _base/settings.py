@@ -37,6 +37,8 @@ INSTALLED_APPS = [
 
     'accounts',
     'ledger',
+    'tracker',
+    'provider',
 ]
 
 MIDDLEWARE = [
