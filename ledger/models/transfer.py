@@ -6,21 +6,26 @@ from ledger.utils.fields import get_amount_field
 
 
 class Transfer(models.Model):
-    PENDING, CANCELLED, DONE = 'pend', 'cancel', 'done'
+    PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 
     created = models.DateTimeField(auto_now_add=True)
-
-    wallet = models.ForeignKey('ledger.Wallet', on_delete=models.CASCADE)
+    group_id = models.UUIDField(default=uuid4, db_index=True)
+    network_wallet = models.ForeignKey('ledger.NetworkWallet', on_delete=models.CASCADE)
 
     amount = get_amount_field()
-    group_id = models.UUIDField(default=uuid4, db_index=True)
+    deposit = models.BooleanField()
+
     status = models.CharField(
         default=PENDING,
         max_length=8,
-        choices=[(PENDING, PENDING), (CANCELLED, CANCELLED), (DONE, DONE)],
+        choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
         db_index=True
     )
 
     lock = models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE)
+
+    trx_hash = models.CharField(max_length=128, db_index=True, unique=True)
+    block_hash = models.CharField(max_length=128, db_index=True, unique=True, blank=True)
+    block_number = models.PositiveIntegerField(null=True, blank=True)
 
     out_address = models.CharField(max_length=256)

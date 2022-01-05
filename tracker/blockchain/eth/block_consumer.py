@@ -1,15 +1,15 @@
-import asyncio
 import json
 import logging
 import signal
 import sys
-import time
 from datetime import datetime
 
 import requests
 import websocket
+from django.db import transaction
 
-# from tracker.models import BlockTracker
+from ledger.models import NetworkWallet
+from ledger.models.transfer import Transfer
 from tracker.models import BlockTracker
 
 logger = logging.getLogger(__name__)
@@ -37,8 +37,8 @@ class EthBlockConsumer:
         history_checked = initial  # ignore history on initial run
 
         while self.loop:
-            logger.info('Now %s' % datetime.now())
             block_str = self.socket.recv()
+            logger.info('Now %s' % datetime.now())
 
             logger.info('Eth new block received: %s' % block_str)
             block_raw = json.loads(block_str)
@@ -138,4 +138,37 @@ class EthBlockConsumer:
         raw_transactions = block['transactions']
 
         logger.info('Transactions %s' % len(raw_transactions))
-        transactions = filter(lambda t: int(t['value'], 16) > 0, raw_transactions)
+        transactions = list(filter(lambda t: int(t['value'], 16) > 0, raw_transactions))
+        logger.info('transactions reduced from %s to %s' % (len(raw_transactions), len(list(transactions))))
+
+        to_address_to_trx = {t['to']: t for t in transactions}
+        # trx_hashes = {t['hash']: t for t in transactions}
+
+        with transaction.atomic():
+            to_network_wallets = NetworkWallet.objects.filter(address__in=to_address_to_trx)
+            for network_wallet in to_network_wallets:
+                trx_data = to_address_to_trx[network_wallet.address]
+
+                Transfer.objects.create(
+                    network_wallet=network_wallet,
+                    amount=int(trx_data['value'], 16),
+                    deposit=True,
+                    trx_hash=trx_data['hash'],
+                    block_hash=block_hash,
+                    block_number=block_number,
+                    out_address=trx_data['from']
+                )
+
+            # withdraws = Transfer.objects.filter(deposit=False, trx_hash__in=trx_hashes.keys())
+            # for withdraw in withdraws:
+            #     trx_data = from_network_wallets[network_wallet.address]
+            #
+            #     Transfer.objects.create(
+            #         network_wallet=network_wallet,
+            #         amount=int(trx_data['value'], 16),
+            #         deposit=True,
+            #         trx_hash=trx_data['hash'],
+            #         block_hash=block_hash,
+            #         block_number=block_number,
+            #         out_address=trx_data['from']
+            #     )
