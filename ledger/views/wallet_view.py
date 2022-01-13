@@ -4,7 +4,7 @@ from rest_framework import serializers
 from rest_framework.generics import ListAPIView
 
 from ledger.models import Wallet, NetworkAsset
-from ledger.models.asset import AssetSerializerMini
+from ledger.models.asset import AssetSerializerMini, Asset
 from ledger.models.network import NetworkSerializer, Network
 from ledger.utils.price import get_all_assets_prices, get_tether_irt_price
 
@@ -23,12 +23,19 @@ class WalletSerializer(serializers.ModelSerializer):
         return wallet.get_balance()
 
     def get_balance_usdt(self, wallet: Wallet):
+        if wallet.asset.symbol == Asset.IRT:
+            tether_irt = self.context['tether_irt']
+            return wallet.get_balance() / tether_irt
+
         prices = self.context['prices']
-        return wallet.get_balance() * decimal.Decimal(prices[wallet.asset.symbol])
+        return wallet.get_balance() * prices[wallet.asset.symbol]
 
     def get_balance_irt(self, wallet: Wallet):
+        if wallet.asset.symbol == Asset.IRT:
+            return wallet.get_balance()
+
         tether_irt = self.context['tether_irt']
-        return self.get_balance_usdt(wallet) * decimal.Decimal(tether_irt)
+        return self.get_balance_usdt(wallet) * tether_irt
 
     def get_networks(self, wallet: Wallet):
         network_ids = NetworkAsset.objects.filter(asset=wallet.asset).values_list('id', flat=True)

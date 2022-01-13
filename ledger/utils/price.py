@@ -2,6 +2,7 @@ from datetime import datetime
 
 from collector.grpc_client import gRPCClient
 from ledger.models import Asset, Order
+from decimal import Decimal
 
 EXCHANGE_BINANCE = 'binance'
 EXCHANGE_NOBITEX = 'nobitex'
@@ -54,15 +55,16 @@ def get_price(coin: str, exchange: str = EXCHANGE_BINANCE, market_symbol: str = 
     return price
 
 
-def get_tether_irt_price(now: datetime = None) -> float:
-    return get_price('USDT', exchange=EXCHANGE_NOBITEX, market_symbol=MARKET_IRT, timedelta_multiplier=6, now=now) / 10
+def get_tether_irt_price(now: datetime = None) -> Decimal:
+    tether_rial = get_price('USDT', exchange=EXCHANGE_NOBITEX, market_symbol=MARKET_IRT, timedelta_multiplier=6, now=now)
+    return Decimal(tether_rial / 10)
 
 
 def get_all_assets_prices(now: datetime = None):
     prices = {}
 
     for asset in Asset.objects.all():
-        prices[asset.symbol] = get_price(asset.symbol, now=now)
+        prices[asset.symbol] = Decimal(get_price(asset.symbol, now=now))
 
     return prices
 
