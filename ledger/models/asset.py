@@ -54,4 +54,4 @@ class AssetSerializer(serializers.ModelSerializer):
 class AssetSerializerMini(serializers.ModelSerializer):
     class Meta:
         model = Asset
-        fields = ('id', 'symbol')
+        fields = ('id', 'symbol', 'name_fa', 'image')
