@@ -20,22 +20,14 @@ class WalletSerializer(serializers.ModelSerializer):
         return wallet.asset.symbol
 
     def get_balance(self, wallet: Wallet):
-        return wallet.get_balance()
+        balance = round(wallet.get_balance(), 6)
+        return str(balance).rstrip('0').rstrip('.')
 
     def get_balance_usdt(self, wallet: Wallet):
-        if wallet.asset.symbol == Asset.IRT:
-            tether_irt = self.context['tether_irt']
-            return wallet.get_balance() / tether_irt
-
-        prices = self.context['prices']
-        return wallet.get_balance() * prices[wallet.asset.symbol]
+        return str(int(wallet.get_balance_usdt()))
 
     def get_balance_irt(self, wallet: Wallet):
-        if wallet.asset.symbol == Asset.IRT:
-            return wallet.get_balance()
-
-        tether_irt = self.context['tether_irt']
-        return self.get_balance_usdt(wallet) * tether_irt
+        return str(int(wallet.get_balance_irt()))
 
     def get_networks(self, wallet: Wallet):
         network_ids = NetworkAsset.objects.filter(asset=wallet.asset).values_list('id', flat=True)

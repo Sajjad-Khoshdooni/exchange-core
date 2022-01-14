@@ -1,8 +1,12 @@
 from datetime import datetime
 
+from cachetools import TTLCache
+
 from collector.grpc_client import gRPCClient
 from ledger.models import Asset, Order
 from decimal import Decimal
+
+from ledger.utils.cache import ttl_cache
 
 EXCHANGE_BINANCE = 'binance'
 EXCHANGE_NOBITEX = 'nobitex'
@@ -10,9 +14,12 @@ EXCHANGE_NOBITEX = 'nobitex'
 MARKET_USDT = 'USDT'
 MARKET_IRT = 'IRT'
 
+cache = TTLCache(maxsize=1000, ttl=10)
 
+
+@ttl_cache(cache)
 def get_price(coin: str, exchange: str = EXCHANGE_BINANCE, market_symbol: str = MARKET_USDT,
-              timedelta_multiplier: int = 1, now: datetime = None):
+              timedelta_multiplier: int = 1, now: datetime = None) -> Decimal:
 
     _now = now
     if not now:
@@ -52,7 +59,7 @@ def get_price(coin: str, exchange: str = EXCHANGE_BINANCE, market_symbol: str = 
 
     grpc_client.channel.close()
 
-    return price
+    return Decimal(price)
 
 
 def get_tether_irt_price(now: datetime = None) -> Decimal:
@@ -70,7 +77,7 @@ def get_all_assets_prices(now: datetime = None):
 
 
 def get_trading_price(coin: str, side: str):
-    diff = 0.005
+    diff = Decimal('0.005')
 
     if side == Order.BUY:
         multiplier = 1 + diff

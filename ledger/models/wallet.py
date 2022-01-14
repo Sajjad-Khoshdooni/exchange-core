@@ -24,6 +24,23 @@ class Wallet(models.Model):
 
         return received - sent
 
+    def get_balance_usdt(self) -> Decimal:
+        from ledger.utils.price import get_tether_irt_price, get_price
+
+        if self.asset.symbol == self.asset.IRT:
+            tether_irt = get_tether_irt_price()
+            return self.get_balance() / tether_irt
+
+        return self.get_balance() * get_price(self.asset.symbol)
+
+    def get_balance_irt(self):
+        if self.asset.symbol == self.asset.IRT:
+            return self.get_balance()
+
+        from ledger.utils.price import get_tether_irt_price
+        tether_irt = get_tether_irt_price()
+        return self.get_balance_usdt() * tether_irt
+
     def can_buy(self, amount: Decimal, raise_exception: bool = False) -> bool:
         can = self.get_balance() >= amount
 
