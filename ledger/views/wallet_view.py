@@ -1,15 +1,13 @@
-import decimal
-
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView
 
 from ledger.models import Wallet, NetworkAsset
-from ledger.models.asset import AssetSerializerMini, Asset
+from ledger.models.asset import AssetSerializerMini
 from ledger.models.network import NetworkSerializer, Network
 from ledger.utils.price import get_all_assets_prices, get_tether_irt_price
 
 
-class WalletSerializer(serializers.ModelSerializer):
+class WalletSerializerBuilder(serializers.ModelSerializer):
     balance = serializers.SerializerMethodField()
     balance_irt = serializers.SerializerMethodField()
     balance_usdt = serializers.SerializerMethodField()
@@ -36,20 +34,44 @@ class WalletSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Wallet
-        fields = ('id', 'asset', 'balance', 'balance_irt', 'balance_usdt', 'networks')
+        fields = ()
+
+    @classmethod
+    def create_serializer(cls,  prices: bool = True):
+        fields = ('id', 'asset', 'balance')
+
+        if prices:
+            fields = (*fields, 'balance_irt', 'balance_usdt', 'networks')
+
+        class Serializer(cls):
+            pass
+
+        Serializer.Meta.fields = fields
+
+        return Serializer
 
 
 class WalletView(ListAPIView):
-    serializer_class = WalletSerializer
-
     def get_queryset(self):
         return Wallet.objects.filter(account__user=self.request.user)
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
 
-        if self.request.method == 'GET':
+        if self.get_serializer_option('prices'):
             ctx['prices'] = get_all_assets_prices()
             ctx['tether_irt'] = get_tether_irt_price()
 
         return ctx
+
+    def get_serializer_option(self, key: str):
+        options = {
+            'prices': self.request.query_params.get('prices', '1') == '1'
+        }
+
+        return options[key]
+
+    def get_serializer_class(self):
+        return WalletSerializerBuilder.create_serializer(
+            prices=self.get_serializer_option('prices')
+        )

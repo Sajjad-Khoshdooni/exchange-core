@@ -15,8 +15,7 @@ class AssetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'name', 'name_fa', 'image', 'price', 'irt_price', 'weekly_trend_url',
-                  'irt_price_changed_percent_24h')
+        fields = ('symbol', 'name', 'name_fa', 'image', 'price', 'irt_price', 'weekly_trend_url')
 
     def get_price(self, asset: Asset):
         prices = self.context['prices']
