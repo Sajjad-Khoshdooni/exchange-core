@@ -4,10 +4,11 @@ from rest_framework import serializers
 from rest_framework.generics import ListAPIView
 
 from ledger.models import Asset
+from ledger.models.asset import AssetSerializerMini
 from ledger.utils.price import get_all_assets_prices, get_tether_irt_price
 
 
-class AssetSerializer(serializers.ModelSerializer):
+class AssetSerializerBuilder(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     irt_price = serializers.SerializerMethodField()
     weekly_trend_url = serializers.SerializerMethodField()
@@ -15,7 +16,7 @@ class AssetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'name', 'name_fa', 'image', 'price', 'irt_price', 'weekly_trend_url')
+        fields = ()
 
     def get_price(self, asset: Asset):
         prices = self.context['prices']
@@ -42,22 +43,49 @@ class AssetSerializer(serializers.ModelSerializer):
 
         return round((now_price - yesterday_price) / yesterday_price * 100, 2)
 
+    @classmethod
+    def create_serializer(cls,  prices: bool = True):
+        fields = AssetSerializerMini.Meta.fields
+
+        if prices:
+            fields = (*fields, 'price', 'irt_price', 'weekly_trend_url')
+
+        class Serializer(cls):
+            pass
+
+        Serializer.Meta.fields = fields
+
+        return Serializer
+
 
 class GeneralAssetInfoView(ListAPIView):
 
     authentication_classes = []
     permission_classes = []
-    serializer_class = AssetSerializer
     queryset = Asset.objects.all()
 
     def get_serializer_context(self):
         ctx = super(GeneralAssetInfoView, self).get_serializer_context()
-        ctx['prices'] = get_all_assets_prices()
-        ctx['tether_irt'] = get_tether_irt_price()
 
-        yesterday = datetime.now() - timedelta(days=1)
+        if self.get_serializer_option('prices'):
+            ctx['prices'] = get_all_assets_prices()
+            ctx['tether_irt'] = get_tether_irt_price()
 
-        ctx['prices_yesterday'] = get_all_assets_prices(now=yesterday)
-        ctx['tether_irt_yesterday'] = get_tether_irt_price(now=yesterday)
+            yesterday = datetime.now() - timedelta(days=1)
+
+            ctx['prices_yesterday'] = get_all_assets_prices(now=yesterday)
+            ctx['tether_irt_yesterday'] = get_tether_irt_price(now=yesterday)
 
         return ctx
+
+    def get_serializer_option(self, key: str):
+        options = {
+            'prices': self.request.query_params.get('prices') == '1'
+        }
+
+        return options[key]
+
+    def get_serializer_class(self):
+        return AssetSerializerBuilder.create_serializer(
+            prices=self.get_serializer_option('prices')
+        )

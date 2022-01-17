@@ -24,12 +24,12 @@ class NetworkWalletAdmin(admin.ModelAdmin):
 
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'token', 'account', 'coin', 'side', 'price')
+    list_display = ('created', 'account', 'from_asset', 'to_asset', 'to_price', 'to_amount', 'token')
 
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request', 'amount', 'status', 'group_id')
+    list_display = ('created', 'otc_request',  'status', 'group_id')
 
 
 @admin.register(models.Trx)

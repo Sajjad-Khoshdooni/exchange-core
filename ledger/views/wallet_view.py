@@ -4,13 +4,15 @@ from rest_framework.generics import ListAPIView
 from ledger.models import Wallet, NetworkAsset
 from ledger.models.asset import AssetSerializerMini
 from ledger.models.network import NetworkSerializer, Network
-from ledger.utils.price import get_all_assets_prices, get_tether_irt_price
+from ledger.utils.price import get_all_assets_prices, get_tether_irt_price, get_trading_price
 
 
 class WalletSerializerBuilder(serializers.ModelSerializer):
     balance = serializers.SerializerMethodField()
     balance_irt = serializers.SerializerMethodField()
     balance_usdt = serializers.SerializerMethodField()
+    sell_price_irt = serializers.SerializerMethodField()
+    buy_price_irt = serializers.SerializerMethodField()
     networks = serializers.SerializerMethodField()
     asset = AssetSerializerMini()
 
@@ -18,14 +20,19 @@ class WalletSerializerBuilder(serializers.ModelSerializer):
         return wallet.asset.symbol
 
     def get_balance(self, wallet: Wallet):
-        balance = round(wallet.get_balance(), 6)
-        return str(balance).rstrip('0').rstrip('.')
+        return wallet.asset.get_presentation_amount(wallet.get_balance())
 
     def get_balance_usdt(self, wallet: Wallet):
         return str(int(wallet.get_balance_usdt()))
 
     def get_balance_irt(self, wallet: Wallet):
         return str(int(wallet.get_balance_irt()))
+
+    def get_sell_price_irt(self, wallet: Wallet):
+        return str(int(get_trading_price(wallet.asset.symbol, 'sell')))
+
+    def get_buy_price_irt(self, wallet: Wallet):
+        return str(int(get_trading_price(wallet.asset.symbol, 'buy')))
 
     def get_networks(self, wallet: Wallet):
         network_ids = NetworkAsset.objects.filter(asset=wallet.asset).values_list('id', flat=True)
@@ -41,7 +48,7 @@ class WalletSerializerBuilder(serializers.ModelSerializer):
         fields = ('id', 'asset', 'balance')
 
         if prices:
-            fields = (*fields, 'balance_irt', 'balance_usdt', 'networks')
+            fields = (*fields, 'balance_irt', 'balance_usdt', 'sell_price_irt', 'buy_price_irt', 'networks')
 
         class Serializer(cls):
             pass

@@ -15,7 +15,6 @@ class OTCTrade(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     otc_request = models.OneToOneField('ledger.OTCRequest', on_delete=models.PROTECT)
 
-    amount = get_amount_field()
     group_id = models.UUIDField(default=uuid4, db_index=True)
 
     status = models.CharField(
@@ -37,26 +36,21 @@ class OTCTrade(models.Model):
         system = Account.system()
         user = self.otc_request.account
 
-        coin = self.otc_request.coin
-        irt = Asset.get(Asset.IRT)
-
-        if self.otc_request.side == Order.BUY:
-            coin_sender, coin_receiver = system, user
-        else:
-            coin_sender, coin_receiver = user, system
+        from_asset = self.otc_request.from_asset
+        to_asset = self.otc_request.to_asset
 
         with transaction.atomic():
             Trx.objects.bulk_create([
                 Trx(
-                    sender=coin.get_wallet(coin_sender),
-                    receiver=coin.get_wallet(coin_receiver),
-                    amount=self.amount,
+                    sender=from_asset.get_wallet(user),
+                    receiver=from_asset.get_wallet(system),
+                    amount=self.otc_request.from_amount,
                     group_id=self.group_id
                 ),
                 Trx(
-                    sender=irt.get_wallet(coin_receiver),
-                    receiver=irt.get_wallet(coin_sender),
-                    amount=self.amount * self.otc_request.price,
+                    sender=to_asset.get_wallet(system),
+                    receiver=to_asset.get_wallet(user),
+                    amount=self.otc_request.to_amount,
                     group_id=self.group_id
                 ),
             ])
@@ -66,32 +60,28 @@ class OTCTrade(models.Model):
         return 'otc-%s' % self.id
 
     @classmethod
-    def create_trade(cls, otc_request: OTCRequest, amount: Decimal) -> 'OTCTrade':
-        coin = otc_request.coin
-        side = otc_request.side
+    def execute_trade(cls, otc_request: OTCRequest) -> 'OTCTrade':
         account = otc_request.account
 
         # todo: add balance lock
 
-        assert coin.is_trade_amount_valid(amount)
+        from_asset = otc_request.from_asset
 
-        if side == Order.BUY:
-            market_wallet = Asset.get(Asset.IRT).get_wallet(account)
-            market_amount = amount * otc_request.price
-            market_wallet.can_buy(market_amount, raise_exception=True)
-        else:
-            wallet = coin.get_wallet(account)
-            wallet.can_buy(amount, raise_exception=True)
+        conf = otc_request.get_trade_config()
+
+        assert conf.coin.is_trade_amount_valid(conf.coin_amount)
+
+        from_wallet = from_asset.get_wallet(account)
+        from_wallet.can_buy(conf.cash_amount, raise_exception=True)
 
         otc_trade = OTCTrade.objects.create(
-            otc_request=otc_request,
-            amount=amount,
+            otc_request=otc_request
         )
 
         resp = BinanceHandler.spot_place_order(
-            symbol=coin.symbol + 'USDT',
-            side=side,
-            amount=amount,
+            symbol=conf.coin.symbol + 'USDT',
+            side=conf.side,
+            amount=conf.coin_amount,
             client_order_id=otc_trade.client_order_id
         )
 
