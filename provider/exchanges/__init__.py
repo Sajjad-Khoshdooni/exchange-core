@@ -1,1 +1,1 @@
-from .binance import BinanceHandler
+from .binance import BinanceSpotHandler, BinanceFuturesHandler

@@ -1,12 +1,10 @@
-from decimal import Decimal
 from uuid import uuid4
 
 from django.db import models, transaction
 
 from accounts.models import Account
-from ledger.models import OTCRequest, Order, Asset, Trx
-from ledger.utils.fields import get_amount_field
-from provider.exchanges import BinanceHandler
+from ledger.models import OTCRequest, Trx
+from provider.exchanges import BinanceFuturesHandler
 
 
 class TokenExpired(Exception):
@@ -86,7 +84,7 @@ class OTCTrade(models.Model):
             otc_request=otc_request
         )
 
-        resp = BinanceHandler.spot_place_order(
+        resp = BinanceFuturesHandler.place_order(
             symbol=conf.coin.symbol + 'USDT',
             side=conf.side,
             amount=conf.coin_amount,
