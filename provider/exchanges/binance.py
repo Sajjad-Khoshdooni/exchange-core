@@ -25,6 +25,7 @@ class BinanceHandler(BaseExchange):
     @classmethod
     def collect_api(cls, endpoint, method='GET', **kwargs):
         if settings.DEBUG:
+            print('requesting ', kwargs)
             return {'orderId': 1}
 
         data = kwargs.get('data', {})

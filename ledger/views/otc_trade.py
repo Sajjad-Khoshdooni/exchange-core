@@ -7,6 +7,7 @@ from rest_framework.generics import CreateAPIView, get_object_or_404
 from ledger.exceptions import InsufficientBalance
 from ledger.models import OTCRequest, Asset, OTCTrade
 from ledger.models.asset import InvalidAmount
+from ledger.models.otc_trade import TokenExpired
 from ledger.utils.fields import get_serializer_amount_field
 
 
@@ -23,16 +24,16 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         to_symbol = attrs['to_asset']['symbol']
 
         if Asset.IRT not in (from_symbol, to_symbol):
-            raise ValidationError('one of from_asset or to_asset should be IRT')
+            raise ValidationError('یکی از دارایی‌ها باید تومان باشد.')
 
         if from_symbol == to_symbol:
-            raise ValidationError('from_asset and to_asset could not be same')
+            raise ValidationError('هر دو دارایی نمی‌تواند یکی باشد.')
 
         try:
             attrs['from_asset'] = Asset.get(from_symbol)
             attrs['to_asset'] = Asset.get(to_symbol)
         except:
-            raise ValidationError('Invalid from_asset or to_asset')
+            raise ValidationError('دارایی نامعتبر است.')
 
         from_amount = attrs.get('from_amount')
         to_amount = attrs.get('to_amount')
@@ -64,12 +65,11 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         try:
             otc_request.set_amounts(from_amount, to_amount)
         except InvalidAmount as e:
-            raise ValidationError('%s %s' % (str(e), e.reason))
+            raise ValidationError(str(e))
 
         conf = otc_request.get_trade_config()
         if conf.cash_amount < 300_000:
-            raise ValidationError('small amount!')
-
+            raise ValidationError('ارزش معامله باید حداقل 300,000 تومان باشد.')
 
         from_wallet = from_asset.get_wallet(account)
         if not from_wallet.can_buy(otc_request.from_amount):
@@ -79,7 +79,15 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         return otc_request
 
     def get_expire(self, otc: OTCRequest):
-        return otc.created + timedelta(seconds=OTCRequest.EXPIRE_TIME)
+        return otc.get_expire_time()
+
+    def to_representation(self, instance: OTCRequest):
+        representation = super(OTCRequestSerializer, self).to_representation(instance)
+
+        representation['from_amount'] = instance.from_asset.get_presentation_amount(representation['from_amount'])
+        representation['to_amount'] = instance.to_asset.get_presentation_amount(representation['to_amount'])
+
+        return representation
 
     class Meta:
         model = OTCRequest
@@ -97,6 +105,7 @@ class OTCTradeSerializer(serializers.ModelSerializer):
     class Meta:
         model = OTCTrade
         fields = ('id', 'token', 'status')
+        read_only_fields = ('token', )
 
     def create(self, validated_data):
         token = validated_data['token']
@@ -110,6 +119,8 @@ class OTCTradeSerializer(serializers.ModelSerializer):
 
         try:
             return OTCTrade.execute_trade(otc_request)
+        except TokenExpired:
+            raise ValidationError({'token': 'سفارش منقضی شده است. لطفا دوباره اقدام کنید.'})
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست.'})
 

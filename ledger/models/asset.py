@@ -8,11 +8,7 @@ from accounts.models import Account
 
 
 class InvalidAmount(Exception):
-    SMALL, LARGE, STEP = 'small', 'large', 'step'
-
-    def __init__(self, *args, reason=None):
-        super(InvalidAmount, self).__init__(*args)
-        self.reason = reason
+    pass
 
 
 class Asset(models.Model):
@@ -59,14 +55,11 @@ class Asset(models.Model):
         if raise_exception:
             reason = None
             if amount < self.min_trade_quantity:
-                reason = InvalidAmount.SMALL
+                raise InvalidAmount('واحد وارد شده کوچک است.')
             elif amount > self.max_trade_quantity:
-                reason = InvalidAmount.LARGE
+                raise InvalidAmount('واحد وارد شده بزرگ است.')
             elif amount % self.trade_quantity_step != 0:
-                reason = InvalidAmount.STEP
-
-            if reason:
-                raise InvalidAmount(self.symbol, reason=reason)
+                raise InvalidAmount('واحد وارد شده باید مضربی از %s باشد.' % self.get_presentation_amount(self.trade_quantity_step))
 
         else:
             return \
@@ -74,6 +67,9 @@ class Asset(models.Model):
                 amount % self.trade_quantity_step == 0
 
     def get_presentation_amount(self, amount: Decimal) -> str:
+        if isinstance(amount, str):
+            amount = Decimal(amount)
+
         n_digits = int(-math.log10(Decimal(self.trade_quantity_step)))
         rounded = round(amount, n_digits)
         return str(rounded).rstrip('0').rstrip('.')

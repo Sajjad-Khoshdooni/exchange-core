@@ -9,6 +9,10 @@ from ledger.utils.fields import get_amount_field
 from provider.exchanges import BinanceHandler
 
 
+class TokenExpired(Exception):
+    pass
+
+
 class OTCTrade(models.Model):
     PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 
@@ -61,6 +65,10 @@ class OTCTrade(models.Model):
 
     @classmethod
     def execute_trade(cls, otc_request: OTCRequest) -> 'OTCTrade':
+
+        if otc_request.expired():
+            raise TokenExpired()
+
         account = otc_request.account
 
         # todo: add balance lock
@@ -72,7 +80,7 @@ class OTCTrade(models.Model):
         assert conf.coin.is_trade_amount_valid(conf.coin_amount)
 
         from_wallet = from_asset.get_wallet(account)
-        from_wallet.can_buy(conf.cash_amount, raise_exception=True)
+        from_wallet.can_buy(otc_request.from_amount, raise_exception=True)
 
         otc_trade = OTCTrade.objects.create(
             otc_request=otc_request
@@ -88,7 +96,10 @@ class OTCTrade(models.Model):
         if resp:
             otc_trade.provider_order_id = resp['orderId']
             otc_trade.change_status(cls.DONE)
-            otc_trade.create_ledger()
+
+            with transaction.atomic():
+                otc_trade.create_ledger()
+
         else:
             otc_trade.change_status(cls.CANCELED)
 

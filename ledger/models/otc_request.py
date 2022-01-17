@@ -1,6 +1,8 @@
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.db import models
+from django.utils import timezone
 
 from accounts.models import Account
 from ledger.models import Asset, Order
@@ -91,6 +93,12 @@ class OTCRequest(models.Model):
         self.to_price = to_price
         self.from_amount = from_amount
         self.to_amount = to_amount
+
+    def get_expire_time(self) -> datetime:
+        return self.created + timedelta(seconds=OTCRequest.EXPIRE_TIME)
+
+    def expired(self):
+        return (timezone.now() - self.created).total_seconds() >= self.EXPIRE_TIME
 
     def __str__(self):
         return 'Buy %d %s from %s' % (self.to_amount, self.to_asset, self.from_asset,)

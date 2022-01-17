@@ -8,8 +8,8 @@ def create_system_accounts(apps, schema_editor):
     Account = apps.get_model('accounts', 'Account')
 
     with transaction.atomic():
-        Account.objects.create(type='s')
-        Account.objects.create(type='o')
+        Account.objects.get_or_create(type='s')
+        Account.objects.get_or_create(type='o')
 
 
 def delete_system_accounts(apps, schema_editor):
