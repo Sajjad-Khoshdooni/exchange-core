@@ -9,6 +9,7 @@ from django.conf import settings
 from yekta_config import secret
 
 from provider.exchanges.base import BaseExchange
+from provider.exchanges.binance_rules import futures_rules
 
 binance_session = requests.Session()
 binance_session.headers = {'X-MBX-APIKEY': secret('BINANCE_API_KEY', default='')}
@@ -100,7 +101,13 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         return cls.collect_api('/fapi/v2/account', method='GET')
 
     @classmethod
-    def get_order_detail(cls, symbol, order_id, market=None):
+    def get_order_detail(cls, symbol: str, order_id: str):
         return cls.collect_api(
-            '/fapi/v1/order', method='GET', data={'orderId': order_id, 'symbol': symbol}, return_status=True
+            '/fapi/v1/order', method='GET', data={'orderId': order_id, 'symbol': symbol}
         )
+
+    @classmethod
+    def get_step_size(cls, symbol: str):
+        return float(futures_rules.get(
+            symbol, {'filters': {'LOT_SIZE': {'stepSize': 0.0001}}}
+        )['filters']['LOT_SIZE']['stepSize'])

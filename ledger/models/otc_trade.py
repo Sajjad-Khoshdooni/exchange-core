@@ -4,7 +4,7 @@ from django.db import models, transaction
 
 from accounts.models import Account
 from ledger.models import OTCRequest, Trx, BalanceLock
-from provider.exchanges import BinanceFuturesHandler
+from provider.models import ProviderOrder
 
 
 class TokenExpired(Exception):
@@ -23,11 +23,6 @@ class OTCTrade(models.Model):
         default=PENDING,
         max_length=8,
         choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)]
-    )
-
-    provider_order_id = models.CharField(
-        max_length=16,
-        blank=True
     )
 
     lock = models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE)
@@ -78,7 +73,7 @@ class OTCTrade(models.Model):
         assert conf.coin.is_trade_amount_valid(conf.coin_amount)
 
         from_wallet = from_asset.get_wallet(account)
-        from_wallet.can_buy(otc_request.from_amount, raise_exception=True)
+        from_wallet.can_buy(otc_request.from_amount, raise_exception=True)  # use select for update for more guarantee!
 
         with transaction.atomic():
             lock = BalanceLock.objects.create(
@@ -91,21 +86,16 @@ class OTCTrade(models.Model):
                 lock=lock
             )
 
-        resp = BinanceFuturesHandler.place_order(
-            symbol=conf.coin.symbol + 'USDT',
+        hedged = ProviderOrder.try_hedge_for_new_order(
+            asset=conf.coin,
             side=conf.side,
-            amount=conf.coin_amount,
-            client_order_id=otc_trade.client_order_id
+            amount=conf.coin_amount
         )
 
-        if resp:
-            otc_trade.provider_order_id = resp['orderId']
-            otc_trade.change_status(cls.DONE)
-
+        if hedged:
             with transaction.atomic():
+                otc_trade.change_status(cls.DONE)
                 otc_trade.create_ledger()
-
-        else:
-            otc_trade.change_status(cls.CANCELED)
+                otc_trade.lock.release()
 
         return otc_trade

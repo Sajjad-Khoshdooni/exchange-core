@@ -5,14 +5,16 @@ from accounts.models import User
 class Account(models.Model):
     SYSTEM = 's'
     OUT = 'o'
-    ORDINARY = ''
+    ORDINARY = None
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
 
     type = models.CharField(
         max_length=1,
         choices=((SYSTEM, 'system'), (OUT, 'out'), (ORDINARY, 'ordinary')),
-        blank=True
+        blank=True,
+        null=True,
+        unique=True
     )
 
     @classmethod

@@ -16,6 +16,9 @@ class Wallet(models.Model):
     def __str__(self):
         return 'Wallet %s [%s]' % (self.asset, self.account)
 
+    class Meta:
+        unique_together = [('account', 'asset')]
+
     def get_balance(self) -> Decimal:
         from ledger.models import Trx
 
