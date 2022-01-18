@@ -29,6 +29,9 @@ def get_json_resp(url: str, session: requests.Session, method='GET', **kwargs):
                 'response': resp.content,
                 'request': kwargs.get('json')
             })
+            # print(url)
+            # print(kwargs)
+            # print(resp.content)
             return
 
     except json.JSONDecodeError as e:

@@ -34,6 +34,8 @@ class BinanceSpotHandler(BaseExchange):
         sign = base64.b16encode(
             hmac.new(secret('BINANCE_SECRET_KEY', default='').encode(), params.encode(), sha256).digest()
         ).decode('latin-1').lower()
+        data['signature'] = sign
+
         params += f'&signature={sign}'
 
         if method == 'GET':
@@ -42,7 +44,7 @@ class BinanceSpotHandler(BaseExchange):
         if method == 'GET':
             response = super().collect_api(endpoint, method=method)
         else:
-            response = super().collect_api(endpoint, method=method, data=params)
+            response = super().collect_api(endpoint, method=method, data=data)
         return response
 
     @classmethod
