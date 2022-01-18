@@ -2,6 +2,7 @@ import json
 import logging
 
 import requests
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ def get_json_resp(url: str, session: requests.Session, method='GET', **kwargs):
 
 class BaseExchange:
     _base_api_url = None
+    _testnet_api_url = None
     _session = None
 
     api_path = None
@@ -63,7 +65,12 @@ class BaseExchange:
 
     @classmethod
     def collect_api(cls, endpoint, method='POST', **kwargs):
-        if not cls._base_api_url:
+        if settings.DEBUG:
+            base_api = cls._testnet_api_url
+        else:
+            base_api = cls._base_api_url
+
+        if not base_api:
             raise Exception('_base_api_url is empty')
 
-        return get_json_resp(cls._base_api_url + endpoint, cls._session, method=method, **kwargs)
+        return get_json_resp(base_api + endpoint, cls._session, method=method, **kwargs)

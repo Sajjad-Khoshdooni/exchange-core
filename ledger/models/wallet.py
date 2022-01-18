@@ -24,6 +24,13 @@ class Wallet(models.Model):
 
         return received - sent
 
+    def get_locked(self) -> Decimal:
+        from ledger.models import BalanceLock
+        return BalanceLock.objects.filter(wallet=self, freed=False).aggregate(amount=Sum('amount'))['amount'] or 0
+
+    def get_free(self) -> Decimal:
+        return self.get_balance() - self.get_locked()
+
     def get_balance_usdt(self) -> Decimal:
         from ledger.utils.price import get_tether_irt_price, get_price
 
@@ -42,7 +49,7 @@ class Wallet(models.Model):
         return self.get_balance_usdt() * tether_irt
 
     def can_buy(self, amount: Decimal, raise_exception: bool = False) -> bool:
-        can = self.get_balance() >= amount
+        can = self.get_free() >= amount
 
         if raise_exception and not can:
             raise InsufficientBalance()

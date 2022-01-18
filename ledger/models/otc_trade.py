@@ -3,7 +3,7 @@ from uuid import uuid4
 from django.db import models, transaction
 
 from accounts.models import Account
-from ledger.models import OTCRequest, Trx
+from ledger.models import OTCRequest, Trx, BalanceLock
 from provider.exchanges import BinanceFuturesHandler
 
 
@@ -29,6 +29,8 @@ class OTCTrade(models.Model):
         max_length=16,
         blank=True
     )
+
+    lock = models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE)
 
     def change_status(self, status: str):
         self.status = status
@@ -69,8 +71,6 @@ class OTCTrade(models.Model):
 
         account = otc_request.account
 
-        # todo: add balance lock
-
         from_asset = otc_request.from_asset
 
         conf = otc_request.get_trade_config()
@@ -80,9 +80,16 @@ class OTCTrade(models.Model):
         from_wallet = from_asset.get_wallet(account)
         from_wallet.can_buy(otc_request.from_amount, raise_exception=True)
 
-        otc_trade = OTCTrade.objects.create(
-            otc_request=otc_request
-        )
+        with transaction.atomic():
+            lock = BalanceLock.objects.create(
+                wallet=from_wallet,
+                amount=otc_request.from_amount
+            )
+
+            otc_trade = OTCTrade.objects.create(
+                otc_request=otc_request,
+                lock=lock
+            )
 
         resp = BinanceFuturesHandler.place_order(
             symbol=conf.coin.symbol + 'USDT',

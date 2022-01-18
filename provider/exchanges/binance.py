@@ -26,10 +26,6 @@ class BinanceSpotHandler(BaseExchange):
 
     @classmethod
     def collect_api(cls, endpoint, method='GET', **kwargs):
-        if settings.DEBUG:
-            print('requesting ', kwargs)
-            return {'orderId': 1}
-
         data = kwargs.get('data', {})
         qp = data.pop('qp', True)
 
@@ -74,6 +70,8 @@ class BinanceSpotHandler(BaseExchange):
 
 class BinanceFuturesHandler(BinanceSpotHandler):
     _base_api_url = 'https://fapi.binance.com'
+    _testnet_api_url = 'https://testnet.binancefuture.com'
+
     order_url = '/fapi/v1/order'
 
     @classmethod
