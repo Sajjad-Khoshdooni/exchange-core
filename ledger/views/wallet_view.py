@@ -2,83 +2,66 @@ from rest_framework import serializers
 from rest_framework.generics import ListAPIView
 
 from ledger.models import Wallet, NetworkAsset
-from ledger.models.asset import AssetSerializerMini
+from ledger.models.asset import AssetSerializerMini, Asset
 from ledger.models.network import NetworkSerializer, Network
 from ledger.utils.price import get_all_assets_prices, get_tether_irt_price, get_trading_price
 
 
-class WalletSerializerBuilder(serializers.ModelSerializer):
+class AssetSerializer(serializers.ModelSerializer):
     balance = serializers.SerializerMethodField()
     balance_irt = serializers.SerializerMethodField()
     balance_usdt = serializers.SerializerMethodField()
     sell_price_irt = serializers.SerializerMethodField()
     buy_price_irt = serializers.SerializerMethodField()
-    networks = serializers.SerializerMethodField()
-    asset = AssetSerializerMini()
 
-    def get_symbol(self, wallet: Wallet):
-        return wallet.asset.symbol
+    def get_wallet(self, asset: Asset):
+        return self.context['asset_to_wallet'].get(asset.id)
 
-    def get_balance(self, wallet: Wallet):
-        return wallet.asset.get_presentation_amount(wallet.get_free())
+    def get_balance(self, asset: Asset):
+        wallet = self.get_wallet(asset)
 
-    def get_balance_usdt(self, wallet: Wallet):
+        if not wallet:
+            return '0'
+
+        return asset.get_presentation_amount(wallet.get_free())
+
+    def get_balance_usdt(self, asset: Asset):
+        wallet = self.get_wallet(asset)
+
+        if not wallet:
+            return '0'
+
         return str(int(wallet.get_free_usdt()))
 
-    def get_balance_irt(self, wallet: Wallet):
+    def get_balance_irt(self, asset: Asset):
+        wallet = self.get_wallet(asset)
+
+        if not wallet:
+            return '0'
+
         return str(int(wallet.get_free_irt()))
 
-    def get_sell_price_irt(self, wallet: Wallet):
-        return str(int(get_trading_price(wallet.asset.symbol, 'sell')))
+    def get_sell_price_irt(self, asset: Asset):
+        return str(int(get_trading_price(asset.symbol, 'sell')))
 
-    def get_buy_price_irt(self, wallet: Wallet):
-        return str(int(get_trading_price(wallet.asset.symbol, 'buy')))
-
-    def get_networks(self, wallet: Wallet):
-        network_ids = NetworkAsset.objects.filter(asset=wallet.asset).values_list('id', flat=True)
-        networks = Network.objects.filter(id__in=network_ids)
-        return NetworkSerializer(instance=networks, many=True).data
+    def get_buy_price_irt(self, asset: Asset):
+        return str(int(get_trading_price(asset.symbol, 'buy')))
 
     class Meta:
-        model = Wallet
-        fields = ()
-
-    @classmethod
-    def create_serializer(cls,  prices: bool = True):
-        fields = ('id', 'asset', 'balance')
-
-        if prices:
-            fields = (*fields, 'balance_irt', 'balance_usdt', 'sell_price_irt', 'buy_price_irt', 'networks')
-
-        class Serializer(cls):
-            pass
-
-        Serializer.Meta.fields = fields
-
-        return Serializer
+        model = Asset
+        fields = ('symbol', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt', 'buy_price_irt')
 
 
 class WalletView(ListAPIView):
+    serializer_class = AssetSerializer
+    
     def get_queryset(self):
-        return Wallet.objects.filter(account__user=self.request.user)
+        return Asset.objects.all()
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
 
-        if self.get_serializer_option('prices'):
-            ctx['prices'] = get_all_assets_prices()
-            ctx['tether_irt'] = get_tether_irt_price()
+        wallets = Wallet.objects.filter(account__user=self.request.user)
+        ctx['asset_to_wallet'] = {wallet.asset_id: wallet for wallet in wallets}
 
         return ctx
-
-    def get_serializer_option(self, key: str):
-        options = {
-            'prices': self.request.query_params.get('prices', '1') == '1'
-        }
-
-        return options[key]
-
-    def get_serializer_class(self):
-        return WalletSerializerBuilder.create_serializer(
-            prices=self.get_serializer_option('prices')
-        )

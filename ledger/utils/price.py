@@ -21,6 +21,9 @@ cache = TTLCache(maxsize=1000, ttl=10)
 def get_price(coin: str, exchange: str = EXCHANGE_BINANCE, market_symbol: str = MARKET_USDT,
               timedelta_multiplier: int = 1, now: datetime = None) -> Decimal:
 
+    if coin == 'USDT' and exchange == EXCHANGE_BINANCE:
+        return Decimal('1')
+
     _now = now
     if not now:
         _now = datetime.now()

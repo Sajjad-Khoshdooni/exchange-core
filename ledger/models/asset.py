@@ -79,6 +79,11 @@ class AssetSerializer(serializers.ModelSerializer):
 
 
 class AssetSerializerMini(serializers.ModelSerializer):
+    is_cash = serializers.SerializerMethodField()
+
+    def get_is_cash(self, asset: Asset):
+        return asset.is_cash()
+
     class Meta:
         model = Asset
-        fields = ('symbol', )
+        fields = ('symbol', 'is_cash')
