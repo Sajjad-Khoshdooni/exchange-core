@@ -1,3 +1,8 @@
 from django.contrib import admin
 
-# Register your models here.
+from provider import models
+
+
+@admin.register(models.ProviderOrder)
+class ProviderAdmin(admin.ModelAdmin):
+    list_display = ('created', 'asset', 'side', 'amount', 'order_id')

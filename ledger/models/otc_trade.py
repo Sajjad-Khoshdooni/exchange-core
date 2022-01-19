@@ -86,6 +86,13 @@ class OTCTrade(models.Model):
                 lock=lock
             )
 
+        otc_trade.hedge_and_finalize()
+
+        return otc_trade
+
+    def hedge_and_finalize(self):
+        conf = self.otc_request.get_trade_config()
+
         hedged = ProviderOrder.try_hedge_for_new_order(
             asset=conf.coin,
             side=conf.side,
@@ -94,8 +101,6 @@ class OTCTrade(models.Model):
 
         if hedged:
             with transaction.atomic():
-                otc_trade.change_status(cls.DONE)
-                otc_trade.create_ledger()
-                otc_trade.lock.release()
-
-        return otc_trade
+                self.change_status(self.DONE)
+                self.create_ledger()
+                self.lock.release()

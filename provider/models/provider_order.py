@@ -63,7 +63,16 @@ class ProviderOrder(models.Model):
         system_balance = system_wallet.get_balance()
 
         orders = ProviderOrder.objects.filter(asset=asset).values('side').annotate(amount=Sum('amount'))
-        orders_amount = orders.get(cls.BUY, 0) - orders.get(cls.SELL, 0)
+
+        orders_amount = 0
+
+        for order in orders:
+            amount = order.get('amount')
+
+            if order.get('side') == cls.SELL:
+                amount = -amount
+
+            orders_amount += amount
 
         return system_balance + orders_amount
 

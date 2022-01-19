@@ -34,22 +34,22 @@ class Wallet(models.Model):
     def get_free(self) -> Decimal:
         return self.get_balance() - self.get_locked()
 
-    def get_balance_usdt(self) -> Decimal:
+    def get_free_usdt(self) -> Decimal:
         from ledger.utils.price import get_tether_irt_price, get_price
 
         if self.asset.symbol == self.asset.IRT:
             tether_irt = get_tether_irt_price()
-            return self.get_balance() / tether_irt
+            return self.get_free() / tether_irt
 
-        return self.get_balance() * get_price(self.asset.symbol)
+        return self.get_free() * get_price(self.asset.symbol)
 
-    def get_balance_irt(self):
+    def get_free_irt(self):
         if self.asset.symbol == self.asset.IRT:
-            return self.get_balance()
+            return self.get_free()
 
         from ledger.utils.price import get_tether_irt_price
         tether_irt = get_tether_irt_price()
-        return self.get_balance_usdt() * tether_irt
+        return self.get_free_usdt() * tether_irt
 
     def can_buy(self, amount: Decimal, raise_exception: bool = False) -> bool:
         can = self.get_free() >= amount

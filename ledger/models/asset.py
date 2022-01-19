@@ -17,10 +17,7 @@ class Asset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
-    symbol = models.CharField(max_length=8, unique=True)
-    name = models.CharField(max_length=64)
-    name_fa = models.CharField(max_length=64)
-    image = models.FileField(upload_to='asset-logo/')
+    symbol = models.CharField(max_length=8, unique=True, db_index=True)
 
     trade_quantity_step = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
     min_trade_quantity = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
@@ -72,17 +69,16 @@ class Asset(models.Model):
 
         n_digits = int(-math.log10(Decimal(self.trade_quantity_step)))
         rounded = round(amount, n_digits)
-        return str(rounded).rstrip('0').rstrip('.')
+        return str(rounded).rstrip('0').rstrip('.') or '0'
 
 
 class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
-        fields = ('id', 'symbol', 'name', 'name_fa', 'image', 'trade_quantity_step', 'min_trade_quantity',
-                  'max_trade_quantity')
+        fields = ('symbol', 'trade_quantity_step', 'min_trade_quantity', 'max_trade_quantity')
 
 
 class AssetSerializerMini(serializers.ModelSerializer):
     class Meta:
         model = Asset
-        fields = ('id', 'symbol', 'name_fa', 'image')
+        fields = ('symbol', )

@@ -68,8 +68,8 @@ class OTCRequestSerializer(serializers.ModelSerializer):
             raise ValidationError(str(e))
 
         conf = otc_request.get_trade_config()
-        if conf.cash_amount < 300_000:
-            raise ValidationError('ارزش معامله باید حداقل 300,000 تومان باشد.')
+        if conf.cash_amount < 100_000:
+            raise ValidationError('ارزش معامله باید حداقل 100,000 تومان باشد.')
 
         from_wallet = from_asset.get_wallet(account)
         if not from_wallet.can_buy(otc_request.from_amount):

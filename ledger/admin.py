@@ -4,12 +4,12 @@ from ledger import models
 
 @admin.register(models.Asset)
 class AssetAdmin(admin.ModelAdmin):
-    list_display = ('symbol', 'name', 'name_fa')
+    list_display = ('symbol', )
 
 
 @admin.register(models.Network)
 class NetworkAdmin(admin.ModelAdmin):
-    list_display = ('symbol', 'name', 'name_fa', 'can_withdraw')
+    list_display = ('symbol', 'can_withdraw')
 
 
 @admin.register(models.NetworkAsset)
@@ -24,7 +24,22 @@ class NetworkWalletAdmin(admin.ModelAdmin):
 
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'from_asset', 'to_asset', 'to_price', 'to_amount', 'token')
+    list_display = ('created', 'account', 'from_asset', 'to_asset', 'to_price', 'from_amount', 'to_amount', 'token')
+
+    def get_from_amount(self, otc_request: models.OTCRequest):
+        return otc_request.from_asset.get_presentation_amount(otc_request.from_amount)
+
+    get_from_amount.short_description = 'from_amount'
+
+    def get_to_amount(self, otc_request: models.OTCRequest):
+        return otc_request.to_asset.get_presentation_amount(otc_request.to_amount)
+
+    get_to_amount.short_description = 'to_amount'
+
+    def get_to_price(self, otc_request: models.OTCRequest):
+        return otc_request.to_asset.get_presentation_amount(otc_request.to_price)
+
+    get_to_price.short_description = 'to_price'
 
 
 @admin.register(models.OTCTrade)
@@ -39,9 +54,15 @@ class TrxAdmin(admin.ModelAdmin):
 
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'asset', 'get_balance')
+    list_display = ('created', 'account', 'asset', 'get_free', 'get_locked')
+    list_filter = ('account', 'asset')
 
-    def get_balance(self, wallet: models.Wallet):
-        return float(wallet.get_balance())
+    def get_free(self, wallet: models.Wallet):
+        return float(wallet.get_free())
 
-    get_balance.short_description = 'balance'
+    get_free.short_description = 'free'
+
+    def get_locked(self, wallet: models.Wallet):
+        return float(wallet.get_locked())
+
+    get_locked.short_description = 'locked'

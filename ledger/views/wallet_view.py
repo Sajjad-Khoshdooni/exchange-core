@@ -20,13 +20,13 @@ class WalletSerializerBuilder(serializers.ModelSerializer):
         return wallet.asset.symbol
 
     def get_balance(self, wallet: Wallet):
-        return wallet.asset.get_presentation_amount(wallet.get_balance())
+        return wallet.asset.get_presentation_amount(wallet.get_free())
 
     def get_balance_usdt(self, wallet: Wallet):
-        return str(int(wallet.get_balance_usdt()))
+        return str(int(wallet.get_free_usdt()))
 
     def get_balance_irt(self, wallet: Wallet):
-        return str(int(wallet.get_balance_irt()))
+        return str(int(wallet.get_free_irt()))
 
     def get_sell_price_irt(self, wallet: Wallet):
         return str(int(get_trading_price(wallet.asset.symbol, 'sell')))
