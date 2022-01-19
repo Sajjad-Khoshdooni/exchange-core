@@ -93,11 +93,14 @@ class OTCTrade(models.Model):
     def hedge_and_finalize(self):
         conf = self.otc_request.get_trade_config()
 
-        hedged = ProviderOrder.try_hedge_for_new_order(
-            asset=conf.coin,
-            side=conf.side,
-            amount=conf.coin_amount
-        )
+        if conf.coin.symbol != 'USDT':
+            hedged = ProviderOrder.try_hedge_for_new_order(
+                asset=conf.coin,
+                side=conf.side,
+                amount=conf.coin_amount
+            )
+        else:
+            hedged = True
 
         if hedged:
             with transaction.atomic():
