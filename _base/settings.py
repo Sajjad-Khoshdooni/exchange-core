@@ -47,7 +47,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',  todo: uncomment me!
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -201,3 +201,6 @@ LOGGING = {
         },
     }
 }
+
+SESSION_COOKIE_DOMAIN = '.chavosh.org'
+CSRF_COOKIE_DOMAIN = '.chavosh.org'
