@@ -9,7 +9,7 @@ urlpatterns = [
     path('signup/init/', views.InitiateSignupView.as_view()),
     path('signup/', views.SignupView.as_view()),
 
-    path('verify/', views.VerifyOTPView.as_view()),
+    path('otp/verify/', views.VerifyOTPView.as_view()),
 
     path('user/', views.UserDetailView.as_view()),
 
