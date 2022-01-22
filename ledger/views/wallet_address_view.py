@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.response import Response
 
@@ -26,8 +25,8 @@ class WalletAddressView(RetrieveAPIView):
 
         network = get_object_or_404(Network, symbol=data['network'])
 
-        if not network.can_withdraw:
-            raise ValidationError({'network': 'withdraw is not supported'})
+        # if not network.can_withdraw:
+        #     raise ValidationError({'network': 'withdraw is not supported'})
 
         network_wallet = NetworkWallet.objects.filter(network=network, wallet=wallet).first()
 

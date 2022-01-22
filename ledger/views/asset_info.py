@@ -5,7 +5,7 @@ from rest_framework.generics import ListAPIView
 
 from ledger.models import Asset
 from ledger.models.asset import AssetSerializerMini
-from ledger.utils.price import get_all_assets_prices, get_tether_irt_price
+from ledger.utils.price import get_all_assets_prices, get_tether_irt_price, BUY
 
 
 class AssetSerializerBuilder(AssetSerializerMini):
@@ -69,8 +69,8 @@ class AssetsView(ListAPIView):
         ctx = super().get_serializer_context()
 
         if self.get_serializer_option('prices'):
-            ctx['prices'] = get_all_assets_prices()
-            ctx['tether_irt'] = get_tether_irt_price()
+            ctx['prices'] = get_all_assets_prices(BUY)
+            ctx['tether_irt'] = get_tether_irt_price(BUY)
 
             # yesterday = datetime.now() - timedelta(days=1)
             #
