@@ -15,6 +15,10 @@ from tracker.models import BlockTracker
 logger = logging.getLogger(__name__)
 
 
+INFURA_HTTPS_URL = 'https://rinkeby.infura.io/v3/3befd24cf53a4f889d632c3293c36d3e'
+INFURA_WSS_URL = 'wss://rinkeby.infura.io/ws/v3/3befd24cf53a4f889d632c3293c36d3e'
+
+
 class EthBlockConsumer:
     def __init__(self):
         self.loop = True
@@ -28,7 +32,7 @@ class EthBlockConsumer:
         signal.signal(signal.SIGQUIT, self.exit_gracefully)
 
         self.socket = websocket.WebSocket()
-        self.socket.connect('wss://mainnet.infura.io/ws/v3/3befd24cf53a4f889d632c3293c36d3e')
+        self.socket.connect(INFURA_WSS_URL)
 
         self.socket.send(json.dumps({"jsonrpc": "2.0", "id": 1, "method": "eth_subscribe", "params": ["newHeads"]}))
         subscription = self.socket.recv()
@@ -74,7 +78,7 @@ class EthBlockConsumer:
 
     def get_block_by_hash(self, block_hash: str, trx_info: bool = True):
         response = requests.post(
-            url='https://mainnet.infura.io/v3/3befd24cf53a4f889d632c3293c36d3e',
+            url=INFURA_HTTPS_URL,
             timeout=60,
             json={
                 "jsonrpc": "2.0",

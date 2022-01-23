@@ -39,10 +39,10 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         to_amount = attrs.get('to_amount')
 
         if not from_amount and not to_amount:
-            raise ValidationError('one amount should present')
+            raise ValidationError('یک مقدار باید وارد شود.')
 
         if from_amount and to_amount:
-            raise ValidationError('one amount should present')
+            raise ValidationError('یک مقدار باید وارد شود.')
 
         return attrs
 

@@ -28,7 +28,7 @@ class InitiateSignupView(APIView):
         phone = serializer.validated_data['phone']
 
         if User.objects.filter(phone=phone).exists():
-            return Response({'msg': 'user exists', 'code': 2})
+            raise ValidationError('شماره موبایل وارد شده در سیستم وجود دارد.')
 
         VerificationCode.send_otp_code(phone, VerificationCode.SCOPE_VERIFY_PHONE)
 
