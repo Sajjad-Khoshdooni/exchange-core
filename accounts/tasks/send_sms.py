@@ -19,7 +19,7 @@ sender = '100045195000'
 
 @shared_task(queue='sms')
 def send_verification_code_by_kavenegar(phone, code, created):
-    api_key = settings.KAVEHNEGAR_KEY
+    api_key = settings.KAVENEGAR_KEY
     _date, _time = change_datetime_to_jalali(created).split(' ')
 
     try:

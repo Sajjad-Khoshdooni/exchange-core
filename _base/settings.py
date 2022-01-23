@@ -83,6 +83,8 @@ CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv(), default='')
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', cast=Csv(), default='')
 CORS_ALLOW_CREDENTIALS = True
 
+KAVENEGAR_KEY = secret('KAVENEGAR_KEY')
+
 DATABASES = {
     'default': {
         'ENGINE': config('DEFAULT_DB_ENGINE', default='django.db.backends.postgresql_psycopg2'),
