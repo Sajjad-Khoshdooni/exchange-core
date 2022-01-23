@@ -22,7 +22,7 @@ class Transfer(models.Model):
         db_index=True
     )
 
-    lock = models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE)
+    lock = models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE, null=True, blank=True)
 
     trx_hash = models.CharField(max_length=128, db_index=True, unique=True)
     block_hash = models.CharField(max_length=128, db_index=True, unique=True, blank=True)
