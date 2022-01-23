@@ -83,7 +83,7 @@ def get_all_assets_prices(side: str, now: datetime = None):
 def get_trading_price(coin: str, side: str):
     assert coin != MARKET_IRT
 
-    other_side = get_other_side(side)
+    # other_side = get_other_side(side)
     diff = Decimal('0.005')
 
     if side == BUY:
@@ -91,6 +91,6 @@ def get_trading_price(coin: str, side: str):
     else:
         multiplier = 1 - diff
 
-    price = get_price(coin, other_side) * get_tether_irt_price(other_side)
+    price = get_price(coin, side) * get_tether_irt_price(side)
 
     return price * multiplier
