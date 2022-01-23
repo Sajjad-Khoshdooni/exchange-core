@@ -22,7 +22,8 @@ INFURA_WSS_URL = 'wss://rinkeby.infura.io/ws/v3/3befd24cf53a4f889d632c3293c36d3e
 class EthBlockConsumer:
     def __init__(self):
         self.loop = True
-        self.socket = None
+        self.subscription_id = None
+        self.socket = websocket.WebSocket()
 
         logger.info('Starting ETH Node')
 
@@ -31,12 +32,12 @@ class EthBlockConsumer:
         signal.signal(signal.SIGTERM, self.exit_gracefully)
         signal.signal(signal.SIGQUIT, self.exit_gracefully)
 
-        self.socket = websocket.WebSocket()
         self.socket.connect(INFURA_WSS_URL)
 
         self.socket.send(json.dumps({"jsonrpc": "2.0", "id": 1, "method": "eth_subscribe", "params": ["newHeads"]}))
-        subscription = self.socket.recv()
+        subscription = json.loads(self.socket.recv())
         logger.info('infura subscription: %s' % subscription)
+        self.subscription_id = subscription['result']
 
         start = datetime.now()
 
@@ -65,6 +66,10 @@ class EthBlockConsumer:
         to_handle_blocks = []
 
         for i in range(1000):
+
+            if not self.loop:
+                return
+
             logger.info('History query %s' % i)
             block = self.get_block_by_hash(parent_hash)
             to_handle_blocks.append(block)
@@ -91,13 +96,18 @@ class EthBlockConsumer:
         return response.json()['result']
 
     def exit_gracefully(self, signum, frame):
-        logger.info(f'{self.__class__.__name__} exited gracefully.')
         self.loop = False
 
-        logger.info('Closing socket')
+        if self.subscription_id:
+            logger.info('Unsubscribing...')
+            self.socket.send(json.dumps({"jsonrpc": "2.0", "id": 1, "method": "eth_unsubscribe", "params": [self.subscription_id]}))
 
-        if self.socket:
-            self.socket.close()
+        logger.info('Closing socket...')
+
+        self.socket.abort()
+        self.socket.close()
+
+        logger.info(f'{self.__class__.__name__} exited gracefully.')
 
         sys.exit()
 
