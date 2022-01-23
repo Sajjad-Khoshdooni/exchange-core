@@ -23,6 +23,9 @@ class NetworkAddress(models.Model):
                 self.address = get_network_address(self.network.symbol.lower(), self.id)
                 super(NetworkAddress, self).save(*args, **kwargs)
 
+        else:
+            super(NetworkAddress, self).save(*args, **kwargs)
+
     class Meta:
         unique_together = ('network', 'account')
 
