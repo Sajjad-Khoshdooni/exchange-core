@@ -18,9 +18,9 @@ class NetworkAssetAdmin(admin.ModelAdmin):
     list_display = ('network', 'asset', 'commission', 'min_transfer')
 
 
-@admin.register(models.NetworkWallet)
-class NetworkWalletAdmin(admin.ModelAdmin):
-    list_display = ('network', 'wallet', 'address', 'address_tag')
+@admin.register(models.NetworkAddress)
+class NetworkAddressAdmin(admin.ModelAdmin):
+    list_display = ('network', 'account', 'address')
 
 
 @admin.register(models.OTCRequest)

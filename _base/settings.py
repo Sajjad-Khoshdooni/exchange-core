@@ -204,7 +204,7 @@ LOGGING = {
     }
 }
 
-SESSION_COOKIE_DOMAIN = '.chavosh.org'
+# SESSION_COOKIE_DOMAIN = '.chavosh.org'
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
 

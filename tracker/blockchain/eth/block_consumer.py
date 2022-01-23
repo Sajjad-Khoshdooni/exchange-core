@@ -8,7 +8,7 @@ import requests
 import websocket
 from django.db import transaction
 
-from ledger.models import NetworkWallet
+from ledger.models import NetworkAddress
 from ledger.models.transfer import Transfer
 from tracker.models import BlockTracker
 
@@ -151,7 +151,7 @@ class EthBlockConsumer:
         # trx_hashes = {t['hash']: t for t in transactions}
 
         with transaction.atomic():
-            to_network_wallets = NetworkWallet.objects.filter(address__in=to_address_to_trx)
+            to_network_wallets = NetworkAddress.objects.filter(address__in=to_address_to_trx)
             for network_wallet in to_network_wallets:
                 trx_data = to_address_to_trx[network_wallet.address]
 

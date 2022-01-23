@@ -10,7 +10,7 @@ class Transfer(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
-    network_wallet = models.ForeignKey('ledger.NetworkWallet', on_delete=models.CASCADE)
+    network_wallet = models.ForeignKey('ledger.NetworkAddress', on_delete=models.CASCADE)
 
     amount = get_amount_field()
     deposit = models.BooleanField()
