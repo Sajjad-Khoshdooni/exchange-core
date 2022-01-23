@@ -51,7 +51,7 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
         position=0,
         type=side,
         timestamp=timestamp,
-        order_by=('symbol', 'position', '-timestamp'),
+        order_by=('symbol', '-timestamp'),
         distinct=('symbol',),
         values=('symbol', 'price')
     ).orders
