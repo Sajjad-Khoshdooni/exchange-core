@@ -204,5 +204,7 @@ LOGGING = {
     }
 }
 
-SESSION_COOKIE_DOMAIN = 'p.chavosh.org'
-CSRF_COOKIE_DOMAIN = 'p.chavosh.org'
+SESSION_COOKIE_DOMAIN = '.chavosh.org'
+SESSION_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_DOMAIN = '.chavosh.org'
+CSRF_COOKIE_SAMESITE = 'None'
