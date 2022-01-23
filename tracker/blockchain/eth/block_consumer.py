@@ -20,6 +20,8 @@ class EthBlockConsumer:
         self.loop = True
         self.socket = None
 
+        logger.info('Starting ETH Node')
+
     def consume(self, initial: bool = False):
         signal.signal(signal.SIGINT, self.exit_gracefully)
         signal.signal(signal.SIGTERM, self.exit_gracefully)
