@@ -151,12 +151,12 @@ class EthBlockConsumer:
         # trx_hashes = {t['hash']: t for t in transactions}
 
         with transaction.atomic():
-            to_network_wallets = NetworkAddress.objects.filter(address__in=to_address_to_trx)
-            for network_wallet in to_network_wallets:
-                trx_data = to_address_to_trx[network_wallet.address]
+            to_network_addresses = NetworkAddress.objects.filter(address__in=to_address_to_trx)
+            for network_address in to_network_addresses:
+                trx_data = to_address_to_trx[network_address.address]
 
                 Transfer.objects.create(
-                    network_wallet=network_wallet,
+                    network_address=network_address,
                     amount=int(trx_data['value'], 16),
                     deposit=True,
                     trx_hash=trx_data['hash'],

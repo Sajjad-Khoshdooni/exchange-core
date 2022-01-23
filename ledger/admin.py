@@ -67,3 +67,9 @@ class WalletAdmin(admin.ModelAdmin):
         return float(wallet.get_locked())
 
     get_locked.short_description = 'locked'
+
+
+@admin.register(models.Transfer)
+class TransferAdmin(admin.ModelAdmin):
+    list_display = ('created', 'amount', 'deposit', 'status', 'trx_hash', )
+
