@@ -7,6 +7,7 @@ from django.utils import timezone
 from accounts.models import Account
 from ledger.models import Asset, Order
 from ledger.utils.fields import get_amount_field
+from ledger.utils.price import get_other_side
 from ledger.utils.random import secure_uuid4
 from dataclasses import dataclass
 
@@ -60,7 +61,8 @@ class OTCRequest(models.Model):
         from ledger.utils.price import get_trading_price
 
         conf = self.get_trade_config()
-        trading_price = get_trading_price(conf.coin.symbol, conf.side)
+        other_side = get_other_side(conf.side)
+        trading_price = get_trading_price(conf.coin.symbol, other_side)
 
         if conf.side == 'sell':
             return 1 / trading_price
