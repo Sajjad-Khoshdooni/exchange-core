@@ -5,6 +5,7 @@ from django.db import models
 from rest_framework import serializers
 
 from accounts.models import Account
+from ledger.models import Wallet
 
 
 class InvalidAmount(Exception):
@@ -26,14 +27,13 @@ class Asset(models.Model):
     def __str__(self):
         return self.symbol
 
-    def get_wallet(self, account: Account):
-        from ledger.models import Wallet
+    def get_wallet(self, account: Account, market: str = Wallet.SPOT):
+        assert market in Wallet.MARKETS
 
         wallet, _ = Wallet.objects.get_or_create(
             asset=self,
             account=account,
-            defaults={
-            }
+            market=market,
         )
 
         return wallet

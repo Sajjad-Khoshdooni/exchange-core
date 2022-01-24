@@ -4,7 +4,6 @@ from decimal import Decimal
 from cachetools import TTLCache
 
 from collector.grpc_client import gRPCClient
-from ledger.models import Asset
 from ledger.utils.cache import ttl_cache
 
 cache = TTLCache(maxsize=1000, ttl=2)
@@ -72,6 +71,8 @@ def get_tether_irt_price(side: str,now: datetime = None) -> Decimal:
 
 
 def get_all_assets_prices(side: str, now: datetime = None):
+    from ledger.models import Asset
+
     prices = {}
 
     for asset in Asset.objects.all():

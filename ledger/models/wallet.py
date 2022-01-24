@@ -8,17 +8,27 @@ from ledger.utils.price import BUY, SELL
 
 
 class Wallet(models.Model):
+    SPOT, MARGIN = 's', 'm'
+    MARKETS = (SPOT, MARGIN)
+    MARKET_CHOICES = ((SPOT, 'spot'), (MARGIN, 'margin'))
+
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
     account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)
 
+    market = models.CharField(
+        max_length=1,
+        choices=MARKET_CHOICES,
+    )
+
     def __str__(self):
-        return 'Wallet %s [%s]' % (self.asset, self.account)
+        market_verbose = dict(self.MARKET_CHOICES)[self.market]
+        return '%s Wallet %s [%s]' % (market_verbose, self.asset, self.account)
 
     class Meta:
-        unique_together = [('account', 'asset')]
+        unique_together = [('account', 'asset', 'market')]
 
     def get_balance(self) -> Decimal:
         from ledger.models import Trx
