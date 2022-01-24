@@ -7,6 +7,8 @@ class Network(models.Model):
 
     can_withdraw = models.BooleanField(default=False)
 
+    minimum_block_to_confirm = models.IntegerField(default=0)
+
     def __str__(self):
         return self.symbol
 

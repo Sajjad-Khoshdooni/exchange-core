@@ -8,12 +8,12 @@ import requests
 import websocket
 from django.db import transaction
 
-from ledger.models import NetworkAddress
+from accounts.models import Account
+from ledger.models import NetworkAddress, Network, Trx, Asset
 from ledger.models.transfer import Transfer
 from tracker.models import BlockTracker
 
 logger = logging.getLogger(__name__)
-
 
 INFURA_HTTPS_URL = 'https://rinkeby.infura.io/v3/3befd24cf53a4f889d632c3293c36d3e'
 INFURA_WSS_URL = 'wss://rinkeby.infura.io/ws/v3/3befd24cf53a4f889d632c3293c36d3e'
@@ -66,7 +66,6 @@ class EthBlockConsumer:
         to_handle_blocks = []
 
         for i in range(1000):
-
             if not self.loop:
                 return
 
@@ -139,6 +138,7 @@ class EthBlockConsumer:
             raise Exception('number_diff > 1 received for block %s' % block_hash)
 
         self.handle_transactions(block)
+        self.handle_confirms(block)
 
         logger.info('Inserting block %d, %s' % (block_number, block_hash))
         BlockTracker.objects.create(number=block_number, hash=block_hash, block_date=block_date)
@@ -188,3 +188,30 @@ class EthBlockConsumer:
             #         block_number=block_number,
             #         out_address=trx_data['from']
             #     )
+
+    def handle_confirms(self, block: dict):
+        network_symbol = 'ETH'
+        asset = Asset.objects.get(symbol=network_symbol)
+        network = Network.objects.get(symbol=network_symbol)
+        block_number = int(block['number'], 16)
+
+        pending_transfers = Transfer.objects.filter(
+            block_number__lte=block_number - network.minimum_block_to_confirm,
+            status=Transfer.PENDING
+        )
+
+        for transfer in pending_transfers:
+            if not BlockTracker.has(transfer.block_hash):
+                transfer.status = Transfer.CANCELED
+                transfer.save()
+                continue
+
+            with transaction.atomic():
+                transfer.status = Transfer.DONE
+                transfer.save()
+                Trx.objects.create(
+                    group_id=transfer.group_id,
+                    sender=asset.get_wallet(Account.out()),
+                    receiver=asset.get_wallet(transfer.network_address.account),
+                    amount=transfer.amount,
+                )
