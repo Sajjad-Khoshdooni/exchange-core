@@ -50,7 +50,6 @@ class Asset(models.Model):
 
     def is_trade_amount_valid(self, amount: Decimal, raise_exception: bool = False):
         if raise_exception:
-            reason = None
             if amount < self.min_trade_quantity:
                 raise InvalidAmount('واحد وارد شده کوچک است.')
             elif amount > self.max_trade_quantity:

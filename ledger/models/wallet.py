@@ -5,6 +5,7 @@ from django.db.models import Sum
 
 from ledger.exceptions import InsufficientBalance
 from ledger.utils.price import BUY, SELL
+from ledger.utils.price import get_tether_irt_price, get_price
 
 
 class Wallet(models.Model):
@@ -46,8 +47,6 @@ class Wallet(models.Model):
         return self.get_balance() - self.get_locked()
 
     def get_free_usdt(self) -> Decimal:
-        from ledger.utils.price import get_tether_irt_price, get_price
-
         if self.asset.symbol == self.asset.IRT:
             tether_irt = get_tether_irt_price(SELL)
             return self.get_free() / tether_irt
