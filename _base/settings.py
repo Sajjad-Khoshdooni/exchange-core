@@ -169,8 +169,6 @@ REST_FRAMEWORK = {
 AUTH_USER_MODEL = 'accounts.User'
 AUTHENTICATION_BACKENDS = ('accounts.backends.AuthenticationBackend',)
 
-KAVENEGAR_KEY = secret('KAVENEGAR_KEY')
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -204,7 +202,7 @@ LOGGING = {
     }
 }
 
-# SESSION_COOKIE_DOMAIN = '.chavosh.org'
+SESSION_COOKIE_DOMAIN = '.chavosh.org'
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
 
