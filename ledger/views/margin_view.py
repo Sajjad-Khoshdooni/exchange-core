@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework import serializers
 
 from ledger.exceptions import InsufficientBalance
-from ledger.models import MarginTransfer, Asset
+from ledger.models import MarginTransfer, Asset, MarginLoan
 from ledger.utils.margin import get_margin_info
 
 
@@ -24,16 +24,8 @@ class MarginInfoView(APIView):
 
 class MarginTransferSerializer(serializers.ModelSerializer):
 
-    def validate(self, attrs):
-        symbol = attrs.pop('coin')
-        asset = get_object_or_404(Asset, symbol=symbol)
-
-        account = self.context['request'].user.account
-
-        return {**attrs, 'asset': asset, 'account': account}
-
     class Meta:
-        fields = ('coin', 'amount', 'type')
+        fields = ('amount', 'type')
         model = MarginTransfer
 
 
@@ -42,6 +34,23 @@ class MarginTransferView(CreateAPIView):
 
     def perform_create(self, serializer):
         try:
-            serializer.save()
+            serializer.save(account=self.request.user.account)
+        except InsufficientBalance:
+            raise ValidationError('موجودی کافی نیست.')
+
+
+class MarginLoanSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        fields = ('amount', 'type')
+        model = MarginLoan
+
+
+class MarginLoanView(CreateAPIView):
+    serializer_class = MarginLoanSerializer
+
+    def perform_create(self, serializer):
+        try:
+            serializer.save(account=self.request.user.account)
         except InsufficientBalance:
             raise ValidationError('موجودی کافی نیست.')

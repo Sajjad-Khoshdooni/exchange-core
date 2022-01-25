@@ -16,15 +16,14 @@ class NetworkAddress(models.Model):
 
     def save(self, *args, **kwargs):
 
-        if not self.id:
-            with transaction.atomic():
-                self.address = ''
-                super(NetworkAddress, self).save(*args, **kwargs)
-                self.address = get_network_address(self.network.symbol.lower(), self.id)
-                super(NetworkAddress, self).save(*args, **kwargs)
+        if not self.pk:
+            self.address = ''
+            super().save(*args, **kwargs)
+            self.address = get_network_address(self.network.symbol.lower(), self.pk)
+            self.save()
 
         else:
-            super(NetworkAddress, self).save(*args, **kwargs)
+            super().save(*args, **kwargs)
 
     class Meta:
         unique_together = ('network', 'account')

@@ -14,6 +14,7 @@ class InvalidAmount(Exception):
 
 class Asset(models.Model):
     IRT = 'IRT'
+    USDT = 'USDT'
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)

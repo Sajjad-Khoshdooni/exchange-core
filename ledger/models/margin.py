@@ -1,4 +1,3 @@
-from decimal import Decimal
 from uuid import uuid4
 
 from django.db import models, transaction
@@ -8,7 +7,6 @@ from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Wallet, Trx
 from ledger.utils.fields import get_amount_field
 from ledger.utils.margin import get_margin_info, get_margin_level
-
 
 TRANSFER_OUT_BLOCK_ML = 2
 BORROW_BLOCK_ML = 1.5
@@ -21,10 +19,9 @@ class MarginTransfer(models.Model):
     MARGIN_TO_SPOT = 'ms'
 
     created = models.DateTimeField(auto_now_add=True)
-    asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE)
 
-    amount = get_amount_field()
+    amount = models.PositiveIntegerField()
 
     type = models.CharField(
         max_length=2,
@@ -34,8 +31,10 @@ class MarginTransfer(models.Model):
     group_id = models.UUIDField(default=uuid4)
 
     def save(self, *args, **kwargs):
-        spot_wallet = self.asset.get_wallet(self.account, Wallet.SPOT)
-        margin_wallet = self.asset.get_wallet(self.account, Wallet.MARGIN)
+        asset = Asset.get(Asset.USDT)
+
+        spot_wallet = asset.get_wallet(self.account, Wallet.SPOT)
+        margin_wallet = asset.get_wallet(self.account, Wallet.MARGIN)
 
         if self.type == self.SPOT_TO_MARGIN:
             sender = spot_wallet
@@ -58,6 +57,55 @@ class MarginTransfer(models.Model):
         with transaction.atomic():
             self.lock = sender.lock_balance(self.amount)
             super(MarginTransfer, self).save(*args, **kwargs)
+
+        with transaction.atomic():
+            Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_TRANSFER)
+            self.lock.release()
+
+
+class MarginLoan(models.Model):
+
+    BORROW, REPAY = 'b', 'r'
+
+    created = models.DateTimeField(auto_now_add=True)
+    account = models.ForeignKey(to=Account, on_delete=models.CASCADE)
+
+    amount = models.PositiveIntegerField()
+
+    type = models.CharField(
+        max_length=1,
+        choices=((BORROW, 'borrow'), (REPAY, 'r')),
+    )
+
+    group_id = models.UUIDField(default=uuid4)
+
+    def save(self, *args, **kwargs):
+        asset = Asset.get(Asset.USDT)
+
+        margin_wallet = asset.get_wallet(self.account, Wallet.MARGIN)
+        borrow_wallet = asset.get_wallet(self.account, Wallet.BORROW)
+
+        if self.type == self.REPAY:
+            sender = borrow_wallet
+            receiver = margin_wallet
+
+        elif self.type == self.BORROW:
+            sender = margin_wallet
+            receiver = borrow_wallet
+
+            margin_info = get_margin_info(self.account)
+
+            future_total_borrow = margin_info.total_debt + self.amount
+            future_margin_level = get_margin_level(margin_info.total_assets, future_total_borrow)
+
+            if future_margin_level <= BORROW_BLOCK_ML:
+                raise InsufficientBalance
+        else:
+            raise NotImplementedError
+
+        with transaction.atomic():
+            self.lock = sender.lock_balance(self.amount)
+            super().save(*args, **kwargs)
 
         with transaction.atomic():
             Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_TRANSFER)

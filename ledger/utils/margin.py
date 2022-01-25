@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from accounts.models import Account
-from ledger.models import Wallet
+from ledger.models import Wallet, Asset
 from ledger.utils.price import SELL, BUY
 
 

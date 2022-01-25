@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Union
 from uuid import uuid4
 
 from django.db import models
@@ -11,6 +12,7 @@ class Trx(models.Model):
     TRADE = 't'
     TRANSFER = 'f'
     MARGIN_TRANSFER = 'm'
+    MARGIN_BORROW = 'b'
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -22,7 +24,8 @@ class Trx(models.Model):
 
     scope = models.CharField(
         max_length=1,
-        choices=((TRADE, 'trade'), (TRANSFER, 'transfer'), (MARGIN_TRANSFER, 'margin transfer'))
+        choices=((TRADE, 'trade'), (TRANSFER, 'transfer'), (MARGIN_TRANSFER, 'margin transfer'),
+                 (MARGIN_BORROW, 'margin borrow'))
     )
 
     def save(self, *args, **kwargs):
@@ -32,5 +35,5 @@ class Trx(models.Model):
         return super(Trx, self).save(*args, **kwargs)
 
     @classmethod
-    def transaction(cls, sender: Wallet, receiver: Wallet, amount: Decimal, scope: str):
+    def transaction(cls, sender: Wallet, receiver: Wallet, amount: Union[Decimal, int], scope: str):
         return Trx.objects.create(sender=sender, receiver=receiver, amount=amount, scope=scope)
