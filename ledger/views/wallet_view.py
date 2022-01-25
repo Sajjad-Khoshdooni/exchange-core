@@ -120,7 +120,8 @@ class WalletView(ModelViewSet):
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
 
-        wallets = Wallet.objects.filter(account__user=self.request.user)
+        market = self.get_market()
+        wallets = Wallet.objects.filter(account__user=self.request.user, market=market)
         ctx['asset_to_wallet'] = {wallet.asset_id: wallet for wallet in wallets}
 
         return ctx
@@ -133,3 +134,11 @@ class WalletView(ModelViewSet):
 
     def get_object(self):
         return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper())
+
+    def get_market(self) -> str:
+        mapping = {
+            'spot': Wallet.SPOT,
+            'margin': Wallet.MARGIN
+        }
+
+        return mapping.get(self.request.query_params.get('market'), Wallet.SPOT)

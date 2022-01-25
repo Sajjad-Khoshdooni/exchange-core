@@ -4,7 +4,7 @@ from ledger import models
 
 @admin.register(models.Asset)
 class AssetAdmin(admin.ModelAdmin):
-    list_display = ('id', 'symbol', )
+    list_display = ('symbol', )
     ordering = ('id', )
 
 
