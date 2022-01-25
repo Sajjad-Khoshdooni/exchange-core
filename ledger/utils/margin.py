@@ -12,10 +12,7 @@ class MarginInfo:
     total_assets: Decimal
 
     def get_margin_level(self) -> Decimal:
-        if self.total_debt == 0:
-            return Decimal(999)
-        else:
-            return self.total_assets / self.total_debt
+        return get_margin_level(self.total_assets, self.total_debt)
 
     def get_total_equity(self):
         return self.total_assets - self.total_debt
@@ -36,3 +33,10 @@ def get_margin_info(account: Account) -> MarginInfo:
         total_debt=total_debt,
         total_assets=total_assets
     )
+
+
+def get_margin_level(total_assets: Decimal, total_debt: Decimal):
+    if total_debt <= 0:
+        return Decimal(999)
+    else:
+        return total_assets / total_debt

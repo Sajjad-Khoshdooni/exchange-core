@@ -44,13 +44,15 @@ class OTCTrade(models.Model):
                     sender=from_asset.get_wallet(user),
                     receiver=from_asset.get_wallet(system),
                     amount=self.otc_request.from_amount,
-                    group_id=self.group_id
+                    group_id=self.group_id,
+                    scope=Trx.TRADE
                 ),
                 Trx(
                     sender=to_asset.get_wallet(system),
                     receiver=to_asset.get_wallet(user),
                     amount=self.otc_request.to_amount,
-                    group_id=self.group_id
+                    group_id=self.group_id,
+                    scope=Trx.TRADE
                 ),
             ])
     
@@ -73,18 +75,13 @@ class OTCTrade(models.Model):
         assert conf.coin.is_trade_amount_valid(conf.coin_amount)
 
         from_wallet = from_asset.get_wallet(account)
-        from_wallet.can_buy(otc_request.from_amount, raise_exception=True)  # use select for update for more guarantee!
 
-        with transaction.atomic():
-            lock = BalanceLock.objects.create(
-                wallet=from_wallet,
-                amount=otc_request.from_amount
-            )
+        lock = from_wallet.lock_balance(otc_request.from_amount)
 
-            otc_trade = OTCTrade.objects.create(
-                otc_request=otc_request,
-                lock=lock
-            )
+        otc_trade = OTCTrade.objects.create(
+            otc_request=otc_request,
+            lock=lock
+        )
 
         otc_trade.hedge_and_finalize()
 

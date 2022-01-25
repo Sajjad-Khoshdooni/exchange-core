@@ -9,3 +9,4 @@ from .order import Order
 from .otc_request import OTCRequest
 from .otc_trade import OTCTrade
 from .transfer import Transfer
+from .margin_transfer import MarginTransfer

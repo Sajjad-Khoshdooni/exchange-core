@@ -221,4 +221,5 @@ class EthBlockConsumer:
                     sender=asset.get_wallet(Account.out()),
                     receiver=asset.get_wallet(transfer.network_address.account),
                     amount=transfer.amount,
+                    scope=Trx.TRANSFER
                 )

@@ -72,7 +72,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
             raise ValidationError('ارزش معامله باید حداقل 100,000 تومان باشد.')
 
         from_wallet = from_asset.get_wallet(account)
-        if not from_wallet.can_buy(otc_request.from_amount):
+        if not from_wallet.has_balance(otc_request.from_amount):
             raise ValidationError({'amount': 'موجودی کافی نیست.'})
 
         otc_request.save()

@@ -88,7 +88,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
     def get_deposits(self, asset: Asset):
         wallet = self.get_wallet(asset)
-        deposits = Transfer.objects.filter(wallet=wallet, deposit=True)
+        deposits = Transfer.objects.filter(wallet=wallet, deposit=True, status=Transfer.DONE)
 
         return TransferSerializer(instance=deposits, many=True).data
 
