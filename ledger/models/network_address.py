@@ -31,8 +31,11 @@ class NetworkAddress(models.Model):
 
 
 class NetworkAddressSerializer(serializers.ModelSerializer):
-    network = NetworkSerializer()
+    network = serializers.SerializerMethodField()
+
+    def get_network(self, network_address: NetworkAddress):
+        return network_address.network.symbol
 
     class Meta:
         model = NetworkAddress
-        fields = '__all__'
+        fields = ('network', 'address')

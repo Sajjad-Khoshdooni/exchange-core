@@ -11,6 +11,7 @@ class Transfer(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
     network_address = models.ForeignKey('ledger.NetworkAddress', on_delete=models.CASCADE)
+    wallet = models.ForeignKey('ledger.Wallet', on_delete=models.CASCADE)
 
     amount = get_amount_field()
     deposit = models.BooleanField()
@@ -29,3 +30,6 @@ class Transfer(models.Model):
     block_number = models.PositiveIntegerField(null=True, blank=True)
 
     out_address = models.CharField(max_length=256)
+
+    def get_explorer_link(self) -> str:
+        return self.wallet.asset.explorer_link.format(hash=self.block_hash)

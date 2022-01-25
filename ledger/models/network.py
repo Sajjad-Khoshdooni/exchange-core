@@ -16,4 +16,4 @@ class Network(models.Model):
 class NetworkSerializer(serializers.ModelSerializer):
     class Meta:
         model = Network
-        fields = '__all__'
+        fields = ('symbol', )

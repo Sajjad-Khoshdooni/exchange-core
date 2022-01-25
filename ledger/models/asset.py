@@ -24,6 +24,8 @@ class Asset(models.Model):
     min_trade_quantity = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
     max_trade_quantity = models.DecimalField(max_digits=15, decimal_places=5, default=1e9)
 
+    explorer_link = models.CharField(max_length=128, blank=True)
+
     def __str__(self):
         return self.symbol
 

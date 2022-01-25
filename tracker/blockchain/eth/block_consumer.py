@@ -146,6 +146,7 @@ class EthBlockConsumer:
     def handle_transactions(self, block: dict):
         block_hash = block['hash']
         block_number = int(block['number'], 16)
+        asset = Asset.objects.get(symbol='ETH')
 
         if 'transactions' not in block:
             logger.info('re fetch block to access transactions %s' % block_number)
@@ -167,6 +168,7 @@ class EthBlockConsumer:
 
                 Transfer.objects.create(
                     network_address=network_address,
+                    wallet=asset.get_wallet(network_address.account),
                     amount=int(trx_data['value'], 16),
                     deposit=True,
                     trx_hash=trx_data['hash'],

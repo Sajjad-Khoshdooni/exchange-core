@@ -21,7 +21,7 @@ class DepositAddressView(RetrieveAPIView):
 
         network = get_object_or_404(Network, symbol=data['network'])
 
-        network_address = NetworkAddress.objects.get_or_create(account=request.user.account, network=network)
+        network_address, _ = NetworkAddress.objects.get_or_create(account=request.user.account, network=network)
 
         serializer = NetworkAddressSerializer(instance=network_address)
         return Response(data=serializer.data)

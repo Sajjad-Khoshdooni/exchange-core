@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.models import Wallet
+from ledger.models import Wallet, NetworkAddress, Transfer, OTCTrade
 from ledger.models.asset import Asset
 from ledger.utils.price import get_trading_price
 
@@ -57,19 +57,61 @@ class AssetListSerializer(serializers.ModelSerializer):
         fields = ('symbol', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt', 'buy_price_irt')
 
 
+class TransferSerializer(serializers.ModelSerializer):
+    link = serializers.SerializerMethodField()
+
+    def get_link(self, transfer: Transfer):
+        return transfer.get_explorer_link()
+
+    class Meta:
+        model = Transfer
+        fields = ('created', 'amount', 'status', 'link')
+
+
 class AssetRetrieveSerializer(AssetListSerializer):
 
     networks = serializers.SerializerMethodField()
+    deposits = serializers.SerializerMethodField()
+    trades = serializers.SerializerMethodField()
 
     def get_networks(self, asset: Asset):
         networks = list(asset.networkasset_set.all().values('network__symbol', 'commission'))
+
+        account = self.context['request'].user.account
+        addresses = dict(NetworkAddress.objects.filter(account=account).values_list('network__symbol', 'address'))
+
         return [{
             'network': net['network__symbol'],
-            'commission': asset.get_presentation_amount(net['commission'])
+            'commission': asset.get_presentation_amount(net['commission']),
+            'address': addresses.get(net['network__symbol'])
         } for net in networks]
 
+    def get_deposits(self, asset: Asset):
+        wallet = self.get_wallet(asset)
+        deposits = Transfer.objects.filter(wallet=wallet, deposit=True)
+
+        return TransferSerializer(instance=deposits, many=True).data
+
+    def get_trades(self, asset: Asset):
+        wallet = self.get_wallet(asset)
+        trades = OTCTrade.objects.filter(lock__wallet=wallet)
+        result = []
+
+        for trade in trades:
+            config = trade.otc_request.get_trade_config()
+
+            result.append({
+                'created': trade.created,
+                'side': config.side,
+                'amount': config.coin_amount,
+                'pair': config.cash.symbol,
+                'pair_amount': config.cash_amount
+            })
+
+        return result
+
     class Meta(AssetListSerializer.Meta):
-        fields = (*AssetListSerializer.Meta.fields, 'networks')
+        fields = (*AssetListSerializer.Meta.fields, 'networks', 'deposits', 'trades')
 
 
 class WalletView(ModelViewSet):
