@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator
 from django.db import models
 from rest_framework import serializers
 
@@ -7,7 +8,7 @@ class Network(models.Model):
 
     can_withdraw = models.BooleanField(default=False)
 
-    minimum_block_to_confirm = models.IntegerField(default=0)
+    minimum_block_to_confirm = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1)])
 
     def __str__(self):
         return self.symbol

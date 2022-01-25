@@ -142,10 +142,11 @@ class EthBlockConsumer:
             raise Exception('number_diff > 1 received for block %s' % block_hash)
 
         self.handle_transactions(block)
-        self.handle_confirms(block)
 
         logger.info('Inserting block %d, %s' % (block_number, block_hash))
         BlockTracker.objects.create(number=block_number, hash=block_hash, block_date=block_date)
+
+        self.handle_confirms(block)
 
     def handle_transactions(self, block: dict):
         block_hash = block['hash']
