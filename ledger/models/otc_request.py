@@ -58,11 +58,11 @@ class OTCRequest(models.Model):
             raise NotImplementedError
 
     def get_to_price(self):
-        from ledger.utils.price import get_trading_price
+        from ledger.utils.price import get_trading_price_irt
 
         conf = self.get_trade_config()
         other_side = get_other_side(conf.side)
-        trading_price = get_trading_price(conf.coin.symbol, other_side)
+        trading_price = get_trading_price_irt(conf.coin.symbol, other_side)
 
         if conf.side == 'sell':
             return 1 / trading_price

@@ -11,4 +11,6 @@ urlpatterns = [
 
     path('v1/trade/otc/request/', views.OTCTradeRequestView.as_view()),
     path('v1/trade/otc/', views.OTCTradeView.as_view()),
+
+    path('v1/margin/info/', views.MarginInfoView.as_view()),
 ]

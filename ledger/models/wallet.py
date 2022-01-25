@@ -4,14 +4,14 @@ from django.db import models
 from django.db.models import Sum
 
 from ledger.exceptions import InsufficientBalance
-from ledger.utils.price import BUY, SELL
-from ledger.utils.price import get_tether_irt_price, get_price
+from ledger.utils.price import BUY, SELL, get_trading_price_irt
+from ledger.utils.price import get_tether_irt_price
 
 
 class Wallet(models.Model):
-    SPOT, MARGIN = 's', 'm'
-    MARKETS = (SPOT, MARGIN)
-    MARKET_CHOICES = ((SPOT, 'spot'), (MARGIN, 'margin'))
+    SPOT, MARGIN, BORROW = 's', 'm', 'b'
+    MARKETS = (SPOT, MARGIN, BORROW)
+    MARKET_CHOICES = ((SPOT, 'spot'), (MARGIN, 'margin'), (BORROW, 'borrow'))
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -51,7 +51,7 @@ class Wallet(models.Model):
             tether_irt = get_tether_irt_price(SELL)
             return self.get_free() / tether_irt
 
-        return self.get_free() * get_price(self.asset.symbol, BUY)
+        return self.get_free() * get_trading_price_irt(self.asset.symbol, BUY)
 
     def get_free_irt(self):
         if self.asset.symbol == self.asset.IRT:

@@ -4,7 +4,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Wallet, NetworkAddress, Transfer, OTCTrade
 from ledger.models.asset import Asset
-from ledger.utils.price import get_trading_price
+from ledger.utils.price import get_trading_price_irt
 
 
 class AssetListSerializer(serializers.ModelSerializer):
@@ -44,13 +44,13 @@ class AssetListSerializer(serializers.ModelSerializer):
     def get_sell_price_irt(self, asset: Asset):
         if asset.is_cash():
             return ''
-        return str(int(get_trading_price(asset.symbol, 'sell')))
+        return str(int(get_trading_price_irt(asset.symbol, 'sell')))
 
     def get_buy_price_irt(self, asset: Asset):
         if asset.is_cash():
             return ''
 
-        return str(int(get_trading_price(asset.symbol, 'buy')))
+        return str(int(get_trading_price_irt(asset.symbol, 'buy')))
 
     class Meta:
         model = Asset
@@ -134,6 +134,14 @@ class WalletView(ModelViewSet):
 
     def get_object(self):
         return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper())
+
+    def get_queryset(self):
+        queryset = super(WalletView, self).get_queryset()
+
+        if self.get_market() == Wallet.MARGIN:
+            return queryset.exclude(symbol=Asset.IRT)
+        else:
+            return queryset
 
     def get_market(self) -> str:
         mapping = {

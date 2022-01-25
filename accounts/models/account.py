@@ -1,5 +1,9 @@
+from decimal import Decimal
+
 from django.db import models
+
 from accounts.models import User
+from ledger.utils.price import get_trading_price_usdt
 
 
 class Account(models.Model):
@@ -32,6 +36,20 @@ class Account(models.Model):
             return 'out'
         else:
             return str(self.user)
+
+    def get_total_balance_usdt(self, market: str, side: str):
+        from ledger.models import Wallet
+
+        wallets = Wallet.objects.filter(account=self, market=market)
+
+        total = Decimal('0')
+
+        for wallet in wallets:
+            balance = wallet.get_balance()
+            if balance >= 0:
+                total += balance * get_trading_price_usdt(wallet.asset.symbol, side)
+
+        return total
 
     def save(self, *args, **kwargs):
         super(Account, self).save(*args, **kwargs)
