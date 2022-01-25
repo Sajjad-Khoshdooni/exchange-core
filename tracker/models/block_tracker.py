@@ -3,7 +3,7 @@ from django.db import models
 
 class BlockTracker(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    number = models.PositiveIntegerField(db_index=True)
+    number = models.PositiveIntegerField(db_index=True, unique=True)
     hash = models.CharField(max_length=128, unique=True, db_index=True)
     block_date = models.DateTimeField()
 
