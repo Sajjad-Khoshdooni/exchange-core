@@ -6,7 +6,7 @@ from ledger.utils.fields import get_amount_field
 
 
 class Transfer(models.Model):
-    PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
+    PENDING, CANCELED, REVERTED, DONE = 'pending', 'canceled', 'reverted', 'done'
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)

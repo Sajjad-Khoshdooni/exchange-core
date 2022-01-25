@@ -11,6 +11,7 @@ from django.db import transaction
 from accounts.models import Account
 from ledger.models import NetworkAddress, Network, Trx, Asset
 from ledger.models.transfer import Transfer
+from tracker.blockchain.eth.reverter import ETHReverter
 from tracker.models import BlockTracker
 
 logger = logging.getLogger(__name__)
@@ -77,6 +78,7 @@ class EthBlockConsumer:
             if BlockTracker.has(parent_hash):
                 break
 
+        ETHReverter().from_number(int(block['number'], 16))
         for block in reversed(to_handle_blocks):
             self.handle_new_block(block)
 
@@ -99,7 +101,8 @@ class EthBlockConsumer:
 
         if self.subscription_id:
             logger.info('Unsubscribing...')
-            self.socket.send(json.dumps({"jsonrpc": "2.0", "id": 1, "method": "eth_unsubscribe", "params": [self.subscription_id]}))
+            self.socket.send(
+                json.dumps({"jsonrpc": "2.0", "id": 1, "method": "eth_unsubscribe", "params": [self.subscription_id]}))
 
         logger.info('Closing socket...')
 
@@ -129,6 +132,7 @@ class EthBlockConsumer:
             number_diff = 1
 
         if number_diff < 1:
+            ETHReverter().from_number(int(block['number'], 16))
             # chain reorg condition
             logger.info('reorg handling')
             pass
