@@ -21,6 +21,8 @@ class Account(models.Model):
         unique=True
     )
 
+    last_margin_warn = models.DateTimeField(null=True, blank=True)
+
     @classmethod
     def system(cls) -> 'Account':
         return Account.objects.get(type=cls.SYSTEM)

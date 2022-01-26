@@ -3,7 +3,8 @@ from uuid import uuid4
 from django.db import models, transaction
 
 from accounts.models import Account
-from ledger.models import OTCRequest, Trx, BalanceLock
+from ledger.models import OTCRequest, Trx, BalanceLock, Asset
+from ledger.utils.fields import get_lock_field, get_status_field
 from provider.models import ProviderOrder
 
 
@@ -25,7 +26,7 @@ class OTCTrade(models.Model):
         choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)]
     )
 
-    lock = models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE)
+    lock = get_lock_field()
 
     def change_status(self, status: str):
         self.status = status
@@ -90,7 +91,7 @@ class OTCTrade(models.Model):
     def hedge_and_finalize(self):
         conf = self.otc_request.get_trade_config()
 
-        if conf.coin.symbol != 'USDT':
+        if conf.coin.symbol != Asset.USDT:
             hedged = ProviderOrder.try_hedge_for_new_order(
                 asset=conf.coin,
                 side=conf.side,

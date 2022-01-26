@@ -6,13 +6,13 @@ from rest_framework import serializers
 
 from ledger.exceptions import InsufficientBalance
 from ledger.models import MarginTransfer, Asset, MarginLoan
-from ledger.utils.margin import get_margin_info
+from ledger.utils.margin import MarginInfo
 
 
 class MarginInfoView(APIView):
     def get(self, request):
         account = request.user.account
-        margin_info = get_margin_info(account)
+        margin_info = MarginInfo.get(account)
 
         return Response({
             'total_assets': margin_info.total_assets,
@@ -40,9 +40,19 @@ class MarginTransferView(CreateAPIView):
 
 
 class MarginLoanSerializer(serializers.ModelSerializer):
+    coin = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        coin = attrs.get('coin')
+        asset = get_object_or_404(Asset, symbol=coin)
+
+        return {
+            **attrs,
+            'asset': asset
+        }
 
     class Meta:
-        fields = ('amount', 'type')
+        fields = ('amount', 'type', 'coin')
         model = MarginLoan
 
 

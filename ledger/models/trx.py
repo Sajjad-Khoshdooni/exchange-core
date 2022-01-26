@@ -31,6 +31,7 @@ class Trx(models.Model):
     def save(self, *args, **kwargs):
         assert self.sender.asset == self.receiver.asset
         assert self.sender != self.receiver
+        assert self.amount > 0
 
         return super(Trx, self).save(*args, **kwargs)
 
