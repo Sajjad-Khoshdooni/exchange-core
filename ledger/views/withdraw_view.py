@@ -13,12 +13,11 @@ class WithdrawSerializer(serializers.ModelSerializer):
         account = self.context['request'].user.account
         asset = get_object_or_404(Asset, symbol=attrs['coin'])
         network = get_object_or_404(Network, symbol=attrs['network'])
-        deposit_address = network.get_deposit_address(account)
 
         return {
             'deposit': False,
             'network': network,
-            'wallet': asset.get_wallet(deposit_address.account),
+            'wallet': asset.get_wallet(account),
             'amount': attrs['amount'],
             'out_address': attrs['address']
         }
