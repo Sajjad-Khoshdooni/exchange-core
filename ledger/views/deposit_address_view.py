@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.response import Response
 
-from ledger.models import NetworkAddress, Asset, Network
+from ledger.models import NetworkAddress, Network
 from ledger.models.network_address import NetworkAddressSerializer
 
 

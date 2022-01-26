@@ -5,7 +5,7 @@ from django.db import models
 from django.utils import timezone
 
 from accounts.models import Account
-from ledger.models import Asset, Order
+from ledger.models import Asset, Order, Wallet
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_other_side
 from ledger.utils.random import secure_uuid4
@@ -34,6 +34,12 @@ class OTCRequest(models.Model):
     to_amount = get_amount_field()
     from_amount = get_amount_field()
     to_price = get_amount_field()
+
+    market = models.CharField(
+        max_length=1,
+        default=Wallet.SPOT,
+        choices=((Wallet.SPOT, 'spot'), (Wallet.MARGIN, 'margin')),
+    )
 
     def get_trade_config(self) -> TradeConfig:
         if self.from_asset.symbol == Asset.IRT:

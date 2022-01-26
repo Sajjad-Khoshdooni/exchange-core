@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.db import models
 from django.db.models import Sum
 
-from ledger.exceptions import InsufficientBalance
+from ledger.exceptions import InsufficientBalance, InsufficientDebt
 from ledger.models import BalanceLock
 from ledger.utils.price import BUY, SELL, get_trading_price_irt
 from ledger.utils.price import get_tether_irt_price
@@ -47,15 +47,9 @@ class Wallet(models.Model):
     def lock_balance(self, amount: Decimal) -> BalanceLock:
         assert amount > 0
 
-        lock = BalanceLock.objects.create(wallet=self, amount=amount)
+        self.has_balance(amount, raise_exception=True)
 
-        try:
-            self.has_balance(amount, raise_exception=True)
-        except Exception:
-            lock.release()
-            raise
-
-        return lock
+        return BalanceLock.objects.create(wallet=self, amount=amount)
 
     def get_free(self) -> Decimal:
         return self.get_balance() - self.get_locked()
@@ -76,9 +70,23 @@ class Wallet(models.Model):
         return self.get_free_usdt() * tether_irt
 
     def has_balance(self, amount: Decimal, raise_exception: bool = False) -> bool:
-        can = self.get_free() >= amount
+        if amount < 0:
+            can = False
+        else:
+            can = self.get_free() >= amount
 
         if raise_exception and not can:
             raise InsufficientBalance()
+
+        return can
+
+    def has_debt(self, amount: Decimal, raise_exception: bool = False) -> bool:
+        if amount > 0:
+            can = False
+        else:
+            can = -self.get_free() >= -amount
+
+        if raise_exception and not can:
+            raise InsufficientDebt()
 
         return can

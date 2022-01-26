@@ -60,6 +60,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
             account=account,
             from_asset=from_asset,
             to_asset=to_asset,
+            market=validated_data.get('market'),
         )
 
         try:
@@ -71,7 +72,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         if conf.cash_amount < 100_000:
             raise ValidationError('ارزش معامله باید حداقل 100,000 تومان باشد.')
 
-        from_wallet = from_asset.get_wallet(account)
+        from_wallet = from_asset.get_wallet(account, otc_request.market)
         if not from_wallet.has_balance(otc_request.from_amount):
             raise ValidationError({'amount': 'موجودی کافی نیست.'})
 
@@ -91,7 +92,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OTCRequest
-        fields = ('from_asset', 'to_asset', 'from_amount', 'to_amount', 'token', 'price', 'expire')
+        fields = ('from_asset', 'to_asset', 'from_amount', 'to_amount', 'token', 'price', 'expire', 'market')
         read_only_fields = ('token', 'price')
 
 
