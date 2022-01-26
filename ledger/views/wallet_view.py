@@ -147,7 +147,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
             result.append({
                 'created': trade.created,
                 'side': config.side,
-                'amount': config.coin_amount,
+                'amount': config.cash.get_presentation_amount(config.coin_amount),
                 'pair': config.cash.symbol,
                 'pair_amount': config.cash.get_presentation_amount(config.cash_amount)
             })
