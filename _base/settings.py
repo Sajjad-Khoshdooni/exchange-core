@@ -53,8 +53,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-if DEBUG:
-    MIDDLEWARE.insert(0, 'accounts.middleware.DisableCsrfCheck')
+MIDDLEWARE.insert(0, 'accounts.middleware.DisableCsrfCheck')
+MIDDLEWARE.remove('django.middleware.csrf.CsrfViewMiddleware')
 
 ROOT_URLCONF = '_base.urls'
 
