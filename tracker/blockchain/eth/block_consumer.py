@@ -9,7 +9,7 @@ import websocket
 from django.db import transaction
 
 from accounts.models import Account
-from ledger.models import NetworkAddress, Network, Trx, Asset
+from ledger.models import DepositAddress, Network, Trx, Asset, AddressSchema
 from ledger.models.transfer import Transfer
 from tracker.blockchain.eth.reverter import ETHReverter
 from tracker.models import BlockTracker
@@ -167,13 +167,17 @@ class EthBlockConsumer:
         # trx_hashes = {t['hash']: t for t in transactions}
 
         with transaction.atomic():
-            to_network_addresses = NetworkAddress.objects.filter(address__in=to_address_to_trx)
-            for network_address in to_network_addresses:
-                trx_data = to_address_to_trx[network_address.address]
+            to_deposit_addresses = DepositAddress.objects.filter(
+                schema__symbol=AddressSchema.ETH,
+                address__in=to_address_to_trx
+            )
+
+            for deposit_address in to_deposit_addresses:
+                trx_data = to_address_to_trx[deposit_address.address]
 
                 Transfer.objects.create(
-                    network_address=network_address,
-                    wallet=asset.get_wallet(network_address.account),
+                    deposit_address=deposit_address,
+                    wallet=asset.get_wallet(deposit_address.account),
                     amount=int(trx_data['value'], 16),
                     deposit=True,
                     trx_hash=trx_data['hash'],
@@ -219,7 +223,7 @@ class EthBlockConsumer:
                 Trx.objects.create(
                     group_id=transfer.group_id,
                     sender=asset.get_wallet(Account.out()),
-                    receiver=asset.get_wallet(transfer.network_address.account),
+                    receiver=asset.get_wallet(transfer.deposit_address.account),
                     amount=transfer.amount,
                     scope=Trx.TRANSFER
                 )

@@ -28,8 +28,8 @@ class OTCRequest(models.Model):
     token = models.UUIDField(default=secure_uuid4, db_index=True)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE)
 
-    from_asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE, related_name='from_selfs')
-    to_asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE, related_name='to_selfs')
+    from_asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE, related_name='from_otc_requests')
+    to_asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE, related_name='to_otc_requests')
 
     to_amount = get_amount_field()
     from_amount = get_amount_field()

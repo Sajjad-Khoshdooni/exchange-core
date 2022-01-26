@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.models import Wallet, NetworkAddress, Transfer, OTCTrade
+from ledger.models import Wallet, DepositAddress, Transfer, OTCTrade, NetworkAsset
 from ledger.models.asset import Asset
 from ledger.utils.price import get_trading_price_irt
 
@@ -65,32 +65,72 @@ class TransferSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transfer
-        fields = ('created', 'amount', 'status', 'link')
+        fields = ('created', 'amount', 'status', 'link', 'out_address')
+
+
+class NetworkAssetSerializer(serializers.ModelSerializer):
+    network = serializers.SerializerMethodField()
+    address = serializers.SerializerMethodField()
+    can_deposit = serializers.SerializerMethodField()
+    can_withdraw = serializers.SerializerMethodField()
+
+    withdraw_commission = serializers.SerializerMethodField()
+    min_withdraw = serializers.SerializerMethodField()
+
+    def get_network(self, network_asset: NetworkAsset):
+        return network_asset.network.symbol
+
+    def get_can_deposit(self, network_asset: NetworkAsset):
+        return network_asset.network.can_deposit
+
+    def get_can_withdraw(self, network_asset: NetworkAsset):
+        return network_asset.network.can_withdraw
+
+    def get_address(self, network_asset: NetworkAsset):
+        addresses = self.context['addresses']
+        return addresses.get(network_asset.network.schema.symbol)
+
+    def get_min_withdraw(self, network_asset: NetworkAsset):
+        return network_asset.asset.get_presentation_amount(network_asset.min_withdraw)
+
+    def get_withdraw_commission(self, network_asset: NetworkAsset):
+        return network_asset.asset.get_presentation_amount(network_asset.withdraw_commission)
+
+    class Meta:
+        fields = ('network', 'address', 'can_deposit', 'can_withdraw', 'withdraw_commission', 'min_withdraw')
+        model = NetworkAsset
 
 
 class AssetRetrieveSerializer(AssetListSerializer):
 
     networks = serializers.SerializerMethodField()
+    withdraws = serializers.SerializerMethodField()
     deposits = serializers.SerializerMethodField()
     trades = serializers.SerializerMethodField()
 
     def get_networks(self, asset: Asset):
-        networks = list(asset.networkasset_set.all().values('network__symbol', 'commission'))
+        network_assets = asset.networkasset_set.all()
 
         account = self.context['request'].user.account
-        addresses = dict(NetworkAddress.objects.filter(account=account).values_list('network__symbol', 'address'))
+        addresses = dict(DepositAddress.objects.filter(account=account).values_list('schema__symbol', 'address'))
 
-        return [{
-            'network': net['network__symbol'],
-            'commission': asset.get_presentation_amount(net['commission']),
-            'address': addresses.get(net['network__symbol'])
-        } for net in networks]
+        serializer = NetworkAssetSerializer(network_assets, many=True, context={
+            'addresses': addresses,
+        })
+
+        return serializer.data
 
     def get_deposits(self, asset: Asset):
         wallet = self.get_wallet(asset)
         deposits = Transfer.objects.filter(wallet=wallet, deposit=True, status=Transfer.DONE)
 
         return TransferSerializer(instance=deposits, many=True).data
+
+    def get_withdraws(self, asset: Asset):
+        wallet = self.get_wallet(asset)
+        withdraws = Transfer.objects.filter(wallet=wallet, deposit=False)
+
+        return TransferSerializer(instance=withdraws, many=True).data
 
     def get_trades(self, asset: Asset):
         wallet = self.get_wallet(asset)
@@ -111,7 +151,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
         return result
 
     class Meta(AssetListSerializer.Meta):
-        fields = (*AssetListSerializer.Meta.fields, 'networks', 'deposits', 'trades')
+        fields = (*AssetListSerializer.Meta.fields, 'networks', 'deposits', 'withdraws', 'trades')
 
 
 class WalletView(ModelViewSet):

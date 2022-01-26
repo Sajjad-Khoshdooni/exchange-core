@@ -9,6 +9,8 @@ urlpatterns = [
     path('v1/wallets/<slug:symbol>/', views.WalletView.as_view({'get': 'retrieve'})),
     path('v1/deposit/address/', views.DepositAddressView.as_view()),
 
+    path('v1/withdraw/', views.WithdrawView.as_view()),
+
     path('v1/trade/otc/request/', views.OTCTradeRequestView.as_view()),
     path('v1/trade/otc/', views.OTCTradeView.as_view()),
 

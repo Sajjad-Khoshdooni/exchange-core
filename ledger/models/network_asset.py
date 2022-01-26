@@ -6,8 +6,8 @@ from ledger.utils.fields import COMMISSION_MAX_DIGITS, AMOUNT_DECIMAL_PLACES, ge
 class NetworkAsset(models.Model):
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)
     network = models.ForeignKey('ledger.Network', on_delete=models.PROTECT)
-    commission = get_amount_field(max_digits=COMMISSION_MAX_DIGITS)
-    min_transfer = get_amount_field(max_digits=COMMISSION_MAX_DIGITS)
+    withdraw_commission = get_amount_field(max_digits=COMMISSION_MAX_DIGITS, default=0)
+    min_withdraw = get_amount_field(max_digits=COMMISSION_MAX_DIGITS)
 
     def __str__(self):
         return '%s - %s' % (self.network, self.asset)
