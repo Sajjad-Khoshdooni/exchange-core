@@ -59,9 +59,13 @@ class AssetListSerializer(serializers.ModelSerializer):
 
 class TransferSerializer(serializers.ModelSerializer):
     link = serializers.SerializerMethodField()
+    amount = serializers.SerializerMethodField()
 
     def get_link(self, transfer: Transfer):
         return transfer.get_explorer_link()
+
+    def get_amount(self, transfer: Transfer):
+        return transfer.wallet.asset.get_presentation_amount(transfer.amount)
 
     class Meta:
         model = Transfer
