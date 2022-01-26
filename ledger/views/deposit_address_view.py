@@ -2,8 +2,7 @@ from rest_framework import serializers
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.response import Response
 
-from ledger.models import NetworkAddress, Asset, Network
-from ledger.models.network_address import NetworkAddressSerializer
+from ledger.models import Network
 
 
 class InputAddressSerializer(serializers.Serializer):
@@ -21,7 +20,8 @@ class DepositAddressView(RetrieveAPIView):
 
         network = get_object_or_404(Network, symbol=data['network'])
 
-        network_address, _ = NetworkAddress.objects.get_or_create(account=request.user.account, network=network)
+        deposit_address = network.get_deposit_address(request.user.account)
 
-        serializer = NetworkAddressSerializer(instance=network_address)
-        return Response(data=serializer.data)
+        return Response(data={
+            'address': deposit_address
+        })

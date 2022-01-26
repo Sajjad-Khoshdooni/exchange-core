@@ -10,17 +10,18 @@ class AssetAdmin(admin.ModelAdmin):
 
 @admin.register(models.Network)
 class NetworkAdmin(admin.ModelAdmin):
-    list_display = ('symbol', 'can_withdraw')
+    list_display = ('symbol', 'can_withdraw', 'can_deposit')
+    list_editable = ('can_withdraw', 'can_deposit')
 
 
 @admin.register(models.NetworkAsset)
 class NetworkAssetAdmin(admin.ModelAdmin):
-    list_display = ('network', 'asset', 'commission', 'min_transfer')
+    list_display = ('network', 'asset', 'withdraw_commission', 'min_withdraw')
 
 
-@admin.register(models.NetworkAddress)
-class NetworkAddressAdmin(admin.ModelAdmin):
-    list_display = ('network', 'account', 'address')
+@admin.register(models.DepositAddress)
+class DepositAddressAdmin(admin.ModelAdmin):
+    list_display = ('schema', 'account', 'address')
 
 
 @admin.register(models.OTCRequest)

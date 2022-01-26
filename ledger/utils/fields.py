@@ -1,3 +1,5 @@
+from django.db.models import CharField
+
 COMMISSION_MAX_DIGITS = 25
 
 AMOUNT_DECIMAL_PLACES = 18
@@ -21,3 +23,7 @@ def get_serializer_amount_field(max_digits: int = None, decimal_places: int = No
         decimal_places=decimal_places or AMOUNT_DECIMAL_PLACES,
         **kwargs
     )
+
+
+def get_address_field():
+    return CharField(max_length=256)

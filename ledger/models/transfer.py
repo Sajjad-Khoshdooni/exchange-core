@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from django.db import models
 
-from ledger.utils.fields import get_amount_field
+from ledger.utils.fields import get_amount_field, get_address_field
 
 
 class Transfer(models.Model):
@@ -10,7 +10,7 @@ class Transfer(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
-    network_address = models.ForeignKey('ledger.NetworkAddress', on_delete=models.CASCADE)
+    deposit_address = models.ForeignKey('ledger.DepositAddress', on_delete=models.CASCADE)
     wallet = models.ForeignKey('ledger.Wallet', on_delete=models.CASCADE)
 
     amount = get_amount_field()
@@ -29,7 +29,7 @@ class Transfer(models.Model):
     block_hash = models.CharField(max_length=128, db_index=True, unique=True, blank=True)
     block_number = models.PositiveIntegerField(null=True, blank=True)
 
-    out_address = models.CharField(max_length=256)
+    out_address = get_address_field()
 
     def get_explorer_link(self) -> str:
         return self.wallet.asset.explorer_link.format(hash=self.block_hash)
