@@ -2,6 +2,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from accounts.models import Account
+from ledger.models import DepositAddress
 
 
 class Network(models.Model):
@@ -13,11 +14,9 @@ class Network(models.Model):
 
     minimum_block_to_confirm = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1)])
 
-    def get_deposit_address(self, account: Account) -> str:
-        from ledger.models import DepositAddress
-
+    def get_deposit_address(self, account: Account) -> DepositAddress:
         deposit_address, _ = DepositAddress.objects.get_or_create(account=account, schema=self.schema)
-        return deposit_address.address
+        return deposit_address
 
     def __str__(self):
         return self.symbol
