@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='transfer',
             name='network',
-            field=models.ForeignKey(default=None, on_delete=django.db.models.deletion.CASCADE, to='ledger.network'),
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='ledger.network'),
             preserve_default=False,
         ),
         migrations.AlterField(
