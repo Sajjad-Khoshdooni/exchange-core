@@ -17,7 +17,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         return {
             'deposit': False,
-            'deposit_address': deposit_address,
+            'network': network,
             'wallet': asset.get_wallet(deposit_address.account),
             'amount': attrs['amount'],
             'out_address': attrs['address']
