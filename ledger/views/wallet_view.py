@@ -149,7 +149,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
                 'side': config.side,
                 'amount': config.coin_amount,
                 'pair': config.cash.symbol,
-                'pair_amount': config.cash_amount
+                'pair_amount': config.cash.get_presentation_amount(config.cash_amount)
             })
 
         return result
