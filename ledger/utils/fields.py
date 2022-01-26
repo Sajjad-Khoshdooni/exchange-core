@@ -17,12 +17,17 @@ AMOUNT_MAX_DIGITS = 40
 
 
 def get_amount_field(max_digits: int = None, decimal_places: int = None, default: Decimal = None):
-    return models.DecimalField(
-        max_digits=max_digits or AMOUNT_MAX_DIGITS,
-        decimal_places=decimal_places or AMOUNT_DECIMAL_PLACES,
-        validators=[MinValueValidator(0)],
-        default=default,
-    )
+
+    kwargs = {
+        'max_digits': max_digits or AMOUNT_MAX_DIGITS,
+        'decimal_places': decimal_places or AMOUNT_DECIMAL_PLACES,
+        'validators': [MinValueValidator(0)]
+    }
+
+    if default is not None:
+        kwargs['default'] = default
+
+    return models.DecimalField(**kwargs)
 
 
 def get_serializer_amount_field(max_digits: int = None, decimal_places: int = None, **kwargs):
