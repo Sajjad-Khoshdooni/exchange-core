@@ -65,7 +65,7 @@ class TransferSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transfer
-        fields = ('created', 'amount', 'status', 'link')
+        fields = ('created', 'amount', 'status', 'link', 'out_address')
 
 
 class NetworkAssetSerializer(serializers.ModelSerializer):
@@ -73,6 +73,9 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
     address = serializers.SerializerMethodField()
     can_deposit = serializers.SerializerMethodField()
     can_withdraw = serializers.SerializerMethodField()
+
+    withdraw_commission = serializers.SerializerMethodField()
+    min_withdraw = serializers.SerializerMethodField()
 
     def get_network(self, network_asset: NetworkAsset):
         return network_asset.network.symbol
@@ -86,6 +89,12 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
     def get_address(self, network_asset: NetworkAsset):
         addresses = self.context['addresses']
         return addresses.get(network_asset.network.schema.symbol)
+
+    def get_min_withdraw(self, network_asset: NetworkAsset):
+        return network_asset.asset.get_presentation_amount(network_asset.min_withdraw)
+
+    def get_withdraw_commission(self, network_asset: NetworkAsset):
+        return network_asset.asset.get_presentation_amount(network_asset.withdraw_commission)
 
     class Meta:
         fields = ('network', 'address', 'can_deposit', 'can_withdraw', 'withdraw_commission', 'min_withdraw')
@@ -105,7 +114,9 @@ class AssetRetrieveSerializer(AssetListSerializer):
         account = self.context['request'].user.account
         addresses = dict(DepositAddress.objects.filter(account=account).values_list('schema__symbol', 'address'))
 
-        serializer = NetworkAssetSerializer(network_assets, many=True, context={'addresses': addresses})
+        serializer = NetworkAssetSerializer(network_assets, many=True, context={
+            'addresses': addresses,
+        })
 
         return serializer.data
 
