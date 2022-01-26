@@ -5,6 +5,9 @@ from ledger.models import DepositAddress, Asset, Network, Transfer
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
+    address = serializers.CharField(write_only=True)
+    coin = serializers.CharField(write_only=True)
+    network = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
         account = self.context['request'].user.account
