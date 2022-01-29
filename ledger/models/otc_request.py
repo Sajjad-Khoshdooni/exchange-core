@@ -8,7 +8,7 @@ from accounts.models import Account
 from ledger.exceptions import SmallAmountTrade
 from ledger.models import Asset, Order, Wallet
 from ledger.utils.fields import get_amount_field
-from ledger.utils.price import get_other_side, get_trading_price_irt, BUY
+from ledger.utils.price import get_other_side, get_trading_price_irt, BUY, get_trading_price_usdt
 from ledger.utils.random import secure_uuid4
 from dataclasses import dataclass
 
@@ -100,7 +100,13 @@ class OTCRequest(models.Model):
 
         conf = self.get_trade_config()
         other_side = get_other_side(conf.side)
-        trading_price = get_trading_price_irt(conf.coin.symbol, other_side)
+
+        if conf.cash.symbol == Asset.IRT:
+            trading_price = get_trading_price_irt(conf.coin.symbol, other_side)
+        elif conf.cash.symbol == Asset.USDT:
+            trading_price = get_trading_price_usdt(conf.coin.symbol, other_side)
+        else:
+            raise NotImplementedError
 
         if conf.side == 'sell':
             return 1 / trading_price
