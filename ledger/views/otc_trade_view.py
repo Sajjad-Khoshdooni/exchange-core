@@ -117,6 +117,8 @@ class OTCTradeSerializer(serializers.ModelSerializer):
             raise ValidationError({'token': 'سفارش منقضی شده است. لطفا دوباره اقدام کنید.'})
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست.'})
+        except InvalidAmount as e:
+            raise ValidationError(str(e))
 
 
 class OTCTradeView(CreateAPIView):

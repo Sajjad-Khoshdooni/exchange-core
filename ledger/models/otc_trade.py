@@ -73,7 +73,7 @@ class OTCTrade(models.Model):
 
         conf = otc_request.get_trade_config()
 
-        assert conf.coin.is_trade_amount_valid(conf.coin_amount)
+        conf.coin.is_trade_amount_valid(conf.coin_amount, raise_exception=True)
 
         from_wallet = from_asset.get_wallet(account)
 
