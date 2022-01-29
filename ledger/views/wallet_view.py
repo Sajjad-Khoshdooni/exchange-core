@@ -116,7 +116,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
         network_assets = asset.networkasset_set.all()
 
         account = self.context['request'].user.account
-        addresses = dict(DepositAddress.objects.filter(account_secret__acount=account).values_list('network__symbol', 'address'))
+        addresses = dict(DepositAddress.objects.filter(account_secret__account=account).values_list('network__symbol', 'address'))
 
         serializer = NetworkAssetSerializer(network_assets, many=True, context={
             'addresses': addresses,
