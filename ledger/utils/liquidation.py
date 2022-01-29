@@ -15,7 +15,7 @@ from provider.models import ProviderOrder
 logger = logging.getLogger(__name__)
 
 
-def get_asset_balances(account: Account, market: str):
+def get_wallet_balances(account: Account, market: str):
     wallets = Wallet.objects.filter(account=account, market=market)
 
     balances = {}
@@ -42,16 +42,8 @@ class LiquidationEngine:
             logger.info('Skipping liquidation...')
             return
 
-        self.margin_wallets = get_asset_balances(account, Wallet.MARGIN)
-        self.borrowed_wallets = get_asset_balances(account, Wallet.LOAN)
-
-        self.margin_asset_to_wallets = {
-            w.asset: w for w in self.margin_wallets
-        }
-
-        self.borrowed_asset_to_wallets = {
-            w.asset: w for w in self.borrowed_wallets
-        }
+        self.margin_wallets = get_wallet_balances(account, Wallet.MARGIN)
+        self.borrowed_wallets = get_wallet_balances(account, Wallet.LOAN)
 
     def start(self):
         logger.info('Starting liquidation for %s' % self.account.id)
@@ -66,7 +58,10 @@ class LiquidationEngine:
         logger.info('Liquidation completed')
 
     def _fast_liquidate(self):
-        shared_assets = set(self.margin_wallets) & set(self.borrowed_wallets)
+        margin_asset_to_wallet = {w.asset: w for w in self.margin_wallets}
+        borrowed_asset_to_wallet = {w.asset: w for w in self.borrowed_wallets}
+
+        shared_assets = set(margin_asset_to_wallet) & set(borrowed_asset_to_wallet)
 
         if shared_assets:
             logger.info('Using fast liquidation')
@@ -86,8 +81,8 @@ class LiquidationEngine:
                 logger.info('Fast liquidating %s %s' % (amount, asset))
 
                 Trx.transaction(
-                    sender=self.margin_asset_to_wallets[asset],
-                    receiver=self.borrowed_asset_to_wallets[asset],
+                    sender=margin_asset_to_wallet[asset],
+                    receiver=borrowed_asset_to_wallet[asset],
                     amount=amount,
                     scope=Trx.LIQUID
                 )
@@ -100,22 +95,24 @@ class LiquidationEngine:
     def _provide_tether(self):
         logger.info('providing tether')
 
-        margin_asset_values = {
-            wallet.asset: balance * get_trading_price_usdt(wallet.asset.symbol, SELL) for (wallet, balance) in
+        margin_wallet_values = {
+            wallet: balance * get_trading_price_usdt(wallet.asset.symbol, SELL) for (wallet, balance) in
             self.margin_wallets.items()
         }
 
-        margin_assets = list(self.margin_wallets.keys())
-        margin_assets.sort(key=lambda a: margin_asset_values[a], reverse=True)
+        margin_wallets = list(self.margin_wallets.keys())
+        margin_wallets.sort(key=lambda w: margin_wallet_values.get(w, 0), reverse=True)
 
-        for asset in margin_assets:
-            max_value = min(self.liquidation_amount, margin_asset_values[asset])
-            amount = max_value / margin_asset_values[asset] * self.margin_wallets[asset]
+        for wallet in margin_wallets:
+            value = margin_wallet_values[wallet]
+
+            max_value = min(self.liquidation_amount, value)
+            amount = max_value / value * self.margin_wallets[wallet]
 
             request = OTCRequest.new_trade(
                 self.account,
                 market=Wallet.MARGIN,
-                from_asset=asset,
+                from_asset=wallet.asset,
                 to_asset=self.tether,
                 to_amount=amount
             )
@@ -125,30 +122,33 @@ class LiquidationEngine:
     def _liquidate_funds(self):
         logger.info('liquidating funds')
 
-        borrowed_asset_values = {
-            wallet.asset: balance * get_trading_price_usdt(wallet.asset.symbol, BUY) for (wallet, balance) in self.borrowed_wallets.items()
+        borrowed_wallet_values = {
+            wallet: balance * get_trading_price_usdt(wallet.asset.symbol, BUY) for (wallet, balance) in
+            self.borrowed_wallets.items()
         }
 
-        borrowed_assets = list(self.borrowed_wallets.keys())
-        borrowed_assets.sort(key=lambda a: borrowed_asset_values[a], reverse=True)
+        borrowed_wallets = list(self.borrowed_wallets.keys())
+        borrowed_wallets.sort(key=lambda w: borrowed_wallet_values.get(w, 0), reverse=True)
 
-        for asset in borrowed_assets:
-            max_value = min(self.liquidation_amount, borrowed_asset_values[asset])
-            amount = max_value / borrowed_asset_values[asset] * self.borrowed_wallets[asset]
+        for wallet in borrowed_wallets:
+            value = borrowed_wallet_values[wallet]
+
+            max_value = min(self.liquidation_amount, value)
+            amount = max_value / value * self.borrowed_wallets[wallet]
 
             request = OTCRequest.new_trade(
                 self.account,
                 market=Wallet.MARGIN,
                 from_asset=self.tether,
-                to_asset=asset,
+                to_asset=wallet.asset,
                 to_amount=amount
             )
 
             OTCTrade.execute_trade(request)
 
             Trx.transaction(
-                sender=self.margin_asset_to_wallets[asset],
-                receiver=self.borrowed_asset_to_wallets[asset],
+                sender=wallet.asset.get_wallet(self.account, market=Wallet.MARGIN),
+                receiver=wallet,
                 amount=amount,
                 scope=Trx.LIQUID
             )
