@@ -97,7 +97,7 @@ class TRXTransferCreator:
 
         with transaction.atomic():
             to_deposit_addresses = DepositAddress.objects.filter(
-                schema__symbol=Network.TRX,
+                network__symbol=Network.TRX,
                 address__in=to_address_to_trx
             )
 
