@@ -21,7 +21,7 @@ class Wallet(models.Model):
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)
 
     market = models.CharField(
-        max_length=1,
+        max_length=8,
         choices=MARKET_CHOICES,
     )
 
