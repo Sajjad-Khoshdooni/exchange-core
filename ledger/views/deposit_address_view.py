@@ -3,6 +3,7 @@ from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.response import Response
 
 from ledger.models import Network
+from ledger.utils.encoding import base58_from_hex
 
 
 class InputAddressSerializer(serializers.Serializer):
@@ -23,5 +24,5 @@ class DepositAddressView(RetrieveAPIView):
         deposit_address = network.get_deposit_address(request.user.account)
 
         return Response(data={
-            'address': deposit_address.address
+            'address': base58_from_hex(deposit_address.address)
         })
