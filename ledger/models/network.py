@@ -6,6 +6,9 @@ from ledger.models import DepositAddress
 
 
 class Network(models.Model):
+    ETH = 'ETH'
+    TRX = 'TRX'
+
     symbol = models.CharField(max_length=8, unique=True, db_index=True)
     schema = models.ForeignKey(to='ledger.AddressSchema', on_delete=models.PROTECT)
 

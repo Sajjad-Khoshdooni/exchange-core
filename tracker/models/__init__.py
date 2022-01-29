@@ -1,1 +1,1 @@
-from .block_tracker import BlockTracker
+from .block_tracker import BlockTracker, ETHBlockTracker

@@ -8,11 +8,12 @@ import requests
 import websocket
 from django.db import transaction
 
-from accounts.models import Account
-from ledger.models import DepositAddress, Network, Trx, Asset, AddressSchema
+from ledger.models import DepositAddress, AddressSchema
+from ledger.models import Network, Asset
 from ledger.models.transfer import Transfer
-from tracker.blockchain.eth.reverter import ETHReverter
-from tracker.models import BlockTracker
+from tracker.blockchain.confirmer import Confirmer, MinimalBlockDTO
+from tracker.blockchain.reverter import Reverter
+from tracker.models import ETHBlockTracker
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ class EthBlockConsumer:
 
     def handle_history_gap(self, block: dict):
         parent_hash = block['parentHash']
-        if BlockTracker.has(parent_hash):
+        if ETHBlockTracker.has(parent_hash):
             return
 
         to_handle_blocks = []
@@ -75,10 +76,10 @@ class EthBlockConsumer:
             to_handle_blocks.append(block)
             parent_hash = block['parentHash']
 
-            if BlockTracker.has(parent_hash):
+            if ETHBlockTracker.has(parent_hash):
                 break
 
-        ETHReverter().from_number(int(block['number'], 16))
+        Reverter(ETHBlockTracker).from_number(int(block['number'], 16))
         for block in reversed(to_handle_blocks):
             self.handle_new_block(block)
 
@@ -116,14 +117,14 @@ class EthBlockConsumer:
     def handle_new_block(self, block: dict):
         block_hash = block['hash']
 
-        if BlockTracker.has(block_hash):
+        if ETHBlockTracker.has(block_hash):
             logger.warning('ignored duplicate block %s' % block_hash)
             return
 
         block_number = int(block['number'], 16)
         block_date = datetime.fromtimestamp(int(block['timestamp'], 16)).astimezone()
 
-        last_db_block = BlockTracker.get_latest_block()
+        last_db_block = ETHBlockTracker.get_latest_block()
         if last_db_block:
             last_db_block_number = last_db_block.number
             number_diff = block_number - last_db_block_number
@@ -132,10 +133,9 @@ class EthBlockConsumer:
             number_diff = 1
 
         if number_diff < 1:
-            ETHReverter().from_number(int(block['number'], 16))
+            Reverter(ETHBlockTracker).from_number(int(block['number'], 16))
             # chain reorg condition
             logger.info('reorg handling')
-            pass
 
         elif number_diff > 1:
             # impossible condition
@@ -144,7 +144,7 @@ class EthBlockConsumer:
         self.handle_transactions(block)
 
         logger.info('Inserting block %d, %s' % (block_number, block_hash))
-        BlockTracker.objects.create(number=block_number, hash=block_hash, block_date=block_date)
+        ETHBlockTracker.objects.create(number=block_number, hash=block_hash, block_date=block_date)
 
         self.handle_confirms(block)
 
@@ -204,28 +204,9 @@ class EthBlockConsumer:
 
     def handle_confirms(self, block: dict):
         network_symbol = 'ETH'
-        asset = Asset.objects.get(symbol=network_symbol)
-        network = Network.objects.get(symbol=network_symbol)
-        block_number = int(block['number'], 16)
-
-        pending_transfers = Transfer.objects.filter(
-            block_number__lte=block_number - network.minimum_block_to_confirm,
-            status=Transfer.PENDING
+        confirmer = Confirmer(
+            asset=Asset.objects.get(symbol=network_symbol),
+            network=Network.objects.get(symbol=network_symbol),
+            block_tracker=ETHBlockTracker
         )
-
-        for transfer in pending_transfers:
-            if not BlockTracker.has(transfer.block_hash):
-                transfer.status = Transfer.CANCELED
-                transfer.save()
-                continue
-
-            with transaction.atomic():
-                transfer.status = Transfer.DONE
-                transfer.save()
-                Trx.objects.create(
-                    group_id=transfer.group_id,
-                    sender=asset.get_wallet(Account.out()),
-                    receiver=asset.get_wallet(transfer.deposit_address.account),
-                    amount=transfer.amount,
-                    scope=Trx.TRANSFER
-                )
+        confirmer.confirm(MinimalBlockDTO(hash=block['hash'], number=int(block['number'], 16)))
