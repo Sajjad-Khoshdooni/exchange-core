@@ -10,3 +10,7 @@ class InsufficientDebt(Exception):
 class MaxBorrowableExceeds(Exception):
     pass
 
+
+class SmallAmountTrade(Exception):
+    pass
+

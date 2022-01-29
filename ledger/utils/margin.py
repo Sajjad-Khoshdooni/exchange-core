@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from accounts.models import Account
-from ledger.models import Wallet, Asset
+from ledger.models import Wallet, Asset, Trx
 from ledger.utils.price import SELL, BUY
 
 
@@ -36,11 +36,14 @@ class MarginInfo:
         return (self.total_assets - BORROW_BLOCK_ML * self.total_debt) / (BORROW_BLOCK_ML - 1)
 
     def get_max_transferable(self) -> Decimal:
-        return (self.total_assets - BORROW_BLOCK_ML * self.total_debt) / (BORROW_BLOCK_ML - 1)
+        return self.total_assets - TRANSFER_OUT_BLOCK_ML * self.total_debt
+
+    def get_liquidation_amount(self) -> Decimal:
+        return -self.get_max_borrowable()
 
 
 def get_total_debt(account: Account) -> Decimal:
-    return account.get_total_balance_usdt(Wallet.BORROW, SELL)
+    return -account.get_total_balance_usdt(Wallet.BORROW, SELL)
 
 
 def get_total_assets(account: Account) -> Decimal:

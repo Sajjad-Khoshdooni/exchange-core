@@ -18,6 +18,9 @@ class ProviderOrder(models.Model):
     BUY, SELL = 'buy', 'sell'
     ORDER_CHOICES = [(BUY, BUY), (SELL, SELL)]
 
+    TRADE, BORROW, LIQUIDATION = 't', 'b', 'l'
+    SCOPE_CHOICES = ((TRADE, 'trade'), (BORROW, 'borrow'), (LIQUIDATION, 'liquidation'))
+
     created = models.DateTimeField(auto_now_add=True)
 
     exchange = models.CharField(max_length=8, default=BINANCE)
@@ -32,11 +35,18 @@ class ProviderOrder(models.Model):
         blank=True
     )
 
+    scope = models.CharField(
+        max_length=1,
+        choices=SCOPE_CHOICES,
+    )
+
+    # caller_id = models.PositiveIntegerField(null=True, blank=True)
+
     @classmethod
-    def new_order(cls, asset: Asset, side: str, amount: Decimal) -> 'ProviderOrder':
+    def new_order(cls, asset: Asset, side: str, amount: Decimal, scope: str) -> 'ProviderOrder':
         with transaction.atomic():
             order = ProviderOrder.objects.create(
-                asset=asset, amount=amount, side=side,
+                asset=asset, amount=amount, side=side, scope=scope
             )
 
             resp = BinanceFuturesHandler.place_order(
@@ -81,7 +91,7 @@ class ProviderOrder(models.Model):
         return asset.symbol + 'USDT'
 
     @classmethod
-    def try_hedge_for_new_order(cls, asset: Asset, side: str, amount: Decimal) -> bool:
+    def try_hedge_for_new_order(cls, asset: Asset, side: str, amount: Decimal, scope: str) -> bool:
         # todo: this method should not called more than once at a single time
 
         to_buy = amount if side == cls.BUY else -amount
@@ -102,7 +112,7 @@ class ProviderOrder(models.Model):
 
             order_amount = round(hedge_amount, round_digits)
 
-            order = cls.new_order(asset, side, order_amount)
+            order = cls.new_order(asset, side, order_amount, scope)
 
             return bool(order)
 

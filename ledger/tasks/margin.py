@@ -1,19 +1,14 @@
-from decimal import Decimal
+import logging
 
 from celery import shared_task
 
 from accounts.models import Account
 from ledger.models import Wallet
+from ledger.utils.liquidation import LiquidationEngine
 from ledger.utils.margin import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD
 from ledger.utils.margin import MarginInfo
 
-
-def warn_risky_level(account: Account, margin_level: Decimal):
-    pass
-
-
-def liquid(account: Account, margin_level: Decimal):
-    pass
+logger = logging.getLogger(__name__)
 
 
 @shared_task()
@@ -22,11 +17,13 @@ def check_margin_level():
     accounts = Account.objects.filter(id__in=margin_accounts)
 
     for account in accounts:
-        info = MarginInfo.get(account)
-        margin_level = info.get_margin_level()
+        margin_info = MarginInfo.get(account)
+        margin_level = margin_info.get_margin_level()
 
         if margin_level <= LIQUIDATION_ML_THRESHOLD:
-            liquid(account, margin_level)
+            engine = LiquidationEngine(account, margin_info)
+            engine.start()
 
         if margin_level <= MARGIN_CALL_ML_THRESHOLD:
-            warn_risky_level(account, margin_level)
+            logger.warning('Send MARGIN_CALL_ML_THRESHOLD for account = %d' % account.id)
+            # warn_risky_level(account, margin_level)

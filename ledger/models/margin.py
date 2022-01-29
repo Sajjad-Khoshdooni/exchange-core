@@ -46,10 +46,7 @@ class MarginTransfer(models.Model):
 
             margin_info = MarginInfo.get(self.account)
 
-            future_total_assets = margin_info.total_assets - self.amount
-            future_margin_level = get_margin_level(future_total_assets, margin_info.total_debt)
-
-            if future_margin_level <= TRANSFER_OUT_BLOCK_ML:
+            if self.amount > margin_info.get_max_transferable():
                 raise InsufficientBalance
         else:
             raise NotImplementedError
@@ -105,7 +102,8 @@ class MarginLoan(models.Model):
             hedged = ProviderOrder.try_hedge_for_new_order(
                 asset=self.asset,
                 side=BUY if self.type == self.BORROW else SELL,
-                amount=self.amount
+                amount=self.amount,
+                scope=ProviderOrder.BORROW
             )
         else:
             hedged = True
