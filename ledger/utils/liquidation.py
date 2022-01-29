@@ -43,7 +43,7 @@ class LiquidationEngine:
             return
 
         self.margin_wallets = get_wallet_balances(account, Wallet.MARGIN)
-        self.borrowed_wallets = get_wallet_balances(account, Wallet.LOAN)
+        self.borrowed_wallets = {wallet: -amount for (wallet, amount) in get_wallet_balances(account, Wallet.LOAN).items()}
 
     def start(self):
         logger.info('Starting liquidation for %s' % self.account.id)
