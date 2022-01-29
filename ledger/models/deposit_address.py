@@ -8,13 +8,14 @@ class DepositAddress(models.Model):
     schema = models.ForeignKey('ledger.AddressSchema', on_delete=models.PROTECT)
     account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
     address = models.CharField(max_length=256, blank=True, unique=True)
+    secret = models.ForeignKey('wallet.Secret', on_delete=models.PROTECT)
+
     # address_tag = models.CharField(max_length=32, blank=True)
 
     def __str__(self):
         return '%s %s (schema= %s)' % (self.account, self.address, self.schema)
 
     def save(self, *args, **kwargs):
-
         if not self.pk:
             self.address = ''
             super().save(*args, **kwargs)
