@@ -42,15 +42,15 @@ class OTCTrade(models.Model):
         with transaction.atomic():
             Trx.objects.bulk_create([
                 Trx(
-                    sender=from_asset.get_wallet(user),
-                    receiver=from_asset.get_wallet(system),
+                    sender=from_asset.get_wallet(user, market=self.otc_request.market),
+                    receiver=from_asset.get_wallet(system, market=self.otc_request.market),
                     amount=self.otc_request.from_amount,
                     group_id=self.group_id,
                     scope=Trx.TRADE
                 ),
                 Trx(
-                    sender=to_asset.get_wallet(system),
-                    receiver=to_asset.get_wallet(user),
+                    sender=to_asset.get_wallet(system, market=self.otc_request.market),
+                    receiver=to_asset.get_wallet(user, market=self.otc_request.market),
                     amount=self.otc_request.to_amount,
                     group_id=self.group_id,
                     scope=Trx.TRADE
@@ -75,7 +75,7 @@ class OTCTrade(models.Model):
 
         conf.coin.is_trade_amount_valid(conf.coin_amount, raise_exception=True)
 
-        from_wallet = from_asset.get_wallet(account)
+        from_wallet = from_asset.get_wallet(account, market=otc_request.market)
 
         lock = from_wallet.lock_balance(otc_request.from_amount)
 
