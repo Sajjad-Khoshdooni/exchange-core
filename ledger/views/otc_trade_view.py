@@ -2,10 +2,13 @@ from datetime import timedelta
 
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView, get_object_or_404
+from rest_framework.generics import CreateAPIView, get_object_or_404, ListAPIView
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from ledger.exceptions import InsufficientBalance, SmallAmountTrade
-from ledger.models import OTCRequest, Asset, OTCTrade
+from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired
 from ledger.utils.fields import get_serializer_amount_field
@@ -123,3 +126,32 @@ class OTCTradeSerializer(serializers.ModelSerializer):
 
 class OTCTradeView(CreateAPIView):
     serializer_class = OTCTradeSerializer
+
+
+class OTCTradeHistoryInputSerializer(serializers.Serializer):
+    market = serializers.ChoiceField(choices=((Wallet.SPOT, Wallet.SPOT), (Wallet.MARGIN, Wallet.MARGIN),))
+
+
+class OTCHistoryView(APIView):
+
+    def get(self, request: Request):
+        serializer = OTCTradeHistoryInputSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+
+        market = serializer.data['market']
+
+        trades = OTCTrade.objects.filter(otc_request__account=self.request.user.account, otc_request__market=market)
+        result = []
+
+        for trade in trades:
+            config = trade.otc_request.get_trade_config()
+
+            result.append({
+                'created': trade.created,
+                'side': config.side,
+                'amount': config.coin.get_presentation_amount(config.coin_amount),
+                'pair': config.cash.symbol,
+                'pair_amount': config.cash.get_presentation_amount(config.cash_amount)
+            })
+
+        return Response(result)
