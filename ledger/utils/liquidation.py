@@ -23,7 +23,7 @@ def get_asset_balances(account: Account, market: str):
     for wallet in wallets:
         free = wallet.get_free()
         if free != 0:
-            balances[wallet.asset] = free
+            balances[wallet] = free
 
     return balances
 
