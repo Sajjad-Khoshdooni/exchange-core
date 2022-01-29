@@ -60,8 +60,8 @@ class LiquidationEngine:
             self._fast_liquidate()
 
         if not self.finished:
-            self._liquidate_funds()
             self._provide_tether()
+            self._liquidate_funds()
 
         logger.info('Liquidation completed')
 
@@ -98,8 +98,10 @@ class LiquidationEngine:
                 self.margin_wallets[asset] -= amount
 
     def _provide_tether(self):
+        logger.info('providing tether')
+
         margin_asset_values = {
-            asset: balance * get_trading_price_usdt(asset.symbol, SELL) for (asset, balance) in
+            wallet.asset: balance * get_trading_price_usdt(wallet.asset.symbol, SELL) for (wallet, balance) in
             self.margin_wallets.items()
         }
 
@@ -121,8 +123,10 @@ class LiquidationEngine:
             OTCTrade.execute_trade(request)
 
     def _liquidate_funds(self):
+        logger.info('liquidating funds')
+
         borrowed_asset_values = {
-            asset: balance * get_trading_price_usdt(asset.symbol, BUY) for (asset, balance) in self.borrowed_wallets.items()
+            wallet.asset: balance * get_trading_price_usdt(wallet.asset.symbol, BUY) for (wallet, balance) in self.borrowed_wallets.items()
         }
 
         borrowed_assets = list(self.borrowed_wallets.keys())
