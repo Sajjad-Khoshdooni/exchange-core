@@ -60,6 +60,7 @@ uritemplate==4.1.1
 urllib3==1.26.7
 vine==5.0.0
 wcwidth==0.2.5
+web3==5.25.0
 websocket-client==1.2.3
 wrapt==1.13.3
 yekta-config==0.2.1
