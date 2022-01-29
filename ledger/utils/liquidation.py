@@ -93,8 +93,8 @@ class LiquidationEngine:
 
                 self.liquidation_amount -= amount * price
 
-                self.borrowed_wallets[asset] -= amount
-                self.margin_wallets[asset] -= amount
+                self.borrowed_wallets[borrowed_wallet] -= amount
+                self.margin_wallets[margin_wallet] -= amount
 
     def _provide_tether(self):
         logger.info('providing tether')
