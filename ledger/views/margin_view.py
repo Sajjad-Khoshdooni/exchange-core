@@ -43,7 +43,7 @@ class MarginLoanSerializer(serializers.ModelSerializer):
     coin = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        coin = attrs.get('coin')
+        coin = attrs.pop('coin')
         asset = get_object_or_404(Asset, symbol=coin)
 
         return {
