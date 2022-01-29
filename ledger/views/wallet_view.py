@@ -188,9 +188,4 @@ class WalletView(ModelViewSet):
             return queryset
 
     def get_market(self) -> str:
-        mapping = {
-            'spot': Wallet.SPOT,
-            'margin': Wallet.MARGIN
-        }
-
-        return mapping.get(self.request.query_params.get('market'), Wallet.SPOT)
+        return self.request.query_params.get('market') or Wallet.SPOT

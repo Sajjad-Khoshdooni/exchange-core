@@ -8,7 +8,7 @@ from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
 from ledger.models import Asset, Wallet, Trx
 from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_lock_field, DONE
 from ledger.utils.margin import MarginInfo, get_margin_level, TRANSFER_OUT_BLOCK_ML
-from ledger.utils.price import BUY, SELL
+from ledger.utils.price import BUY, SELL, get_trading_price_usdt
 from provider.models import ProviderOrder
 
 
@@ -76,7 +76,7 @@ class MarginLoan(models.Model):
     )
 
     status = get_status_field()
-    lock = get_lock_field()
+    lock = get_lock_field(null=True)
     group_id = get_group_id_field()
 
     @property
@@ -137,12 +137,11 @@ class MarginLoan(models.Model):
 
         else:
             margin_info = MarginInfo.get(account)
-            max_borrowable = margin_info.get_max_borrowable()
+            max_borrowable = margin_info.get_max_borrowable() / get_trading_price_usdt(asset.symbol, SELL, raw_price=True)
 
             if amount > max_borrowable:
                 raise MaxBorrowableExceeds()
 
-            loan.lock = loan.margin_wallet.lock_balance(amount)
             loan.save()
 
         loan.finalize()

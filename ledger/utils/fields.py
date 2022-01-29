@@ -48,8 +48,8 @@ def get_status_field():
     )
 
 
-def get_lock_field():
-    return models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE)
+def get_lock_field(null: bool = False):
+    return models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE, null=null, blank=null)
 
 
 def get_group_id_field():
