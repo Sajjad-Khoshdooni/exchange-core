@@ -7,6 +7,7 @@ from django.db.models import Sum
 from accounts.models import Account
 from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
+from ledger.utils.price import get_trading_price_usdt, SELL
 from provider.exchanges import BinanceFuturesHandler
 
 
@@ -111,6 +112,12 @@ class ProviderOrder(models.Model):
             round_digits = -int(log10(step_size))
 
             order_amount = round(hedge_amount, round_digits)
+
+            # check notional
+            price = get_trading_price_usdt(asset.symbol, side=SELL, raw_price=True)
+
+            if order_amount * price < 10:
+                return True
 
             order = cls.new_order(asset, side, order_amount, scope)
 
