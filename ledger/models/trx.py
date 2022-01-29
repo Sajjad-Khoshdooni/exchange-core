@@ -13,6 +13,7 @@ class Trx(models.Model):
     TRANSFER = 'f'
     MARGIN_TRANSFER = 'm'
     MARGIN_BORROW = 'b'
+    LIQUID = 'l'
 
     created = models.DateTimeField(auto_now_add=True)
 

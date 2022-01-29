@@ -47,7 +47,7 @@ class Account(models.Model):
         total = Decimal('0')
 
         for wallet in wallets:
-            balance = wallet.get_balance()
+            balance = wallet.get_free()
             if balance >= 0:
                 total += balance * get_trading_price_usdt(wallet.asset.symbol, side)
 

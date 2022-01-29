@@ -5,6 +5,7 @@ from django.db import models
 from django.utils import timezone
 
 from accounts.models import Account
+from ledger.exceptions import SmallAmountTrade
 from ledger.models import Asset, Order, Wallet
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_other_side
@@ -22,7 +23,7 @@ class TradeConfig:
 
 
 class OTCRequest(models.Model):
-    EXPIRE_TIME = 30
+    EXPIRE_TIME = 5
 
     created = models.DateTimeField(auto_now_add=True)
     token = models.UUIDField(default=secure_uuid4, db_index=True)
@@ -40,6 +41,34 @@ class OTCRequest(models.Model):
         default=Wallet.SPOT,
         choices=((Wallet.SPOT, 'spot'), (Wallet.MARGIN, 'margin')),
     )
+
+    @classmethod
+    def new_trade(cls, account: Account, market: str, from_asset: Asset, to_asset: Asset, from_amount: Decimal = None,
+                  to_amount: Decimal = None, allow_small_trades: bool = False) -> 'OTCRequest':
+
+        assert from_amount or to_amount
+
+        otc_request = OTCRequest(
+            account=account,
+            from_asset=from_asset,
+            to_asset=to_asset,
+            market=market,
+        )
+
+        otc_request.set_amounts(from_amount, to_amount)
+
+        if not allow_small_trades:
+            conf = otc_request.get_trade_config()
+
+            if conf.cash_amount < 100_000:
+                raise SmallAmountTrade()
+
+        from_wallet = from_asset.get_wallet(account, otc_request.market)
+        from_wallet.has_balance(otc_request.from_amount, raise_exception=True)
+
+        otc_request.save()
+
+        return otc_request
 
     def get_trade_config(self) -> TradeConfig:
         if self.from_asset.symbol == Asset.IRT:

@@ -4,7 +4,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404
 
-from ledger.exceptions import InsufficientBalance
+from ledger.exceptions import InsufficientBalance, SmallAmountTrade
 from ledger.models import OTCRequest, Asset, OTCTrade
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired
@@ -18,6 +18,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     to_amount = get_serializer_amount_field(allow_null=True, required=False)
     price = get_serializer_amount_field(source='to_price', read_only=True)
     expire = serializers.SerializerMethodField()
+    market = serializers.CharField(required=True)
 
     def validate(self, attrs):
         from_symbol = attrs['from_asset']['symbol']
@@ -56,28 +57,21 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         to_amount = validated_data.get('to_amount')
         from_amount = validated_data.get('from_amount')
 
-        otc_request = OTCRequest(
-            account=account,
-            from_asset=from_asset,
-            to_asset=to_asset,
-            market=validated_data.get('market'),
-        )
-
         try:
-            otc_request.set_amounts(from_amount, to_amount)
+            return OTCRequest.new_trade(
+                account=account,
+                from_asset=from_asset,
+                to_asset=to_asset,
+                from_amount=from_amount,
+                to_amount=to_amount,
+                market=validated_data.get('market'),
+            )
         except InvalidAmount as e:
             raise ValidationError(str(e))
-
-        conf = otc_request.get_trade_config()
-        if conf.cash_amount < 100_000:
+        except SmallAmountTrade:
             raise ValidationError('ارزش معامله باید حداقل 100,000 تومان باشد.')
-
-        from_wallet = from_asset.get_wallet(account, otc_request.market)
-        if not from_wallet.has_balance(otc_request.from_amount):
+        except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست.'})
-
-        otc_request.save()
-        return otc_request
 
     def get_expire(self, otc: OTCRequest):
         return otc.get_expire_time()

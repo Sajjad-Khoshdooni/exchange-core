@@ -95,7 +95,8 @@ class OTCTrade(models.Model):
             hedged = ProviderOrder.try_hedge_for_new_order(
                 asset=conf.coin,
                 side=conf.side,
-                amount=conf.coin_amount
+                amount=conf.coin_amount,
+                scope=ProviderOrder.TRADE
             )
         else:
             hedged = True

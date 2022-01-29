@@ -126,13 +126,13 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
     def get_deposits(self, asset: Asset):
         wallet = self.get_wallet(asset)
-        deposits = Transfer.objects.filter(wallet=wallet, deposit=True, status=Transfer.DONE)
+        deposits = Transfer.objects.filter(wallet=wallet, deposit=True, status=Transfer.DONE).order_by('-created')
 
         return TransferSerializer(instance=deposits, many=True).data
 
     def get_withdraws(self, asset: Asset):
         wallet = self.get_wallet(asset)
-        withdraws = Transfer.objects.filter(wallet=wallet, deposit=False)
+        withdraws = Transfer.objects.filter(wallet=wallet, deposit=False).order_by('-created')
 
         return TransferSerializer(instance=withdraws, many=True).data
 
