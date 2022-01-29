@@ -146,3 +146,5 @@ class MarginLoan(models.Model):
             loan.save()
 
         loan.finalize()
+
+        return loan
