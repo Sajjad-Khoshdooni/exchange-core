@@ -51,6 +51,13 @@ class MarginLoanSerializer(serializers.ModelSerializer):
             'asset': asset
         }
 
+    def create(self, validated_data):
+        validated_data['loan_type'] = validated_data.pop('type')
+
+        return MarginLoan.new_loan(
+            **validated_data
+        )
+
     class Meta:
         fields = ('amount', 'type', 'coin')
         model = MarginLoan
