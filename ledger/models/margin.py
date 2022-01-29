@@ -116,7 +116,8 @@ class MarginLoan(models.Model):
             with transaction.atomic():
                 self.status = DONE
                 Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_BORROW)
-                self.lock.release()
+                if self.lock:
+                    self.lock.release()
 
     @classmethod
     def new_loan(cls, account: Account, asset: Asset, amount: Decimal, loan_type: str):
