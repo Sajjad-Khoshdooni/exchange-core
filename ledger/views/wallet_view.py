@@ -42,12 +42,12 @@ class AssetListSerializer(serializers.ModelSerializer):
         return str(int(wallet.get_free_irt()))
 
     def get_sell_price_irt(self, asset: Asset):
-        if asset.is_cash():
+        if asset.symbol == asset.IRT:
             return ''
         return str(int(get_trading_price_irt(asset.symbol, 'sell')))
 
     def get_buy_price_irt(self, asset: Asset):
-        if asset.is_cash():
+        if asset.symbol == asset.IRT:
             return ''
 
         return str(int(get_trading_price_irt(asset.symbol, 'buy')))

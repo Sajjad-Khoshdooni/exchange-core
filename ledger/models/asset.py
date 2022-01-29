@@ -48,8 +48,8 @@ class Asset(models.Model):
     def is_cash(self):
         return self.symbol == self.IRT
 
-    def is_coin(self):
-        return not self.is_cash()
+    def is_trade_base(self):
+        return self.symbol in (self.IRT, self.USDT)
 
     def is_trade_amount_valid(self, amount: Decimal, raise_exception: bool = False):
         if raise_exception:
@@ -81,11 +81,7 @@ class AssetSerializer(serializers.ModelSerializer):
 
 
 class AssetSerializerMini(serializers.ModelSerializer):
-    is_cash = serializers.SerializerMethodField()
-
-    def get_is_cash(self, asset: Asset):
-        return asset.is_cash()
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'is_cash')
+        fields = ('symbol', )

@@ -121,7 +121,7 @@ class OTCRequest(models.Model):
         if to_amount:
             from_amount = to_price * to_amount
 
-            if self.to_asset.is_coin():
+            if self.from_asset.is_trade_base():
                 self.to_asset.is_trade_amount_valid(to_amount, raise_exception=True)
             else:
                 from_amount = from_amount - (from_amount % self.from_asset.trade_quantity_step)  # step coin
@@ -130,7 +130,7 @@ class OTCRequest(models.Model):
         else:
             to_amount = from_amount / to_price
 
-            if self.to_asset.is_coin():
+            if self.from_asset.is_trade_base():
                 to_amount = to_amount - (to_amount % self.to_asset.trade_quantity_step)  # step coin
                 from_amount = to_amount * to_price  # re calc cash
             else:
