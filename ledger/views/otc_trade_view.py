@@ -140,7 +140,11 @@ class OTCHistoryView(APIView):
 
         market = serializer.data['market']
 
-        trades = OTCTrade.objects.filter(otc_request__account=self.request.user.account, otc_request__market=market)
+        trades = OTCTrade.objects.filter(
+            otc_request__account=self.request.user.account,
+            otc_request__market=market
+        ).order_by('-created')
+
         result = []
 
         for trade in trades:
@@ -149,6 +153,7 @@ class OTCHistoryView(APIView):
             result.append({
                 'created': trade.created,
                 'side': config.side,
+                'coin': config.coin.symbol,
                 'amount': config.coin.get_presentation_amount(config.coin_amount),
                 'pair': config.cash.symbol,
                 'pair_amount': config.cash.get_presentation_amount(config.cash_amount)

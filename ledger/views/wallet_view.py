@@ -110,7 +110,6 @@ class AssetRetrieveSerializer(AssetListSerializer):
     networks = serializers.SerializerMethodField()
     withdraws = serializers.SerializerMethodField()
     deposits = serializers.SerializerMethodField()
-    trades = serializers.SerializerMethodField()
 
     def get_networks(self, asset: Asset):
         network_assets = asset.networkasset_set.all()
@@ -136,26 +135,8 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
         return TransferSerializer(instance=withdraws, many=True).data
 
-    def get_trades(self, asset: Asset):
-        wallet = self.get_wallet(asset)
-        trades = OTCTrade.objects.filter(lock__wallet=wallet)
-        result = []
-
-        for trade in trades:
-            config = trade.otc_request.get_trade_config()
-
-            result.append({
-                'created': trade.created,
-                'side': config.side,
-                'amount': config.coin.get_presentation_amount(config.coin_amount),
-                'pair': config.cash.symbol,
-                'pair_amount': config.cash.get_presentation_amount(config.cash_amount)
-            })
-
-        return result
-
     class Meta(AssetListSerializer.Meta):
-        fields = (*AssetListSerializer.Meta.fields, 'networks', 'deposits', 'withdraws', 'trades')
+        fields = (*AssetListSerializer.Meta.fields, 'networks', 'deposits', 'withdraws')
 
 
 class WalletView(ModelViewSet):
