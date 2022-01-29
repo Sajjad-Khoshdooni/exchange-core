@@ -87,7 +87,7 @@ class TRXTransferCreator:
         block_number = block['block_header']['raw_data']['number']
         asset = Asset.objects.get(symbol='USDT')
 
-        raw_transactions = block['transactions']
+        raw_transactions = block.get('transactions', [])
 
         logger.info('Transactions %s' % len(raw_transactions))
         transactions = list(filter(self._is_valid_transaction, raw_transactions))
