@@ -3,6 +3,7 @@ import logging
 from abc import ABC, abstractmethod
 
 import base58
+import pytz
 import requests
 from django.db import transaction
 
@@ -162,7 +163,8 @@ class TRXHistoryBuilder(HistoryBuilder):
             TRXBlockTracker.objects.create(
                 number=block['block_header']['raw_data']['number'],
                 hash=block['blockID'],
-                block_date=datetime.datetime.fromtimestamp(block['block_header']['raw_data']['timestamp'] / 1000),
+                block_date=datetime.datetime.fromtimestamp(block['block_header']['raw_data']['timestamp'] /
+                                                           1000).astimezone(),
             )
         confirmer = Confirmer(
             asset=Asset.objects.get(symbol='USDT'),
