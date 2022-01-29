@@ -14,7 +14,7 @@ class Secret(models.Model):
     @classmethod
     def build(cls):
         return cls.objects.create(
-            encrypted_key=secret_aes_cipher.encrypt(Account.create().privateKey.hex())
+            encrypted_key=secret_aes_cipher.encrypt(Account.create().privateKey.hex()).decode()
         )
 
     def get_address(self, network: str):
