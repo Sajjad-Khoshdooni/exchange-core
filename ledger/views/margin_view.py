@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import serializers
 
-from ledger.exceptions import InsufficientBalance
+from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowableExceeds
 from ledger.models import MarginTransfer, Asset, MarginLoan
 from ledger.utils.margin import MarginInfo
 
@@ -54,9 +54,14 @@ class MarginLoanSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['loan_type'] = validated_data.pop('type')
 
-        return MarginLoan.new_loan(
-            **validated_data
-        )
+        try:
+            return MarginLoan.new_loan(
+                **validated_data
+            )
+        except InsufficientDebt:
+            raise ValidationError('میزان بدهی کمتر از مقدار بازپرداخت است.')
+        except MaxBorrowableExceeds:
+            raise ValidationError('میزان بدهی بیشتر از حد مجاز است.')
 
     class Meta:
         fields = ('amount', 'type', 'coin')
