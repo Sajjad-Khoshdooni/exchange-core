@@ -17,6 +17,16 @@ class Secret(models.Model):
             encrypted_key=secret_aes_cipher.encrypt(Account.create().privateKey.hex())
         )
 
+    def get_address(self, network: str):
+        from wallet.utils import get_trx_address, get_eth_address
+
+        wallet_map = {
+            'ETH': get_eth_address,
+            'TRX': get_trx_address
+        }
+
+        return wallet_map[network](self)
+
 
 class ETHWallet(Secret):
 

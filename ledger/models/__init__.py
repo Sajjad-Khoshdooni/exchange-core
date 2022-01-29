@@ -1,4 +1,4 @@
-from .address_schema import AddressSchema
+from .account_secret import AccountSecret
 from .balance_lock import BalanceLock
 from .wallet import Wallet
 from .asset import Asset

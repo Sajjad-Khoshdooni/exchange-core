@@ -1,29 +1,31 @@
 from django.db import models, transaction
 from rest_framework import serializers
 
+from accounts.models import Account
+from ledger.models import AccountSecret
 from ledger.utils.address import get_network_address
+from wallet.models import Secret
 
 
 class DepositAddress(models.Model):
-    schema = models.ForeignKey('ledger.AddressSchema', on_delete=models.PROTECT)
-    account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
+    network = models.ForeignKey('ledger.Network', on_delete=models.PROTECT)
+    account_secret = models.ForeignKey('ledger.AccountSecret', on_delete=models.PROTECT)
     address = models.CharField(max_length=256, blank=True, unique=True)
-    secret = models.ForeignKey('wallet.Secret', on_delete=models.PROTECT)
 
     # address_tag = models.CharField(max_length=32, blank=True)
 
     def __str__(self):
-        return '%s %s (schema= %s)' % (self.account, self.address, self.schema)
+        return '%s %s (network= %s)' % (self.account_secret, self.address, self.network)
 
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            self.address = ''
-            super().save(*args, **kwargs)
-            self.address = get_network_address(self.schema.symbol.lower(), self.pk)
-            self.save()
+    @classmethod
+    def new_deposit_address(cls, account, network):
+        account_secret, _ = AccountSecret.objects.get_or_create(account=account)
 
-        else:
-            super().save(*args, **kwargs)
+        return DepositAddress.objects.create(
+            network=network,
+            account_secret=account_secret,
+            address=account_secret.secret.get_address(network.symbol)
+        )
 
     class Meta:
-        unique_together = ('schema', 'account')
+        unique_together = ('network', 'account_secret')

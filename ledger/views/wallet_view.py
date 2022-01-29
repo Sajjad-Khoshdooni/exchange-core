@@ -92,7 +92,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 
     def get_address(self, network_asset: NetworkAsset):
         addresses = self.context['addresses']
-        return addresses.get(network_asset.network.schema.symbol)
+        return addresses.get(network_asset.network.symbol)
 
     def get_min_withdraw(self, network_asset: NetworkAsset):
         return network_asset.asset.get_presentation_amount(network_asset.min_withdraw)
@@ -116,7 +116,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
         network_assets = asset.networkasset_set.all()
 
         account = self.context['request'].user.account
-        addresses = dict(DepositAddress.objects.filter(account=account).values_list('schema__symbol', 'address'))
+        addresses = dict(DepositAddress.objects.filter(account=account).values_list('network__symbol', 'address'))
 
         serializer = NetworkAssetSerializer(network_assets, many=True, context={
             'addresses': addresses,

@@ -8,7 +8,7 @@ import requests
 import websocket
 from django.db import transaction
 
-from ledger.models import DepositAddress, AddressSchema
+from ledger.models import DepositAddress
 from ledger.models import Network, Asset
 from ledger.models.transfer import Transfer
 from tracker.blockchain.confirmer import Confirmer, MinimalBlockDTO
@@ -169,7 +169,7 @@ class EthBlockConsumer:
 
         with transaction.atomic():
             to_deposit_addresses = DepositAddress.objects.filter(
-                schema__symbol=AddressSchema.ETH,
+                network__symbol=Network.ETH,
                 address__in=to_address_to_trx
             )
 

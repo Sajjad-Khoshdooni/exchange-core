@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'ledger',
     'tracker',
     'provider',
+    'wallet',
 ]
 
 MIDDLEWARE = [

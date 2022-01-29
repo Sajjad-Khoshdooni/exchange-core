@@ -6,7 +6,7 @@ import base58
 import requests
 from django.db import transaction
 
-from ledger.models import Asset, Transfer, Network, AddressSchema, DepositAddress
+from ledger.models import Asset, Transfer, Network, DepositAddress
 from tracker.blockchain.confirmer import Confirmer, MinimalBlockDTO
 from tracker.blockchain.reverter import Reverter
 from tracker.models.block_tracker import TRXBlockTracker
@@ -97,7 +97,7 @@ class TRXTransferCreator:
 
         with transaction.atomic():
             to_deposit_addresses = DepositAddress.objects.filter(
-                schema__symbol=AddressSchema.ETH,
+                schema__symbol=Network.TRX,
                 address__in=to_address_to_trx
             )
 
