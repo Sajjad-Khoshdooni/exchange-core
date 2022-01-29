@@ -60,7 +60,7 @@ class OTCRequest(models.Model):
         if not allow_small_trades:
             conf = otc_request.get_trade_config()
 
-            if conf.cash_amount * get_trading_price_irt(conf.cash.symbol, BUY, raw_price=True) < 100_000:
+            if conf.cash_amount * get_trading_price_irt(conf.cash.symbol, BUY, raw_price=True) < 95_000:
                 raise SmallAmountTrade()
 
         from_wallet = from_asset.get_wallet(account, otc_request.market)
