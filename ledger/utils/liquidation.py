@@ -71,10 +71,14 @@ class LiquidationEngine:
                 if self.finished:
                     return
 
+                borrowed_wallet = borrowed_asset_to_wallet[asset]
+                borrowed_amount = self.borrowed_wallets[borrowed_wallet]
+
+                margin_wallet = margin_asset_to_wallet[asset]
+                margin_amount = self.margin_wallets[margin_wallet]
+
                 price = get_trading_price_usdt(asset.symbol, SELL)
                 max_amount = self.liquidation_amount / price
-                borrowed_amount = self.borrowed_wallets[asset]
-                margin_amount = self.margin_wallets[asset]
 
                 amount = min(margin_amount, borrowed_amount, max_amount)
 
