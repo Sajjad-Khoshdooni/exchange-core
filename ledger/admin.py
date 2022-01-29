@@ -79,3 +79,9 @@ class WalletAdmin(admin.ModelAdmin):
 class TransferAdmin(admin.ModelAdmin):
     list_display = ('created', 'amount', 'deposit', 'status', 'trx_hash', )
 
+
+@admin.register(models.BalanceLock)
+class BalanceLockAdmin(admin.ModelAdmin):
+    list_display = ('created', 'release_date', 'wallet', 'amount', 'freed')
+    list_filter = ('freed', 'wallet')
+    ordering = ('-created', )
