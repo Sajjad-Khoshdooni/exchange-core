@@ -43,7 +43,7 @@ class LiquidationEngine:
             return
 
         self.margin_wallets = get_asset_balances(account, Wallet.MARGIN)
-        self.borrowed_wallets = get_asset_balances(account, Wallet.MARGIN)
+        self.borrowed_wallets = get_asset_balances(account, Wallet.LOAN)
 
         self.margin_asset_to_wallets = {
             w.asset: w for w in self.margin_wallets

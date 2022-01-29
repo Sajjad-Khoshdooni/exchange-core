@@ -72,7 +72,4 @@ class MarginLoanView(CreateAPIView):
     serializer_class = MarginLoanSerializer
 
     def perform_create(self, serializer):
-        try:
-            serializer.save(account=self.request.user.account)
-        except InsufficientBalance:
-            raise ValidationError('موجودی کافی نیست.')
+        serializer.save(account=self.request.user.account)

@@ -37,9 +37,9 @@ class OTCRequest(models.Model):
     to_price = get_amount_field()
 
     market = models.CharField(
-        max_length=1,
+        max_length=8,
         default=Wallet.SPOT,
-        choices=((Wallet.SPOT, 'spot'), (Wallet.MARGIN, 'margin')),
+        choices=((Wallet.SPOT, Wallet.SPOT), (Wallet.MARGIN, Wallet.MARGIN)),
     )
 
     @classmethod

@@ -10,9 +10,9 @@ from ledger.utils.price import get_tether_irt_price
 
 
 class Wallet(models.Model):
-    SPOT, MARGIN, BORROW = 's', 'm', 'b'
-    MARKETS = (SPOT, MARGIN, BORROW)
-    MARKET_CHOICES = ((SPOT, 'spot'), (MARGIN, 'margin'), (BORROW, 'borrow'))
+    SPOT, MARGIN, LOAN = 'spot', 'margin', 'loan'
+    MARKETS = (SPOT, MARGIN, LOAN)
+    MARKET_CHOICES = ((SPOT, SPOT), (MARGIN, MARGIN), (LOAN, LOAN))
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)

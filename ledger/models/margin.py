@@ -61,8 +61,7 @@ class MarginTransfer(models.Model):
 
 
 class MarginLoan(models.Model):
-
-    BORROW, REPAY = 'b', 'r'
+    BORROW, REPAY = 'borrow', 'repay'
 
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE)
@@ -72,7 +71,7 @@ class MarginLoan(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
 
     type = models.CharField(
-        max_length=1,
+        max_length=8,
         choices=((BORROW, 'borrow'), (REPAY, 'repay')),
     )
 
@@ -86,7 +85,7 @@ class MarginLoan(models.Model):
 
     @property
     def borrow_wallet(self) -> 'Wallet':
-        return self.asset.get_wallet(self.account, Wallet.BORROW)
+        return self.asset.get_wallet(self.account, Wallet.LOAN)
 
     # def create_ledger(self):
     #     if self.type == self.REPAY:

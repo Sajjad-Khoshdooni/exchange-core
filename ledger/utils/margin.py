@@ -43,7 +43,7 @@ class MarginInfo:
 
 
 def get_total_debt(account: Account) -> Decimal:
-    return -account.get_total_balance_usdt(Wallet.BORROW, SELL)
+    return -account.get_total_balance_usdt(Wallet.LOAN, SELL)
 
 
 def get_total_assets(account: Account) -> Decimal:
