@@ -18,14 +18,13 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     to_amount = get_serializer_amount_field(allow_null=True, required=False)
     price = get_serializer_amount_field(source='to_price', read_only=True)
     expire = serializers.SerializerMethodField()
-    market = serializers.CharField(required=True)
 
     def validate(self, attrs):
         from_symbol = attrs['from_asset']['symbol']
         to_symbol = attrs['to_asset']['symbol']
 
-        if Asset.IRT not in (from_symbol, to_symbol):
-            raise ValidationError('یکی از دارایی‌ها باید تومان باشد.')
+        if not {Asset.IRT, Asset.USDT} & {from_symbol, to_symbol}:
+            raise ValidationError('یکی از دارایی‌ها باید تومان یا تتر باشد.')
 
         if from_symbol == to_symbol:
             raise ValidationError('هر دو دارایی نمی‌تواند یکی باشد.')

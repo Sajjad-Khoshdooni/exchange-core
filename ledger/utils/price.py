@@ -98,5 +98,8 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Dec
     return price * multiplier
 
 
-def get_trading_price_irt(coin: str, side: str) -> Decimal:
-    return get_trading_price_usdt(coin, side) * get_tether_irt_price(side)
+def get_trading_price_irt(coin: str, side: str, raw_price: bool = False) -> Decimal:
+    if coin == MARKET_IRT:
+        return Decimal(1)
+
+    return get_trading_price_usdt(coin, side, raw_price) * get_tether_irt_price(side)

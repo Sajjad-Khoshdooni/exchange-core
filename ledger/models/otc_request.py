@@ -8,7 +8,7 @@ from accounts.models import Account
 from ledger.exceptions import SmallAmountTrade
 from ledger.models import Asset, Order, Wallet
 from ledger.utils.fields import get_amount_field
-from ledger.utils.price import get_other_side
+from ledger.utils.price import get_other_side, get_trading_price_irt, BUY
 from ledger.utils.random import secure_uuid4
 from dataclasses import dataclass
 
@@ -60,7 +60,7 @@ class OTCRequest(models.Model):
         if not allow_small_trades:
             conf = otc_request.get_trade_config()
 
-            if conf.cash_amount < 100_000:
+            if conf.cash_amount * get_trading_price_irt(conf.cash.symbol, BUY, raw_price=True) < 100_000:
                 raise SmallAmountTrade()
 
         from_wallet = from_asset.get_wallet(account, otc_request.market)
@@ -71,7 +71,10 @@ class OTCRequest(models.Model):
         return otc_request
 
     def get_trade_config(self) -> TradeConfig:
-        if self.from_asset.symbol == Asset.IRT:
+        from_symbol = self.from_asset.symbol
+        to_symbol = self.to_asset.symbol
+
+        if from_symbol in (Asset.IRT, Asset.USDT) and to_symbol != Asset.IRT:
             return TradeConfig(
                 side=Order.BUY,
                 cash=self.from_asset,
@@ -80,7 +83,7 @@ class OTCRequest(models.Model):
                 coin_amount=self.to_amount,
             )
 
-        elif self.to_asset.symbol == Asset.IRT:
+        elif to_symbol in (Asset.IRT, Asset.USDT):
             return TradeConfig(
                 side=Order.SELL,
                 cash=self.to_asset,

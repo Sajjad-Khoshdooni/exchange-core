@@ -5,8 +5,7 @@ from django.db.models import Sum
 
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
 from ledger.models import BalanceLock
-from ledger.utils.price import BUY, SELL, get_trading_price_irt
-from ledger.utils.price import get_tether_irt_price
+from ledger.utils.price import BUY, SELL, get_trading_price_usdt, get_tether_irt_price
 
 
 class Wallet(models.Model):
@@ -59,13 +58,12 @@ class Wallet(models.Model):
             tether_irt = get_tether_irt_price(SELL)
             return self.get_free() / tether_irt
 
-        return self.get_free() * get_trading_price_irt(self.asset.symbol, BUY)
+        return self.get_free() * get_trading_price_usdt(self.asset.symbol, BUY)
 
     def get_free_irt(self):
         if self.asset.symbol == self.asset.IRT:
             return self.get_free()
 
-        from ledger.utils.price import get_tether_irt_price
         tether_irt = get_tether_irt_price(SELL)
         return self.get_free_usdt() * tether_irt
 

@@ -16,5 +16,5 @@ urlpatterns = [
 
     path('v1/margin/info/', views.MarginInfoView.as_view()),
     path('v1/margin/transfer/', views.MarginTransferView.as_view()),
-    path('v1/margin/borrow/', views.MarginLoanView.as_view()),
+    path('v1/margin/loan/', views.MarginLoanView.as_view()),
 ]

@@ -24,6 +24,6 @@ def check_margin_level():
             engine = LiquidationEngine(account, margin_info)
             engine.start()
 
-        if margin_level <= MARGIN_CALL_ML_THRESHOLD:
+        elif margin_level <= MARGIN_CALL_ML_THRESHOLD:
             logger.warning('Send MARGIN_CALL_ML_THRESHOLD for account = %d' % account.id)
             # warn_risky_level(account, margin_level)
