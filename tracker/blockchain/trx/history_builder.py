@@ -1,6 +1,7 @@
 import datetime
 import logging
 from abc import ABC, abstractmethod
+from decimal import Decimal
 
 import base58
 import pytz
@@ -46,7 +47,7 @@ def decode_trx_data_in_block(data: str):
     if method_id == TRANSFER_METHOD_ID:
         address, amount = data[:64], data[64:]
         address = trxify_address(address.lstrip('0'))
-        amount = int(amount, 16) / 10 ** 6
+        amount = Decimal(int(amount, 16)) / 10 ** 6
         return {'to': address, 'amount': amount}
     if method_id == TRANSFER_FROM_METHOD_ID:
         from_address, to_address, amount = data[:64], data[64:128], data[128:]
