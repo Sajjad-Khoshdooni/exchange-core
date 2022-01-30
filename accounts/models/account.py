@@ -3,7 +3,6 @@ from decimal import Decimal
 from django.db import models
 
 from accounts.models import User
-from ledger.models import Asset
 from ledger.utils.price import get_trading_price_usdt
 
 
@@ -41,7 +40,7 @@ class Account(models.Model):
             return str(self.user)
 
     def get_total_balance_usdt(self, market: str, side: str):
-        from ledger.models import Wallet
+        from ledger.models import Wallet, Asset
 
         wallets = Wallet.objects.filter(account=self, market=market).exclude(asset__symbol=Asset.IRT)
 
