@@ -17,14 +17,9 @@ class MarginInfo:
     total_assets: Decimal
 
     @classmethod
-    def get(cls, account: Account, asset: Asset = None) -> 'MarginInfo':
+    def get(cls, account: Account) -> 'MarginInfo':
         total_assets = get_total_assets(account)
-
-        if not asset:
-            total_debt = get_total_debt(account)
-        else:
-            loan_wallet = asset.get_wallet(account=account, market=Wallet.LOAN)
-            total_debt = -loan_wallet.get_free() * get_trading_price_usdt(asset.symbol, SELL, raw_price=True)
+        total_debt = get_total_debt(account)
 
         return MarginInfo(
             total_debt=total_debt,

@@ -16,6 +16,7 @@ urlpatterns = [
     path('v1/trade/otc/history/', views.OTCHistoryView.as_view()),
 
     path('v1/margin/info/', views.MarginInfoView.as_view()),
+    path('v1/margin/info/<slug:symbol>/', views.AssetMarginInfoView.as_view()),
     path('v1/margin/transfer/', views.MarginTransferView.as_view()),
     path('v1/margin/loan/', views.MarginLoanView.as_view()),
 ]

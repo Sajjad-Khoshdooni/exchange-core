@@ -6,20 +6,14 @@ from rest_framework.views import APIView
 from rest_framework import serializers
 
 from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowableExceeds
-from ledger.models import MarginTransfer, Asset, MarginLoan
+from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet
 from ledger.utils.margin import MarginInfo
+from ledger.utils.price import get_trading_price_usdt, BUY
 
 
 class MarginInfoView(APIView):
     def get(self, request: Request):
         account = request.user.account
-
-        symbol = request.query_params.get('coin')
-        if symbol:
-            asset = get_object_or_404(Asset, symbol=symbol)
-        else:
-            asset = None
-
         margin_info = MarginInfo.get(account, asset=asset)
 
         return Response({
@@ -28,6 +22,26 @@ class MarginInfoView(APIView):
             'margin_level': margin_info.get_margin_level(),
             'total_equity': margin_info.get_total_equity(),
             'max_debt': margin_info.get_total_max_borrow(),
+        })
+
+
+class AssetMarginInfoView(APIView):
+    def get(self, request: Request, symbol):
+        account = request.user.account
+        asset = get_object_or_404(Asset, symbol=symbol)
+
+        margin_info = MarginInfo.get(account)
+
+        margin_wallet = asset.get_wallet(account, Wallet.MARGIN)
+        loan_wallet = asset.get_wallet(account, Wallet.LOAN)
+
+        max_borrow = margin_info.get_total_max_borrow() / get_trading_price_usdt(asset.symbol, BUY)
+        debt = loan_wallet.get_free()
+
+        return Response({
+            'balance': margin_wallet.get_free(),
+            'debt': debt,
+            'max_borrow': max(max_borrow, debt),
         })
 
 
