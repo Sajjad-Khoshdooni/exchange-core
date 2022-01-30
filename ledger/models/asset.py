@@ -70,12 +70,12 @@ class Asset(models.Model):
             amount = Decimal(amount)
 
         n_digits = int(-math.log10(Decimal(self.trade_quantity_step)))
-        rounded = round(amount, n_digits)
+        rounded = str(round(amount, n_digits))
 
         if '.' not in rounded:
-            return str(rounded)
+            return rounded
         else:
-            return str(rounded).rstrip('0').rstrip('.') or '0'
+            return rounded.rstrip('0').rstrip('.') or '0'
 
 
 class AssetSerializer(serializers.ModelSerializer):
