@@ -111,7 +111,7 @@ class LiquidationEngine:
             value = margin_wallet_values[wallet]
 
             max_value = min(self.liquidation_amount, value)
-            amount = max_value / value * margin_wallets[w]
+            amount = max_value / value * self.margin_wallets[wallet]
 
             request = OTCRequest.new_trade(
                 self.account,
