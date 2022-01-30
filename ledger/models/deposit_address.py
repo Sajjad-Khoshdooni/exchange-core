@@ -20,11 +20,13 @@ class DepositAddress(models.Model):
     @classmethod
     def new_deposit_address(cls, account, network):
         account_secret, _ = AccountSecret.objects.get_or_create(account=account)
+        secret = account_secret.secret
+        secret.__class__ = secret.get_secret_wallet(network.symbol)
 
         return DepositAddress.objects.create(
             network=network,
             account_secret=account_secret,
-            address=account_secret.secret.get_address(network.symbol)
+            address=secret.address,
         )
 
     class Meta:

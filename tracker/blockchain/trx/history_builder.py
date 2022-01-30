@@ -86,6 +86,7 @@ class TRXTransferCreator:
         block_hash = block['blockID']
         block_number = block['block_header']['raw_data']['number']
         asset = Asset.objects.get(symbol='USDT')
+        network = Network.objects.get(symbol='TRX')
 
         raw_transactions = block.get('transactions', [])
 
@@ -98,7 +99,7 @@ class TRXTransferCreator:
 
         with transaction.atomic():
             to_deposit_addresses = DepositAddress.objects.filter(
-                network__symbol=Network.TRX,
+                network=network,
                 address__in=to_address_to_trx
             )
 
@@ -107,7 +108,8 @@ class TRXTransferCreator:
 
                 Transfer.objects.create(
                     deposit_address=deposit_address,
-                    wallet=asset.get_wallet(deposit_address.account),
+                    wallet=asset.get_wallet(deposit_address.account_secret.account),
+                    network=network,
                     amount=trx_data['amount'],
                     deposit=True,
                     trx_hash=trx_data['id'],

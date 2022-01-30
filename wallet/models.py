@@ -17,31 +17,31 @@ class Secret(models.Model):
             encrypted_key=secret_aes_cipher.encrypt(Account.create().privateKey.hex()).decode()
         )
 
-    def get_address(self, network: str):
-        from wallet.utils import get_trx_address, get_eth_address
-
+    @staticmethod
+    def get_secret_wallet(network: str):
         wallet_map = {
-            'ETH': get_eth_address,
-            'TRX': get_trx_address
+            'ETH': ETHWallet,
+            'TRX': TRXWallet
         }
-
-        return wallet_map[network](self)
+        return wallet_map[network]
 
 
 class ETHWallet(Secret):
 
     @property
     def address(self):
-        return Account.from_key(self.key).address
+        return Account.from_key(self.key).address.lower()
 
     class Meta:
         proxy = True
 
 
 class TRXWallet(Secret):
+    TRX_ADDRESS_PREFIX = '41'
+
     @property
     def address(self):
-        return '41' + Account.from_key(self.key).address[2:]
+        return self.TRX_ADDRESS_PREFIX + Account.from_key(self.key).address[2:].lower()
 
     class Meta:
         proxy = True
