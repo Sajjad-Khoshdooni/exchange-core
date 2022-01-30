@@ -11,6 +11,7 @@ import logging
 
 from ledger.utils.price import get_trading_price_usdt, SELL, BUY
 from provider.models import ProviderOrder
+from provider.utils import round_with_step_size
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,7 @@ class LiquidationEngine:
 
             max_value = min(self.liquidation_amount, value)
             amount = max_value / value * self.margin_wallets[wallet]
+            amount = round_with_step_size(amount, wallet.asset.trade_quantity_step)
 
             request = OTCRequest.new_trade(
                 self.account,
