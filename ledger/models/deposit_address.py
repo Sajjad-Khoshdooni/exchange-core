@@ -29,5 +29,9 @@ class DepositAddress(models.Model):
             address=secret.address,
         )
 
+    @property
+    def account(self):
+        return self.account_secret.account
+
     class Meta:
         unique_together = ('network', 'account_secret')
