@@ -101,7 +101,10 @@ class LiquidationEngine:
         margin_wallets = list(self.margin_wallets.keys())
         margin_wallets.sort(key=lambda w: margin_wallet_values.get(w, 0), reverse=True)
 
-        to_provide_tether = self.liquidation_amount
+        margin_tether_wallet = self.tether.get_wallet(self.account, Wallet.MARGIN)
+        tether_amount = margin_tether_wallet.get_free()
+
+        to_provide_tether = self.liquidation_amount - tether_amount
 
         for wallet in margin_wallets:
             if wallet.asset.symbol == Asset.USDT:
@@ -146,7 +149,6 @@ class LiquidationEngine:
         borrowed_wallets.sort(key=lambda w: borrowed_wallet_values.get(w, 0), reverse=True)
 
         margin_tether_wallet = self.tether.get_wallet(self.account, Wallet.MARGIN)
-
         tether_amount = margin_tether_wallet.get_free()
 
         for wallet in borrowed_wallets:
@@ -156,7 +158,7 @@ class LiquidationEngine:
 
             value = borrowed_wallet_values[wallet]
 
-            max_value = min(self.liquidation_amount, value, tether_amount / Decimal('1.01'))
+            max_value = min(self.liquidation_amount * Decimal('1.02'), value, tether_amount / Decimal('1.01'))
             amount = max_value / value * self.borrowed_wallets[wallet]
             amount = round_with_step_size(amount, wallet.asset.trade_quantity_step)
 
