@@ -3,8 +3,7 @@ from decimal import Decimal
 
 from accounts.models import Account
 from ledger.models import Wallet, Asset, Trx
-from ledger.utils.price import SELL, BUY
-
+from ledger.utils.price import SELL, BUY, get_trading_price_usdt
 
 TRANSFER_OUT_BLOCK_ML = Decimal('2')
 BORROW_BLOCK_ML = Decimal('1.5')  # leverage = 3
@@ -18,8 +17,15 @@ class MarginInfo:
     total_assets: Decimal
 
     @classmethod
-    def get(cls, account: Account) -> 'MarginInfo':
-        total_debt, total_assets = get_total_debt(account), get_total_assets(account)
+    def get(cls, account: Account, asset: Asset = None) -> 'MarginInfo':
+        if not asset:
+            total_debt, total_assets = get_total_debt(account), get_total_assets(account)
+        else:
+            margin_wallet = asset.get_wallet(account=account, market=Wallet.MARGIN)
+            loan_wallet = asset.get_wallet(account=account, market=Wallet.LOAN)
+
+            total_assets = margin_wallet.get_free() * get_trading_price_usdt(asset.symbol, BUY, raw_price=True)
+            total_debt = -loan_wallet.get_free() * get_trading_price_usdt(asset.symbol, SELL, raw_price=True)
 
         return MarginInfo(
             total_debt=total_debt,
@@ -40,6 +46,9 @@ class MarginInfo:
 
     def get_liquidation_amount(self) -> Decimal:
         return -self.get_max_borrowable()
+
+    def get_total_max_borrow(self) -> Decimal:
+        return self.total_debt + self.get_max_borrowable()
 
 
 def get_total_debt(account: Account) -> Decimal:
