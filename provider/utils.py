@@ -8,5 +8,5 @@ def floor_precision(amount: float, precision: int = 0):
 
 
 def round_with_step_size(amount: Decimal, step_size: Decimal) -> Decimal:
-    round_digits = -Decimal(math.log10(step_size))
+    round_digits = -int(math.log10(step_size))
     return round(amount, round_digits)
