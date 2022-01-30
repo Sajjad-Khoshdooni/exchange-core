@@ -14,7 +14,7 @@ from ledger.utils.price import get_trading_price_usdt, BUY
 class MarginInfoView(APIView):
     def get(self, request: Request):
         account = request.user.account
-        margin_info = MarginInfo.get(account, asset=asset)
+        margin_info = MarginInfo.get(account)
 
         return Response({
             'total_assets': margin_info.total_assets,
