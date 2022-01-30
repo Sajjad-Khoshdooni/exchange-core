@@ -28,7 +28,7 @@ class MarginInfoView(APIView):
 class AssetMarginInfoView(APIView):
     def get(self, request: Request, symbol):
         account = request.user.account
-        asset = get_object_or_404(Asset, symbol=symbol)
+        asset = get_object_or_404(Asset, symbol=symbol.upper())
 
         margin_info = MarginInfo.get(account)
 
@@ -40,7 +40,7 @@ class AssetMarginInfoView(APIView):
 
         return Response({
             'balance': margin_wallet.get_free(),
-            'debt': debt,
+            'debt': -debt,
             'max_borrow': max(max_borrow, debt),
         })
 
