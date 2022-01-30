@@ -33,4 +33,4 @@ class Transfer(models.Model):
     out_address = get_address_field()
 
     def get_explorer_link(self) -> str:
-        return self.wallet.asset.explorer_link.format(hash=self.block_hash)
+        return self.network.explorer_link.format(hash=self.block_hash)

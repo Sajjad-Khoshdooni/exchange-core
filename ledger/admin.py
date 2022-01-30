@@ -1,11 +1,23 @@
 from django.contrib import admin
+from django.db.models import F
+
 from ledger import models
+from ledger.models import Asset
 
 
 @admin.register(models.Asset)
 class AssetAdmin(admin.ModelAdmin):
-    list_display = ('symbol', )
-    ordering = ('id', )
+    list_display = ('symbol', 'order', 'enable', 'trade_quantity_step', 'min_trade_quantity', 'max_trade_quantity')
+    list_filter = ('enable', )
+    list_editable = ('enable', 'order')
+    search_fields = ('symbol', )
+
+    def save_model(self, request, obj, form, change):
+        if Asset.objects.filter(order=obj.order).exclude(id=obj.id).exists():
+            Asset.objects.filter(order__gte=obj.order).exclude(id=obj.id).update(order=F('order') + 1)
+
+        return super(AssetAdmin, self).save_model(request, obj, form, change)
+
 
 
 @admin.register(models.Network)

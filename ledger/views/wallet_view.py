@@ -140,7 +140,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
 
 class WalletView(ModelViewSet):
-    queryset = Asset.objects.all().order_by('id')
+    queryset = Asset.live_objects.all()
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()

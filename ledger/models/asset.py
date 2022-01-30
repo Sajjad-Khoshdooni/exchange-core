@@ -12,9 +12,16 @@ class InvalidAmount(Exception):
     pass
 
 
+class LiveAssetManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(enable=True).order_by('order')
+
+
 class Asset(models.Model):
     IRT = 'IRT'
     USDT = 'USDT'
+
+    live_objects = LiveAssetManager()
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -23,9 +30,16 @@ class Asset(models.Model):
 
     trade_quantity_step = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
     min_trade_quantity = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
-    max_trade_quantity = models.DecimalField(max_digits=15, decimal_places=5, default=1e9)
+    max_trade_quantity = models.DecimalField(max_digits=18, decimal_places=2, default=1e9)
 
-    explorer_link = models.CharField(max_length=128, blank=True)
+    price_precision_usdt = models.SmallIntegerField(default=2)
+    price_precision_irt = models.SmallIntegerField(default=0)
+
+    enable = models.BooleanField(default=False)
+    order = models.SmallIntegerField(default=0, db_index=True)
+
+    class Meta:
+        ordering = ('order', )
 
     def __str__(self):
         return self.symbol

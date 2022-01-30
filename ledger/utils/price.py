@@ -75,7 +75,7 @@ def get_all_assets_prices(side: str, now: datetime = None):
 
     prices = {}
 
-    for asset in Asset.objects.all():
+    for asset in Asset.live_objects.all():
         prices[asset.symbol] = Decimal(get_price(asset.symbol, side, now=now))
 
     return prices
