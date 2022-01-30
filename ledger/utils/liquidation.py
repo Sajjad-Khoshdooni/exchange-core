@@ -1,16 +1,10 @@
-from accounts.models import Account
+import logging
 from decimal import Decimal
-
-from celery import shared_task
 
 from accounts.models import Account
 from ledger.models import Wallet, Trx, OTCTrade, OTCRequest, Asset
-from ledger.utils.margin import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD
 from ledger.utils.margin import MarginInfo
-import logging
-
 from ledger.utils.price import get_trading_price_usdt, SELL, BUY
-from provider.models import ProviderOrder
 from provider.utils import round_with_step_size
 
 logger = logging.getLogger(__name__)
@@ -49,8 +43,7 @@ class LiquidationEngine:
     def start(self):
         logger.info('Starting liquidation for %s' % self.account.id)
 
-        if not self.finished:
-            self._fast_liquidate()
+        self._fast_liquidate()
 
         if not self.finished:
             self._provide_tether()
@@ -108,12 +101,25 @@ class LiquidationEngine:
         margin_wallets = list(self.margin_wallets.keys())
         margin_wallets.sort(key=lambda w: margin_wallet_values.get(w, 0), reverse=True)
 
+        to_provide_tether = self.liquidation_amount
+
         for wallet in margin_wallets:
+            if wallet.asset.symbol == Asset.USDT:
+                continue
+
+            if to_provide_tether < 0.1:
+                return
+
+            logger.info('providing tether with %s' % wallet.asset)
+
             value = margin_wallet_values[wallet]
 
-            max_value = min(self.liquidation_amount, value)
+            max_value = min(to_provide_tether * Decimal('1.01'), value)
             amount = max_value / value * self.margin_wallets[wallet]
             amount = round_with_step_size(amount, wallet.asset.trade_quantity_step)
+
+            if amount < wallet.asset.min_trade_quantity:
+                continue
 
             request = OTCRequest.new_trade(
                 self.account,
@@ -126,6 +132,8 @@ class LiquidationEngine:
 
             OTCTrade.execute_trade(request)
 
+            to_provide_tether -= request.to_amount
+
     def _liquidate_funds(self):
         logger.info('liquidating funds')
 
@@ -137,11 +145,23 @@ class LiquidationEngine:
         borrowed_wallets = list(self.borrowed_wallets.keys())
         borrowed_wallets.sort(key=lambda w: borrowed_wallet_values.get(w, 0), reverse=True)
 
+        margin_tether_wallet = self.tether.get_wallet(self.account)
+
+        tether_amount = margin_tether_wallet.get_balance()
+
         for wallet in borrowed_wallets:
+
+            if self.liquidation_amount < 0.1 or tether_amount < 0.1:
+                return
+
             value = borrowed_wallet_values[wallet]
 
-            max_value = min(self.liquidation_amount, value)
+            max_value = min(self.liquidation_amount, value, tether_amount / Decimal('1.01'))
             amount = max_value / value * self.borrowed_wallets[wallet]
+            amount = round_with_step_size(amount, wallet.asset.trade_quantity_step)
+
+            if amount < wallet.asset.min_trade_quantity:
+                continue
 
             request = OTCRequest.new_trade(
                 self.account,
@@ -161,6 +181,9 @@ class LiquidationEngine:
                 scope=Trx.LIQUID
             )
 
+            tether_amount = margin_tether_wallet.get_balance()
+            self.liquidation_amount -= amount
+
     @property
     def finished(self):
-        return self.liquidation_amount < 0.01
+        return self.liquidation_amount < 0.1
