@@ -118,7 +118,8 @@ class LiquidationEngine:
                 market=Wallet.MARGIN,
                 from_asset=wallet.asset,
                 to_asset=self.tether,
-                to_amount=amount
+                to_amount=amount,
+                allow_small_trades=True
             )
 
             OTCTrade.execute_trade(request)
@@ -145,7 +146,8 @@ class LiquidationEngine:
                 market=Wallet.MARGIN,
                 from_asset=self.tether,
                 to_asset=wallet.asset,
-                to_amount=amount
+                to_amount=amount,
+                allow_small_trades=True
             )
 
             OTCTrade.execute_trade(request)

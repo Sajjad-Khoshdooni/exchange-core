@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 @shared_task()
 def check_margin_level():
     margin_accounts = set(Wallet.objects.filter(market=Wallet.MARGIN).values_list('account', flat=True))
-    accounts = Account.objects.filter(id__in=margin_accounts)
+    accounts = Account.objects.filter(id__in=margin_accounts, user__isnull=False)
 
     for account in accounts:
         margin_info = MarginInfo.get(account)
