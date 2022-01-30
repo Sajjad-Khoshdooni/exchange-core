@@ -145,9 +145,9 @@ class LiquidationEngine:
         borrowed_wallets = list(self.borrowed_wallets.keys())
         borrowed_wallets.sort(key=lambda w: borrowed_wallet_values.get(w, 0), reverse=True)
 
-        margin_tether_wallet = self.tether.get_wallet(self.account)
+        margin_tether_wallet = self.tether.get_wallet(self.account, Wallet.MARGIN)
 
-        tether_amount = margin_tether_wallet.get_balance()
+        tether_amount = margin_tether_wallet.get_free()
 
         for wallet in borrowed_wallets:
 
