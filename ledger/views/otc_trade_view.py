@@ -32,6 +32,9 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         if from_symbol == to_symbol:
             raise ValidationError('هر دو دارایی نمی‌تواند یکی باشد.')
 
+        if attrs['market'] == Wallet.MARGIN and Asset.IRT in (from_symbol, to_symbol):
+            raise ValidationError('در بازار معاملات تعهدی نمی‌توان به تومان معامله کرد.')
+
         try:
             attrs['from_asset'] = Asset.get(from_symbol)
             attrs['to_asset'] = Asset.get(to_symbol)
