@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView
 
+from collector.models import CoinMarketCap
 from ledger.models import Asset
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.price import get_all_assets_prices, get_tether_irt_price, BUY
@@ -31,7 +32,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return asset.get_presentation_price_irt(price)
 
     def get_weekly_trend_url(self, asset: Asset):
-        return 'https://cdn.nobitex.ir/charts/%s.png' % asset.symbol.lower()
+        cap = CoinMarketCap.objects.get(symbol=asset.symbol)
+        return 'https://s3.coinmarketcap.com/generated/sparklines/web/7d/2781/%d.svg' % cap.internal_id
 
     def get_irt_price_changed_percent_24h(self, asset: Asset):
         now_price = self.get_price_irt(asset)
