@@ -3,6 +3,7 @@ import os
 from celery import Celery
 
 # Set the default Django settings module for the 'celery' program.
+from celery.schedules import crontab
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', '_base.settings')
 
@@ -17,13 +18,16 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
 
-app.conf.task_routes = {
-    'tracker.tasks.trx_network_consumer': {'queue': 'trx_network_consumer'},
-}
-
 app.conf.beat_schedule = {
     'trx_network_consumer': {
         'task': 'tracker.tasks.trx_network_consumer',
         'schedule': 60,
+        'options': {
+            'queue': 'trx_network_consumer'
+        },
+    },
+    'coin_market_cap_update': {
+        'task': 'collector.tasks.coin_market_cap.update_coin_market_cap',
+        'schedule': crontab(minute=0, hour=2),
     },
 }

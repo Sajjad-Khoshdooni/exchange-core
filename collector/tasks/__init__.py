@@ -1,0 +1,1 @@
+from .coin_market_cap import update_coin_market_cap

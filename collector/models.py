@@ -19,8 +19,12 @@ class CoinMarketCap(models.Model):
     change_7d = models.FloatField()
 
     @classmethod
+    def request(cls):
+        return requests.get(data_url).json()['data']['cryptoCurrencyList']
+
+    @classmethod
     def fill(cls):
-        coins = requests.get(data_url).json()['data']['cryptoCurrencyList']
+        coins = cls.request()
         coins = list(filter(lambda x: x['quotes'][0]['marketCap'] > 0, coins))
 
         coins_per_symbol = defaultdict(list)
