@@ -21,11 +21,13 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
     def get_price_usdt(self, asset: Asset):
         prices = self.context['prices']
-        return int(str(int(prices[asset.symbol])))
+        price = prices[asset.symbol]
+        return asset.get_presentation_price_usdt(price)
 
     def get_price_irt(self, asset: Asset):
         tether_irt = self.context['tether_irt']
-        return int(self.get_price_usdt(asset) * tether_irt)
+        price = self.get_price_usdt(asset) * tether_irt
+        return asset.get_presentation_price_irt(price)
 
     def get_weekly_trend_url(self, asset: Asset):
         return 'https://cdn.nobitex.ir/charts/%s.png' % asset.symbol.lower()
