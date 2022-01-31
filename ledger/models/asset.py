@@ -21,8 +21,8 @@ class Asset(models.Model):
     IRT = 'IRT'
     USDT = 'USDT'
 
-    live_objects = LiveAssetManager()
     objects = models.Manager()
+    live_objects = LiveAssetManager()
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
