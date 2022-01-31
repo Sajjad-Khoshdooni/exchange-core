@@ -32,8 +32,11 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return asset.get_presentation_price_irt(price)
 
     def get_weekly_trend_url(self, asset: Asset):
-        cap = CoinMarketCap.objects.get(symbol=asset.symbol)
-        return 'https://s3.coinmarketcap.com/generated/sparklines/web/7d/2781/%d.svg' % cap.internal_id
+        cap = CoinMarketCap.objects.filter(symbol=asset.symbol).first()
+        if cap:
+            return 'https://s3.coinmarketcap.com/generated/sparklines/web/7d/2781/%d.svg' % cap.internal_id
+        else:
+            return '/'
 
     def get_irt_price_changed_percent_24h(self, asset: Asset):
         now_price = self.get_price_irt(asset)
