@@ -35,7 +35,12 @@ class AssetMarginInfoView(APIView):
         margin_wallet = asset.get_wallet(account, Wallet.MARGIN)
         loan_wallet = asset.get_wallet(account, Wallet.LOAN)
 
-        max_borrow = margin_info.get_total_max_borrow() / get_trading_price_usdt(asset.symbol, BUY)
+        price = get_trading_price_usdt(asset.symbol, BUY)
+        if price == 0:
+            max_borrow = 0
+        else:
+            max_borrow = margin_info.get_total_max_borrow() / price
+
         debt = loan_wallet.get_free()
 
         return Response({
