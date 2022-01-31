@@ -53,7 +53,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
             return cap.change_7d
 
     def get_cap(self, asset) -> CoinMarketCap:
-        return self.context['caps'].get(asset.symbol)
+        return self.context['cap_info'].get(asset.symbol)
 
     @classmethod
     def create_serializer(cls,  prices: bool = True):
