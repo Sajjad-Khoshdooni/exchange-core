@@ -15,6 +15,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
     weekly_trend_url = serializers.SerializerMethodField()
     irt_price_changed_percent_24h = serializers.SerializerMethodField()
     is_cash = serializers.SerializerMethodField()
+    change_24h = serializers.SerializerMethodField()
+    change_7d = serializers.SerializerMethodField()
 
     class Meta:
         model = Asset
@@ -38,26 +40,27 @@ class AssetSerializerBuilder(AssetSerializerMini):
         else:
             return '/'
 
-    def get_irt_price_changed_percent_24h(self, asset: Asset):
-        now_price = self.get_price_irt(asset)
+    def get_change24h(self, asset: Asset):
+        cap = self.get_cap(asset)
 
-        print('now: coin = %s, tether = %s, coin_irt = %s' % (self.get_price_usdt(asset), self.context['tether_irt'], now_price))
+        if cap:
+            return cap.change_24h
 
-        prices_yesterday = self.context['prices_yesterday']
-        tether_irt_yesterday = self.context['tether_irt_yesterday']
+    def get_change7d(self, asset: Asset):
+        cap = self.get_cap(asset)
 
-        yesterday_price = prices_yesterday[asset.symbol] * tether_irt_yesterday
+        if cap:
+            return cap.change_7d
 
-        print('yes: coin = %s, tether = %s, coin_irt = %s' % (prices_yesterday[asset.symbol], tether_irt_yesterday, yesterday_price))
-
-        return round((now_price - yesterday_price) / yesterday_price * 100, 2)
+    def get_cap(self, asset) -> CoinMarketCap:
+        return self.context['caps'].get(asset.symbol)
 
     @classmethod
     def create_serializer(cls,  prices: bool = True):
         fields = AssetSerializerMini.Meta.fields
 
         if prices:
-            fields = (*fields, 'price_usdt', 'price_irt', 'weekly_trend_url')
+            fields = (*fields, 'price_usdt', 'price_irt', 'weekly_trend_url', 'change_24h', 'change_7d')
 
         class Serializer(cls):
             pass
@@ -80,10 +83,9 @@ class AssetsView(ListAPIView):
             ctx['prices'] = get_all_assets_prices(BUY)
             ctx['tether_irt'] = get_tether_irt_price(BUY)
 
-            # yesterday = datetime.now() - timedelta(days=1)
-            #
-            # ctx['prices_yesterday'] = get_all_assets_prices(now=yesterday)
-            # ctx['tether_irt_yesterday'] = get_tether_irt_price(now=yesterday)
+            symbols = list(self.get_queryset().values_list('symbol', flat=True))
+            caps = CoinMarketCap.objects.filter(symbol__in=symbols)
+            ctx['cap_info'] = {cap.symbol: cap for cap in caps}
 
         return ctx
 

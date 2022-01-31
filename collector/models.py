@@ -15,6 +15,8 @@ class CoinMarketCap(models.Model):
     internal_id = models.PositiveIntegerField()
     price = models.FloatField()
     market_cap = models.FloatField()
+    change_24h = models.FloatField()
+    change_7d = models.FloatField()
 
     @classmethod
     def fill(cls):
@@ -39,14 +41,18 @@ class CoinMarketCap(models.Model):
 
             coin = coins_list[0]
 
+            price_info = coin['quotes'][0]
+
             objects.append(
                 CoinMarketCap(
                     symbol=coin['symbol'],
                     name=coin['name'],
                     slug=coin['slug'],
                     internal_id=coin['id'],
-                    price=coin['quotes'][0]['price'],
-                    market_cap=coin['quotes'][0]['marketCap'],
+                    price=price_info['price'],
+                    market_cap=price_info['marketCap'],
+                    change_24h=price_info['percentChange24h'],
+                    change_7d=price_info['percentChange7d'],
                 )
             )
 
