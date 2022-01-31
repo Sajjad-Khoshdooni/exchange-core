@@ -1,14 +1,9 @@
 import grpc
-from django.conf import settings
-from yekta_config import secret
 
-from collector import order_pb2
-from collector import order_pb2_grpc
-from collector import trade_pb2
-from collector import trade_pb2_grpc
+from collector.price import order_pb2, order_pb2_grpc, trade_pb2_grpc, trade_pb2
 
 # if not settings.DEBUG:
-with open('collector/server.crt', 'rb') as f:
+with open('collector/price/server.crt', 'rb') as f:
     trusted_certs = f.read()
 
 

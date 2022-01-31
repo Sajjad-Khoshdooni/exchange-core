@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from collector import trade_pb2 as trade__pb2
+from collector.price import trade_pb2 as trade__pb2
 
 
 class TradeStub(object):

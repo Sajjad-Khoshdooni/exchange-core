@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from cachetools import TTLCache
 
-from collector.grpc_client import gRPCClient
+from collector.price.grpc_client import gRPCClient
 from ledger.utils.cache import ttl_cache
 
 cache = TTLCache(maxsize=1000, ttl=2)
