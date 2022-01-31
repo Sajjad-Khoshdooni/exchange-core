@@ -103,3 +103,15 @@ def get_trading_price_irt(coin: str, side: str, raw_price: bool = False) -> Deci
         return Decimal(1)
 
     return get_trading_price_usdt(coin, side, raw_price) * get_tether_irt_price(side)
+
+
+def get_presentation_amount(amount: Decimal, precision: int):
+    if isinstance(amount, str):
+        amount = Decimal(amount)
+
+    rounded = str(round(amount, precision))
+
+    if '.' not in rounded:
+        return rounded
+    else:
+        return rounded.rstrip('0').rstrip('.') or '0'

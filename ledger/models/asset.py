@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from accounts.models import Account
 from ledger.models import Wallet
+from ledger.utils.price import get_presentation_amount
 
 
 class InvalidAmount(Exception):
@@ -81,16 +82,14 @@ class Asset(models.Model):
                 amount % self.trade_quantity_step == 0
 
     def get_presentation_amount(self, amount: Decimal) -> str:
-        if isinstance(amount, str):
-            amount = Decimal(amount)
-
         n_digits = int(-math.log10(Decimal(self.trade_quantity_step)))
-        rounded = str(round(amount, n_digits))
+        return get_presentation_amount(amount, n_digits)
 
-        if '.' not in rounded:
-            return rounded
-        else:
-            return rounded.rstrip('0').rstrip('.') or '0'
+    def get_presentation_price_irt(self, price: Decimal) -> str:
+        return get_presentation_amount(price, self.price_precision_irt)
+
+    def get_presentation_price_usdt(self, price: Decimal) -> str:
+        return get_presentation_amount(price, self.price_precision_usdt)
 
 
 class AssetSerializer(serializers.ModelSerializer):

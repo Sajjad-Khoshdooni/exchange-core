@@ -4,7 +4,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Wallet, DepositAddress, Transfer, OTCTrade, NetworkAsset
 from ledger.models.asset import Asset
-from ledger.utils.price import get_trading_price_irt
+from ledger.utils.price import get_trading_price_irt, BUY, SELL
 
 
 class AssetListSerializer(serializers.ModelSerializer):
@@ -31,7 +31,8 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        return str(int(wallet.get_free_usdt()))
+        amount = wallet.get_free_usdt()
+        return asset.get_presentation_price_usdt(amount)
 
     def get_balance_irt(self, asset: Asset):
         wallet = self.get_wallet(asset)
@@ -39,18 +40,22 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        return str(int(wallet.get_free_irt()))
+        amount = wallet.get_free_irt()
+        return asset.get_presentation_price_irt(amount)
 
     def get_sell_price_irt(self, asset: Asset):
         if asset.symbol == asset.IRT:
             return ''
-        return str(int(get_trading_price_irt(asset.symbol, 'sell')))
+
+        price = get_trading_price_irt(asset.symbol, SELL)
+        return asset.get_presentation_price_irt(price)
 
     def get_buy_price_irt(self, asset: Asset):
         if asset.symbol == asset.IRT:
             return ''
 
-        return str(int(get_trading_price_irt(asset.symbol, 'buy')))
+        price = get_trading_price_irt(asset.symbol, BUY)
+        return asset.get_presentation_price_irt(price)
 
     class Meta:
         model = Asset
