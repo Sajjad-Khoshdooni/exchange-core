@@ -33,7 +33,7 @@ def create_assets(apps, schema_editor):
                     rule = spot_rules[symbol]
 
                     kwargs['price_precision_usdt'] = -int(math.log10(rule['price_precision']))
-                    kwargs['price_precision_irt'] = kwargs['price_precision_usdt'] - 3
+                    kwargs['price_precision_irt'] = max(kwargs['price_precision_usdt'] - 3, 0)
 
                 _filter = get_spot_filter(symbol, 'LOT_SIZE')
                 if _filter:

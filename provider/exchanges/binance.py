@@ -89,10 +89,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
             kwargs['headers'] = headers
 
         data = kwargs.get('data', {})
-        if 'symbol' in data:
-            data['symbol'] = data['symbol'].replace('SHIB', '1000SHIB')
-        if 'asset' in data:
-            data['asset'] = data['asset'].replace('SHIB', '1000SHIB')
+
         kwargs['data'] = data
         return super(BinanceFuturesHandler, cls).collect_api(endpoint, method, **kwargs)
 
