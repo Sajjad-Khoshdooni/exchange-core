@@ -40,13 +40,13 @@ class AssetSerializerBuilder(AssetSerializerMini):
         else:
             return '/'
 
-    def get_change24h(self, asset: Asset):
+    def get_change_24h(self, asset: Asset):
         cap = self.get_cap(asset)
 
         if cap:
             return cap.change_24h
 
-    def get_change7d(self, asset: Asset):
+    def get_change_7d(self, asset: Asset):
         cap = self.get_cap(asset)
 
         if cap:
