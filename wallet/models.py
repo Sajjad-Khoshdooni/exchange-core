@@ -1,7 +1,21 @@
+from typing import Type
+
+import base58
 from django.db import models
 from eth_account import Account
 
 from wallet.aes_cipher import secret_aes_cipher
+
+
+class CryptoWallet:
+
+    @property
+    def address(self):
+        raise NotImplementedError
+
+    @property
+    def base58_address(self):
+        return base58.b58encode_check(bytes.fromhex(self.address)).decode()
 
 
 class Secret(models.Model):
@@ -18,7 +32,7 @@ class Secret(models.Model):
         )
 
     @staticmethod
-    def get_secret_wallet(network: str):
+    def get_secret_wallet(network: str) -> Type['Secret']:
         wallet_map = {
             'ETH': ETHWallet,
             'TRX': TRXWallet
@@ -26,7 +40,7 @@ class Secret(models.Model):
         return wallet_map[network]
 
 
-class ETHWallet(Secret):
+class ETHWallet(Secret, CryptoWallet):
 
     @property
     def address(self):
@@ -36,7 +50,7 @@ class ETHWallet(Secret):
         proxy = True
 
 
-class TRXWallet(Secret):
+class TRXWallet(Secret, CryptoWallet):
     TRX_ADDRESS_PREFIX = '41'
 
     @property

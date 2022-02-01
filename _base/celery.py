@@ -26,6 +26,13 @@ app.conf.beat_schedule = {
             'queue': 'trx_network_consumer'
         },
     },
+    'create_withdraw_transaction': {
+        'task': 'ledger.tasks.def create_transaction_from_not_broadcasts',
+        'schedule': 120,
+        'options': {
+            'queue': 'trx_network_consumer'
+        },
+    },
     'coin_market_cap_update': {
         'task': 'collector.tasks.coin_market_cap.update_coin_market_cap',
         'schedule': crontab(minute=0, hour=2),
