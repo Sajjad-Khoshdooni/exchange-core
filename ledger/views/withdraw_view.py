@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404, CreateAPIView
 
-from ledger.models import DepositAddress, Asset, Network, Transfer
+from ledger.models import Asset, Network, Transfer
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
@@ -17,10 +17,17 @@ class WithdrawSerializer(serializers.ModelSerializer):
         return {
             'deposit': False,
             'network': network,
+            'asset': asset,
             'wallet': asset.get_wallet(account),
             'amount': attrs['amount'],
-            'out_address': attrs['address']
+            'out_address': attrs['address'],
+            'account': account,
         }
+
+    def create(self, validated_data):
+        created_transfer = super().create(validated_data)
+
+        return created_transfer
 
     class Meta:
         model = Transfer
