@@ -27,7 +27,7 @@ app.conf.beat_schedule = {
         },
     },
     'create_withdraw_transaction': {
-        'task': 'ledger.tasks.def create_transaction_from_not_broadcasts',
+        'task': 'ledger.tasks.create_transaction_from_not_broadcasts',
         'schedule': 120,
         'options': {
             'queue': 'trx_network_consumer'

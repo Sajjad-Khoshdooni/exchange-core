@@ -6,7 +6,7 @@ from ledger.utils.fields import get_amount_field, get_address_field
 
 
 class Transfer(models.Model):
-    PENDING, CANCELED, REVERTED, DONE, NOT_BROADCAST = 'pending', 'canceled', 'reverted', 'done', 'not broadcast'
+    PENDING, CANCELED, REVERTED, DONE, NOT_BROADCAST = 'pending', 'canceled', 'reverted', 'done', 'not_brod'
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
@@ -20,7 +20,7 @@ class Transfer(models.Model):
     status = models.CharField(
         default=PENDING,
         max_length=8,
-        choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
+        choices=[(NOT_BROADCAST, NOT_BROADCAST), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
         db_index=True
     )
 
