@@ -38,23 +38,28 @@ class FeeHandler:
 
     def supply_fee_for_asset(self, fee_account: Account, account: Account):
         if (
-            self.asset.symbol != 'TRX' or self.network.symbol != 'TRX'
+            self.asset.symbol != 'USDT' or self.network.symbol != 'TRX'
         ):
             raise NotImplementedError
-        crypto_wallet = account.accountsecret.secret
-        crypto_wallet.__class__ = Secret.get_secret_wallet(self.network.symbol)
+        sender_wallet = fee_account.accountsecret.secret
+        sender_wallet.__class__ = Secret.get_secret_wallet(self.network.symbol)
+
+        receiver_wallet = account.accountsecret.secret
+        receiver_wallet.__class__ = Secret.get_secret_wallet(self.network.symbol)
 
         fee_amount = self.get_asset_fee()
-        trx_creator = TRXTransactionCreator(self.asset, crypto_wallet)
 
-        wallet = self.asset.get_wallet(fee_account)
+        base_asset = Asset.objects.get(symbol=self.network.symbol)
+        trx_creator = TRXTransactionCreator(base_asset, sender_wallet)
+
+        wallet = base_asset.get_wallet(fee_account)
 
         transfer = Transfer.objects.create(
             deposit=False,
             network=self.network,
             wallet=wallet,
             amount=fee_amount,
-            out_address=crypto_wallet.address,
+            out_address=receiver_wallet.address,
             deposit_address=self.network.get_deposit_address(wallet.account)
         )
         trx_creator.from_transfer(transfer)
