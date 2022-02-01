@@ -7,7 +7,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ledger.exceptions import InsufficientBalance, SmallAmountTrade
+from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease
 from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired
@@ -125,6 +125,8 @@ class OTCTradeSerializer(serializers.ModelSerializer):
             raise ValidationError({'amount': 'موجودی کافی نیست.'})
         except InvalidAmount as e:
             raise ValidationError(str(e))
+        except AbruptDecrease as e:
+            raise ValidationError('مشکلی در ثبت سفارش رخ داد. لطفا دوباره تلاش کنید.')
 
 
 class OTCTradeView(CreateAPIView):

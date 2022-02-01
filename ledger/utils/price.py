@@ -6,7 +6,7 @@ from cachetools import TTLCache
 from collector.price.grpc_client import gRPCClient
 from ledger.utils.cache import ttl_cache
 
-cache = TTLCache(maxsize=1000, ttl=2)
+cache = TTLCache(maxsize=1000, ttl=0.5)
 
 BINANCE = 'binance'
 NOBITEX = 'nobitex'

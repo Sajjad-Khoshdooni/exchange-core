@@ -1,11 +1,17 @@
+import logging
 from uuid import uuid4
 
 from django.db import models, transaction
 
 from accounts.models import Account
+from ledger.exceptions import AbruptDecrease
 from ledger.models import OTCRequest, Trx, BalanceLock, Asset
 from ledger.utils.fields import get_lock_field, get_status_field
+from ledger.utils.price import SELL
 from provider.models import ProviderOrder
+
+
+logger = logging.getLogger(__name__)
 
 
 class TokenExpired(Exception):
@@ -70,12 +76,13 @@ class OTCTrade(models.Model):
         account = otc_request.account
 
         from_asset = otc_request.from_asset
-
         conf = otc_request.get_trade_config()
 
         conf.coin.is_trade_amount_valid(conf.coin_amount, raise_exception=True)
 
         from_wallet = from_asset.get_wallet(account, market=otc_request.market)
+
+        cls.check_abrupt_decrease(otc_request)
 
         lock = from_wallet.lock_balance(otc_request.from_amount)
 
@@ -106,3 +113,20 @@ class OTCTrade(models.Model):
                 self.change_status(self.DONE)
                 self.create_ledger()
                 self.lock.release()
+
+    @classmethod
+    def check_abrupt_decrease(cls, otc_request: OTCRequest):
+        old_coin_price = otc_request.to_price
+        new_coin_price = otc_request.get_to_price()
+
+        threshold = 0.0035
+
+        conf = otc_request.get_trade_config()
+
+        if conf.side == SELL:
+            old_coin_price = 1 / old_coin_price
+            new_coin_price = 1 / new_coin_price
+
+        if new_coin_price <= old_coin_price * (1 - threshold):
+            logger.error('otc failed because of abrupt decrease!')
+            raise AbruptDecrease()

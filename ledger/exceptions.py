@@ -14,3 +14,6 @@ class MaxBorrowableExceeds(Exception):
 class SmallAmountTrade(Exception):
     pass
 
+
+class AbruptDecrease(Exception):
+    pass
