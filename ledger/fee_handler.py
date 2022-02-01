@@ -18,7 +18,7 @@ class FeeHandler:
             self.asset.symbol != 'USDT' or self.network.symbol != 'TRX'
         ):
             raise NotImplementedError
-        return 20 * 10 ** 6
+        return 10 * 10 ** 6
 
     def is_balance_enough_for_fee(self, account: Account):
         if (
@@ -28,7 +28,8 @@ class FeeHandler:
         secret = account.accountsecret.secret
         secret.__class__ = Secret.get_secret_wallet(self.network.symbol)
         account_info = tron.get_account(secret.base58_address)
-        return account_info.get('balance', 0) > self.get_asset_fee()
+
+        return account_info.get('balance', 0) >= self.get_asset_fee()
 
     def supply_fee_for_asset(self, fee_account: Account, account: Account):
         if (
@@ -40,11 +41,15 @@ class FeeHandler:
 
         fee_amount = self.get_asset_fee()
         trx_creator = TRXTransactionCreator(self.asset, crypto_wallet)
+
+        wallet = self.asset.get_wallet(fee_account)
+
         transfer = Transfer.objects.create(
             deposit=False,
             network=self.network,
-            wallet=self.asset.get_wallet(fee_account),
+            wallet=wallet,
             amount=fee_amount,
             out_address=crypto_wallet.address,
+            deposit_address=self.network.get_deposit_address(wallet.account)
         )
         trx_creator.from_transfer(transfer)
