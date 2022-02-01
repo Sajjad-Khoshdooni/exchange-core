@@ -152,7 +152,7 @@ class WalletView(ModelViewSet):
         ctx = super().get_serializer_context()
 
         market = self.get_market()
-        wallets = Wallet.objects.filter(account__user=self.request.user, market=market)
+        wallets = Wallet.objects.filter(account=self.request.user.account, market=market)
         ctx['asset_to_wallet'] = {wallet.asset_id: wallet for wallet in wallets}
 
         return ctx
