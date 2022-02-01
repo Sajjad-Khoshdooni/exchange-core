@@ -22,7 +22,7 @@ class FeeHandler:
             self.asset.symbol != 'USDT' or self.network.symbol != 'TRX'
         ):
             raise NotImplementedError
-        return 10 * 10 ** 6
+        return 10
 
     def is_balance_enough_for_fee(self, account: Account):
         if (
@@ -37,7 +37,7 @@ class FeeHandler:
         except AddressNotFound:
             return False
 
-        return account_info.get('balance', 0) >= self.get_asset_fee()
+        return account_info.get('balance', 0) >= self.get_asset_fee() * 10 ** 6
 
     def supply_fee_for_asset(self, fee_account: Account, account: Account):
         if (
@@ -58,6 +58,7 @@ class FeeHandler:
         wallet = base_asset.get_wallet(fee_account)
 
         transfer = Transfer.objects.create(
+            status=Transfer.NOT_BROADCAST,
             deposit=False,
             network=self.network,
             wallet=wallet,
@@ -65,4 +66,8 @@ class FeeHandler:
             out_address=receiver_wallet.address,
             deposit_address=self.network.get_deposit_address(wallet.account)
         )
-        trx_creator.from_transfer(transfer)
+        tx_id = trx_creator.from_transfer(transfer)
+
+        transfer.trx_hash = tx_id
+        transfer.status = Transfer.PENDING
+        transfer.save()
