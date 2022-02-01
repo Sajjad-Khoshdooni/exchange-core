@@ -40,7 +40,7 @@ class TRXTransactionCreator(TransactionCreator):
     def _smart_contract_from_transfer(self, transfer: Transfer):
         contract = self.tron.get_contract(self.USDT_CONTRACT)
         transaction = (
-            contract.functions.transfer(transfer.out_address, transfer.amount * 10 ** 6)
+            contract.functions.transfer(transfer.out_address, int(transfer.amount * 10 ** 6))
                 .with_owner(self.wallet.address)
                 .fee_limit(10_000_000)
                 .build()
@@ -54,7 +54,7 @@ class TRXTransactionCreator(TransactionCreator):
 
     def _trx_from_transfer(self, transfer: Transfer):
         transaction = (
-            self.tron.trx.transfer(self.wallet.address, transfer.out_address, transfer.amount * 10 ** 6)
+            self.tron.trx.transfer(self.wallet.address, transfer.out_address, int(transfer.amount * 10 ** 6))
                 .build()
                 .sign(self._private_key)
         )
