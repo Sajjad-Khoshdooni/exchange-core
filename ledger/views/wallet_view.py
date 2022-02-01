@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Wallet, DepositAddress, Transfer, NetworkAsset
@@ -145,7 +146,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
         fields = (*AssetListSerializer.Meta.fields, 'networks', 'deposits', 'withdraws')
 
 
-class WalletView(ModelViewSet):
+class WalletViewSet(ModelViewSet):
     queryset = Asset.live_objects.all()
 
     def get_serializer_context(self):
@@ -167,7 +168,7 @@ class WalletView(ModelViewSet):
         return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper())
 
     def get_queryset(self):
-        queryset = super(WalletView, self).get_queryset()
+        queryset = super(WalletViewSet, self).get_queryset()
 
         if self.get_market() == Wallet.MARGIN:
             return queryset.exclude(symbol=Asset.IRT)
@@ -184,3 +185,16 @@ class WalletView(ModelViewSet):
         wallets = list(filter(lambda w: w['balance'] != '0', data)) + list(filter(lambda w: w['balance'] == '0', data))
 
         return Response(wallets)
+
+
+class WalletBalanceView(APIView):
+
+    def get(self, request, *args, **kwargs):
+        asset = get_object_or_404(Asset, symbol=kwargs['symbol'].upper())
+        wallet = asset.get_wallet(request.user.account)
+
+
+        return {
+            'symbol': asset.symbol,
+            'balance': wallet.get_balance()
+        }
