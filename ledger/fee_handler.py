@@ -1,4 +1,5 @@
 from tronpy import Tron
+from tronpy.exceptions import AddressNotFound
 
 from accounts.models import Account
 from ledger.models import Transfer, Network, Asset
@@ -27,7 +28,11 @@ class FeeHandler:
             raise NotImplementedError
         secret = account.accountsecret.secret
         secret.__class__ = Secret.get_secret_wallet(self.network.symbol)
-        account_info = tron.get_account(secret.base58_address)
+
+        try:
+            account_info = tron.get_account(secret.base58_address)
+        except AddressNotFound:
+            return False
 
         return account_info.get('balance', 0) >= self.get_asset_fee()
 

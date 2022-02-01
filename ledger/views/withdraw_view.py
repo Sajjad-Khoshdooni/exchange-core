@@ -14,7 +14,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         asset = get_object_or_404(Asset, symbol=attrs['coin'])
         network = get_object_or_404(Network, symbol=attrs['network'])
 
-        #todo: status = not_broadcast, address = convert to base16
+        #todo: status = not_broadcast, address = convert to lower base16
 
         return {
             'deposit': False,
