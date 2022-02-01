@@ -193,8 +193,7 @@ class WalletBalanceView(APIView):
         asset = get_object_or_404(Asset, symbol=kwargs['symbol'].upper())
         wallet = asset.get_wallet(request.user.account)
 
-
-        return {
+        return Response({
             'symbol': asset.symbol,
             'balance': wallet.get_balance()
-        }
+        })
