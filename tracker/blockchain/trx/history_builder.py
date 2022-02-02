@@ -94,7 +94,7 @@ class TRXTransferCreator:
             t['raw_data']['contract'][0]['parameter']['value']['contract_address'] == ETHER_CONTRACT_ID and
             t['raw_data']['contract'][0]['parameter']['value']['data'][:8] in [TRANSFER_METHOD_ID,
                                                                                TRANSFER_FROM_METHOD_ID] and
-            t['id'] not in self._get_transaction_ids()
+            t['txID'] not in self._get_fee_transaction_ids()
         )
 
     def from_block(self, block):
