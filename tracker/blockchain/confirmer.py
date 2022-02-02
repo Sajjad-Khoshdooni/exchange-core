@@ -31,11 +31,5 @@ class Confirmer:
 
             with transaction.atomic():
                 transfer.status = Transfer.DONE
+                transfer.build_trx()
                 transfer.save()
-                Trx.objects.create(
-                    group_id=transfer.group_id,
-                    sender=self.asset.get_wallet(Account.out()),
-                    receiver=self.asset.get_wallet(transfer.deposit_address.account),
-                    amount=transfer.amount,
-                    scope=Trx.TRANSFER
-                )

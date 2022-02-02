@@ -2,6 +2,8 @@ from uuid import uuid4
 
 from django.db import models
 
+from accounts.models import Account
+from ledger.models import Trx
 from ledger.utils.fields import get_amount_field, get_address_field
 
 
@@ -34,3 +36,21 @@ class Transfer(models.Model):
 
     def get_explorer_link(self) -> str:
         return self.network.explorer_link.format(hash=self.block_hash)
+
+    def build_trx(self):
+        if self.deposit:
+            return Trx.objects.create(
+                group_id=self.group_id,
+                sender=self.wallet.asset.get_wallet(Account.out()),
+                receiver=self.wallet,
+                amount=self.amount,
+                scope=Trx.TRANSFER
+            )
+        else:
+            return Trx.objects.create(
+                group_id=self.group_id,
+                sender=self.wallet,
+                receiver=self.wallet.asset.get_wallet(Account.out()),
+                amount=self.amount,
+                scope=Trx.TRANSFER
+            )
