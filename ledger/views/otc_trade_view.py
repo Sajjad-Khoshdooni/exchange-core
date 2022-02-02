@@ -12,6 +12,7 @@ from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired
 from ledger.utils.fields import get_serializer_amount_field
+from ledger.utils.price import SELL
 
 
 class OTCRequestSerializer(serializers.ModelSerializer):
@@ -21,6 +22,8 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     to_amount = get_serializer_amount_field(allow_null=True, required=False)
     price = get_serializer_amount_field(source='to_price', read_only=True)
     expire = serializers.SerializerMethodField()
+    coin = serializers.SerializerMethodField()
+    coin_price = serializers.SerializerMethodField()
 
     def validate(self, attrs):
         from_symbol = attrs['from_asset']['symbol']
@@ -89,9 +92,24 @@ class OTCRequestSerializer(serializers.ModelSerializer):
 
         return representation
 
+    def get_coin(self, otc_request: OTCRequest):
+        conf = otc_request.get_trade_config()
+        return conf.coin.symbol
+
+    def get_coin_price(self, otc_request: OTCRequest):
+        conf = otc_request.get_trade_config()
+
+        price = otc_request.to_price
+
+        if conf.side == SELL:
+            price = 1 / price
+
+        return conf.coin.get_presentation_price_irt(price)
+
     class Meta:
         model = OTCRequest
-        fields = ('from_asset', 'to_asset', 'from_amount', 'to_amount', 'token', 'price', 'expire', 'market')
+        fields = ('from_asset', 'to_asset', 'from_amount', 'to_amount', 'token', 'price', 'expire', 'market', 'coin',
+                  'coin_price')
         read_only_fields = ('token', 'price')
 
 
