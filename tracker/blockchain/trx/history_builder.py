@@ -75,11 +75,12 @@ class TRXTransferCreator:
     def __init__(self):
         self.cache = {}
 
-    def _get_transaction_ids(self):
+    def _get_fee_transaction_ids(self):
         if 'transaction_ids' not in self.cache:
             self.cache['transaction_ids'] = set(
                 Transfer.objects.filter(
-                    network=self.network
+                    network=self.network,
+                    is_fee=True
                 ).values_list('trx_hash', flat=True)
             )
         return self.cache['transaction_ids']
