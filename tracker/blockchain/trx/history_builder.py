@@ -70,6 +70,20 @@ def create_transaction_data(t):
 
 
 class TRXTransferCreator:
+    network = Network.objects.get(symbol='TRX')
+
+    def __init__(self):
+        self.cache = {}
+
+    def _get_transaction_ids(self):
+        if 'transaction_ids' not in self.cache:
+            self.cache['transaction_ids'] = set(
+                Transfer.objects.filter(
+                    network=self.network
+                ).values_list('trx_hash', flat=True)
+            )
+        return self.cache['transaction_ids']
+
     def _is_valid_transaction(self, t):
         return (
             len(t['ret']) == 1 and
@@ -78,14 +92,14 @@ class TRXTransferCreator:
             t['raw_data']['contract'][0]['type'] == 'TriggerSmartContract' and
             t['raw_data']['contract'][0]['parameter']['value']['contract_address'] == ETHER_CONTRACT_ID and
             t['raw_data']['contract'][0]['parameter']['value']['data'][:8] in [TRANSFER_METHOD_ID,
-                                                                               TRANSFER_FROM_METHOD_ID]
+                                                                               TRANSFER_FROM_METHOD_ID] and
+            t['id'] not in self._get_transaction_ids()
         )
 
     def from_block(self, block):
         block_hash = block['blockID']
         block_number = block['block_header']['raw_data']['number']
         asset = Asset.objects.get(symbol='USDT')
-        network = Network.objects.get(symbol='TRX')
 
         raw_transactions = block.get('transactions', [])
 
@@ -98,7 +112,7 @@ class TRXTransferCreator:
 
         with transaction.atomic():
             to_deposit_addresses = DepositAddress.objects.filter(
-                network=network,
+                network=self.network,
                 address__in=to_address_to_trx
             )
 
@@ -108,7 +122,7 @@ class TRXTransferCreator:
                 Transfer.objects.create(
                     deposit_address=deposit_address,
                     wallet=asset.get_wallet(deposit_address.account_secret.account),
-                    network=network,
+                    network=self.network,
                     amount=trx_data['amount'],
                     deposit=True,
                     trx_hash=trx_data['id'],
