@@ -26,11 +26,18 @@ app.conf.beat_schedule = {
             'queue': 'trx_network_consumer'
         },
     },
+    'trx_add_block_info': {
+        'task': 'tracker.tasks.trx_add_block_info',
+        'schedule': 60,
+        'options': {
+            'queue': 'trx_add_block_info'
+        },
+    },
     'create_withdraw_transaction': {
         'task': 'ledger.tasks.create_transaction_from_not_broadcasts',
         'schedule': 120,
         'options': {
-            'queue': 'trx_network_consumer'
+            'queue': 'create_withdraw_transaction'
         },
     },
     'coin_market_cap_update': {

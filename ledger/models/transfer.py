@@ -1,3 +1,4 @@
+import logging
 from uuid import uuid4
 
 from django.db import models
@@ -5,6 +6,8 @@ from django.db import models
 from accounts.models import Account
 from ledger.models import Trx
 from ledger.utils.fields import get_amount_field, get_address_field
+
+logger = logging.getLogger(__name__)
 
 
 class Transfer(models.Model):
@@ -28,17 +31,23 @@ class Transfer(models.Model):
 
     lock = models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE, null=True, blank=True)
 
-    trx_hash = models.CharField(max_length=128, db_index=True, unique=True, null=True, blank=True)
-    block_hash = models.CharField(max_length=128, db_index=True, unique=True, blank=True, null=True)
-    block_number = models.PositiveIntegerField(null=True, blank=True)
+    trx_hash = models.CharField(max_length=128, db_index=True, unique=True, null=True)
+    block_hash = models.CharField(max_length=128, db_index=True, unique=True, null=True)
+    block_number = models.PositiveIntegerField(null=True)
 
     out_address = get_address_field()
+
+    is_fee = models.BooleanField(default=False)
 
     def get_explorer_link(self) -> str:
         return self.network.explorer_link.format(hash=self.block_hash)
 
     def build_trx(self):
-        if self.deposit:
+        if self.deposit and self.is_fee:
+            logger.info(f'Creating Trx for transfer id: {self.id} ignored.')
+            return None
+
+        elif self.deposit:
             return Trx.objects.create(
                 group_id=self.group_id,
                 sender=self.wallet.asset.get_wallet(Account.out()),
