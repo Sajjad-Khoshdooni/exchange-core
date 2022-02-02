@@ -10,12 +10,12 @@ from wallet.aes_cipher import secret_aes_cipher
 class CryptoWallet:
 
     @property
-    def address(self):
+    def base16_address(self):
         raise NotImplementedError
 
     @property
     def base58_address(self):
-        return base58.b58encode_check(bytes.fromhex(self.address)).decode()
+        return base58.b58encode_check(bytes.fromhex(self.base16_address)).decode()
 
 
 class Secret(models.Model):
@@ -43,7 +43,7 @@ class Secret(models.Model):
 class ETHWallet(Secret, CryptoWallet):
 
     @property
-    def address(self):
+    def base16_address(self):
         return Account.from_key(self.key).address.lower()
 
     class Meta:
