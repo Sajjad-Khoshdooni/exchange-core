@@ -25,7 +25,7 @@ class TooOldBlock(Exception):
     pass
 
 
-def trxify_address(address):
+def trxify_address(address: str):
     if len(address) == 42:
         return address
     if len(address) > 40:

@@ -79,7 +79,7 @@ class NetworkAssetAdmin(admin.ModelAdmin):
 
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_display = ('account_secret', 'address')
+    list_display = ('account_secret', 'network', 'address')
 
 
 @admin.register(models.OTCRequest)

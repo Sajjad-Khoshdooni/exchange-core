@@ -1,10 +1,10 @@
 from typing import Type
 
-import base58
 from django.db import models
 from eth_account import Account
 
 from wallet.aes_cipher import secret_aes_cipher
+from wallet.utils import get_base58_address
 
 
 class CryptoWallet:
@@ -13,9 +13,9 @@ class CryptoWallet:
     def address(self):
         raise NotImplementedError
 
-    @property
-    def base58_address(self):
-        return base58.b58encode_check(bytes.fromhex(self.address)).decode()
+    @classmethod
+    def get_presentation_address(cls, address: str):
+        return address
 
 
 class Secret(models.Model):
@@ -24,6 +24,10 @@ class Secret(models.Model):
     @property
     def key(self):
         return secret_aes_cipher.decrypt(self.encrypted_key)
+
+    @property
+    def base16_address(self):
+        return Account.from_key(self.key).address[2:].lower()
 
     @classmethod
     def build(cls):
@@ -44,18 +48,21 @@ class ETHWallet(Secret, CryptoWallet):
 
     @property
     def address(self):
-        return Account.from_key(self.key).address.lower()
+        return '0x' + self.base16_address
 
     class Meta:
         proxy = True
 
 
 class TRXWallet(Secret, CryptoWallet):
-    TRX_ADDRESS_PREFIX = '41'
 
     @property
     def address(self):
-        return self.TRX_ADDRESS_PREFIX + Account.from_key(self.key).address[2:].lower()
+        return '41' + super().base16_address
+
+    @classmethod
+    def get_presentation_address(cls, address: str):
+        return get_base58_address(address)
 
     class Meta:
         proxy = True

@@ -44,8 +44,7 @@ class FeeHandler:
         sender_wallet = fee_account.accountsecret.secret
         sender_wallet.__class__ = Secret.get_secret_wallet(self.network.symbol)
 
-        receiver_wallet = account.accountsecret.secret
-        receiver_wallet.__class__ = Secret.get_secret_wallet(self.network.symbol)
+        receiver_wallet = account.accountsecret.get_crypto_wallet(self.network)
 
         fee_amount = self.get_asset_fee()
 

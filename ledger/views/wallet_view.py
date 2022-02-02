@@ -7,6 +7,7 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.models import Wallet, DepositAddress, Transfer, NetworkAsset
 from ledger.models.asset import Asset
 from ledger.utils.price import get_trading_price_irt, BUY, SELL
+from wallet.utils import get_presentation_address
 
 
 class AssetListSerializer(serializers.ModelSerializer):
@@ -67,12 +68,16 @@ class AssetListSerializer(serializers.ModelSerializer):
 class TransferSerializer(serializers.ModelSerializer):
     link = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
+    out_address = serializers.SerializerMethodField()
 
     def get_link(self, transfer: Transfer):
         return transfer.get_explorer_link()
 
     def get_amount(self, transfer: Transfer):
         return transfer.wallet.asset.get_presentation_amount(transfer.amount)
+
+    def get_out_address(self, transfer: Transfer):
+        return get_presentation_address(transfer.out_address, transfer.network.symbol)
 
     class Meta:
         model = Transfer
@@ -122,10 +127,15 @@ class AssetRetrieveSerializer(AssetListSerializer):
         network_assets = asset.networkasset_set.all()
 
         account = self.context['request'].user.account
-        addresses = dict(DepositAddress.objects.filter(account_secret__account=account).values_list('network__symbol', 'address'))
+
+        deposit_addresses = DepositAddress.objects.filter(account_secret__account=account)
+
+        address_mapping = {
+            deposit.network.symbol: deposit.presentation_address for deposit in deposit_addresses
+        }
 
         serializer = NetworkAssetSerializer(network_assets, many=True, context={
-            'addresses': addresses,
+            'addresses': address_mapping,
         })
 
         return serializer.data
@@ -195,5 +205,5 @@ class WalletBalanceView(APIView):
 
         return Response({
             'symbol': asset.symbol,
-            'balance': wallet.get_balance()
+            'balance': wallet.get_free(),
         })

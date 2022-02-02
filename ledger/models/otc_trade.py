@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 from uuid import uuid4
 
 from django.db import models, transaction
@@ -119,7 +120,7 @@ class OTCTrade(models.Model):
         old_coin_price = otc_request.to_price
         new_coin_price = otc_request.get_to_price()
 
-        threshold = 0.0035
+        threshold = Decimal('0.0035')
 
         conf = otc_request.get_trade_config()
 
