@@ -31,7 +31,8 @@ app.conf.beat_schedule = {
         'task': 'tracker.tasks.trx_add_block_info',
         'schedule': 60,
         'options': {
-            'queue': 'trx_network_consumer'
+            'queue': 'trx_network_consumer',
+            'expire': 60
         },
     },
     'create_withdraw_transaction': {
@@ -39,7 +40,7 @@ app.conf.beat_schedule = {
         'schedule': 120,
         'options': {
             'queue': 'trx_network_consumer',
-            'expire': 60
+            'expire': 120
         },
     },
     'coin_market_cap_update': {
