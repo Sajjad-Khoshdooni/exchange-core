@@ -4,10 +4,9 @@ from abc import ABC, abstractmethod
 from decimal import Decimal
 
 import base58
-import pytz
-import requests
 from django.db import transaction
 
+from _helpers.blockchain.tron import get_tron_client
 from ledger.models import Asset, Transfer, Network, DepositAddress
 from tracker.blockchain.confirmer import Confirmer, MinimalBlockDTO
 from tracker.blockchain.reverter import Reverter
@@ -122,17 +121,12 @@ class TRXTransferCreator:
 
 class TRXRequester:
     def get_latest_block(self):
-        url = "https://api.trongrid.io/wallet/getnowblock"
-        headers = {"Accept": "application/json"}
-        return requests.get(url, headers=headers).json()
+        tron = get_tron_client()
+        return tron.get_latest_block()
 
     def get_block_by_id(self, _hash):
-        url = "https://api.trongrid.io/wallet/getblockbyid"
-        headers = {"Accept": "application/json"}
-        data = {
-            'value': _hash
-        }
-        return requests.post(url, json=data, headers=headers).json()
+        tron = get_tron_client()
+        return tron.get_block(_hash)
 
 
 class HistoryBuilder(ABC):
