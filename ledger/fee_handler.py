@@ -1,15 +1,12 @@
-from tronpy import Tron
 from tronpy.exceptions import AddressNotFound
-from tronpy.providers import HTTPProvider
 
+from _helpers.blockchain.tron import get_tron_client
 from accounts.models import Account
 from ledger.models import Transfer, Network, Asset
 from ledger.transaction_creator import TRXTransactionCreator
 from wallet.models import Secret
 
-provider = HTTPProvider(api_key='d69566b0-4604-49b5-8066-d7441b3210ff')
-
-tron = Tron(provider)
+tron = get_tron_client()
 
 
 class FeeHandler:

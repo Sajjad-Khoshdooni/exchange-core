@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 
-from tronpy import Tron
 from tronpy.keys import PrivateKey
-from tronpy.providers import HTTPProvider
 
+from _helpers.blockchain.tron import get_tron_client
 from ledger.models import Transfer, Network, Asset
 from wallet.models import TRXWallet, CryptoWallet
 
@@ -18,14 +17,11 @@ class TransactionCreator(ABC):
         pass
 
 
-provider = HTTPProvider(api_key='d69566b0-4604-49b5-8066-d7441b3210ff')
-
-
 class TRXTransactionCreator(TransactionCreator):
     USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
 
-    def __init__(self, asset: Asset, wallet: TRXWallet, network='mainnet'):
-        self.tron = Tron(provider=provider, network=network)
+    def __init__(self, asset: Asset, wallet: TRXWallet):
+        self.tron = get_tron_client()
 
         self.asset = asset
         self.wallet = wallet
