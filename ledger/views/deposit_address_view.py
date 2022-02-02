@@ -24,5 +24,5 @@ class DepositAddressView(RetrieveAPIView):
         deposit_address = network.get_deposit_address(request.user.account)
 
         return Response(data={
-            'address': base58_from_hex(deposit_address.address)
+            'address': deposit_address.presentation_address
         })

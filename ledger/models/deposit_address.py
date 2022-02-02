@@ -1,10 +1,6 @@
-from django.db import models, transaction
-from rest_framework import serializers
+from django.db import models
 
-from accounts.models import Account
 from ledger.models import AccountSecret
-from ledger.utils.address import get_network_address
-from wallet.models import Secret
 
 
 class DepositAddress(models.Model):
@@ -17,16 +13,20 @@ class DepositAddress(models.Model):
     def __str__(self):
         return '%s %s (network= %s)' % (self.account_secret, self.address, self.network)
 
+    @property
+    def presentation_address(self):
+        wallet = self.account_secret.get_crypto_wallet(self.network)
+        return wallet.get_presentation_address(self.address)
+
     @classmethod
     def new_deposit_address(cls, account, network):
         account_secret, _ = AccountSecret.objects.get_or_create(account=account)
-        secret = account_secret.secret
-        secret.__class__ = secret.get_secret_wallet(network.symbol)
+        crypto_wallet = account_secret.get_crypto_wallet(network)
 
         return DepositAddress.objects.create(
             network=network,
             account_secret=account_secret,
-            address=secret.address,
+            address=crypto_wallet.address,
         )
 
     @property
