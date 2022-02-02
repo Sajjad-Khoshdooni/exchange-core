@@ -1,10 +1,12 @@
 import logging
+from decimal import Decimal
 from uuid import uuid4
 
 from django.db import models
 
 from accounts.models import Account
 from ledger.models import Trx
+from ledger.models import Wallet, Network
 from ledger.utils.fields import get_amount_field, get_address_field
 
 logger = logging.getLogger(__name__)
@@ -12,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class Transfer(models.Model):
     PENDING, CANCELED, REVERTED, DONE, NOT_BROADCAST = 'pending', 'canceled', 'reverted', 'done', 'not_brod'
+    SELF, BINANCE = 'self', 'binance'
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
@@ -39,6 +42,10 @@ class Transfer(models.Model):
 
     is_fee = models.BooleanField(default=False)
 
+    source = models.CharField(max_length=8, default=SELF, choices=((SELF, SELF), (BINANCE, BINANCE)))
+
+    provider_transfer = models.OneToOneField(to='provider.ProviderTransfer', on_delete=models.PROTECT, null=True, blank=True)
+
     def get_explorer_link(self) -> str:
         return self.network.explorer_link.format(hash=self.block_hash)
 
@@ -63,3 +70,20 @@ class Transfer(models.Model):
                 amount=self.amount,
                 scope=Trx.TRANSFER
             )
+
+    @classmethod
+    def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):
+        lock = wallet.lock_balance(amount)
+        deposit_address = network.get_deposit_address(wallet.account)
+
+        transfer = Transfer.objects.create(
+            wallet=wallet,
+            network=network,
+            amount=amount,
+            lock=lock,
+            deposit_address=deposit_address,
+            out_address=address,
+            deposit=False
+        )
+
+        return transfer

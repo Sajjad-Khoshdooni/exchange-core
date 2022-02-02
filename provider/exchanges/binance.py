@@ -70,6 +70,21 @@ class BinanceSpotHandler(BaseExchange):
 
         return cls.collect_api(cls.order_url, data=data, method=cls.POST)
 
+    @classmethod
+    def withdraw(cls, coin: str, network: str, address: str, amount: Decimal, address_tag: str = None,
+                 client_id: str = None) -> dict:
+
+        resp = cls.collect_api('/sapi/v1/capital/withdraw/apply', method='POST', data={
+            'coin': coin,
+            'network': network,
+            'amount': amount,
+            'address': address,
+            'addressTag': address_tag,
+            'withdrawOrderId': client_id
+        })
+
+        return resp
+
 
 class BinanceFuturesHandler(BinanceSpotHandler):
     _base_api_url = 'https://fapi.binance.com'
