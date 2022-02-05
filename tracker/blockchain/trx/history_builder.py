@@ -143,6 +143,9 @@ class TRXRequester:
     def get_block_by_id(self, _hash):
         return self.tron.get_block(_hash)
 
+    def get_block_by_number(self, number):
+        return self.tron.get_block(number)
+
 
 class HistoryBuilder(ABC):
     @abstractmethod
@@ -151,36 +154,62 @@ class HistoryBuilder(ABC):
 
 
 class TRXHistoryBuilder(HistoryBuilder):
+
     def __init__(self, requester, reverter, transfer_creator):
         self.requester = requester
         self.reverter = reverter
         self.transfer_creator = transfer_creator
+        self.network = Network.objects.get(symbol='TRX')
 
-    def build(self, only_add_now_block=False, maximum_block_step=1000):
+    def build(self, only_add_now_block=False, maximum_block_step_for_backward=1000):
         block = self.requester.get_latest_block()
         if TRXBlockTracker.has(block['blockID']):
             return
-        blocks = [block]
 
-        if not only_add_now_block:
-            while not TRXBlockTracker.has(blocks[-1]['block_header']['raw_data']['parentHash']):
-                blocks.append(self.requester.get_block_by_id(blocks[-1]['block_header']['raw_data']['parentHash']))
+        if only_add_now_block:
+            self.add_block(block)
+        elif (
+            block['block_header']['raw_data']['number'] - TRXBlockTracker.get_latest_block().number
+            >= maximum_block_step_for_backward
+        ):
+            self.forward_fulfill(block)
+        else:
+            self.backward_fulfill(block)
 
-                if len(blocks) > maximum_block_step:
-                    raise TooOldBlock
-
-        Reverter(TRXBlockTracker).from_number(blocks[-1]['block_header']['raw_data']['number'])
-        for block in reversed(blocks):
-            self.transfer_creator.from_block(block)
-            TRXBlockTracker.objects.create(
-                number=block['block_header']['raw_data']['number'],
-                hash=block['blockID'],
-                block_date=datetime.datetime.fromtimestamp(block['block_header']['raw_data']['timestamp'] /
-                                                           1000).astimezone(),
-            )
         confirmer = Confirmer(
             asset=Asset.objects.get(symbol='USDT'),
-            network=Network.objects.get(symbol='TRX'),
+            network=self.network,
             block_tracker=TRXBlockTracker
         )
         confirmer.confirm(MinimalBlockDTO(hash=block['blockID'], number=block['block_header']['raw_data']['number']))
+
+    def forward_fulfill(self, block):
+        system_latest_block = TRXBlockTracker.get_latest_block()
+        blockchain_latest_block_number = block['block_header']['raw_data']['number']
+
+        _from = system_latest_block.number + 1
+        _to = blockchain_latest_block_number - self.network.minimum_block_to_confirm
+
+        for i in range(_from, _to):
+            block = self.requester.get_block_by_number(i)
+            self.add_block(block)
+
+    def backward_fulfill(self, block):
+        blocks = [block]
+
+        while not TRXBlockTracker.has(blocks[-1]['block_header']['raw_data']['parentHash']):
+            blocks.append(self.requester.get_block_by_id(blocks[-1]['block_header']['raw_data']['parentHash']))
+
+        Reverter(TRXBlockTracker).from_number(blocks[-1]['block_header']['raw_data']['number'])
+        for block in reversed(blocks):
+            self.add_block(block)
+
+    def add_block(self, block):
+        self.transfer_creator.from_block(block)
+        created_block = TRXBlockTracker.objects.create(
+            number=block['block_header']['raw_data']['number'],
+            hash=block['blockID'],
+            block_date=datetime.datetime.fromtimestamp(block['block_header']['raw_data']['timestamp'] /
+                                                       1000).astimezone(),
+        )
+        logger.info(f'(TRXHistoryBuilder) Block number: {created_block.number}, hash: {created_block.hash} created.')
