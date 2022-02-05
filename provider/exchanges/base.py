@@ -69,7 +69,7 @@ class BaseExchange:
     SELL, BUY = 'SELL', 'BUY'
     GET, POST = 'GET', 'POST'
 
-    _context = {}
+    _context ={}
 
     @classmethod
     def collect_api(cls, endpoint, method='POST', **kwargs):
