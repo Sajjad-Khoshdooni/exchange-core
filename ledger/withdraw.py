@@ -30,7 +30,7 @@ class WithdrawHandler:
 
     @classmethod
     def create_transaction_from_not_broadcasts(cls):
-        transfers = Transfer.objects.filter(status=Transfer.NOT_BROADCAST)
+        transfers = Transfer.objects.filter(status=Transfer.PROCESSING, source=Transfer.SELF)
         for transfer in transfers:
             fee_handler = FeeHandler(transfer.network, transfer.wallet.asset)
 

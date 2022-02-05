@@ -85,6 +85,10 @@ class BinanceSpotHandler(BaseExchange):
 
         return resp
 
+    @classmethod
+    def get_account_details(cls):
+        return cls.collect_api('/api/v3/account', method='GET') or {}
+
 
 class BinanceFuturesHandler(BinanceSpotHandler):
     _base_api_url = 'https://fapi.binance.com'

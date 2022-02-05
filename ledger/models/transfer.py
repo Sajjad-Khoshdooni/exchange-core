@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class Transfer(models.Model):
-    PENDING, CANCELED, REVERTED, DONE, NOT_BROADCAST = 'pending', 'canceled', 'reverted', 'done', 'not_brod'
+    PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done',
     SELF, BINANCE = 'self', 'binance'
 
     created = models.DateTimeField(auto_now_add=True)
@@ -28,7 +28,7 @@ class Transfer(models.Model):
     status = models.CharField(
         default=PENDING,
         max_length=8,
-        choices=[(NOT_BROADCAST, NOT_BROADCAST), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
+        choices=[(PROCESSING, PROCESSING), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
         db_index=True
     )
 
@@ -42,9 +42,9 @@ class Transfer(models.Model):
 
     is_fee = models.BooleanField(default=False)
 
-    source = models.CharField(max_length=8, default=SELF, choices=((SELF, SELF), (BINANCE, BINANCE)))
-
+    source = models.CharField(max_length=8, default=BINANCE, choices=((SELF, SELF), (BINANCE, BINANCE)))
     provider_transfer = models.OneToOneField(to='provider.ProviderTransfer', on_delete=models.PROTECT, null=True, blank=True)
+    handling = models.BooleanField(default=False)
 
     def get_explorer_link(self) -> str:
         return self.network.explorer_link.format(hash=self.block_hash)

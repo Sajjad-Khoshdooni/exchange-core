@@ -5,7 +5,9 @@ from django.db import models, transaction
 from ledger.models import Asset, Network
 from ledger.utils.fields import get_amount_field
 from provider.exchanges import BinanceSpotHandler
+import logging
 
+logger = logging.getLogger(__name__)
 
 class ProviderTransfer(models.Model):
     BINANCE = 'binance'
@@ -21,24 +23,29 @@ class ProviderTransfer(models.Model):
     address = models.CharField(max_length=256)
 
     provider_transfer_id = models.CharField(max_length=64)
+    caller_id = models.CharField(max_length=64, blank=True)
 
     @classmethod
-    def new_withdraw(cls, asset: Asset, network: Network, amount: Decimal, address: str) -> 'ProviderTransfer':
-        with transaction.atomic():
-            transfer = ProviderTransfer.objects.create(
-                asset=asset, network=network, amount=amount, address=address
-            )
+    def new_withdraw(cls, asset: Asset, network: Network, amount: Decimal, address: str, caller_id: str = '') -> 'ProviderTransfer':
 
-            resp = BinanceSpotHandler.withdraw(
-                coin=asset.symbol,
-                network=network.symbol,
-                address=address,
-                amount=amount,
-                client_id=transfer.id
-            )
+        if ProviderTransfer.objects.filter(provider_transfer_id__isnull=False, caller_id=caller_id).exists():
+            logger.warning('transfer ignored due to duplicated caller_id')
+            return
 
-            transfer.provider_transfer_id = resp['id']
-            transfer.save()
+        transfer = ProviderTransfer.objects.create(
+            asset=asset, network=network, amount=amount, address=address, caller_id=caller_id
+        )
+
+        resp = BinanceSpotHandler.withdraw(
+            coin=asset.symbol,
+            network=network.symbol,
+            address=address,
+            amount=amount,
+            client_id=transfer.id
+        )
+
+        transfer.provider_transfer_id = resp['id']
+        transfer.save()
 
         return transfer
 
