@@ -7,7 +7,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def get_json_resp(url: str, session: requests.Session, method='GET', **kwargs):
+def get_json_resp(url: str, session: requests.Session, method='GET', context: dict = None, **kwargs):
 
     try:
         if method == 'GET':
@@ -20,6 +20,9 @@ def get_json_resp(url: str, session: requests.Session, method='GET', **kwargs):
             resp: requests.Response = session.put(url, **kwargs, timeout=150)
         else:
             raise NotImplementedError
+
+        if context:
+            context['resp'] = resp
 
         if resp.ok:
             return resp.json()
@@ -66,6 +69,8 @@ class BaseExchange:
     SELL, BUY = 'SELL', 'BUY'
     GET, POST = 'GET', 'POST'
 
+    _context ={}
+
     @classmethod
     def collect_api(cls, endpoint, method='POST', **kwargs):
         # if settings.DEBUG:
@@ -76,4 +81,4 @@ class BaseExchange:
         if not base_api:
             raise Exception('_base_api_url is empty')
 
-        return get_json_resp(base_api + endpoint, cls._session, method=method, **kwargs)
+        return get_json_resp(base_api + endpoint, cls._session, method=method, context=cls._context, **kwargs)
