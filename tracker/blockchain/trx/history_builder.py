@@ -7,7 +7,6 @@ from typing import List
 
 from django.db import transaction
 
-from _helpers.blockchain.tron import get_tron_client
 from ledger.models import Asset, Transfer, Network, DepositAddress
 from tracker.blockchain.confirmer import Confirmer, MinimalBlockDTO
 from tracker.blockchain.reverter import Reverter
@@ -23,11 +22,19 @@ TRANSFER_FROM_METHOD_ID = '23b872dd'
 TRX_ADDRESS_PREFIX = '41'
 
 
+class AddressIsNotValid(Exception):
+    pass
+
+
+class BuildTransactionError(Exception):
+    pass
+
+
 def trxify_address(address: str):
     if len(address) == 42:
         return address
     if len(address) > 40:
-        raise Exception
+        raise AddressIsNotValid
 
     number_of_zeros = 40 - len(address)
     return '41' + '0' * number_of_zeros + address
@@ -50,25 +57,13 @@ def decode_trx_data_in_block(data: str):
     raise NotImplementedError
 
 
-def create_transaction_data(t):
-    decoded_data = decode_trx_data_in_block(t['raw_data']['contract'][0]['parameter']['value']['data'])
-    return {
-        'to': decoded_data['to'],
-        'amount': decoded_data['amount'],
-        'from': (
-            decoded_data.get('from') or
-            t['raw_data']['contract'][0]['parameter']['value']['owner_address']
-        ),
-        'id': t['txID']
-    }
-
-
 @dataclass
 class TransactionDTO:
     id: str
     amount: int
     from_address: str
     to_address: str
+    asset: Asset
 
 
 class CoinTRXHandler(ABC):
@@ -82,6 +77,9 @@ class CoinTRXHandler(ABC):
 
 
 class USDTCoinTRXHandler(CoinTRXHandler):
+    def __init__(self):
+        self.asset = Asset.objects.get(symbol='USDT')
+
     def is_valid_transaction(self, t):
         return (
             len(t['ret']) == 1 and
@@ -94,7 +92,10 @@ class USDTCoinTRXHandler(CoinTRXHandler):
         )
 
     def build_transaction_data(self, t):
-        decoded_data = decode_trx_data_in_block(t['raw_data']['contract'][0]['parameter']['value']['data'])
+        try:
+            decoded_data = decode_trx_data_in_block(t['raw_data']['contract'][0]['parameter']['value']['data'])
+        except AddressIsNotValid as e:
+            raise BuildTransactionError(f'Address is not valid for txid:{e["txID"]}')
         return TransactionDTO(
             to_address=decoded_data['to'],
             amount=decoded_data['amount'],
@@ -102,11 +103,15 @@ class USDTCoinTRXHandler(CoinTRXHandler):
                 decoded_data.get('from') or
                 t['raw_data']['contract'][0]['parameter']['value']['owner_address']
             ),
-            id=t['txID']
+            id=t['txID'],
+            asset=self.asset
         )
 
 
 class TRXCoinTRXHandler(CoinTRXHandler):
+    def __init__(self):
+        self.asset = Asset.objects.get(symbol='TRX')
+
     def is_valid_transaction(self, t):
         return (
             len(t['ret']) == 1 and
@@ -121,7 +126,8 @@ class TRXCoinTRXHandler(CoinTRXHandler):
             to_address=data['to_address'],
             amount=data['amount'] / 10 ** 6,
             from_address=data['owner_address'],
-            id=t['txID']
+            id=t['txID'],
+            asset=self.asset
         )
 
 
@@ -151,7 +157,6 @@ class TRXTransferCreator:
     def from_block(self, block):
         block_hash = block['blockID']
         block_number = block['block_header']['raw_data']['number']
-        asset = Asset.objects.get(symbol='USDT')
 
         raw_transactions = block.get('transactions', [])
 
@@ -178,7 +183,7 @@ class TRXTransferCreator:
 
                 Transfer.objects.create(
                     deposit_address=deposit_address,
-                    wallet=asset.get_wallet(deposit_address.account_secret.account),
+                    wallet=trx_data.asset.get_wallet(deposit_address.account_secret.account),
                     network=self.network,
                     amount=trx_data.amount,
                     deposit=True,
