@@ -36,6 +36,7 @@ class Asset(models.Model):
 
     price_precision_usdt = models.SmallIntegerField(default=2)
     price_precision_irt = models.SmallIntegerField(default=0)
+    precision = models.SmallIntegerField(default=0)
 
     enable = models.BooleanField(default=False)
     order = models.SmallIntegerField(default=0, db_index=True)
@@ -82,8 +83,7 @@ class Asset(models.Model):
                 amount % self.trade_quantity_step == 0
 
     def get_presentation_amount(self, amount: Decimal) -> str:
-        n_digits = int(-math.log10(Decimal(self.trade_quantity_step)))
-        return get_presentation_amount(amount, n_digits)
+        return get_presentation_amount(amount, self.precision)
 
     def get_presentation_price_irt(self, price: Decimal) -> str:
         return get_presentation_amount(price, self.price_precision_irt)
