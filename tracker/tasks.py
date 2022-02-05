@@ -3,16 +3,20 @@ from celery import shared_task
 from _helpers.blockchain.tron import get_tron_client
 from tracker.blockchain.block_info_populator import TRXBlockInfoPopulator
 from tracker.blockchain.reverter import Reverter
-from tracker.blockchain.trx.history_builder import TRXHistoryBuilder, TRXRequester, TRXTransferCreator
+from tracker.blockchain.trx.history_builder import (
+    TRXHistoryBuilder, TRXRequester, TRXTransferCreator,
+    USDTCoinTRXHandler, TRXCoinTRXHandler,
+)
+
 from tracker.models.block_tracker import TRXBlockTracker
 
 
 @shared_task()
 def trx_network_consumer(initial=False):
     TRXHistoryBuilder(
-        TRXRequester(),
+        TRXRequester(get_tron_client()),
         Reverter(block_tracker=TRXBlockTracker),
-        TRXTransferCreator()
+        TRXTransferCreator(coin_handlers=[USDTCoinTRXHandler(), TRXCoinTRXHandler()])
     ).build(only_add_now_block=initial, maximum_block_step_for_backward=100)
 
 
