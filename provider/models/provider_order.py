@@ -53,7 +53,7 @@ class ProviderOrder(models.Model):
             symbol = cls.get_trading_symbol(asset)
 
             if asset.symbol == 'SHIB':
-                symbol.replace('SHIB', '1000SHIB')
+                symbol = symbol.replace('SHIB', '1000SHIB')
                 amount = round(amount / 1000)
 
             resp = BinanceFuturesHandler.place_order(
