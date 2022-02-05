@@ -124,7 +124,7 @@ class OTCRequest(models.Model):
         if to_amount:
             from_amount = to_price * to_amount
 
-            if self.from_asset.is_trade_base():
+            if self.from_asset.is_trade_base() and self.to_asset.symbol != Asset.IRT:
                 self.to_asset.is_trade_amount_valid(to_amount, raise_exception=True)
             else:
                 from_amount = from_amount - (from_amount % self.from_asset.trade_quantity_step)  # step coin
