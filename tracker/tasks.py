@@ -13,7 +13,7 @@ def trx_network_consumer(initial=False):
         TRXRequester(tron_client=get_tron_client()),
         Reverter(block_tracker=TRXBlockTracker),
         TRXTransferCreator()
-    ).build(only_add_now_block=initial)
+    ).build(only_add_now_block=initial, maximum_block_step_for_backward=100)
 
 
 @shared_task()
