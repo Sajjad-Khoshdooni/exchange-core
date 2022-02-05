@@ -6,6 +6,7 @@ from decimal import Decimal
 import base58
 from django.db import transaction
 
+from _helpers.blockchain.tron import get_tron_client
 from ledger.models import Asset, Transfer, Network, DepositAddress
 from tracker.blockchain.confirmer import Confirmer, MinimalBlockDTO
 from tracker.blockchain.reverter import Reverter
@@ -134,17 +135,17 @@ class TRXTransferCreator:
 
 
 class TRXRequester:
-    def __init__(self, tron_client):
-        self.tron = tron_client
-
     def get_latest_block(self):
-        return self.tron.get_latest_block()
+        tron = get_tron_client()
+        return tron.get_latest_block()
 
     def get_block_by_id(self, _hash):
-        return self.tron.get_block(_hash)
+        tron = get_tron_client()
+        return tron.get_block(_hash)
 
     def get_block_by_number(self, number):
-        return self.tron.get_block(number)
+        tron = get_tron_client()
+        return tron.get_block(number)
 
 
 class HistoryBuilder(ABC):
