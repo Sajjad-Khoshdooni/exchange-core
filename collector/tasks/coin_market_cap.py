@@ -11,7 +11,7 @@ def update_coin_market_cap():
     objects = CoinMarketCap.objects.all()
 
     for obj in objects:
-        data = id_to_coin.get(obj.id)
+        data = id_to_coin.get(obj.internal_id)
         if data:
             price_info = data['quotes'][0]
 
