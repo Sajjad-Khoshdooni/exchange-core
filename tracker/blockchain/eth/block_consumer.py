@@ -205,7 +205,6 @@ class EthBlockConsumer:
     def handle_confirms(self, block: dict):
         network_symbol = 'ETH'
         confirmer = Confirmer(
-            asset=Asset.objects.get(symbol=network_symbol),
             network=Network.objects.get(symbol=network_symbol),
             block_tracker=ETHBlockTracker
         )
