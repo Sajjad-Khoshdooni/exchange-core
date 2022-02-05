@@ -21,7 +21,7 @@ def get_json_resp(url: str, session: requests.Session, method='GET', context: di
         else:
             raise NotImplementedError
 
-        if context:
+        if context is not None:
             context['resp'] = resp
 
         if resp.ok:
@@ -69,7 +69,7 @@ class BaseExchange:
     SELL, BUY = 'SELL', 'BUY'
     GET, POST = 'GET', 'POST'
 
-    _context ={}
+    _context = {}
 
     @classmethod
     def collect_api(cls, endpoint, method='POST', **kwargs):
