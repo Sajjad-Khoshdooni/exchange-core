@@ -95,7 +95,7 @@ class USDTCoinTRXHandler(CoinTRXHandler):
         try:
             decoded_data = decode_trx_data_in_block(t['raw_data']['contract'][0]['parameter']['value']['data'])
         except AddressIsNotValid as e:
-            raise BuildTransactionError(f'Address is not valid for txid:{e["txID"]}')
+            raise BuildTransactionError(f'Address is not valid for txid: {t["txID"]}')
         return TransactionDTO(
             to_address=decoded_data['to'],
             amount=decoded_data['amount'],
