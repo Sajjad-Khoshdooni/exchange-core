@@ -30,7 +30,7 @@ def trxify_address(address: str):
     if len(address) == 42:
         return address
     if len(address) > 40:
-        raise AddressIsNotValid
+        address = address[-40:]
 
     number_of_zeros = 40 - len(address)
     return '41' + '0' * number_of_zeros + address
