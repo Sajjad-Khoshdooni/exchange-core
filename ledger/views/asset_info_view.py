@@ -104,7 +104,7 @@ class AssetsView(ListAPIView):
     def get_queryset(self):
         queryset = Asset.live_objects.all()
 
-        if self.request.query_params.get('important') == '1':
-            queryset = queryset.filter(important=True)
+        if self.request.query_params.get('trend') == '1':
+            queryset = queryset.filter(trend=True)
 
         return queryset

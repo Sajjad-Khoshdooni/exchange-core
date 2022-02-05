@@ -15,7 +15,7 @@ class InvalidAmount(Exception):
 
 class LiveAssetManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(enable=True).order_by('order')
+        return super().get_queryset().filter(enable=True)
 
 
 class Asset(models.Model):
@@ -41,10 +41,10 @@ class Asset(models.Model):
     enable = models.BooleanField(default=False)
     order = models.SmallIntegerField(default=0, db_index=True)
 
-    important = models.BooleanField(default=False)
+    trend = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ('order', )
+        ordering = ('-trend', 'order', )
 
     def __str__(self):
         return self.symbol

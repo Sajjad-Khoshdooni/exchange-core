@@ -11,11 +11,11 @@ from provider.exchanges import BinanceFuturesHandler
 @admin.register(models.Asset)
 class AssetAdmin(admin.ModelAdmin):
     list_display = (
-        'symbol', 'order', 'enable', 'important', 'get_future_amount', 'get_future_value',
+        'symbol', 'order', 'enable', 'trend', 'get_future_amount', 'get_future_value',
         'get_ledger_balance_users', 'get_ledger_balance_system', 'get_ledger_balance_out',
     )
-    list_filter = ('enable', 'important')
-    list_editable = ('enable', 'order', 'important')
+    list_filter = ('enable', 'trend')
+    list_editable = ('enable', 'order', 'trend')
     search_fields = ('symbol', )
 
     def changelist_view(self, request, extra_context=None):
