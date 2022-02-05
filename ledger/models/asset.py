@@ -41,6 +41,8 @@ class Asset(models.Model):
     enable = models.BooleanField(default=False)
     order = models.SmallIntegerField(default=0, db_index=True)
 
+    important = models.BooleanField(default=False)
+
     class Meta:
         ordering = ('order', )
 

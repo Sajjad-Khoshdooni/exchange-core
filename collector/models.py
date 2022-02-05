@@ -16,6 +16,7 @@ class CoinMarketCap(models.Model):
     price = models.FloatField()
     market_cap = models.FloatField()
     change_24h = models.FloatField()
+    volume_24h = models.FloatField()
     change_7d = models.FloatField()
 
     @classmethod
@@ -56,6 +57,7 @@ class CoinMarketCap(models.Model):
                     price=price_info['price'],
                     market_cap=price_info['marketCap'],
                     change_24h=price_info['percentChange24h'],
+                    volume_24h=price_info['volume24h'],
                     change_7d=price_info['percentChange7d'],
                 )
             )
