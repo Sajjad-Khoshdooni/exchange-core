@@ -137,15 +137,15 @@ class TRXTransferCreator:
 class TRXRequester:
     def get_latest_block(self):
         tron = get_tron_client()
-        return tron.get_latest_block()
+        return tron.provider.make_request("wallet/getnowblock", {"visible": False})
 
     def get_block_by_id(self, _hash):
         tron = get_tron_client()
-        return tron.get_block(_hash)
+        return tron.get_block(_hash, visible=False)
 
     def get_block_by_number(self, number):
         tron = get_tron_client()
-        return tron.get_block(number)
+        return tron.get_block(number, visible=False)
 
 
 class HistoryBuilder(ABC):
