@@ -17,7 +17,8 @@ class BSCCoinBSCHandler(CoinHandler):
     def is_valid_transaction(self, t):
         t = t.raw_transaction
         return (
-            t['input'] == '0x'
+            t['input'] == '0x' and
+            t['to'] is not None
         )
 
     def build_transaction_data(self, t):
