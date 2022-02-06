@@ -54,3 +54,20 @@ class TRXBlockTracker(BlockTracker):
 
     class Meta:
         proxy = True
+
+
+class BSCBlockTrackerManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(network=Network.objects.get(symbol=Network.BSC).id)
+
+
+class BSCBlockTracker(BlockTracker):
+    objects = BSCBlockTrackerManager()
+
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        self.network = Network.objects.get(symbol=Network.BSC)
+        super().save(force_insert, force_update, using, update_fields)
+
+    class Meta:
+        proxy = True

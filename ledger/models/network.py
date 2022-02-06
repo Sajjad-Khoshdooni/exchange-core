@@ -8,6 +8,7 @@ from ledger.models import DepositAddress, AccountSecret
 class Network(models.Model):
     ETH = 'ETH'
     TRX = 'TRX'
+    BSC = 'BSC'
 
     symbol = models.CharField(max_length=8, unique=True, db_index=True)
 

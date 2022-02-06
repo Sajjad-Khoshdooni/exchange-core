@@ -2,9 +2,10 @@ from abc import ABC, abstractmethod
 
 from tronpy.keys import PrivateKey
 
+from _helpers.blockchain.bsc import get_web3_bsc_client
 from _helpers.blockchain.tron import get_tron_client
 from ledger.models import Transfer, Network, Asset
-from wallet.models import TRXWallet, CryptoWallet
+from wallet.models import TRXWallet, CryptoWallet, ETHWallet
 
 
 class TransactionCreationFailure(Exception):
@@ -66,9 +67,36 @@ class TRXTransactionCreator(TransactionCreator):
         return PrivateKey(bytes.fromhex(self.wallet.key[2:]))  # Ignore first 0x
 
 
+class BSCTransactionCreator(TransactionCreator):
+
+    def __init__(self, asset: Asset, wallet: ETHWallet):
+        self.asset = asset
+        self.wallet = wallet
+        self.web3 = get_web3_bsc_client()
+
+    def from_transfer(self, transfer: Transfer):
+        if self.asset.symbol != 'BNB':
+            raise NotImplementedError
+
+        nonce = self.web3.eth.getTransactionCount(self.web3.toChecksumAddress(self.wallet.address))
+        tx = {
+            'nonce': nonce,
+            'to': self.web3.toChecksumAddress(transfer.out_address),
+            'value': self.web3.toWei(transfer.amount, 'ether'),
+            'gas': 21_000,
+            'gasPrice': self.web3.toWei('5', 'gwei')
+        }
+        signed_tx = self.web3.eth.account.sign_transaction(tx, self.wallet.key)
+
+        tx_hash = self.web3.eth.sendRawTransaction(signed_tx.rawTransaction)
+
+        return tx_hash
+
+
 class TransactionCreatorBuilder:
     NETWORK_TO_TRANSACTION_CREATOR = {
-        Network.TRX: TRXTransactionCreator
+        Network.TRX: TRXTransactionCreator,
+        Network.BSC: BSCTransactionCreator
     }
 
     def __init__(self, network: Network, asset: Asset, wallet: CryptoWallet):

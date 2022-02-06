@@ -68,4 +68,5 @@ class HistoryBuilder:
             hash=block.id,
             block_date=datetime.fromtimestamp(block.timestamp / 1000).astimezone(),
         )
-        logger.info(f'(TRXHistoryBuilder) Block number: {created_block.number}, hash: {created_block.hash} created.')
+        logger.info(f'(HistoryBuilder-{self.network}) Block number: {created_block.number}, hash: {created_block.hash} '
+                    f'created.')
