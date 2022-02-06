@@ -42,13 +42,23 @@ def decode_trx_data_in_block(data: str):
     if method_id == TRANSFER_METHOD_ID:
         address, amount = data[:64], data[64:]
         address = trxify_address(address.lstrip('0'))
-        amount = Decimal(int(amount, 16)) / 10 ** 6
+
+        if amount:
+            amount = Decimal(int(amount, 16)) / 10 ** 6
+        else:
+            amount = 0
+
         return {'to': address, 'amount': amount}
     if method_id == TRANSFER_FROM_METHOD_ID:
         from_address, to_address, amount = data[:64], data[64:128], data[128:]
         from_address = trxify_address(from_address.lstrip('0'))
         to_address = trxify_address(to_address.lstrip('0'))
-        amount = int(amount, 16) / 10 ** 6
+
+        if amount:
+            amount = int(amount, 16) / 10 ** 6
+        else:
+            amount = 0
+
         return {'from': from_address, 'to': to_address, 'amount': amount}
     raise NotImplementedError
 
