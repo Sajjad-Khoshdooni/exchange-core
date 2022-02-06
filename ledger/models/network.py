@@ -17,6 +17,7 @@ class Network(models.Model):
     minimum_block_to_confirm = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1)])
 
     explorer_link = models.CharField(max_length=128, blank=True)
+    address_regex = models.CharField(max_length=128, blank=True)
 
     def get_deposit_address(self, account: Account) -> DepositAddress:
         account_secret, _ = AccountSecret.objects.get_or_create(account=account)

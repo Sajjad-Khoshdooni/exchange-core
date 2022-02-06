@@ -66,7 +66,7 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt', 'buy_price_irt', 'can_deposit')
+        fields = ('symbol', 'precision', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt', 'buy_price_irt', 'can_deposit')
 
 
 class TransferSerializer(serializers.ModelSerializer):

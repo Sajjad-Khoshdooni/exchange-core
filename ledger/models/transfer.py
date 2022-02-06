@@ -7,7 +7,6 @@ from django.db import models
 from accounts.models import Account
 from ledger.models import Trx
 from ledger.models import Wallet, Network
-from ledger.tasks import create_binance_withdraw
 from ledger.utils.fields import get_amount_field, get_address_field
 
 logger = logging.getLogger(__name__)
@@ -88,6 +87,7 @@ class Transfer(models.Model):
             deposit=False
         )
 
+        from ledger.tasks import create_binance_withdraw
         create_binance_withdraw.delay(transfer.id)
 
         return transfer
