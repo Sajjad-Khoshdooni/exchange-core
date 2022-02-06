@@ -14,5 +14,5 @@ class Reverter:
 
         blocks = self.block_tracker.objects.filter(number__gte=number)
         for block in blocks:
-            Transfer.objects.filter(block_hash=block.hash).update(status=Transfer.REVERTED)
+            Transfer.objects.filter(block_hash=block.hash).update(status=Transfer.CANCELED)
         blocks.delete()

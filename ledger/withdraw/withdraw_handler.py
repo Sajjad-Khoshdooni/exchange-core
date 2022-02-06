@@ -1,7 +1,7 @@
 from accounts.models import Account
 from ledger.models import DepositAddress, Transfer
-from ledger.fee_handler import FeeHandler
-from ledger.transaction_creator import TransactionCreatorBuilder
+from ledger.withdraw.fee_handler import FeeHandler
+from ledger.withdraw.transaction_creator import TransactionCreatorBuilder
 from wallet.models import Secret
 
 
@@ -30,7 +30,7 @@ class WithdrawHandler:
 
     @classmethod
     def create_transaction_from_not_broadcasts(cls):
-        transfers = Transfer.objects.filter(status=Transfer.NOT_BROADCAST)
+        transfers = Transfer.objects.filter(status=Transfer.PROCESSING, source=Transfer.SELF)
         for transfer in transfers:
             fee_handler = FeeHandler(transfer.network, transfer.wallet.asset)
 

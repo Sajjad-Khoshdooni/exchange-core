@@ -1,17 +1,20 @@
 import logging
+from decimal import Decimal
 from uuid import uuid4
 
 from django.db import models
 
 from accounts.models import Account
 from ledger.models import Trx
+from ledger.models import Wallet, Network
 from ledger.utils.fields import get_amount_field, get_address_field
 
 logger = logging.getLogger(__name__)
 
 
 class Transfer(models.Model):
-    PENDING, CANCELED, REVERTED, DONE, NOT_BROADCAST = 'pending', 'canceled', 'reverted', 'done', 'not_brod'
+    PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done',
+    SELF, BINANCE = 'self', 'binance'
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
@@ -25,7 +28,7 @@ class Transfer(models.Model):
     status = models.CharField(
         default=PENDING,
         max_length=8,
-        choices=[(NOT_BROADCAST, NOT_BROADCAST), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
+        choices=[(PROCESSING, PROCESSING), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
         db_index=True
     )
 
@@ -38,6 +41,10 @@ class Transfer(models.Model):
     out_address = get_address_field()
 
     is_fee = models.BooleanField(default=False)
+
+    source = models.CharField(max_length=8, default=SELF, choices=((SELF, SELF), (BINANCE, BINANCE)))
+    provider_transfer = models.OneToOneField(to='provider.ProviderTransfer', on_delete=models.PROTECT, null=True, blank=True)
+    handling = models.BooleanField(default=False)
 
     def get_explorer_link(self) -> str:
         return self.network.explorer_link.format(hash=self.block_hash)
@@ -63,3 +70,24 @@ class Transfer(models.Model):
                 amount=self.amount,
                 scope=Trx.TRANSFER
             )
+
+    @classmethod
+    def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):
+        lock = wallet.lock_balance(amount)
+        deposit_address = network.get_deposit_address(wallet.account)
+
+        transfer = Transfer.objects.create(
+            wallet=wallet,
+            network=network,
+            amount=amount,
+            lock=lock,
+            source=cls.BINANCE,
+            deposit_address=deposit_address,
+            out_address=address,
+            deposit=False
+        )
+
+        from ledger.tasks import create_binance_withdraw
+        create_binance_withdraw.delay(transfer.id)
+
+        return transfer

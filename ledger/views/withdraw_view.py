@@ -1,7 +1,11 @@
+import re
+
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
 
 from ledger.models import Asset, Network, Transfer
+from ledger.utils.precision import get_precision
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
@@ -14,10 +18,16 @@ class WithdrawSerializer(serializers.ModelSerializer):
         asset = get_object_or_404(Asset, symbol=attrs['coin'])
         network = get_object_or_404(Network, symbol=attrs['network'])
 
-        #todo: status = not_broadcast, address = convert to lower base16
+        address = attrs['address']
+        amount = attrs['amount']
+
+        if not re.match(network.address_regex, address):
+            raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
+
+        if get_precision(amount) > asset.precision:
+            raise ValidationError('عدد وارد شده اشتباه است.')
 
         return {
-            'deposit': False,
             'network': network,
             'asset': asset,
             'wallet': asset.get_wallet(account),
@@ -27,9 +37,12 @@ class WithdrawSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        created_transfer = super().create(validated_data)
-
-        return created_transfer
+        return Transfer.new_withdraw(
+            wallet=validated_data['wallet'],
+            network=validated_data['network'],
+            amount=validated_data['amount'],
+            address=validated_data['out_address']
+        )
 
     class Meta:
         model = Transfer
