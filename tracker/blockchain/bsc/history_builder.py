@@ -50,7 +50,7 @@ class BSCRequester(Requester):
             id=data['hash'].hex().lower(),
             number=data['number'],
             parent_id=data['parentHash'].hex().lower(),
-            timestamp=data['timestamp'],
+            timestamp=data['timestamp'] * 1000,
             raw_block=data
         )
 

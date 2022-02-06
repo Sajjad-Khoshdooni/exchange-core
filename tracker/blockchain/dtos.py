@@ -24,5 +24,5 @@ class BlockDTO:
     id: str
     number: int
     parent_id: str
-    timestamp: int
+    timestamp: int  # with microseconds
     raw_block: Any
