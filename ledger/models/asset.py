@@ -42,9 +42,10 @@ class Asset(models.Model):
     order = models.SmallIntegerField(default=0, db_index=True)
 
     trend = models.BooleanField(default=False)
+    fiat = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ('-trend', 'order', )
+        ordering = ('-fiat', '-trend', 'order', )
 
     def __str__(self):
         return self.symbol
