@@ -27,6 +27,14 @@ app.conf.beat_schedule = {
             'expire': 60
         },
     },
+    'bsc_network_consumer': {
+        'task': 'tracker.tasks.bsc_network_consumer',
+        'schedule': 60,
+        'options': {
+            'queue': 'bsc_network_consumer',
+            'expire': 60
+        },
+    },
     'trx_add_block_info': {
         'task': 'tracker.tasks.trx_add_block_info',
         'schedule': 60,
