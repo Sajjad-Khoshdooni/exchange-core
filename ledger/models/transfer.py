@@ -7,6 +7,7 @@ from django.db import models
 from accounts.models import Account
 from ledger.models import Trx
 from ledger.models import Wallet, Network
+from ledger.tasks import create_binance_withdraw
 from ledger.utils.fields import get_amount_field, get_address_field
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ class Transfer(models.Model):
 
     is_fee = models.BooleanField(default=False)
 
-    source = models.CharField(max_length=8, default=BINANCE, choices=((SELF, SELF), (BINANCE, BINANCE)))
+    source = models.CharField(max_length=8, default=SELF, choices=((SELF, SELF), (BINANCE, BINANCE)))
     provider_transfer = models.OneToOneField(to='provider.ProviderTransfer', on_delete=models.PROTECT, null=True, blank=True)
     handling = models.BooleanField(default=False)
 
@@ -81,9 +82,12 @@ class Transfer(models.Model):
             network=network,
             amount=amount,
             lock=lock,
+            source=cls.BINANCE,
             deposit_address=deposit_address,
             out_address=address,
             deposit=False
         )
+
+        create_binance_withdraw.delay(transfer.id)
 
         return transfer

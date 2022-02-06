@@ -1,7 +1,5 @@
 import logging
 
-from celery import shared_task
-
 from ledger.models import Transfer
 from ledger.utils.price import BUY
 from provider.exchanges import BinanceSpotHandler
@@ -10,8 +8,7 @@ from provider.models import ProviderTransfer, ProviderHedgedOrder
 logger = logging.getLogger(__name__)
 
 
-@shared_task()
-def handle_withdraw(transfer_id: int):
+def handle_binance_withdraw(transfer_id: int):
     transfer = Transfer.objects.get(id=transfer_id)
 
     if transfer.handling:

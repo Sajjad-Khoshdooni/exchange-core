@@ -35,11 +35,19 @@ app.conf.beat_schedule = {
             'expire': 60
         },
     },
+    'update_binance_transfers': {
+        'task': 'ledger.tasks.withdraw.update_binance_withdraw',
+        'schedule': 60,
+        'options': {
+            'queue': 'transfer',
+            'expire': 60
+        },
+    },
     'create_withdraw_transaction': {
         'task': 'ledger.tasks.withdraw.create_transaction_from_not_broadcasts',
         'schedule': 120,
         'options': {
-            'queue': 'trx_network_consumer',
+            'queue': 'transfer',
             'expire': 120
         },
     },

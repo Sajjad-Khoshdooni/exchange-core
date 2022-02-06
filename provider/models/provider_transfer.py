@@ -1,11 +1,11 @@
+import logging
 from decimal import Decimal
 
-from django.db import models, transaction
+from django.db import models
 
 from ledger.models import Asset, Network
 from ledger.utils.fields import get_amount_field
 from provider.exchanges import BinanceSpotHandler
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class ProviderTransfer(models.Model):
 
         return transfer
 
-    def get_status(self):
+    def get_status(self) -> dict:
         data = BinanceSpotHandler.collect_api(
             '/sapi/v1/capital/withdraw/history', 'GET',
             data={'withdrawOrderId': self.id}
@@ -61,11 +61,13 @@ class ProviderTransfer(models.Model):
 
         data = data[0]
 
+        return data
+
         if 'txId' in data:
             tx_id = data['txId']
 
         status = data['status']
-        description = ''
+
         if status % 2 == 1:
             transfer.status = AssetTransfer.CANCELED
         elif status == 6:
@@ -73,3 +75,4 @@ class ProviderTransfer(models.Model):
         else:
             description = 'withdraw pending with status %s' % status
 
+        return TransferStatus(tx_id=tx_id, status=data['status'])
