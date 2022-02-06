@@ -1,15 +1,12 @@
-import datetime
 import logging
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from decimal import Decimal
+from typing import List
 
-import base58
-from django.db import transaction
-
-from ledger.models import Asset, Transfer, Network, DepositAddress
-from tracker.blockchain.confirmer import Confirmer, MinimalBlockDTO
-from tracker.blockchain.reverter import Reverter
-from tracker.models.block_tracker import TRXBlockTracker
+from ledger.models import Asset
+from tracker.blockchain.history_builder import BlockDTO
+from tracker.blockchain.requester import Requester
+from tracker.blockchain.transfer_creator import CoinHandler, TransactionDTO, TransactionParser, RawTransactionDTO
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +18,11 @@ TRANSFER_FROM_METHOD_ID = '23b872dd'
 TRX_ADDRESS_PREFIX = '41'
 
 
-class TooOldBlock(Exception):
+class AddressIsNotValid(Exception):
+    pass
+
+
+class BuildTransactionError(Exception):
     pass
 
 
@@ -29,14 +30,10 @@ def trxify_address(address: str):
     if len(address) == 42:
         return address
     if len(address) > 40:
-        raise Exception
+        address = address[-40:]
 
     number_of_zeros = 40 - len(address)
     return '41' + '0' * number_of_zeros + address
-
-
-def base58_from_hex(hex_string):
-    return base58.b58encode_check(bytes.fromhex(hex_string)).decode()
 
 
 def decode_trx_data_in_block(data: str):
@@ -56,36 +53,12 @@ def decode_trx_data_in_block(data: str):
     raise NotImplementedError
 
 
-def create_transaction_data(t):
-    decoded_data = decode_trx_data_in_block(t['raw_data']['contract'][0]['parameter']['value']['data'])
-    return {
-        'to': decoded_data['to'],
-        'amount': decoded_data['amount'],
-        'from': (
-            decoded_data.get('from') or
-            t['raw_data']['contract'][0]['parameter']['value']['owner_address']
-        ),
-        'id': t['txID']
-    }
-
-
-class TRXTransferCreator:
-    network = Network.objects.get(symbol='TRX')
-
+class USDTCoinTRXHandler(CoinHandler):
     def __init__(self):
-        self.cache = {}
+        self.asset = Asset.objects.get(symbol='USDT')
 
-    def _get_fee_transaction_ids(self):
-        if 'transaction_ids' not in self.cache:
-            self.cache['transaction_ids'] = set(
-                Transfer.objects.filter(
-                    network=self.network,
-                    is_fee=True
-                ).values_list('trx_hash', flat=True)
-            )
-        return self.cache['transaction_ids']
-
-    def _is_valid_transaction(self, t):
+    def is_valid_transaction(self, t):
+        t = t.raw_transaction
         return (
             len(t['ret']) == 1 and
             t['ret'][0]['contractRet'] == 'SUCCESS' and
@@ -93,94 +66,82 @@ class TRXTransferCreator:
             t['raw_data']['contract'][0]['type'] == 'TriggerSmartContract' and
             t['raw_data']['contract'][0]['parameter']['value']['contract_address'] == ETHER_CONTRACT_ID and
             t['raw_data']['contract'][0]['parameter']['value']['data'][:8] in [TRANSFER_METHOD_ID,
-                                                                               TRANSFER_FROM_METHOD_ID] and
-            t['txID'] not in self._get_fee_transaction_ids()
+                                                                               TRANSFER_FROM_METHOD_ID]
         )
 
-    def from_block(self, block):
-        block_hash = block['blockID']
-        block_number = block['block_header']['raw_data']['number']
-        asset = Asset.objects.get(symbol='USDT')
-
-        raw_transactions = block.get('transactions', [])
-
-        logger.info('Transactions %s' % len(raw_transactions))
-        transactions = list(filter(self._is_valid_transaction, raw_transactions))
-        logger.info('transactions reduced from %s to %s' % (len(raw_transactions), len(list(transactions))))
-        transactions = list(map(create_transaction_data, transactions))
-
-        to_address_to_trx = {t['to']: t for t in transactions}
-
-        with transaction.atomic():
-            to_deposit_addresses = DepositAddress.objects.filter(
-                network=self.network,
-                address__in=to_address_to_trx
-            )
-
-            for deposit_address in to_deposit_addresses:
-                trx_data = to_address_to_trx[deposit_address.address]
-
-                Transfer.objects.create(
-                    deposit_address=deposit_address,
-                    wallet=asset.get_wallet(deposit_address.account_secret.account),
-                    network=self.network,
-                    amount=trx_data['amount'],
-                    deposit=True,
-                    trx_hash=trx_data['id'],
-                    block_hash=block_hash,
-                    block_number=block_number,
-                    out_address=trx_data['from']
-                )
+    def build_transaction_data(self, t):
+        t = t.raw_transaction
+        try:
+            decoded_data = decode_trx_data_in_block(t['raw_data']['contract'][0]['parameter']['value']['data'])
+        except AddressIsNotValid as e:
+            raise BuildTransactionError(f'Address is not valid for txid: {t["txID"]}')
+        return TransactionDTO(
+            to_address=decoded_data['to'],
+            amount=decoded_data['amount'],
+            from_address=(
+                decoded_data.get('from') or
+                t['raw_data']['contract'][0]['parameter']['value']['owner_address']
+            ),
+            id=t['txID'],
+            asset=self.asset
+        )
 
 
-class TRXRequester:
+class TRXCoinTRXHandler(CoinHandler):
+    def __init__(self):
+        self.asset = Asset.objects.get(symbol='TRX')
+
+    def is_valid_transaction(self, t):
+        t = t.raw_transaction
+        return (
+            len(t['ret']) == 1 and
+            t['ret'][0]['contractRet'] == 'SUCCESS' and
+            len(t['raw_data']['contract']) == 1 and
+            t['raw_data']['contract'][0]['type'] == 'TransferContract'
+        )
+
+    def build_transaction_data(self, t):
+        t = t.raw_transaction
+        data = t['raw_data']['contract'][0]['parameter']['value']
+        return TransactionDTO(
+            to_address=data['to_address'],
+            amount=data['amount'] / 10 ** 6,
+            from_address=data['owner_address'],
+            id=t['txID'],
+            asset=self.asset
+        )
+
+
+class TRXTransactionParser(TransactionParser):
+
+    def list_of_raw_transaction_from_block(self, block: BlockDTO) -> List[RawTransactionDTO]:
+        return [RawTransactionDTO(
+            id=t['txID'],
+            raw_transaction=t
+        ) for t in block.raw_block.get('transactions', [])]
+
+
+class TRXRequester(Requester):
     def __init__(self, tron_client):
         self.tron = tron_client
 
+    @staticmethod
+    def build_block_dto_from_dict(data) -> BlockDTO:
+        return BlockDTO(
+            id=data['blockID'],
+            number=data['block_header']['raw_data']['number'],
+            parent_id=data['block_header']['raw_data']['parentHash'],
+            timestamp=data['block_header']['raw_data']['timestamp'],
+            raw_block=data
+        )
+
     def get_latest_block(self):
-        return self.tron.get_latest_block()
+        return self.build_block_dto_from_dict(
+            self.tron.provider.make_request("wallet/getnowblock", {"visible": False})
+        )
 
     def get_block_by_id(self, _hash):
-        return self.tron.get_block(_hash)
+        return self.build_block_dto_from_dict(self.tron.get_block(_hash, visible=False))
 
-
-class HistoryBuilder(ABC):
-    @abstractmethod
-    def build(self):
-        pass
-
-
-class TRXHistoryBuilder(HistoryBuilder):
-    def __init__(self, requester, reverter, transfer_creator):
-        self.requester = requester
-        self.reverter = reverter
-        self.transfer_creator = transfer_creator
-
-    def build(self, only_add_now_block=False, maximum_block_step=1000):
-        block = self.requester.get_latest_block()
-        if TRXBlockTracker.has(block['blockID']):
-            return
-        blocks = [block]
-
-        if not only_add_now_block:
-            while not TRXBlockTracker.has(blocks[-1]['block_header']['raw_data']['parentHash']):
-                blocks.append(self.requester.get_block_by_id(blocks[-1]['block_header']['raw_data']['parentHash']))
-
-                if len(blocks) > maximum_block_step:
-                    raise TooOldBlock
-
-        Reverter(TRXBlockTracker).from_number(blocks[-1]['block_header']['raw_data']['number'])
-        for block in reversed(blocks):
-            self.transfer_creator.from_block(block)
-            TRXBlockTracker.objects.create(
-                number=block['block_header']['raw_data']['number'],
-                hash=block['blockID'],
-                block_date=datetime.datetime.fromtimestamp(block['block_header']['raw_data']['timestamp'] /
-                                                           1000).astimezone(),
-            )
-        confirmer = Confirmer(
-            asset=Asset.objects.get(symbol='USDT'),
-            network=Network.objects.get(symbol='TRX'),
-            block_tracker=TRXBlockTracker
-        )
-        confirmer.confirm(MinimalBlockDTO(hash=block['blockID'], number=block['block_header']['raw_data']['number']))
+    def get_block_by_number(self, number):
+        return self.build_block_dto_from_dict(self.tron.get_block(number, visible=False))

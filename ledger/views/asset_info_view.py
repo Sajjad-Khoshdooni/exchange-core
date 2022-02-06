@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView
@@ -12,11 +13,11 @@ from ledger.utils.price import get_all_assets_prices, get_tether_irt_price, BUY
 class AssetSerializerBuilder(AssetSerializerMini):
     price_usdt = serializers.SerializerMethodField()
     price_irt = serializers.SerializerMethodField()
-    weekly_trend_url = serializers.SerializerMethodField()
+    trend_url = serializers.SerializerMethodField()
     irt_price_changed_percent_24h = serializers.SerializerMethodField()
     is_cash = serializers.SerializerMethodField()
     change_24h = serializers.SerializerMethodField()
-    change_7d = serializers.SerializerMethodField()
+    volume_24h = serializers.SerializerMethodField()
 
     class Meta:
         model = Asset
@@ -33,10 +34,10 @@ class AssetSerializerBuilder(AssetSerializerMini):
         price = prices[asset.symbol] * tether_irt
         return asset.get_presentation_price_irt(price)
 
-    def get_weekly_trend_url(self, asset: Asset):
+    def get_trend_url(self, asset: Asset):
         cap = CoinMarketCap.objects.filter(symbol=asset.symbol).first()
         if cap:
-            return 'https://s3.coinmarketcap.com/generated/sparklines/web/7d/2781/%d.svg' % cap.internal_id
+            return 'https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/%d.svg' % cap.internal_id
         else:
             return '/'
 
@@ -46,11 +47,11 @@ class AssetSerializerBuilder(AssetSerializerMini):
         if cap:
             return cap.change_24h
 
-    def get_change_7d(self, asset: Asset):
+    def get_volume_24h(self, asset: Asset):
         cap = self.get_cap(asset)
 
         if cap:
-            return cap.change_7d
+            return asset.get_presentation_amount(Decimal(cap.volume_24h))
 
     def get_cap(self, asset) -> CoinMarketCap:
         return self.context['cap_info'].get(asset.symbol)
@@ -60,7 +61,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
         fields = AssetSerializerMini.Meta.fields
 
         if prices:
-            fields = (*fields, 'price_usdt', 'price_irt', 'weekly_trend_url', 'change_24h', 'change_7d')
+            fields = (*fields, 'price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h')
 
         class Serializer(cls):
             pass
@@ -74,7 +75,6 @@ class AssetsView(ListAPIView):
 
     authentication_classes = []
     permission_classes = []
-    queryset = Asset.live_objects.all()
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -100,3 +100,11 @@ class AssetsView(ListAPIView):
         return AssetSerializerBuilder.create_serializer(
             prices=self.get_serializer_option('prices')
         )
+
+    def get_queryset(self):
+        queryset = Asset.live_objects.all()
+
+        if self.request.query_params.get('trend') == '1':
+            queryset = queryset.filter(trend=True)
+
+        return queryset

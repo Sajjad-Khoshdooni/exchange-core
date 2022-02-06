@@ -16,6 +16,7 @@ class AssetListSerializer(serializers.ModelSerializer):
     balance_usdt = serializers.SerializerMethodField()
     sell_price_irt = serializers.SerializerMethodField()
     buy_price_irt = serializers.SerializerMethodField()
+    can_deposit = serializers.SerializerMethodField()
 
     def get_wallet(self, asset: Asset):
         return self.context['asset_to_wallet'].get(asset.id)
@@ -60,9 +61,12 @@ class AssetListSerializer(serializers.ModelSerializer):
         price = get_trading_price_irt(asset.symbol, BUY)
         return asset.get_presentation_price_irt(price)
 
+    def get_can_deposit(self, asset: Asset):
+        return NetworkAsset.objects.filter(asset=asset, network__can_deposit=True).exists()
+
     class Meta:
         model = Asset
-        fields = ('symbol', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt', 'buy_price_irt')
+        fields = ('symbol', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt', 'buy_price_irt', 'can_deposit')
 
 
 class TransferSerializer(serializers.ModelSerializer):

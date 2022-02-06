@@ -10,16 +10,22 @@ tron = get_tron_client()
 
 
 class FeeHandler:
+    NETWORK_ASSET_FEE = {
+        'TRX': {
+            'TRX': 0,
+            'USDT': 10
+        }
+    }
+
     def __init__(self, network: Network, asset: Asset):
         self.network = network
         self.asset = asset
 
     def get_asset_fee(self):
-        if (
-            self.asset.symbol != 'USDT' or self.network.symbol != 'TRX'
-        ):
+        fee = self.NETWORK_ASSET_FEE.get(self.network.symbol, {}).get(self.asset.symbol, None)
+        if fee is None:
             raise NotImplementedError
-        return 10
+        return fee
 
     def is_balance_enough_for_fee(self, account: Account):
         if (
@@ -30,7 +36,7 @@ class FeeHandler:
         secret.__class__ = Secret.get_secret_wallet(self.network.symbol)
 
         try:
-            account_info = tron.get_account(secret.base58_address)
+            account_info = tron.get_account(secret.get_presentation_address(secret.address))
         except AddressNotFound:
             return False
 

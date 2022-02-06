@@ -1,12 +1,36 @@
+from random import choice
+
+from tronpy.defaults import conf_for_name
 from tronpy.providers import HTTPProvider
 from tronpy import Tron
 
-_tron = None
+_tron_proxy = None
 
 
-def get_tron_client() -> Tron:
-    global _tron
-    if _tron is None:
-        provider = HTTPProvider(api_key='d69566b0-4604-49b5-8066-d7441b3210ff')
-        _tron = Tron(provider=provider)
-    return _tron
+class TronProxy:
+    def __init__(self, tron_list):
+        self._tron_list = tron_list
+
+    def __call__(self, *args, **kwargs):
+        return choice(self._tron_list).__call__(*args, **kwargs)
+
+    def __getattribute__(self, item):
+        if item in ['_tron_list']:
+            return super().__getattribute__(item)
+        return getattr(choice(self._tron_list), item)
+
+
+def get_tron_client(network='mainnet') -> Tron:
+    global _tron_proxy
+    _trons = []
+    if _tron_proxy is None:
+        for api_key in ['bb149363-094b-47ad-8ed7-1bb42ac8541f',
+                        '8a751720-2877-4d0e-8dc9-1c72ccff2ad8',
+                        'd69566b0-4604-49b5-8066-d7441b3210ff',
+                        'edaa9d8d-0649-4425-910e-f15a1ca7632c',
+                        'c6acfd07-cd72-4e33-bc69-550dcb7d7eba',
+                        '1511f05b-a6cd-4ecd-a050-68c45b063a62']:
+            provider = HTTPProvider(endpoint_uri=conf_for_name(network), api_key=api_key,)
+            _trons.append(Tron(provider=provider))
+        _tron_proxy = TronProxy(_trons)
+    return _tron_proxy

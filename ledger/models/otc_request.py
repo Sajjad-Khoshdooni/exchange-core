@@ -58,9 +58,12 @@ class OTCRequest(models.Model):
         otc_request.set_amounts(from_amount, to_amount)
 
         if not allow_small_trades:
-            conf = otc_request.get_trade_config()
+            if from_amount:
+                check_asset, check_amount = from_asset, from_amount
+            else:
+                check_asset, check_amount = to_asset, to_amount
 
-            if conf.cash_amount * get_trading_price_irt(conf.cash.symbol, BUY, raw_price=True) < 95_000:
+            if check_amount * get_trading_price_irt(check_asset.symbol, BUY, raw_price=True) < 98_000:
                 raise SmallAmountTrade()
 
         from_wallet = from_asset.get_wallet(account, otc_request.market)
@@ -121,7 +124,7 @@ class OTCRequest(models.Model):
         if to_amount:
             from_amount = to_price * to_amount
 
-            if self.from_asset.is_trade_base():
+            if self.from_asset.is_trade_base() and self.to_asset.symbol != Asset.IRT:
                 self.to_asset.is_trade_amount_valid(to_amount, raise_exception=True)
             else:
                 from_amount = from_amount - (from_amount % self.from_asset.trade_quantity_step)  # step coin
@@ -130,7 +133,7 @@ class OTCRequest(models.Model):
         else:
             to_amount = from_amount / to_price
 
-            if self.from_asset.is_trade_base():
+            if self.from_asset.is_trade_base() and self.to_asset.symbol != Asset.IRT:
                 to_amount = to_amount - (to_amount % self.to_asset.trade_quantity_step)  # step coin
                 from_amount = to_amount * to_price  # re calc cash
             else:
