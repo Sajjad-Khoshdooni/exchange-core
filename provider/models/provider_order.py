@@ -8,7 +8,7 @@ from accounts.models import Account
 from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_trading_price_usdt, SELL
-from provider.exchanges import BinanceFuturesHandler
+from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
 
 class ProviderOrder(models.Model):
@@ -19,8 +19,8 @@ class ProviderOrder(models.Model):
     BUY, SELL = 'buy', 'sell'
     ORDER_CHOICES = [(BUY, BUY), (SELL, SELL)]
 
-    TRADE, BORROW, LIQUIDATION = 't', 'b', 'l'
-    SCOPE_CHOICES = ((TRADE, 'trade'), (BORROW, 'borrow'), (LIQUIDATION, 'liquidation'))
+    TRADE, BORROW, LIQUIDATION, WITHDRAW = 'trade', 'borrow', 'liquid', 'withdraw'
+    SCOPE_CHOICES = ((TRADE, 'trade'), (BORROW, 'borrow'), (LIQUIDATION, 'liquidation'), (WITHDRAW, 'withdraw'))
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -37,14 +37,14 @@ class ProviderOrder(models.Model):
     )
 
     scope = models.CharField(
-        max_length=1,
+        max_length=8,
         choices=SCOPE_CHOICES,
     )
 
     # caller_id = models.PositiveIntegerField(null=True, blank=True)
 
     @classmethod
-    def new_order(cls, asset: Asset, side: str, amount: Decimal, scope: str) -> 'ProviderOrder':
+    def new_order(cls, asset: Asset, side: str, amount: Decimal, scope: str, market: str = FUTURE) -> 'ProviderOrder':
         with transaction.atomic():
             order = ProviderOrder.objects.create(
                 asset=asset, amount=amount, side=side, scope=scope
@@ -52,16 +52,26 @@ class ProviderOrder(models.Model):
 
             symbol = cls.get_trading_symbol(asset)
 
-            if asset.symbol == 'SHIB':
+            if market == cls.FUTURE and asset.symbol == 'SHIB':
                 symbol.replace('SHIB', '1000SHIB')
                 amount = round(amount / 1000)
 
-            resp = BinanceFuturesHandler.place_order(
-                symbol=symbol,
-                side=side,
-                amount=amount,
-                client_order_id=order.id
-            )
+            if market == cls.FUTURE:
+                resp = BinanceFuturesHandler.place_order(
+                    symbol=symbol,
+                    side=side,
+                    amount=amount,
+                    client_order_id=order.id
+                )
+            elif market == cls.SPOT:
+                resp = BinanceSpotHandler.place_order(
+                    symbol=symbol,
+                    side=side,
+                    amount=amount,
+                    client_order_id=order.id
+                )
+            else:
+                raise NotImplementedError
 
             order.order_id = resp['orderId']
             order.save()

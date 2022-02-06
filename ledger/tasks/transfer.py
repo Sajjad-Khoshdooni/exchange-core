@@ -3,8 +3,9 @@ import logging
 from celery import shared_task
 
 from ledger.models import Transfer
+from ledger.utils.price import BUY
 from provider.exchanges import BinanceSpotHandler
-from provider.models import ProviderTransfer
+from provider.models import ProviderTransfer, ProviderHedgedOrder
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,16 @@ def handle_withdraw(transfer_id: int):
         coin = transfer.wallet.asset.symbol
         amount = transfer.amount
 
-        if balance_map[coin] >= amount:
+        if balance_map[coin] < amount:
+
+            ProviderHedgedOrder.new_hedged_order(
+                asset=transfer.wallet.asset,
+                amount=amount,
+                spot_side=BUY,
+                caller_id=transfer.id
+            )
+
+        withdraw(transfer)
 
     finally:
         transfer.handling = False
@@ -40,4 +50,20 @@ def handle_withdraw(transfer_id: int):
 
 
 def withdraw(transfer: Transfer):
-    ProviderTransfer.
+    provider_transfer = ProviderTransfer.new_withdraw(
+        transfer.wallet.asset,
+        transfer.network,
+        transfer.amount,
+        transfer.out_address,
+        caller_id=str(transfer.id)
+    )
+
+    if not provider_transfer:
+        logger.error(
+            'creating provider transfer failed!'
+        )
+        return
+
+    transfer.provider_transfer = provider_transfer
+    transfer.status = transfer.PENDING
+    transfer.save()
