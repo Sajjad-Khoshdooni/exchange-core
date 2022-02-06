@@ -111,10 +111,10 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return addresses.get(network_asset.network.symbol)
 
     def get_min_withdraw(self, network_asset: NetworkAsset):
-        return network_asset.asset.get_presentation_amount(network_asset.min_withdraw)
+        return network_asset.asset.get_presentation_amount(network_asset.withdraw_min)
 
     def get_withdraw_commission(self, network_asset: NetworkAsset):
-        return network_asset.asset.get_presentation_amount(network_asset.withdraw_commission)
+        return network_asset.asset.get_presentation_amount(network_asset.withdraw_fee)
 
     class Meta:
         fields = ('network', 'address', 'can_deposit', 'can_withdraw', 'withdraw_commission', 'min_withdraw')

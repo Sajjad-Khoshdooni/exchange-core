@@ -11,7 +11,7 @@ class Confirmer:
 
     def confirm(self, block: BlockDTO):
         pending_transfers = Transfer.objects.filter(
-            block_number__lte=block.number - self.network.minimum_block_to_confirm,
+            block_number__lte=block.number - self.network.min_confirm,
             status=Transfer.PENDING
         )
         for transfer in pending_transfers:

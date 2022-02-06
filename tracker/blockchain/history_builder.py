@@ -45,7 +45,7 @@ class HistoryBuilder:
         system_latest_block = self.block_tracker.get_latest_block()
 
         _from = system_latest_block.number + 1
-        _to = block.number - self.network.minimum_block_to_confirm
+        _to = block.number - self.network.min_confirm
 
         for i in range(_from, _to):
             block = self.requester.get_block_by_number(i)

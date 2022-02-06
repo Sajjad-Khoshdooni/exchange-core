@@ -68,13 +68,15 @@ class AssetAdmin(admin.ModelAdmin):
 
 @admin.register(models.Network)
 class NetworkAdmin(admin.ModelAdmin):
-    list_display = ('symbol', 'can_withdraw', 'can_deposit')
+    list_display = ('symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'address_regex')
     list_editable = ('can_withdraw', 'can_deposit')
+    search_fields = ('symbol', )
 
 
 @admin.register(models.NetworkAsset)
 class NetworkAssetAdmin(admin.ModelAdmin):
-    list_display = ('network', 'asset', 'withdraw_commission', 'min_withdraw')
+    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max')
+    search_fields = ('network__symbol', 'asset__symbol')
 
 
 @admin.register(models.DepositAddress)
