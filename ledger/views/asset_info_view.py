@@ -2,7 +2,8 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from rest_framework import serializers
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, get_object_or_404
+from rest_framework.viewsets import ModelViewSet
 
 from collector.models import CoinMarketCap
 from ledger.models import Asset
@@ -57,21 +58,25 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return self.context['cap_info'].get(asset.symbol)
 
     @classmethod
-    def create_serializer(cls,  prices: bool = True):
+    def create_serializer(cls,  prices: bool = True, detailed: bool = False):
         fields = AssetSerializerMini.Meta.fields
+        new_fields = []
 
         if prices:
-            fields = (*fields, 'price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h')
+            new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h']
+
+        if detailed:
+            new_fields.append('description')
 
         class Serializer(cls):
             pass
 
-        Serializer.Meta.fields = fields
+        Serializer.Meta.fields = (*fields, *new_fields)
 
         return Serializer
 
 
-class AssetsView(ListAPIView):
+class AssetsViewSet(ModelViewSet):
 
     authentication_classes = []
     permission_classes = []
@@ -97,8 +102,11 @@ class AssetsView(ListAPIView):
         return options[key]
 
     def get_serializer_class(self):
+        detailed = self.action == 'retrieve'
+
         return AssetSerializerBuilder.create_serializer(
-            prices=self.get_serializer_option('prices')
+            prices=self.get_serializer_option('prices'),
+            detailed=detailed
         )
 
     def get_queryset(self):
@@ -108,3 +116,6 @@ class AssetsView(ListAPIView):
             queryset = queryset.filter(trend=True)
 
         return queryset
+
+    def get_object(self):
+        return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper(), enable=True)

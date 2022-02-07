@@ -3,7 +3,8 @@ from ledger import views
 
 
 urlpatterns = [
-    path('v1/assets/', views.AssetsView.as_view()),
+    path('v1/assets/', views.AssetsViewSet.as_view({'get': 'list'})),
+    path('v1/assets/<slug:symbol>/', views.AssetsViewSet.as_view({'get': 'retrieve'})),
 
     path('v1/wallets/', views.WalletViewSet.as_view({'get': 'list'})),
     path('v1/wallets/<slug:symbol>/', views.WalletViewSet.as_view({'get': 'retrieve'})),
