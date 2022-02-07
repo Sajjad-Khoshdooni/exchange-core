@@ -38,6 +38,9 @@ def get_prices_dict(coins: list, side: str, exchange: str = BINANCE, market_symb
         extra[IRT] = Decimal(0)
         coins.remove(IRT)
 
+    if not coins:
+        return extra
+
     symbol_to_coins = {
         c + market_symbol: c for c in coins
     }
