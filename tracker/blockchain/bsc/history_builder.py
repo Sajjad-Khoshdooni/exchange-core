@@ -1,9 +1,8 @@
 from typing import List
 
-from web3 import Web3
-from web3.middleware import geth_poa_middleware
 from web3.types import BlockData
 
+from _helpers.blockchain.bsc import get_web3_bsc_client, bsc
 from ledger.models import Asset
 from tracker.blockchain.dtos import BlockDTO, RawTransactionDTO, TransactionDTO
 from tracker.blockchain.requester import Requester
@@ -26,6 +25,35 @@ class BSCCoinBSCHandler(CoinHandler):
         return TransactionDTO(
             to_address=t['to'].lower(),
             amount=t['value'] / 10 ** 18,
+            from_address=t['from'].lower(),
+            id=t['hash'].hex(),
+            asset=self.asset
+        )
+
+
+class USDTCoinBSCHandler(CoinHandler):
+    # USDT_CONTRACT_ADDRESS = '0x55d398326f99059ff775485246999027b3197955'
+    USDT_CONTRACT_ADDRESS = '0x337610d27c682e347c9cd60bd4b3b107c9d34ddd'  # TESTNET
+
+    def __init__(self):
+        self.asset = Asset.objects.get(symbol='USDT')
+
+    def is_valid_transaction(self, t):
+        t = t.raw_transaction
+        return (
+            t['to'].lower() == self.USDT_CONTRACT_ADDRESS
+        )
+
+    def build_transaction_data(self, t):
+        t = t.raw_transaction
+        web3 = get_web3_bsc_client()
+
+        contract = web3.eth.contract(web3.toChecksumAddress(self.USDT_CONTRACT_ADDRESS),
+                                     abi=bsc.get_bsc_abi(self.USDT_CONTRACT_ADDRESS))
+        _, decoded_input = contract.decode_function_input(t['input'])
+        return TransactionDTO(
+            to_address=decoded_input['recipient'].lower(),
+            amount=decoded_input['amount'] / 10 ** 18,
             from_address=t['from'].lower(),
             id=t['hash'].hex(),
             asset=self.asset
