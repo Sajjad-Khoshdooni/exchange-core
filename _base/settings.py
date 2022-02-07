@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'raven.contrib.django.raven_compat',
     'rest_framework',
     'corsheaders',
+    'django_summernote',
 
     'accounts',
     'ledger',
