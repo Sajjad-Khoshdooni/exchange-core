@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'django_summernote',
     'hijack',
     'hijack.contrib.admin',
+    'financial',
 
     'accounts',
     'ledger',
