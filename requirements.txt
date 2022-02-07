@@ -22,6 +22,7 @@ defusedxml==0.7.1
 Deprecated==1.2.13
 Django==4.0
 django-cors-headers==3.10.1
+django-hijack==3.1.4
 django-templated-mail==1.1.1
 django-summernote==0.8.20.0
 djangorestframework==3.13.1

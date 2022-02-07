@@ -32,6 +32,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'django_summernote',
+    'hijack',
+    'hijack.contrib.admin',
 
     'accounts',
     'ledger',
@@ -51,6 +53,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'hijack.middleware.HijackUserMiddleware',
 ]
 
 MIDDLEWARE.insert(0, 'accounts.middleware.DisableCsrfCheck')
