@@ -25,7 +25,7 @@ def get_other_side(side: str):
     return BUY if side == SELL else SELL
 
 
-def get_prices_dict(coins: list, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
+def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
                     now: datetime = None) -> Dict[str, Decimal]:
 
     extra = {}
@@ -58,15 +58,24 @@ def get_prices_dict(coins: list, side: str, exchange: str = BINANCE, market_symb
     grpc_client = gRPCClient()
     timestamp = int(_now.timestamp() * 1000) - delay
 
+    if side:
+        order_by = ('symbol', '-timestamp')
+        distinct = ('symbol',)
+        values = ('symbol', 'price')
+    else:
+        order_by = ('symbol', 'type', '-timestamp')
+        distinct = ('symbol', 'type')
+        values = ('symbol', 'type', 'price')
+
     orders = grpc_client.get_current_orders(
         exchange=exchange,
         symbols=tuple(symbol_to_coins.keys()),
         position=0,
         type=side,
         timestamp=timestamp,
-        order_by=('symbol', '-timestamp'),
-        distinct=('symbol',),
-        values=('symbol', 'price')
+        order_by=order_by,
+        distinct=distinct,
+        values=values,
     ).orders
 
     grpc_client.channel.close()
@@ -78,8 +87,14 @@ def get_prices_dict(coins: list, side: str, exchange: str = BINANCE, market_symb
     result.update(extra)
 
     if PriceManager.active():
-        for (coin, price) in result.items():
-            PriceManager.set_price(coin, side, exchange, market_symbol, now, price)
+        for order in orders:
+            coin = symbol_to_coins[order.symbol]
+            _side = side
+
+            if not _side:
+                _side = order.type
+
+            PriceManager.set_price(coin, _side, exchange, market_symbol, now, order.price)
 
     return result
 
