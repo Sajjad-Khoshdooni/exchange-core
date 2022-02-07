@@ -7,6 +7,7 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.models import Wallet, DepositAddress, Transfer, NetworkAsset
 from ledger.models.asset import Asset
 from ledger.utils.price import get_trading_price_irt, BUY, SELL
+from ledger.utils.price_manager import PriceManager
 from wallet.utils import get_presentation_address
 
 
@@ -193,10 +194,11 @@ class WalletViewSet(ModelViewSet):
         return self.request.query_params.get('market') or Wallet.SPOT
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        data = serializer.data
-        wallets = list(filter(lambda w: w['balance'] != '0', data)) + list(filter(lambda w: w['balance'] == '0', data))
+        with PriceManager():
+            queryset = self.get_queryset()
+            serializer = self.get_serializer(queryset, many=True)
+            data = serializer.data
+            wallets = list(filter(lambda w: w['balance'] != '0', data)) + list(filter(lambda w: w['balance'] == '0', data))
 
         return Response(wallets)
 
