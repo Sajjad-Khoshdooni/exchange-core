@@ -1,18 +1,20 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Dict
 
 from cachetools import TTLCache
 
 from collector.price.grpc_client import gRPCClient
 from ledger.utils.cache import ttl_cache
+from ledger.utils.price_manager import PriceManager
 
 cache = TTLCache(maxsize=1000, ttl=0.5)
 
 BINANCE = 'binance'
 NOBITEX = 'nobitex'
 
-MARKET_USDT = 'USDT'
-MARKET_IRT = 'IRT'
+USDT = 'USDT'
+IRT = 'IRT'
 
 BUY, SELL = 'buy', 'sell'
 
@@ -23,18 +25,27 @@ def get_other_side(side: str):
     return BUY if side == SELL else SELL
 
 
-@ttl_cache(cache)
-def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = MARKET_USDT,
-              now: datetime = None) -> Decimal:
+def get_prices_dict(coins: list, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
+                    now: datetime = None) -> Dict[str, Decimal]:
 
-    if coin == 'USDT' and exchange == BINANCE:
-        return Decimal('1')
+    extra = {}
 
-    if coin == 'IRT':
-        return Decimal('0')
+    if exchange == BINANCE and USDT in coins:
+        extra[USDT] = Decimal(1)
+        coins.remove(USDT)
+
+    if IRT in coins:
+        extra[IRT] = Decimal(0)
+        coins.remove(IRT)
+
+    symbol_to_coins = {
+        c + market_symbol: c for c in coins
+    }
 
     if not now:
-        now = datetime.now()
+        _now = datetime.now()
+    else:
+        _now = now
 
     if exchange == BINANCE:
         delay = 60_000
@@ -42,11 +53,11 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
         delay = 600_000
 
     grpc_client = gRPCClient()
-    timestamp = int(now.timestamp() * 1000) - delay
+    timestamp = int(_now.timestamp() * 1000) - delay
 
     orders = grpc_client.get_current_orders(
         exchange=exchange,
-        symbols=(coin + market_symbol,),
+        symbols=tuple(symbol_to_coins.keys()),
         position=0,
         type=side,
         timestamp=timestamp,
@@ -55,34 +66,45 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
         values=('symbol', 'price')
     ).orders
 
-    if orders:
-        price = orders[0].price
-    else:
-        price = 0
-
     grpc_client.channel.close()
 
-    return Decimal(price)
+    result = {
+        symbol_to_coins[o.symbol]: Decimal(o.price) for o in orders
+    }
+
+    result.update(extra)
+
+    if PriceManager.active():
+        for (coin, price) in result.items():
+            PriceManager.set_price(coin, side, exchange, market_symbol, now, price)
+
+    return result
 
 
-def get_tether_irt_price(side: str,now: datetime = None) -> Decimal:
-    tether_rial = get_price('USDT', side=side, exchange=NOBITEX, market_symbol=MARKET_IRT, now=now)
+@ttl_cache(cache)
+def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
+              now: datetime = None) -> Decimal:
+
+    if PriceManager.active():
+        price = PriceManager.get_price(coin, side, exchange, market_symbol, now)
+        if price is not None:
+            return price
+
+    prices = get_prices_dict([coin], side, exchange, market_symbol, now)
+
+    if prices:
+        return prices[coin]
+    else:
+        return Decimal(0)
+
+
+def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
+    tether_rial = get_price('USDT', side=side, exchange=NOBITEX, market_symbol=IRT, now=now)
     return Decimal(tether_rial / 10)
 
 
-def get_all_assets_prices(side: str, now: datetime = None):
-    from ledger.models import Asset
-
-    prices = {}
-
-    for asset in Asset.live_objects.all():
-        prices[asset.symbol] = Decimal(get_price(asset.symbol, side, now=now))
-
-    return prices
-
-
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Decimal:
-    assert coin != MARKET_IRT
+    assert coin != IRT
     diff = Decimal('0.005')
 
     if raw_price:
@@ -99,7 +121,7 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Dec
 
 
 def get_trading_price_irt(coin: str, side: str, raw_price: bool = False) -> Decimal:
-    if coin == MARKET_IRT:
+    if coin == IRT:
         return Decimal(1)
 
     return get_trading_price_usdt(coin, side, raw_price) * get_tether_irt_price(side)

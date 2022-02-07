@@ -1,14 +1,14 @@
-from datetime import datetime, timedelta
 from decimal import Decimal
 
 from rest_framework import serializers
-from rest_framework.generics import ListAPIView, get_object_or_404
+from rest_framework.generics import get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 
 from collector.models import CoinMarketCap
 from ledger.models import Asset
 from ledger.models.asset import AssetSerializerMini
-from ledger.utils.price import get_all_assets_prices, get_tether_irt_price, BUY
+from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
+from ledger.utils.price_manager import PriceManager
 
 
 class AssetSerializerBuilder(AssetSerializerMini):
@@ -84,19 +84,20 @@ class AssetsViewSet(ModelViewSet):
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
 
-        if self.get_serializer_option('prices'):
-            ctx['prices'] = get_all_assets_prices(BUY)
-            ctx['tether_irt'] = get_tether_irt_price(BUY)
-
+        if self.get_options('prices'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
             caps = CoinMarketCap.objects.filter(symbol__in=symbols)
             ctx['cap_info'] = {cap.symbol: cap for cap in caps}
 
+            ctx['prices'] = get_prices_dict(coins=symbols, side=BUY)
+            ctx['tether_irt'] = get_tether_irt_price(BUY)
+
         return ctx
 
-    def get_serializer_option(self, key: str):
+    def get_options(self, key: str):
         options = {
-            'prices': self.request.query_params.get('prices') == '1'
+            'prices': self.request.query_params.get('prices') == '1',
+            'trend': self.request.query_params.get('trend') == '1'
         }
 
         return options[key]
@@ -105,17 +106,21 @@ class AssetsViewSet(ModelViewSet):
         detailed = self.action == 'retrieve'
 
         return AssetSerializerBuilder.create_serializer(
-            prices=self.get_serializer_option('prices'),
+            prices=self.get_options('prices'),
             detailed=detailed
         )
 
     def get_queryset(self):
         queryset = Asset.live_objects.all()
 
-        if self.request.query_params.get('trend') == '1':
+        if self.get_options('trend'):
             queryset = queryset.filter(trend=True)
 
         return queryset
 
     def get_object(self):
         return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper(), enable=True)
+
+    def get(self, *args, **kwargs):
+        with PriceManager():
+            return super().get(*args, **kwargs)
