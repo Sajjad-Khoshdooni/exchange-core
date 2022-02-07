@@ -94,7 +94,7 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
             if not _side:
                 _side = order.type
 
-            PriceManager.set_price(coin, _side, exchange, market_symbol, now, order.price)
+            PriceManager.set_price(coin, _side, exchange, market_symbol, now, Decimal(order.price))
 
     return result
 
