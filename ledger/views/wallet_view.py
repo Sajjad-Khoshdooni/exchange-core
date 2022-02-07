@@ -196,7 +196,7 @@ class WalletViewSet(ModelViewSet):
     def list(self, request, *args, **kwargs):
         with PriceManager():
             queryset = self.get_queryset()
-            get_prices_dict(coins=queryset.values_list('symbol', flat=True))  # cache prices
+            get_prices_dict(coins=list(queryset.values_list('symbol', flat=True)))  # cache prices
 
             serializer = self.get_serializer(queryset, many=True)
             data = serializer.data
