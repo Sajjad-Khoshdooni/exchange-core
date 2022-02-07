@@ -107,6 +107,11 @@ class AssetSerializer(serializers.ModelSerializer):
 
 class AssetSerializerMini(serializers.ModelSerializer):
 
+    trade_precision = serializers.SerializerMethodField()
+
+    def get_trade_precision(self, asset: Asset):
+        return asset.precision
+
     class Meta:
         model = Asset
-        fields = ('symbol', )
+        fields = ('symbol', 'trade_precision')
