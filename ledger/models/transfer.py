@@ -113,6 +113,12 @@ class Transfer(models.Model):
 
     def save(self, *args, **kwargs):
         if self.status == self.DONE:
+            self.update_crypto_balances()
+
+        return super().save(*args, **kwargs)
+
+    def update_crypto_balances(self):
+        try:
             balance, _ = CryptoBalance.objects.get_or_create(
                 deposit_address=self.deposit_address,
                 asset=self.wallet.asset,
@@ -132,4 +138,5 @@ class Transfer(models.Model):
                 )
                 balance.update()
 
-        return super().save(*args, **kwargs)
+        except Exception:
+            logger.exception('failed to update crypto balance')
