@@ -33,33 +33,49 @@ class BSCCoinBSCHandler(CoinHandler):
 
 
 class USDTCoinBSCHandler(CoinHandler):
-    # USDT_CONTRACT_ADDRESS = '0x55d398326f99059ff775485246999027b3197955'
-    USDT_CONTRACT_ADDRESS = '0x337610d27c682e347c9cd60bd4b3b107c9d34ddd'  # TESTNET
+    USDT_CONTRACT_ADDRESS = '0x55d398326f99059ff775485246999027b3197955'
+    # USDT_CONTRACT_ADDRESS = '0x337610d27c682e347c9cd60bd4b3b107c9d34ddd'  # TESTNET
 
     def __init__(self):
         self.asset = Asset.objects.get(symbol='USDT')
+        self.web3 = get_web3_bsc_client()
+
+    def get_function_of_input(self, t):
+        contract = self.web3.eth.contract(self.web3.toChecksumAddress(self.USDT_CONTRACT_ADDRESS),
+                                          abi=bsc.get_bsc_abi(self.USDT_CONTRACT_ADDRESS))
+        function, _ = contract.decode_function_input(t['input'])
+        return function.function_identifier
 
     def is_valid_transaction(self, t):
         t = t.raw_transaction
         return (
             t['to'] and
-            t['to'].lower() == self.USDT_CONTRACT_ADDRESS
+            t['to'].lower() == self.USDT_CONTRACT_ADDRESS and
+            (self.get_function_of_input(t) == 'transfer' or self.get_function_of_input(t) == 'transferFrom')
         )
 
     def build_transaction_data(self, t):
         t = t.raw_transaction
-        web3 = get_web3_bsc_client()
 
-        contract = web3.eth.contract(web3.toChecksumAddress(self.USDT_CONTRACT_ADDRESS),
-                                     abi=bsc.get_bsc_abi(self.USDT_CONTRACT_ADDRESS))
-        _, decoded_input = contract.decode_function_input(t['input'])
-        return TransactionDTO(
-            to_address=decoded_input['recipient'].lower(),
-            amount=decoded_input['amount'] / 10 ** 18,
-            from_address=t['from'].lower(),
-            id=t['hash'].hex(),
-            asset=self.asset
-        )
+        contract = self.web3.eth.contract(self.web3.toChecksumAddress(self.USDT_CONTRACT_ADDRESS),
+                                          abi=bsc.get_bsc_abi(self.USDT_CONTRACT_ADDRESS))
+        function, decoded_input = contract.decode_function_input(t['input'])
+        if function.function_identifier == 'transfer':
+            return TransactionDTO(
+                to_address=decoded_input['recipient'].lower(),
+                amount=decoded_input['amount'] / 10 ** 18,
+                from_address=t['from'].lower(),
+                id=t['hash'].hex(),
+                asset=self.asset
+            )
+        if function.function_identifier == 'transferFrom':
+            return TransactionDTO(
+                to_address=decoded_input['recipient'].lower(),
+                amount=decoded_input['amount'] / 10 ** 18,
+                from_address=decoded_input['sender'].lower(),
+                id=t['hash'].hex(),
+                asset=self.asset
+            )
 
 
 class BSCTransactionParser(TransactionParser):
