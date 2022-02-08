@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.admin import SimpleListFilter
 from django.db.models import F
 from django_summernote.admin import SummernoteModelAdmin
 
@@ -145,14 +146,29 @@ class BalanceLockAdmin(admin.ModelAdmin):
     ordering = ('-created', )
 
 
+class CryptoAccountTypeFilter(SimpleListFilter):
+    title = 'type' # or use _('country') for translated title
+    parameter_name = 'type'
+
+    def lookups(self, request, model_admin):
+        return (Account.SYSTEM, 'system'), (Account.OUT, 'out'), ('ord', 'ordinary')
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value:
+            if value == 'ord':
+                value = None
+
+            return queryset.filter(deposit_address__account_secret__account__type=value)
+        else:
+            return queryset
+
+
 @admin.register(models.CryptoBalance)
 class CryptoBalanceAdmin(admin.ModelAdmin):
     list_display = ('asset', 'get_address', 'get_owner', 'amount', 'updated_at', )
     search_fields = ('asset__symbol', 'deposit_address__address',)
-
-    def get_queryset(self, request):
-        _type = request.GET.get('type')
-        return super().get_queryset(request).filter(deposit_address__account_secret__account__type=_type)
+    list_filter = (CryptoAccountTypeFilter, )
 
     def get_address(self, crypto_balance: models.CryptoBalance):
         return crypto_balance.deposit_address.address

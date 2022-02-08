@@ -11,11 +11,13 @@ class Account(models.Model):
     OUT = 'o'
     ORDINARY = None
 
+    TYPE_CHOICES = ((SYSTEM, 'system'), (OUT, 'out'), (ORDINARY, 'ordinary'))
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
 
     type = models.CharField(
         max_length=1,
-        choices=((SYSTEM, 'system'), (OUT, 'out'), (ORDINARY, 'ordinary')),
+        choices=TYPE_CHOICES,
         blank=True,
         null=True,
         unique=True
