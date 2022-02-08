@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from tronpy import Tron
+from tronpy.exceptions import AddressNotFound
 from web3 import Web3
 
 from _helpers.blockchain.bsc import bsc, get_web3_bsc_client
@@ -35,7 +36,10 @@ class TronAccountBalanceGetter(CryptoAccountBalanceGetter):
             return normalizer.from_int_to_decimal(self.get_smart_contact_balance(deposit_address, asset))
 
     def get_network_coin_balance(self, deposit_address: DepositAddress):
-        return self.tron.get_account_balance(deposit_address.address)
+        try:
+            return self.tron.get_account_balance(deposit_address.address)
+        except AddressNotFound:
+            return 0
 
     def get_smart_contact_balance(self, deposit_address: DepositAddress, asset: Asset):
         smart_contact = self.ASSET_TO_SMART_CONTACT[asset.symbol]
