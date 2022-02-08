@@ -7,6 +7,7 @@ from django.db import models
 from accounts.models import Account
 from ledger.models import Trx, NetworkAsset
 from ledger.models import Wallet, Network
+from ledger.models.crypto_balance import CryptoBalance
 from ledger.utils.fields import get_amount_field, get_address_field
 
 logger = logging.getLogger(__name__)
@@ -107,3 +108,14 @@ class Transfer(models.Model):
         create_binance_withdraw.delay(transfer.id)
 
         return transfer
+
+    def save(self, *args, **kwargs):
+
+        if self.status == self.DONE:
+            balance, _ = CryptoBalance.objects.get_or_create(
+               deposit_address=self.deposit_address,
+               asset=self.wallet.asset,
+            )
+            balance.update()
+
+        return super().save(*args, **kwargs)
