@@ -5,7 +5,7 @@ from uuid import uuid4
 from django.db import models
 
 from accounts.models import Account
-from ledger.models import Trx
+from ledger.models import Trx, NetworkAsset
 from ledger.models import Wallet, Network
 from ledger.utils.fields import get_amount_field, get_address_field
 
@@ -23,6 +23,8 @@ class Transfer(models.Model):
     wallet = models.ForeignKey('ledger.Wallet', on_delete=models.CASCADE)
 
     amount = get_amount_field()
+    fee_amount = get_amount_field(default=Decimal(0))
+
     deposit = models.BooleanField()
 
     status = models.CharField(
@@ -54,32 +56,46 @@ class Transfer(models.Model):
             logger.info(f'Creating Trx for transfer id: {self.id} ignored.')
             return None
 
-        elif self.deposit:
-            return Trx.objects.create(
-                group_id=self.group_id,
-                sender=self.wallet.asset.get_wallet(Account.out()),
-                receiver=self.wallet,
-                amount=self.amount,
-                scope=Trx.TRANSFER
-            )
+        asset = self.wallet.asset
+        out_wallet = asset.get_wallet(Account.out())
+
+        if self.deposit:
+            sender, receiver = out_wallet, self.wallet
         else:
-            return Trx.objects.create(
+            sender, receiver = self.wallet, out_wallet
+
+        Trx.objects.create(
+            group_id=self.group_id,
+            sender=sender,
+            receiver=receiver,
+            amount=self.amount,
+            scope=Trx.TRANSFER
+        )
+
+        if self.fee_amount:
+            Trx.objects.create(
                 group_id=self.group_id,
-                sender=self.wallet,
-                receiver=self.wallet.asset.get_wallet(Account.out()),
-                amount=self.amount,
-                scope=Trx.TRANSFER
+                sender=sender,
+                receiver=asset.get_wallet(Account.system()),
+                amount=self.fee_amount,
+                scope=Trx.COMMISSION
             )
 
     @classmethod
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):
+        network_asset = NetworkAsset.objects.get(network=network, asset=wallet.asset)
+        assert network_asset.withdraw_max >= amount >= max(network_asset.withdraw_min, network_asset.withdraw_fee)
+
         lock = wallet.lock_balance(amount)
         deposit_address = network.get_deposit_address(wallet.account)
+
+        commission = network_asset.withdraw_fee
 
         transfer = Transfer.objects.create(
             wallet=wallet,
             network=network,
-            amount=amount,
+            amount=amount - commission,
+            fee_amount=commission,
             lock=lock,
             source=cls.BINANCE,
             deposit_address=deposit_address,

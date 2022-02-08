@@ -1,4 +1,5 @@
 from celery import shared_task
+from django.db import transaction
 
 from ledger.models import Transfer
 from ledger.withdraw.binance import handle_binance_withdraw
@@ -31,7 +32,12 @@ def update_binance_withdraw():
 
         if status % 2 == 1:
             transfer.status = transfer.CANCELED
+            transfer.save()
         elif status == 6:
-            transfer.status = transfer.DONE
 
-        transfer.save()
+            with transaction.atomic():
+                transfer.status = transfer.DONE
+                transfer.save()
+
+                transfer.lock.release()
+                transfer.build_trx()

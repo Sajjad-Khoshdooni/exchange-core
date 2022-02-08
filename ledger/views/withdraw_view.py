@@ -4,7 +4,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
 
-from ledger.models import Asset, Network, Transfer
+from ledger.models import Asset, Network, Transfer, NetworkAsset
 from ledger.utils.precision import get_precision
 
 
@@ -18,6 +18,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
         asset = get_object_or_404(Asset, symbol=attrs['coin'])
         network = get_object_or_404(Network, symbol=attrs['network'])
 
+        network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
+
         address = attrs['address']
         amount = attrs['amount']
 
@@ -25,7 +27,13 @@ class WithdrawSerializer(serializers.ModelSerializer):
             raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
 
         if get_precision(amount) > asset.precision:
-            raise ValidationError('عدد وارد شده اشتباه است.')
+            raise ValidationError('مقدار وارد شده اشتباه است.')
+
+        if amount < network_asset.withdraw_min:
+            raise ValidationError('مقدار وارد شده کوچک است.')
+
+        if amount > network_asset.withdraw_max:
+            raise ValidationError('مقدار وارد شده بزرگ است.')
 
         return {
             'network': network,

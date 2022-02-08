@@ -14,6 +14,7 @@ class Trx(models.Model):
     MARGIN_TRANSFER = 'm'
     MARGIN_BORROW = 'b'
     LIQUID = 'l'
+    COMMISSION = 'c'
 
     created = models.DateTimeField(auto_now_add=True)
 
