@@ -8,15 +8,6 @@ import jdatetime
 logger = logging.getLogger(__name__)
 
 
-message = ''' کد تایید شما در کریپتو: 
-{otp}
-
-زمان ارسال: {time} - {date}
-مدت اعتبار: ۱۵ دقیقه'''
-
-sender = '100045195000'
-
-
 @shared_task(queue='sms')
 def send_verification_code_by_kavenegar(phone, code, created):
     api_key = settings.KAVENEGAR_KEY
@@ -26,11 +17,13 @@ def send_verification_code_by_kavenegar(phone, code, created):
         api = KavenegarAPI(apikey=api_key)
         params = {
             'receptor': phone,
-            'message': message.format(otp=code, date=_date, time=_time),
-            'sender': sender
+            'template': 'verify',
+            'type': 'sms',
+            'token': code,
+            'token1': _date + ' - ' + _time
         }
 
-        api.sms_send(params)
+        api.verify_lookup(params)
     except (APIException, HTTPException) as e:
         logger.exception("Failed to send verification code")
 
