@@ -4,7 +4,10 @@ from _helpers.blockchain.bsc import get_web3_bsc_client
 from _helpers.blockchain.tron import get_tron_client
 from ledger.models import Network
 from tracker.blockchain.block_info_populator import TRXBlockInfoPopulator
-from tracker.blockchain.bsc.history_builder import BSCRequester, BSCCoinBSCHandler, BSCTransactionParser
+from tracker.blockchain.bsc.history_builder import (
+    BSCRequester, BSCCoinBSCHandler, BSCTransactionParser,
+    USDTCoinBSCHandler,
+)
 from tracker.blockchain.confirmer import Confirmer
 from tracker.blockchain.history_builder import HistoryBuilder
 from tracker.blockchain.reverter import Reverter
@@ -40,7 +43,7 @@ def bsc_network_consumer(initial=False):
         requester=BSCRequester(get_web3_bsc_client()),
         reverter=Reverter(block_tracker=BSCBlockTracker),
         transfer_creator=TransferCreator(
-            coin_handlers=[BSCCoinBSCHandler()],
+            coin_handlers=[BSCCoinBSCHandler(), USDTCoinBSCHandler()],
             transaction_parser=BSCTransactionParser(),
             network=network
         ),
