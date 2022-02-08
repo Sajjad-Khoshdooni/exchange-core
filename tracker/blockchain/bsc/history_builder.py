@@ -1,5 +1,6 @@
 from typing import List
 
+from web3 import Web3
 from web3.types import BlockData
 
 from _helpers.blockchain.bsc import get_web3_bsc_client, bsc
@@ -70,7 +71,7 @@ class BSCTransactionParser(TransactionParser):
 
 
 class BSCRequester(Requester):
-    def __init__(self, bsc_web3):
+    def __init__(self, bsc_web3: Web3):
         self.web3 = bsc_web3
 
     @staticmethod

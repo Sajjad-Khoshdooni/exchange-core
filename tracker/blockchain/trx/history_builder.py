@@ -3,6 +3,8 @@ from abc import abstractmethod
 from decimal import Decimal
 from typing import List
 
+from tronpy import Tron
+
 from ledger.models import Asset
 from tracker.blockchain.history_builder import BlockDTO
 from tracker.blockchain.requester import Requester
@@ -132,7 +134,7 @@ class TRXTransactionParser(TransactionParser):
 
 
 class TRXRequester(Requester):
-    def __init__(self, tron_client):
+    def __init__(self, tron_client: Tron):
         self.tron = tron_client
 
     @staticmethod
@@ -155,3 +157,15 @@ class TRXRequester(Requester):
 
     def get_block_by_number(self, number):
         return self.build_block_dto_from_dict(self.tron.get_block(number, visible=False))
+
+    def get_asset_balance_of_account(self, address, asset):
+        if asset.symbol == 'TRX':
+            return self.tron.get_account_balance(address)
+
+        asset_symbol_to_token_id = {
+            'USDT': None
+        }
+
+        if asset.symbol not in asset_symbol_to_token_id:
+            raise NotImplementedError
+        return self.tron.get_account_asset_balance(address, asset_symbol_to_token_id[asset.symbol])
