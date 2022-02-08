@@ -5,7 +5,8 @@ from uuid import uuid4
 from django.db import models
 
 from accounts.models import Account
-from ledger.models import Trx, NetworkAsset
+from ledger.consts import DEFAULT_COIN_OF_NETWORK
+from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
 from ledger.models.crypto_balance import CryptoBalance
 from ledger.utils.fields import get_amount_field, get_address_field
@@ -46,7 +47,8 @@ class Transfer(models.Model):
     is_fee = models.BooleanField(default=False)
 
     source = models.CharField(max_length=8, default=SELF, choices=((SELF, SELF), (BINANCE, BINANCE)))
-    provider_transfer = models.OneToOneField(to='provider.ProviderTransfer', on_delete=models.PROTECT, null=True, blank=True)
+    provider_transfer = models.OneToOneField(to='provider.ProviderTransfer', on_delete=models.PROTECT, null=True,
+                                             blank=True)
     handling = models.BooleanField(default=False)
 
     def get_explorer_link(self) -> str:
@@ -110,12 +112,24 @@ class Transfer(models.Model):
         return transfer
 
     def save(self, *args, **kwargs):
-
         if self.status == self.DONE:
             balance, _ = CryptoBalance.objects.get_or_create(
-               deposit_address=self.deposit_address,
-               asset=self.wallet.asset,
+                deposit_address=self.deposit_address,
+                asset=self.wallet.asset,
             )
             balance.update()
+            if DEFAULT_COIN_OF_NETWORK.get(self.network.symbol) != self.wallet.asset.symbol:
+                balance, _ = CryptoBalance.objects.get_or_create(
+                    deposit_address=self.deposit_address,
+                    asset=Asset.objects.get(symbol=DEFAULT_COIN_OF_NETWORK.get(self.network.symbol)),
+                )
+                balance.update()
+
+            if deposit_address := DepositAddress.objects.filter(address=self.out_address).first():
+                balance, _ = CryptoBalance.objects.get_or_create(
+                    deposit_address=deposit_address,
+                    asset=self.wallet.asset,
+                )
+                balance.update()
 
         return super().save(*args, **kwargs)
