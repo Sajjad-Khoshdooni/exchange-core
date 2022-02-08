@@ -15,6 +15,9 @@ def update_coin_market_cap():
         if data:
             price_info = data['quotes'][0]
 
+            if obj.change_24h != price_info['percentChange24h']:
+                print('CCCCCCCCCC changed!!!')
+
             obj.change_24h = price_info['percentChange24h']
             obj.volume_24h = price_info['volume24h']
 

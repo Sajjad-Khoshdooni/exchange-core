@@ -61,6 +61,7 @@ app.conf.beat_schedule = {
     },
     'coin_market_cap_update': {
         'task': 'collector.tasks.coin_market_cap.update_coin_market_cap',
-        'schedule': crontab(minute=0, hour=2),
+        # 'schedule': crontab(minute=0, hour=2),
+        'schedule': crontab(minute="*/30"),
     },
 }
