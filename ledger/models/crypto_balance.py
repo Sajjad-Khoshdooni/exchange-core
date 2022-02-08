@@ -16,10 +16,8 @@ class CryptoBalance(models.Model):
         unique_together = ('deposit_address', 'asset')
 
     def update(self):
-        balance = CryptoAccountBalanceGetterFactory.build(self.deposit_address.network).get_asset_balance_of_account(
+        balance = CryptoAccountBalanceGetterFactory.build(self.deposit_address.network).get_asset_of_account(
             self.deposit_address, self.asset
         )
         self.amount = balance
         self.save()
-
-
