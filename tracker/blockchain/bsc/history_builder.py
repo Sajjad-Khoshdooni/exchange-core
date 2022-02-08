@@ -42,6 +42,7 @@ class USDTCoinBSCHandler(CoinHandler):
     def is_valid_transaction(self, t):
         t = t.raw_transaction
         return (
+            t['to'] and
             t['to'].lower() == self.USDT_CONTRACT_ADDRESS
         )
 
