@@ -146,6 +146,20 @@ class BalanceLockAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.CryptoBalance)
-class TransferAdmin(admin.ModelAdmin):
-    list_display = ('asset', 'deposit_address', 'amount', 'updated_at', )
-    search_fields = ('asset__symbol', 'deposit_address__address')
+class CryptoBalanceAdmin(admin.ModelAdmin):
+    list_display = ('asset', 'get_address', 'get_owner', 'amount', 'updated_at', )
+    search_fields = ('asset__symbol', 'deposit_address__address',)
+
+    def get_queryset(self, request):
+        _type = request.GET.get('type')
+        return super().get_queryset(request).filter(deposit_address__account_secret__account__type=_type)
+
+    def get_address(self, crypto_balance: models.CryptoBalance):
+        return crypto_balance.deposit_address.address
+
+    get_address.short_description = 'address'
+
+    def get_owner(self, crypto_balance: models.CryptoBalance):
+        return str(crypto_balance.deposit_address.account_secret.account)
+
+    get_owner.short_description = 'owner'
