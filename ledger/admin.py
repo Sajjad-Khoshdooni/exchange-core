@@ -143,3 +143,9 @@ class BalanceLockAdmin(admin.ModelAdmin):
     list_display = ('created', 'release_date', 'wallet', 'amount', 'freed')
     list_filter = ('freed', 'wallet')
     ordering = ('-created', )
+
+
+@admin.register(models.CryptoBalance)
+class TransferAdmin(admin.ModelAdmin):
+    list_display = ('asset', 'deposit_address', 'amount', 'updated_at', )
+    search_fields = ('asset__symbol', 'deposit_address__address')
