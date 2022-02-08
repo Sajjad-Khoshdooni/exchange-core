@@ -157,15 +157,3 @@ class TRXRequester(Requester):
 
     def get_block_by_number(self, number):
         return self.build_block_dto_from_dict(self.tron.get_block(number, visible=False))
-
-    def get_asset_balance_of_account(self, address, asset):
-        if asset.symbol == 'TRX':
-            return self.tron.get_account_balance(address)
-
-        asset_symbol_to_token_id = {
-            'USDT': None
-        }
-
-        if asset.symbol not in asset_symbol_to_token_id:
-            raise NotImplementedError
-        return self.tron.get_account_asset_balance(address, asset_symbol_to_token_id[asset.symbol])

@@ -17,7 +17,7 @@ class CryptoBalance(models.Model):
 
     def update(self):
         balance = CryptoAccountBalanceGetterFactory.build(self.deposit_address.network).get_asset_balance_of_account(
-            self.deposit_address.address, self.asset
+            self.deposit_address, self.asset
         )
         self.amount = balance
         self.save()
