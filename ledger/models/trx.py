@@ -27,7 +27,7 @@ class Trx(models.Model):
     scope = models.CharField(
         max_length=1,
         choices=((TRADE, 'trade'), (TRANSFER, 'transfer'), (MARGIN_TRANSFER, 'margin transfer'),
-                 (MARGIN_BORROW, 'margin borrow'))
+                 (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'))
     )
 
     def save(self, *args, **kwargs):
