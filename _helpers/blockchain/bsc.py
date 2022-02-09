@@ -15,6 +15,8 @@ class BSC:
         self._caches = {}
 
     def get_bsc_abi(self, contract_address: str) -> dict:
+        contract_address = '0x55d398326f99059ff775485246999027b3197955'  # NOTE: Some bep20 smart contract doesn't have
+        # correct abis, so we use usdt abi for all smart contracts
         if contract_address not in self._caches:
             url = f'{bscan}api?module=contract&action=getabi&address={contract_address}&apikey={bscan_api_key}'
             r = requests.get(url, headers={

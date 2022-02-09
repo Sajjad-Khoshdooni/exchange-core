@@ -6,7 +6,7 @@ from ledger.models import Network
 from tracker.blockchain.block_info_populator import TRXBlockInfoPopulator
 from tracker.blockchain.bsc.history_builder import (
     BSCRequester, BSCCoinBSCHandler, BSCTransactionParser,
-    USDTCoinBSCHandler,
+    BEP20CoinBSCHandler,
 )
 from tracker.blockchain.confirmer import Confirmer
 from tracker.blockchain.history_builder import HistoryBuilder
@@ -43,7 +43,7 @@ def bsc_network_consumer(initial=False):
         requester=BSCRequester(get_web3_bsc_client()),
         reverter=Reverter(block_tracker=BSCBlockTracker),
         transfer_creator=TransferCreator(
-            coin_handlers=[BSCCoinBSCHandler(), USDTCoinBSCHandler()],
+            coin_handlers=[BSCCoinBSCHandler(), BEP20CoinBSCHandler()],
             transaction_parser=BSCTransactionParser(),
             network=network
         ),
