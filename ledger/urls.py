@@ -1,8 +1,6 @@
 from django.urls import path
-from django.views.generic import TemplateView
 
 from ledger import views
-
 
 urlpatterns = [
     path('v1/assets/', views.AssetsViewSet.as_view({'get': 'list'})),
@@ -23,6 +21,4 @@ urlpatterns = [
     path('v1/margin/info/<slug:symbol>/', views.AssetMarginInfoView.as_view()),
     path('v1/margin/transfer/', views.MarginTransferView.as_view()),
     path('v1/margin/loan/', views.MarginLoanView.as_view()),
-
-    path('robots.txt', TemplateView.as_view(template_name="robots.txt", content_type="text/plain")),
 ]
