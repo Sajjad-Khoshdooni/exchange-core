@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from accounts.models import Account
 from ledger.models import Wallet
+from ledger.utils.precision import get_precision
 from ledger.utils.price import get_presentation_amount
 
 
@@ -110,7 +111,7 @@ class AssetSerializerMini(serializers.ModelSerializer):
     trade_precision = serializers.SerializerMethodField()
 
     def get_trade_precision(self, asset: Asset):
-        return asset.precision
+        return get_precision(asset.trade_quantity_step)
 
     class Meta:
         model = Asset
