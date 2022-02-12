@@ -1,19 +1,26 @@
-from tronpy.exceptions import AddressNotFound
-
 from _helpers.blockchain.tron import get_tron_client
 from accounts.models import Account
-from ledger.models import Transfer, Network, Asset
-from ledger.withdraw.transaction_creator import TRXTransactionCreator
+from ledger.models import Transfer, Network, Asset, CryptoBalance
+from ledger.withdraw.transaction_creator import TransactionCreatorBuilder
 from wallet.models import Secret
 
 tron = get_tron_client()
 
 
 class FeeHandler:
+    BASE_ASSET = {
+        'TRX': 'TRX',
+        'BSC': 'BNB'
+    }
+
     NETWORK_ASSET_FEE = {
         'TRX': {
             'TRX': 0,
             'USDT': 10
+        },
+        'BSC': {
+            'BNB': 0.0001,
+            'DEFAULT': 0.00015
         }
     }
 
@@ -22,29 +29,23 @@ class FeeHandler:
         self.asset = asset
 
     def get_asset_fee(self):
-        fee = self.NETWORK_ASSET_FEE.get(self.network.symbol, {}).get(self.asset.symbol, None)
+        network_fees = self.NETWORK_ASSET_FEE.get(self.network.symbol, {})
+        fee = network_fees.get(self.asset.symbol, None) or network_fees.get('DEFAULT', None)
         if fee is None:
             raise NotImplementedError
         return fee
 
     def is_balance_enough_for_fee(self, account: Account):
-        if (
-            self.network.symbol != 'TRX'
-        ):
-            raise NotImplementedError
-        secret = account.accountsecret.secret
-        secret.__class__ = Secret.get_secret_wallet(self.network.symbol)
-
-        try:
-            account_info = tron.get_account(secret.get_presentation_address(secret.address))
-        except AddressNotFound:
-            return False
-
-        return account_info.get('balance', 0) >= self.get_asset_fee() * 10 ** 6
+        balance, _ = CryptoBalance.objects.get_or_create(
+            deposit_address=self.network.get_deposit_address(account),
+            asset=Asset.objects.get(symbol=self.BASE_ASSET[self.network.symbol]),
+        )
+        balance.update()
+        return balance.amount >= self.get_asset_fee()
 
     def supply_fee_for_asset(self, fee_account: Account, account: Account):
         if (
-            self.asset.symbol != 'USDT' or self.network.symbol != 'TRX'
+            self.network.symbol not in self.NETWORK_ASSET_FEE
         ):
             raise NotImplementedError
         sender_wallet = fee_account.accountsecret.secret
@@ -54,8 +55,13 @@ class FeeHandler:
 
         fee_amount = self.get_asset_fee()
 
-        base_asset = Asset.objects.get(symbol=self.network.symbol)
-        trx_creator = TRXTransactionCreator(base_asset, sender_wallet)
+        base_asset = Asset.objects.get(symbol=self.BASE_ASSET[self.network.symbol])
+
+        trx_creator = TransactionCreatorBuilder(
+            network=self.network,
+            asset=base_asset,
+            wallet=sender_wallet
+        ).build()
 
         wallet = base_asset.get_wallet(fee_account)
 

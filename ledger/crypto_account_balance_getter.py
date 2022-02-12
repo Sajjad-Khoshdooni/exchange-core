@@ -7,6 +7,7 @@ from web3 import Web3
 from _helpers.blockchain.bsc import bsc, get_web3_bsc_client
 from _helpers.blockchain.tron import get_tron_client
 from ledger.amount_normalizer import NormalizedAmount, AmountNormalizer
+from ledger.consts import BEP20_SYMBOL_TO_SMART_CONTRACT
 from ledger.models import Asset, DepositAddress, Network
 
 
@@ -50,10 +51,6 @@ class TronAccountBalanceGetter(CryptoAccountBalanceGetter):
 class BSCAccountBalanceGetter(CryptoAccountBalanceGetter):
     NETWORK_COIN = 'BNB'
 
-    ASSET_TO_SMART_CONTACT = {
-        'USDT': "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
-    }
-
     def __init__(self, web3_client: Web3):
         self.web3 = web3_client
         self.network = Network.objects.get(symbol='BSC')
@@ -69,11 +66,11 @@ class BSCAccountBalanceGetter(CryptoAccountBalanceGetter):
         return self.web3.eth.get_balance(self.web3.toChecksumAddress(deposit_address.address))
 
     def get_smart_contact_balance(self, deposit_address: DepositAddress, asset: Asset):
-        smart_contact = self.ASSET_TO_SMART_CONTACT[asset.symbol]
+        smart_contact = BEP20_SYMBOL_TO_SMART_CONTRACT[asset.symbol]
 
         contract = self.web3.eth.contract(self.web3.toChecksumAddress(smart_contact),
                                           abi=bsc.get_bsc_abi(smart_contact))
-        return contract.functions.balanceOf(deposit_address.address).call()
+        return contract.functions.balanceOf(self.web3.toChecksumAddress(deposit_address.address)).call()
 
 
 class CryptoAccountBalanceGetterFactory:

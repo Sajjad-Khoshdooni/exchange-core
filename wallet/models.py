@@ -39,6 +39,7 @@ class Secret(models.Model):
     def get_secret_wallet(network: str) -> Type['Secret']:
         wallet_map = {
             'ETH': ETHWallet,
+            'BSC': ETHWallet,
             'TRX': TRXWallet
         }
         return wallet_map[network]
