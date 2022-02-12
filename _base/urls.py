@@ -8,7 +8,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/accounts/', include('accounts.urls')),
     path('api/', include('ledger.urls')),
-    path('summernote/', include('django_summernote.urls')),
     path('hijack/', include('hijack.urls')),
     path('robots.txt', TemplateView.as_view(template_name="robots.txt", content_type="text/plain")),
 
