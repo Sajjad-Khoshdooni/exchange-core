@@ -13,6 +13,10 @@ class AmountNormalizer:
         'BSC': {
             'BNB': 18,
             'USDT': 18,
+        },
+        'ETH': {
+            'ETH': 18,
+            'USDT': 18,
         }
     }
 

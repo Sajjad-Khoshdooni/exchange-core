@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Any
+from decimal import Decimal
+from typing import Any, Union
 
 from ledger.models import Asset
 
@@ -13,7 +14,7 @@ class RawTransactionDTO:
 @dataclass
 class TransactionDTO:
     id: str
-    amount: int
+    amount: Union[int, float, Decimal]
     from_address: str
     to_address: str
     asset: Asset
