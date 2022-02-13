@@ -48,7 +48,7 @@ class BasicAccountInfo(models.Model):
             'BirthDate': gregorian_to_jalali_date(self.birth_date).strftime('%Y/%m/%d'),
             'Name': self.user.first_name,
             'Family': self.user.last_name,
-            'Photo': self.national_card_image
+            'Photo': self.national_card_image.image.url,
         })
 
         self.verifier_code = resp.json()['Result']['ID']

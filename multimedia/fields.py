@@ -16,4 +16,4 @@ class ImageField(serializers.CharField):
             self.fail('not_found')
 
     def to_representation(self, value):
-        return value.image.url
+        return self.context['request'].build_absolute_uri(value.image.url)

@@ -14,9 +14,9 @@ class ActionBasedPermission(AllowAny):
         return False
 
 
-class IsVerified(IsAuthenticated):
+class IsBasicVerified(IsAuthenticated):
     def has_permission(self, request, view):
         if not super().has_permission(request, view):
             return False
 
-        return request.user.verification > User
+        return request.user.verification >= User.BASIC_VERIFIED
