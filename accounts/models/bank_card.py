@@ -7,7 +7,6 @@ from rest_framework import serializers
 
 
 class BankCard(models.Model):
-
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 

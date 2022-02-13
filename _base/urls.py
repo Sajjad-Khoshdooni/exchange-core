@@ -7,6 +7,7 @@ from django.views.generic import TemplateView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/accounts/', include('accounts.urls')),
+    path('api/v1/media/', include('multimedia.urls')),
     path('api/', include('ledger.urls')),
     path('hijack/', include('hijack.urls')),
     path('robots.txt', TemplateView.as_view(template_name="robots.txt", content_type="text/plain")),

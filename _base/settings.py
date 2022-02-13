@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'hijack.contrib.admin',
     'financial',
 
+    'multimedia',
     'accounts',
     'ledger',
     'tracker',

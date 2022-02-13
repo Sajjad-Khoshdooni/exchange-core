@@ -26,20 +26,18 @@ class BasicAccountInfo(models.Model):
     )
 
     gender = models.CharField(
-        blank=True,
         max_length=1,
         choices=((MALE, MALE), (FEMALE, FEMALE))
     )
 
-    birth_date = models.DateField(null=True, blank=True)
+    birth_date = models.DateField()
 
     national_card_code = models.CharField(
         max_length=10,
-        blank=True,
         validators=[national_card_code_validator],
     )
 
-    national_card_image = models.ImageField(blank=True)
+    national_card_image = models.ForeignKey(to='multimedia.Image', on_delete=models.PROTECT)
 
     def verify(self):
         assert self.status in (self.INIT, self.REJECTED)

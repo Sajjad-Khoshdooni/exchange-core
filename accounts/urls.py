@@ -18,7 +18,7 @@ urlpatterns = [
 
     path('verify/basic/', views.BasicInfoVerificationViewSet.as_view({
         'get': 'retrieve',
-        'put': 'update',
+        'post': 'update',
     })),
 
     path('verify/searchline/', views.VerifySearchLine.as_view()),
