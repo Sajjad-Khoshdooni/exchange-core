@@ -19,6 +19,8 @@ SECRET_KEY = secret('SECRET')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', cast=bool, default=False)
 
+HOST_URL = config('HOST_URL')
+
 # Application definition
 
 INSTALLED_APPS = [

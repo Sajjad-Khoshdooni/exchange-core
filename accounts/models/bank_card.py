@@ -1,9 +1,8 @@
-from django.core.validators import RegexValidator
 from django.db import models
+from rest_framework import serializers
 
 from accounts.models import User
-from accounts.validators import iban_validator, bank_card_number_validator
-from rest_framework import serializers
+from accounts.validators import iban_validator, bank_card_pan_validator
 
 
 class BankCard(models.Model):
@@ -13,10 +12,10 @@ class BankCard(models.Model):
     user = models.ForeignKey(to=User, on_delete=models.PROTECT)
 
     name = models.CharField(max_length=256)
-    card_number = models.CharField(
+    card_pan = models.CharField(
         verbose_name='شماره کارت',
         max_length=20,
-        validators=[bank_card_number_validator],
+        validators=[bank_card_pan_validator],
         unique=True,
     )
     iban = models.CharField(
@@ -36,5 +35,5 @@ class BankCardSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BankCard
-        fields = ('id', 'name', 'card_number', 'iban', 'verified')
+        fields = ('id', 'name', 'card_pan', 'iban', 'verified')
         read_only_fields = ('verified', )

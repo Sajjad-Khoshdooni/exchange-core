@@ -39,7 +39,7 @@ class Migration(migrations.Migration):
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('modified', models.DateTimeField(auto_now=True)),
                 ('name', models.CharField(max_length=256)),
-                ('card_number', models.CharField(max_length=20, unique=True, validators=[accounts.validators.bank_card_number_validator], verbose_name='شماره کارت')),
+                ('card_number', models.CharField(max_length=20, unique=True, validators=[accounts.validators.bank_card_pan_validator], verbose_name='شماره کارت')),
                 ('iban', models.CharField(max_length=26, unique=True, validators=[accounts.validators.iban_validator], verbose_name='شبا')),
                 ('verified', models.BooleanField(default=False)),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='accounts.user')),

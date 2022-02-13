@@ -30,6 +30,9 @@ class Trx(models.Model):
                  (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'))
     )
 
+    class Meta:
+        unique_together = ('group_id', 'sender', 'receiver', 'scope')
+
     def save(self, *args, **kwargs):
         assert self.sender.asset == self.receiver.asset
         assert self.sender != self.receiver
@@ -38,5 +41,22 @@ class Trx(models.Model):
         return super(Trx, self).save(*args, **kwargs)
 
     @classmethod
-    def transaction(cls, sender: Wallet, receiver: Wallet, amount: Union[Decimal, int], scope: str):
-        return Trx.objects.create(sender=sender, receiver=receiver, amount=amount, scope=scope)
+    def transaction(
+            cls,
+            sender: Wallet,
+            receiver: Wallet,
+            amount: Union[Decimal, int],
+            scope: str,
+            group_id: str
+    ):
+        trx, _ = Trx.objects.get_or_create(
+            sender=sender,
+            receiver=receiver,
+            scope=scope,
+            group_id=group_id,
+            defaults={
+                'amount': amount
+            }
+        )
+
+        return trx

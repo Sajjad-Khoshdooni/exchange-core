@@ -68,7 +68,7 @@ def iban_validator(value: str):
         raise ValidationError('شماره شبا نامعتبر است.')
 
 
-def bank_card_number_validator(value: str):
+def bank_card_pan_validator(value: str):
     if not re.match(r'^[0-9]{16}$', value):
         raise ValidationError('شماره کارت نامعتبر است.')
 
