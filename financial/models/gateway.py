@@ -3,7 +3,7 @@ import logging
 import requests
 from django.conf import settings
 from django.db import models, transaction
-from django.urls import reverse_lazy
+from django.urls import reverse
 
 from accounts.models import BankCard
 from financial.models import PaymentRequest
@@ -54,7 +54,6 @@ class Gateway(models.Model):
 
 class ZarinpalGateway(Gateway):
     BASE_URL = 'https://api.zarinpal.com'
-    CALLBACK_URL = settings.HOST_URL + reverse_lazy('finance:zarinpal-callback')
 
     def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:
         resp = requests.post(
@@ -62,7 +61,7 @@ class ZarinpalGateway(Gateway):
             data={
                 'merchant_id': self.merchant_id,
                 'amount': amount * 10,
-                'callback_url': self.CALLBACK_URL,
+                'callback_url': settings.HOST_URL + reverse('finance:zarinpal-callback'),
                 'metadata': {'card_pan': bank_card.card_pan}
             }
         )
