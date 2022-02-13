@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
@@ -25,6 +26,14 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
         if instance and instance.status in (BasicAccountInfo.PENDING, BasicAccountInfo.VERIFIED):
             raise ValidationError('امکان تغییر اطلاعات وجود ندارد.')
+
+        date_delta = timezone.now() - self.validated_data['birth_date']
+        age = date_delta.days / 365
+
+        if age < 18:
+            raise ValidationError('سن باید بالای ۱۸ سال باشد.')
+        elif age > 120:
+            raise ValidationError('تاریخ تولد نامعتبر است.')
 
         cards_data = self.context['request'].data.get('cards', [])
         to_create_cards = list(filter(lambda d: not d.get('id'), cards_data))
