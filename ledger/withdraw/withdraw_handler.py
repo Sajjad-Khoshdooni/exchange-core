@@ -17,6 +17,7 @@ class WithdrawHandler:
 
     @classmethod
     def _creat_transaction_from_transfer(cls, transfer):
+        print('create transaction...')
         deposit_address: DepositAddress = transfer.network.get_deposit_address(transfer.wallet.account)
         wallet_class = Secret.get_secret_wallet(transfer.network.symbol)
         wallet = deposit_address.account_secret.secret
@@ -26,6 +27,7 @@ class WithdrawHandler:
         txid = transaction_creator.from_transfer(transfer)
         transfer.trx_hash = txid
         transfer.status = Transfer.PENDING
+        print('change transfer status to %s' % transfer.status)
         transfer.save()
 
     @classmethod

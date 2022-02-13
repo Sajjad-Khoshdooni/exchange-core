@@ -19,7 +19,7 @@ class FeeHandler:
             'USDT': 10
         },
         'BSC': {
-            'BNB': 0.0001,
+            'BNB': 0,
             'DEFAULT': 0.00015
         }
     }
@@ -77,7 +77,9 @@ class FeeHandler:
             is_fee=True
         )
         tx_id = trx_creator.from_transfer(transfer)
+        print('create fee transaction...')
 
         transfer.trx_hash = tx_id
         transfer.status = Transfer.PENDING
+        print('change fee transfer status to %s' % transfer.status)
         transfer.save()
