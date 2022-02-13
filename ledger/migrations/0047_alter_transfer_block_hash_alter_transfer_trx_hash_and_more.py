@@ -22,6 +22,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='transfer',
-            constraint=models.UniqueConstraint(condition=models.Q(('status__in', ['pending', 'confirmed'])), fields=('tx_hash', 'network'), name='unique_transfer_tx_hash_network'),
+            constraint=models.UniqueConstraint(condition=models.Q(('status__in', ['pending', 'confirmed'])), fields=('trx_hash', 'network'), name='unique_transfer_tx_hash_network'),
         ),
     ]
