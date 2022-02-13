@@ -19,6 +19,8 @@ SECRET_KEY = secret('SECRET')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', cast=bool, default=False)
 
+HOST_URL = config('HOST_URL')
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -31,11 +33,11 @@ INSTALLED_APPS = [
     'raven.contrib.django.raven_compat',
     'rest_framework',
     'corsheaders',
-    'django_summernote',
     'hijack',
     'hijack.contrib.admin',
     'financial',
 
+    'multimedia',
     'accounts',
     'ledger',
     'tracker',
@@ -210,6 +212,8 @@ LOGGING = {
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
 
-CSRF_COOKIE_DOMAIN = '.chavosh.org'
+CSRF_COOKIE_DOMAIN = '.raastin.com'
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SECURE = True
+
+SEARCHLINE_TOKEN = secret('SEARCHLINE_TOKEN')

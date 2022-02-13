@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F
-from django_summernote.admin import SummernoteModelAdmin
 
 from accounts.models import Account
 from ledger import models
@@ -11,7 +10,7 @@ from provider.exchanges import BinanceFuturesHandler
 
 
 @admin.register(models.Asset)
-class AssetAdmin(SummernoteModelAdmin):
+class AssetAdmin(admin.ModelAdmin):
     list_display = (
         'symbol', 'order', 'enable', 'trend', 'get_future_amount', 'get_future_value',
         'get_ledger_balance_users', 'get_ledger_balance_system', 'get_ledger_balance_out',

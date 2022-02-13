@@ -68,7 +68,7 @@ class Transfer(models.Model):
         else:
             sender, receiver = self.wallet, out_wallet
 
-        Trx.objects.create(
+        Trx.transaction(
             group_id=self.group_id,
             sender=sender,
             receiver=receiver,
@@ -77,7 +77,7 @@ class Transfer(models.Model):
         )
 
         if self.fee_amount:
-            Trx.objects.create(
+            Trx.transaction(
                 group_id=self.group_id,
                 sender=sender,
                 receiver=asset.get_wallet(Account.system()),

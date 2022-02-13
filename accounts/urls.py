@@ -15,4 +15,11 @@ urlpatterns = [
 
     path('forget/init/', views.InitiateForgetPasswordView.as_view()),
     path('forget/', views.ForgetPasswordView.as_view()),
+
+    path('verify/basic/', views.BasicInfoVerificationViewSet.as_view({
+        'get': 'retrieve',
+        'post': 'update',
+    })),
+
+    path('verify/searchline/', views.VerifySearchLine.as_view()),
 ]

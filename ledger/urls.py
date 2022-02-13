@@ -1,6 +1,6 @@
 from django.urls import path
-from ledger import views
 
+from ledger import views
 
 urlpatterns = [
     path('v1/assets/', views.AssetsViewSet.as_view({'get': 'list'})),
