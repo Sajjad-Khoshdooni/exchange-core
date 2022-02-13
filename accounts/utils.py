@@ -1,6 +1,8 @@
 import re
 from datetime import timedelta
 from secrets import randbelow
+import datetime
+import jdatetime
 
 from django.utils import timezone
 
@@ -35,3 +37,6 @@ def fifteen_minutes_later_datetime():
     fifteen_minutes = timedelta(seconds=15 * MINUTES)
     return now + fifteen_minutes
 
+
+def gregorian_to_jalali_date(date: datetime.date):
+    return jdatetime.date.fromgregorian(day=date.day, month=date.month, year=date.year)

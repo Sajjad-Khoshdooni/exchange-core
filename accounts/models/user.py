@@ -1,5 +1,5 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser, UserManager
+from django.db import models
 from django.db.models import Q
 
 from accounts.utils import PHONE_MAX_LENGTH
@@ -12,6 +12,10 @@ class CustomUserManager(UserManager):
 
 
 class User(AbstractUser):
+    NOT_VERIFIED = 0
+    BASIC_VERIFIED = 1
+    LOCATION_VERIFIED = 2
+
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'phone'
@@ -29,6 +33,8 @@ class User(AbstractUser):
 
     email_verified = models.BooleanField(default=False)
     email_verification_date = models.DateTimeField(null=True, blank=True)
+
+    verification = models.PositiveSmallIntegerField(default=NOT_VERIFIED)
 
     @classmethod
     def get_user_from_login(cls, email_or_phone: str) -> 'User':
