@@ -27,7 +27,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         if instance and instance.status in (BasicAccountInfo.PENDING, BasicAccountInfo.VERIFIED):
             raise ValidationError('امکان تغییر اطلاعات وجود ندارد.')
 
-        date_delta = timezone.now() - self.validated_data['birth_date']
+        date_delta = timezone.now().date() - self.validated_data['birth_date']
         age = date_delta.days / 365
 
         if age < 18:
