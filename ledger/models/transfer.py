@@ -3,6 +3,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.db import models
+from django.db.models import UniqueConstraint, Q
 
 from accounts.models import Account
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
@@ -38,8 +39,8 @@ class Transfer(models.Model):
 
     lock = models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE, null=True, blank=True)
 
-    trx_hash = models.CharField(max_length=128, db_index=True, unique=True, null=True)
-    block_hash = models.CharField(max_length=128, db_index=True, unique=True, null=True)
+    trx_hash = models.CharField(max_length=128, db_index=True, null=True)
+    block_hash = models.CharField(max_length=128, db_index=True, null=True)
     block_number = models.PositiveIntegerField(null=True)
 
     out_address = get_address_field()
@@ -140,3 +141,12 @@ class Transfer(models.Model):
 
         except Exception:
             logger.exception('failed to update crypto balance')
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=["tx_hash", "network"],
+                name="unique_transfer_tx_hash_network",
+                condition=Q(status__in=["pending", "confirmed"]),
+            )
+        ]
