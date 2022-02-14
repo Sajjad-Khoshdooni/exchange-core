@@ -35,8 +35,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'hijack',
     'hijack.contrib.admin',
-    'financial',
+    'django_filters',
 
+    'financial',
     'multimedia',
     'accounts',
     'ledger',
