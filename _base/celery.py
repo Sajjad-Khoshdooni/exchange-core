@@ -35,11 +35,11 @@ app.conf.beat_schedule = {
             'expire': 60
         },
     },
-    'trx_add_block_info': {
-        'task': 'tracker.tasks.trx_add_block_info',
+    'add_block_infos': {
+        'task': 'tracker.tasks.add_block_infos',
         'schedule': 10,
         'options': {
-            'queue': 'trx_network_consumer',
+            'queue': 'add_block_infos',
             'expire': 10
         },
     },
