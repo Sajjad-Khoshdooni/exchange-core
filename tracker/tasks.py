@@ -4,7 +4,7 @@ from web3 import Web3
 from _helpers.blockchain.bsc import get_web3_bsc_client
 from _helpers.blockchain.tron import get_tron_client
 from ledger.amount_normalizer import AmountNormalizer
-from ledger.models import Network
+from ledger.models import Network, Asset
 from ledger.symbol_contract_mapper import bep20_symbol_contract_mapper, erc20_symbol_contract_mapper
 from tracker.blockchain.abi_getter import BSCAbiGetter, ETHAbiGetter
 from tracker.blockchain.block_info_populator import TRXBlockInfoPopulator
@@ -43,7 +43,7 @@ def trx_network_consumer(initial=False):
 @shared_task()
 def bsc_network_consumer(initial=False):
     network = Network.objects.get(symbol='BSC')
-    asset = Network.objects.get(symbol='BNB')
+    asset = Asset.objects.get(symbol='BNB')
     normalizer = AmountNormalizer(network=network, asset=asset)
     HistoryBuilder(
         requester=Web3Requester(get_web3_bsc_client()),
