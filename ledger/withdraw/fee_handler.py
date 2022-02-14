@@ -30,7 +30,7 @@ class FeeHandler:
 
     def get_asset_fee(self):
         network_fees = self.NETWORK_ASSET_FEE.get(self.network.symbol, {})
-        fee = network_fees.get(self.asset.symbol, None) or network_fees.get('DEFAULT', None)
+        fee = network_fees.get(self.asset.symbol, network_fees.get('DEFAULT', None))
         if fee is None:
             raise NotImplementedError
         return fee

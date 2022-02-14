@@ -22,4 +22,12 @@ urlpatterns = [
     })),
 
     path('verify/searchline/', views.VerifySearchLine.as_view()),
+
+    path('notifs/', views.NotificationViewSet.as_view({
+        'get': 'list',
+    })),
+
+    path('notifs/<int:pk>/', views.NotificationViewSet.as_view({
+        'patch': 'partial_update',
+    })),
 ]

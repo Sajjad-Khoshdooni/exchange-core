@@ -62,6 +62,9 @@ MIDDLEWARE = [
 MIDDLEWARE.insert(0, 'accounts.middleware.DisableCsrfCheck')
 MIDDLEWARE.remove('django.middleware.csrf.CsrfViewMiddleware')
 
+if DEBUG:
+    MIDDLEWARE.remove('hijack.middleware.HijackUserMiddleware')
+
 ROOT_URLCONF = '_base.urls'
 
 TEMPLATES = [
