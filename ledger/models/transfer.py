@@ -41,7 +41,7 @@ class Transfer(models.Model):
 
     trx_hash = models.CharField(max_length=128, db_index=True, blank=True)
     block_hash = models.CharField(max_length=128, db_index=True, blank=True)
-    block_number = models.PositiveIntegerField(null=True)
+    block_number = models.PositiveIntegerField(null=True, blank=True)
 
     out_address = get_address_field()
 
