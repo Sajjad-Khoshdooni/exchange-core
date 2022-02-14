@@ -1,9 +1,9 @@
-from rest_framework.generics import CreateAPIView, get_object_or_404
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+from rest_framework.generics import CreateAPIView, get_object_or_404
 
-from accounts.models import BankCard
 from accounts.permissions import IsBasicVerified
-from financial.models import PaymentRequest
+from financial.models import BankCard, PaymentRequest
 
 
 class PaymentRequestSerializer(serializers.ModelSerializer):
@@ -17,6 +17,9 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
         card_pan = validated_data['card_pan']
 
         bank_card = get_object_or_404(BankCard, card_pan=card_pan)
+
+        if not bank_card.verified:
+            raise ValidationError({'card_pan': 'شماره کارت تایید نشده است.'})
 
         from financial.models import Gateway
         gateway = Gateway.get_active()

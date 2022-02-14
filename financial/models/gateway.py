@@ -5,7 +5,7 @@ from django.conf import settings
 from django.db import models, transaction
 from django.urls import reverse
 
-from accounts.models import BankCard
+from financial.models import BankCard
 from financial.models import PaymentRequest
 from financial.models.payment import Payment
 from ledger.utils.fields import DONE, CANCELED

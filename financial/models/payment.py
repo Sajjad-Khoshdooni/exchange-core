@@ -10,8 +10,7 @@ class PaymentRequest(models.Model):
     modified = models.DateTimeField(auto_now=True)
 
     gateway = models.ForeignKey('financial.Gateway', on_delete=models.PROTECT)
-
-    bank_card = models.ForeignKey('accounts.BankCard', on_delete=models.PROTECT)
+    bank_card = models.ForeignKey('financial.BankCard', on_delete=models.PROTECT)
     amount = models.PositiveIntegerField()
 
     authority = models.CharField(max_length=64, blank=True, db_index=True)

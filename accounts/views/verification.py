@@ -1,14 +1,13 @@
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import serializers
 
 from accounts.models import BasicAccountInfo
-from accounts.models.bank_card import BankCard, BankCardSerializer
+from financial.models.bank_card import BankCard, BankCardSerializer
 from multimedia.fields import ImageField
 
 
