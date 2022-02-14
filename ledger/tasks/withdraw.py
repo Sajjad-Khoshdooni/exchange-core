@@ -20,7 +20,7 @@ def create_binance_withdraw(transfer_id: int):
 def update_binance_withdraw():
 
     transfers = Transfer.objects.filter(
-        deposite=False,
+        deposit=False,
         source=Transfer.BINANCE,
         status=Transfer.PENDING
     )

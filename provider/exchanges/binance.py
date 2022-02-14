@@ -1,5 +1,6 @@
 import base64
 import hmac
+import os
 from _sha256 import sha256
 from datetime import datetime
 from decimal import Decimal
@@ -30,10 +31,12 @@ class BinanceSpotHandler(BaseExchange):
         data = kwargs.get('data', {})
         qp = data.pop('qp', True)
 
+        secret_key = os.environ['BIN_SECRET'].encode()
+
         data['timestamp'] = int(datetime.now().timestamp() * 1000)
         params = '&'.join(map(lambda i: f'{i[0]}={i[1]}', data.items()))
         sign = base64.b16encode(
-            hmac.new(secret('BINANCE_SECRET_KEY', default='').encode(), params.encode(), sha256).digest()
+            hmac.new(secret_key, params.encode(), sha256).digest()
         ).decode('latin-1').lower()
         data['signature'] = sign
 

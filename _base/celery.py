@@ -29,10 +29,10 @@ app.conf.beat_schedule = {
     },
     'bsc_network_consumer': {
         'task': 'tracker.tasks.bsc_network_consumer',
-        'schedule': 60,
+        'schedule': 15,
         'options': {
             'queue': 'bsc_network_consumer',
-            'expire': 60
+            'expire': 15
         },
     },
     'add_block_infos': {
