@@ -24,7 +24,7 @@ class BlockTracker(models.Model):
 
 class ETHBlockTrackerManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(network=Network.objects.get(symbol=Network.ETH).id)
+        return super().get_queryset().filter(network__symbol=Network.ETH)
 
 
 class ETHBlockTracker(BlockTracker):
@@ -41,7 +41,7 @@ class ETHBlockTracker(BlockTracker):
 
 class TRXBlockTrackerManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(network=Network.objects.get(symbol=Network.TRX).id)
+        return super().get_queryset().filter(network__symbol=Network.TRX)
 
 
 class TRXBlockTracker(BlockTracker):
@@ -58,7 +58,7 @@ class TRXBlockTracker(BlockTracker):
 
 class BSCBlockTrackerManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(network=Network.objects.get(symbol=Network.BSC).id)
+        return super().get_queryset().filter(network__symbol=Network.BSC)
 
 
 class BSCBlockTracker(BlockTracker):
