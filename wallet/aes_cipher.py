@@ -32,4 +32,5 @@ class AESCipher:
         return s[:-ord(s[len(s) - 1:])]
 
 
-secret_aes_cipher = AESCipher(os.environ.get('AES_SECRET_SECRET', 'a6748f4baa92743dcda17fc9b41a9fa5'))
+def get_aes_cipher():
+    return AESCipher(os.environ['AES_SECRET_SECRET'])

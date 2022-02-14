@@ -3,7 +3,7 @@ from typing import Type
 from django.db import models
 from eth_account import Account
 
-from wallet.aes_cipher import secret_aes_cipher
+from wallet.aes_cipher import get_aes_cipher
 from wallet.utils import get_base58_address
 
 
@@ -23,7 +23,7 @@ class Secret(models.Model):
 
     @property
     def key(self):
-        return secret_aes_cipher.decrypt(self.encrypted_key)
+        return get_aes_cipher().decrypt(self.encrypted_key)
 
     @property
     def base16_address(self):
@@ -32,7 +32,7 @@ class Secret(models.Model):
     @classmethod
     def build(cls):
         return cls.objects.create(
-            encrypted_key=secret_aes_cipher.encrypt(Account.create().privateKey.hex()).decode()
+            encrypted_key=get_aes_cipher().encrypt(Account.create().privateKey.hex()).decode()
         )
 
     @staticmethod
