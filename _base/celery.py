@@ -21,10 +21,10 @@ app.autodiscover_tasks()
 app.conf.beat_schedule = {
     'trx_network_consumer': {
         'task': 'tracker.tasks.trx_network_consumer',
-        'schedule': 60,
+        'schedule': 20,
         'options': {
             'queue': 'trx_network_consumer',
-            'expire': 60
+            'expire': 20
         },
     },
     'bsc_network_consumer': {
@@ -37,10 +37,10 @@ app.conf.beat_schedule = {
     },
     'trx_add_block_info': {
         'task': 'tracker.tasks.trx_add_block_info',
-        'schedule': 60,
+        'schedule': 10,
         'options': {
             'queue': 'trx_network_consumer',
-            'expire': 60
+            'expire': 10
         },
     },
     'update_binance_transfers': {
@@ -53,10 +53,10 @@ app.conf.beat_schedule = {
     },
     'create_withdraw_transaction': {
         'task': 'ledger.tasks.withdraw.create_transaction_from_not_broadcasts',
-        'schedule': 120,
+        'schedule': 10,
         'options': {
             'queue': 'transfer',
-            'expire': 120
+            'expire': 10
         },
     },
     'coin_market_cap_update': {

@@ -14,8 +14,9 @@ class TRXBlockInfoPopulator(BlockInfoPopulator):
         self.tron = tron_client
 
     def populate(self):
-        for transfer in Transfer.objects.filter(network__symbol=self.symbol, block_hash='',
-                                                ).exclude(trx_hash=''):
+        to_populate_transfers = Transfer.objects.filter(network__symbol=self.symbol, block_hash='').exclude(trx_hash='')
+
+        for transfer in to_populate_transfers:
             try:
                 transaction_info = self.tron.get_solid_transaction_info(transfer.trx_hash)
             except TransactionNotFound:

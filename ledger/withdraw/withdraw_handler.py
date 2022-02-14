@@ -13,10 +13,10 @@ class WithdrawHandler:
         if not fee_handler.is_balance_enough_for_fee(transfer.wallet.account):
             fee_handler.supply_fee_for_asset(Account.system(), transfer.wallet.account)
             return
-        return cls._creat_transaction_from_transfer(transfer)
+        return cls._create_transaction_from_transfer(transfer)
 
     @classmethod
-    def _creat_transaction_from_transfer(cls, transfer):
+    def _create_transaction_from_transfer(cls, transfer):
         print('create transaction...')
         deposit_address: DepositAddress = transfer.network.get_deposit_address(transfer.wallet.account)
         wallet_class = Secret.get_secret_wallet(transfer.network.symbol)
@@ -39,4 +39,4 @@ class WithdrawHandler:
             if not fee_handler.is_balance_enough_for_fee(transfer.wallet.account):
                 continue
 
-            cls._creat_transaction_from_transfer(transfer)
+            cls._create_transaction_from_transfer(transfer)
