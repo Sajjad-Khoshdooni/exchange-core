@@ -39,7 +39,7 @@ app.conf.beat_schedule = {
         'task': 'tracker.tasks.add_block_infos',
         'schedule': 10,
         'options': {
-            'queue': 'add_block_infos',
+            'queue': 'transfer',
             'expire': 10
         },
     },
