@@ -53,7 +53,7 @@ class Transfer(models.Model):
     handling = models.BooleanField(default=False)
 
     def get_explorer_link(self) -> str:
-        return self.network.explorer_link.format(hash=self.block_hash)
+        return self.network.explorer_link.format(hash=self.trx_hash)
 
     def build_trx(self):
         if self.deposit and self.is_fee:

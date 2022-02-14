@@ -135,7 +135,9 @@ class WalletAdmin(admin.ModelAdmin):
 
 @admin.register(models.Transfer)
 class TransferAdmin(admin.ModelAdmin):
-    list_display = ('created', 'amount', 'deposit', 'status', 'trx_hash', )
+    list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount', 'deposit', 'status', 'is_fee', 'source')
+    search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address')
+    list_filter = ('deposit', 'status', 'is_fee', 'source', 'status')
 
 
 @admin.register(models.BalanceLock)
