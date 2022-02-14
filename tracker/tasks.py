@@ -7,7 +7,7 @@ from ledger.amount_normalizer import AmountNormalizer
 from ledger.models import Network, Asset
 from ledger.symbol_contract_mapper import bep20_symbol_contract_mapper, erc20_symbol_contract_mapper
 from tracker.blockchain.abi_getter import BSCAbiGetter, ETHAbiGetter
-from tracker.blockchain.block_info_populator import TRXBlockInfoPopulator
+from tracker.blockchain.block_info_populator import AllPopulatorGetter
 from tracker.blockchain.confirmer import Confirmer
 from tracker.blockchain.history_builder import HistoryBuilder
 from tracker.blockchain.reverter import Reverter
@@ -94,6 +94,8 @@ def eth_network_consumer(initial=False):
         confirmer=Confirmer(block_tracker=ETHBlockTracker, network=network),
     ).build(only_add_now_block=initial, maximum_block_step_for_backward=100)
 
+
 @shared_task()
-def trx_add_block_info():
-    TRXBlockInfoPopulator(tron_client=get_tron_client()).populate()
+def add_block_infos():
+    for populator in AllPopulatorGetter.get():
+        populator.populate()
