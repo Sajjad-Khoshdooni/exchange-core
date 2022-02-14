@@ -21,6 +21,10 @@ class FeeHandler:
         'BSC': {
             'BNB': 0,
             'DEFAULT': 0.00015
+        },
+        'ETH': {
+            'ETH': 0,
+            'DEFAULT': 0.004
         }
     }
 
