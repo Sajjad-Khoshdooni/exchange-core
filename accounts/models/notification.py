@@ -6,7 +6,7 @@ class Notification(models.Model):
     INFO, SUCCESS, WARNING, ERROR = 'info', 'success', 'warning', 'error'
 
     created = models.DateTimeField(auto_now_add=True)
-    read_date = models.DateTimeField()
+    read_date = models.DateTimeField(null=True, blank=True)
 
     recipient = models.ForeignKey(to='accounts.User', on_delete=models.CASCADE)
 

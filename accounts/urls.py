@@ -28,6 +28,7 @@ urlpatterns = [
     })),
 
     path('notifs/<int:pk>/', views.NotificationViewSet.as_view({
+        'get': 'retrieve',
         'patch': 'partial_update',
     })),
 ]
