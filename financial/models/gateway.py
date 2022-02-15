@@ -1,3 +1,4 @@
+import json
 import logging
 
 import requests
@@ -61,8 +62,9 @@ class ZarinpalGateway(Gateway):
             data={
                 'merchant_id': self.merchant_id,
                 'amount': amount * 10,
+                'description': 'خرید %s ریال' % (amount * 10),
                 'callback_url': settings.HOST_URL + reverse('finance:zarinpal-callback'),
-                'metadata': {'card_pan': bank_card.card_pan}
+                # 'metadata': json.dumps({'card_pan': bank_card.card_pan})
             }
         )
 
