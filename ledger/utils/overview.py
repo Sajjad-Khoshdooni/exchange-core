@@ -77,7 +77,7 @@ class AssetOverview:
 
     def get_hedge_amount(self, asset: Asset):
         balance = self.get_balance(Account.SYSTEM)
-        future_amount = self.get_future_position_amount(asset)
+        future_amount = Decimal(self.get_future_position_amount(asset))
         return future_amount - balance
 
     def get_hedge_value(self, asset: Asset):
