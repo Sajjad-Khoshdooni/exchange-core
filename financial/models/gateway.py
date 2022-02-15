@@ -64,7 +64,7 @@ class ZarinpalGateway(Gateway):
                 'amount': amount * 10,
                 'description': 'خرید %s ریال' % (amount * 10),
                 'callback_url': settings.HOST_URL + reverse('finance:zarinpal-callback'),
-                # 'metadata': json.dumps({'card_pan': bank_card.card_pan})
+                'metadata': json.dumps({'card_pan': bank_card.card_pan})
             }
         )
 
@@ -100,7 +100,7 @@ class ZarinpalGateway(Gateway):
         if data['code'] in (100, 101):
             with transaction.atomic():
                 payment.status = DONE
-                payment.ref_id = data['ref_id']
+                payment.ref_id = data.get('ref_id')
                 payment.ref_status = data['code']
                 payment.save()
 
