@@ -1,13 +1,13 @@
 from uuid import uuid4
 
-from django.db import models
+from django.db import models, transaction
 
 from accounts.models import Account
+from ledger.models import Trx, Asset
+from ledger.utils.fields import get_status_field, DONE
 
 
 class FiatTransferRequest(models.Model):
-    PENDING, CANCELED, DONE = 'pending', 'canceled', 'done',
-
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
 
@@ -16,11 +16,24 @@ class FiatTransferRequest(models.Model):
 
     deposit = models.BooleanField(default=False)
 
-    status = models.CharField(
-        default=PENDING,
-        max_length=8,
-        choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
-        db_index=True
-    )
+    status = get_status_field()
 
-    transaction = models.OneToOneField('ledger.Trx', on_delete=models.PROTECT)
+    def save(self, *args, **kwargs):
+        old = self.id and FiatTransferRequest.objects.get(id=self.id)
+
+        if old and old.status == DONE and self.status != DONE:
+            return
+
+        with transaction.atomic():
+            super(FiatTransferRequest, self).save(*args, **kwargs)
+
+            if (not old or old.status != DONE) and self.status == DONE:
+                asset = Asset.get(Asset.IRT)
+
+                Trx.transaction(
+                    sender=asset.get_wallet(Account.out()),
+                    receiver=asset.get_wallet(self.account),
+                    group_id=self.group_id,
+                    scope=Trx.TRANSFER,
+                    amount=self.amount
+                )
