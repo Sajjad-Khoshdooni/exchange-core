@@ -100,7 +100,7 @@ class ZarinpalGateway(Gateway):
             }
         )
 
-        data = resp.json()
+        data = resp.json()['data']
 
         if data['code'] == 101:
             logger.warning('duplicate verify!', extra={'payment_id': payment.id})
