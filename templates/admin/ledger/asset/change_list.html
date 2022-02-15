@@ -52,13 +52,15 @@
         </p>
         {{ cl.formset.non_form_errors }}
     {% endif %}
+      <div style="float: left; font-weight: bold;">HEDGE VALUE: {{ hedge_value }}</div>
+      </br>
+      <div style="float: left; font-weight: bold;">MARGIN RATIO: {{ binance_margin_ratio }}</div>
+      </br>
       <div style="float: left; font-weight: bold;">BinanceF Initial Margin: {{ binance_initial_margin }}</div>
       </br>
       <div style="float: left; font-weight: bold;">BinanceF Maint Margin: {{ binance_maint_margin }}</div>
       </br>
       <div style="float: left; font-weight: bold;">BinanceF Margin Balance: {{ binance_margin_balance }}</div>
-      </br>
-      <div style="float: left; font-weight: bold;">MARGIN RATIO: {{ binance_margin_ratio }}</div>
       </br>
     <div class="module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
       <div class="changelist-form-container">

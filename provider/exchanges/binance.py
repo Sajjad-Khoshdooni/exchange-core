@@ -31,7 +31,10 @@ class BinanceSpotHandler(BaseExchange):
         data = kwargs.get('data', {})
         qp = data.pop('qp', True)
 
-        secret_key = os.environ['BIN_SECRET'].encode()
+        if settings.DEBUG:
+            secret_key = secret('BINANCE_SECRET_KEY').encode()
+        else:
+            secret_key = os.environ['BIN_SECRET'].encode()
 
         data['timestamp'] = int(datetime.now().timestamp() * 1000)
         params = '&'.join(map(lambda i: f'{i[0]}={i[1]}', data.items()))

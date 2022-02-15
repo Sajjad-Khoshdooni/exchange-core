@@ -6,14 +6,17 @@ from accounts.models import Account
 from ledger import models
 from ledger.models import Asset
 from ledger.utils.overview import AssetOverview
+from provider.exchanges import BinanceFuturesHandler
 
 
 @admin.register(models.Asset)
 class AssetAdmin(admin.ModelAdmin):
     list_display = (
-        'symbol', 'order', 'enable', 'trend', 'get_future_amount', 'get_future_value',
+        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount',  'get_hedge_threshold',
+        'get_future_amount', 'get_ledger_balance_system',
+        'get_future_value',
 
-        'get_ledger_balance_system', 'get_ledger_balance_users', 'get_ledger_balance_out',
+        'get_ledger_balance_users', 'get_ledger_balance_out', 'trend',
     )
     list_filter = ('enable', 'trend')
     list_editable = ('enable', 'order', 'trend')
@@ -21,12 +24,12 @@ class AssetAdmin(admin.ModelAdmin):
 
     def changelist_view(self, request, extra_context=None):
         self.overview = AssetOverview()
-
         context = {
             'binance_initial_margin': round(self.overview.total_initial_margin, 2),
             'binance_maint_margin': round(self.overview.total_maintenance_margin, 2),
             'binance_margin_balance': round(self.overview.total_margin_balance, 2),
             'binance_margin_ratio': round(self.overview.margin_ratio, 2),
+            'hedge_value': round(self.overview.get_total_hedge_value(), 2)
         }
 
         return super().changelist_view(request, extra_context=context)
@@ -38,17 +41,17 @@ class AssetAdmin(admin.ModelAdmin):
         return super(AssetAdmin, self).save_model(request, obj, form, change)
 
     def get_ledger_balance_users(self, asset: Asset):
-        return self.overview.get_user_type_asset_balance(Account.ORDINARY, asset)
+        return self.overview.get_balance(Account.ORDINARY, asset)
 
     get_ledger_balance_users.short_description = 'users'
 
     def get_ledger_balance_system(self, asset: Asset):
-        return self.overview.get_user_type_asset_balance(Account.SYSTEM, asset)
+        return self.overview.get_balance(Account.SYSTEM, asset)
 
     get_ledger_balance_system.short_description = 'system'
 
     def get_ledger_balance_out(self, asset: Asset):
-        return self.overview.get_user_type_asset_balance(Account.OUT, asset)
+        return self.overview.get_balance(Account.OUT, asset)
 
     get_ledger_balance_out.short_description = 'out'
 
@@ -63,12 +66,20 @@ class AssetAdmin(admin.ModelAdmin):
     get_future_value.short_description = 'future usdt'
 
     def get_hedge_amount(self, asset: Asset):
-        future_amount = self.future_positions.get(asset.symbol + 'USDT', {}).get('positionAmt', 0)
-        system_amount = self.overview.get_user_type_asset_balance(Account.SYSTEM, asset)
+        return self.overview.get_hedge_amount(asset)
 
-        return future_amount - system_amount
+    get_hedge_amount.short_description = 'hedge amount'
 
-    get_future_value.short_description = 'future usdt'
+    def get_hedge_value(self, asset: Asset):
+        return round(self.overview.get_hedge_value(asset), 2)
+
+    get_hedge_value.short_description = 'hedge value'
+
+    def get_hedge_threshold(self, asset: Asset):
+        return BinanceFuturesHandler.get_step_size(asset.symbol + 'USDT')
+
+    get_hedge_threshold.short_description = 'hedge threshold'
+
 
 
 @admin.register(models.Network)
