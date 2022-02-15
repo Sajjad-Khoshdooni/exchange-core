@@ -11,11 +11,11 @@ from provider.exchanges import BinanceFuturesHandler
 
 def get_user_type_asset_balances():
 
-    received = Trx.objects.values('receiver__account__type', 'receiver__asset').annotate(amount=Sum('amount'))
-    sent = Trx.objects.values('sender__account__type', 'sender__asset').annotate(amount=Sum('amount'))
+    received = Trx.objects.values('receiver__account__type', 'receiver__asset__symbol').annotate(amount=Sum('amount'))
+    sent = Trx.objects.values('sender__account__type', 'sender__asset__symbol').annotate(amount=Sum('amount'))
 
-    received_dict = {(r['receiver__account__type'], r['receiver__asset']): r['amount'] for r in received}
-    sent_dict = {(r['sender__account__type'], r['sender__asset']): r['amount'] for r in sent}
+    received_dict = {(r['receiver__account__type'], r['receiver__asset__symbol']): r['amount'] for r in received}
+    sent_dict = {(r['sender__account__type'], r['sender__asset__symbol']): r['amount'] for r in sent}
 
     keys = set(received_dict.keys()) | set(sent_dict.keys())
     total_dict = {}
