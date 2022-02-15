@@ -55,8 +55,8 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         elif age > 120:
             raise ValidationError('تاریخ تولد نامعتبر است.')
 
-        card_pan = self.validated_data['card_pan']
-        iban = self.validated_data['iban']
+        card_pan = self.validated_data.pop('card_pan')
+        iban = self.validated_data.pop('iban')
 
         bank_card = BankCard.objects.filter(user=user, card_pan=card_pan).first()
         bank_account = BankAccount.objects.filter(user=user, iban=iban).first()
