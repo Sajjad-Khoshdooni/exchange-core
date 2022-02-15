@@ -53,7 +53,7 @@ def get_lock_field(null: bool = False):
 
 
 def get_group_id_field():
-    return models.UUIDField(default=uuid4)
+    return models.UUIDField(default=uuid4, editable=False)
 
 
 def get_address_field():

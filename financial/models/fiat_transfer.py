@@ -1,15 +1,13 @@
-from uuid import uuid4
-
 from django.db import models, transaction
 
 from accounts.models import Account
 from ledger.models import Trx, Asset
-from ledger.utils.fields import get_status_field, DONE
+from ledger.utils.fields import get_status_field, DONE, get_group_id_field
 
 
 class FiatTransferRequest(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    group_id = models.UUIDField(default=uuid4, db_index=True)
+    group_id = get_group_id_field()
 
     account = models.ForeignKey(to=Account, on_delete=models.PROTECT)
     amount = models.PositiveIntegerField()
