@@ -76,7 +76,7 @@ class AssetOverview:
         return float(self._future_positions.get(asset.symbol + 'USDT', {}).get('notional', 0))
 
     def get_hedge_amount(self, asset: Asset):
-        balance = self.get_balance(Account.SYSTEM)
+        balance = self.get_balance(Account.SYSTEM, asset)
         future_amount = Decimal(self.get_future_position_amount(asset))
         return future_amount - balance
 
