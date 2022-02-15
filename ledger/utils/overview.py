@@ -78,12 +78,7 @@ class AssetOverview:
         return amount
 
     def get_future_position_value(self, asset: Asset):
-        value = float(self._future_positions.get(asset.future_symbol + 'USDT', {}).get('notional', 0))
-
-        if asset.symbol == Asset.SHIB:
-            value *= 1000
-
-        return value
+        return float(self._future_positions.get(asset.future_symbol + 'USDT', {}).get('notional', 0))
 
     def get_hedge_amount(self, asset: Asset):
         if asset.symbol in (Asset.IRT, Asset.USDT):
