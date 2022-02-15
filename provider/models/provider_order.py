@@ -32,7 +32,7 @@ class ProviderOrder(models.Model):
     side = models.CharField(max_length=8, choices=ORDER_CHOICES)
 
     order_id = models.CharField(
-        max_length=16,
+        max_length=64,
         blank=True
     )
 
