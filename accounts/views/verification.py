@@ -7,7 +7,8 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework import serializers
 
 from accounts.models import BasicAccountInfo
-from financial.models.bank_card import BankCard, BankCardSerializer
+from financial.validators import bank_card_pan_validator, iban_validator
+from financial.models.bank_card import BankCard, BankCardSerializer, BankAccountSerializer, BankAccount
 from multimedia.fields import ImageField
 
 
@@ -15,10 +16,30 @@ class BankCardListSerializer(serializers.ListSerializer):
     child = BankCardSerializer()
 
 
+class CardPanField(serializers.CharField):
+    def to_representation(self, value):
+        if value:
+            return BankCardSerializer(instance=value).data
+
+    def get_attribute(self, instance: BasicAccountInfo):
+        return BankCard.objects.filter(user=instance.user).order_by('-verified', 'id').first()
+
+
+class IbanField(serializers.CharField):
+    def to_representation(self, value):
+        if value:
+            return BankAccountSerializer(instance=value).data
+
+    def get_attribute(self, instance: BasicAccountInfo):
+        return BankAccount.objects.filter(user=instance.user).order_by('-verified', 'id').first()
+
+
 class BasicInfoSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     national_card_image = ImageField()
+    card_pan = CardPanField(validators=[bank_card_pan_validator])
+    iban = IbanField(validators=[iban_validator])
 
     def save(self, user):
         instance = self.instance
@@ -34,23 +55,27 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         elif age > 120:
             raise ValidationError('تاریخ تولد نامعتبر است.')
 
-        cards_data = self.context['request'].data.get('cards', [])
-        to_create_cards = list(filter(lambda d: not d.get('id'), cards_data))
-        current_cards = BankCard.objects.filter(user=user)
-        current_unverified_cards = BankCard.objects.filter(user=user, verified=False)
-        to_not_create_card_ids = list(map(lambda x: x['id'], filter(lambda d: d.get('id'), cards_data)))
-        to_delete_cards = list(filter(lambda d: d.id not in to_not_create_card_ids, current_unverified_cards))
+        card_pan = self.validated_data['card_pan']
+        iban = self.validated_data['iban']
 
-        cards_len = len(to_create_cards) + len(current_cards) - len(to_delete_cards)
+        bank_card = BankCard.objects.filter(user=user, card_pan=card_pan).first()
+        bank_account = BankAccount.objects.filter(user=user, iban=iban).first()
 
-        if cards_len <= 0:
-            raise ValidationError({'cards': ['حداقل یک کارت بانکی باید وارد شود.']})
+        if not bank_card:
+            # new bank_card
+            if BankCard.objects.filter(user=user, verified=True).exists():
+                raise ValidationError('امکان تغییر شماره کارت تایید شده وجود ندارد.')
 
-        if cards_len > 3:
-            raise ValidationError({'cards': ['حداکثر ۳ تا کارت می‌توانید داشته باشید.']})
+            BankCard.objects.filter(user=user).delete()
+            BankCard.objects.create(user=user, card_pan=card_pan)
 
-        cards_serializer = BankCardListSerializer(data=to_create_cards)
-        cards_serializer.is_valid(raise_exception=True)
+        if not bank_account:
+            # new bank_card
+            if BankAccount.objects.filter(user=user, verified=True).exists():
+                raise ValidationError('امکان تغییر شماره شبای تایید شده وجود ندارد.')
+
+            BankAccount.objects.filter(user=user).delete()
+            BankAccount.objects.create(user=user, iban=iban)
 
         with transaction.atomic():
             user.first_name = self.validated_data['user']['first_name']
@@ -58,24 +83,13 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             user.save()
 
             instance = super().save(user=user)
-            cards_serializer.save(user=user)
-
-            for to_delete in to_delete_cards:
-                to_delete.delete()
 
         return instance
-
-    @property
-    def data(self):
-        _data = super(BasicInfoSerializer, self).data
-        cards = BankCard.objects.filter(user=self.context['request'].user)
-        _data['cards'] = BankCardListSerializer(instance=cards).data
-        return _data
 
     class Meta:
         model = BasicAccountInfo
         fields = ('status', 'first_name', 'last_name', 'gender', 'birth_date', 'national_card_code',
-                  'national_card_image')
+                  'national_card_image', 'card_pan', 'iban')
 
         read_only_fields = ('status', )
 
