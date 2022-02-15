@@ -41,17 +41,17 @@ class AssetAdmin(admin.ModelAdmin):
         return super(AssetAdmin, self).save_model(request, obj, form, change)
 
     def get_ledger_balance_users(self, asset: Asset):
-        return self.overview.get_balance(Account.ORDINARY, asset)
+        return asset.get_presentation_amount(self.overview.get_balance(Account.ORDINARY, asset))
 
     get_ledger_balance_users.short_description = 'users'
 
     def get_ledger_balance_system(self, asset: Asset):
-        return self.overview.get_balance(Account.SYSTEM, asset)
+        return asset.get_presentation_amount(self.overview.get_balance(Account.SYSTEM, asset))
 
     get_ledger_balance_system.short_description = 'system'
 
     def get_ledger_balance_out(self, asset: Asset):
-        return self.overview.get_balance(Account.OUT, asset)
+        return asset.get_presentation_amount(self.overview.get_balance(Account.OUT, asset))
 
     get_ledger_balance_out.short_description = 'out'
 
@@ -66,7 +66,7 @@ class AssetAdmin(admin.ModelAdmin):
     get_future_value.short_description = 'future usdt'
 
     def get_hedge_amount(self, asset: Asset):
-        return self.overview.get_hedge_amount(asset)
+        return asset.get_presentation_amount(self.overview.get_hedge_amount(asset))
 
     get_hedge_amount.short_description = 'hedge amount'
 

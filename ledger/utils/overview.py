@@ -76,15 +76,15 @@ class AssetOverview:
         return float(self._future_positions.get(asset.symbol + 'USDT', {}).get('notional', 0))
 
     def get_hedge_amount(self, asset: Asset):
+        if asset.symbol in (Asset.IRT, Asset.USDT):
+            return 0
+
         balance = self.get_balance(Account.SYSTEM, asset)
         future_amount = Decimal(self.get_future_position_amount(asset))
         return future_amount - balance
 
     def get_hedge_value(self, asset: Asset):
-        if asset.symbol == Asset.IRT:
-            price = 1 / self._usdt_irt
-        else:
-            price = self._prices.get(asset.symbol, 0)
+        price = self._prices.get(asset.symbol, 0)
 
         return Decimal(self.get_hedge_amount(asset)) * price
 
