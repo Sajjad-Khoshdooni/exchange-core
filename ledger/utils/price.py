@@ -2,13 +2,10 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Dict
 
-from cachetools import TTLCache
+from cachetools.func import ttl_cache
 
 from collector.price.grpc_client import gRPCClient
-from ledger.utils.cache import ttl_cache
 from ledger.utils.price_manager import PriceManager
-
-cache = TTLCache(maxsize=1000, ttl=0.5)
 
 BINANCE = 'binance'
 NOBITEX = 'nobitex'
@@ -99,7 +96,7 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
     return result
 
 
-@ttl_cache(cache)
+@ttl_cache(maxsize=1000, ttl=0.5)
 def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
               now: datetime = None) -> Decimal:
 

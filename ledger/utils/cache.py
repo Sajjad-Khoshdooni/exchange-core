@@ -18,20 +18,20 @@ def get_cache_func_key(func, *args, **kwargs) -> str:
 
     return key
 
-
-def ttl_cache(cache: TTLCache):
-    def wrapper(func):
-        def wrapped(*args, **kwargs):
-            key = get_cache_func_key(func, *args, **kwargs)
-
-            try:
-                return cache[key]
-            except KeyError:
-                result = cache[key] = func(*args, **kwargs)
-
-                return result
-
-        return wrapped
-
-    return wrapper
-
+#
+# def ttl_cache(cache: TTLCache):
+#     def wrapper(func):
+#         def wrapped(*args, **kwargs):
+#             key = get_cache_func_key(func, *args, **kwargs)
+#
+#             try:
+#                 return cache[key]
+#             except KeyError:
+#                 result = cache[key] = func(*args, **kwargs)
+#
+#                 return result
+#
+#         return wrapped
+#
+#     return wrapper
+#

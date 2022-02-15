@@ -8,6 +8,7 @@ from financial.models import BankCard, PaymentRequest
 
 class PaymentRequestSerializer(serializers.ModelSerializer):
     callback = serializers.SerializerMethodField(read_only=True)
+    card_pan = serializers.CharField(write_only=True)
 
     def get_callback(self, payment_request: PaymentRequest):
         return payment_request.get_gateway().get_redirect_url(payment_request)
