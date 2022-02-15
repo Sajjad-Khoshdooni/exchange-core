@@ -70,10 +70,20 @@ class AssetOverview:
             return self._user_type_balances[user_type]
 
     def get_future_position_amount(self, asset: Asset):
-        return float(self._future_positions.get(asset.symbol + 'USDT', {}).get('positionAmt', 0))
+        amount = float(self._future_positions.get(asset.future_symbol + 'USDT', {}).get('positionAmt', 0))
+
+        if asset.symbol == Asset.SHIB:
+            amount *= 1000
+
+        return amount
 
     def get_future_position_value(self, asset: Asset):
-        return float(self._future_positions.get(asset.symbol + 'USDT', {}).get('notional', 0))
+        value = float(self._future_positions.get(asset.future_symbol + 'USDT', {}).get('notional', 0))
+
+        if asset.symbol == Asset.SHIB:
+            value *= 1000
+
+        return value
 
     def get_hedge_amount(self, asset: Asset):
         if asset.symbol in (Asset.IRT, Asset.USDT):

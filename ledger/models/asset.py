@@ -22,6 +22,7 @@ class LiveAssetManager(models.Manager):
 class Asset(models.Model):
     IRT = 'IRT'
     USDT = 'USDT'
+    SHIB = 'SHIB'
 
     objects = models.Manager()
     live_objects = LiveAssetManager()
@@ -98,6 +99,13 @@ class Asset(models.Model):
 
     def get_presentation_price_usdt(self, price: Decimal) -> str:
         return get_presentation_amount(price, self.price_precision_usdt)
+
+    @property
+    def future_symbol(self):
+        if self.symbol == 'SHIB':
+            return '1000SHIB'
+        else:
+            return self.symbol
 
 
 class AssetSerializer(serializers.ModelSerializer):
