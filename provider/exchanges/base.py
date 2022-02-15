@@ -73,10 +73,10 @@ class BaseExchange:
 
     @classmethod
     def collect_api(cls, endpoint, method='POST', **kwargs):
-        # if settings.DEBUG:
-        base_api = cls._testnet_api_url
-        # else:
-        #     base_api = cls._base_api_url
+        if settings.DEBUG:
+            base_api = cls._testnet_api_url
+        else:
+            base_api = cls._base_api_url
 
         if not base_api:
             raise Exception('_base_api_url is empty')
