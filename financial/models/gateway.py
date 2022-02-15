@@ -73,7 +73,7 @@ class ZarinpalGateway(Gateway):
             }
         )
 
-        if not resp.ok or resp.json()['code'] != 100:
+        if not resp.ok or resp.json()['data']['code'] != 100:
             raise GatewayFailed
 
         authority = resp.json()['data']['authority']
