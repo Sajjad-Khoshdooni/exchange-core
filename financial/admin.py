@@ -1,12 +1,19 @@
 from django.contrib import admin
 
-from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount
+from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransferRequest
 
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
     list_display = ('name', 'type', 'merchant_id', 'active')
     list_editable = ('active', )
+
+
+@admin.register(FiatTransferRequest)
+class FiatTransferRequestAdmin(admin.ModelAdmin):
+    list_display = ('created', 'account', 'deposit', 'status', 'amount')
+    list_filter = ('deposit', 'status')
+    ordering = ('-created', )
 
 
 @admin.register(PaymentRequest)

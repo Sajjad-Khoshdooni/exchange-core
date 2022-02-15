@@ -30,9 +30,14 @@ class FiatTransferRequest(models.Model):
             if (not old or old.status != DONE) and self.status == DONE:
                 asset = Asset.get(Asset.IRT)
 
+                sender, receiver = asset.get_wallet(Account.out()), asset.get_wallet(self.account)
+
+                if not self.deposit:
+                    sender, receiver = receiver, sender
+
                 Trx.transaction(
-                    sender=asset.get_wallet(Account.out()),
-                    receiver=asset.get_wallet(self.account),
+                    sender=sender,
+                    receiver=receiver,
                     group_id=self.group_id,
                     scope=Trx.TRANSFER,
                     amount=self.amount
