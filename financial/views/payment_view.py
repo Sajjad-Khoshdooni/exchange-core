@@ -1,9 +1,10 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView, get_object_or_404
+from rest_framework.generics import CreateAPIView, get_object_or_404, ListAPIView
 
 from accounts.permissions import IsBasicVerified
-from financial.models import BankCard, PaymentRequest
+from financial.models import BankCard, PaymentRequest, Payment
+from financial.models.bank_card import BankCardSerializer
 from financial.models.gateway import GatewayFailed
 
 
@@ -43,3 +44,18 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
 class PaymentRequestView(CreateAPIView):
     permission_classes = (IsBasicVerified, )
     serializer_class = PaymentRequestSerializer
+
+
+class PaymentHistorySerializer(serializers.ModelSerializer):
+
+    amount = serializers.IntegerField(source='payment_request.amount')
+    bank_card = BankCardSerializer(source='payment_request.bank_card')
+
+    class Meta:
+        model = Payment
+        fields = ('created', 'status', 'ref_id', 'amount', 'bank_card')
+
+
+class PaymentHistoryView(ListAPIView):
+    serializer_class = PaymentHistorySerializer
+    queryset = Payment.objects.all()

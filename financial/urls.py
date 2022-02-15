@@ -1,9 +1,10 @@
 from django.urls import path
 
-from financial.views import PaymentRequestView, ZarinpalCallbackView, BankCardView
+from financial.views import PaymentRequestView, ZarinpalCallbackView, BankCardView, PaymentHistoryView
 
 urlpatterns = [
     path('payment/request/', PaymentRequestView.as_view()),
+    path('payments/', PaymentHistoryView.as_view()),
     path('payment/callback/zarinpal/', ZarinpalCallbackView.as_view(), name='zarinpal-callback'),
     path('cards/', BankCardView.as_view()),
 ]
