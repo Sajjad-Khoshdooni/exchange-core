@@ -42,8 +42,8 @@ class Payment(models.Model):
 
     status = get_status_field()
 
-    ref_id = models.PositiveIntegerField()
-    ref_status = models.SmallIntegerField()
+    ref_id = models.PositiveIntegerField(null=True, blank=True)
+    ref_status = models.SmallIntegerField(null=True, blank=True)
 
     def create_trx(self):
         asset = Asset.get(Asset.IRT)
