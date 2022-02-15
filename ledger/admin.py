@@ -26,11 +26,13 @@ class AssetAdmin(admin.ModelAdmin):
             pos['symbol']: pos for pos in detail['positions']
         }
 
+        total_maintenance_margin = float(detail['totalMaintMargin'])
+
         context = {
             'binance_initial_margin': round(float(detail['totalInitialMargin']), 2),
-            'binance_maint_margin': round(float(detail['totalMaintMargin']), 2),
+            'binance_maint_margin': round(total_maintenance_margin, 2),
             'binance_margin_balance': round(float(detail['totalMarginBalance']), 2),
-            'binance_margin_ratio': round(float(detail['totalMarginBalance']) / float(detail['totalMaintMargin']), 2),
+            'binance_margin_ratio': round(float(detail['totalMarginBalance']) / max(total_maintenance_margin, 1e-10), 2),
         }
 
         return super().changelist_view(request, extra_context=context)
