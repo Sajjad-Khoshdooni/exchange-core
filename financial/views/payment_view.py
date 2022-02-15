@@ -58,4 +58,6 @@ class PaymentHistorySerializer(serializers.ModelSerializer):
 
 class PaymentHistoryView(ListAPIView):
     serializer_class = PaymentHistorySerializer
-    queryset = Payment.objects.all()
+
+    def get_queryset(self):
+        return Payment.objects.filter(payment_request__bank_card__user=self.request.user).order_by('-created')

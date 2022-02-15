@@ -9,7 +9,7 @@ from accounts.models import User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'phone', 'email', 'first_name', 'last_name')
+        fields = ('id', 'phone', 'email', 'first_name', 'last_name', 'verification')
 
 
 class UserDetailView(RetrieveAPIView):
