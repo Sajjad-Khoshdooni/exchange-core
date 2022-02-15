@@ -29,10 +29,10 @@ class ZarinpalCallbackView(TemplateView):
                 payment_request=payment_request
             )
 
+        if payment.status == Payment.PENDING:
             if status == 'NOK':
                 payment.status = CANCELED
                 payment.save()
-
             else:
                 payment_request.get_gateway().verify(payment)
 
