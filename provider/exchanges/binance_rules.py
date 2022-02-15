@@ -11226,10 +11226,10 @@ futures_rules = {
                 "tickSize": "0.000001"
             },
             "LOT_SIZE": {
-                "stepSize": "1",
+                "stepSize": "1000",
                 "filterType": "LOT_SIZE",
-                "maxQty": "100000000",
-                "minQty": "1"
+                "maxQty": "100000000000",
+                "minQty": "1000"
             },
             "MARKET_LOT_SIZE": {
                 "stepSize": "1",
