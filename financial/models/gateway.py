@@ -14,6 +14,10 @@ from ledger.utils.fields import DONE, CANCELED
 logger = logging.getLogger(__name__)
 
 
+class GatewayFailed(Exception):
+    pass
+
+
 class Gateway(models.Model):
     BASE_URL = None
 
@@ -59,14 +63,18 @@ class ZarinpalGateway(Gateway):
     def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:
         resp = requests.post(
             self.BASE_URL + '/pg/v4/payment/request.json',
-            data={
+            json={
                 'merchant_id': self.merchant_id,
-                'amount': amount * 10,
-                'description': 'خرید %s ریال' % (amount * 10),
+                'amount': amount,
+                'currency': 'IRT',
+                'description': 'افزایش اعتبار',
                 'callback_url': settings.HOST_URL + reverse('finance:zarinpal-callback'),
-                # 'metadata': json.dumps({'card_pan': bank_card.card_pan})
+                'metadata': {"card_pan":  bank_card.card_pan}
             }
         )
+
+        if not resp.ok or resp.json()['code'] != 100:
+            raise GatewayFailed
 
         authority = resp.json()['data']['authority']
 
@@ -87,7 +95,7 @@ class ZarinpalGateway(Gateway):
             self.BASE_URL + '/pg/v4/payment/verify.json',
             data={
                 'merchant_id': payment_request.gateway.merchant_id,
-                'amount': payment_request.rial_amount,
+                'amount': payment_request.amount,
                 'authority': payment_request.authority
             }
         )

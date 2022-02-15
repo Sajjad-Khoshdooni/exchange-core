@@ -4,6 +4,7 @@ from rest_framework.generics import CreateAPIView, get_object_or_404
 
 from accounts.permissions import IsBasicVerified
 from financial.models import BankCard, PaymentRequest
+from financial.models.gateway import GatewayFailed
 
 
 class PaymentRequestSerializer(serializers.ModelSerializer):
@@ -28,7 +29,11 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
 
         from financial.models import Gateway
         gateway = Gateway.get_active()
-        return gateway.create_payment_request(bank_card=bank_card, amount=amount)
+
+        try:
+            return gateway.create_payment_request(bank_card=bank_card, amount=amount)
+        except GatewayFailed:
+            raise ValidationError('مشکلی در ارتباط با درگاه بانک به وجود آمد.')
 
     class Meta:
         model = PaymentRequest
