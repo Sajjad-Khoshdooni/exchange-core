@@ -82,9 +82,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             user.last_name = self.validated_data['user']['last_name']
             user.save()
 
-            instance.status = BasicAccountInfo.PENDING
-
-            instance = super().save(user=user)
+            instance = super().save(user=user, status=BasicAccountInfo.PENDING)
 
         return instance
 
