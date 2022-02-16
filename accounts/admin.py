@@ -16,6 +16,9 @@ class CustomUserAdmin(UserAdmin):
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
     )
 
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'verification')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', 'verification')
+
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):

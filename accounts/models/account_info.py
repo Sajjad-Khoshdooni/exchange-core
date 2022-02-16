@@ -64,3 +64,7 @@ class BasicAccountInfo(models.Model):
         if self.status == self.VERIFIED and self.user.verification < User.BASIC_VERIFIED:
             self.user.verification = User.BASIC_VERIFIED
             self.user.save()
+
+        if self.status != self.VERIFIED and self.user.verification == User.BASIC_VERIFIED:
+            self.user.verification = User.NOT_VERIFIED
+            self.user.save()
