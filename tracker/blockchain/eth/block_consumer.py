@@ -177,6 +177,7 @@ class EthBlockConsumer:
                 trx_data = to_address_to_trx[deposit_address.address]
 
                 Transfer.objects.create(
+                    status=Transfer.PENDING,
                     deposit_address=deposit_address,
                     network=network,
                     wallet=asset.get_wallet(deposit_address.account),
@@ -193,6 +194,7 @@ class EthBlockConsumer:
             #     trx_data = from_network_wallets[network_wallet.address]
             #
             #     Transfer.objects.create(
+            #         status = Transfer.PENDING,
             #         network_wallet=network_wallet,
             #         amount=int(trx_data['value'], 16),
             #         deposit=True,

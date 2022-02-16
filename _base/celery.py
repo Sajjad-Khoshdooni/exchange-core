@@ -64,4 +64,12 @@ app.conf.beat_schedule = {
         # 'schedule': crontab(minute=0, hour=2),
         'schedule': crontab(minute="*/30"),
     },
+    'update_binance_withdraw': {
+        'task': 'ledger.tasks.withdraw.update_binance_withdraw',
+        'schedule': 10,
+        'options': {
+            'queue': 'binance',
+            'expire': 10
+        },
+    },
 }

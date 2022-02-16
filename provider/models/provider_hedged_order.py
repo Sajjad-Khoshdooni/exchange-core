@@ -51,7 +51,6 @@ class ProviderHedgedOrder(models.Model):
             return
 
         hedge_order.hedged = True
-
         hedge_order.save()
 
         return hedge_order

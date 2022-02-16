@@ -1,7 +1,7 @@
 import logging
 
-from ledger.models import Transfer
-from ledger.utils.price import BUY
+from ledger.models import Transfer, Asset
+from ledger.utils.price import BUY, get_price, SELL
 from provider.exchanges import BinanceSpotHandler
 from provider.models import ProviderTransfer, ProviderHedgedOrder
 
@@ -27,17 +27,29 @@ def handle_binance_withdraw(transfer_id: int):
         balances_list = BinanceSpotHandler.get_account_details()['balances']
         balance_map = {b['asset']: b['free'] for b in balances_list}
 
-        coin = transfer.wallet.asset.symbol
-        amount = transfer.amount
+        coin = transfer.asset.symbol
+
+        binance_fee = BinanceSpotHandler.get_withdraw_fee(transfer.asset.symbol, transfer.network.symbol)
+        amount = transfer.amount + binance_fee
 
         if balance_map[coin] < amount:
+            to_buy_amount = amount - balance_map[coin]
 
-            ProviderHedgedOrder.new_hedged_order(
-                asset=transfer.wallet.asset,
-                amount=amount,
-                spot_side=BUY,
-                caller_id=transfer.id
-            )
+            if coin != Asset.USDT:
+                to_buy_value = to_buy_amount * get_price(coin, side=SELL) * 1.02
+            else:
+                to_buy_value = to_buy_amount
+
+            if to_buy_value < balance_map[Asset.USDT]:
+                raise Exception('Insufficient balance in binance spot to full fill withdraw')
+
+            if transfer.asset.symbol != Asset.USDT:
+                ProviderHedgedOrder.new_hedged_order(
+                    asset=transfer.asset,
+                    amount=to_buy_amount,
+                    spot_side=BUY,
+                    caller_id=transfer.id
+                )
 
         withdraw(transfer)
 
@@ -47,10 +59,12 @@ def handle_binance_withdraw(transfer_id: int):
 
 
 def withdraw(transfer: Transfer):
+    binance_fee = BinanceSpotHandler.get_withdraw_fee(transfer.wallet.asset.symbol, transfer.network.symbol)
+
     provider_transfer = ProviderTransfer.new_withdraw(
         transfer.wallet.asset,
         transfer.network,
-        transfer.amount,
+        transfer.amount + binance_fee,
         transfer.out_address,
         caller_id=str(transfer.id)
     )

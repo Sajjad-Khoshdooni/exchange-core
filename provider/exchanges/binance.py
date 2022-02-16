@@ -1,5 +1,6 @@
 import base64
 import hmac
+import json
 import os
 from _sha256 import sha256
 from datetime import datetime
@@ -94,6 +95,19 @@ class BinanceSpotHandler(BaseExchange):
     @classmethod
     def get_account_details(cls):
         return cls.collect_api('/api/v3/account', method='GET') or {}
+
+    @classmethod
+    def get_network_info(cls):
+        with open('provider/data/binance/data.json') as f:
+            return json.load(f)
+
+    @classmethod
+    def get_withdraw_fee(cls, coin: str, network: str) -> Decimal:
+
+        coin = list(filter(lambda d: d['coin'] == coin, cls.get_network_info()))[0]
+        network = list(filter(lambda d: d['network'] == network, coin['networkList']))[0]
+
+        return Decimal(network['withdrawFee'])
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):

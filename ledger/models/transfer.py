@@ -31,7 +31,7 @@ class Transfer(models.Model):
     deposit = models.BooleanField()
 
     status = models.CharField(
-        default=PENDING,
+        default=PROCESSING,
         max_length=8,
         choices=[(PROCESSING, PROCESSING), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
         db_index=True
@@ -51,6 +51,10 @@ class Transfer(models.Model):
     provider_transfer = models.OneToOneField(to='provider.ProviderTransfer', on_delete=models.PROTECT, null=True,
                                              blank=True)
     handling = models.BooleanField(default=False)
+
+    @property
+    def asset(self):
+        return self.wallet.asset
 
     def get_explorer_link(self) -> str:
         return self.network.explorer_link.format(hash=self.trx_hash)
@@ -87,6 +91,8 @@ class Transfer(models.Model):
 
     @classmethod
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):
+        assert wallet.asset.symbol != Asset.IRT
+
         network_asset = NetworkAsset.objects.get(network=network, asset=wallet.asset)
         assert network_asset.withdraw_max >= amount >= max(network_asset.withdraw_min, network_asset.withdraw_fee)
 

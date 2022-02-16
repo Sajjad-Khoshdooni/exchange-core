@@ -66,7 +66,6 @@ class FeeHandler:
         wallet = base_asset.get_wallet(fee_account)
 
         transfer = Transfer.objects.create(
-            status=Transfer.PROCESSING,
             source=Transfer.SELF,
             deposit=False,
             network=self.network,

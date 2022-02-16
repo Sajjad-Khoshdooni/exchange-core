@@ -17,6 +17,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         account = self.context['request'].user.account
         asset = get_object_or_404(Asset, symbol=attrs['coin'])
+
+        if asset.symbol == Asset.IRT:
+            raise ValidationError('نشانه دارایی اشتباه است.')
+
         network = get_object_or_404(Network, symbol=attrs['network'])
 
         network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
