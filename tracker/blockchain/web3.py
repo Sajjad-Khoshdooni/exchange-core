@@ -20,14 +20,14 @@ class Web3BaseNetworkCoinHandler(CoinHandler):
         self.asset = base_network_asset
         self.amount_normalizer = amount_normalizer
 
-    def is_valid_transaction(self, t):
+    def is_valid_transaction(self, t: RawTransactionDTO) -> bool:
         t = t.raw_transaction
         return (
             t['input'] == '0x' and
             t['to'] is not None
         )
 
-    def build_transaction_data(self, t):
+    def build_transaction_data(self, t: RawTransactionDTO) -> TransactionDTO:
         t = t.raw_transaction
         return TransactionDTO(
             to_address=t['to'].lower(),
@@ -52,7 +52,7 @@ class Web3ERC20BasedCoinHandler(CoinHandler):
         self.abi_getter = abi_getter
         self.all_asset_symbols = Asset.objects.all().values_list('symbol', flat=True)
 
-    def is_valid_transaction(self, t):
+    def is_valid_transaction(self, t: RawTransactionDTO):
         t = t.raw_transaction
         return (
             t['to'] and
@@ -61,34 +61,43 @@ class Web3ERC20BasedCoinHandler(CoinHandler):
             self.symbol_contract_mapper.get_symbol_of_contract(t['to'].lower()) in self.all_asset_symbols
         )
 
-    def get_asset(self, t):
+    def get_asset(self, t: dict) -> Asset:
         if symbol := self.symbol_contract_mapper.get_symbol_of_contract(t['to'].lower()):
             return Asset.objects.get(symbol=symbol)
         raise NotImplementedError
 
-    def build_transaction_data(self, t):
+    def build_transaction_data(self, t: RawTransactionDTO) -> TransactionDTO:
         t = t.raw_transaction
 
         contract = self.web3.eth.contract(self.web3.toChecksumAddress(t['to'].lower()),
                                           abi=self.abi_getter.from_contract(t['to'].lower()))
         function, decoded_input = contract.decode_function_input(t['input'])
+
         if function.function_identifier == 'transfer':
+            recipient_name = function.abi['inputs'][0]['name']
+            amount_name = function.abi['inputs'][1]['name']
+
             return TransactionDTO(
-                to_address=decoded_input[function.abi['inputs'][0]['name']].lower(),
+                to_address=decoded_input[recipient_name].lower(),
                 amount=self.amount_normalizer.from_int_to_decimal(
-                    decoded_input[function.abi['inputs'][1]['name']]
+                    decoded_input[amount_name]
                 ),
                 from_address=t['from'].lower(),
                 id=t['hash'].hex(),
                 asset=self.get_asset(t)
             )
-        if function.function_identifier == 'transferFrom':
+
+        elif function.function_identifier == 'transferFrom':
+            from_name = function.abi['inputs'][0]['name']
+            recipient_name = function.abi['inputs'][1]['name']
+            amount_name = function.abi['inputs'][2]['name']
+
             return TransactionDTO(
-                to_address=decoded_input[function.abi['inputs'][1]['name']].lower(),
+                to_address=decoded_input[recipient_name].lower(),
                 amount=self.amount_normalizer.from_int_to_decimal(
-                    decoded_input[function.abi['inputs'][2]['name']]
+                    decoded_input[amount_name]
                 ),
-                from_address=decoded_input[function.abi['inputs'][0]['name']].lower(),
+                from_address=decoded_input[from_name].lower(),
                 id=t['hash'].hex(),
                 asset=self.get_asset(t)
             )

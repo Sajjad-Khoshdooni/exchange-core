@@ -7,7 +7,7 @@ from wallet.models import Secret
 
 class WithdrawHandler:
     @classmethod
-    def withdraw_from_transfer(cls, transfer):
+    def withdraw_from_transfer(cls, transfer: Transfer):
         fee_handler = FeeHandler(transfer.network, transfer.wallet.asset)
 
         if not fee_handler.is_balance_enough_for_fee(transfer.wallet.account):

@@ -30,10 +30,9 @@ class ETHBlockTrackerManager(models.Manager):
 class ETHBlockTracker(BlockTracker):
     objects = ETHBlockTrackerManager()
 
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
+    def save(self, *args, **kwargs):
         self.network = Network.objects.get(symbol=Network.ETH)
-        super().save(force_insert, force_update, using, update_fields)
+        super().save(*args, **kwargs)
 
     class Meta:
         proxy = True
@@ -47,10 +46,9 @@ class TRXBlockTrackerManager(models.Manager):
 class TRXBlockTracker(BlockTracker):
     objects = TRXBlockTrackerManager()
 
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
+    def save(self, *args, **kwargs):
         self.network = Network.objects.get(symbol=Network.TRX)
-        super().save(force_insert, force_update, using, update_fields)
+        super().save(*args, **kwargs)
 
     class Meta:
         proxy = True
@@ -64,10 +62,9 @@ class BSCBlockTrackerManager(models.Manager):
 class BSCBlockTracker(BlockTracker):
     objects = BSCBlockTrackerManager()
 
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
+    def save(self, *args, **kwargs):
         self.network = Network.objects.get(symbol=Network.BSC)
-        super().save(force_insert, force_update, using, update_fields)
+        super().save(*args, **kwargs)
 
     class Meta:
         proxy = True

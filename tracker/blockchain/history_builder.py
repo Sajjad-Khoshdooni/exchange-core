@@ -2,6 +2,8 @@ import logging
 from datetime import datetime
 from typing import Type
 
+from django.db import transaction
+
 from ledger.models import Network
 from tracker.blockchain.confirmer import Confirmer
 from tracker.blockchain.dtos import BlockDTO

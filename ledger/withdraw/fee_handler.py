@@ -20,7 +20,7 @@ class FeeHandler:
         },
         'ETH': {
             'ETH': 0,
-            'DEFAULT': 0.004
+            'DEFAULT': 0.004  # todo: check fee
         }
     }
 
@@ -48,6 +48,7 @@ class FeeHandler:
             self.network.symbol not in self.NETWORK_ASSET_FEE
         ):
             raise NotImplementedError
+
         sender_wallet = fee_account.accountsecret.secret
         sender_wallet.__class__ = Secret.get_secret_wallet(self.network.symbol)
 

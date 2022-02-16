@@ -69,7 +69,7 @@ class USDTCoinTRXHandler(CoinHandler):
     def __init__(self):
         self.asset = Asset.objects.get(symbol='USDT')
 
-    def is_valid_transaction(self, t):
+    def is_valid_transaction(self, t: RawTransactionDTO):
         t = t.raw_transaction
         return (
             len(t['ret']) == 1 and
@@ -81,7 +81,7 @@ class USDTCoinTRXHandler(CoinHandler):
                                                                                TRANSFER_FROM_METHOD_ID]
         )
 
-    def build_transaction_data(self, t):
+    def build_transaction_data(self, t: RawTransactionDTO) -> TransactionDTO:
         t = t.raw_transaction
         try:
             decoded_data = decode_trx_data_in_block(t['raw_data']['contract'][0]['parameter']['value']['data'])
@@ -91,8 +91,8 @@ class USDTCoinTRXHandler(CoinHandler):
             to_address=decoded_data['to'],
             amount=decoded_data['amount'],
             from_address=(
-                decoded_data.get('from') or
-                t['raw_data']['contract'][0]['parameter']['value']['owner_address']
+                decoded_data.get('from') or  # transfer_from
+                t['raw_data']['contract'][0]['parameter']['value']['owner_address']  # transfer
             ),
             id=t['txID'],
             asset=self.asset
@@ -103,7 +103,7 @@ class TRXCoinTRXHandler(CoinHandler):
     def __init__(self):
         self.asset = Asset.objects.get(symbol='TRX')
 
-    def is_valid_transaction(self, t):
+    def is_valid_transaction(self, t: RawTransactionDTO):
         t = t.raw_transaction
         return (
             len(t['ret']) == 1 and
@@ -112,7 +112,7 @@ class TRXCoinTRXHandler(CoinHandler):
             t['raw_data']['contract'][0]['type'] == 'TransferContract'
         )
 
-    def build_transaction_data(self, t):
+    def build_transaction_data(self, t: RawTransactionDTO) -> TransactionDTO:
         t = t.raw_transaction
         data = t['raw_data']['contract'][0]['parameter']['value']
         return TransactionDTO(

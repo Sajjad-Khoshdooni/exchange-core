@@ -1,5 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import List
 
 from django.db import transaction
@@ -51,7 +52,7 @@ class TransferCreator:
             any(coin_handler.is_valid_transaction(t) for coin_handler in self.coin_handlers)
         )
 
-    def from_block(self, block):
+    def from_block(self, block: BlockDTO):
         block_hash = block.id
         block_number = block.number
 
@@ -63,30 +64,41 @@ class TransferCreator:
 
         parsed_transactions = []
         for t in transactions:
+            count = 0
+
             for coin_handler in self.coin_handlers:
                 if coin_handler.is_valid_transaction(t):
+                    count += 1
                     parsed_transactions.append(coin_handler.build_transaction_data(t))
 
-        to_address_to_trx = {t.to_address: t for t in parsed_transactions}
+            if count > 1:
+                logger.warning(
+                    'transaction is valid in more than one coin handler',
+                    extra={'transaction': t.id, 'network': self.network.symbol}
+                )
+
+        recipient_address_to_transactions = defaultdict(list)
+
+        for t in parsed_transactions:
+            recipient_address_to_transactions[t.to_address].append(t)
 
         with transaction.atomic():
             to_deposit_addresses = DepositAddress.objects.filter(
                 network=self.network,
-                address__in=to_address_to_trx
+                address__in=recipient_address_to_transactions
             )
 
             for deposit_address in to_deposit_addresses:
-                trx_data = to_address_to_trx[deposit_address.address]
-
-                Transfer.objects.create(
-                    status=Transfer.PENDING,
-                    deposit_address=deposit_address,
-                    wallet=trx_data.asset.get_wallet(deposit_address.account_secret.account),
-                    network=self.network,
-                    amount=trx_data.amount,
-                    deposit=True,
-                    trx_hash=trx_data.id,
-                    block_hash=block_hash,
-                    block_number=block_number,
-                    out_address=trx_data.from_address
-                )
+                for trx_data in recipient_address_to_transactions[deposit_address.address]:
+                    Transfer.objects.create(
+                        status=Transfer.PENDING,
+                        deposit_address=deposit_address,
+                        wallet=trx_data.asset.get_wallet(deposit_address.account_secret.account),
+                        network=self.network,
+                        amount=trx_data.amount,
+                        deposit=True,
+                        trx_hash=trx_data.id,
+                        block_hash=block_hash,
+                        block_number=block_number,
+                        out_address=trx_data.from_address
+                    )
