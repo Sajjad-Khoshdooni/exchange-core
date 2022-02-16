@@ -70,7 +70,7 @@ def bsc_network_consumer(initial=False):
 @shared_task()
 def eth_network_consumer(initial=False):
     network = Network.objects.get(symbol='ETH')
-    asset = Network.objects.get(symbol='ETH')
+    asset = Asset.objects.get(symbol='ETH')
     normalizer = AmountNormalizer(network=network, asset=asset)
     HistoryBuilder(
         requester=Web3Requester(get_web3_eth_client()),
