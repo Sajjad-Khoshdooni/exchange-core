@@ -88,6 +88,15 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
         return instance
 
+    @property
+    def data(self):
+        d = super(BasicInfoSerializer, self).data
+
+        if 'status' not in d:
+            d['status'] = BasicAccountInfo.INIT
+
+        return d
+
     class Meta:
         model = BasicAccountInfo
         fields = ('status', 'first_name', 'last_name', 'gender', 'birth_date', 'national_card_code',

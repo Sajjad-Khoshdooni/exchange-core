@@ -34,7 +34,12 @@ class User(AbstractUser):
     email_verified = models.BooleanField(default=False)
     email_verification_date = models.DateTimeField(null=True, blank=True)
 
-    verification = models.PositiveSmallIntegerField(default=NOT_VERIFIED)
+    verification = models.PositiveSmallIntegerField(
+        default=NOT_VERIFIED,
+        choices=(
+            (NOT_VERIFIED, 'not verified'), (BASIC_VERIFIED, 'basic verified')
+        )
+    )
 
     @classmethod
     def get_user_from_login(cls, email_or_phone: str) -> 'User':
