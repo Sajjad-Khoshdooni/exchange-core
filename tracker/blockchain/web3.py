@@ -44,7 +44,7 @@ class Web3ERC20BasedCoinHandler(CoinHandler):
                  web3_client: Web3,
                  symbol_contract_mapper: SymbolContractMapper,
                  amount_normalizer: AmountNormalizer,
-                 abi_getter: AbiGetter
+                 abi_getter: AbiGetter,
                  ):
         self.web3 = web3_client
         self.symbol_contract_mapper = symbol_contract_mapper
@@ -74,17 +74,21 @@ class Web3ERC20BasedCoinHandler(CoinHandler):
         function, decoded_input = contract.decode_function_input(t['input'])
         if function.function_identifier == 'transfer':
             return TransactionDTO(
-                to_address=decoded_input['recipient'].lower(),
-                amount=self.amount_normalizer.from_int_to_decimal(decoded_input['amount']),
+                to_address=decoded_input[function.abi['inputs'][0]['name']].lower(),
+                amount=self.amount_normalizer.from_int_to_decimal(
+                    decoded_input[function.abi['inputs'][1]['name']]
+                ),
                 from_address=t['from'].lower(),
                 id=t['hash'].hex(),
                 asset=self.get_asset(t)
             )
         if function.function_identifier == 'transferFrom':
             return TransactionDTO(
-                to_address=decoded_input['recipient'].lower(),
-                amount=self.amount_normalizer.from_int_to_decimal(decoded_input['amount']),
-                from_address=decoded_input['sender'].lower(),
+                to_address=decoded_input[function.abi['inputs'][1]['name']].lower(),
+                amount=self.amount_normalizer.from_int_to_decimal(
+                    decoded_input[function.abi['inputs'][2]['name']]
+                ),
+                from_address=decoded_input[function.abi['inputs'][0]['name']].lower(),
                 id=t['hash'].hex(),
                 asset=self.get_asset(t)
             )

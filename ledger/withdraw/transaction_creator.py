@@ -1,12 +1,19 @@
 from abc import ABC, abstractmethod
 
 from tronpy.keys import PrivateKey
+from web3 import Web3
 
-from _helpers.blockchain.bsc import get_web3_bsc_client, bsc
+from _helpers.blockchain.bsc import get_web3_bsc_client
+from _helpers.blockchain.eth import get_web3_eth_client
 from _helpers.blockchain.tron import get_tron_client
 from ledger.amount_normalizer import AmountNormalizer
-from ledger.consts import BEP20_SYMBOL_TO_SMART_CONTRACT
+from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Transfer, Network, Asset
+from ledger.symbol_contract_mapper import (
+    SymbolContractMapper, bep20_symbol_contract_mapper,
+    erc20_symbol_contract_mapper,
+)
+from tracker.blockchain.abi_getter import AbiGetter, bsc_abi_getter, eth_abi_getter
 from wallet.models import TRXWallet, CryptoWallet, ETHWallet
 
 
@@ -69,19 +76,30 @@ class TRXTransactionCreator(TransactionCreator):
         return PrivateKey(bytes.fromhex(self.wallet.key[2:]))  # Ignore first 0x
 
 
-class BSCTransactionCreator(TransactionCreator):
+class Web3TransactionCreator(TransactionCreator):
 
-    def __init__(self, asset: Asset, wallet: ETHWallet):
+    def __init__(
+        self,
+        asset: Asset,
+        network: Network,
+        wallet: ETHWallet,
+        web3_client: Web3,
+        abi_getter: AbiGetter,
+        symbol_contract_mapper: SymbolContractMapper
+    ):
         self.asset = asset
+        self.network = network
         self.wallet = wallet
-        self.web3 = get_web3_bsc_client()
+        self.web3 = web3_client
+        self.abi_getter = abi_getter
+        self.symbol_contract_mapper = symbol_contract_mapper
 
     def from_transfer(self, transfer: Transfer):
-        if self.asset.symbol == 'BNB':
-            return self.bnb_from_transfer(transfer)
+        if self.asset.symbol == DEFAULT_COIN_OF_NETWORK[self.network.symbol]:
+            return self.base_coin_from_transfer(transfer)
         return self.smart_contract_from_transfer(transfer)
 
-    def bnb_from_transfer(self, transfer: Transfer):
+    def base_coin_from_transfer(self, transfer: Transfer):
         nonce = self.web3.eth.getTransactionCount(self.web3.toChecksumAddress(self.wallet.address))
         tx = {
             'nonce': nonce,
@@ -97,13 +115,13 @@ class BSCTransactionCreator(TransactionCreator):
         return tx_hash.hex()
 
     def smart_contract_from_transfer(self, transfer):
-        if self.asset.symbol not in BEP20_SYMBOL_TO_SMART_CONTRACT:
+        if self.asset.symbol not in self.symbol_contract_mapper.list_of_symbols():
             raise NotImplementedError
-        smart_contract = BEP20_SYMBOL_TO_SMART_CONTRACT[self.asset.symbol]
+        smart_contract = self.symbol_contract_mapper.get_contract_of_symbol(self.asset.symbol)
         contract = self.web3.eth.contract(self.web3.toChecksumAddress(smart_contract),
-                                          abi=bsc.get_bsc_abi(smart_contract))
+                                          abi=self.abi_getter.from_contract(smart_contract))
         nonce = self.web3.eth.getTransactionCount(self.web3.toChecksumAddress(self.wallet.address))
-        normalizer = AmountNormalizer(network=Network.objects.get(symbol='BSC'), asset=self.asset)
+        normalizer = AmountNormalizer(network=self.network, asset=self.asset)
         tx = contract.functions.transfer(
             self.web3.toChecksumAddress(transfer.out_address), normalizer.from_decimal_to_int(transfer.amount)
         ).buildTransaction(
@@ -118,17 +136,30 @@ class BSCTransactionCreator(TransactionCreator):
 
 
 class TransactionCreatorBuilder:
-    NETWORK_TO_TRANSACTION_CREATOR = {
-        Network.TRX: TRXTransactionCreator,
-        Network.BSC: BSCTransactionCreator
-    }
-
     def __init__(self, network: Network, asset: Asset, wallet: CryptoWallet):
         self.network = network
         self.asset = asset
         self.wallet = wallet
 
     def build(self) -> TransactionCreator:
-        if self.network.symbol not in self.NETWORK_TO_TRANSACTION_CREATOR:
-            raise NotImplementedError
-        return self.NETWORK_TO_TRANSACTION_CREATOR[self.network.symbol](self.asset, self.wallet)
+        if self.network.symbol == 'TRX':
+            return TRXTransactionCreator(self.asset, self.wallet)
+        if self.network.symbol == 'BSC':
+            return Web3TransactionCreator(
+                asset=self.asset,
+                network=self.network,
+                wallet=self.wallet,
+                web3_client=get_web3_bsc_client(),
+                abi_getter=bsc_abi_getter,
+                symbol_contract_mapper=bep20_symbol_contract_mapper
+            )
+        if self.network.symbol == 'ETH':
+            return Web3TransactionCreator(
+                asset=self.asset,
+                network=self.network,
+                wallet=self.wallet,
+                web3_client=get_web3_eth_client(),
+                abi_getter=eth_abi_getter,
+                symbol_contract_mapper=erc20_symbol_contract_mapper
+            )
+        raise NotImplementedError

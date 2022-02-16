@@ -6,7 +6,7 @@ from ledger.models import AccountSecret
 class DepositAddress(models.Model):
     network = models.ForeignKey('ledger.Network', on_delete=models.PROTECT)
     account_secret = models.ForeignKey('ledger.AccountSecret', on_delete=models.PROTECT)
-    address = models.CharField(max_length=256, blank=True, unique=True)
+    address = models.CharField(max_length=256, blank=True)
 
     # address_tag = models.CharField(max_length=32, blank=True)
 
@@ -34,4 +34,7 @@ class DepositAddress(models.Model):
         return self.account_secret.account
 
     class Meta:
-        unique_together = ('network', 'account_secret')
+        unique_together = (
+            ('network', 'account_secret'),
+            ('network', 'address'),
+        )

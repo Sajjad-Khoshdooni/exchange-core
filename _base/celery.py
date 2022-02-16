@@ -35,6 +35,14 @@ app.conf.beat_schedule = {
             'expire': 15
         },
     },
+    'eth_network_consumer': {
+        'task': 'tracker.tasks.eth_network_consumer',
+        'schedule': 30,
+        'options': {
+            'queue': 'eth_network_consumer',
+            'expire': 39
+        },
+    },
     'add_block_infos': {
         'task': 'tracker.tasks.add_block_infos',
         'schedule': 10,

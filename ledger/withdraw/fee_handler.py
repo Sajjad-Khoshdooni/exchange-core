@@ -1,5 +1,6 @@
 from _helpers.blockchain.tron import get_tron_client
 from accounts.models import Account
+from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Transfer, Network, Asset, CryptoBalance
 from ledger.withdraw.transaction_creator import TransactionCreatorBuilder
 from wallet.models import Secret
@@ -8,11 +9,6 @@ tron = get_tron_client()
 
 
 class FeeHandler:
-    BASE_ASSET = {
-        'TRX': 'TRX',
-        'BSC': 'BNB'
-    }
-
     NETWORK_ASSET_FEE = {
         'TRX': {
             'TRX': 0,
@@ -21,6 +17,10 @@ class FeeHandler:
         'BSC': {
             'BNB': 0,
             'DEFAULT': 0.00015
+        },
+        'ETH': {
+            'ETH': 0,
+            'DEFAULT': 0.004
         }
     }
 
@@ -38,7 +38,7 @@ class FeeHandler:
     def is_balance_enough_for_fee(self, account: Account):
         balance, _ = CryptoBalance.objects.get_or_create(
             deposit_address=self.network.get_deposit_address(account),
-            asset=Asset.objects.get(symbol=self.BASE_ASSET[self.network.symbol]),
+            asset=Asset.objects.get(symbol=DEFAULT_COIN_OF_NETWORK[self.network.symbol]),
         )
         balance.update()
         return balance.amount >= self.get_asset_fee()
@@ -55,7 +55,7 @@ class FeeHandler:
 
         fee_amount = self.get_asset_fee()
 
-        base_asset = Asset.objects.get(symbol=self.BASE_ASSET[self.network.symbol])
+        base_asset = Asset.objects.get(symbol=DEFAULT_COIN_OF_NETWORK[self.network.symbol])
 
         trx_creator = TransactionCreatorBuilder(
             network=self.network,

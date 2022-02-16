@@ -7,6 +7,7 @@ from web3 import Web3
 from web3.exceptions import TransactionNotFound as Web3TransactionNotFound
 
 from _helpers.blockchain.bsc import get_web3_bsc_client
+from _helpers.blockchain.eth import get_web3_eth_client
 from _helpers.blockchain.tron import get_tron_client
 from ledger.models import Transfer, Network
 
@@ -60,5 +61,6 @@ class AllPopulatorGetter:
     def get(cls) -> List[BlockInfoPopulator]:
         return [
             TRXBlockInfoPopulator(get_tron_client()),
-            Web3BlockInfoPopulator(get_web3_bsc_client(), Network.objects.get(symbol='BSC'))
+            Web3BlockInfoPopulator(get_web3_bsc_client(), Network.objects.get(symbol='BSC')),
+            Web3BlockInfoPopulator(get_web3_eth_client(), Network.objects.get(symbol='ETH')),
         ]

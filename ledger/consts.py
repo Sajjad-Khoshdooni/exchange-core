@@ -1,6 +1,7 @@
 DEFAULT_COIN_OF_NETWORK = {
     'BSC': 'BNB',
     'TRX': 'TRX',
+    'ETH': 'ETH'
 }
 
 BEP20_SYMBOL_TO_SMART_CONTRACT = {

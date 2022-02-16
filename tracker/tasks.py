@@ -1,12 +1,12 @@
 from celery import shared_task
-from web3 import Web3
 
 from _helpers.blockchain.bsc import get_web3_bsc_client
+from _helpers.blockchain.eth import get_web3_eth_client
 from _helpers.blockchain.tron import get_tron_client
 from ledger.amount_normalizer import AmountNormalizer
 from ledger.models import Network, Asset
 from ledger.symbol_contract_mapper import bep20_symbol_contract_mapper, erc20_symbol_contract_mapper
-from tracker.blockchain.abi_getter import BSCAbiGetter, ETHAbiGetter
+from tracker.blockchain.abi_getter import bsc_abi_getter, eth_abi_getter
 from tracker.blockchain.block_info_populator import AllPopulatorGetter
 from tracker.blockchain.confirmer import Confirmer
 from tracker.blockchain.history_builder import HistoryBuilder
@@ -55,7 +55,7 @@ def bsc_network_consumer(initial=False):
                     web3_client=get_web3_bsc_client(),
                     symbol_contract_mapper=bep20_symbol_contract_mapper,
                     amount_normalizer=normalizer,
-                    abi_getter=BSCAbiGetter()
+                    abi_getter=bsc_abi_getter,
                 )
             ],
             transaction_parser=Web3TransactionParser(),
@@ -70,20 +70,19 @@ def bsc_network_consumer(initial=False):
 @shared_task()
 def eth_network_consumer(initial=False):
     network = Network.objects.get(symbol='ETH')
-    asset = Network.objects.get(symbol='ETH')
+    asset = Asset.objects.get(symbol='ETH')
     normalizer = AmountNormalizer(network=network, asset=asset)
     HistoryBuilder(
-        requester=Web3Requester(Web3(Web3.HTTPProvider(
-            'https://mainnet.infura.io/v3/3befd24cf53a4f889d632c3293c36d3e'))),
+        requester=Web3Requester(get_web3_eth_client()),
         reverter=Reverter(block_tracker=ETHBlockTracker),
         transfer_creator=TransferCreator(
             coin_handlers=[
                 Web3BaseNetworkCoinHandler(base_network_asset=asset, amount_normalizer=normalizer),
                 Web3ERC20BasedCoinHandler(
-                    web3_client=Web3(Web3.HTTPProvider('https://mainnet.infura.io/v3/3befd24cf53a4f889d632c3293c36d3e')),
+                    web3_client=get_web3_eth_client(),
                     symbol_contract_mapper=erc20_symbol_contract_mapper,
                     amount_normalizer=normalizer,
-                    abi_getter=ETHAbiGetter()
+                    abi_getter=eth_abi_getter,
                 )
             ],
             transaction_parser=Web3TransactionParser(),
