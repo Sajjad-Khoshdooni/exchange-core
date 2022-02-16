@@ -71,6 +71,13 @@ class Web3ERC20BasedCoinHandler(CoinHandler):
 
         contract = self.web3.eth.contract(self.web3.toChecksumAddress(t['to'].lower()),
                                           abi=self.abi_getter.from_contract(t['to'].lower()))
+
+        # fix failing of
+        # input: 0xa9059cbb0000000000000000000000dcf5a3b60c74399078ddb3c23e634e36f61d590b100000000000000000000000000000000000000000000000008d8dadf544fc0000
+        # trx_hash: 0x6230f2f352f4966e1f995e06b2f8c8af2b1eac24cb2049b98877f4e10bfb29da
+
+        t['input'] = t['input'][:10] + '0' * 24 + t['input'][34:]
+
         function, decoded_input = contract.decode_function_input(t['input'])
 
         if function.function_identifier == 'transfer':
