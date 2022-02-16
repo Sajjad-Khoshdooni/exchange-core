@@ -13,7 +13,7 @@ from ledger.symbol_contract_mapper import (
     SymbolContractMapper, bep20_symbol_contract_mapper,
     erc20_symbol_contract_mapper,
 )
-from tracker.blockchain.abi_getter import AbiGetter, BSCAbiGetter, ETHAbiGetter
+from tracker.blockchain.abi_getter import AbiGetter, bsc_abi_getter, eth_abi_getter
 from wallet.models import TRXWallet, CryptoWallet, ETHWallet
 
 
@@ -150,7 +150,7 @@ class TransactionCreatorBuilder:
                 network=self.network,
                 wallet=self.wallet,
                 web3_client=get_web3_bsc_client(),
-                abi_getter=BSCAbiGetter(),
+                abi_getter=bsc_abi_getter,
                 symbol_contract_mapper=bep20_symbol_contract_mapper
             )
         if self.network.symbol == 'ETH':
@@ -159,7 +159,7 @@ class TransactionCreatorBuilder:
                 network=self.network,
                 wallet=self.wallet,
                 web3_client=get_web3_eth_client(),
-                abi_getter=ETHAbiGetter(),
+                abi_getter=eth_abi_getter,
                 symbol_contract_mapper=erc20_symbol_contract_mapper
             )
         raise NotImplementedError

@@ -50,3 +50,7 @@ class ETHAbiGetter(AbiGetter):
                 raise Exception(f'Error getting ABI for contract {contract_address}')
             self._caches[contract_address] = r.json()['result']
         return self._caches[contract_address]
+
+
+bsc_abi_getter = BSCAbiGetter()
+eth_abi_getter = ETHAbiGetter()

@@ -6,7 +6,7 @@ from _helpers.blockchain.tron import get_tron_client
 from ledger.amount_normalizer import AmountNormalizer
 from ledger.models import Network, Asset
 from ledger.symbol_contract_mapper import bep20_symbol_contract_mapper, erc20_symbol_contract_mapper
-from tracker.blockchain.abi_getter import BSCAbiGetter, ETHAbiGetter
+from tracker.blockchain.abi_getter import bsc_abi_getter, eth_abi_getter
 from tracker.blockchain.block_info_populator import AllPopulatorGetter
 from tracker.blockchain.confirmer import Confirmer
 from tracker.blockchain.history_builder import HistoryBuilder
@@ -55,7 +55,7 @@ def bsc_network_consumer(initial=False):
                     web3_client=get_web3_bsc_client(),
                     symbol_contract_mapper=bep20_symbol_contract_mapper,
                     amount_normalizer=normalizer,
-                    abi_getter=BSCAbiGetter()
+                    abi_getter=bsc_abi_getter,
                 )
             ],
             transaction_parser=Web3TransactionParser(),
@@ -82,7 +82,7 @@ def eth_network_consumer(initial=False):
                     web3_client=get_web3_eth_client(),
                     symbol_contract_mapper=erc20_symbol_contract_mapper,
                     amount_normalizer=normalizer,
-                    abi_getter=ETHAbiGetter()
+                    abi_getter=eth_abi_getter,
                 )
             ],
             transaction_parser=Web3TransactionParser(),
