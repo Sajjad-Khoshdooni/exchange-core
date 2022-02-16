@@ -54,3 +54,13 @@ class BasicAccountInfo(models.Model):
         self.verifier_code = resp.json()['Result']['ID']
         self.status = self.PENDING
         self.save()
+
+    def __str__(self):
+        return '%s (%s)' % (self.user, self.status)
+
+    def save(self, *args, **kwargs):
+        super(BasicAccountInfo, self).save(*args, **kwargs)
+
+        if self.status == self.VERIFIED and self.user.verification < User.BASIC_VERIFIED:
+            self.user.verification = User.BASIC_VERIFIED
+            self.user.save()
