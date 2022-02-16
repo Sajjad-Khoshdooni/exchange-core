@@ -14,7 +14,7 @@ class AssetAdmin(admin.ModelAdmin):
     list_display = (
         'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount',  'get_hedge_threshold',
         'get_future_amount', 'get_ledger_balance_system',
-        'get_future_value',
+        'get_future_value', 'get_binance_spot_amount',
 
         'get_ledger_balance_users', 'get_ledger_balance_out', 'trend',
     )
@@ -56,7 +56,7 @@ class AssetAdmin(admin.ModelAdmin):
     get_ledger_balance_out.short_description = 'out'
 
     def get_future_amount(self, asset: Asset):
-        return self.overview.get_future_position_amount(asset)
+        return asset.get_presentation_amount(self.overview.get_future_position_amount(asset))
 
     get_future_amount.short_description = 'future amount'
 
@@ -64,6 +64,11 @@ class AssetAdmin(admin.ModelAdmin):
         return round(self.overview.get_future_position_value(asset), 2)
 
     get_future_value.short_description = 'future usdt'
+
+    def get_binance_spot_amount(self, asset: Asset):
+        return asset.get_presentation_amount(self.overview.get_binance_spot_amount(asset))
+
+    get_binance_spot_amount.short_description = 'bin spot amount'
 
     def get_hedge_amount(self, asset: Asset):
         return asset.get_presentation_amount(self.overview.get_hedge_amount(asset))

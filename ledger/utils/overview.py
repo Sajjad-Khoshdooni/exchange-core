@@ -5,8 +5,8 @@ from django.db.models import Sum
 
 from accounts.models import Account
 from ledger.models import Trx, Asset
-from ledger.utils.price import get_price, SELL, get_prices_dict, get_tether_irt_price
-from provider.exchanges import BinanceFuturesHandler
+from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price
+from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
 
 def get_user_type_asset_balances():
@@ -46,6 +46,10 @@ class AssetOverview:
         )
 
         self._usdt_irt = get_tether_irt_price(SELL)
+
+        balances_list = BinanceSpotHandler.get_account_details()['balances']
+        self._binance_spot_balance_map = {b['asset']: float(b['free']) for b in balances_list}
+
 
     @property
     def total_initial_margin(self):
@@ -97,3 +101,6 @@ class AssetOverview:
         return sum([
             self.get_hedge_value(asset) for asset in Asset.objects.all()
         ])
+
+    def get_binance_spot_amount(self, asset: Asset):
+        return self._binance_spot_balance_map.get(asset.symbol, 0)

@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 
 from ledger.models import Transfer, Asset
 from ledger.utils.price import BUY, get_price, SELL
@@ -25,7 +26,7 @@ def handle_binance_withdraw(transfer_id: int):
         assert not transfer.provider_transfer
 
         balances_list = BinanceSpotHandler.get_account_details()['balances']
-        balance_map = {b['asset']: b['free'] for b in balances_list}
+        balance_map = {b['asset']: Decimal(b['free']) for b in balances_list}
 
         coin = transfer.asset.symbol
 
