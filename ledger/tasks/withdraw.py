@@ -27,8 +27,11 @@ def update_binance_withdraw():
 
     for transfer in transfers:
         data = transfer.provider_transfer.get_status()
-        transfer.trx_hash = data['txId']
+
         status = data['status']
+
+        if 'txId' in data:
+            transfer.trx_hash = data['txId']
 
         if status % 2 == 1:
             transfer.status = transfer.CANCELED

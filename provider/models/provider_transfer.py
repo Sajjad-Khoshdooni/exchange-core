@@ -62,17 +62,3 @@ class ProviderTransfer(models.Model):
         data = data[0]
 
         return data
-
-        if 'txId' in data:
-            tx_id = data['txId']
-
-        status = data['status']
-
-        if status % 2 == 1:
-            transfer.status = AssetTransfer.CANCELED
-        elif status == 6:
-            transfer.withdraw_done = True
-        else:
-            description = 'withdraw pending with status %s' % status
-
-        return TransferStatus(tx_id=tx_id, status=data['status'])
