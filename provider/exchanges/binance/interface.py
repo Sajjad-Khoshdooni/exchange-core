@@ -33,7 +33,7 @@ class BinanceSpotHandler:
             'symbol': symbol,
             'side': side,
             'type': order_type,
-            'quantity': amount,
+            'quantity': str(amount),
         }
 
         if client_order_id:
