@@ -66,8 +66,8 @@ class ProviderHedgedOrder(models.Model):
 
         min_notional_amount = 10 / price * Decimal('1.002')
 
-        min_amount = max(amount, min_notional_amount, config['minQty'])
-        step_size = config['stepSize']
+        min_amount = max(amount, min_notional_amount, Decimal(config['minQty']))
+        step_size = Decimal(config['stepSize'])
 
         reminder = min_amount % step_size
 
