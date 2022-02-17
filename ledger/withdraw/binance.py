@@ -46,7 +46,7 @@ def handle_binance_withdraw(transfer_id: int):
             else:
                 to_buy_value = to_buy_amount
 
-            if to_buy_value < balance_map[Asset.USDT]:
+            if to_buy_value > balance_map[Asset.USDT]:
                 raise Exception('insufficient balance in binance spot to full fill withdraw')
 
             if transfer.asset.symbol != Asset.USDT:
