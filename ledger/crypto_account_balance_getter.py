@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from decimal import Decimal
 
 from tronpy import Tron
 from tronpy.exceptions import AddressNotFound
@@ -7,7 +8,7 @@ from web3 import Web3
 from _helpers.blockchain.bsc import get_web3_bsc_client
 from _helpers.blockchain.eth import get_web3_eth_client
 from _helpers.blockchain.tron import get_tron_client
-from tracker.blockchain.amount_normalizer import NormalizedAmount, AmountNormalizer
+from tracker.blockchain.amount_normalizer import AmountNormalizer
 from ledger.models import Asset, DepositAddress, Network
 from ledger.symbol_contract_mapper import (
     SymbolContractMapper, bep20_symbol_contract_mapper,
@@ -19,7 +20,7 @@ from tracker.blockchain.abi_getter import AbiGetter, bsc_abi_getter, eth_abi_get
 class CryptoAccountBalanceGetter(ABC):
 
     @abstractmethod
-    def get_asset_of_account(self, deposit_address: DepositAddress, asset: Asset) -> NormalizedAmount:
+    def get_asset_of_account(self, deposit_address: DepositAddress, asset: Asset) -> Decimal:
         pass
 
 
@@ -34,10 +35,10 @@ class TronAccountBalanceGetter(CryptoAccountBalanceGetter):
         self.tron = tron_client
         self.network = Network.objects.get(symbol='TRX')
 
-    def get_asset_of_account(self, deposit_address: DepositAddress, asset: Asset) -> NormalizedAmount:
+    def get_asset_of_account(self, deposit_address: DepositAddress, asset: Asset) -> Decimal:
         normalizer = AmountNormalizer(network=self.network)
         if asset.symbol == self.NETWORK_COIN:
-            return NormalizedAmount(self.get_network_coin_balance(deposit_address))
+            return Decimal(self.get_network_coin_balance(deposit_address))
         else:
             return normalizer.from_int_to_decimal(
                 asset=asset,
@@ -70,7 +71,7 @@ class Web3AccountBalanceGetter(CryptoAccountBalanceGetter):
         self.symbol_contract_mapper = symbol_contract_mapper
         self.abi_getter = abi_getter
 
-    def get_asset_of_account(self, deposit_address: DepositAddress, asset: Asset) -> NormalizedAmount:
+    def get_asset_of_account(self, deposit_address: DepositAddress, asset: Asset) -> Decimal:
         normalizer = AmountNormalizer(network=self.network)
         if asset.symbol == self.network_asset.symbol:
             return normalizer.from_int_to_decimal(
