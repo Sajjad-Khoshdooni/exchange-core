@@ -1,6 +1,7 @@
 import json
 from decimal import Decimal
 
+from ledger.utils.precision import decimal_to_str
 from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request
 from provider.exchanges.binance_rules import futures_rules
 from provider.exchanges.rules import get_rules
@@ -33,7 +34,7 @@ class BinanceSpotHandler:
             'symbol': symbol,
             'side': side,
             'type': order_type,
-            'quantity': str(amount),
+            'quantity': decimal_to_str(amount),
         }
 
         if client_order_id:
@@ -48,7 +49,7 @@ class BinanceSpotHandler:
         return cls.collect_api('/sapi/v1/capital/withdraw/apply', method='POST', data={
             'coin': coin,
             'network': network,
-            'amount': amount,
+            'amount': decimal_to_str(amount),
             'address': address,
             'addressTag': address_tag,
             'withdrawOrderId': client_id
