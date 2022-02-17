@@ -3,7 +3,7 @@ from celery import shared_task
 from _helpers.blockchain.bsc import get_web3_bsc_client
 from _helpers.blockchain.eth import get_web3_eth_client
 from _helpers.blockchain.tron import get_tron_client
-from ledger.amount_normalizer import AmountNormalizer
+from tracker.blockchain.amount_normalizer import AmountNormalizer
 from ledger.models import Network, Asset
 from ledger.symbol_contract_mapper import bep20_symbol_contract_mapper, erc20_symbol_contract_mapper
 from tracker.blockchain.abi_getter import bsc_abi_getter, eth_abi_getter
@@ -44,7 +44,9 @@ def trx_network_consumer(initial=False):
 def bsc_network_consumer(initial=False):
     network = Network.objects.get(symbol='BSC')
     asset = Asset.objects.get(symbol='BNB')
-    normalizer = AmountNormalizer(network=network, asset=asset)
+
+    normalizer = AmountNormalizer(network=network)
+
     HistoryBuilder(
         requester=Web3Requester(get_web3_bsc_client()),
         reverter=Reverter(block_tracker=BSCBlockTracker),
@@ -71,7 +73,7 @@ def bsc_network_consumer(initial=False):
 def eth_network_consumer(initial=False):
     network = Network.objects.get(symbol='ETH')
     asset = Asset.objects.get(symbol='ETH')
-    normalizer = AmountNormalizer(network=network, asset=asset)
+    normalizer = AmountNormalizer(network=network)
     HistoryBuilder(
         requester=Web3Requester(get_web3_eth_client()),
         reverter=Reverter(block_tracker=ETHBlockTracker),

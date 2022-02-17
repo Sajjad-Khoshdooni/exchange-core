@@ -7,7 +7,7 @@ from web3 import Web3
 from _helpers.blockchain.bsc import get_web3_bsc_client
 from _helpers.blockchain.eth import get_web3_eth_client
 from _helpers.blockchain.tron import get_tron_client
-from ledger.amount_normalizer import NormalizedAmount, AmountNormalizer
+from tracker.blockchain.amount_normalizer import NormalizedAmount, AmountNormalizer
 from ledger.models import Asset, DepositAddress, Network
 from ledger.symbol_contract_mapper import (
     SymbolContractMapper, bep20_symbol_contract_mapper,
@@ -35,11 +35,14 @@ class TronAccountBalanceGetter(CryptoAccountBalanceGetter):
         self.network = Network.objects.get(symbol='TRX')
 
     def get_asset_of_account(self, deposit_address: DepositAddress, asset: Asset) -> NormalizedAmount:
-        normalizer = AmountNormalizer(network=self.network, asset=asset)
+        normalizer = AmountNormalizer(network=self.network)
         if asset.symbol == self.NETWORK_COIN:
             return NormalizedAmount(self.get_network_coin_balance(deposit_address))
         else:
-            return normalizer.from_int_to_decimal(self.get_smart_contact_balance(deposit_address, asset))
+            return normalizer.from_int_to_decimal(
+                asset=asset,
+                amount=self.get_smart_contact_balance(deposit_address, asset)
+            )
 
     def get_network_coin_balance(self, deposit_address: DepositAddress):
         try:
@@ -68,11 +71,17 @@ class Web3AccountBalanceGetter(CryptoAccountBalanceGetter):
         self.abi_getter = abi_getter
 
     def get_asset_of_account(self, deposit_address: DepositAddress, asset: Asset) -> NormalizedAmount:
-        normalizer = AmountNormalizer(network=self.network, asset=asset)
+        normalizer = AmountNormalizer(network=self.network)
         if asset.symbol == self.network_asset.symbol:
-            return normalizer.from_int_to_decimal(self.get_network_coin_balance(deposit_address))
+            return normalizer.from_int_to_decimal(
+                asset=asset,
+                amount=self.get_network_coin_balance(deposit_address)
+            )
         else:
-            return normalizer.from_int_to_decimal(self.get_smart_contact_balance(deposit_address, asset))
+            return normalizer.from_int_to_decimal(
+                asset=asset,
+                amount=self.get_smart_contact_balance(deposit_address, asset)
+            )
 
     def get_network_coin_balance(self, deposit_address: DepositAddress):
         return self.web3.eth.get_balance(self.web3.toChecksumAddress(deposit_address.address))

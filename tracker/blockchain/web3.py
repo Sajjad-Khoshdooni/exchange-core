@@ -3,7 +3,7 @@ from typing import List
 from web3 import Web3
 from web3.types import BlockData
 
-from ledger.amount_normalizer import AmountNormalizer
+from tracker.blockchain.amount_normalizer import AmountNormalizer
 from ledger.models import Asset
 from ledger.symbol_contract_mapper import SymbolContractMapper
 from tracker.blockchain.abi_getter import AbiGetter
@@ -31,7 +31,7 @@ class Web3BaseNetworkCoinHandler(CoinHandler):
         t = t.raw_transaction
         return TransactionDTO(
             to_address=t['to'].lower(),
-            amount=self.amount_normalizer.from_int_to_decimal(t['value']),
+            amount=self.amount_normalizer.from_int_to_decimal(self.asset, t['value']),
             from_address=t['from'].lower(),
             id=t['hash'].hex(),
             asset=self.asset
@@ -80,6 +80,8 @@ class Web3ERC20BasedCoinHandler(CoinHandler):
 
         function, decoded_input = contract.decode_function_input(transaction_input)
 
+        asset = self.get_asset(t)
+
         if function.function_identifier == 'transfer':
             recipient_name = function.abi['inputs'][0]['name']
             amount_name = function.abi['inputs'][1]['name']
@@ -87,11 +89,12 @@ class Web3ERC20BasedCoinHandler(CoinHandler):
             return TransactionDTO(
                 to_address=decoded_input[recipient_name].lower(),
                 amount=self.amount_normalizer.from_int_to_decimal(
-                    decoded_input[amount_name]
+                    asset=asset,
+                    amount=decoded_input[amount_name]
                 ),
                 from_address=t['from'].lower(),
                 id=t['hash'].hex(),
-                asset=self.get_asset(t)
+                asset=asset
             )
 
         elif function.function_identifier == 'transferFrom':
@@ -102,11 +105,12 @@ class Web3ERC20BasedCoinHandler(CoinHandler):
             return TransactionDTO(
                 to_address=decoded_input[recipient_name].lower(),
                 amount=self.amount_normalizer.from_int_to_decimal(
-                    decoded_input[amount_name]
+                    asset=asset,
+                    amount=decoded_input[amount_name]
                 ),
                 from_address=decoded_input[from_name].lower(),
                 id=t['hash'].hex(),
-                asset=self.get_asset(t)
+                asset=asset
             )
 
 

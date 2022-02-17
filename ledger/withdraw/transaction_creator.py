@@ -6,7 +6,7 @@ from web3 import Web3
 from _helpers.blockchain.bsc import get_web3_bsc_client
 from _helpers.blockchain.eth import get_web3_eth_client
 from _helpers.blockchain.tron import get_tron_client
-from ledger.amount_normalizer import AmountNormalizer
+from tracker.blockchain.amount_normalizer import AmountNormalizer
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Transfer, Network, Asset
 from ledger.symbol_contract_mapper import (
@@ -121,9 +121,12 @@ class Web3TransactionCreator(TransactionCreator):
         contract = self.web3.eth.contract(self.web3.toChecksumAddress(smart_contract),
                                           abi=self.abi_getter.from_contract(smart_contract))
         nonce = self.web3.eth.getTransactionCount(self.web3.toChecksumAddress(self.wallet.address))
-        normalizer = AmountNormalizer(network=self.network, asset=self.asset)
+
+        normalizer = AmountNormalizer(network=self.network)
+        normalized_amount = normalizer.from_decimal_to_int(asset=self.asset, amount=transfer.amount)
+
         tx = contract.functions.transfer(
-            self.web3.toChecksumAddress(transfer.out_address), normalizer.from_decimal_to_int(transfer.amount)
+            self.web3.toChecksumAddress(transfer.out_address), normalized_amount
         ).buildTransaction(
             {'nonce': nonce, 'gas': 30_000, 'gasPrice': self.web3.toWei('5', 'gwei')}  # todo: eth gas price is around 64. this is for only bsc
         )
