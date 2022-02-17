@@ -19,6 +19,16 @@ def create_binance_withdraw(transfer_id: int):
 @shared_task(queue='binance')
 def update_binance_withdraw():
 
+    re_handle_transfers = Transfer.objects.filter(
+        deposit=False,
+        source=Transfer.BINANCE,
+        status=Transfer.PROCESSING,
+        handling=False
+    )
+
+    for transfer in re_handle_transfers:
+        create_binance_withdraw.delay(transfer.id)
+
     transfers = Transfer.objects.filter(
         deposit=False,
         source=Transfer.BINANCE,
