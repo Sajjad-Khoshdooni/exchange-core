@@ -42,7 +42,7 @@ def handle_binance_withdraw(transfer_id: int):
             logger.info('not enough %s in binance spot. So buy %s of it!' % (coin, to_buy_amount))
 
             if coin != Asset.USDT:
-                to_buy_value = to_buy_amount * get_price(coin, side=SELL) * Decimal('1.02')
+                to_buy_value = to_buy_amount * get_price(coin, side=SELL) * Decimal('1.002')
             else:
                 to_buy_value = to_buy_amount
 

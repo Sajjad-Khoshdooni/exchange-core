@@ -158,7 +158,7 @@ class LiquidationEngine:
 
             value = borrowed_wallet_values[wallet]
 
-            max_value = min(self.liquidation_amount * Decimal('1.02'), value, tether_amount / Decimal('1.01'))
+            max_value = min(self.liquidation_amount * Decimal('1.002'), value, tether_amount / Decimal('1.01'))
             amount = max_value / value * self.borrowed_wallets[wallet]
             amount = round_with_step_size(amount, wallet.asset.trade_quantity_step)
 

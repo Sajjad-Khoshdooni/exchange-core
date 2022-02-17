@@ -5,7 +5,8 @@ from django.db import models
 
 from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
-from ledger.utils.price import BUY, SELL
+from ledger.utils.price import BUY, SELL, get_price
+from provider.exchanges.rules import get_rules
 from provider.models import ProviderOrder
 
 logger = logging.getLogger(__name__)
@@ -32,12 +33,14 @@ class ProviderHedgedOrder(models.Model):
             logger.warning('transfer ignored due to duplicated caller_id')
             return
 
-        spot_order = ProviderOrder.new_order(asset, spot_side, amount, scope=ProviderOrder.WITHDRAW,
+        valid_amount = cls.get_min_trade_amount_to_buy(asset, amount)
+
+        spot_order = ProviderOrder.new_order(asset, spot_side, valid_amount, scope=ProviderOrder.WITHDRAW,
                                              market=ProviderOrder.SPOT)
 
         hedge_order = ProviderHedgedOrder.objects.create(
             asset=asset,
-            amount=amount,
+            amount=valid_amount,
             side=spot_side,
             spot_order=spot_order
         )
@@ -54,3 +57,22 @@ class ProviderHedgedOrder(models.Model):
         hedge_order.save()
 
         return hedge_order
+
+    @classmethod
+    def get_min_trade_amount_to_buy(cls, asset: Asset, amount: Decimal):
+        config = get_rules('spot')[asset.symbol + 'USDT']
+
+        price = get_price(asset.symbol, SELL)
+
+        min_notional_amount = 10 / price * Decimal('1.002')
+
+        min_amount = max(amount, min_notional_amount, config['minQty'])
+        step_size = config['stepSize']
+
+        reminder = min_amount % step_size
+
+        if reminder == 0:
+            return min_amount
+        else:
+            return min_amount + step_size - reminder
+

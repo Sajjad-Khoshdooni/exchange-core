@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request
 from provider.exchanges.binance_rules import futures_rules
+from provider.exchanges.rules import get_rules
 
 BINANCE = 'binance'
 
@@ -72,7 +73,6 @@ class BinanceSpotHandler:
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):
-
     order_url = '/fapi/v1/order'
 
     @classmethod

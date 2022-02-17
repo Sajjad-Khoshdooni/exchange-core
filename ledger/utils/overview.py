@@ -50,7 +50,6 @@ class AssetOverview:
         balances_list = BinanceSpotHandler.get_account_details()['balances']
         self._binance_spot_balance_map = {b['asset']: float(b['free']) for b in balances_list}
 
-
     @property
     def total_initial_margin(self):
         return float(self._future['totalInitialMargin'])
@@ -90,7 +89,8 @@ class AssetOverview:
 
         balance = self.get_balance(Account.SYSTEM, asset)
         future_amount = Decimal(self.get_future_position_amount(asset))
-        return future_amount + balance
+
+        return future_amount + balance + Decimal(self.get_binance_spot_amount(asset))
 
     def get_hedge_value(self, asset: Asset):
         price = self._prices.get(asset.symbol, 0)
