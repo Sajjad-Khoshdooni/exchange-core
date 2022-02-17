@@ -1,12 +1,15 @@
-import hmac
-import time
 import hashlib
-import requests
+import hmac
+import logging
+import os
+import time
 from urllib.parse import urlencode
 
+import requests
 from django.conf import settings
 from yekta_config import secret
-import os
+
+logger = logging.getLogger(__name__)
 
 if not settings.DEBUG:
     SPOT_BASE_URL = "https://api.binance.com"
@@ -54,8 +57,25 @@ def spot_send_signed_request(http_method, url_path, payload: dict):
     )
     print("{} {}".format(http_method, url))
     params = {"url": url, "params": {}}
+
     response = dispatch_request(http_method)(**params)
-    return response.json()
+    resp_data = response.json()
+
+    if not response.ok:
+        logger.warning(
+            'binance request failed',
+            extra={
+                'url': url_path,
+                'method': http_method,
+                'payload': payload,
+                'status': response.status_code,
+                'resp': resp_data
+            }
+        )
+
+        return
+
+    return resp_data
 
 
 # used for sending public data request
@@ -84,8 +104,26 @@ def futures_send_signed_request(http_method: str, url_path: str, payload: dict):
     )
     print("{} {}".format(http_method, url))
     params = {"url": url, "params": {}}
+
     response = dispatch_request(http_method)(**params)
-    return response.json()
+
+    resp_data = response.json()
+
+    if not response.ok:
+        logger.warning(
+            'binance request failed',
+            extra={
+                'url': url_path,
+                'method': http_method,
+                'payload': payload,
+                'status': response.status_code,
+                'resp': resp_data
+            }
+        )
+
+        return
+
+    return resp_data
 
 
 # used for sending public data request
