@@ -15,7 +15,7 @@ class BinanceSpotHandler:
     order_url = '/api/v3/order'
 
     @classmethod
-    def collect_api(cls, url: str, method: 'GET', data: dict = None):
+    def collect_api(cls, url: str, method: str = 'GET', data: dict = None):
         return spot_send_signed_request(method, url, data or {})
 
     @classmethod
@@ -76,7 +76,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
     order_url = '/fapi/v1/order'
 
     @classmethod
-    def collect_api(cls, url, method='POST', data: dict = None):
+    def collect_api(cls, url: str, method: str = 'POST', data: dict = None):
         return futures_send_signed_request(method, url, data or {})
 
     @classmethod
