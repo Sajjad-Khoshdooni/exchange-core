@@ -32,7 +32,7 @@ class NotificationViewSet(ModelViewSet):
 
             if limit <= 0:
                 limit = None
-        except ValueError:
+        except (ValueError, TypeError):
             limit = None
 
         notifications = Notification.objects.filter(
