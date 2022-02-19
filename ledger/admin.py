@@ -187,12 +187,17 @@ class CryptoAccountTypeFilter(SimpleListFilter):
 
 @admin.register(models.CryptoBalance)
 class CryptoBalanceAdmin(admin.ModelAdmin):
-    list_display = ('asset', 'get_address', 'get_owner', 'amount', 'updated_at', )
+    list_display = ('asset', 'get_network', 'get_address', 'get_owner', 'amount', 'updated_at', )
     search_fields = ('asset__symbol', 'deposit_address__address',)
     list_filter = (CryptoAccountTypeFilter, )
 
+    def get_network(self, crypto_balance: models.CryptoBalance):
+        return crypto_balance.deposit_address.network
+
+    get_network.short_description = 'network'
+
     def get_address(self, crypto_balance: models.CryptoBalance):
-        return crypto_balance.deposit_address.address
+        return crypto_balance.deposit_address.presentation_address
 
     get_address.short_description = 'address'
 
