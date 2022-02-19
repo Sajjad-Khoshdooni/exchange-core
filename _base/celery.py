@@ -67,6 +67,10 @@ app.conf.beat_schedule = {
     'update_network_fee': {
         'task': 'ledger.tasks.fee.update_network_fees',
         'schedule': crontab(minute="*/30"),
+        'options': {
+            'queue': 'celery',
+            'expire': 30 * 60
+        },
     },
     'update_binance_withdraw': {
         'task': 'ledger.tasks.withdraw.update_binance_withdraw',
