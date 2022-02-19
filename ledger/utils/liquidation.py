@@ -183,7 +183,7 @@ class LiquidationEngine:
                 scope=Trx.LIQUID
             )
 
-            tether_amount = margin_tether_wallet.get_ledger_balance()
+            tether_amount = margin_tether_wallet.get_balance()
             self.liquidation_amount -= amount
 
     @property
