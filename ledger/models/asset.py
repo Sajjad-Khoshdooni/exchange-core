@@ -1,4 +1,3 @@
-import math
 from decimal import Decimal
 
 from django.db import models
@@ -6,8 +5,7 @@ from rest_framework import serializers
 
 from accounts.models import Account
 from ledger.models import Wallet
-from ledger.utils.precision import get_precision
-from ledger.utils.price import get_presentation_amount
+from ledger.utils.precision import get_precision, get_presentation_amount
 
 
 class InvalidAmount(Exception):
