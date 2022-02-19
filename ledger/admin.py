@@ -29,7 +29,8 @@ class AssetAdmin(admin.ModelAdmin):
             'binance_maint_margin': round(self.overview.total_maintenance_margin, 2),
             'binance_margin_balance': round(self.overview.total_margin_balance, 2),
             'binance_margin_ratio': round(self.overview.margin_ratio, 2),
-            'hedge_value': round(self.overview.get_total_hedge_value(), 2)
+            'hedge_value': round(self.overview.get_total_hedge_value(), 2),
+            'spot_usdt': round(self.overview.get_binance_spot_amount(Asset.get(Asset.USDT)), 2),
         }
 
         return super().changelist_view(request, extra_context=context)
