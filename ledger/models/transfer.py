@@ -57,6 +57,12 @@ class Transfer(models.Model):
         return self.wallet.asset
 
     def get_explorer_link(self) -> str:
+        if not self.trx_hash:
+            return ''
+
+        if 'Internal transfer' in self.trx_hash:
+            return ''
+
         return self.network.explorer_link.format(hash=self.trx_hash)
 
     def build_trx(self):
