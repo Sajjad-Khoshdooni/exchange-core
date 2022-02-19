@@ -25,7 +25,11 @@ class TRXBlockInfoPopulator(BlockInfoPopulator):
         self.tron = tron_client
 
     def populate(self):
-        to_populate_transfers = Transfer.objects.filter(network__symbol=self.symbol, block_hash='').exclude(trx_hash='')
+        to_populate_transfers = Transfer.objects.filter(
+            network__symbol=self.symbol,
+            block_hash='',
+            source=Transfer.SELF
+        ).exclude(trx_hash='')
 
         for transfer in to_populate_transfers:
             try:
@@ -45,8 +49,14 @@ class Web3BlockInfoPopulator(BlockInfoPopulator):
         self.network = network
 
     def populate(self):
-        for transfer in Transfer.objects.filter(network__symbol=self.network.symbol, block_hash='',
-                                                ).exclude(trx_hash=''):
+        transfers = Transfer.objects.filter(
+            network__symbol=self.network.symbol,
+            block_hash='',
+            source=Transfer.SELF
+        ).exclude(trx_hash='')
+
+
+        for transfer in transfers:
             try:
                 transaction_info = self.web3.eth.get_transaction_receipt(transfer.trx_hash)
             except Web3TransactionNotFound:
