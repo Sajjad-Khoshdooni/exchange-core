@@ -55,7 +55,6 @@ class Web3BlockInfoPopulator(BlockInfoPopulator):
             source=Transfer.SELF
         ).exclude(trx_hash='')
 
-
         for transfer in transfers:
             try:
                 transaction_info = self.web3.eth.get_transaction_receipt(transfer.trx_hash)
