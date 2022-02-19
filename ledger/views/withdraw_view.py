@@ -5,6 +5,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
 
 from accounts.permissions import IsBasicVerified
+from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Network, Transfer, NetworkAsset
 from ledger.utils.precision import get_precision
 
@@ -50,12 +51,15 @@ class WithdrawSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        return Transfer.new_withdraw(
-            wallet=validated_data['wallet'],
-            network=validated_data['network'],
-            amount=validated_data['amount'],
-            address=validated_data['out_address']
-        )
+        try:
+            return Transfer.new_withdraw(
+                wallet=validated_data['wallet'],
+                network=validated_data['network'],
+                amount=validated_data['amount'],
+                address=validated_data['out_address']
+            )
+        except InsufficientBalance:
+            raise ValidationError('موجودی کافی نیست.')
 
     class Meta:
         model = Transfer

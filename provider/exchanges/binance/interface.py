@@ -1,10 +1,9 @@
-import json
 from decimal import Decimal
 
+from ledger.utils.cache import cache_for
 from ledger.utils.precision import decimal_to_str
 from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request
 from provider.exchanges.binance_rules import futures_rules
-from provider.exchanges.rules import get_rules
 
 BINANCE = 'binance'
 
@@ -60,14 +59,13 @@ class BinanceSpotHandler:
         return cls.collect_api('/api/v3/account', method='GET') or {}
 
     @classmethod
-    def get_network_info(cls):
-        with open('provider/data/binance/data.json') as f:
-            return json.load(f)
+    @cache_for()
+    def get_all_coins(cls):
+        return cls.collect_api('sapi/v1/capital/config/getall', method='GET')
 
     @classmethod
     def get_withdraw_fee(cls, coin: str, network: str) -> Decimal:
-
-        coin = list(filter(lambda d: d['coin'] == coin, cls.get_network_info()))[0]
+        coin = list(filter(lambda d: d['coin'] == coin, cls.get_all_coins()))[0]
         network = list(filter(lambda d: d['network'] == network, coin['networkList']))[0]
 
         return Decimal(network['withdrawFee'])

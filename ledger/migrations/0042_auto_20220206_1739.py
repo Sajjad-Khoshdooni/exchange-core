@@ -3,6 +3,8 @@ import json
 
 from django.db import migrations
 
+from provider.exchanges import BinanceSpotHandler
+
 
 def create_network_assets(apps, schema_editor):
     Asset = apps.get_model('ledger', 'Asset')
@@ -12,8 +14,7 @@ def create_network_assets(apps, schema_editor):
     assets = Asset.objects.all()
     assets_map = {a.symbol: a for a in assets}
 
-    with open('provider/data/binance/data.json') as f:
-        coins = json.load(f)
+    coins = BinanceSpotHandler.get_all_coins()
 
     for c in coins:
         if c['coin'] not in assets_map:

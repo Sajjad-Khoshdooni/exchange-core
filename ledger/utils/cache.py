@@ -1,6 +1,6 @@
-from cachetools import TTLCache
 import hashlib
 import logging
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
@@ -18,20 +18,19 @@ def get_cache_func_key(func, *args, **kwargs) -> str:
 
     return key
 
-#
-# def ttl_cache(cache: TTLCache):
-#     def wrapper(func):
-#         def wrapped(*args, **kwargs):
-#             key = get_cache_func_key(func, *args, **kwargs)
-#
-#             try:
-#                 return cache[key]
-#             except KeyError:
-#                 result = cache[key] = func(*args, **kwargs)
-#
-#                 return result
-#
-#         return wrapped
-#
-#     return wrapper
-#
+
+def cache_for(time: float = 600):
+    def decorator(fn):
+        def wrapper(*args, **kwargs):
+            key = get_cache_func_key(fn, *args, **kwargs)
+            result = cache.get(key)
+
+            if result is None:
+                result = fn(*args, **kwargs)
+                cache.set(key, result, time)
+
+            return result
+        return wrapper
+
+    return decorator
+
