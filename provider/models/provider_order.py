@@ -87,7 +87,7 @@ class ProviderOrder(models.Model):
         """
 
         system_wallet = asset.get_wallet(Account.system())
-        system_balance = system_wallet.get_balance()
+        system_balance = system_wallet.get_ledger_balance()
 
         orders = ProviderOrder.objects.filter(asset=asset).values('side').annotate(amount=Sum('amount'))
 

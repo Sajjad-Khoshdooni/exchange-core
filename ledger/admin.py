@@ -12,11 +12,11 @@ from provider.exchanges import BinanceFuturesHandler
 @admin.register(models.Asset)
 class AssetAdmin(admin.ModelAdmin):
     list_display = (
-        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount',  'get_hedge_threshold',
-        'get_future_amount', 'get_ledger_balance_system',
-        'get_future_value', 'get_binance_spot_amount',
+        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount',
+        'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance', 'get_ledger_balance_users',
 
-        'get_ledger_balance_users', 'get_ledger_balance_out', 'trend',
+        'get_hedge_threshold', 'get_future_value',
+        'get_ledger_balance_system', 'get_ledger_balance_out', 'trend',
     )
     list_filter = ('enable', 'trend')
     list_editable = ('enable', 'order', 'trend')
@@ -41,17 +41,17 @@ class AssetAdmin(admin.ModelAdmin):
         return super(AssetAdmin, self).save_model(request, obj, form, change)
 
     def get_ledger_balance_users(self, asset: Asset):
-        return asset.get_presentation_amount(self.overview.get_balance(Account.ORDINARY, asset))
+        return asset.get_presentation_amount(self.overview.get_ledger_balance(Account.ORDINARY, asset))
 
     get_ledger_balance_users.short_description = 'users'
 
     def get_ledger_balance_system(self, asset: Asset):
-        return asset.get_presentation_amount(self.overview.get_balance(Account.SYSTEM, asset))
+        return asset.get_presentation_amount(self.overview.get_ledger_balance(Account.SYSTEM, asset))
 
     get_ledger_balance_system.short_description = 'system'
 
     def get_ledger_balance_out(self, asset: Asset):
-        return asset.get_presentation_amount(self.overview.get_balance(Account.OUT, asset))
+        return asset.get_presentation_amount(self.overview.get_ledger_balance(Account.OUT, asset))
 
     get_ledger_balance_out.short_description = 'out'
 
@@ -70,6 +70,11 @@ class AssetAdmin(admin.ModelAdmin):
 
     get_binance_spot_amount.short_description = 'bin spot amount'
 
+    def get_internal_balance(self, asset: Asset):
+        return asset.get_presentation_amount(self.overview.get_internal_deposits_balance(asset))
+
+    get_internal_balance.short_description = 'internal'
+
     def get_hedge_amount(self, asset: Asset):
         return asset.get_presentation_amount(self.overview.get_hedge_amount(asset))
 
@@ -83,7 +88,7 @@ class AssetAdmin(admin.ModelAdmin):
     def get_hedge_threshold(self, asset: Asset):
         return BinanceFuturesHandler.get_step_size(asset.symbol + 'USDT')
 
-    get_hedge_threshold.short_description = 'hedge threshold'
+    get_hedge_threshold.short_description = 'future hedge threshold'
 
 
 

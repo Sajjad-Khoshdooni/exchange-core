@@ -4,12 +4,12 @@ from decimal import Decimal
 from django.db.models import Sum
 
 from accounts.models import Account
-from ledger.models import Trx, Asset
+from ledger.models import Trx, Asset, CryptoBalance
 from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
 
-def get_user_type_asset_balances():
+def get_ledger_user_type_asset_balances():
 
     received = Trx.objects.values('receiver__account__type', 'receiver__asset__symbol').annotate(amount=Sum('amount'))
     sent = Trx.objects.values('sender__account__type', 'sender__asset__symbol').annotate(amount=Sum('amount'))
@@ -26,6 +26,14 @@ def get_user_type_asset_balances():
     return total_dict
 
 
+def get_internal_asset_deposits():
+    deposits = CryptoBalance.objects.values('asset__symbol').annotate(amount=Sum('amount'))
+
+    return {
+        d['asset_symbol']: d['amount'] for d in deposits
+    }
+
+
 class AssetOverview:
     def __init__(self):
         self._future = BinanceFuturesHandler.get_account_details()
@@ -34,7 +42,7 @@ class AssetOverview:
             pos['symbol']: pos for pos in self._future['positions']
         }
 
-        self._user_type_asset_balances = get_user_type_asset_balances()
+        self._user_type_asset_balances = get_ledger_user_type_asset_balances()
 
         self._user_type_balances = defaultdict(int)
         for key, amount in self._user_type_asset_balances.items():
@@ -49,6 +57,8 @@ class AssetOverview:
 
         balances_list = BinanceSpotHandler.get_account_details()['balances']
         self._binance_spot_balance_map = {b['asset']: float(b['free']) for b in balances_list}
+
+        self._internal_deposits = get_internal_asset_deposits()
 
     @property
     def total_initial_margin(self):
@@ -66,11 +76,14 @@ class AssetOverview:
     def margin_ratio(self):
         return self.total_margin_balance / max(self.total_maintenance_margin, 1e-10)
 
-    def get_balance(self, user_type: str, asset: Asset = None):
+    def get_ledger_balance(self, user_type: str, asset: Asset = None):
         if asset:
             return self._user_type_asset_balances.get((user_type, asset.symbol), 0)
         else:
             return self._user_type_balances[user_type]
+
+    def get_internal_deposits_balance(self, asset: Asset) -> Decimal:
+        return self._internal_deposits.get(asset.symbol, 0)
 
     def get_future_position_amount(self, asset: Asset):
         amount = float(self._future_positions.get(asset.future_symbol + 'USDT', {}).get('positionAmt', 0))
@@ -80,6 +93,9 @@ class AssetOverview:
 
         return amount
 
+    def get_binance_spot_amount(self, asset: Asset) -> float:
+        return self._binance_spot_balance_map.get(asset.symbol, 0)
+
     def get_future_position_value(self, asset: Asset):
         return float(self._future_positions.get(asset.future_symbol + 'USDT', {}).get('notional', 0))
 
@@ -87,10 +103,8 @@ class AssetOverview:
         if asset.symbol in (Asset.IRT, Asset.USDT):
             return 0
 
-        balance = self.get_balance(Account.SYSTEM, asset)
-        future_amount = Decimal(self.get_future_position_amount(asset))
-
-        return future_amount + balance + Decimal(self.get_binance_spot_amount(asset))
+        return self.get_binance_balance(asset) + self.get_internal_deposits_balance(asset) \
+               - self.get_ledger_balance(Account.ORDINARY, asset)
 
     def get_hedge_value(self, asset: Asset):
         price = self._prices.get(asset.symbol, 0)
@@ -102,5 +116,8 @@ class AssetOverview:
             self.get_hedge_value(asset) for asset in Asset.objects.all()
         ])
 
-    def get_binance_spot_amount(self, asset: Asset):
-        return self._binance_spot_balance_map.get(asset.symbol, 0)
+    def get_binance_balance(self, asset: Asset) -> Decimal:
+        future_amount = Decimal(self.get_future_position_amount(asset))
+        spot_amount = Decimal(self.get_binance_spot_amount(asset))
+
+        return future_amount + spot_amount
