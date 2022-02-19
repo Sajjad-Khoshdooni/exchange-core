@@ -4,7 +4,7 @@ from ledger.models import NetworkAsset
 from provider.exchanges import BinanceSpotHandler
 
 
-@shared_task()
+@shared_task(queue='celery')
 def update_network_fees():
     network_assets = NetworkAsset.objects.all()
 
