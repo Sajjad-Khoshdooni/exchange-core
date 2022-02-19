@@ -30,7 +30,7 @@ def get_internal_asset_deposits():
     deposits = CryptoBalance.objects.values('asset__symbol').annotate(amount=Sum('amount'))
 
     return {
-        d['asset_symbol']: d['amount'] for d in deposits
+        d['asset__symbol']: d['amount'] for d in deposits
     }
 
 
