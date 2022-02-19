@@ -61,7 +61,7 @@ class BinanceSpotHandler:
     @classmethod
     @cache_for()
     def get_all_coins(cls):
-        return cls.collect_api('sapi/v1/capital/config/getall', method='GET')
+        return cls.collect_api('/sapi/v1/capital/config/getall', method='GET')
 
     @classmethod
     def get_network_info(cls, coin: str, network: str) -> dict:
