@@ -100,6 +100,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
     address = serializers.SerializerMethodField()
     can_deposit = serializers.SerializerMethodField()
     can_withdraw = serializers.SerializerMethodField()
+    address_regex = serializers.SerializerMethodField()
 
     withdraw_commission = serializers.SerializerMethodField()
     min_withdraw = serializers.SerializerMethodField()
@@ -109,6 +110,9 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 
     def get_network_name(self, network_asset: NetworkAsset):
         return network_asset.network.name
+
+    def get_address_regex(self, network_asset: NetworkAsset):
+        return network_asset.network.address_regex
 
     def get_can_deposit(self, network_asset: NetworkAsset):
         return network_asset.network.can_deposit
@@ -128,7 +132,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('network', 'address', 'can_deposit', 'can_withdraw', 'withdraw_commission', 'min_withdraw',
-                  'network_name')
+                  'network_name', 'address_regex')
         model = NetworkAsset
 
 
