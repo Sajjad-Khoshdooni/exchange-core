@@ -10,6 +10,7 @@ class Notification(models.Model):
 
     recipient = models.ForeignKey(to='accounts.User', on_delete=models.CASCADE)
 
+    title = models.CharField(max_length=128)
     message = models.CharField(max_length=512)
 
     level = models.CharField(
