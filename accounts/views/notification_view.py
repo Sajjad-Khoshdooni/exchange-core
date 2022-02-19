@@ -29,9 +29,17 @@ class NotificationViewSet(ModelViewSet):
 
         try:
             limit = int(self.request.query_params.get('limit'))
-        except:
-            limit = 20
 
-        return Notification.objects.filter(
+            if limit <= 0:
+                limit = None
+        except ValueError:
+            limit = None
+
+        notifications = Notification.objects.filter(
             recipient=self.request.user
-        )[:limit]
+        )
+
+        if limit:
+            notifications = notifications[:limit]
+
+        return notifications
