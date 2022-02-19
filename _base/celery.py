@@ -64,6 +64,10 @@ app.conf.beat_schedule = {
         # 'schedule': crontab(minute=0, hour=2),
         'schedule': crontab(minute="*/30"),
     },
+    'update_network_fee': {
+        'task': 'ledger.tasks.fee.update_network_fees',
+        'schedule': crontab(minute="*/30"),
+    },
     'update_binance_withdraw': {
         'task': 'ledger.tasks.withdraw.update_binance_withdraw',
         'schedule': 10,

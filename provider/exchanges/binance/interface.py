@@ -64,11 +64,17 @@ class BinanceSpotHandler:
         return cls.collect_api('sapi/v1/capital/config/getall', method='GET')
 
     @classmethod
-    def get_withdraw_fee(cls, coin: str, network: str) -> Decimal:
+    def get_network_info(cls, coin: str, network: str) -> dict:
         coin = list(filter(lambda d: d['coin'] == coin, cls.get_all_coins()))[0]
-        network = list(filter(lambda d: d['network'] == network, coin['networkList']))[0]
+        networks = list(filter(lambda d: d['network'] == network, coin['networkList']))
 
-        return Decimal(network['withdrawFee'])
+        if networks:
+            return networks[0]
+
+    @classmethod
+    def get_withdraw_fee(cls, coin: str, network: str) -> Decimal:
+        info = cls.get_network_info(coin, network)
+        return Decimal(info['withdrawFee'])
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):
