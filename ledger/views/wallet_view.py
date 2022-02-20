@@ -179,6 +179,9 @@ class AssetRetrieveSerializer(AssetListSerializer):
     def get_deposits(self, asset: Asset):
         wallet = self.get_wallet(asset)
 
+        if not wallet:
+            return []
+
         deposits = Transfer.objects.filter(
             wallet__account=wallet.account,
             deposit=True,
@@ -189,6 +192,10 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
     def get_withdraws(self, asset: Asset):
         wallet = self.get_wallet(asset)
+
+        if not wallet:
+            return []
+
         withdraws = Transfer.objects.filter(
             wallet__account=wallet.account,
             deposit=False
