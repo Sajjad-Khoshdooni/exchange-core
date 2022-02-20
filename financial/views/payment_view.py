@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404, ListAPIView
+from rest_framework.pagination import LimitOffsetPagination
 
 from accounts.permissions import IsBasicVerified
 from financial.models import BankCard, PaymentRequest, Payment
@@ -58,6 +59,7 @@ class PaymentHistorySerializer(serializers.ModelSerializer):
 
 class PaymentHistoryView(ListAPIView):
     serializer_class = PaymentHistorySerializer
+    pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
         return Payment.objects.filter(payment_request__bank_card__user=self.request.user).order_by('-created')
