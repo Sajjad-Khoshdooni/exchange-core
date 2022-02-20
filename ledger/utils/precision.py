@@ -1,6 +1,9 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 
-from provider.utils import floor_precision
+
+def floor_precision(amount: Decimal, precision: int = 0):
+    step = precision_to_step(precision)
+    return amount.quantize(step, rounding=ROUND_DOWN)
 
 
 def get_precision(amount: Decimal) -> int:
@@ -22,11 +25,20 @@ def decimal_to_str(amount: Decimal):
     return amount
 
 
-def get_presentation_amount(amount: Decimal, precision: int):
+def precision_to_step(precision: int) -> Decimal:
+    precision = int(precision)
+
+    if precision <= 0:
+        return Decimal('1' + '0' * -precision)
+    else:
+        return Decimal('0.' + '0' * (precision - 1) + '1')
+
+
+def get_presentation_amount(amount: Decimal, precision: int) -> str:
     if isinstance(amount, str):
         amount = Decimal(amount)
 
-    rounded = str(floor_precision(amount, precision))
+    rounded = format(floor_precision(amount, precision), 'f')
 
     if '.' not in rounded:
         return rounded
