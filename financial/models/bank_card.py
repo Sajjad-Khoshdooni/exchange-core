@@ -20,6 +20,9 @@ class BankCard(models.Model):
 
     verified = models.BooleanField(default=False)
 
+    def __str__(self):
+        return self.card_pan
+
     class Meta:
         verbose_name = 'کارت بانکی'
         verbose_name_plural = 'کارت‌های بانکی'
@@ -39,6 +42,9 @@ class BankAccount(models.Model):
     )
 
     verified = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.iban
 
     class Meta:
         verbose_name = 'حساب بانکی'

@@ -56,6 +56,10 @@ class Transfer(models.Model):
     def asset(self):
         return self.wallet.asset
 
+    @property
+    def total_amount(self):
+        return self.amount + self.fee_amount
+
     def get_explorer_link(self) -> str:
         if not self.trx_hash:
             return ''

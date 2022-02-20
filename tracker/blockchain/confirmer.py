@@ -28,9 +28,10 @@ class Confirmer:
                 transfer.build_trx()
                 transfer.save()
 
+            received_amount = transfer.asset.get_presentation_amount(transfer.amount)
             Notification.send(
                 recipient=transfer.wallet.account.user,
-                title='دریافت شد: %s %s' % (humanize_number(transfer.amount), transfer.wallet.asset.symbol),
+                title='دریافت شد: %s %s' % (humanize_number(received_amount), transfer.wallet.asset.symbol),
                 message='از آدرس %s' % transfer.out_address
             )
 

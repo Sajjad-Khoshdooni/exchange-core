@@ -1,6 +1,7 @@
 from django.contrib import admin
 
-from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransferRequest
+from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
+    FiatWithdrawRequest
 
 
 @admin.register(Gateway)
@@ -9,11 +10,19 @@ class GatewayAdmin(admin.ModelAdmin):
     list_editable = ('active', )
 
 
-@admin.register(FiatTransferRequest)
+@admin.register(FiatTransaction)
 class FiatTransferRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'deposit', 'status', 'amount')
     list_filter = ('deposit', 'status')
     ordering = ('-created', )
+
+
+@admin.register(FiatWithdrawRequest)
+class FiatWithdrawRequestAdmin(admin.ModelAdmin):
+    list_display = ('created', 'bank_account', 'status', 'amount', 'fee_amount')
+    list_filter = ('status', )
+    ordering = ('-created', )
+    readonly_fields = ('amount', 'fee_amount', 'bank_account')
 
 
 @admin.register(PaymentRequest)

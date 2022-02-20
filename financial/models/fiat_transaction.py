@@ -5,7 +5,7 @@ from ledger.models import Trx, Asset
 from ledger.utils.fields import get_status_field, DONE, get_group_id_field
 
 
-class FiatTransferRequest(models.Model):
+class FiatTransaction(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     group_id = get_group_id_field()
 
@@ -17,13 +17,13 @@ class FiatTransferRequest(models.Model):
     status = get_status_field()
 
     def save(self, *args, **kwargs):
-        old = self.id and FiatTransferRequest.objects.get(id=self.id)
+        old = self.id and FiatTransaction.objects.get(id=self.id)
 
         if old and old.status == DONE and self.status != DONE:
             return
 
         with transaction.atomic():
-            super(FiatTransferRequest, self).save(*args, **kwargs)
+            super(FiatTransaction, self).save(*args, **kwargs)
 
             if (not old or old.status != DONE) and self.status == DONE:
                 asset = Asset.get(Asset.IRT)

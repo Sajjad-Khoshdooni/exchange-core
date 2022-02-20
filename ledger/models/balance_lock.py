@@ -17,3 +17,6 @@ class BalanceLock(models.Model):
             self.freed = True
             self.release_date = timezone.now()
             self.save()
+
+    def __str__(self):
+        return '%s %s %s' % (self.wallet, self.wallet.asset.get_presentation_amount(self.amount), self.freed)
