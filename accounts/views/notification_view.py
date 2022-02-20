@@ -27,6 +27,9 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 class NotificationViewSet(ModelViewSet):
     serializer_class = NotificationSerializer
+    
+    def get_object(self):
+        super(NotificationViewSet, self).get_object()
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

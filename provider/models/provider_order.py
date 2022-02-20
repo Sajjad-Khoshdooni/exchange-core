@@ -25,7 +25,7 @@ class ProviderOrder(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     exchange = models.CharField(max_length=8, default=BINANCE)
-    market = models.CharField(max_length=4, default=FUTURE)
+    market = models.CharField(max_length=4, default=FUTURE, choices=((SPOT, SPOT), (FUTURE, FUTURE), (MARGIN, MARGIN)))
 
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     amount = get_amount_field()
@@ -47,7 +47,7 @@ class ProviderOrder(models.Model):
     def new_order(cls, asset: Asset, side: str, amount: Decimal, scope: str, market: str = FUTURE) -> 'ProviderOrder':
         with transaction.atomic():
             order = ProviderOrder.objects.create(
-                asset=asset, amount=amount, side=side, scope=scope
+                asset=asset, amount=amount, side=side, scope=scope, market=market
             )
 
             symbol = cls.get_trading_symbol(asset)
@@ -108,7 +108,7 @@ class ProviderOrder(models.Model):
         return asset.symbol + 'USDT'
 
     @classmethod
-    def try_hedge_for_new_order(cls, asset: Asset, side: str, amount: Decimal, scope: str) -> bool:
+    def try_hedge_for_new_order(cls, asset: Asset, side: str, scope: str, amount: Decimal = 0) -> bool:
         # todo: this method should not called more than once at a single time
 
         to_buy = amount if side == cls.BUY else -amount
