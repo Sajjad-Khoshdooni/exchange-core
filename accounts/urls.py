@@ -31,4 +31,6 @@ urlpatterns = [
         'get': 'retrieve',
         'patch': 'partial_update',
     })),
+
+    path('notifs/all/', views.UnreadAllNotificationView.as_view()),
 ]

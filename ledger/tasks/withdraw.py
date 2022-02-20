@@ -1,7 +1,9 @@
 from celery import shared_task
 from django.db import transaction
 
+from accounts.models import Notification
 from ledger.models import Transfer
+from ledger.utils.precision import humanize_number
 from ledger.withdraw.binance import handle_binance_withdraw
 from ledger.withdraw.withdraw_handler import WithdrawHandler
 
@@ -54,3 +56,9 @@ def update_binance_withdraw():
 
                 transfer.lock.release()
                 transfer.build_trx()
+
+            Notification.send(
+                recipient=transfer.wallet.account.user,
+                title='ارسال شد: %s %s' % (humanize_number(transfer.amount), transfer.wallet.asset.symbol),
+                message='به آدرس %s' % transfer.out_address
+            )

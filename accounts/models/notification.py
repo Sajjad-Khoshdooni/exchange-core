@@ -1,5 +1,9 @@
+import logging
+
 from django.db import models
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 
 class Notification(models.Model):
@@ -25,9 +29,14 @@ class Notification(models.Model):
         ordering = ('-created', )
 
     @classmethod
-    def send(cls, recipient, message: str, level: str = INFO):
+    def send(cls, recipient, title: str, message: str = '', level: str = INFO):
+        if not recipient:
+            logger.info('failed to send notif')
+            return
+
         Notification.objects.create(
             recipient=recipient,
+            title=title,
             message=message,
             level=level
         )

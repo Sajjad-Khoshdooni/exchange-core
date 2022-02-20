@@ -1,6 +1,8 @@
 from django.db import transaction
 
+from accounts.models import Notification
 from ledger.models import Transfer
+from ledger.utils.precision import humanize_number
 from tracker.blockchain.dtos import BlockDTO
 
 
@@ -25,3 +27,10 @@ class Confirmer:
                 transfer.status = Transfer.DONE
                 transfer.build_trx()
                 transfer.save()
+
+            Notification.send(
+                recipient=transfer.wallet.account.user,
+                title='دریافت شد: %s %s' % (humanize_number(transfer.amount), transfer.wallet.asset.symbol),
+                message='از آدرس %s' % transfer.out_address
+            )
+

@@ -32,3 +32,7 @@ def get_presentation_amount(amount: Decimal, precision: int):
         return rounded
     else:
         return rounded.rstrip('0').rstrip('.') or '0'
+
+
+def humanize_number(num):
+    return '{:,}'.format(num)

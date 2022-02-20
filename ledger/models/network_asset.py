@@ -1,6 +1,6 @@
 from django.db import models
 
-from ledger.utils.fields import COMMISSION_MAX_DIGITS, AMOUNT_DECIMAL_PLACES, get_amount_field
+from ledger.utils.fields import COMMISSION_MAX_DIGITS, get_amount_field
 
 
 class NetworkAsset(models.Model):

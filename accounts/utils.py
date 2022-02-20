@@ -40,3 +40,15 @@ def fifteen_minutes_later_datetime():
 
 def gregorian_to_jalali_date(date: datetime.date):
     return jdatetime.date.fromgregorian(day=date.day, month=date.month, year=date.year)
+
+
+def parse_positive_int(inp: str, default: int = None):
+    try:
+        num = int(inp)
+
+        if num < 0:
+            num = default
+    except (ValueError, TypeError):
+        num = default
+
+    return num
