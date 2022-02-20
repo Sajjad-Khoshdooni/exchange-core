@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from django.conf import settings
+
 from ledger.utils.cache import cache_for
 from ledger.utils.precision import decimal_to_str
 from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request
@@ -17,6 +19,9 @@ class BinanceSpotHandler:
 
     @classmethod
     def collect_api(cls, url: str, method: str = 'GET', data: dict = None):
+        if settings.DEBUG:
+            return {}
+
         return spot_send_signed_request(method, url, data or {})
 
     @classmethod
@@ -65,7 +70,12 @@ class BinanceSpotHandler:
 
     @classmethod
     def get_network_info(cls, coin: str, network: str) -> dict:
-        coin = list(filter(lambda d: d['coin'] == coin, cls.get_all_coins()))[0]
+        info = list(filter(lambda d: d['coin'] == coin, cls.get_all_coins()))
+
+        if not info:
+            return
+
+        coin = info[0]
         networks = list(filter(lambda d: d['network'] == network, coin['networkList']))
 
         if networks:
