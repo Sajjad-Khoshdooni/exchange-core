@@ -38,8 +38,6 @@ class Asset(models.Model):
     price_precision_irt = models.SmallIntegerField(default=0)
     precision = models.SmallIntegerField(default=0)
 
-    withdraw_step = models.DecimalField(max_digits=15, decimal_places=10, default='0.001')
-
     enable = models.BooleanField(default=False)
     order = models.SmallIntegerField(default=0, db_index=True)
 
