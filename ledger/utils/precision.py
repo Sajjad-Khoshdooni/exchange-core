@@ -35,7 +35,7 @@ def precision_to_step(precision: int) -> Decimal:
 
 
 def get_presentation_amount(amount: Decimal, precision: int) -> str:
-    if isinstance(amount, str):
+    if not isinstance(amount, Decimal):
         amount = Decimal(amount)
 
     rounded = format(floor_precision(amount, precision), 'f')
