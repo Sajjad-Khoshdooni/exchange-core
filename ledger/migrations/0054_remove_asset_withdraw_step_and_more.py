@@ -18,7 +18,9 @@ def populate_precision(apps, schema_editor):
 
         info = BinanceSpotHandler.get_network_info(coin, network)
         if info:
-            network_asset.withdraw_precision = -int(math.log10(Decimal(info['withdrawIntegerMultiple'])))
+            withdraw_integer = Decimal(info['withdrawIntegerMultiple']) or 1
+
+            network_asset.withdraw_precision = -int(math.log10(withdraw_integer))
             network_asset.save()
 
     for asset in Asset.objects.all():
