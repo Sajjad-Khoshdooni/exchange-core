@@ -13,6 +13,9 @@ urlpatterns = [
 
     path('v1/withdraw/', views.WithdrawView.as_view()),
 
+    path('v1/withdraw/list/', views.WithdrawHistoryView.as_view()),
+    path('v1/deposit/list/', views.DepositHistoryView.as_view()),
+
     path('v1/trade/otc/request/', views.OTCTradeRequestView.as_view()),
     path('v1/trade/otc/', views.OTCTradeView.as_view()),
     path('v1/trade/otc/history/', views.OTCHistoryView.as_view()),

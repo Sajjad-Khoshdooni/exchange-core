@@ -78,7 +78,10 @@ class AssetListSerializer(serializers.ModelSerializer):
 class TransferSerializer(serializers.ModelSerializer):
     link = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
+    fee_amount = serializers.SerializerMethodField()
     out_address = serializers.SerializerMethodField()
+    network = serializers.SerializerMethodField()
+    coin = serializers.SerializerMethodField()
 
     def get_link(self, transfer: Transfer):
         return transfer.get_explorer_link()
@@ -86,12 +89,21 @@ class TransferSerializer(serializers.ModelSerializer):
     def get_amount(self, transfer: Transfer):
         return transfer.wallet.asset.get_presentation_amount(transfer.amount)
 
+    def get_fee_amount(self, transfer: Transfer):
+        return transfer.wallet.asset.get_presentation_amount(transfer.fee_amount)
+
     def get_out_address(self, transfer: Transfer):
         return get_presentation_address(transfer.out_address, transfer.network.symbol)
 
+    def get_coin(self, transfer: Transfer):
+        return transfer.wallet.asset.symbol
+
+    def get_network(self, transfer: Transfer):
+        return transfer.network.symbol
+
     class Meta:
         model = Transfer
-        fields = ('created', 'amount', 'status', 'link', 'out_address')
+        fields = ('created', 'amount', 'status', 'link', 'out_address', 'coin', 'network', 'trx_hash', 'fee_amount')
 
 
 class NetworkAssetSerializer(serializers.ModelSerializer):
@@ -161,13 +173,21 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
     def get_deposits(self, asset: Asset):
         wallet = self.get_wallet(asset)
-        deposits = Transfer.objects.filter(wallet=wallet, deposit=True, status=Transfer.DONE).order_by('-created')
+
+        deposits = Transfer.objects.filter(
+            wallet__account=wallet.account,
+            deposit=True,
+            status=Transfer.DONE
+        ).order_by('-created')[:10]
 
         return TransferSerializer(instance=deposits, many=True).data
 
     def get_withdraws(self, asset: Asset):
         wallet = self.get_wallet(asset)
-        withdraws = Transfer.objects.filter(wallet=wallet, deposit=False).order_by('-created')
+        withdraws = Transfer.objects.filter(
+            wallet__account=wallet.account,
+            deposit=False
+        ).order_by('-created')[:10]
 
         return TransferSerializer(instance=withdraws, many=True).data
 

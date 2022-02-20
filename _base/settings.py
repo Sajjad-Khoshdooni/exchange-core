@@ -181,7 +181,7 @@ RAVEN_CONFIG = {
 REST_FRAMEWORK = {
     # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'DEFAULT_PAGINATION_CLASS': None,
-    # 'PAGE_SIZE': 20,
+    'PAGE_SIZE': 20,
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
