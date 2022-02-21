@@ -47,4 +47,7 @@ def get_presentation_amount(amount: Decimal, precision: int) -> str:
 
 
 def humanize_number(num):
+    if isinstance(num, str):
+        num = Decimal(num)
+
     return '{:,}'.format(num)
