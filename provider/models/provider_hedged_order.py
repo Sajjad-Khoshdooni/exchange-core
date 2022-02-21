@@ -42,7 +42,8 @@ class ProviderHedgedOrder(models.Model):
             asset=asset,
             amount=valid_amount,
             side=spot_side,
-            spot_order=spot_order
+            spot_order=spot_order,
+            caller_id=caller_id
         )
 
         future_side = BUY if spot_side == SELL else SELL
