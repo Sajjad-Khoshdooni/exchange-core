@@ -27,9 +27,6 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 class NotificationViewSet(ModelViewSet):
     serializer_class = NotificationSerializer
-    
-    def get_object(self):
-        super(NotificationViewSet, self).get_object()
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -41,16 +38,16 @@ class NotificationViewSet(ModelViewSet):
         })
 
     def get_queryset(self):
-        query_params = self.request.query_params
-
-        limit = parse_positive_int(query_params.get('limit'), default=20)
-        offset = parse_positive_int(query_params.get('offset'), default=0)
-
         notifications = Notification.objects.filter(
             recipient=self.request.user
         )
 
-        notifications = notifications[offset:limit]
+        if self.action == 'list':
+            query_params = self.request.query_params
+            limit = parse_positive_int(query_params.get('limit'), default=20)
+            offset = parse_positive_int(query_params.get('offset'), default=0)
+
+            return notifications[offset:limit]
 
         return notifications
 
