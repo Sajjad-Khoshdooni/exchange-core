@@ -106,6 +106,14 @@ class AssetOverview:
         return self.get_binance_balance(asset) + self.get_internal_deposits_balance(asset) \
                - self.get_ledger_balance(Account.ORDINARY, asset)
 
+    def get_internal_usdt_value(self):
+        total = 0
+
+        for symbol, amount in self._internal_deposits.values():
+            total += amount * self._prices.get(symbol, 0)
+
+        return total
+
     def get_hedge_value(self, asset: Asset):
         price = self._prices.get(asset.symbol, 0)
 
