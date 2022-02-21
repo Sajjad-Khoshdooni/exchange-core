@@ -62,3 +62,6 @@ class ProviderTransfer(models.Model):
         data = data[0]
 
         return data
+
+    def __str__(self):
+        return '%s %s %s' % (self.asset, self.amount, self.network)
