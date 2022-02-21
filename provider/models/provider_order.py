@@ -25,7 +25,7 @@ class ProviderOrder(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     exchange = models.CharField(max_length=8, default=BINANCE)
-    market = models.CharField(max_length=4, default=FUTURE, choices=((SPOT, SPOT), (FUTURE, FUTURE), (MARGIN, MARGIN)))
+    market = models.CharField(max_length=4, default=FUTURE, choices=((SPOT, 'spot'), (FUTURE, 'future'), (MARGIN, 'margin')))
 
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     amount = get_amount_field()
@@ -108,7 +108,7 @@ class ProviderOrder(models.Model):
         return asset.symbol + 'USDT'
 
     @classmethod
-    def try_hedge_for_new_order(cls, asset: Asset, side: str, scope: str, amount: Decimal = 0) -> bool:
+    def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '') -> bool:
         # todo: this method should not called more than once at a single time
 
         to_buy = amount if side == cls.BUY else -amount
