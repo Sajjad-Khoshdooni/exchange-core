@@ -39,7 +39,7 @@ class Transfer(models.Model):
 
     lock = models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE, null=True, blank=True)
 
-    trx_hash = models.CharField(max_length=128, db_index=True, blank=True)
+    trx_hash = models.CharField(max_length=128, db_index=True, null=True, blank=True)
     block_hash = models.CharField(max_length=128, db_index=True, blank=True)
     block_number = models.PositiveIntegerField(null=True, blank=True)
 
@@ -163,6 +163,6 @@ class Transfer(models.Model):
             UniqueConstraint(
                 fields=["trx_hash", "network"],
                 name="unique_transfer_tx_hash_network",
-                condition=Q(status__in=["pending", "confirmed"]),
+                condition=Q(status__in=["pending", "done"]) & Q(),
             )
         ]
