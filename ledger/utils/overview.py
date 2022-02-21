@@ -109,7 +109,7 @@ class AssetOverview:
     def get_internal_usdt_value(self):
         total = 0
 
-        for symbol, amount in self._internal_deposits.values():
+        for symbol, amount in self._internal_deposits.items():
             total += amount * self._prices.get(symbol, 0)
 
         return total
