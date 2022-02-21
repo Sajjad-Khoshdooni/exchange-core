@@ -161,7 +161,7 @@ class Transfer(models.Model):
     class Meta:
         constraints = [
             UniqueConstraint(
-                fields=["trx_hash", "network"],
+                fields=["trx_hash", "network", "deposit"],
                 name="unique_transfer_tx_hash_network",
                 condition=Q(status__in=["pending", "done"]) & Q(),
             )
