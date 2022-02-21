@@ -11,10 +11,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveConstraint(
-            model_name='transfer',
-            name='unique_transfer_tx_hash_network',
-        ),
         migrations.AlterField(
             model_name='marginloan',
             name='lock',
@@ -29,9 +25,5 @@ class Migration(migrations.Migration):
             model_name='transfer',
             name='trx_hash',
             field=models.CharField(blank=True, db_index=True, max_length=128, null=True),
-        ),
-        migrations.AddConstraint(
-            model_name='transfer',
-            constraint=models.UniqueConstraint(condition=models.Q(('status__in', ['pending', 'done'])), fields=('trx_hash', 'network'), name='unique_transfer_tx_hash_network'),
         ),
     ]
