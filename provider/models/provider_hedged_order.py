@@ -22,15 +22,15 @@ class ProviderHedgedOrder(models.Model):
     amount = get_amount_field()
     side = models.CharField(max_length=8, choices=ORDER_CHOICES)  # spot side
 
-    caller_id = models.PositiveIntegerField(null=True, blank=True)
+    caller_id = models.CharField(blank=True, null=True, unique=True, max_length=32)
 
     spot_order = models.OneToOneField(to=ProviderOrder, on_delete=models.PROTECT)
     hedged = models.BooleanField(default=False)
 
     @classmethod
     def new_hedged_order(cls, asset: Asset, amount: Decimal, spot_side: str, caller_id: str) -> 'ProviderHedgedOrder':
-        if ProviderHedgedOrder.objects.filter(caller_id=caller_id).exists():
-            logger.warning('transfer ignored due to duplicated caller_id')
+        if ProviderHedgedOrder.objects.filter(caller_id=str(caller_id)).exists():
+            logger.warning('hedge order ignored due to duplicated caller_id')
             return
 
         valid_amount = cls.get_min_trade_amount_to_buy(asset, amount)
