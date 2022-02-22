@@ -3,7 +3,7 @@ from django.db import models
 from django.db.models import Q
 
 from accounts.utils import PHONE_MAX_LENGTH
-from accounts.validators import mobile_number_validator
+from accounts.validators import mobile_number_validator, national_card_code_validator
 
 
 class CustomUserManager(UserManager):
@@ -33,6 +33,14 @@ class User(AbstractUser):
 
     email_verified = models.BooleanField(default=False)
     email_verification_date = models.DateTimeField(null=True, blank=True)
+
+    national_code = models.CharField(
+        max_length=10,
+        validators=[national_card_code_validator],
+    )
+
+    national_code_verified = models.BooleanField(default=False)
+    national_code_verified_date = models.DateTimeField(blank=True, null=True)
 
     verification = models.PositiveSmallIntegerField(
         default=NOT_VERIFIED,

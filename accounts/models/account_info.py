@@ -1,10 +1,28 @@
-import requests
-from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 
 from accounts.models import User
-from accounts.utils import gregorian_to_jalali_date
-from accounts.validators import national_card_code_validator
+from ledger.utils.fields import get_group_id_field
+
+
+class VerifiableField(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+
+    user = models.ForeignKey(to=User, on_delete=models.CASCADE)
+
+    name = models.CharField(max_length=64)
+    value = models.CharField(max_length=512)
+
+    verified_date = models.DateTimeField(null=True, blank=True)
+    verified = models.BooleanField(default=False)
+
+    group_id = get_group_id_field(db_index=True)
+
+    class Meta:
+        unique_together = ('user', 'name', 'value')
+
+    def insert(self, user: User, field_names: list):
+        objects = [VerifiableField(user=user, name=name) for name in field_names]
+        return VerifiableField.objects.bulk_create(objects)
 
 
 class BasicAccountInfo(models.Model):
@@ -17,7 +35,6 @@ class BasicAccountInfo(models.Model):
     modified = models.DateTimeField(auto_now=True)
 
     user = models.OneToOneField(to=User, on_delete=models.PROTECT)
-    verifier_code = models.CharField(max_length=16, blank=True)
 
     status = models.CharField(
         max_length=8,
@@ -25,35 +42,22 @@ class BasicAccountInfo(models.Model):
         default=INIT,
     )
 
-    gender = models.CharField(
-        max_length=1,
-        choices=((MALE, MALE), (FEMALE, FEMALE))
-    )
+    birth_date = models.DateField(null=True, blank=True)
 
-    birth_date = models.DateField()
-
-    national_card_code = models.CharField(
-        max_length=10,
-        validators=[national_card_code_validator],
-    )
-
-    national_card_image = models.ForeignKey(to='multimedia.Image', on_delete=models.PROTECT)
+    group_id = get_group_id_field()
 
     def verify(self):
         assert self.status in (self.INIT, self.REJECTED)
 
-        resp = requests.get('https://inquery.ir/:70', params={
-            'Token': settings.SEARCHLINE_TOKEN,
-            'IdCode': self.national_card_code,
-            'BirthDate': gregorian_to_jalali_date(self.birth_date).strftime('%Y/%m/%d'),
-            'Name': self.user.first_name,
-            'Family': self.user.last_name,
-            'Photo': self.national_card_image.get_absolute_image_url(),
-        })
+        with transaction.atomic():
+            self.status = self.PENDING
+            self.save()
 
-        self.verifier_code = resp.json()['Result']['ID']
-        self.status = self.PENDING
-        self.save()
+            fields = []
+
+            VerifiableField.insert(self.user, field_names=[
+                'first_name', 'last'
+            ])
 
     def __str__(self):
         return '%s (%s)' % (self.user, self.status)
@@ -68,3 +72,9 @@ class BasicAccountInfo(models.Model):
         if self.status != self.VERIFIED and self.user.verification == User.BASIC_VERIFIED:
             self.user.verification = User.NOT_VERIFIED
             self.user.save()
+
+
+def verify_national_code(user: User):
+    assert not user.national_code_verified
+
+    

@@ -32,6 +32,6 @@ class BasicAccountInfoAdmin(admin.ModelAdmin):
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ('recipient', 'level', 'title', 'message')
+    list_display = ('created', 'recipient', 'level', 'title', 'message')
     list_filter = ('level', 'recipient')
     search_fields = ('title', 'message', )

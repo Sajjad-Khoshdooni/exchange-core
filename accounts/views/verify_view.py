@@ -7,6 +7,7 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework import serializers
 
 from accounts.models import BasicAccountInfo
+from accounts.tasks import basic_verify_user
 from financial.validators import bank_card_pan_validator, iban_validator
 from financial.models.bank_card import BankCard, BankCardSerializer, BankAccountSerializer, BankAccount
 from multimedia.fields import ImageField
@@ -37,9 +38,11 @@ class IbanField(serializers.CharField):
 class BasicInfoSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
-    national_card_image = ImageField()
+    national_code = serializers.CharField(source='user.national_code')
     card_pan = CardPanField(validators=[bank_card_pan_validator])
     iban = IbanField(validators=[iban_validator])
+
+    national_code_verified = serializers.CharField(source='user.national_code_verified', read_only=True)
 
     def save(self, user):
         instance = self.instance
@@ -47,13 +50,13 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         if instance and instance.status in (BasicAccountInfo.PENDING, BasicAccountInfo.VERIFIED):
             raise ValidationError('امکان تغییر اطلاعات وجود ندارد.')
 
-        date_delta = timezone.now().date() - self.validated_data['birth_date']
-        age = date_delta.days / 365
-
-        if age < 18:
-            raise ValidationError('سن باید بالای ۱۸ سال باشد.')
-        elif age > 120:
-            raise ValidationError('تاریخ تولد نامعتبر است.')
+        # date_delta = timezone.now().date() - self.validated_data['birth_date']
+        # age = date_delta.days / 365
+        #
+        # if age < 18:
+        #     raise ValidationError('سن باید بالای ۱۸ سال باشد.')
+        # elif age > 120:
+        #     raise ValidationError('تاریخ تولد نامعتبر است.')
 
         card_pan = self.validated_data.pop('card_pan')
         iban = self.validated_data.pop('iban')
@@ -78,11 +81,16 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             BankAccount.objects.create(user=user, iban=iban)
 
         with transaction.atomic():
+            if not user.national_code_verified:
+                user.national_code = self.validated_data['user']['national_code']
+
             user.first_name = self.validated_data['user']['first_name']
             user.last_name = self.validated_data['user']['last_name']
             user.save()
 
             instance = super().save(user=user, status=BasicAccountInfo.PENDING)
+
+            basic_verify_user.s(user.id).apply_async(countdown=60)
 
         return instance
 
@@ -97,8 +105,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BasicAccountInfo
-        fields = ('status', 'first_name', 'last_name', 'gender', 'birth_date', 'national_card_code',
-                  'national_card_image', 'card_pan', 'iban')
+        fields = ('status', 'first_name', 'last_name', 'national_code', 'card_pan', 'iban')
 
         read_only_fields = ('status', )
 
@@ -112,9 +119,3 @@ class BasicInfoVerificationViewSet(ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(user=self.request.user)
-
-
-class VerifySearchLine(APIView):
-
-    def get(self, request):
-        return Response('ok!')

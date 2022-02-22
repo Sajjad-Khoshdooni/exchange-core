@@ -52,8 +52,8 @@ def get_lock_field(null: bool = False):
     return models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE, null=null, blank=null, editable=False)
 
 
-def get_group_id_field():
-    return models.UUIDField(default=uuid4, editable=False)
+def get_group_id_field(db_index: bool = False):
+    return models.UUIDField(default=uuid4, editable=False, db_index=db_index)
 
 
 def get_address_field():
