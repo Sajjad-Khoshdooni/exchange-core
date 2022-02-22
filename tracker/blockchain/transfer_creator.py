@@ -68,8 +68,11 @@ class TransferCreator:
 
             for coin_handler in self.coin_handlers:
                 if coin_handler.is_valid_transaction(t):
-                    count += 1
-                    parsed_transactions.append(coin_handler.build_transaction_data(t))
+                    transaction_data = coin_handler.build_transaction_data(t)
+
+                    if transaction_data:
+                        count += 1
+                        parsed_transactions.append(transaction_data)
 
             if count > 1:
                 logger.warning(

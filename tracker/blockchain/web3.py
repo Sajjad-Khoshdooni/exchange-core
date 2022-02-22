@@ -1,5 +1,7 @@
+import logging
 from typing import List
 
+from eth_abi.exceptions import InsufficientDataBytes
 from web3 import Web3
 from web3.types import BlockData
 
@@ -10,6 +12,9 @@ from tracker.blockchain.abi_getter import AbiGetter
 from tracker.blockchain.dtos import BlockDTO, RawTransactionDTO, TransactionDTO
 from tracker.blockchain.requester import Requester
 from tracker.blockchain.transfer_creator import TransactionParser, CoinHandler
+
+logger = logging.getLogger(__name__)
+
 
 TRANSFER_METHOD_ID = 'a9059cbb'
 TRANSFER_FROM_METHOD_ID = '23b872dd'
@@ -78,7 +83,15 @@ class Web3ERC20BasedCoinHandler(CoinHandler):
 
         transaction_input = t['input'][:10] + '0' * 24 + t['input'][34:]
 
-        function, decoded_input = contract.decode_function_input(transaction_input)
+        try:
+            function, decoded_input = contract.decode_function_input(transaction_input)
+        except InsufficientDataBytes:
+            logger.warning('transfer transaction ignored', extra={
+                't': t,
+                'input': transaction_input
+            })
+
+            return
 
         asset = self.get_asset(t)
 
