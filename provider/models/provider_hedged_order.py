@@ -63,7 +63,7 @@ class ProviderHedgedOrder(models.Model):
     def get_min_trade_amount_to_buy(cls, asset: Asset, amount: Decimal):
         config = get_rules('spot')[asset.symbol + 'USDT']
 
-        price = get_price(asset.symbol, SELL)
+        price = get_price(asset.symbol, BUY)
 
         min_notional_amount = 10 / price * Decimal('1.002')
 
