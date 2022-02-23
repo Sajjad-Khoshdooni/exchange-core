@@ -63,7 +63,7 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FiatWithdrawRequest
-        fields = ('created', 'status', 'fee_amount', 'amount', 'bank_account')
+        fields = ('created', 'status', 'fee_amount', 'amount', 'bank_account', 'ref_id')
 
 
 class WithdrawHistoryView(ListAPIView):
