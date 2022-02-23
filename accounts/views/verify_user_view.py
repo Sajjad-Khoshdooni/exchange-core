@@ -86,8 +86,8 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         user.change_status(User.PENDING)
 
         from accounts.tasks import basic_verify_user
-        # basic_verify_user.s(user.id).apply_async(countdown=60)
-        basic_verify_user(user.id)
+        basic_verify_user.s(user.id).apply_async(countdown=60)
+        # basic_verify_user(user.id)
 
         return user
 

@@ -8,7 +8,7 @@ from accounts.verifiers.basic_verify import basic_verify
 logger = logging.getLogger(__name__)
 
 
-@shared_task
+@shared_task(queue='celery')
 def basic_verify_user(user_id: int):
     user = User.objects.get(id=user_id)  # type: User
 
