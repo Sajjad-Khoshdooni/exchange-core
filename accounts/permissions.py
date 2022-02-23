@@ -19,4 +19,4 @@ class IsBasicVerified(IsAuthenticated):
         if not super().has_permission(request, view):
             return False
 
-        return request.user.verification >= User.BASIC_VERIFIED
+        return request.user.level >= User.LEVEL2
