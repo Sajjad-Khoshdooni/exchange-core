@@ -146,7 +146,7 @@ class TrxAdmin(admin.ModelAdmin):
 
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'asset', 'get_free', 'get_locked')
+    list_display = ('created', 'account', 'asset', 'market', 'get_free', 'get_locked')
     list_filter = ('account', 'asset')
 
     def get_free(self, wallet: models.Wallet):
