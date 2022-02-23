@@ -1,13 +1,12 @@
-from django.db import transaction
+from rest_framework import serializers
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 
 from accounts.permissions import IsBasicVerified
-from financial.models import BankCard, PaymentRequest, Payment, FiatWithdrawRequest
-from financial.models.bank_card import BankCardSerializer, BankAccount
-from financial.models.gateway import GatewayFailed
+from financial.models import Payment, FiatWithdrawRequest
+from financial.models.bank_card import BankAccount, BankAccountSerializer
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
 
@@ -55,3 +54,21 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 class WithdrawRequestView(CreateAPIView):
     permission_classes = (IsBasicVerified, )
     serializer_class = WithdrawRequestSerializer
+
+
+class WithdrawHistorySerializer(serializers.ModelSerializer):
+
+    amount = serializers.IntegerField(source='payment_request.amount')
+    bank_account = BankAccountSerializer()
+
+    class Meta:
+        model = FiatWithdrawRequest
+        fields = ('created', 'status', 'fee_amount', 'amount', 'bank_account')
+
+
+class WithdrawHistoryView(ListAPIView):
+    serializer_class = WithdrawHistorySerializer
+    pagination_class = LimitOffsetPagination
+
+    def get_queryset(self):
+        return FiatWithdrawRequest.objects.filter(bank_account__user=self.request.user).order_by('-created')
