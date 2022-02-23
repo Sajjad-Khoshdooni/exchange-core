@@ -39,7 +39,7 @@ def get_user_irt_net_deposit(user: User) -> int:
 def check_withdraw_laundering(wallet: Wallet, amount: Decimal) -> bool:
     user = wallet.account.user
 
-    if user >= User.LEVEL3:
+    if user.level >= User.LEVEL3:
         return True
 
     net_irt_deposit = get_user_irt_net_deposit(user)
