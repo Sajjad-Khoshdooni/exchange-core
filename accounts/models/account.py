@@ -3,7 +3,8 @@ from decimal import Decimal
 from django.db import models
 
 from accounts.models import User
-from ledger.utils.price import get_trading_price_usdt
+from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt
+from ledger.utils.price_manager import PriceManager
 
 
 class Account(models.Model):
@@ -48,9 +49,24 @@ class Account(models.Model):
 
         total = Decimal('0')
 
-        for wallet in wallets:
-            balance = wallet.get_free()
-            total += balance * get_trading_price_usdt(wallet.asset.symbol, side, raw_price=True)
+        with PriceManager(fetch_all=True):
+            for wallet in wallets:
+                balance = wallet.get_free()
+                total += balance * get_trading_price_usdt(wallet.asset.symbol, side, raw_price=True)
+
+        return total
+
+    def get_total_balance_irt(self, market: str, side: str):
+        from ledger.models import Wallet
+
+        wallets = Wallet.objects.filter(account=self, market=market)
+
+        total = Decimal('0')
+
+        with PriceManager(fetch_all=True):
+            for wallet in wallets:
+                balance = wallet.get_free()
+                total += balance * get_trading_price_irt(wallet.asset.symbol, side, raw_price=True)
 
         return total
 

@@ -27,7 +27,8 @@ class AccountAdmin(admin.ModelAdmin):
 
 @admin.register(FinotechRequest)
 class FinotechRequestAdmin(admin.ModelAdmin):
-    list_display = ('url', 'data', 'status_code')
+    list_display = ('created', 'url', 'data', 'status_code')
+    ordering = ('-created', )
 
 
 @admin.register(Notification)

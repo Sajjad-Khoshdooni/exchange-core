@@ -7,6 +7,7 @@ from rest_framework.generics import get_object_or_404, CreateAPIView
 from accounts.permissions import IsBasicVerified
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Network, Transfer, NetworkAsset
+from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
 
 
@@ -41,12 +42,17 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if amount > network_asset.withdraw_max:
             raise ValidationError('مقدار وارد شده بزرگ است.')
 
+        wallet = asset.get_wallet(account)
+
+        if not check_withdraw_laundering(wallet=wallet, amount=amount):
+            raise ValidationError('در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید.')
+
         return {
             'network': network,
             'asset': asset,
-            'wallet': asset.get_wallet(account),
-            'amount': attrs['amount'],
-            'out_address': attrs['address'],
+            'wallet': wallet,
+            'amount': amount,
+            'out_address': address,
             'account': account,
         }
 
