@@ -21,8 +21,6 @@ urlpatterns = [
         'post': 'update',
     })),
 
-    path('verify/searchline/', views.VerifySearchLine.as_view()),
-
     path('notifs/', views.NotificationViewSet.as_view({
         'get': 'list',
     })),

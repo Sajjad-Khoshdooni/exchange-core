@@ -38,8 +38,6 @@ class InitiateSignupView(APIView):
 class SignupSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
     token = serializers.UUIDField(write_only=True, required=True)
-    first_name = serializers.CharField(required=True)
-    last_name = serializers.CharField(required=True)
     password = serializers.CharField(required=True, write_only=True, validators=[password_validator])
 
     def create(self, validated_data):
@@ -54,7 +52,6 @@ class SignupSerializer(serializers.Serializer):
         return User.objects.create_user(
             username=phone,
             phone=phone,
-            **validated_data
         )
 
 
