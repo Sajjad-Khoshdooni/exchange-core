@@ -1,7 +1,9 @@
-from celery import shared_task
 import logging
-from accounts.models import User
 
+from celery import shared_task
+
+from accounts.models import User
+from accounts.verifiers.basic_verify import basic_verify
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +12,11 @@ logger = logging.getLogger(__name__)
 def basic_verify_user(user_id: int):
     user = User.objects.get(id=user_id)  # type: User
 
-    if not user.national_code_verified:
-        logger.info('verifying national_code')
+    try:
+        basic_verify(user)
+    except:
+        user.refresh_from_db()
+        if user.verify_status == User.PENDING:
+            user.change_status(User.REJECTED)
 
-
-
+        raise

@@ -116,6 +116,14 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     },
+    'token': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': secret('TOKEN_CACHE_LOCATION', default='redis://127.0.0.1:6379/0'),
+
+        'OPTIONS': {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    },
 }
 
 
@@ -164,11 +172,6 @@ MEDIA_ROOT = config('MEDIA_ROOT', default=os.path.join(BASE_DIR, 'media/'))
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-
-IGNORABLE_404_URLS = (
-    re.compile('/favicon.ico'),
-)
 
 SENTRY_CLIENT = 'raven.contrib.django.raven_compat.DjangoClient'
 RAVEN_CONFIG = {
@@ -236,5 +239,3 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_DOMAIN = '.raastin.com'
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SECURE = True
-
-SEARCHLINE_TOKEN = secret('SEARCHLINE_TOKEN')

@@ -12,13 +12,15 @@ class CustomUserManager(UserManager):
 
 
 class User(AbstractUser):
-    NOT_VERIFIED = 0
-    BASIC_VERIFIED = 1
-    LOCATION_VERIFIED = 2
+    LEVEL1 = 1
+    LEVEL2 = 2
+    LEVEL3 = 3
 
-    objects = CustomUserManager()
+    INIT, PENDING, REJECTED, VERIFIED = 'init', 'pending', 'rejected', 'verified'
 
     USERNAME_FIELD = 'phone'
+
+    objects = CustomUserManager()
 
     phone = models.CharField(
         max_length=PHONE_MAX_LENGTH,
@@ -34,20 +36,45 @@ class User(AbstractUser):
     email_verified = models.BooleanField(default=False)
     email_verification_date = models.DateTimeField(null=True, blank=True)
 
+    first_name_verified = models.BooleanField(null=True, blank=True)
+    last_name_verified = models.BooleanField(null=True, blank=True)
+
     national_code = models.CharField(
         max_length=10,
+        blank=True,
         validators=[national_card_code_validator],
     )
+    national_code_verified = models.BooleanField(null=True, blank=True)
 
-    national_code_verified = models.BooleanField(default=False)
-    national_code_verified_date = models.DateTimeField(blank=True, null=True)
+    birth_date = models.DateField(null=True, blank=True)
+    birth_date_verified = models.BooleanField(null=True, blank=True)
 
-    verification = models.PositiveSmallIntegerField(
-        default=NOT_VERIFIED,
+    level = models.PositiveSmallIntegerField(
+        default=LEVEL1,
         choices=(
-            (NOT_VERIFIED, 'not verified'), (BASIC_VERIFIED, 'basic verified')
+            (LEVEL1, 'level 1'), (LEVEL2, 'level 2'), (LEVEL3, 'level 3')
         )
     )
+
+    verify_status = models.CharField(
+        max_length=8,
+        choices=((INIT, INIT), (PENDING, PENDING), (REJECTED, REJECTED), (VERIFIED, VERIFIED)),
+        default=INIT,
+    )
+
+    def change_status(self, status: str):
+        if self.verify_status == self.PENDING and status == self.VERIFIED:
+            self.verify_status = self.INIT
+            self.level += 1
+        else:
+            self.verify_status = status
+
+        self.save()
+
+    @property
+    def primary_data_verified(self):
+        return self.first_name and self.first_name_verified and self.last_name and self.last_name_verified and \
+            self.birth_date and self.birth_date_verified
 
     @classmethod
     def get_user_from_login(cls, email_or_phone: str) -> 'User':

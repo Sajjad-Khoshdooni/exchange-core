@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 
-from .models import User, Account, BasicAccountInfo, Notification
+from .models import User, Account, Notification, FinotechRequest
 
 
 @admin.register(User)
@@ -11,13 +11,13 @@ class CustomUserAdmin(UserAdmin):
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'email')}),
         (_('Permissions'), {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'verification', 'groups', 'user_permissions'),
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'level', 'verify_status', 'groups', 'user_permissions'),
         }),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
     )
 
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'verification')
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', 'verification')
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'level')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', 'level', 'verify_status')
 
 
 @admin.register(Account)
@@ -25,9 +25,9 @@ class AccountAdmin(admin.ModelAdmin):
     list_display = ('user', 'type')
 
 
-@admin.register(BasicAccountInfo)
-class BasicAccountInfoAdmin(admin.ModelAdmin):
-    list_display = ('user', 'status', 'national_card_code', 'verifier_code')
+@admin.register(FinotechRequest)
+class FinotechRequestAdmin(admin.ModelAdmin):
+    list_display = ('url', 'data', 'status_code')
 
 
 @admin.register(Notification)

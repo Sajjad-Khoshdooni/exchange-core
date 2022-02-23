@@ -1,7 +1,6 @@
 from django.db import models
 from rest_framework import serializers
 
-from accounts.models import User
 from financial.validators import iban_validator, bank_card_pan_validator
 
 
@@ -9,7 +8,7 @@ class BankCard(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
-    user = models.ForeignKey(to=User, on_delete=models.PROTECT)
+    user = models.ForeignKey(to='accounts.User', on_delete=models.PROTECT)
 
     card_pan = models.CharField(
         verbose_name='شماره کارت',
@@ -18,7 +17,7 @@ class BankCard(models.Model):
         unique=True,
     )
 
-    verified = models.BooleanField(default=False)
+    verified = models.BooleanField(null=True, blank=True)
 
     def __str__(self):
         return self.card_pan
@@ -29,10 +28,12 @@ class BankCard(models.Model):
 
 
 class BankAccount(models.Model):
+    ACTIVE, DEPOSITABLE_SUSPENDED, NON_DEPOSITABLE_SUSPENDED, STAGNANT = 'active', 'suspend', 'nsuspend', 'stagnant'
+
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
-    user = models.ForeignKey(to=User, on_delete=models.PROTECT)
+    user = models.ForeignKey(to='accounts.User', on_delete=models.PROTECT)
 
     iban = models.CharField(
         max_length=26,
@@ -41,7 +42,22 @@ class BankAccount(models.Model):
         verbose_name='شبا'
     )
 
-    verified = models.BooleanField(default=False)
+    bank_name= models.CharField(max_length=256, blank=True)
+    deposit_address = models.CharField(max_length=64, blank=True)
+    card_pan = models.CharField(max_length=20, blank=True)
+
+    deposit_status = models.CharField(
+        max_length=8,
+        blank=True,
+        choices=(
+            (ACTIVE, 'active'), (DEPOSITABLE_SUSPENDED, 'suspend'), (NON_DEPOSITABLE_SUSPENDED, 'nodep suspend'),
+            (STAGNANT, 'stagnant')
+        )
+    )
+
+    owners = models.JSONField(blank=True, null=True)
+
+    verified = models.BooleanField(null=True, blank=True)
 
     def __str__(self):
         return self.iban

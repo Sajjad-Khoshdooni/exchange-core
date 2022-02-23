@@ -1,20 +1,11 @@
-from django.db import transaction
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.viewsets import ModelViewSet
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+from rest_framework.viewsets import ModelViewSet
 
-from accounts.models import BasicAccountInfo
-from accounts.tasks import basic_verify_user
-from financial.validators import bank_card_pan_validator, iban_validator
+from accounts.models import User
 from financial.models.bank_card import BankCard, BankCardSerializer, BankAccountSerializer, BankAccount
-from multimedia.fields import ImageField
-
-
-class BankCardListSerializer(serializers.ListSerializer):
-    child = BankCardSerializer()
+from financial.validators import bank_card_pan_validator, iban_validator
 
 
 class CardPanField(serializers.CharField):
@@ -22,8 +13,8 @@ class CardPanField(serializers.CharField):
         if value:
             return BankCardSerializer(instance=value).data
 
-    def get_attribute(self, instance: BasicAccountInfo):
-        return BankCard.objects.filter(user=instance.user).order_by('-verified', 'id').first()
+    def get_attribute(self, user: User):
+        return BankCard.objects.filter(user=user).order_by('-verified', 'id').first()
 
 
 class IbanField(serializers.CharField):
@@ -31,35 +22,31 @@ class IbanField(serializers.CharField):
         if value:
             return BankAccountSerializer(instance=value).data
 
-    def get_attribute(self, instance: BasicAccountInfo):
-        return BankAccount.objects.filter(user=instance.user).order_by('-verified', 'id').first()
+    def get_attribute(self, user: User):
+        return BankAccount.objects.filter(user=user).order_by('-verified', 'id').first()
 
 
 class BasicInfoSerializer(serializers.ModelSerializer):
-    first_name = serializers.CharField(source='user.first_name')
-    last_name = serializers.CharField(source='user.last_name')
-    national_code = serializers.CharField(source='user.national_code')
     card_pan = CardPanField(validators=[bank_card_pan_validator])
     iban = IbanField(validators=[iban_validator])
 
-    national_code_verified = serializers.CharField(source='user.national_code_verified', read_only=True)
-
-    def save(self, user):
-        instance = self.instance
-
-        if instance and instance.status in (BasicAccountInfo.PENDING, BasicAccountInfo.VERIFIED):
+    def update(self, user, validated_data):
+        if user and user.verify_status in (User.PENDING, User.VERIFIED):
             raise ValidationError('امکان تغییر اطلاعات وجود ندارد.')
 
-        # date_delta = timezone.now().date() - self.validated_data['birth_date']
-        # age = date_delta.days / 365
-        #
-        # if age < 18:
-        #     raise ValidationError('سن باید بالای ۱۸ سال باشد.')
-        # elif age > 120:
-        #     raise ValidationError('تاریخ تولد نامعتبر است.')
+        if user.level > User.LEVEL1:
+            raise ValidationError('کاربر تایید شده است.')
 
-        card_pan = self.validated_data.pop('card_pan')
-        iban = self.validated_data.pop('iban')
+        date_delta = timezone.now().date() - validated_data['birth_date']
+        age = date_delta.days / 365
+
+        if age < 18:
+            raise ValidationError('سن باید بالای ۱۸ سال باشد.')
+        elif age > 120:
+            raise ValidationError('تاریخ تولد نامعتبر است.')
+
+        card_pan = validated_data.pop('card_pan')
+        iban = validated_data.pop('iban')
 
         bank_card = BankCard.objects.filter(user=user, card_pan=card_pan).first()
         bank_account = BankAccount.objects.filter(user=user, iban=iban).first()
@@ -80,42 +67,49 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             BankAccount.objects.filter(user=user).delete()
             BankAccount.objects.create(user=user, iban=iban)
 
-        with transaction.atomic():
-            if not user.national_code_verified:
-                user.national_code = self.validated_data['user']['national_code']
+        if not user.national_code_verified:
+            user.national_code = validated_data['national_code']
+            user.national_code_verified = None
 
-            user.first_name = self.validated_data['user']['first_name']
-            user.last_name = self.validated_data['user']['last_name']
-            user.save()
+        if not user.first_name_verified:
+            user.first_name = validated_data['first_name']
+            user.first_name_verified = None
+            
+        if not user.last_name_verified:
+            user.last_name = validated_data['last_name']
+            user.last_name_verified = None
+            
+        if not user.birth_date_verified:
+            user.birth_date = validated_data['birth_date']
+            user.birth_date_verified = None
 
-            instance = super().save(user=user, status=BasicAccountInfo.PENDING)
+        user.change_status(User.PENDING)
 
-            basic_verify_user.s(user.id).apply_async(countdown=60)
+        from accounts.tasks import basic_verify_user
+        # basic_verify_user.s(user.id).apply_async(countdown=60)
+        basic_verify_user(user.id)
 
-        return instance
-
-    @property
-    def data(self):
-        d = super(BasicInfoSerializer, self).data
-
-        if 'status' not in d:
-            d['status'] = BasicAccountInfo.INIT
-
-        return d
+        return user
 
     class Meta:
-        model = BasicAccountInfo
-        fields = ('status', 'first_name', 'last_name', 'national_code', 'card_pan', 'iban')
-
-        read_only_fields = ('status', )
+        model = User
+        fields = (
+            'verify_status', 'first_name', 'last_name', 'birth_date', 'national_code', 'card_pan', 'iban',
+            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified'
+        )
+        read_only_fields = (
+            'verify_status', 'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified'
+        )
+        extra_kwargs = {
+            'first_name': {'required': True},
+            'last_name': {'required': True},
+            'national_code': {'required': True},
+            'birth_date': {'required': True},
+        }
 
 
 class BasicInfoVerificationViewSet(ModelViewSet):
     serializer_class = BasicInfoSerializer
 
     def get_object(self):
-        user = self.request.user
-        return BasicAccountInfo.objects.filter(user=user).first()
-
-    def perform_update(self, serializer):
-        serializer.save(user=self.request.user)
+        return self.request.user
