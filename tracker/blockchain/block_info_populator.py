@@ -60,8 +60,8 @@ class Web3BlockInfoPopulator(BlockInfoPopulator):
                 transaction_info = self.web3.eth.get_transaction_receipt(transfer.trx_hash)
             except Web3TransactionNotFound:
                 continue
-            transfer.block_number = transaction_info['blockNumber']
-            transfer.block_hash = transaction_info['blockHash']
+            transfer.block_number = transaction_info['blockNumber'].decode()
+            transfer.block_hash = transaction_info['blockHash'].decode()
             transfer.save()
 
 
