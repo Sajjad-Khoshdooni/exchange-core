@@ -12,7 +12,7 @@ class PriceManager:
             from ledger.utils.price import get_prices_dict
             from ledger.models import Asset
             self._default_prices = get_prices_dict(
-                coins=list(Asset.objects.values_list('symbol', flat=True)),
+                coins=list(Asset.live_objects.values_list('symbol', flat=True)),
                 side=side
             )
 

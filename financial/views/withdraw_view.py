@@ -1,3 +1,4 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -69,6 +70,9 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
 class WithdrawHistoryView(ListAPIView):
     serializer_class = WithdrawHistorySerializer
     pagination_class = LimitOffsetPagination
+
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['status']
 
     def get_queryset(self):
         return FiatWithdrawRequest.objects.filter(bank_account__user=self.request.user).order_by('-created')

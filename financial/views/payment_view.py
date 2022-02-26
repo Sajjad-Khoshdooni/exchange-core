@@ -1,3 +1,4 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404, ListAPIView
@@ -57,6 +58,9 @@ class PaymentHistorySerializer(serializers.ModelSerializer):
 class PaymentHistoryView(ListAPIView):
     serializer_class = PaymentHistorySerializer
     pagination_class = LimitOffsetPagination
+
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['status']
 
     def get_queryset(self):
         return Payment.objects.filter(payment_request__bank_card__user=self.request.user).order_by('-created')
