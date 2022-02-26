@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.db import models
 
+from accounts.models import Account
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.crypto_account_balance_getter import CryptoAccountBalanceGetterFactory
 from ledger.utils.fields import get_amount_field
@@ -54,7 +55,13 @@ class CryptoBalance(models.Model):
             'BSC': '0x4b6c77358c69ed0a3af7c1a1131560432b824d69'
         }
 
-        for crypto in CryptoBalance.objects.filter(amount__gt=0):
+        all_crypto = CryptoBalance.objects.filter(
+            amount__gt=0
+        ).exclude(
+            deposit_address__account_secret__account=Account.system()
+        )
+
+        for crypto in all_crypto:
             value = crypto.amount * get_trading_price_usdt(coin=crypto.asset.symbol, side=BUY, raw_price=True)
 
             fee_amount = FeeHandler(crypto.deposit_address.network, crypto.asset).get_asset_fee()
