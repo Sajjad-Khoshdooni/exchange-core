@@ -84,5 +84,5 @@ class FiatWithdrawRequest(models.Model):
         return '%s %s' % (self.bank_account, self.amount)
 
     class Meta:
-        verbose_name = 'درخواست انتقال'
-        verbose_name_plural = 'درخواست‌های انتقال'
+        verbose_name = 'درخواست برداشت'
+        verbose_name_plural = 'درخواست‌های برداشت'
