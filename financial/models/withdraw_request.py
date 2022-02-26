@@ -4,7 +4,7 @@ from django.db import models, transaction
 from accounts.models import Account
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
-from ledger.utils.fields import get_status_field, DONE, get_group_id_field, get_lock_field
+from ledger.utils.fields import get_status_field, DONE, get_group_id_field, get_lock_field, PENDING
 
 
 class FiatWithdrawRequest(models.Model):
@@ -61,16 +61,19 @@ class FiatWithdrawRequest(models.Model):
 
     def save(self, *args, **kwargs):
         old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
+        old_status = old and old.status
 
-        if old and old.status == DONE and self.status != DONE:
+        if old and old_status != PENDING and self.status == PENDING:
             return
 
         with transaction.atomic():
             super().save(*args, **kwargs)
 
             if (not old or old.status != DONE) and self.status == DONE:
-                self.lock.release()
                 self.build_trx()
+
+            if self.status != PENDING:
+                self.lock.release()
 
     def __str__(self):
         return '%s %s' % (self.bank_account, self.amount)

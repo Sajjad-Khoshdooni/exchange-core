@@ -29,7 +29,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         if not bank_account.verified:
             raise ValidationError({'iban': 'شماره حساب تایید نشده است.'})
 
-        if amount < 15000:
+        if amount < MIN_WITHDRAW:
             raise ValidationError({'iban': 'مقدار وارد شده کمتر از حد مجاز است.'})
 
         asset = Asset.get(Asset.IRT)
@@ -68,7 +68,6 @@ class WithdrawRequestView(CreateAPIView):
 
 
 class WithdrawHistorySerializer(serializers.ModelSerializer):
-    amount = serializers.IntegerField(source='payment_request.amount')
     bank_account = BankAccountSerializer()
 
     class Meta:
