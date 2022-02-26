@@ -156,8 +156,6 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 class AssetRetrieveSerializer(AssetListSerializer):
 
     networks = serializers.SerializerMethodField()
-    withdraws = serializers.SerializerMethodField()
-    deposits = serializers.SerializerMethodField()
 
     def get_networks(self, asset: Asset):
         network_assets = asset.networkasset_set.all()
@@ -175,33 +173,6 @@ class AssetRetrieveSerializer(AssetListSerializer):
         })
 
         return serializer.data
-
-    def get_deposits(self, asset: Asset):
-        wallet = self.get_wallet(asset)
-
-        if not wallet:
-            return []
-
-        deposits = Transfer.objects.filter(
-            wallet__account=wallet.account,
-            deposit=True,
-            status=Transfer.DONE
-        ).order_by('-created')[:10]
-
-        return TransferSerializer(instance=deposits, many=True).data
-
-    def get_withdraws(self, asset: Asset):
-        wallet = self.get_wallet(asset)
-
-        if not wallet:
-            return []
-
-        withdraws = Transfer.objects.filter(
-            wallet__account=wallet.account,
-            deposit=False
-        ).order_by('-created')[:10]
-
-        return TransferSerializer(instance=withdraws, many=True).data
 
     class Meta(AssetListSerializer.Meta):
         fields = (*AssetListSerializer.Meta.fields, 'networks', 'deposits', 'withdraws')

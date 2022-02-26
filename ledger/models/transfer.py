@@ -52,6 +52,8 @@ class Transfer(models.Model):
                                              blank=True)
     handling = models.BooleanField(default=False)
 
+    hidden = models.BooleanField(default=False)
+
     @property
     def asset(self):
         return self.wallet.asset

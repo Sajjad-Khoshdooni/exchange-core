@@ -18,7 +18,8 @@ class WithdrawHistoryView(ListAPIView):
 
         queryset = Transfer.objects.filter(
             wallet__account=self.request.user.account,
-            deposit=False
+            deposit=False,
+            hidden=False,
         ).order_by('-created')
 
         if 'coin' in query_params:
@@ -34,6 +35,7 @@ class DepositHistoryView(WithdrawHistoryView):
         queryset = Transfer.objects.filter(
             wallet__account=self.request.user.account,
             deposit=True,
+            hidden=False,
             status=Transfer.DONE
         ).order_by('-created')
 
