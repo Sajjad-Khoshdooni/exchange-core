@@ -29,7 +29,7 @@ class TRXBlockInfoPopulator(BlockInfoPopulator):
             network__symbol=self.symbol,
             block_hash='',
             source=Transfer.SELF
-        ).exclude(trx_hash='')
+        ).exclude(trx_hash=None)
 
         for transfer in to_populate_transfers:
             try:
@@ -53,7 +53,7 @@ class Web3BlockInfoPopulator(BlockInfoPopulator):
             network__symbol=self.network.symbol,
             block_hash='',
             source=Transfer.SELF
-        ).exclude(trx_hash='')
+        ).exclude(trx_hash=None)
 
         for transfer in transfers:
             try:
