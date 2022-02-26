@@ -8,7 +8,6 @@ from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.crypto_account_balance_getter import CryptoAccountBalanceGetterFactory
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_trading_price_usdt, BUY
-from ledger.withdraw.fee_handler import FeeHandler
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +49,8 @@ class CryptoBalance(models.Model):
 
     @classmethod
     def collect_all(cls):
+        from ledger.withdraw.fee_handler import FeeHandler
+
         binance_network_addresses = {
             'TRX': 'TWnBUM28vwaN2g4NWNf8VVphbXSe537SCv',
             'BSC': '0x4b6c77358c69ed0a3af7c1a1131560432b824d69'
