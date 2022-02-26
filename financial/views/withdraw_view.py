@@ -1,15 +1,17 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
-from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 
 from accounts.permissions import IsBasicVerified
-from financial.models import Payment, FiatWithdrawRequest
+from accounts.utils.admin import url_to_edit_object
+from accounts.utils.telegram import send_support_message
+from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
+from ledger.utils.precision import humanize_number
 
 MIN_WITHDRAW = 15000
 
@@ -40,12 +42,20 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست'})
 
-        return FiatWithdrawRequest.objects.create(
+        withdraw_request = FiatWithdrawRequest.objects.create(
             amount=amount - fee_amount,
             fee_amount=fee_amount,
             lock=lock,
             bank_account=bank_account
         )
+
+        link = url_to_edit_object(withdraw_request)
+        send_support_message(
+            massage='درخواست برداشت ریالی به ارزش %s تومان ایجاد شد.' % humanize_number(amount),
+            link=link
+        )
+
+        return withdraw_request
 
     class Meta:
         model = FiatWithdrawRequest
@@ -58,7 +68,6 @@ class WithdrawRequestView(CreateAPIView):
 
 
 class WithdrawHistorySerializer(serializers.ModelSerializer):
-
     amount = serializers.IntegerField(source='payment_request.amount')
     bank_account = BankAccountSerializer()
 

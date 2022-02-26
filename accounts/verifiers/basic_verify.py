@@ -1,7 +1,7 @@
 import logging
 
 from accounts.models import User
-from accounts.similarity import str_similar_rate
+from accounts.utils.similarity import str_similar_rate
 from accounts.verifiers.finotech import FinotechRequester
 from financial.models import BankCard, BankAccount
 

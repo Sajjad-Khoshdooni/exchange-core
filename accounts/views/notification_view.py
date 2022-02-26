@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from accounts.models.notification import Notification
-from accounts.utils import parse_positive_int
+from accounts.utils.validation import parse_positive_int
 
 
 class NotificationSerializer(serializers.ModelSerializer):

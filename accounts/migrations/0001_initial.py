@@ -6,7 +6,6 @@ import accounts.validators
 import django.contrib.auth.validators
 import django.core.validators
 from django.db import migrations, models
-import django.db.models.deletion
 import django.utils.timezone
 import uuid
 
@@ -54,9 +53,9 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('expiration', models.DateTimeField(default=accounts.utils.fifteen_minutes_later_datetime)),
+                ('expiration', models.DateTimeField(default=accounts.utils.validation.fifteen_minutes_later_datetime)),
                 ('phone', models.CharField(db_index=True, max_length=16, validators=[accounts.validators.mobile_number_validator], verbose_name='شماره تماس')),
-                ('code', models.CharField(db_index=True, default=accounts.utils.generate_random_code, max_length=6, validators=[django.core.validators.RegexValidator('^\\d{6}$')])),
+                ('code', models.CharField(db_index=True, default=accounts.utils.validation.generate_random_code, max_length=6, validators=[django.core.validators.RegexValidator('^\\d{6}$')])),
                 ('code_used', models.BooleanField(default=False)),
                 ('token_used', models.BooleanField(default=False)),
                 ('token', models.UUIDField(db_index=True, default=uuid.uuid4, unique=True)),

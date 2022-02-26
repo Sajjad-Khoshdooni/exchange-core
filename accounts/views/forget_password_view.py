@@ -11,7 +11,7 @@ from rest_framework.generics import CreateAPIView
 from accounts import codes
 from accounts.models import User
 from accounts.models.phone_verification import VerificationCode
-from accounts.utils import is_phone
+from accounts.utils.validation import is_phone
 from accounts.validators import mobile_number_validator, RegexValidator, password_validator
 
 

@@ -5,7 +5,7 @@ import requests
 from yekta_config import secret
 
 from accounts.models import FinotechRequest
-from accounts.utils import gregorian_to_jalali_date
+from accounts.utils.validation import gregorian_to_jalali_date
 from django.core.cache import caches
 
 logger = logging.getLogger(__name__)
