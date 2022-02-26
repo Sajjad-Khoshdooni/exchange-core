@@ -19,7 +19,8 @@ class FiatWithdrawRequest(models.Model):
     status = get_status_field()
     lock = get_lock_field()
 
-    ref_id = models.CharField(max_length=128, blank=True)
+    ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
+    ref_doc = models.FileField(verbose_name='رسید انتقال', null=True, blank=True)
 
     @property
     def total_amount(self):
@@ -52,18 +53,22 @@ class FiatWithdrawRequest(models.Model):
 
     def clean(self):
         old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
+        old_status = old and old.status
 
-        if old and old.status == DONE and self.status != DONE:
-            raise ValidationError('Cant change status')
+        if old and old_status != PENDING and self.status == old_status:
+            raise ValidationError('امکان تغییر وضعیت وجود ندارد.')
 
         if self.status == DONE and not self.ref_id:
-            raise ValidationError('ref_id cant be empty')
+            raise ValidationError('شماره پیگیری خالی است.')
+
+        if self.status == DONE and not self.ref_id:
+            raise ValidationError('رسید انتقال خالی است.')
 
     def save(self, *args, **kwargs):
         old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
         old_status = old and old.status
 
-        if old and old_status != PENDING and self.status == PENDING:
+        if old and old_status != PENDING and self.status != old_status:
             return
 
         with transaction.atomic():
@@ -77,3 +82,7 @@ class FiatWithdrawRequest(models.Model):
 
     def __str__(self):
         return '%s %s' % (self.bank_account, self.amount)
+
+    class Meta:
+        verbose_name = 'درخواست انتقال'
+        verbose_name_plural = 'درخواست‌های انتقال'
