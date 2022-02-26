@@ -3,9 +3,7 @@ from decimal import Decimal
 from django.db import models
 
 from ledger.crypto_account_balance_getter import CryptoAccountBalanceGetterFactory
-from ledger.models import Transfer
 from ledger.utils.fields import get_amount_field
-from ledger.withdraw.withdraw_handler import WithdrawHandler
 
 
 class CryptoBalance(models.Model):
@@ -25,6 +23,9 @@ class CryptoBalance(models.Model):
         self.save()
 
     def send_to(self, address: str, amount: Decimal):
+        from ledger.models import Transfer
+        from ledger.withdraw.withdraw_handler import WithdrawHandler
+
         wallet = self.asset.get_wallet(self.deposit_address.account)
 
         transfer = Transfer.objects.create(
