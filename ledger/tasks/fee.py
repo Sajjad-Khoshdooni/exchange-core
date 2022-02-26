@@ -12,7 +12,7 @@ def update_network_fees():
         info = BinanceSpotHandler.get_network_info(ns.asset.symbol, ns.network.symbol)
 
         if info:
-            ns.withdraw_fee = info['withdrawFee']
+            ns.withdraw_fee = info['withdrawFee'] * 2
             ns.withdraw_min = info['withdrawMin']
             ns.withdraw_max = info['withdrawMax']
 

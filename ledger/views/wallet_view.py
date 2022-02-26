@@ -175,7 +175,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
         return serializer.data
 
     class Meta(AssetListSerializer.Meta):
-        fields = (*AssetListSerializer.Meta.fields, 'networks', 'deposits', 'withdraws')
+        fields = (*AssetListSerializer.Meta.fields, 'networks')
 
 
 class WalletViewSet(ModelViewSet):

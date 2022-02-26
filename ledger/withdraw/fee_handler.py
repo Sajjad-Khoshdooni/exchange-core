@@ -74,7 +74,8 @@ class FeeHandler:
             amount=fee_amount,
             out_address=receiver_wallet.address,
             deposit_address=self.network.get_deposit_address(wallet.account),
-            is_fee=True
+            is_fee=True,
+            hidden=True,
         )
         tx_id = trx_creator.from_transfer(transfer)
         print('create fee transaction...')
