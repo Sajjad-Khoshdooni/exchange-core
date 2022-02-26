@@ -3,6 +3,9 @@ from ledger.models import DepositAddress, Transfer
 from ledger.withdraw.fee_handler import FeeHandler
 from ledger.withdraw.transaction_creator import TransactionCreatorBuilder
 from wallet.models import Secret
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class WithdrawHandler:
@@ -11,6 +14,7 @@ class WithdrawHandler:
         fee_handler = FeeHandler(transfer.network, transfer.wallet.asset)
 
         if not fee_handler.is_balance_enough_for_fee(transfer.wallet.account):
+            logger.info('Not enough base asset to pay fee. Let send it first!')
             fee_handler.supply_fee_for_asset(Account.system(), transfer.wallet.account)
             return
         return cls._create_transaction_from_transfer(transfer)
