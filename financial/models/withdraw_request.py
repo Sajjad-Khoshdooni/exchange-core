@@ -68,7 +68,7 @@ class FiatWithdrawRequest(models.Model):
         old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
         old_status = old and old.status
 
-        if old and old_status != PENDING and self.status != old_status:
+        if old and old_status != PENDING:
             return
 
         with transaction.atomic():
