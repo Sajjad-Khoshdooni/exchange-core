@@ -61,7 +61,7 @@ class Web3BlockInfoPopulator(BlockInfoPopulator):
             except Web3TransactionNotFound:
                 continue
             transfer.block_number = transaction_info['blockNumber']
-            transfer.block_hash = transaction_info['blockHash'].decode()
+            transfer.block_hash = transaction_info['blockHash'].hex()
             transfer.save()
 
 
