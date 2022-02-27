@@ -48,6 +48,12 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         card_pan = validated_data.pop('card_pan')
         iban = validated_data.pop('iban')
 
+        if BankCard.objects.filter(card_pan=card_pan, verified=True).exclude(user=user).exists():
+            raise ValidationError('این شماره کارت قبلا ثبت شده است.')
+
+        if BankAccount.objects.filter(iban=iban, verified=True).exclude(user=user).exists():
+            raise ValidationError('این شماره شبا قبلا ثبت شده است.')
+
         bank_card = BankCard.objects.filter(user=user, card_pan=card_pan).first()
         bank_account = BankAccount.objects.filter(user=user, iban=iban).first()
 
