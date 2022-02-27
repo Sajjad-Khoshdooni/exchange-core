@@ -1,4 +1,5 @@
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.viewsets import ModelViewSet
 
@@ -15,3 +16,12 @@ class BankAccountView(ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    def perform_destroy(self, bank_account: BankAccount):
+        if bank_account.verified is None:
+            raise ValidationError('شماره شبا در حال اعتبارسنجی است.')
+
+        if bank_account.verified and BankAccount.objects.filter(user=bank_account.user, verified=True).count() == 1:
+            raise ValidationError('تنها شماره شبا تایید شده‌تان را نمی‌توانید حذف کنید.')
+
+        return super().perform_destroy(bank_account)

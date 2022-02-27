@@ -89,6 +89,14 @@ class BankCardSerializer(serializers.ModelSerializer):
         fields = ('id', 'card_pan', 'verified')
         read_only_fields = ('verified', )
 
+    def create(self, validated_data: dict):
+        bank_card = super().create(validated_data)
+
+        from financial.tasks.verify import verify_bank_card_task
+        verify_bank_card_task.delay(bank_card.id)
+
+        return bank_card
+
 
 class BankAccountSerializer(serializers.ModelSerializer):
 
@@ -96,3 +104,12 @@ class BankAccountSerializer(serializers.ModelSerializer):
         model = BankAccount
         fields = ('id', 'iban', 'verified')
         read_only_fields = ('verified', )
+
+    def create(self, validated_data: dict):
+        bank_card = super().create(validated_data)
+
+        from financial.tasks.verify import verify_bank_card_task
+        verify_bank_card_task.delay(bank_card.id)
+
+        return bank_card
+
