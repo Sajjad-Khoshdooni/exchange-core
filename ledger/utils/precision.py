@@ -34,11 +34,14 @@ def precision_to_step(precision: int) -> Decimal:
         return Decimal('0.' + '0' * (precision - 1) + '1')
 
 
-def get_presentation_amount(amount: Decimal, precision: int) -> str:
+def get_presentation_amount(amount: Decimal, precision: int = None) -> str:
     if not isinstance(amount, Decimal):
         amount = Decimal(amount)
 
-    rounded = format(floor_precision(amount, precision), 'f')
+    if precision is not None:
+        amount = floor_precision(amount, precision)
+
+    rounded = format(amount, 'f')
 
     if '.' not in rounded:
         return rounded
