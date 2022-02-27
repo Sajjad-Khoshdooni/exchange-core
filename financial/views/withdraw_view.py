@@ -35,7 +35,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         asset = Asset.get(Asset.IRT)
         wallet = asset.get_wallet(user.account)
 
-        fee_amount = min(4000, int(amount * 0.01))
+        # fee_amount = min(4000, int(amount * 0.01))
+        fee_amount = 5000
 
         try:
             lock = wallet.lock_balance(amount)
