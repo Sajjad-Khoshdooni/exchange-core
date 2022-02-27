@@ -14,6 +14,9 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
     withdraw_fee = serializers.SerializerMethodField()
     withdraw_min = serializers.SerializerMethodField()
 
+    def get_coin(self, network_asset: NetworkAsset):
+        return network_asset.asset.symbol
+
     def get_network(self, network_asset: NetworkAsset):
         return network_asset.network.symbol
 
