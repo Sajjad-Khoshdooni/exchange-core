@@ -11,9 +11,17 @@ urlpatterns = [
         'get': 'list',
         'post': 'create'
     })),
+    path('cards/<int:pk>/', BankCardView.as_view({
+        'get': 'retrieve',
+        'delete': 'destroy'
+    })),
     path('accounts/', BankAccountView.as_view({
         'get': 'list',
         'post': 'create'
+    })),
+    path('accounts/<int:pk>/', BankAccountView.as_view({
+        'get': 'retrieve',
+        'delete': 'destroy'
     })),
     path('withdraw/request/', WithdrawRequestView.as_view()),
     path('withdraw/list/', WithdrawHistoryView.as_view()),

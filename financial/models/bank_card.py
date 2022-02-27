@@ -86,7 +86,7 @@ class BankCardSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BankCard
-        fields = ('card_pan', 'verified')
+        fields = ('id', 'card_pan', 'verified')
         read_only_fields = ('verified', )
 
 
@@ -94,5 +94,5 @@ class BankAccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BankAccount
-        fields = ('iban', 'verified')
+        fields = ('id', 'iban', 'verified')
         read_only_fields = ('verified', )
