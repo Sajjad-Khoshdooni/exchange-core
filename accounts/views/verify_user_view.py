@@ -100,7 +100,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'verify_status', 'first_name', 'last_name', 'birth_date', 'national_code', 'card_pan', 'iban',
+            'verify_status', 'level', 'first_name', 'last_name', 'birth_date', 'national_code', 'card_pan', 'iban',
             'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified'
         )
         read_only_fields = (

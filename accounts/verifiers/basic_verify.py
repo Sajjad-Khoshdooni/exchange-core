@@ -92,7 +92,7 @@ def verify_user_primary_info(user: User) -> bool:
     user.last_name_verified = data['lastNameSimilarity'] >= 95
     user.save()
 
-    if not user.first_name_verified or user.last_name_verified:
+    if not user.first_name_verified or not user.last_name_verified:
         user.change_status(User.REJECTED)
         return False
 
