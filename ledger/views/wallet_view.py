@@ -6,6 +6,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Wallet, DepositAddress, Transfer, NetworkAsset
 from ledger.models.asset import Asset
+from ledger.utils.precision import get_presentation_amount
 from ledger.utils.price import get_trading_price_irt, BUY, SELL, get_prices_dict
 from ledger.utils.price_manager import PriceManager
 from wallet.utils import get_presentation_address
@@ -139,10 +140,10 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return addresses.get(network_asset.network.symbol)
 
     def get_min_withdraw(self, network_asset: NetworkAsset):
-        return network_asset.asset.get_presentation_amount(network_asset.withdraw_min)
+        return get_presentation_amount(network_asset.withdraw_min)
 
     def get_withdraw_commission(self, network_asset: NetworkAsset):
-        return network_asset.asset.get_presentation_amount(network_asset.withdraw_fee)
+        return get_presentation_amount(network_asset.withdraw_fee)
 
     def get_withdraw_precision(self, network_asset: NetworkAsset):
         return network_asset.withdraw_precision
