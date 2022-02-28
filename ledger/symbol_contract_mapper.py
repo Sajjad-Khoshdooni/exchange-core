@@ -6,7 +6,7 @@ from ledger.consts import BEP20_SYMBOL_TO_SMART_CONTRACT, ERC20_SYMBOL_TO_SMART_
 class SymbolContractMapper:
     def __init__(self, symbol_to_contract_map: Dict[str, str]):
         self.symbol_to_contract_map = symbol_to_contract_map
-        self.contract_to_symbol_map = {v: k for k, v in symbol_to_contract_map.items()}
+        self.contract_to_symbol_map = {v.lower(): k for k, v in symbol_to_contract_map.items()}
 
     def get_symbol_of_contract(self, contract):
         return self.contract_to_symbol_map.get(contract)

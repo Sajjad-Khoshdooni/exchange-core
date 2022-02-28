@@ -15,7 +15,7 @@ BEP20_SYMBOL_TO_SMART_CONTRACT = {
     'BCH': '0x8ff795a6f4d97e7887c79bea79aba5cc76444adf', 'XRP': '0x1d2f0da169ceb9fc7b3144628db156f3f6c60dbe',
     'EOS': '0x56b6fb708fc5732dec1afc8d8556423a2edccbd6', 'LTC': '0x4338665cbb7b2485a8855a139b75d5e34ab0db94',
     'TRX': '0x85eac5ac2f758618dfa09bdbe0cf174e7d574d5b', 'ETC': '0x3d6545b08693dae087e957cb1180ee38b9e3c25e',
-    'XLM': '0x43C934A845205F0b514417d757d7235B8f53f1B9', 'DOT': '0x7083609fce4d1d8dc0c979aab8c869ea2c873402',
+    'XLM': '0x43c934a845205f0b514417d757d7235b8f53f1b9', 'DOT': '0x7083609fce4d1d8dc0c979aab8c869ea2c873402',
     'ZEC': '0x1ba42e5193dfa8b03d15dd1b86a3113bbbef8eeb', 'XTZ': '0x16939ef78684453bfdfb47825f8a5f714f12623a',
     'ATOM': '0x0eb3a705fc54725037cc9e008bdede697f62f335', 'BAT': '0x101d82428437127bf1608f699cd651e6abf9766e',
     'ZIL': '0xb86abcb37c3a4b64f74f59301aff131a1becc787', 'COMP': '0x52ce071bd9b1c4b00a0b92d298c512478cad67e8',
@@ -28,9 +28,9 @@ BEP20_SYMBOL_TO_SMART_CONTRACT = {
     'DODO': '0x67ee3cb086f8a16f34bee3ca72fad36f7db929e2', 'ALICE': '0xac51066d7bec65dc4589368da368b212745d63e8',
     'REEF': '0xf21768ccbc73ea5b6fd3c687208a7c2def2d966e', 'CELR': '0x1f9f6a696c6fd109cd3956f45dc709d2b3902163',
     'GALA': '0x7ddee176f665cd201f93eede625770e2fd911990',
-
+}
     # ---------------------------------------------------------------------------------------------------------
-
+BEP20_TMP = {
     'WBNB': '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', 'USDC': '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
     'BUSD': '0xe9e7cea3dedca5984780bafc599bd69add087d56', 'UST': '0x23396cf899ca06c4472205fc903bdb4de249d6fc',
     'DAI': '0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3',
