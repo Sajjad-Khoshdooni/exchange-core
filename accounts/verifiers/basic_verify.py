@@ -100,6 +100,12 @@ def verify_user_primary_info(user: User) -> bool:
 
 
 def verify_bank_card(bank_card: BankCard) -> bool:
+    if BankCard.objects.filter(card_pan=bank_card.card_pan, verified=True).exclude(id=bank_card.id).exists():
+        logger.info('rejecting bank card because of duplication')
+        bank_card.verified = False
+        bank_card.save()
+        return False
+
     requester = FinotechRequester(bank_card.user)
 
     verified = requester.verify_card_pan_phone_number(bank_card.user.phone, bank_card.card_pan)
@@ -118,6 +124,12 @@ DEPOSIT_STATUS_MAP = {
 
 
 def verify_bank_account(bank_account: BankAccount) -> bool:
+    if BankAccount.objects.filter(iban=bank_account.iban, verified=True).exclude(id=bank_account.id).exists():
+        logger.info('rejecting bank account because of duplication')
+        bank_account.verified = False
+        bank_account.save()
+        return False
+
     requester = FinotechRequester(bank_account.user)
 
     data = requester.get_iban_info(bank_account.iban)
