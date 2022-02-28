@@ -3,6 +3,7 @@ from datetime import timedelta
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404, ListAPIView
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -156,6 +157,7 @@ class OTCTradeHistoryInputSerializer(serializers.Serializer):
 
 
 class OTCHistoryView(APIView):
+    pagination_class = LimitOffsetPagination
 
     def get(self, request: Request):
         serializer = OTCTradeHistoryInputSerializer(data=request.query_params)
