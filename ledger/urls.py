@@ -4,7 +4,7 @@ from ledger import views
 
 urlpatterns = [
     path('v1/assets/', views.AssetsViewSet.as_view({'get': 'list'})),
-    path('v1/netowrkassets/', views.NetworkAssetView.as_view()),
+    path('v1/networkassets/', views.NetworkAssetView.as_view()),
 
     path('v1/assets/<slug:symbol>/', views.AssetsViewSet.as_view({'get': 'retrieve'})),
 

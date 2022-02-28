@@ -11,8 +11,8 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
     coin = serializers.SerializerMethodField()
     network_name = serializers.SerializerMethodField()
 
-    withdraw_fee = serializers.SerializerMethodField()
-    withdraw_min = serializers.SerializerMethodField()
+    withdraw_commission = serializers.SerializerMethodField()
+    min_withdraw = serializers.SerializerMethodField()
 
     def get_coin(self, network_asset: NetworkAsset):
         return network_asset.asset.symbol
@@ -23,14 +23,14 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
     def get_network_name(self, network_asset: NetworkAsset):
         return network_asset.network.name
 
-    def get_withdraw_min(self, network_asset: NetworkAsset):
+    def get_min_withdraw(self, network_asset: NetworkAsset):
         return get_presentation_amount(network_asset.withdraw_min)
 
-    def get_withdraw_fee(self, network_asset: NetworkAsset):
+    def get_withdraw_commission(self, network_asset: NetworkAsset):
         return get_presentation_amount(network_asset.withdraw_fee)
 
     class Meta:
-        fields = ('coin', 'network', 'network_name', 'withdraw_fee', 'withdraw_min')
+        fields = ('coin', 'network', 'network_name', 'withdraw_commission', 'min_withdraw')
         model = NetworkAsset
 
 
