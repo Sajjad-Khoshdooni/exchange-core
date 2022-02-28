@@ -110,10 +110,10 @@ def verify_bank_card(bank_card: BankCard) -> bool:
 
 
 DEPOSIT_STATUS_MAP = {
-    '02': BankAccount.ACTIVE,
-    '03': BankAccount.DEPOSITABLE_SUSPENDED,
-    '04': BankAccount.NON_DEPOSITABLE_SUSPENDED,
-    '05': BankAccount.STAGNANT
+    2: BankAccount.ACTIVE,
+    3: BankAccount.DEPOSITABLE_SUSPENDED,
+    4: BankAccount.NON_DEPOSITABLE_SUSPENDED,
+    5: BankAccount.STAGNANT,
 }
 
 
@@ -130,7 +130,7 @@ def verify_bank_account(bank_account: BankAccount) -> bool:
     bank_account.bank_name = data['bankName']
     bank_account.deposit_address = data['deposit']
     bank_account.card_pan = data.get('card', '')
-    bank_account.deposit_status = DEPOSIT_STATUS_MAP[data['depositStatus']]
+    bank_account.deposit_status = DEPOSIT_STATUS_MAP.get(int(data['depositStatus']), '')
 
     owners = bank_account.owners = data['depositOwners']
 
