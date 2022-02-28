@@ -10,6 +10,8 @@ class FinotechRequest(models.Model):
         default=uuid.uuid4,
     )
 
+    search_key = models.CharField(max_length=128, db_index=True, null=True, blank=True)
+
     url = models.CharField(max_length=256)
     data = models.JSONField(blank=True, null=True)
     method = models.CharField(max_length=8)

@@ -2,6 +2,7 @@ import datetime
 import logging
 
 import requests
+from django.utils import timezone
 from yekta_config import secret
 
 from accounts.models import FinotechRequest
@@ -51,7 +52,18 @@ class FinotechRequester:
 
             return token
 
-    def collect_api(self, path: str, method: str = 'GET', data: dict = None, force_renew_token: bool = False) -> dict:
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, force_renew_token: bool = False,
+                    search_key: str = None) -> dict:
+
+        if search_key:
+            request = FinotechRequest.objects.filter(
+                created__gt=timezone.now() - datetime.timedelta(days=30),
+                search_key=search_key
+            ).order_by('-created').first()
+
+            if request:
+                return request.response['result']
+
         token = self._get_cc_token()
 
         if data is None:
@@ -75,7 +87,7 @@ class FinotechRequester:
             resp = method_prop(url, timeout=60, data=data, headers={'Authorization': 'Bearer ' + token})
 
         if not force_renew_token and resp.status_code == 403:
-            return self.collect_api(path, method, data, force_renew_token=True)
+            return self.collect_api(path, method, data, force_renew_token=True, search_key=search_key)
 
         resp_data = resp.json()
 
@@ -102,7 +114,8 @@ class FinotechRequester:
             data={
                 'mobile': phone_number,
                 'nationalCode': national_code
-            }
+            },
+            search_key='shahkar-%s-%s' % (national_code, phone_number)
         )
 
         return resp['isValid']
@@ -112,7 +125,8 @@ class FinotechRequester:
             path='/oak/v2/clients/{clientId}/ibanInquiry',
             data={
                 'iban': iban,
-            }
+            },
+            search_key='iban-%s' % iban
         )
 
         return resp
@@ -124,19 +138,23 @@ class FinotechRequester:
             data={
                 'mobile': phone_number,
                 'card': card_pan
-            }
+            },
+            search_key='mobcard-%s-%s' % (phone_number, card_pan)
         )
 
         return resp['isValid']
 
     def verify_basic_info(self, national_code: str, birth_date: datetime.date, first_name: str, last_name: str, ) -> dict:
+        jalali_date = gregorian_to_jalali_date(birth_date).strftime('%Y/%m/%d')
+
         resp = self.collect_api(
             path='/facility/v2/clients/{clientId}/users/%s/cc/nidVerification' % national_code,
             data={
-                'birthDate': gregorian_to_jalali_date(birth_date).strftime('%Y/%m/%d'),
+                'birthDate': jalali_date,
                 'firstName': first_name,
                 'lastName': last_name,
-            }
+            },
+            search_key='nid-%s-%s-%s-%s' % (national_code, jalali_date, first_name, last_name)
         )
 
         return resp
