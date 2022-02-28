@@ -156,23 +156,29 @@ class OTCTradeHistoryInputSerializer(serializers.Serializer):
     market = serializers.ChoiceField(choices=((Wallet.SPOT, Wallet.SPOT), (Wallet.MARGIN, Wallet.MARGIN),))
 
 
-class OTCHistoryView(APIView):
+class OTCHistoryView(ListAPIView):
     pagination_class = LimitOffsetPagination
 
-    def get(self, request: Request):
-        serializer = OTCTradeHistoryInputSerializer(data=request.query_params)
+    def get_queryset(self):
+        serializer = OTCTradeHistoryInputSerializer(data=self.request.query_params)
         serializer.is_valid(raise_exception=True)
 
         market = serializer.data['market']
 
-        trades = OTCTrade.objects.filter(
+        return OTCTrade.objects.filter(
             otc_request__account=self.request.user.account,
             otc_request__market=market
         ).order_by('-created')
 
+
+    def list(self, request: Request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+
         result = []
 
-        for trade in trades:
+        for trade in page:
             config = trade.otc_request.get_trade_config()
 
             result.append({
@@ -184,4 +190,4 @@ class OTCHistoryView(APIView):
                 'pair_amount': config.cash.get_presentation_amount(config.cash_amount)
             })
 
-        return Response(result)
+        return self.get_paginated_response(result)
