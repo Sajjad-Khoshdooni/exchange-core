@@ -4,7 +4,6 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
 
-from accounts.permissions import IsBasicVerified
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Network, Transfer, NetworkAsset
 from ledger.utils.laundering import check_withdraw_laundering
@@ -73,5 +72,4 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
 
 class WithdrawView(CreateAPIView):
-    permission_classes = (IsBasicVerified, )
     serializer_class = WithdrawSerializer

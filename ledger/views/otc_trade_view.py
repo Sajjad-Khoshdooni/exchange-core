@@ -170,7 +170,6 @@ class OTCHistoryView(ListAPIView):
             otc_request__market=market
         ).order_by('-created')
 
-
     def list(self, request: Request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
 

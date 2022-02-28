@@ -23,7 +23,7 @@ class TradeConfig:
 
 
 class OTCRequest(models.Model):
-    EXPIRE_TIME = 5
+    EXPIRE_TIME = 6
 
     created = models.DateTimeField(auto_now_add=True)
     token = models.UUIDField(default=secure_uuid4, db_index=True)
