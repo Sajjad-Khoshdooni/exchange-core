@@ -80,7 +80,6 @@ class TransferSerializer(serializers.ModelSerializer):
     link = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
     fee_amount = serializers.SerializerMethodField()
-    out_address = serializers.SerializerMethodField()
     network = serializers.SerializerMethodField()
     coin = serializers.SerializerMethodField()
 
@@ -92,9 +91,6 @@ class TransferSerializer(serializers.ModelSerializer):
 
     def get_fee_amount(self, transfer: Transfer):
         return transfer.wallet.asset.get_presentation_amount(transfer.fee_amount)
-
-    def get_out_address(self, transfer: Transfer):
-        return get_presentation_address(transfer.out_address, transfer.network.symbol)
 
     def get_coin(self, transfer: Transfer):
         return transfer.wallet.asset.symbol
