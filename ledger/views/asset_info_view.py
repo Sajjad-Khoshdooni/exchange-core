@@ -58,15 +58,12 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return self.context['cap_info'].get(asset.symbol)
 
     @classmethod
-    def create_serializer(cls,  prices: bool = True, detailed: bool = False):
+    def create_serializer(cls,  prices: bool = True):
         fields = AssetSerializerMini.Meta.fields
         new_fields = []
 
         if prices:
             new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h']
-
-        if detailed:
-            new_fields.append('description')
 
         class Serializer(cls):
             pass
@@ -103,11 +100,8 @@ class AssetsViewSet(ModelViewSet):
         return options[key]
 
     def get_serializer_class(self):
-        detailed = self.action == 'retrieve'
-
         return AssetSerializerBuilder.create_serializer(
             prices=self.get_options('prices'),
-            detailed=detailed
         )
 
     def get_queryset(self):

@@ -44,8 +44,6 @@ class Asset(models.Model):
     trend = models.BooleanField(default=False)
     pin_to_top = models.BooleanField(default=False)
 
-    description = models.TextField(blank=True)
-
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
 
