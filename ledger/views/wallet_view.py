@@ -87,7 +87,7 @@ class TransferSerializer(serializers.ModelSerializer):
         return transfer.get_explorer_link()
 
     def get_amount(self, transfer: Transfer):
-        return transfer.wallet.asset.get_presentation_amount(transfer.total_amount)
+        return transfer.wallet.asset.get_presentation_amount(transfer.total_amount - transfer.fee_amount)
 
     def get_fee_amount(self, transfer: Transfer):
         return transfer.wallet.asset.get_presentation_amount(transfer.fee_amount)
