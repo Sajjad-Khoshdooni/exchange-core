@@ -1,7 +1,7 @@
 import logging
 
 from accounts.models import User
-from accounts.utils.similarity import str_similar_rate
+from accounts.utils.similarity import str_similar_rate, clean_persian_name
 from accounts.verifiers.finotech import FinotechRequester
 from financial.models import BankCard, BankAccount
 
@@ -141,7 +141,8 @@ def verify_bank_account(bank_account: BankAccount) -> bool:
         owner = owners[0]
         owner_full_name = owner['firstName'] + ' ' + owner['lastName']
 
-        verified = str_similar_rate(owner_full_name, user.get_full_name()) > 0.8
+        verified = str_similar_rate(
+            clean_persian_name(owner_full_name), clean_persian_name(user.get_full_name())) >= 0.7
 
     bank_account.verified = verified
     bank_account.save()
