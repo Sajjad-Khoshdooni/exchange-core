@@ -72,9 +72,9 @@ class Transfer(models.Model):
         return self.network.explorer_link.format(hash=self.trx_hash)
 
     def build_trx(self):
-        if self.deposit and self.is_fee:
+        if self.hidden or (self.deposit and self.is_fee):
             logger.info(f'Creating Trx for transfer id: {self.id} ignored.')
-            return None
+            return
 
         asset = self.wallet.asset
         out_wallet = asset.get_wallet(Account.out())
