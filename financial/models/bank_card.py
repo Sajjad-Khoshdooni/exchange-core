@@ -123,10 +123,10 @@ class BankAccountSerializer(serializers.ModelSerializer):
         if BankAccount.objects.filter(Q(user=user) | Q(verified=True), iban=iban).exists():
             raise ValidationError('این شماره شما قبلا ثبت شده است.')
 
-        bank_card = super().create(validated_data)
+        bank_account = super().create(validated_data)
 
-        from financial.tasks.verify import verify_bank_card_task
-        verify_bank_card_task.delay(bank_card.id)
+        from financial.tasks.verify import verify_bank_account_task
+        verify_bank_account_task.delay(bank_account.id)
 
-        return bank_card
+        return bank_account
 
