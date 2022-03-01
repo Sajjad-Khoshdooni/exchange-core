@@ -18,6 +18,7 @@ class CustomUserAdmin(UserAdmin):
 
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'level')
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', 'level', 'verify_status')
+    ordering = ('-id', )
 
 
 @admin.register(Account)
