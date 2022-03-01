@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from celery import shared_task
 from django.conf import settings
@@ -9,9 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='sms')
-def send_verification_code_by_kavenegar(phone, code, created):
+def send_verification_code_by_kavenegar(phone: str, code: str):
     api_key = settings.KAVENEGAR_KEY
-    _date, _time = change_datetime_to_jalali(created).split(' ')
 
     try:
         api = KavenegarAPI(apikey=api_key)
@@ -20,7 +20,6 @@ def send_verification_code_by_kavenegar(phone, code, created):
             'template': 'verify',
             'type': 'sms',
             'token': code,
-            'token1': _date + ' - ' + _time
         }
 
         api.verify_lookup(params)

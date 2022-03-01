@@ -89,7 +89,6 @@ class VerificationCode(models.Model):
             send_verification_code_by_kavenegar(
                 phone=otp_code.phone,
                 code=otp_code.code,
-                created=otp_code.created,
             )
 
         return otp_code
