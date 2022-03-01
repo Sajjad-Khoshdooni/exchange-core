@@ -1,6 +1,7 @@
-from django.db import models
+from django.db import models, IntegrityError
 from django.db.models import UniqueConstraint, Q
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from financial.validators import iban_validator, bank_card_pan_validator
 
@@ -94,6 +95,12 @@ class BankCardSerializer(serializers.ModelSerializer):
         read_only_fields = ('verified', )
 
     def create(self, validated_data: dict):
+        user = validated_data['user']
+        card_pan = validated_data['card_pan']
+
+        if BankCard.objects.filter(Q(user=user) | Q(verified=True), card_pan=card_pan).exists():
+            raise ValidationError('این شماره کارت قبلا ثبت شده است.')
+
         bank_card = super().create(validated_data)
 
         from financial.tasks.verify import verify_bank_card_task
@@ -110,6 +117,12 @@ class BankAccountSerializer(serializers.ModelSerializer):
         read_only_fields = ('verified', )
 
     def create(self, validated_data: dict):
+        user = validated_data['user']
+        iban = validated_data['iban']
+
+        if BankAccount.objects.filter(Q(user=user) | Q(verified=True), iban=iban).exists():
+            raise ValidationError('این شماره شما قبلا ثبت شده است.')
+
         bank_card = super().create(validated_data)
 
         from financial.tasks.verify import verify_bank_card_task

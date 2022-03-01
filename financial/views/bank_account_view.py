@@ -22,6 +22,6 @@ class BankAccountView(ModelViewSet):
             raise ValidationError('شماره شبا در حال اعتبارسنجی است.')
 
         if bank_account.verified and BankAccount.objects.filter(user=bank_account.user, verified=True).count() == 1:
-            raise ValidationError('تنها شماره شبا تایید شده‌تان را نمی‌توانید حذف کنید.')
+            raise ValidationError('شما باید حداقل یک شماره شبا تایید شده داشته باشید.')
 
         return super().perform_destroy(bank_account)
