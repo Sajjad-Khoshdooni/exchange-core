@@ -65,7 +65,7 @@ def get_crypto_withdraw_irt_value(user: User):
 
     with PriceManager(coins=list(crypto_withdraws.keys())):
         for symbol, amount in crypto_withdraws.items():
-            crypto_amount += get_trading_price_irt(symbol, BUY, raw_price=True)
+            crypto_amount += get_trading_price_irt(symbol, BUY, raw_price=True) * amount
 
     return crypto_amount
 
