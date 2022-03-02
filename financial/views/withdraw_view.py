@@ -52,7 +52,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         link = url_to_edit_object(withdraw_request)
         send_support_message(
-            massage='درخواست برداشت ریالی به ارزش %s تومان ایجاد شد.' % humanize_number(amount),
+            message='درخواست برداشت ریالی به ارزش %s تومان ایجاد شد.' % humanize_number(amount),
             link=link
         )
 

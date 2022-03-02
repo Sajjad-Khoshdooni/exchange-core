@@ -21,7 +21,10 @@ class BankCard(models.Model):
     verified = models.BooleanField(null=True, blank=True)
 
     def __str__(self):
-        return self.card_pan
+        if len(self.card_pan) < 10:
+            return self.card_pan
+
+        return self.card_pan[:4] + '********' + self.card_pan[-4:]
 
     class Meta:
         verbose_name = 'کارت بانکی'
@@ -70,7 +73,7 @@ class BankAccount(models.Model):
     verified = models.BooleanField(null=True, blank=True)
 
     def __str__(self):
-        return self.iban
+        return self.iban[:6] + '********' + self.iban[-4:]
 
     class Meta:
         verbose_name = 'حساب بانکی'
