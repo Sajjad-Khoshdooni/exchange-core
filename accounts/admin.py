@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.admin import SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
@@ -6,6 +7,33 @@ from django.utils.translation import gettext_lazy as _
 from .models import User, Account, Notification, FinotechRequest
 from .tasks import basic_verify_user
 from .tasks.verify_user import alert_user_verify_status
+
+
+class ManualNameVerifyFilter(SimpleListFilter):
+    title = 'نیازمند تایید دستی نام'
+    parameter_name = 'manual_name_verify'
+
+    def lookups(self, request, model_admin):
+        return (1, 'بله'), (0, 'خیر')
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value is not None:
+
+            conditions = Q(
+                Q(first_name_verified=False) | Q(last_name_verified=False),
+                national_code_verified=True,
+                birth_date_verified=True,
+                level=User.LEVEL1,
+                verify_status=User.PENDING
+            )
+
+            if value == '1':
+                return queryset.filter(conditions)
+            elif value == '0':
+                return queryset.exclude(conditions)
+
+        return queryset
 
 
 @admin.register(User)
@@ -21,7 +49,7 @@ class CustomUserAdmin(UserAdmin):
     )
 
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'level')
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', 'level', 'verify_status')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', ManualNameVerifyFilter, 'level', 'verify_status')
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')
 

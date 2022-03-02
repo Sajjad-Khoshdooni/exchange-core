@@ -99,7 +99,7 @@ def verify_user_primary_info(user: User) -> bool:
 
         link = url_to_edit_object(user)
         send_support_message(
-            message='User name verification rejected. Check it manually',
+            message='اطلاعات نام کاربر مورد تایید قرار نگرفت. لطفا دستی بررسی شود.',
             link=link
         )
 
