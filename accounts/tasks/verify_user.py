@@ -25,8 +25,8 @@ def basic_verify_user(user_id: int):
 
 
 def alert_user_verify_status(user: User):
-    if user.verify_status in (User.VERIFIED, User.REJECTED):
-        if user.verify_status == User.VERIFIED:
+    if user.level >= User.LEVEL2 or user.verify_status == User.REJECTED:
+        if user.level >= User.LEVEL2:
             title = 'شما احراز هویت شدید.'
             message = 'احراز هویت شما با موفقیت انجام شد.'
             level = Notification.SUCCESS
