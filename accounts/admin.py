@@ -9,6 +9,15 @@ from .tasks import basic_verify_user
 from .tasks.verify_user import alert_user_verify_status
 
 
+MANUAL_VERIFY_CONDITION = Q(
+    ~Q(first_name_verified=True) | ~Q(last_name_verified=True),
+    national_code_verified=True,
+    birth_date_verified=True,
+    level=User.LEVEL1,
+    verify_status=User.PENDING
+)
+
+
 class ManualNameVerifyFilter(SimpleListFilter):
     title = 'نیازمند تایید دستی نام'
     parameter_name = 'manual_name_verify'
@@ -20,18 +29,10 @@ class ManualNameVerifyFilter(SimpleListFilter):
         value = self.value()
         if value is not None:
 
-            conditions = Q(
-                Q(first_name_verified=False) | Q(last_name_verified=False),
-                national_code_verified=True,
-                birth_date_verified=True,
-                level=User.LEVEL1,
-                verify_status=User.PENDING
-            )
-
             if value == '1':
-                return queryset.filter(conditions)
+                return queryset.filter(MANUAL_VERIFY_CONDITION)
             elif value == '0':
-                return queryset.exclude(conditions)
+                return queryset.exclude(MANUAL_VERIFY_CONDITION)
 
         return queryset
 
@@ -55,13 +56,7 @@ class CustomUserAdmin(UserAdmin):
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
-        to_verify_users = queryset.filter(
-            Q(first_name_verified=False) | Q(last_name_verified=False),
-            national_code_verified=True,
-            birth_date_verified=True,
-            level=User.LEVEL1,
-            verify_status=User.PENDING
-        ).distinct()
+        to_verify_users = queryset.filter(MANUAL_VERIFY_CONDITION).distinct()
 
         for user in to_verify_users:
             user.first_name_verified = True
@@ -71,13 +66,7 @@ class CustomUserAdmin(UserAdmin):
 
     @admin.action(description='رد کردن نام کاربر', permissions=['view'])
     def reject_user_name(self, request, queryset):
-        to_reject_users = queryset.filter(
-            Q(first_name_verified=False) | Q(last_name_verified=False),
-            national_code_verified=True,
-            birth_date_verified=True,
-            level=User.LEVEL1,
-            verify_status=User.PENDING
-        ).distinct()
+        to_reject_users = queryset.filter(MANUAL_VERIFY_CONDITION).distinct()
 
         for user in to_reject_users:
             user.change_status(User.REJECTED)
