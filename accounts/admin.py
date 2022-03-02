@@ -10,7 +10,7 @@ from .tasks.verify_user import alert_user_verify_status
 
 
 MANUAL_VERIFY_CONDITION = Q(
-    ~Q(first_name_verified=True) | ~Q(last_name_verified=True),
+    Q(first_name_verified=None) | Q(last_name_verified=None),
     national_code_verified=True,
     birth_date_verified=True,
     level=User.LEVEL1,
