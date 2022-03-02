@@ -3,6 +3,8 @@ import logging
 from celery import shared_task
 
 from accounts.models import User, Notification
+from accounts.utils.admin import url_to_edit_object
+from accounts.utils.telegram import send_support_message
 from accounts.verifiers.basic_verify import basic_verify
 
 logger = logging.getLogger(__name__)
@@ -14,6 +16,13 @@ def basic_verify_user(user_id: int):
 
     try:
         basic_verify(user)
+
+        if user.verify_status == User.REJECTED:
+            link = url_to_edit_object(user)
+            send_support_message(
+                message='User level 2 verification rejected',
+                link=link
+            )
 
         if user.verify_status in (User.VERIFIED, User.REJECTED):
             if user.verify_status == User.VERIFIED:
