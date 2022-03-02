@@ -7,6 +7,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from accounts.permissions import IsBasicVerified
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
+from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
 from ledger.exceptions import InsufficientBalance
@@ -25,6 +26,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         user = self.context['request'].user
         bank_account = get_object_or_404(BankAccount, iban=iban, user=user)
+
+        if not is_48h_rule_passed(user):
+            raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
 
         if not bank_account.verified:
             raise ValidationError({'iban': 'شماره حساب تایید نشده است.'})

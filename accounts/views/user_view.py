@@ -1,9 +1,6 @@
 from rest_framework import serializers
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
-
-from accounts.models import User
 
 from accounts.models import User
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer

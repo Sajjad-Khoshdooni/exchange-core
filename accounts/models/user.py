@@ -62,6 +62,8 @@ class User(AbstractUser):
         default=INIT,
     )
 
+    first_fiat_deposit_date = models.DateTimeField(blank=True, null=True)
+
     def change_status(self, status: str):
         if self.verify_status == self.PENDING and status == self.VERIFIED:
             self.verify_status = self.INIT

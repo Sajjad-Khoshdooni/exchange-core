@@ -140,4 +140,3 @@ class ProviderOrder(models.Model):
             return bool(order)
 
         return True
-

@@ -4,6 +4,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
 
+from accounts.verifiers.legal import is_48h_rule_passed
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Network, Transfer, NetworkAsset
 from ledger.utils.laundering import check_withdraw_laundering
@@ -16,11 +17,15 @@ class WithdrawSerializer(serializers.ModelSerializer):
     network = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        account = self.context['request'].user.account
+        user = self.context['request'].user
+        account = user.account
         asset = get_object_or_404(Asset, symbol=attrs['coin'])
 
         if asset.symbol == Asset.IRT:
             raise ValidationError('نشانه دارایی اشتباه است.')
+
+        if not is_48h_rule_passed(user):
+            raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
 
         network = get_object_or_404(Network, symbol=attrs['network'])
 

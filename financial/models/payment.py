@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 from accounts.models import Account
 from ledger.models import Trx, Asset
@@ -45,9 +46,10 @@ class Payment(models.Model):
     ref_id = models.PositiveBigIntegerField(null=True, blank=True)
     ref_status = models.SmallIntegerField(null=True, blank=True)
 
-    def create_trx(self):
+    def accept(self):
         asset = Asset.get(Asset.IRT)
-        account = self.payment_request.bank_card.user.account
+        user = self.payment_request.bank_card.user
+        account = user.account
 
         Trx.transaction(
             sender=asset.get_wallet(Account.out()),
@@ -56,3 +58,7 @@ class Payment(models.Model):
             scope=Trx.TRANSFER,
             group_id=self.group_id,
         )
+
+        if not user.first_fiat_deposit_date:
+            user.first_fiat_deposit_date = timezone.now()
+            user.save()

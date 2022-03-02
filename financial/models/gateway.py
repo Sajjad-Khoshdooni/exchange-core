@@ -111,7 +111,7 @@ class ZarinpalGateway(Gateway):
                 payment.ref_status = data['code']
                 payment.save()
 
-                payment.create_trx()
+                payment.accept()
 
         else:
             payment.status = CANCELED
