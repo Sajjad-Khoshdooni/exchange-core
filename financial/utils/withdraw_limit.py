@@ -51,6 +51,7 @@ def get_crypto_withdraw_irt_value(user: User):
 
     crypto_withdraws = Transfer.objects.filter(
         deposit=False, hidden=False, is_fee=False,
+        wallet__account__user=user,
         created__gte=start_of_day
     ).exclude(
         status=Transfer.CANCELED
@@ -62,7 +63,7 @@ def get_crypto_withdraw_irt_value(user: User):
 
     crypto_amount = 0
 
-    with PriceManager(coins=list(crypto_withdraws.values())):
+    with PriceManager(coins=list(crypto_withdraws.keys())):
         for symbol, amount in crypto_withdraws.items():
             crypto_amount += get_trading_price_irt(symbol, BUY, raw_price=True)
 
