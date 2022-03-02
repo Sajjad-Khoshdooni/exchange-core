@@ -33,27 +33,30 @@ class User(AbstractUser):
         }
     )
 
-    email_verified = models.BooleanField(default=False)
+    email_verified = models.BooleanField(default=False,verbose_name='تاپیدیه ایمیل',)
     email_verification_date = models.DateTimeField(null=True, blank=True)
 
-    first_name_verified = models.BooleanField(null=True, blank=True)
-    last_name_verified = models.BooleanField(null=True, blank=True)
+    first_name_verified = models.BooleanField(null=True, blank=True,verbose_name='تاپیدیه نام',)
+    last_name_verified = models.BooleanField(null=True, blank=True,verbose_name='تاپیدیه نام خانوادگی',)
 
     national_code = models.CharField(
         max_length=10,
         blank=True,
+        verbose_name='کد ملی',
         validators=[national_card_code_validator],
     )
-    national_code_verified = models.BooleanField(null=True, blank=True)
+    national_code_verified = models.BooleanField(null=True, blank=True,verbose_name='تاپیدیه کد ملی',)
 
-    birth_date = models.DateField(null=True, blank=True)
-    birth_date_verified = models.BooleanField(null=True, blank=True)
+    birth_date = models.DateField(null=True, blank=True,verbose_name='تاریخ تولد',)
+    birth_date_verified = models.BooleanField(null=True, blank=True,verbose_name='تاپیدیه تاریخ تولد',)
 
     level = models.PositiveSmallIntegerField(
         default=LEVEL1,
         choices=(
             (LEVEL1, 'level 1'), (LEVEL2, 'level 2'), (LEVEL3, 'level 3')
-        )
+
+        ),
+        verbose_name = 'سطح',
     )
 
     verify_status = models.CharField(

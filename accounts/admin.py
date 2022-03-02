@@ -12,9 +12,10 @@ from .tasks.verify_user import alert_user_verify_status
 class CustomUserAdmin(UserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name', 'email')}),
+        (_('Personal info'), {'fields': ('first_name', 'last_name','national_code', 'email','phone','birth_date')}),
+        (_('Authentication'), {'fields': ('level','verify_status','email_verified','first_name_verified','last_name_verified','national_code_verified','birth_date_verified', )}),
         (_('Permissions'), {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'level', 'verify_status', 'groups', 'user_permissions'),
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
         (_('Important dates'), {'fields': ('last_login', 'date_joined', 'first_fiat_deposit_date')}),
     )
