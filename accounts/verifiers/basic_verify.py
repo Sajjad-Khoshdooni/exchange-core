@@ -1,7 +1,9 @@
 import logging
 
 from accounts.models import User
+from accounts.utils.admin import url_to_edit_object
 from accounts.utils.similarity import str_similar_rate, clean_persian_name
+from accounts.utils.telegram import send_support_message
 from accounts.verifiers.finotech import FinotechRequester
 from financial.models import BankCard, BankAccount
 
@@ -93,7 +95,14 @@ def verify_user_primary_info(user: User) -> bool:
     user.save()
 
     if not user.first_name_verified or not user.last_name_verified:
-        user.change_status(User.REJECTED)
+        # user.change_status(User.REJECTED)
+
+        link = url_to_edit_object(user)
+        send_support_message(
+            message='User name verification rejected. Check it manually',
+            link=link
+        )
+
         return False
 
     return True
