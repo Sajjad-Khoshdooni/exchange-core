@@ -5,14 +5,18 @@ from decimal import Decimal
 class PriceManager:
     _prices = None
 
-    def __init__(self, fetch_all: bool = False, side: str = None):
+    def __init__(self, fetch_all: bool = False, side: str = None, coins: list = None):
         self._default_prices = {}
 
-        if fetch_all:
+        if fetch_all or coins:
             from ledger.utils.price import get_prices_dict
             from ledger.models import Asset
+
+            if fetch_all:
+                coins = list(Asset.live_objects.values_list('symbol', flat=True))
+
             self._default_prices = get_prices_dict(
-                coins=list(Asset.live_objects.values_list('symbol', flat=True)),
+                coins=coins,
                 side=side
             )
 

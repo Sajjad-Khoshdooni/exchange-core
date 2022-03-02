@@ -10,6 +10,7 @@ from accounts.utils.telegram import send_support_message
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
+from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
 from ledger.utils.precision import humanize_number
@@ -35,6 +36,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         if amount < MIN_WITHDRAW:
             raise ValidationError({'iban': 'مقدار وارد شده کمتر از حد مجاز است.'})
+
+        if user_reached_fiat_withdraw_limit(user, amount):
+            raise ValidationError({'amount': 'شما به سقف برداشت ریالی خورده اید.'})
 
         asset = Asset.get(Asset.IRT)
         wallet = asset.get_wallet(user.account)

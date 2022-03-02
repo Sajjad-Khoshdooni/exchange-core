@@ -5,10 +5,12 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
 
 from accounts.verifiers.legal import is_48h_rule_passed
+from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Network, Transfer, NetworkAsset
 from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
+from ledger.utils.price import get_trading_price_irt, BUY
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
@@ -50,6 +52,11 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         if not check_withdraw_laundering(wallet=wallet, amount=amount):
             raise ValidationError('در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید.')
+
+        irt_value = get_trading_price_irt(asset.symbol, BUY, raw_price=False) * amount
+
+        if user_reached_crypto_withdraw_limit(user, irt_value):
+            raise ValidationError({'amount': 'شما به سقف برداشت رمزارزی خورده اید.'})
 
         return {
             'network': network,

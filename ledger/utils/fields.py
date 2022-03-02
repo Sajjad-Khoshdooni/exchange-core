@@ -58,3 +58,12 @@ def get_group_id_field(db_index: bool = False):
 
 def get_address_field():
     return CharField(max_length=256)
+
+
+def get_created_field():
+    return models.DateTimeField(auto_now_add=True)
+
+
+def get_modified_field():
+    return models.DateTimeField(auto_now=True)
+
