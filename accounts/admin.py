@@ -85,6 +85,14 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
             user.change_status(User.REJECTED)
             alert_user_verify_status(user)
 
+    def save_model(self, request, user: User, form, change):
+        if not request.user.is_superuser:
+            old_user = User.objects.get(id=user.id)
+            if not old_user.is_superuser and user.is_superuser:
+                raise Exception('Dangerous action happened!')
+
+        return super(CustomUserAdmin, self).save_model(request, user, form, change)
+
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
