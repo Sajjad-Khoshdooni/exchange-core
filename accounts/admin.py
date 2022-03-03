@@ -47,6 +47,8 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
         'password': None,
         'first_name': ~M('first_name_verified'),
         'last_name': ~M('last_name_verified'),
+        'national_code': M.superuser & ~M('national_code_verified'),
+        'birth_date': M.superuser & ~M('birth_date_verified'),
     }
 
     fieldsets = (
@@ -64,7 +66,6 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', ManualNameVerifyFilter, 'level', 'verify_status')
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')
-    readonly_fields = ('last_name', )
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):

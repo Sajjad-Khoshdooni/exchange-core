@@ -96,7 +96,7 @@ class AdvancedAdmin(ModelAdmin):
             remaining_fields = set(self._get_fields(request, obj)) - set(self.fields_view_conditions)
 
             for field in remaining_fields:
-                if not evaluate_admin_condition(request, self, obj, self.default_edit_condition):
+                if not evaluate_admin_condition(request, self, obj, self.default_view_condition):
                     to_remove_fields.append(field)
 
         return to_remove_fields

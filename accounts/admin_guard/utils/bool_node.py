@@ -6,6 +6,10 @@ class BoolNode:
 
     def __init__(self, *conditions):
         self.is_connector = False
+
+        if len(conditions) == 0:
+            conditions = (None,)
+
         self.conditions = conditions
         self.inverted = False
 
