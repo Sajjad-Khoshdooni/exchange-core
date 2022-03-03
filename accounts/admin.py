@@ -4,6 +4,8 @@ from django.contrib.auth.admin import UserAdmin
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
+from .admin_guard import M
+from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
 from .tasks import basic_verify_user
 from .tasks.verify_user import alert_user_verify_status
@@ -38,11 +40,20 @@ class ManualNameVerifyFilter(SimpleListFilter):
 
 
 @admin.register(User)
-class CustomUserAdmin(UserAdmin):
+class CustomUserAdmin(AdvancedAdmin, UserAdmin):
+    default_edit_condition = M.superuser
+
+    fields_edit_conditions = {
+        'password': None,
+        'first_name': ~M('first_name_verified'),
+        'last_name': ~M('last_name_verified'),
+    }
+
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name','national_code', 'email','phone','birth_date')}),
-        (_('Authentication'), {'fields': ('level','verify_status','email_verified','first_name_verified','last_name_verified','national_code_verified','birth_date_verified', )}),
+        (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email','phone','birth_date')}),
+        (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
+                                          'last_name_verified', 'national_code_verified', 'birth_date_verified', )}),
         (_('Permissions'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
@@ -53,6 +64,7 @@ class CustomUserAdmin(UserAdmin):
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', ManualNameVerifyFilter, 'level', 'verify_status')
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')
+    readonly_fields = ('last_name', )
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
