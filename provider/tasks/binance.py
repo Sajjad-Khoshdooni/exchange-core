@@ -1,0 +1,24 @@
+from celery import shared_task
+
+from accounts.utils.admin import url_to_admin_list
+from accounts.utils.telegram import send_system_message
+from ledger.models import Asset
+from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
+
+
+@shared_task()
+def inject_tether_to_futures():
+    details = BinanceFuturesHandler.get_account_details()
+    futures_margin_ratio = float(details.get('totalMarginBalance', 0)) / float(details.get('totalInitialMargin', 1e-10))
+
+    if futures_margin_ratio < 0.9:
+        balance_map = BinanceSpotHandler.get_free_dict()
+        usdt_amount = min(balance_map[Asset.USDT], 5000)
+
+        if usdt_amount > 1:
+            BinanceSpotHandler.transfer('USDT', usdt_amount, 'futures', 1)
+
+        send_system_message(
+            message='small margin ratio = %s' % round(futures_margin_ratio, 3),
+            link=url_to_admin_list(Asset)
+        )

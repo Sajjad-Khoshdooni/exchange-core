@@ -80,4 +80,12 @@ app.conf.beat_schedule = {
             'expire': 10
         },
     },
+    'inject_tether_to_futures': {
+        'task': 'provider.tasks.binance.inject_tether_to_futures',
+        'schedule': 1,
+        'options': {
+            'queue': 'binance-monitor',
+            'expire': 1
+        },
+    },
 }

@@ -74,7 +74,7 @@ class AssetOverview:
 
     @property
     def margin_ratio(self):
-        return self.total_margin_balance / max(self.total_maintenance_margin, 1e-10)
+        return self.total_margin_balance / max(self.total_initial_margin, 1e-10)
 
     def get_ledger_balance(self, user_type: str, asset: Asset = None):
         if asset:
