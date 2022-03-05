@@ -59,6 +59,10 @@ class VerificationCode(models.Model):
         choices=SCOPE_CHOICES
     )
 
+    def set_token_used(self):
+        self.token_used = True
+        self.save()
+
     @classmethod
     def get_by_code(cls, code: str, phone: str, scope: str) -> 'VerificationCode':
         return VerificationCode.objects.filter(
