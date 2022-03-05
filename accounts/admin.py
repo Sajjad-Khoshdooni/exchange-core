@@ -9,7 +9,7 @@ from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
 from .tasks import basic_verify_user
 from .tasks.verify_user import alert_user_verify_status
-
+from .utils.validation import gregorian_to_jalali_date
 
 MANUAL_VERIFY_CONDITION = Q(
     Q(first_name_verified=None) | Q(last_name_verified=None),
@@ -53,7 +53,8 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email','phone','birth_date')}),
+        (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email','phone', 'birth_date',
+                                         'get_birth_date_jalali')}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified', )}),
         (_('Permissions'), {
@@ -66,6 +67,7 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', ManualNameVerifyFilter, 'level', 'verify_status')
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')
+    readonly_fields = ('get_birth_date_jalali', )
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
@@ -92,6 +94,11 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
                 raise Exception('Dangerous action happened!')
 
         return super(CustomUserAdmin, self).save_model(request, user, form, change)
+
+    def get_birth_date_jalali(self, user: User):
+        return gregorian_to_jalali_date(user.birth_date).strftime('%Y/%m/%d')
+
+    get_birth_date_jalali.short_description = 'تاریخ تولد شمسی'
 
 
 @admin.register(Account)
