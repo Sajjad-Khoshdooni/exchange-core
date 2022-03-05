@@ -28,8 +28,7 @@ def handle_binance_withdraw(transfer_id: int):
         assert transfer.status == transfer.PROCESSING
         assert not transfer.provider_transfer
 
-        balances_list = BinanceSpotHandler.get_account_details()['balances']
-        balance_map = {b['asset']: Decimal(b['free']) for b in balances_list}
+        balance_map = BinanceSpotHandler.get_free_dict()
 
         coin = transfer.asset.symbol
 
@@ -60,8 +59,7 @@ def handle_binance_withdraw(transfer_id: int):
                 logger.info('waiting to finish buying...')
                 time.sleep(1)
 
-        balances_list = BinanceSpotHandler.get_account_details()['balances']
-        balance_map = {b['asset']: Decimal(b['free']) for b in balances_list}
+        balance_map = BinanceSpotHandler.get_free_dict()
 
         if balance_map[coin] < amount:
             logger.info('ignored withdrawing because of insufficient spot balance')

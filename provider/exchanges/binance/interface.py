@@ -64,6 +64,11 @@ class BinanceSpotHandler:
         return cls.collect_api('/api/v3/account', method='GET') or {}
 
     @classmethod
+    def get_free_dict(cls):
+        balances_list = BinanceSpotHandler.get_account_details()['balances']
+        return {b['asset']: Decimal(b['free']) for b in balances_list}
+
+    @classmethod
     @cache_for()
     def get_all_coins(cls):
         return cls.collect_api('/sapi/v1/capital/config/getall', method='GET')
@@ -85,6 +90,12 @@ class BinanceSpotHandler:
     def get_withdraw_fee(cls, coin: str, network: str) -> Decimal:
         info = cls.get_network_info(coin, network)
         return Decimal(info['withdrawFee'])
+
+    @classmethod
+    def transfer(cls, asset: str, amount: float, market: str, transfer_type: int):
+        return cls.collect_api(f'/sapi/v1/{market}/transfer', method='POST', data={
+            'asset': asset, 'amount': amount, 'type': transfer_type
+        })
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):

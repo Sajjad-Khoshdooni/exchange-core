@@ -18,6 +18,9 @@ class M(BoolNode):
     def leaf_evaluator(self, request, admin, model, condition):
         if isinstance(condition, str):
 
+            if model is None:
+                return None
+
             if hasattr(admin, condition):
                 admin_func = getattr(admin, condition, None)
                 return admin_func(model)
