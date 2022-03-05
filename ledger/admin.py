@@ -134,10 +134,25 @@ class OTCRequestAdmin(admin.ModelAdmin):
     get_to_price.short_description = 'to_price'
 
 
+class UserFilter(SimpleListFilter):
+    title = 'کاربر'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        return [(1,1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(otc_request__account__user_id = user)
+        else:
+            return queryset
+
+
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
     list_display = ('created', 'otc_request',  'status', 'group_id')
-
+    list_filter = (UserFilter,)
 
 @admin.register(models.Trx)
 class TrxAdmin(admin.ModelAdmin):

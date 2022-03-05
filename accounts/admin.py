@@ -11,6 +11,7 @@ from .tasks import basic_verify_user
 from .tasks.verify_user import alert_user_verify_status
 from accounts.utils.admin import url_to_admin_list
 from financial.models.payment import Payment
+from financial.models.withdraw_request import FiatWithdrawRequest
 from django.utils.safestring import mark_safe
 
 MANUAL_VERIFY_CONDITION = Q(
@@ -62,14 +63,14 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
         (_('Important dates'), {'fields': ('last_login', 'date_joined', 'first_fiat_deposit_date')}),
-        (_('Rial deposit list'),{'fields': ('get_payment_address',)})
+        (_('Rial deposit list'),{'fields': ('get_payment_address','get_withdraw_address','get_otctrade_address',)})
     )
 
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'level')
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', ManualNameVerifyFilter, 'level', 'verify_status')
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')
-    readonly_fields = ('get_payment_address',)
+    readonly_fields = ('get_payment_address','get_withdraw_address','get_otctrade_address')
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
@@ -102,6 +103,16 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
         link = url_to_admin_list(Payment)+'?user={}'.format(user.id)
         return mark_safe ("<a href='%s'>دیدن</a>" % link)
     get_payment_address.short_description = 'واریزهای ریالی'
+
+    def get_withdraw_address(self, user: User):
+        link = url_to_admin_list(FiatWithdrawRequest)+'?user={}'.format(user.id)
+        return mark_safe ("<a href='%s'>دیدن</a>" % link)
+    get_withdraw_address.short_description = 'درخواست برداشت ریالی'
+
+    def get_otctrade_address(self, user: User):
+        link = url_to_admin_list(FiatWithdrawRequest)+'?user={}'.format(user.id)
+        return mark_safe ("<a href='%s'>دیدن</a>" % link)
+    get_otctrade_address.short_description = 'OTC_Trade'
 
 
 

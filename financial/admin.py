@@ -17,12 +17,28 @@ class FiatTransferRequestAdmin(admin.ModelAdmin):
     ordering = ('-created', )
 
 
+class UserRialWithdrawRequestFilter(SimpleListFilter):
+    title = 'کاربر'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        return [(1,1)]
+
+    def queryset(self, request, queryset):
+        value = request.GET.get('user')
+        if value is not None:
+            return queryset.filter(bank_account__user_id=value)
+        else:
+            return queryset
 @admin.register(FiatWithdrawRequest)
 class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'bank_account', 'status', 'amount', 'fee_amount')
-    list_filter = ('status', )
+    list_filter = ('status',UserRialWithdrawRequestFilter, )
     ordering = ('-created', )
     readonly_fields = ('amount', 'fee_amount', 'bank_account')
+
+
+
 
 
 @admin.register(PaymentRequest)
