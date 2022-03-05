@@ -5,7 +5,7 @@ from rest_framework.generics import CreateAPIView
 from accounts.models.phone_verification import VerificationCode
 
 
-class OTPSerializer(serializers.ModelSerializer):
+class VerifyOTPSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         phone = validated_data['phone']
@@ -39,4 +39,24 @@ class OTPSerializer(serializers.ModelSerializer):
 class VerifyOTPView(CreateAPIView):
     authentication_classes = []
     permission_classes = []
+    serializer_class = VerifyOTPSerializer
+
+
+class OTPSerializer(serializers.ModelSerializer):
+
+    def create(self, validated_data):
+        scope = validated_data['scope']
+        user = validated_data['user']
+
+        return VerificationCode.send_otp_code(phone=user.phone, scope=scope)
+
+    class Meta:
+        model = VerificationCode
+        fields = ('scope', )
+
+
+class SendOTPView(CreateAPIView):
     serializer_class = OTPSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
