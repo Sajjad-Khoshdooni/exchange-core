@@ -4,7 +4,8 @@ from django.db.models import Q
 
 from accounts.utils.validation import PHONE_MAX_LENGTH
 from accounts.validators import mobile_number_validator, national_card_code_validator
-
+from accounts.utils.admin import url_to_admin_list
+# from financial.models.payment import Payment
 
 class CustomUserManager(UserManager):
     def create_superuser(self, email=None, password=None, **extra_fields):
@@ -66,6 +67,8 @@ class User(AbstractUser):
     )
 
     first_fiat_deposit_date = models.DateTimeField(blank=True, null=True)
+
+
 
     def change_status(self, status: str):
         if self.verify_status == self.PENDING and status == self.VERIFIED:

@@ -9,7 +9,9 @@ from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
 from .tasks import basic_verify_user
 from .tasks.verify_user import alert_user_verify_status
-
+from accounts.utils.admin import url_to_admin_list
+from financial.models.payment import Payment
+from django.utils.safestring import mark_safe
 
 MANUAL_VERIFY_CONDITION = Q(
     Q(first_name_verified=None) | Q(last_name_verified=None),
@@ -60,13 +62,14 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
         (_('Important dates'), {'fields': ('last_login', 'date_joined', 'first_fiat_deposit_date')}),
-        (_('Rial deposit list'),{'fields':()})
+        (_('Rial deposit list'),{'fields': ('get_payment_address',)})
     )
 
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'level')
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', ManualNameVerifyFilter, 'level', 'verify_status')
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')
+    readonly_fields = ('get_payment_address',)
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
@@ -77,6 +80,7 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
             user.last_name_verified = True
             user.save()
             basic_verify_user.delay(user.id)
+
 
     @admin.action(description='رد کردن نام کاربر', permissions=['view'])
     def reject_user_name(self, request, queryset):
@@ -93,6 +97,12 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
                 raise Exception('Dangerous action happened!')
 
         return super(CustomUserAdmin, self).save_model(request, user, form, change)
+
+    def get_payment_address(self, user: User):
+        link = url_to_admin_list(Payment)+'?user={}'.format(user.id)
+        return mark_safe ("<a href='%s'>دیدن</a>" % link)
+    get_payment_address.short_description = 'واریزهای ریالی'
+
 
 
 @admin.register(Account)
