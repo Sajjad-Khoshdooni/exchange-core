@@ -1,18 +1,23 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
-from django.db.models import Q
+from django.db.models import Q, F
+from django.db.models import Sum
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
+from accounts.models import UserComment
+from accounts.utils.admin import url_to_admin_list
+from financial.models.payment import Payment
+from financial.models.withdraw_request import FiatWithdrawRequest
+from ledger.models import OTCRequest, OTCTrade
+from ledger.models.wallet import Wallet
+from ledger.utils.precision import humanize_number
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
 from .tasks import basic_verify_user
 from .tasks.verify_user import alert_user_verify_status
-from accounts.utils.admin import url_to_admin_list
-from financial.models.payment import Payment
-from financial.models.withdraw_request import FiatWithdrawRequest
-from django.utils.safestring import mark_safe
 
 MANUAL_VERIFY_CONDITION = Q(
     Q(first_name_verified=None) | Q(last_name_verified=None),
@@ -42,6 +47,11 @@ class ManualNameVerifyFilter(SimpleListFilter):
         return queryset
 
 
+class UserCommentInLine(admin.TabularInline):
+    model = UserComment
+    extra = 1
+
+
 @admin.register(User)
 class CustomUserAdmin(AdvancedAdmin, UserAdmin):
     default_edit_condition = M.superuser
@@ -63,14 +73,18 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
         (_('Important dates'), {'fields': ('last_login', 'date_joined', 'first_fiat_deposit_date')}),
-        (_('Rial deposit list'),{'fields': ('get_payment_address','get_withdraw_address','get_otctrade_address',)})
+        (_('لینک های مالی کاربر'),{'fields': ('get_payment_address','get_withdraw_address','get_otctrade_address','get_wallet_address')}),
+        (_('مجموع خرید و فروش کاربر'),{'fields':('get_sum_of_value_buy_sell',)})
+
     )
 
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'level')
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', ManualNameVerifyFilter, 'level', 'verify_status')
+    inlines = [UserCommentInLine,]
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')
-    readonly_fields = ('get_payment_address','get_withdraw_address','get_otctrade_address')
+    readonly_fields = ('get_payment_address','get_withdraw_address','get_otctrade_address','get_wallet_address',
+                       'get_sum_of_value_buy_sell')
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
@@ -110,9 +124,24 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
     get_withdraw_address.short_description = 'درخواست برداشت ریالی'
 
     def get_otctrade_address(self, user: User):
-        link = url_to_admin_list(FiatWithdrawRequest)+'?user={}'.format(user.id)
-        return mark_safe ("<a href='%s'>دیدن</a>" % link)
+        link = url_to_admin_list(OTCTrade)+'?user={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_otctrade_address.short_description = 'OTC_Trade'
+
+    def get_wallet_address(self,user:User):
+        link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" %link)
+    get_wallet_address.short_description = 'آدرس کیف اعتباری'
+
+    def get_sum_of_value_buy_sell(self,user:User):
+        value = OTCRequest.objects.filter(
+            account__user_id=user.id
+        ).aggregate(
+            amount=Sum(F('to_price_abs') * F('to_amount'))
+        )
+        return humanize_number(float(value['amount'] or 0))
+    get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
+
 
 
 
@@ -132,3 +161,7 @@ class NotificationAdmin(admin.ModelAdmin):
     list_display = ('created', 'recipient', 'level', 'title', 'message')
     list_filter = ('level', 'recipient')
     search_fields = ('title', 'message', )
+
+@admin.register(UserComment)
+class UserCommentAdmin(admin.ModelAdmin):
+    pass

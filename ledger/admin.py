@@ -159,10 +159,24 @@ class TrxAdmin(admin.ModelAdmin):
     list_display = ('created', 'sender', 'receiver', 'amount', 'group_id')
 
 
+class UserFilter(SimpleListFilter):
+    title = 'کاربر'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        return [(1,1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(account__user_id=user)
+        else:
+            return queryset
+
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'asset', 'market', 'get_free', 'get_locked')
-    list_filter = ('account', 'asset')
+    list_display = ('created', 'account', 'asset', 'market', 'get_free', 'get_locked','get_free_usdt','get_free_irt')
+    list_filter = ('account', 'asset',UserFilter,)
 
     def get_free(self, wallet: models.Wallet):
         return float(wallet.get_free())

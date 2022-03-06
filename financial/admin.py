@@ -25,9 +25,9 @@ class UserRialWithdrawRequestFilter(SimpleListFilter):
         return [(1,1)]
 
     def queryset(self, request, queryset):
-        value = request.GET.get('user')
-        if value is not None:
-            return queryset.filter(bank_account__user_id=value)
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(bank_account__user_id=user)
         else:
             return queryset
 @admin.register(FiatWithdrawRequest)
@@ -54,9 +54,9 @@ class UserFilter(SimpleListFilter):
         return [(1,1)]
 
     def queryset(self, request, queryset):
-        value = request.GET.get('user')
-        if value is not None:
-            return queryset.filter(payment_request__bank_card__user_id=value)
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(payment_request__bank_card__user_id=user)
         else:
             return queryset
 

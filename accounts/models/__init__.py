@@ -3,3 +3,4 @@ from .user import User
 from .finotech import FinotechRequest
 from .phone_verification import VerificationCode
 from .account import Account
+from .user_comment import UserComment

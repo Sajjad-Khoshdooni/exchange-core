@@ -35,6 +35,7 @@ class OTCRequest(models.Model):
     to_amount = get_amount_field()
     from_amount = get_amount_field()
     to_price = get_amount_field()
+    to_price_abs = get_amount_field()
 
     market = models.CharField(
         max_length=8,
@@ -116,10 +117,16 @@ class OTCRequest(models.Model):
 
         return trading_price
 
-    def set_amounts(self, from_amount: Decimal = None, to_amount: Decimal = None):
+    def get_to_price_abs(self):
+        conf = self.get_trade_config()
+        other_side = get_other_side(conf.side)
+        return get_trading_price_irt(self.to_asset.symbol, other_side)
+
+    def set_amounts(self, from_amount: Decimal = None, to_amount: Decimal = None,):
         assert (from_amount or to_amount) and (not from_amount or not to_amount), 'exactly one amount should presents'
 
         to_price = self.get_to_price()
+        to_price_abs = self.get_to_price_abs()
 
         if to_amount:
             from_amount = to_price * to_amount
