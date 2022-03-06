@@ -68,7 +68,11 @@ class AssetListSerializer(serializers.ModelSerializer):
         return NetworkAsset.objects.filter(asset=asset, network__can_deposit=True).exists()
 
     def get_can_withdraw(self, asset: Asset):
-        return NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True).exists()
+        return NetworkAsset.objects.filter(
+            asset=asset,
+            network__can_withdraw=True,
+            binance_withdraw_enable=True
+        ).exists()
 
     class Meta:
         model = Asset
@@ -129,7 +133,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return network_asset.network.can_deposit
 
     def get_can_withdraw(self, network_asset: NetworkAsset):
-        return network_asset.network.can_withdraw
+        return network_asset.network.can_withdraw and network_asset.binance_withdraw_enable
 
     def get_address(self, network_asset: NetworkAsset):
         addresses = self.context['addresses']

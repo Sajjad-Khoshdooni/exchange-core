@@ -14,6 +14,8 @@ class NetworkAsset(models.Model):
     withdraw_max = get_amount_field()
     withdraw_precision = models.PositiveSmallIntegerField()
 
+    binance_withdraw_enable = models.BooleanField(default=True)
+
     def __str__(self):
         return '%s - %s' % (self.network, self.asset)
 
