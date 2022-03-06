@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F
+from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 
 from accounts.models import Account
 from ledger import models
@@ -176,8 +177,11 @@ class WalletUserFilter(SimpleListFilter):
 
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'asset', 'market', 'get_free', 'get_locked','get_free_usdt','get_free_irt')
-    list_filter = ('account', 'asset', WalletUserFilter,)
+    list_display = ('created', 'account', 'asset', 'market', 'get_free', 'get_locked', 'get_free_usdt', 'get_free_irt')
+    list_filter = [
+        ('asset', RelatedDropdownFilter),
+        WalletUserFilter
+    ]
 
     def get_free(self, wallet: models.Wallet):
         return float(wallet.get_free())
@@ -188,6 +192,14 @@ class WalletAdmin(admin.ModelAdmin):
         return float(wallet.get_locked())
 
     get_locked.short_description = 'locked'
+
+    def get_free_irt(self , wallet: models.Wallet):
+        return wallet.asset.get_presentation_price_irt(wallet.get_free_irt())
+    get_free_irt.short_description = 'ارزش ریالی'
+
+    def get_free_usdt(self, wallet: models.Wallet):
+        return wallet.asset.get_presentation_price_usdt(wallet.get_free_usdt())
+    get_free_usdt.short_description = 'ارزش دلاری'
 
 
 @admin.register(models.Transfer)
