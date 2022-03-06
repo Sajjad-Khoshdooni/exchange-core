@@ -80,13 +80,19 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
         (_('Important dates'), {'fields': ('last_login', 'date_joined', 'first_fiat_deposit_date')}),
-        (_('لینک های مالی کاربر'),{'fields': ('get_payment_address','get_withdraw_address','get_otctrade_address','get_wallet_address')}),
+        (_('لینک های مالی کاربر'),{
+            'fields': ('get_payment_address','get_withdraw_address','get_otctrade_address', 'get_wallet_address')
+        }),
         (_('مجموع خرید و فروش کاربر'),{'fields':('get_sum_of_value_buy_sell',)})
 
     )
 
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'level')
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', ManualNameVerifyFilter, 'level', 'verify_status')
+    list_filter = (
+        'is_staff', 'is_superuser', 'is_active', 'groups',
+        ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
+        'level_3_verify_datetime',
+    )
     inlines = [UserCommentInLine,]
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')

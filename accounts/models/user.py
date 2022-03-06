@@ -2,7 +2,7 @@ from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 from django.db.models import Q
 from simple_history.models import HistoricalRecords
-
+from django.utils import timezone
 from accounts.utils.validation import PHONE_MAX_LENGTH
 from accounts.validators import mobile_number_validator, national_card_code_validator, telephone_number_validator
 
@@ -51,6 +51,9 @@ class User(AbstractUser):
 
     birth_date = models.DateField(null=True, blank=True,verbose_name='تاریخ تولد',)
     birth_date_verified = models.BooleanField(null=True, blank=True,verbose_name='تاییدیه تاریخ تولد',)
+
+    level_2_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تاپید سطح ۲')
+    level_3_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تاپید سطح 3')
 
     level = models.PositiveSmallIntegerField(
         default=LEVEL1,
@@ -106,6 +109,10 @@ class User(AbstractUser):
         if self.verify_status == self.PENDING and status == self.VERIFIED:
             self.verify_status = self.INIT
             self.level += 1
+            if self.level == User.LEVEL2:
+                self.level_2_verify_datetime = timezone.now()
+            if self.level == User.LEVEL3:
+                self.level_3_verify_datetime = timezone.now()
         else:
             self.verify_status = status
 
