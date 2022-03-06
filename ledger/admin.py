@@ -134,7 +134,7 @@ class OTCRequestAdmin(admin.ModelAdmin):
     get_to_price.short_description = 'to_price'
 
 
-class UserFilter(SimpleListFilter):
+class OTCUserFilter(SimpleListFilter):
     title = 'کاربر'
     parameter_name = 'user'
 
@@ -152,14 +152,15 @@ class UserFilter(SimpleListFilter):
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
     list_display = ('created', 'otc_request',  'status', 'group_id')
-    list_filter = (UserFilter,)
+    list_filter = (OTCUserFilter,)
+
 
 @admin.register(models.Trx)
 class TrxAdmin(admin.ModelAdmin):
     list_display = ('created', 'sender', 'receiver', 'amount', 'group_id')
 
 
-class UserFilter(SimpleListFilter):
+class WalletUserFilter(SimpleListFilter):
     title = 'کاربر'
     parameter_name = 'user'
 
@@ -173,10 +174,11 @@ class UserFilter(SimpleListFilter):
         else:
             return queryset
 
+
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'asset', 'market', 'get_free', 'get_locked','get_free_usdt','get_free_irt')
-    list_filter = ('account', 'asset',UserFilter,)
+    list_filter = ('account', 'asset', WalletUserFilter,)
 
     def get_free(self, wallet: models.Wallet):
         return float(wallet.get_free())
