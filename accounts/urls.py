@@ -22,6 +22,13 @@ urlpatterns = [
         'post': 'update',
     })),
 
+    path('verify/full/', views.FullVerificationViewSet.as_view({
+        'get': 'retrieve',
+        'post': 'update',
+    })),
+
+    path('verify/tel/otp/', views.TelephoneOTPView.as_view()),
+
     path('notifs/', views.NotificationViewSet.as_view({
         'get': 'list',
     })),

@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
 from django.db.models import Q
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
 from .admin_guard import M
@@ -54,9 +55,12 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email','phone', 'birth_date',
-                                         'get_birth_date_jalali')}),
+                                         'get_birth_date_jalali',
+                                         'telephone', 'get_national_card_image', 'get_selfie_image')}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
-                                          'last_name_verified', 'national_code_verified', 'birth_date_verified', )}),
+                                          'last_name_verified', 'national_code_verified', 'birth_date_verified',
+                                          'telephone_verified', 'national_card_image_verified', 'selfie_image_verified',
+                                          )}),
         (_('Permissions'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
@@ -67,7 +71,7 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', ManualNameVerifyFilter, 'level', 'verify_status')
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')
-    readonly_fields = ('get_birth_date_jalali', )
+    readonly_fields = ('get_birth_date_jalali', 'get_national_card_image', 'get_selfie_image')
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
@@ -99,6 +103,16 @@ class CustomUserAdmin(AdvancedAdmin, UserAdmin):
         return gregorian_to_jalali_date(user.birth_date).strftime('%Y/%m/%d')
 
     get_birth_date_jalali.short_description = 'تاریخ تولد شمسی'
+
+    def get_national_card_image(self, user: User):
+        return mark_safe("<img src='%s' width='200' height='200' />" % user.national_card_image.get_absolute_image_url())
+
+    get_national_card_image.short_description = 'عکس کارت ملی'
+
+    def get_selfie_image(self, user: User):
+        return mark_safe("<img src='%s' width='200' height='200' />" % user.selfie_image.get_absolute_image_url())
+
+    get_selfie_image.short_description = 'عکس سلفی'
 
 
 @admin.register(Account)
