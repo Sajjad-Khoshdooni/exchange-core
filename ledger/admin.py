@@ -105,7 +105,7 @@ class NetworkAdmin(admin.ModelAdmin):
 
 @admin.register(models.NetworkAsset)
 class NetworkAssetAdmin(admin.ModelAdmin):
-    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max')
+    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'binance_withdraw_enable')
     search_fields = ('network__symbol', 'asset__symbol')
 
 
