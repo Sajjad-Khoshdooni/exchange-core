@@ -1,18 +1,13 @@
-from datetime import timedelta
-
-from django.contrib.auth import login
-from django.utils import timezone
-from rest_framework import serializers, status
+from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.generics import CreateAPIView
 
 from accounts import codes
 from accounts.models import User
 from accounts.models.phone_verification import VerificationCode
-from accounts.utils.validation import is_phone
-from accounts.validators import mobile_number_validator, RegexValidator, password_validator
+from accounts.validators import password_validator
 
 
 class InitiateForgotPasswordSerializer(serializers.Serializer):

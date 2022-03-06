@@ -3,7 +3,7 @@ from django.db import models
 from django.db.models import Q
 
 from accounts.utils.validation import PHONE_MAX_LENGTH
-from accounts.validators import mobile_number_validator, national_card_code_validator
+from accounts.validators import mobile_number_validator, national_card_code_validator, telephone_number_validator
 
 
 class CustomUserManager(UserManager):
@@ -25,7 +25,7 @@ class User(AbstractUser):
     phone = models.CharField(
         max_length=PHONE_MAX_LENGTH,
         validators=[mobile_number_validator],
-        verbose_name='شماره تماس',
+        verbose_name='شماره موبایل',
         unique=True,
         db_index=True,
         error_messages={
@@ -33,11 +33,11 @@ class User(AbstractUser):
         }
     )
 
-    email_verified = models.BooleanField(default=False,verbose_name='تاپیدیه ایمیل',)
+    email_verified = models.BooleanField(default=False,verbose_name='تاییدیه ایمیل',)
     email_verification_date = models.DateTimeField(null=True, blank=True)
 
-    first_name_verified = models.BooleanField(null=True, blank=True,verbose_name='تاپیدیه نام',)
-    last_name_verified = models.BooleanField(null=True, blank=True,verbose_name='تاپیدیه نام خانوادگی',)
+    first_name_verified = models.BooleanField(null=True, blank=True,verbose_name='تاییدیه نام',)
+    last_name_verified = models.BooleanField(null=True, blank=True,verbose_name='تاییدیه نام خانوادگی',)
 
     national_code = models.CharField(
         max_length=10,
@@ -45,10 +45,10 @@ class User(AbstractUser):
         verbose_name='کد ملی',
         validators=[national_card_code_validator],
     )
-    national_code_verified = models.BooleanField(null=True, blank=True,verbose_name='تاپیدیه کد ملی',)
+    national_code_verified = models.BooleanField(null=True, blank=True,verbose_name='تاییدیه کد ملی',)
 
     birth_date = models.DateField(null=True, blank=True,verbose_name='تاریخ تولد',)
-    birth_date_verified = models.BooleanField(null=True, blank=True,verbose_name='تاپیدیه تاریخ تولد',)
+    birth_date_verified = models.BooleanField(null=True, blank=True,verbose_name='تاییدیه تاریخ تولد',)
 
     level = models.PositiveSmallIntegerField(
         default=LEVEL1,
@@ -56,16 +56,49 @@ class User(AbstractUser):
             (LEVEL1, 'level 1'), (LEVEL2, 'level 2'), (LEVEL3, 'level 3')
 
         ),
-        verbose_name = 'سطح',
+        verbose_name='سطح',
     )
 
     verify_status = models.CharField(
         max_length=8,
         choices=((INIT, INIT), (PENDING, PENDING), (REJECTED, REJECTED), (VERIFIED, VERIFIED)),
         default=INIT,
+        verbose_name='وضعیت تایید'
     )
 
-    first_fiat_deposit_date = models.DateTimeField(blank=True, null=True)
+    first_fiat_deposit_date = models.DateTimeField(blank=True, null=True, verbose_name='زمان اولین برداشت ریالی')
+
+    national_card_image = models.OneToOneField(
+        to='multimedia.Image',
+        on_delete=models.PROTECT,
+        verbose_name='عکس کارت ملی',
+        related_name='+',
+        blank=True,
+        null=True
+    )
+    selfie_image = models.OneToOneField(
+        to='multimedia.Image',
+        on_delete=models.PROTECT,
+        verbose_name='عکس سلفی',
+        related_name='+',
+        blank=True,
+        null=True
+    )
+    telephone = models.CharField(
+        max_length=PHONE_MAX_LENGTH,
+        validators=[telephone_number_validator],
+        verbose_name='شماره تلفن',
+        blank=True,
+        null=True,
+        unique=True,
+        error_messages={
+            'unique': 'شماره موبایل وارد شده از قبل در سیستم موجود است.'
+        }
+    )
+
+    national_card_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس کارت ملی')
+    selfie_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس سلفی')
+    telephone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه شماره تلفن')
 
     def change_status(self, status: str):
         if self.verify_status == self.PENDING and status == self.VERIFIED:
@@ -92,3 +125,9 @@ class User(AbstractUser):
         if creating:
             from accounts.models import Account
             Account.objects.create(user=self)
+
+        if self.level == self.LEVEL2 and self.telephone_verified and self.national_card_image_verified \
+                and self.selfie_image_verified:
+
+            self.verify_status = self.PENDING
+            self.change_status(self.VERIFIED)

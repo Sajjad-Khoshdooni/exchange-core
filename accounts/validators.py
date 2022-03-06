@@ -3,6 +3,8 @@ import re
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
 
+PHONE_REGEX = r'^((09\d{9})|(00\d{8,15}))$'
+
 
 class RegexValidator:
     def __init__(self, pattern: str):
@@ -14,8 +16,13 @@ class RegexValidator:
 
 
 def mobile_number_validator(value):
-    if not re.match(r'^((09\d{9})|(00\d{8,15}))$', value):
+    if not re.match(PHONE_REGEX, value):
         raise ValidationError('شماره موبایل معتبر نیست.')
+
+
+def telephone_number_validator(value):
+    if not re.match(r'^0?[1-8]\d{9}$', value):
+        raise ValidationError('شماره تلفن معتبر نیست.')
 
 
 def iran_mobile_number_validator(value):
@@ -55,3 +62,7 @@ def password_validator(password: str, user=None):
 
     if errors:
         raise ValidationError(errors)
+
+
+def is_phone(phone: str) -> bool:
+    return bool(re.match(PHONE_REGEX, phone))
