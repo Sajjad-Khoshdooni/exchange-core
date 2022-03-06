@@ -1,10 +1,11 @@
-from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
-from django.db.models import Q, F
+from django.db.models import F
+from django.db.models import Q
 from django.db.models import Sum
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
+from simple_history.admin import SimpleHistoryAdmin
 
 from accounts.models import UserComment
 from accounts.utils.admin import url_to_admin_list
@@ -18,8 +19,7 @@ from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
 from .tasks import basic_verify_user
 from .tasks.verify_user import alert_user_verify_status
-from simple_history.admin import SimpleHistoryAdmin
-
+from .utils.validation import gregorian_to_jalali_date
 
 MANUAL_VERIFY_CONDITION = Q(
     Q(first_name_verified=None) | Q(last_name_verified=None),
@@ -68,9 +68,13 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email','phone','birth_date')}),
+        (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email','phone', 'birth_date',
+                                         'get_birth_date_jalali',
+                                         'telephone', 'get_national_card_image', 'get_selfie_image')}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
-                                          'last_name_verified', 'national_code_verified', 'birth_date_verified', )}),
+                                          'last_name_verified', 'national_code_verified', 'birth_date_verified',
+                                          'telephone_verified', 'national_card_image_verified', 'selfie_image_verified',
+                                          )}),
         (_('Permissions'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
@@ -86,7 +90,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')
     readonly_fields = ('get_payment_address','get_withdraw_address','get_otctrade_address','get_wallet_address',
-                       'get_sum_of_value_buy_sell')
+                       'get_sum_of_value_buy_sell', 'get_birth_date_jalali', 'get_national_card_image',
+                       'get_selfie_image')
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
@@ -144,7 +149,20 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         return humanize_number(float(value['amount'] or 0))
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
 
+    def get_birth_date_jalali(self, user: User):
+        return gregorian_to_jalali_date(user.birth_date).strftime('%Y/%m/%d')
 
+    get_birth_date_jalali.short_description = 'تاریخ تولد شمسی'
+
+    def get_national_card_image(self, user: User):
+        return mark_safe("<img src='%s' width='200' height='200' />" % user.national_card_image.get_absolute_image_url())
+
+    get_national_card_image.short_description = 'عکس کارت ملی'
+
+    def get_selfie_image(self, user: User):
+        return mark_safe("<img src='%s' width='200' height='200' />" % user.selfie_image.get_absolute_image_url())
+
+    get_selfie_image.short_description = 'عکس سلفی'
 
 
 @admin.register(Account)

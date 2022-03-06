@@ -1,4 +1,7 @@
 import logging
+from datetime import datetime, timedelta
+
+from django.utils import timezone
 
 from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
@@ -20,6 +23,23 @@ def basic_verify(user: User):
             return
 
     if not user.primary_data_verified:
+        now = timezone.now().astimezone()
+        hour = now.hour
+
+        if hour >= 23 or hour < 7:
+            if hour >= 23:
+                target = now + timedelta(days=1)
+            else:
+                target = now
+
+            next_valid = datetime(year=target.year, month=target.month, day=target.day, hour=7, minute=10, tzinfo=target.tzinfo)
+            to_pass_seconds = int((next_valid - now).total_seconds())
+
+            from accounts.tasks import basic_verify_user
+            logger.info('rescheduling basic_verify to valid hours for user_id = %d' % user.id)
+            basic_verify_user.s(user.id).apply_async(countdown=to_pass_seconds)
+            return
+
         logger.info('verifying primary_data for user_d = %d' % user.id)
 
         if not verify_user_primary_info(user):

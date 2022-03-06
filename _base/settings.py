@@ -177,7 +177,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 SENTRY_CLIENT = 'raven.contrib.django.raven_compat.DjangoClient'
 RAVEN_CONFIG = {
-    'ignore_exceptions ': ['Http404', 'django.exceptions.http.Http404'],
+    'ignore_exceptions ': ['Http404', 'django.exceptions.http.Http404', 'rest_framework.exceptions.PermissionDenied'],
     'dsn': secret('SENTRY_DSN', default=''),
     'release': raven.fetch_git_sha(os.path.dirname(os.pardir)),
     'environment': config('ENVIRONMENT', default='development')

@@ -10,3 +10,6 @@ class Image(models.Model):
 
     def get_absolute_image_url(self):
         return settings.HOST_URL + self.image.url
+
+    def __str__(self):
+        return self.get_absolute_image_url()

@@ -10,6 +10,7 @@ urlpatterns = [
     path('signup/', views.SignupView.as_view()),
 
     path('otp/verify/', views.VerifyOTPView.as_view()),
+    path('otp/send/', views.SendOTPView.as_view()),
 
     path('user/', views.UserDetailView.as_view()),
 
@@ -20,6 +21,13 @@ urlpatterns = [
         'get': 'retrieve',
         'post': 'update',
     })),
+
+    path('verify/full/', views.FullVerificationViewSet.as_view({
+        'get': 'retrieve',
+        'post': 'update',
+    })),
+
+    path('verify/tel/otp/', views.TelephoneOTPView.as_view()),
 
     path('notifs/', views.NotificationViewSet.as_view({
         'get': 'list',

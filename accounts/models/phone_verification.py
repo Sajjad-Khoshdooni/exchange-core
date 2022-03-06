@@ -7,7 +7,7 @@ from django.db import models
 from django.utils import timezone
 
 from accounts.utils.validation import generate_random_code, PHONE_MAX_LENGTH, fifteen_minutes_later_datetime, MINUTES
-from accounts.validators import mobile_number_validator
+from accounts.validators import mobile_number_validator, is_phone
 from accounts.tasks import send_verification_code_by_kavenegar
 
 
@@ -16,15 +16,19 @@ class VerificationCode(models.Model):
 
     SCOPE_FORGET_PASSWORD = 'forget'
     SCOPE_VERIFY_PHONE = 'verify'
+    SCOPE_WITHDRAW = 'withdraw'
+    SCOPE_TELEPHONE = 'tel'
 
-    SCOPE_CHOICES = [(SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_PHONE, SCOPE_VERIFY_PHONE)]
+    SCOPE_CHOICES = [
+        (SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_PHONE, SCOPE_VERIFY_PHONE),
+        (SCOPE_WITHDRAW, SCOPE_WITHDRAW), (SCOPE_TELEPHONE, SCOPE_TELEPHONE)
+    ]
 
     created = models.DateTimeField(auto_now_add=True)
     expiration = models.DateTimeField(default=fifteen_minutes_later_datetime)
 
     phone = models.CharField(
         max_length=PHONE_MAX_LENGTH,
-        validators=[mobile_number_validator],
         verbose_name='شماره تماس',
         db_index=True
     )
@@ -86,9 +90,15 @@ class VerificationCode(models.Model):
         if settings.DEBUG:
             print('[OTP] code for %s is: %s' % (otp_code.phone, otp_code.code))
         else:
+            if is_phone(phone):
+                send_type = 'sms'
+            else:
+                send_type = 'call'
+
             send_verification_code_by_kavenegar(
                 phone=otp_code.phone,
                 code=otp_code.code,
+                send_type=send_type
             )
 
         return otp_code
