@@ -60,6 +60,7 @@ class Wallet(models.Model):
 
         return self.get_free() * get_trading_price_usdt(self.asset.symbol, BUY, raw_price=True)
     get_free_usdt.short_description = 'ارزش تتر'
+
     def get_free_irt(self):
         if self.asset.symbol == self.asset.IRT:
             return self.get_free()

@@ -1,3 +1,4 @@
+from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
 from django.db.models import F
@@ -184,5 +185,5 @@ class NotificationAdmin(admin.ModelAdmin):
 
 
 @admin.register(UserComment)
-class UserCommentAdmin(SimpleHistoryAdmin,admin.ModelAdmin):
-    list_display = ['account','created',]
+class UserCommentAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    list_display = ['user', 'created']

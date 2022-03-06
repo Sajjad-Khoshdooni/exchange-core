@@ -35,7 +35,7 @@ class OTCRequest(models.Model):
     to_amount = get_amount_field()
     from_amount = get_amount_field()
     to_price = get_amount_field()
-    to_price_abs = get_amount_field()
+    to_price_absolute_irt = get_amount_field()
 
     market = models.CharField(
         max_length=8,
@@ -117,7 +117,7 @@ class OTCRequest(models.Model):
 
         return trading_price
 
-    def get_to_price_abs(self):
+    def get_to_price_absolute_irt(self):
         conf = self.get_trade_config()
         other_side = get_other_side(conf.side)
         return get_trading_price_irt(self.to_asset.symbol, other_side)
@@ -126,7 +126,6 @@ class OTCRequest(models.Model):
         assert (from_amount or to_amount) and (not from_amount or not to_amount), 'exactly one amount should presents'
 
         to_price = self.get_to_price()
-        to_price_abs = self.get_to_price_abs()
 
         if to_amount:
             from_amount = to_price * to_amount
@@ -149,6 +148,7 @@ class OTCRequest(models.Model):
         self.to_price = to_price
         self.from_amount = from_amount
         self.to_amount = to_amount
+        self.to_price_absolute_irt = self.get_to_price_absolute_irt()
 
     def get_expire_time(self) -> datetime:
         return self.created + timedelta(seconds=OTCRequest.EXPIRE_TIME)
