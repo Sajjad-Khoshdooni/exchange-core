@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'provider',
     'wallet',
     'collector',
+    'simple_history',
 ]
 
 MIDDLEWARE = [
@@ -59,6 +60,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'hijack.middleware.HijackUserMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
 ]
 
 MIDDLEWARE.insert(0, 'accounts.middleware.DisableCsrfCheck')

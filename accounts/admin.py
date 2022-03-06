@@ -18,6 +18,8 @@ from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
 from .tasks import basic_verify_user
 from .tasks.verify_user import alert_user_verify_status
+from simple_history.admin import SimpleHistoryAdmin
+
 
 MANUAL_VERIFY_CONDITION = Q(
     Q(first_name_verified=None) | Q(last_name_verified=None),
@@ -53,7 +55,7 @@ class UserCommentInLine(admin.TabularInline):
 
 
 @admin.register(User)
-class CustomUserAdmin(AdvancedAdmin, UserAdmin):
+class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     default_edit_condition = M.superuser
 
     fields_edit_conditions = {
@@ -162,6 +164,7 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = ('level', 'recipient')
     search_fields = ('title', 'message', )
 
+
 @admin.register(UserComment)
-class UserCommentAdmin(admin.ModelAdmin):
-    pass
+class UserCommentAdmin(SimpleHistoryAdmin,admin.ModelAdmin):
+    list_display = ['account','created',]

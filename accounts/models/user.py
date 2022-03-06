@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 from django.db.models import Q
-
+from simple_history.models import HistoricalRecords
 from accounts.utils.validation import PHONE_MAX_LENGTH
 from accounts.validators import mobile_number_validator, national_card_code_validator
 from accounts.utils.admin import url_to_admin_list
@@ -67,7 +67,7 @@ class User(AbstractUser):
     )
 
     first_fiat_deposit_date = models.DateTimeField(blank=True, null=True)
-
+    history = HistoricalRecords()
 
 
     def change_status(self, status: str):
