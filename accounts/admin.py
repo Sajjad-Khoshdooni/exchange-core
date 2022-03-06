@@ -145,7 +145,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         value = OTCRequest.objects.filter(
             account__user_id=user.id
         ).aggregate(
-            amount=Sum(F('to_price_abs') * F('to_amount'))
+            amount=Sum(F('to_price_absolute_irt') * F('to_amount'))
         )
         return humanize_number(float(value['amount'] or 0))
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
