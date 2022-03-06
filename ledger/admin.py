@@ -93,7 +93,6 @@ class AssetAdmin(admin.ModelAdmin):
     get_hedge_threshold.short_description = 'future hedge threshold'
 
 
-
 @admin.register(models.Network)
 class NetworkAdmin(admin.ModelAdmin):
     list_display = ('symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'address_regex')

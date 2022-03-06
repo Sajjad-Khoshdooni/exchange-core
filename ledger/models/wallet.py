@@ -17,7 +17,7 @@ class Wallet(models.Model):
     modified = models.DateTimeField(auto_now=True)
 
     account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
-    asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)
+    asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT, limit_choices_to={'enable': True})
 
     market = models.CharField(
         max_length=8,
