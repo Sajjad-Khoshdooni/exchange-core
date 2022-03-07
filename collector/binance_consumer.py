@@ -37,11 +37,11 @@ class BinanceConsumer:
 
         self.socket.send(json.dumps({"method": "SUBSCRIBE", "params": streams,"id": 1}))
 
-        # while self.loop:
-        logger.info('Now %s' % datetime.now())
-        data_str = self.socket.recv()
-        data = json.loads(data_str)
-        self.handle_stream_data(data)
+        while self.loop:
+            logger.info('Now %s' % datetime.now())
+            data_str = self.socket.recv()
+            data = json.loads(data_str)
+            self.handle_stream_data(data)
 
     def handle_stream_data(self, data: dict):
         stream = data['stream']
@@ -57,6 +57,7 @@ class BinanceConsumer:
         price_redis.hset(name=key, mapping={
             'a': ask, 'b': bid
         })
+        price_redis.expire(key, 5)
 
     def exit_gracefully(self, signum, frame):
         self.loop = False
