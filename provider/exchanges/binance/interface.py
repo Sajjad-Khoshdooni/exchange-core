@@ -69,7 +69,7 @@ class BinanceSpotHandler:
         return {b['asset']: Decimal(b['free']) for b in balances_list}
 
     @classmethod
-    @cache_for()
+    @cache_for(time=120)
     def get_all_coins(cls):
         return cls.collect_api('/sapi/v1/capital/config/getall', method='GET')
 

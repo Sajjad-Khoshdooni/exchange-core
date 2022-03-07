@@ -1,4 +1,4 @@
-from _helpers.blockchain.tron import get_tron_client
+from tracker.clients.tron import get_tron_client
 from accounts.models import Account
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Transfer, Network, Asset, CryptoBalance

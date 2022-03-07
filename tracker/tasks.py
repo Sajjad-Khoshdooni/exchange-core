@@ -1,8 +1,8 @@
 from celery import shared_task
 
-from _helpers.blockchain.bsc import get_web3_bsc_client
-from _helpers.blockchain.eth import get_web3_eth_client
-from _helpers.blockchain.tron import get_tron_client
+from tracker.clients.bsc import get_web3_bsc_client
+from tracker.clients.eth import get_web3_eth_client
+from tracker.clients.tron import get_tron_client
 from tracker.blockchain.amount_normalizer import AmountNormalizer
 from ledger.models import Network, Asset
 from ledger.symbol_contract_mapper import bep20_symbol_contract_mapper, erc20_symbol_contract_mapper
