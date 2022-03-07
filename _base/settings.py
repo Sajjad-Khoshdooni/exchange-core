@@ -129,7 +129,7 @@ CACHES = {
     },
 }
 
-PROVIDER_CACHE_LOCATION = secret('PROVIDER_CACHE_LOCATION')
+PROVIDER_CACHE_LOCATION = secret('PROVIDER_CACHE_LOCATION', default='redis://127.0.0.1:6379/0')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
