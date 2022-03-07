@@ -54,7 +54,7 @@ class BinanceConsumer:
 
         key = 'bin:' + symbol
 
-        price_redis.hset(key=key, mapping={
+        price_redis.hset(name=key, mapping={
             'a': ask, 'b': bid
         })
 
