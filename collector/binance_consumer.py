@@ -22,7 +22,7 @@ class BinanceConsumer:
         logger.info('Starting Binance Socket...')
 
     def get_streams(self):
-        assets = list(Asset.objects.filter(enable=True).values_list('symbol', flat=True))
+        assets = list(Asset.objects.values_list('symbol', flat=True))
         return list(map(lambda asset: asset.lower() + 'usdt@depth5', assets))
 
     def consume(self):
@@ -61,7 +61,7 @@ class BinanceConsumer:
         price_redis.hset(name=key, mapping={
             'a': ask, 'b': bid
         })
-        price_redis.expire(key, 5)
+        price_redis.expire(key, 10)
 
     def exit_gracefully(self, signum, frame):
         self.loop = False
