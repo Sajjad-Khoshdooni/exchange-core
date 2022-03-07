@@ -44,6 +44,10 @@ class BinanceConsumer:
             self.handle_stream_data(data)
 
     def handle_stream_data(self, data: dict):
+        if 'stream' not in data:
+            logger.info('ignoring %s' % data)
+            return
+
         stream = data['stream']
         symbol = stream.split('@')[0]
 
