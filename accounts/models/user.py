@@ -3,6 +3,9 @@ from django.db import models
 from django.db.models import Q
 from simple_history.models import HistoricalRecords
 from django.utils import timezone
+
+from accounts.utils.admin import url_to_edit_object
+from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import PHONE_MAX_LENGTH
 from accounts.validators import mobile_number_validator, national_card_code_validator, telephone_number_validator
 
@@ -114,6 +117,13 @@ class User(AbstractUser):
             if self.level == User.LEVEL3:
                 self.level_3_verify_datetime = timezone.now()
         else:
+            if self.verify_status != self.REJECTED and status == self.REJECTED:
+                link = url_to_edit_object(self)
+                send_support_message(
+                    message='اطلاعات سطح %d کاربر مورد تایید قرار نگرفت. لطفا دستی بررسی شود.' % (self.level + 1),
+                    link=link
+                )
+
             self.verify_status = status
 
         self.save()
