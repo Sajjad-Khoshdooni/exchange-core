@@ -174,9 +174,16 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Decimal:
     from ledger.models.asset import Asset
     assert coin != IRT
-    asset = Asset.objects.get(symbol=coin)
-    buy_diff = asset.buy_diff or Decimal('0.005')
-    sell_diff = asset.sell_diff or Decimal('0.005')
+    asset = Asset.get(coin)
+
+    buy_diff = asset.buy_diff
+    if buy_diff is None:
+        buy_diff = Decimal('0.005')
+
+    sell_diff = asset.sell_diff
+    if sell_diff is None:
+        sell_diff = Decimal('0.005')
+
     if raw_price:
         multiplier = 1
     else:
