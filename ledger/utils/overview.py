@@ -123,7 +123,7 @@ class AssetOverview:
 
     def get_total_hedge_value(self):
         return sum([
-            self.get_hedge_value(asset) for asset in Asset.objects.all()
+            self.get_hedge_value(asset) or 0 for asset in Asset.objects.all()
         ])
 
     def get_binance_balance(self, asset: Asset) -> Decimal:
