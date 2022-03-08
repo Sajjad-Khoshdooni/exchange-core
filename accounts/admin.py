@@ -12,6 +12,8 @@ from accounts.models import UserComment
 from accounts.utils.admin import url_to_admin_list
 from financial.models.payment import Payment
 from financial.models.withdraw_request import FiatWithdrawRequest
+from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdraw_irt_value, CRYPTO_WITHDRAW_LIMIT, \
+    get_crypto_withdraw_irt_value
 from ledger.models import OTCRequest, OTCTrade
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import humanize_number
@@ -160,6 +162,42 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         return gregorian_to_jalali_date(user.birth_date).strftime('%Y/%m/%d')
 
     get_birth_date_jalali.short_description = 'تاریخ تولد شمسی'
+
+    def get_level_2_verify_datetime_jalali(self, user: User):
+        return gregorian_to_jalali_date(user.level_2_verify_datetime).strftime('%Y/%m/%d')
+
+    get_level_2_verify_datetime_jalali.short_description = 'تاریخ تایید سطح ۲'
+
+    def get_level_3_verify_datetime_jalali(self, user: User):
+        return gregorian_to_jalali_date(user.level_3_verify_datetime).strftime('%Y/%m/%d')
+
+    get_level_3_verify_datetime_jalali.short_description = 'تاریخ تایید سطح ۳'
+
+    def get_first_fiat_deposit_date_jalali(self, user: User):
+        return gregorian_to_jalali_date(user.first_fiat_deposit_date).strftime('%Y/%m/%d')
+
+    get_first_fiat_deposit_date_jalali.short_description = 'تاریخ اولین واریز ریالی'
+
+    def get_date_joined_jalali(self, user: User):
+        return gregorian_to_jalali_date(user.date_joined).strftime('%Y/%m/%d')
+
+    get_date_joined_jalali.short_description = 'تاریخ پیوستن'
+
+    def get_last_login_jalali(self, user: User):
+        return gregorian_to_jalali_date(user.last_login).strftime('%Y/%m/%d')
+
+    get_last_login_jalali.short_description = 'آخرین ورود'
+
+    def get_remaining_FIAT_WITHDRAW_LIMIT(self, user: User):
+        return humanize_number(FIAT_WITHDRAW_LIMIT[user.level] - get_fiat_withdraw_irt_value(user))
+
+    get_remaining_FIAT_WITHDRAW_LIMIT.short_description = 'باقی مانده سقف مجاز برداشت ریالی روزانه'
+
+    def get_remaining_crypto_WITHDRAW_LIMIT(self, user: User):
+        return humanize_number(CRYPTO_WITHDRAW_LIMIT[user.level] - get_crypto_withdraw_irt_value(user))
+
+    get_remaining_crypto_WITHDRAW_LIMIT.short_description = 'باقی مانده سقف مجاز برداشت رمزارز   روزانه'
+
 
     def get_national_card_image(self, user: User):
         return mark_safe("<img src='%s' width='200' height='200' />" % user.national_card_image.get_absolute_image_url())
