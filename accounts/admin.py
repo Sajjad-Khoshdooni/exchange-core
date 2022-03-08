@@ -159,7 +159,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     def get_sum_of_value_buy_sell(self, user: User):
         value = OTCRequest.objects.filter(
-            account__user_id=user.id
+            account__user_id=user.id,
+            otctrade__isnull=False,
         ).aggregate(
             amount=Sum(F('to_price_absolute_irt') * F('to_amount'))
         )
