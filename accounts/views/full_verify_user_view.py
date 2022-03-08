@@ -49,8 +49,8 @@ class FullVerificationSerializer(serializers.ModelSerializer):
                 link=link
             )
 
-        if need_telephone_otp and user.telephone:
-            VerificationCode.send_otp_code(user.telephone, scope=VerificationCode.SCOPE_TELEPHONE)
+        # if need_telephone_otp and user.telephone:
+        #     VerificationCode.send_otp_code(user.telephone, scope=VerificationCode.SCOPE_TELEPHONE)
 
         return user
 

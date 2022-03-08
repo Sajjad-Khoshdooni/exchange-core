@@ -159,7 +159,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
     networks = serializers.SerializerMethodField()
 
     def get_networks(self, asset: Asset):
-        network_assets = asset.networkasset_set.all()
+        network_assets = asset.networkasset_set.all().order_by('withdraw_fee')
 
         account = self.context['request'].user.account
 
