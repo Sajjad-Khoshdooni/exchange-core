@@ -6,6 +6,7 @@ from rest_framework import serializers
 from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.precision import get_precision, get_presentation_amount
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class InvalidAmount(Exception):
@@ -49,6 +50,16 @@ class Asset(models.Model):
 
     hedge_method = models.CharField(max_length=16, default=HEDGE_BINANCE_FUTURE, choices=[
         (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE), (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
+    ])
+
+    buy_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
+        MinValueValidator(0),
+        MaxValueValidator(Decimal('0.1')),
+    ])
+
+    sell_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
+        MinValueValidator(0),
+        MaxValueValidator(Decimal('0.1')),
     ])
 
     class Meta:

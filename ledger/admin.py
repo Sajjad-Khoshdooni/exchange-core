@@ -4,21 +4,34 @@ from django.contrib.admin import SimpleListFilter
 from django.db.models import F
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 
+from accounts.admin_guard import M
+from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
 from ledger.models import Asset
 from ledger.utils.overview import AssetOverview
 from provider.exchanges import BinanceFuturesHandler
+from ledger.utils.precision import humanize_number
 
 
 @admin.register(models.Asset)
-class AssetAdmin(admin.ModelAdmin):
+class AssetAdmin(AdvancedAdmin):
+    default_edit_condition = M.superuser
+
+    fields_edit_conditions = {
+        'order': True,
+        'enable': True,
+        'trend': True,
+        'buy_diff': True,
+        'sell_diff': True
+    }
+
     list_display = (
         'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount',
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance', 'get_ledger_balance_users',
 
         'get_hedge_threshold', 'get_future_value',
-        'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'hedge_method',
+        'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'hedge_method', 'buy_diff', 'sell_diff'
     )
     list_filter = ('enable', 'trend')
     list_editable = ('enable', 'order', 'trend')
@@ -92,7 +105,7 @@ class AssetAdmin(admin.ModelAdmin):
     def get_hedge_value(self, asset: Asset):
         hedge_value = self.overview and self.overview.get_hedge_value(asset)
 
-        if hedge_value:
+        if hedge_value is not None:
             hedge_value = round(hedge_value, 2)
 
         return hedge_value
@@ -130,7 +143,7 @@ class OTCRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'from_asset', 'to_asset', 'to_price', 'from_amount', 'to_amount', 'token')
 
     def get_from_amount(self, otc_request: models.OTCRequest):
-        return otc_request.from_asset.get_presentation_amount(otc_request.from_amount)
+        return humanize_number((otc_request.from_asset.get_presentation_amount(otc_request.from_amount)))
 
     get_from_amount.short_description = 'from_amount'
 
@@ -150,20 +163,25 @@ class OTCUserFilter(SimpleListFilter):
     parameter_name = 'user'
 
     def lookups(self, request, model_admin):
-        return [(1,1)]
+        return [(1, 1)]
 
     def queryset(self, request, queryset):
         user = request.GET.get('user')
         if user is not None:
-            return queryset.filter(otc_request__account__user_id = user)
+            return queryset.filter(otc_request__account__user_id=user)
         else:
             return queryset
 
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request',  'status', 'group_id')
-    list_filter = (OTCUserFilter,)
+    list_display = ('created', 'otc_request',  'status', 'get_otc_trade_from_amount')
+    list_filter = (OTCUserFilter, 'status')
+
+    def get_otc_trade_from_amount(self, otc_trade : models.OTCTrade):
+        return humanize_number(otc_trade.otc_request.from_asset.get_presentation_amount(otc_trade.otc_request.from_amount))
+
+    get_otc_trade_from_amount.short_description = 'مقدار پایه'
 
 
 @admin.register(models.Trx)
@@ -176,7 +194,7 @@ class WalletUserFilter(SimpleListFilter):
     parameter_name = 'user'
 
     def lookups(self, request, model_admin):
-        return [(1,1)]
+        return [(1, 1)]
 
     def queryset(self, request, queryset):
         user = request.GET.get('user')
@@ -204,7 +222,7 @@ class WalletAdmin(admin.ModelAdmin):
 
     get_locked.short_description = 'locked'
 
-    def get_free_irt(self , wallet: models.Wallet):
+    def get_free_irt(self, wallet: models.Wallet):
         return wallet.asset.get_presentation_price_irt(wallet.get_free_irt())
     get_free_irt.short_description = 'ارزش ریالی'
 

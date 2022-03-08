@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
     FiatWithdrawRequest
+from ledger.utils.precision import humanize_number
 
 
 @admin.register(Gateway)
@@ -63,14 +64,18 @@ class UserFilter(SimpleListFilter):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('created', 'status', 'ref_id', 'ref_status', 'get_user_bank_card',)
+    list_display = ('created','get_payment_amount', 'status', 'ref_id', 'ref_status', 'get_user_bank_card',)
     list_filter = (UserFilter,)
 
     def get_user_bank_card(self, payment: Payment):
         return payment.payment_request.bank_card.user
 
     get_user_bank_card.short_description = 'کاربر'
-
+    
+    def get_payment_amount(self, payment: Payment):
+        return humanize_number(payment.payment_request.amount)
+    
+    get_payment_amount.short_description = 'مقدار'
 
 @admin.register(BankCard)
 class BankCardAdmin(admin.ModelAdmin):

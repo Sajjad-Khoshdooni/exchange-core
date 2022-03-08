@@ -26,7 +26,7 @@ class AdvancedAdmin(ModelAdmin):
     __fieldsets__ = None
 
     __readonly_fields__ = [
-        'get_list_item_initializer',
+        # 'get_list_item_initializer',
     ]
 
     def __init__(self, model, admin_site):
@@ -77,10 +77,10 @@ class AdvancedAdmin(ModelAdmin):
 
         return append_list(readonly, readonly_fields, unique=True)
 
-    def get_list_display(self, request):
-        list_display = super(AdvancedAdmin, self).get_list_display(request)
-
-        return append(list_display, 'get_list_item_initializer')
+    # def get_list_display(self, request):
+    #     list_display = super(AdvancedAdmin, self).get_list_display(request)
+    #
+    #     return append(list_display, 'get_list_item_initializer')
 
     def get_to_remove_fields(self, request, obj):
         to_remove_fields = []
@@ -121,7 +121,10 @@ class AdvancedAdmin(ModelAdmin):
                 should_be_readonly_fields.append(field)
 
         if self.default_edit_condition is not None:
+            default_condition = self.default_edit_condition
+            self.default_edit_condition = None
             remaining_fields = set(self._get_fields(request, obj)) - set(self.fields_edit_conditions)
+            self.default_edit_condition = default_condition
 
             for field in remaining_fields:
                 if not evaluate_admin_condition(request, self, obj, self.default_edit_condition):
