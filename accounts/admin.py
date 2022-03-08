@@ -81,11 +81,16 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         (_('Permissions'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
-        (_('Important dates'), {'fields': ('last_login', 'date_joined', 'first_fiat_deposit_date')}),
-        (_('لینک های مالی کاربر'),{
-            'fields': ('get_payment_address','get_withdraw_address','get_otctrade_address', 'get_wallet_address')
+        (_('Important dates'), {'fields': (
+            'get_last_login_jalali', 'get_date_joined_jalali', 'get_first_fiat_deposit_date_jalali',
+            'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
+        )}),
+        (_('لینک های مالی کاربر'), {
+            'fields': ('get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet_address')
         }),
-        (_('مجموع خرید و فروش کاربر'),{'fields':('get_sum_of_value_buy_sell',)})
+        (_('اطلاعات مالی کاربر'), {'fields': (
+            'get_sum_of_value_buy_sell', 'get_remaining_FIAT_WITHDRAW_LIMIT', 'get_remaining_crypto_WITHDRAW_LIMIT'
+        )})
 
     )
 
