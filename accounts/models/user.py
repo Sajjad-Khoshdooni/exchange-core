@@ -38,11 +38,11 @@ class User(AbstractUser):
         }
     )
 
-    email_verified = models.BooleanField(default=False,verbose_name='تاییدیه ایمیل',)
+    email_verified = models.BooleanField(default=False, verbose_name='تاییدیه ایمیل',)
     email_verification_date = models.DateTimeField(null=True, blank=True)
 
-    first_name_verified = models.BooleanField(null=True, blank=True,verbose_name='تاییدیه نام',)
-    last_name_verified = models.BooleanField(null=True, blank=True,verbose_name='تاییدیه نام خانوادگی',)
+    first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام',)
+    last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی',)
 
     national_code = models.CharField(
         max_length=10,
@@ -50,10 +50,10 @@ class User(AbstractUser):
         verbose_name='کد ملی',
         validators=[national_card_code_validator],
     )
-    national_code_verified = models.BooleanField(null=True, blank=True,verbose_name='تاییدیه کد ملی',)
+    national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی',)
 
-    birth_date = models.DateField(null=True, blank=True,verbose_name='تاریخ تولد',)
-    birth_date_verified = models.BooleanField(null=True, blank=True,verbose_name='تاییدیه تاریخ تولد',)
+    birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد',)
+    birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد',)
 
     level_2_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تاپید سطح ۲')
     level_3_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تاپید سطح 3')
@@ -74,7 +74,7 @@ class User(AbstractUser):
         verbose_name='وضعیت تایید'
     )
 
-    first_fiat_deposit_date = models.DateTimeField(blank=True, null=True, verbose_name='زمان اولین برداشت ریالی')
+    first_fiat_deposit_date = models.DateTimeField(blank=True, null=True, verbose_name='زمان اولین واریز ریالی')
 
     national_card_image = models.OneToOneField(
         to='multimedia.Image',

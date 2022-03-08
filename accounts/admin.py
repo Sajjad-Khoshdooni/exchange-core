@@ -71,7 +71,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email','phone', 'birth_date',
+        (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
                                          'get_birth_date_jalali',
                                          'telephone', 'get_national_card_image', 'get_selfie_image')}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
@@ -89,7 +89,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
             'fields': ('get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet_address')
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
-            'get_sum_of_value_buy_sell', 'get_remaining_FIAT_WITHDRAW_LIMIT', 'get_remaining_crypto_WITHDRAW_LIMIT'
+            'get_sum_of_value_buy_sell', 'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit'
         )})
 
     )
@@ -100,12 +100,16 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime',
     )
-    inlines = [UserCommentInLine,]
+    inlines = [UserCommentInLine, ]
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')
-    readonly_fields = ('get_payment_address','get_withdraw_address','get_otctrade_address','get_wallet_address',
-                       'get_sum_of_value_buy_sell', 'get_birth_date_jalali', 'get_national_card_image',
-                       'get_selfie_image')
+    readonly_fields = (
+        'get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet_address',
+        'get_sum_of_value_buy_sell', 'get_birth_date_jalali', 'get_national_card_image',
+        'get_selfie_image', 'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
+        'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
+        'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit'
+    )
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
@@ -116,7 +120,6 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
             user.last_name_verified = True
             user.save()
             basic_verify_user.delay(user.id)
-
 
     @admin.action(description='رد کردن نام کاربر', permissions=['view'])
     def reject_user_name(self, request, queryset):
@@ -136,12 +139,12 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     def get_payment_address(self, user: User):
         link = url_to_admin_list(Payment)+'?user={}'.format(user.id)
-        return mark_safe ("<a href='%s'>دیدن</a>" % link)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_payment_address.short_description = 'واریزهای ریالی'
 
     def get_withdraw_address(self, user: User):
         link = url_to_admin_list(FiatWithdrawRequest)+'?user={}'.format(user.id)
-        return mark_safe ("<a href='%s'>دیدن</a>" % link)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_withdraw_address.short_description = 'درخواست برداشت ریالی'
 
     def get_otctrade_address(self, user: User):
@@ -149,12 +152,12 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_otctrade_address.short_description = 'OTC_Trade'
 
-    def get_wallet_address(self,user:User):
+    def get_wallet_address(self, user: User):
         link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
-        return mark_safe("<a href='%s'>دیدن</a>" %link)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_wallet_address.short_description = 'آدرس کیف اعتباری'
 
-    def get_sum_of_value_buy_sell(self,user:User):
+    def get_sum_of_value_buy_sell(self, user: User):
         value = OTCRequest.objects.filter(
             account__user_id=user.id
         ).aggregate(
@@ -193,19 +196,20 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     get_last_login_jalali.short_description = 'آخرین ورود'
 
-    def get_remaining_FIAT_WITHDRAW_LIMIT(self, user: User):
+    def get_remaining_fiat_withdraw_limit(self, user: User):
         return humanize_number(FIAT_WITHDRAW_LIMIT[user.level] - get_fiat_withdraw_irt_value(user))
 
-    get_remaining_FIAT_WITHDRAW_LIMIT.short_description = 'باقی مانده سقف مجاز برداشت ریالی روزانه'
+    get_remaining_fiat_withdraw_limit.short_description = 'باقی مانده سقف مجاز برداشت ریالی روزانه'
 
-    def get_remaining_crypto_WITHDRAW_LIMIT(self, user: User):
+    def get_remaining_crypto_withdraw_limit(self, user: User):
         return humanize_number(CRYPTO_WITHDRAW_LIMIT[user.level] - get_crypto_withdraw_irt_value(user))
 
-    get_remaining_crypto_WITHDRAW_LIMIT.short_description = 'باقی مانده سقف مجاز برداشت رمزارز   روزانه'
-
+    get_remaining_crypto_withdraw_limit.short_description = 'باقی مانده سقف مجاز برداشت رمزارز   روزانه'
 
     def get_national_card_image(self, user: User):
-        return mark_safe("<img src='%s' width='200' height='200' />" % user.national_card_image.get_absolute_image_url())
+        return mark_safe(
+            "<img src='%s' width='200' height='200' />" % user.national_card_image.get_absolute_image_url()
+        )
 
     get_national_card_image.short_description = 'عکس کارت ملی'
 
