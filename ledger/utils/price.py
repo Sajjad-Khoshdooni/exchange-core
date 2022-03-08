@@ -80,7 +80,7 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
             for s in sides:
                 price = price_dict.get(SIDE_MAP[s])
                 if price is not None:
-                    price = Decimal(prices)
+                    price = Decimal(price)
 
                 results.append(
                     Price(coin=c, price=price, side=s)
