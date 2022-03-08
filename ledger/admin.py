@@ -5,10 +5,10 @@ from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 
 from accounts.models import Account
 from ledger import models
-from ledger.models import Asset
+from ledger.models import Asset, asset
 from ledger.utils.overview import AssetOverview
 from provider.exchanges import BinanceFuturesHandler
-
+from ledger.utils.precision import humanize_number
 
 @admin.register(models.Asset)
 class AssetAdmin(admin.ModelAdmin):
@@ -119,7 +119,7 @@ class OTCRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'from_asset', 'to_asset', 'to_price', 'from_amount', 'to_amount', 'token')
 
     def get_from_amount(self, otc_request: models.OTCRequest):
-        return otc_request.from_asset.get_presentation_amount(otc_request.from_amount)
+        return humanize_number((otc_request.from_asset.get_presentation_amount(otc_request.from_amount)))
 
     get_from_amount.short_description = 'from_amount'
 
@@ -139,20 +139,25 @@ class OTCUserFilter(SimpleListFilter):
     parameter_name = 'user'
 
     def lookups(self, request, model_admin):
-        return [(1,1)]
+        return [(1, 1)]
 
     def queryset(self, request, queryset):
         user = request.GET.get('user')
         if user is not None:
-            return queryset.filter(otc_request__account__user_id = user)
+            return queryset.filter(otc_request__account__user_id=user)
         else:
             return queryset
 
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request',  'status', 'group_id')
-    list_filter = (OTCUserFilter,)
+    list_display = ('created', 'otc_request',  'status', 'get_otc_trade_from_amount')
+    list_filter = (OTCUserFilter, 'status')
+
+    def get_otc_trade_from_amount(self, otctrade : models.OTCTrade):
+        return humanize_number(asset.get_presentation_amount(otctrade.otc_request.from_amount))
+
+    get_otc_trade_from_amount.short_description = 'مقدار پایه'
 
 
 @admin.register(models.Trx)
@@ -165,7 +170,7 @@ class WalletUserFilter(SimpleListFilter):
     parameter_name = 'user'
 
     def lookups(self, request, model_admin):
-        return [(1,1)]
+        return [(1, 1)]
 
     def queryset(self, request, queryset):
         user = request.GET.get('user')
@@ -193,7 +198,7 @@ class WalletAdmin(admin.ModelAdmin):
 
     get_locked.short_description = 'locked'
 
-    def get_free_irt(self , wallet: models.Wallet):
+    def get_free_irt(self, wallet: models.Wallet):
         return wallet.asset.get_presentation_price_irt(wallet.get_free_irt())
     get_free_irt.short_description = 'ارزش ریالی'
 

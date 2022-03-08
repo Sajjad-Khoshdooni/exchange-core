@@ -5,6 +5,7 @@ from typing import Dict
 from cachetools.func import ttl_cache
 
 from collector.price.grpc_client import gRPCClient
+# from ledger import models
 from ledger.utils.price_manager import PriceManager
 
 BINANCE = 'binance'
@@ -119,16 +120,18 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
 
 
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Decimal:
+    from ledger.models.asset import Asset
     assert coin != IRT
-    diff = Decimal('0.005')
-
+    asset = Asset.objects.get(symbol=coin)
+    buy_diff = asset.buy_diff or Decimal('0.005')
+    sell_diff = asset.sell_diff or Decimal('0.005')
     if raw_price:
         multiplier = 1
     else:
         if side == BUY:
-            multiplier = 1 - diff
+            multiplier = 1 - buy_diff
         else:
-            multiplier = 1 + diff
+            multiplier = 1 + sell_diff
 
     price = get_price(coin, side)
 

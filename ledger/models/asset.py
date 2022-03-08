@@ -6,6 +6,7 @@ from rest_framework import serializers
 from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.precision import get_precision, get_presentation_amount
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class InvalidAmount(Exception):
@@ -43,6 +44,16 @@ class Asset(models.Model):
 
     trend = models.BooleanField(default=False)
     pin_to_top = models.BooleanField(default=False)
+
+    buy_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
+            MaxValueValidator(Decimal('.01')),
+            MinValueValidator(0)
+        ])
+
+    sell_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
+        MaxValueValidator(Decimal('0.1')),
+        MinValueValidator(0)
+    ])
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )

@@ -120,3 +120,5 @@ class ZarinpalGateway(Gateway):
 
     class Meta:
         proxy = True
+
+# class Payir
