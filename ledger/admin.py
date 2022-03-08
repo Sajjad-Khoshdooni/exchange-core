@@ -22,8 +22,8 @@ class AssetAdmin(AdvancedAdmin):
         'order': True,
         'enable': True,
         'trend': True,
-        'buy_diff': True,
-        'sell_diff': True
+        'bid_diff': True,
+        'ask_diff': True
     }
 
     list_display = (
@@ -31,7 +31,7 @@ class AssetAdmin(AdvancedAdmin):
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance', 'get_ledger_balance_users',
 
         'get_hedge_threshold', 'get_future_value',
-        'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'hedge_method', 'buy_diff', 'sell_diff'
+        'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'hedge_method', 'bid_diff', 'ask_diff'
     )
     list_filter = ('enable', 'trend')
     list_editable = ('enable', 'order', 'trend')

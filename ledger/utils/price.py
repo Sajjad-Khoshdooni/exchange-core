@@ -176,21 +176,21 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Dec
     assert coin != IRT
     asset = Asset.get(coin)
 
-    buy_diff = asset.buy_diff
-    if buy_diff is None:
-        buy_diff = Decimal('0.005')
+    bid_diff = asset.bid_diff
+    if bid_diff is None:
+        bid_diff = Decimal('0.005')
 
-    sell_diff = asset.sell_diff
-    if sell_diff is None:
-        sell_diff = Decimal('0.005')
+    ask_diff = asset.ask_diff
+    if ask_diff is None:
+        ask_diff = Decimal('0.005')
 
     if raw_price:
         multiplier = 1
     else:
         if side == BUY:
-            multiplier = 1 - buy_diff
+            multiplier = 1 - bid_diff
         else:
-            multiplier = 1 + sell_diff
+            multiplier = 1 + ask_diff
     price = get_price(coin, side)
 
     return price * multiplier

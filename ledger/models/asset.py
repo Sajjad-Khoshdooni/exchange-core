@@ -52,15 +52,15 @@ class Asset(models.Model):
         (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE), (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
     ])
 
-    buy_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
+    bid_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
         MinValueValidator(0),
         MaxValueValidator(Decimal('0.1')),
-    ])
+    ], help_text='our bid (taker sell price) = (1 - bid_diff) * binance_bid')
 
-    sell_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
+    ask_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
         MinValueValidator(0),
         MaxValueValidator(Decimal('0.1')),
-    ])
+    ], help_text='our ask (taker buy price) = (1 + ask_diff) * binance_ask')
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
