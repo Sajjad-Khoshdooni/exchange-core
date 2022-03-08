@@ -105,3 +105,7 @@ class VerificationCode(models.Model):
             )
 
         return otp_code
+
+    def set_token_used(self):
+        self.token_used = True
+        self.save()

@@ -76,14 +76,6 @@ class User(AbstractUser):
 
     first_fiat_deposit_date = models.DateTimeField(blank=True, null=True, verbose_name='زمان اولین واریز ریالی')
 
-    national_card_image = models.OneToOneField(
-        to='multimedia.Image',
-        on_delete=models.PROTECT,
-        verbose_name='عکس کارت ملی',
-        related_name='+',
-        blank=True,
-        null=True
-    )
     selfie_image = models.OneToOneField(
         to='multimedia.Image',
         on_delete=models.PROTECT,
