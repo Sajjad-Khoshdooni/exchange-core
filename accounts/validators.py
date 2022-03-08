@@ -21,7 +21,7 @@ def mobile_number_validator(value):
 
 
 def telephone_number_validator(value):
-    if not re.match(r'^0?[1-8]\d{9}$', value):
+    if not re.match(r'^0?[1-9]\d{9}$', value):
         raise ValidationError('شماره تلفن معتبر نیست.')
 
 
