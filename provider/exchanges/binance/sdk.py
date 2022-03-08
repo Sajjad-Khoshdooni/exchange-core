@@ -20,11 +20,10 @@ else:
 
 
 def hashing(query_string):
-    # secret_key = os.environ['BIN_SECRET']
-    # return hmac.new(
-    #     secret_key.encode("utf-8"), query_string.encode("utf-8"), hashlib.sha256
-    # ).hexdigest()
-    return ''
+    secret_key = os.environ['BIN_SECRET']
+    return hmac.new(
+        secret_key.encode("utf-8"), query_string.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
 
 
 def get_timestamp():
