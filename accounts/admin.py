@@ -76,7 +76,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
                                          'telephone', 'get_national_card_image', 'get_selfie_image')}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
-                                          'telephone_verified', 'national_card_image_verified', 'selfie_image_verified',
+                                          'telephone_verified', 'selfie_image_verified',
                                           )}),
         (_('Permissions'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),

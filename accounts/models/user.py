@@ -96,7 +96,6 @@ class User(AbstractUser):
         }
     )
 
-    national_card_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس کارت ملی')
     selfie_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس سلفی')
     telephone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه شماره تلفن')
 
@@ -138,11 +137,11 @@ class User(AbstractUser):
             Account.objects.create(user=self)
 
         if self.level == self.LEVEL2 and self.verify_status == self.PENDING:
-            if self.telephone_verified and self.national_card_image_verified and self.selfie_image_verified:
+            if self.telephone_verified and self.selfie_image_verified:
                 self.change_status(self.VERIFIED)
 
             else:
-                fields = [self.telephone_verified, self.national_card_image_verified, self.selfie_image_verified]
+                fields = [self.telephone_verified, self.selfie_image_verified]
                 any_none = any(map(lambda f: f is None, fields))
                 any_false = any(map(lambda f: f is False, fields))
 

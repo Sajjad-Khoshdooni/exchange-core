@@ -1,10 +1,10 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, UpdateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.models import VerificationCode
+from accounts.models import VerificationCode, User
 from accounts.validators import telephone_number_validator
 
 
@@ -31,8 +31,9 @@ class InitiateTelephoneVerifyView(APIView):
 
 
 class TelephoneOTPVerifySerializer(serializers.ModelSerializer):
-    def create(self, validated_data):
-        user = validated_data['user']
+    token = serializers.UUIDField(write_only=True, required=True)
+
+    def update(self, user, validated_data):
         token = validated_data.pop('token')
 
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_TELEPHONE)
@@ -43,22 +44,24 @@ class TelephoneOTPVerifySerializer(serializers.ModelSerializer):
         otp_code.set_token_used()
 
         user.telephone_verified = True
+        user.telephone = validated_data['telephone']
         user.save()
 
-        return otp_code
+        return user
 
     class Meta:
-        model = VerificationCode
-        fields = ('token', 'scope')
-        read_only_fields = ('scope', )
+        model = User
+        fields = ('token', 'telephone', 'telephone_verified')
+        read_only_fields = ('telephone_verified', )
+        write_only_fields = ('token', )
 
         extra_kwargs = {
             'token': {'required': True},
         }
 
 
-class TelephoneOTPVerifyView(CreateAPIView):
+class TelephoneOTPVerifyView(UpdateAPIView):
     serializer_class = TelephoneOTPVerifySerializer
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    def get_object(self):
+        return self.request.user
