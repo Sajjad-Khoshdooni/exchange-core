@@ -17,7 +17,7 @@ class AssetAdmin(admin.ModelAdmin):
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance', 'get_ledger_balance_users',
 
         'get_hedge_threshold', 'get_future_value',
-        'get_ledger_balance_system', 'get_ledger_balance_out', 'trend',
+        'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'hedge_method',
     )
     list_filter = ('enable', 'trend')
     list_editable = ('enable', 'order', 'trend')
