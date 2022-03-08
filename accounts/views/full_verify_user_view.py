@@ -43,12 +43,12 @@ class FullVerificationSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = (
-            'verify_status', 'level', 'telephone', 'national_card_image', 'selfie_image',
-            'telephone_verified', 'national_card_image_verified', 'selfie_image_verified',
+            'verify_status', 'level', 'telephone', 'selfie_image',
+            'telephone_verified', 'selfie_image_verified',
         )
         model = User
         read_only_fields = (
-            'verify_status', 'level', 'selfie_image_verified',
+            'verify_status', 'level', 'selfie_image_verified', 'telephone_verified', 'telephone'
         )
         extra_kwargs = {
             'selfie_image': {'required': True},
