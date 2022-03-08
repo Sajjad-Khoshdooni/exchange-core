@@ -90,7 +90,7 @@ class VerificationCode(models.Model):
         if settings.DEBUG:
             print('[OTP] code for %s is: %s' % (otp_code.phone, otp_code.code))
         else:
-            if is_phone(phone):
+            if scope == cls.SCOPE_TELEPHONE: # is_phone(phone):
                 send_type = 'sms'
             else:
                 send_type = 'call'
