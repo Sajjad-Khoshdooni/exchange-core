@@ -5,4 +5,5 @@ from .otp_view import VerifyOTPView, SendOTPView
 from .forget_password_view import InitiateForgetPasswordView, ForgetPasswordView
 from .basic_verify_user_view import BasicInfoVerificationViewSet
 from .notification_view import NotificationViewSet, UnreadAllNotificationView
-from .full_verify_user_view import FullVerificationViewSet, TelephoneOTPView
+from .full_verify_user_view import FullVerificationViewSet
+from .telephone_verify_view import InitiateTelephoneVerifyView, TelephoneOTPVerifyView

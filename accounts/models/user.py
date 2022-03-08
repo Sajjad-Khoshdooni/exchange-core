@@ -38,11 +38,11 @@ class User(AbstractUser):
         }
     )
 
-    email_verified = models.BooleanField(default=False,verbose_name='تاییدیه ایمیل',)
+    email_verified = models.BooleanField(default=False, verbose_name='تاییدیه ایمیل',)
     email_verification_date = models.DateTimeField(null=True, blank=True)
 
-    first_name_verified = models.BooleanField(null=True, blank=True,verbose_name='تاییدیه نام',)
-    last_name_verified = models.BooleanField(null=True, blank=True,verbose_name='تاییدیه نام خانوادگی',)
+    first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام',)
+    last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی',)
 
     national_code = models.CharField(
         max_length=10,
@@ -50,10 +50,10 @@ class User(AbstractUser):
         verbose_name='کد ملی',
         validators=[national_card_code_validator],
     )
-    national_code_verified = models.BooleanField(null=True, blank=True,verbose_name='تاییدیه کد ملی',)
+    national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی',)
 
-    birth_date = models.DateField(null=True, blank=True,verbose_name='تاریخ تولد',)
-    birth_date_verified = models.BooleanField(null=True, blank=True,verbose_name='تاییدیه تاریخ تولد',)
+    birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد',)
+    birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد',)
 
     level_2_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تاپید سطح ۲')
     level_3_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تاپید سطح 3')
@@ -74,16 +74,8 @@ class User(AbstractUser):
         verbose_name='وضعیت تایید'
     )
 
-    first_fiat_deposit_date = models.DateTimeField(blank=True, null=True, verbose_name='زمان اولین برداشت ریالی')
+    first_fiat_deposit_date = models.DateTimeField(blank=True, null=True, verbose_name='زمان اولین واریز ریالی')
 
-    national_card_image = models.OneToOneField(
-        to='multimedia.Image',
-        on_delete=models.PROTECT,
-        verbose_name='عکس کارت ملی',
-        related_name='+',
-        blank=True,
-        null=True
-    )
     selfie_image = models.OneToOneField(
         to='multimedia.Image',
         on_delete=models.PROTECT,
@@ -104,7 +96,6 @@ class User(AbstractUser):
         }
     )
 
-    national_card_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس کارت ملی')
     selfie_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس سلفی')
     telephone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه شماره تلفن')
 
@@ -145,8 +136,14 @@ class User(AbstractUser):
             from accounts.models import Account
             Account.objects.create(user=self)
 
-        if self.level == self.LEVEL2 and self.telephone_verified and self.national_card_image_verified \
-                and self.selfie_image_verified:
+        if self.level == self.LEVEL2 and self.verify_status == self.PENDING:
+            if self.telephone_verified and self.selfie_image_verified:
+                self.change_status(self.VERIFIED)
 
-            self.verify_status = self.PENDING
-            self.change_status(self.VERIFIED)
+            else:
+                fields = [self.telephone_verified, self.selfie_image_verified]
+                any_none = any(map(lambda f: f is None, fields))
+                any_false = any(map(lambda f: f is False, fields))
+
+                if not any_none and any_false:
+                    self.change_status(self.REJECTED)

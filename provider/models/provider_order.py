@@ -116,7 +116,16 @@ class ProviderOrder(models.Model):
 
         symbol = cls.get_trading_symbol(asset)
 
-        step_size = BinanceFuturesHandler.get_step_size(symbol)
+        if asset.hedge_method == Asset.HEDGE_BINANCE_FUTURE:
+            handler = BinanceFuturesHandler
+            market = cls.FUTURE
+        elif asset.hedge_method == Asset.HEDGE_BINANCE_SPOT:
+            handler = BinanceSpotHandler
+            market = cls.SPOT
+        else:
+            raise NotImplementedError
+
+        step_size = handler.get_step_size(symbol)
 
         if abs(hedge_amount) > step_size / 2:
             side = cls.SELL
@@ -135,7 +144,7 @@ class ProviderOrder(models.Model):
             if order_amount * price < 10:
                 return True
 
-            order = cls.new_order(asset, side, order_amount, scope)
+            order = cls.new_order(asset, side, order_amount, scope, market=market)
 
             return bool(order)
 

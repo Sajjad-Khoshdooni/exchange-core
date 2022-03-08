@@ -57,6 +57,8 @@ class SignupSerializer(serializers.Serializer):
         user.set_password(validated_data['password'])
         user.save()
 
+        otp_code.set_token_used()
+
         return user
 
 

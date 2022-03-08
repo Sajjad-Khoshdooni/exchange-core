@@ -56,8 +56,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
         user.set_password(validated_data.pop('password'))
         user.save()
 
-        otp_code.token_used = True
-        otp_code.save()
+        otp_code.set_token_used()
 
         return user
 

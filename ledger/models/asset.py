@@ -23,6 +23,9 @@ class Asset(models.Model):
     USDT = 'USDT'
     SHIB = 'SHIB'
 
+    HEDGE_BINANCE_FUTURE = 'binance-future'
+    HEDGE_BINANCE_SPOT = 'binance-spot'
+
     objects = models.Manager()
     live_objects = LiveAssetManager()
 
@@ -45,14 +48,18 @@ class Asset(models.Model):
     trend = models.BooleanField(default=False)
     pin_to_top = models.BooleanField(default=False)
 
+    hedge_method = models.CharField(max_length=16, default=HEDGE_BINANCE_FUTURE, choices=[
+        (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE), (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
+    ])
+
     buy_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
-            MaxValueValidator(Decimal('.01')),
-            MinValueValidator(0)
-        ])
+        MinValueValidator(0),
+        MaxValueValidator(Decimal('0.1')),
+    ])
 
     sell_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
+        MinValueValidator(0),
         MaxValueValidator(Decimal('0.1')),
-        MinValueValidator(0)
     ])
 
     class Meta:

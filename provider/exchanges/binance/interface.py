@@ -97,6 +97,14 @@ class BinanceSpotHandler:
             'asset': asset, 'amount': amount, 'type': transfer_type
         })
 
+    @classmethod
+    def get_step_size(cls, symbol: str) -> Decimal:
+        data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol + 'USDT'})
+        filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['symbols'][0]['filters']))
+        lot_size = filters[0]
+
+        return Decimal(lot_size['stepSize'])
+
 
 class BinanceFuturesHandler(BinanceSpotHandler):
     order_url = '/fapi/v1/order'
