@@ -92,13 +92,16 @@ class VerificationCode(models.Model):
         else:
             if scope == cls.SCOPE_TELEPHONE: # is_phone(phone):
                 send_type = 'sms'
+                template = 'verify'
             else:
                 send_type = 'call'
+                template = 'telephone'
 
             send_verification_code_by_kavenegar(
                 phone=otp_code.phone,
                 code=otp_code.code,
-                send_type=send_type
+                send_type=send_type,
+                template=template
             )
 
         return otp_code

@@ -10,14 +10,14 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='sms')
-def send_verification_code_by_kavenegar(phone: str, code: str, send_type: str = 'sms'):
+def send_verification_code_by_kavenegar(phone: str, code: str, send_type: str = 'sms', template: str = 'verify'):
     api_key = settings.KAVENEGAR_KEY
 
     try:
         api = KavenegarAPI(apikey=api_key)
         params = {
             'receptor': phone,
-            'template': 'verify',
+            'template': template,
             'type': send_type,
             'token': code,
         }
