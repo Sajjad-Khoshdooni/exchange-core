@@ -115,7 +115,9 @@ class AssetOverview:
         return total
 
     def get_hedge_value(self, asset: Asset):
-        price = self._prices.get(asset.symbol, 0)
+        price = self._prices.get(asset.symbol)
+        if price is None:
+            return None
 
         return Decimal(self.get_hedge_amount(asset)) * price
 
