@@ -20,7 +20,6 @@ class AssetAdmin(AdvancedAdmin):
 
     fields_edit_conditions = {
         'order': True,
-        'enable': True,
         'trend': True,
         'bid_diff': True,
         'ask_diff': True
