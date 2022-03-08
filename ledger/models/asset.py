@@ -22,6 +22,9 @@ class Asset(models.Model):
     USDT = 'USDT'
     SHIB = 'SHIB'
 
+    HEDGE_BINANCE_FUTURE = 'binance-future'
+    HEDGE_BINANCE_SPOT = 'binance-spot'
+
     objects = models.Manager()
     live_objects = LiveAssetManager()
 
@@ -43,6 +46,10 @@ class Asset(models.Model):
 
     trend = models.BooleanField(default=False)
     pin_to_top = models.BooleanField(default=False)
+
+    hedge_method = models.CharField(max_length=16, default=HEDGE_BINANCE_FUTURE, choices=[
+        (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE), (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
+    ])
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
