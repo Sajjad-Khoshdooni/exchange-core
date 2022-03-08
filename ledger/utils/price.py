@@ -132,7 +132,6 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Dec
             multiplier = 1 - buy_diff
         else:
             multiplier = 1 + sell_diff
-
     price = get_price(coin, side)
 
     return price * multiplier
