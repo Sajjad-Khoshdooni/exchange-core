@@ -90,7 +90,12 @@ class AssetAdmin(admin.ModelAdmin):
     get_hedge_amount.short_description = 'hedge amount'
 
     def get_hedge_value(self, asset: Asset):
-        return self.overview and round(self.overview.get_hedge_value(asset), 2)
+        hedge_value = self.overview and self.overview.get_hedge_value(asset)
+
+        if hedge_value:
+            hedge_value = round(hedge_value, 2)
+
+        return hedge_value
 
     get_hedge_value.short_description = 'hedge value'
 
