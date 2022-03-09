@@ -13,22 +13,22 @@
     </div>
     <div style="width: 90%; margin-left: 5%; margin-top: 2%">
         <a type="button" href="/admin/accounts/user/" class="btn btn-secondary btn-lg btn-block">
-            ({{ user_count }})لیست کاربران
+            ({{ user_count }}) لیست کاربران
         </a>
         <br>
         <a type="button" href="/admin/accounts/user/?level__exact=1&status_is_pending_or_rejected=1"
            class="btn btn-warning btn-lg btn-block">
-            ({{ user_pendin_or_reject_level_2_verification_count }})لیست کاربران منتظر تایید سطح ۲
+            ({{ user_pendin_or_reject_level_2_verification_count }}) لیست کاربران منتظر تایید سطح ۲
         </a>
         <br>
         <a type="button" href="/admin/accounts/user/?level__exact=2&status_is_pending_or_rejected=1"
            class="btn btn-secondary btn-lg btn-block" >
-            ({{ user_pendin_or_reject_level_3_verification_count }})لیست کاربران منتظر تایید سطح ۳
+            ({{ user_pendin_or_reject_level_3_verification_count }}) لیست کاربران منتظر تایید سطح ۳
         </a>
         <br>
         <a type="button" href="/admin/financial/fiatwithdrawrequest/?status__exact=pending"
            class="btn btn-warning btn-lg btn-block">
-            ({{ withdraw_request_pendeng_or_reject_count }})لیست برداشت‌های ریالی در انتظار تایید
+            ({{ withdraw_request_pendeng_or_reject_count }}) لیست برداشت‌های ریالی در انتظار تایید
         </a>
         <br>
     </div>
