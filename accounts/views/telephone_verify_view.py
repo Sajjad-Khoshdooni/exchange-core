@@ -31,17 +31,17 @@ class InitiateTelephoneVerifyView(APIView):
 
 
 class TelephoneOTPVerifySerializer(serializers.ModelSerializer):
-    token = serializers.UUIDField(write_only=True, required=True)
+    code = serializers.CharField(write_only=True, required=True)
 
     def update(self, user, validated_data):
-        token = validated_data.pop('token')
+        code = validated_data['code']
 
-        otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_TELEPHONE)
+        otp_code = VerificationCode.get_by_code(code, user.telephone, VerificationCode.SCOPE_TELEPHONE)
 
         if not otp_code:
-            raise ValidationError({'token': 'کد نامعتبر است.'})
+            raise ValidationError({'code': 'کد نامعتبر است.'})
 
-        otp_code.set_token_used()
+        otp_code.set_code_used()
 
         user.telephone_verified = True
         user.telephone = validated_data['telephone']
@@ -51,13 +51,8 @@ class TelephoneOTPVerifySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('token', 'telephone', 'telephone_verified')
+        fields = ('code', 'telephone', 'telephone_verified')
         read_only_fields = ('telephone_verified', )
-        write_only_fields = ('token', )
-
-        extra_kwargs = {
-            'token': {'required': True},
-        }
 
 
 class TelephoneOTPVerifyView(UpdateAPIView):
