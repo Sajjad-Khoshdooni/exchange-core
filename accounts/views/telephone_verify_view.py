@@ -25,6 +25,9 @@ class InitiateTelephoneVerifyView(APIView):
         if user.telephone_verified:
             raise ValidationError('شماره تلفن تایید شده است.')
 
+        if User.objects.filter(telephone=telephone).exclude(id=user.id).exists():
+            raise ValidationError('این شماره تلفن توسط کاربر دیگری ثبت شده است.')
+
         VerificationCode.send_otp_code(telephone, VerificationCode.SCOPE_TELEPHONE)
 
         return Response({'msg': 'otp sent', 'code': 0})
