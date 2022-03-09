@@ -108,7 +108,7 @@ class User(AbstractUser):
             if self.level == User.LEVEL3:
                 self.level_3_verify_datetime = timezone.now()
         else:
-            if self.verify_status != self.REJECTED and status == self.REJECTED:
+            if self.level == self.LEVEL1 and self.verify_status != self.REJECTED and status == self.REJECTED:
                 link = url_to_edit_object(self)
                 send_support_message(
                     message='اطلاعات سطح %d کاربر مورد تایید قرار نگرفت. لطفا دستی بررسی شود.' % (self.level + 1),
