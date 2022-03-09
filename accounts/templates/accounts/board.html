@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <meta charset="UTF-8">
+    <title>داشبورد</title>
+</head>
+<body>
+<div class="card" style="width: 80%; margin-left: 10%;margin-top: 10%">
+    <div class="card-header" style="text-align: center">
+        <h5>Rastin Dashboard</h5>
+    </div>
+    <div style="width: 90%; margin-left: 5%; margin-top: 2%">
+        <a type="button" href="/admin/accounts/user/" class="btn btn-secondary btn-lg btn-block">
+            ({{ user_count }}) لیست کاربران
+        </a>
+        <br>
+        <a type="button" href="/admin/accounts/user/?level__exact=1&status_is_pending_or_rejected=1"
+           class="btn btn-warning btn-lg btn-block">
+            ({{ user_pendin_or_reject_level_2_verification_count }}) لیست کاربران منتظر تایید سطح ۲
+        </a>
+        <br>
+        <a type="button" href="/admin/accounts/user/?level__exact=2&status_is_pending_or_rejected=1"
+           class="btn btn-secondary btn-lg btn-block" >
+            ({{ user_pendin_or_reject_level_3_verification_count }}) لیست کاربران منتظر تایید سطح ۳
+        </a>
+        <br>
+        <a type="button" href="/admin/financial/fiatwithdrawrequest/?status__exact=pending"
+           class="btn btn-warning btn-lg btn-block">
+            ({{ withdraw_request_pendeng_or_reject_count }}) لیست برداشت‌های ریالی در انتظار تایید
+        </a>
+        <br>
+    </div>
+</div>
+</body>
+</html>
