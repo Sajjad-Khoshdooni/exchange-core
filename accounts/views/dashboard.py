@@ -12,10 +12,10 @@ def dashboard(request):
         users = User.objects.all()
         user_count = users.count()
         user_pendin_or_reject_level_2_verification_count = users.filter(
-            (Q(verify_status='pending') | Q(verify_status='rejected'))
+            (Q(verify_status=User.PENDING) | Q(verify_status=User.REJECTED))
         ).filter(level=1).count()
         user_pendin_or_reject_level_3_verification_count = users.filter(
-            (Q(verify_status='pending') | Q(verify_status='reject'))
+            (Q(verify_status=User.PENDING) | Q(verify_status=User.REJECTED))
         ).filter(level=2).count()
         withdraw_request_pendeng_or_reject_count = FiatWithdrawRequest.objects.filter(
             status='pending',
