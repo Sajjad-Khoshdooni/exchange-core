@@ -14,8 +14,8 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'national_code', 'birth_date', 'level',
-            'national_code_verified', 'first_name_verified', 'last_name_verified', 'birth_date_verified', 'verify_status',
-            'bank_cards', 'bank_accounts'
+            'national_code_verified', 'first_name_verified', 'last_name_verified', 'birth_date_verified',
+            'verify_status', 'bank_cards', 'bank_accounts', 'telephone', 'telephone_verified'
         )
 
     def get_bank_cards(self, user: User):

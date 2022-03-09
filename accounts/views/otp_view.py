@@ -21,8 +21,7 @@ class VerifyOTPSerializer(serializers.ModelSerializer):
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
 
-        otp_code.code_used = True
-        otp_code.save()
+        otp_code.set_code_used()
 
         return otp_code
 

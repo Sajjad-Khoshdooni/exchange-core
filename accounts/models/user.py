@@ -90,10 +90,7 @@ class User(AbstractUser):
         verbose_name='شماره تلفن',
         blank=True,
         null=True,
-        unique=True,
-        error_messages={
-            'unique': 'شماره موبایل وارد شده از قبل در سیستم موجود است.'
-        }
+        db_index=True,
     )
 
     selfie_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس سلفی')
@@ -108,7 +105,7 @@ class User(AbstractUser):
             if self.level == User.LEVEL3:
                 self.level_3_verify_datetime = timezone.now()
         else:
-            if self.verify_status != self.REJECTED and status == self.REJECTED:
+            if self.level == self.LEVEL1 and self.verify_status != self.REJECTED and status == self.REJECTED:
                 link = url_to_edit_object(self)
                 send_support_message(
                     message='اطلاعات سطح %d کاربر مورد تایید قرار نگرفت. لطفا دستی بررسی شود.' % (self.level + 1),

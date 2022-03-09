@@ -84,6 +84,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'last_name': ~M('last_name_verified'),
         'national_code': M.superuser & ~M('national_code_verified'),
         'birth_date': M.superuser & ~M('birth_date_verified'),
+        'selfie_image_verified': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
     }
 
     fieldsets = (
