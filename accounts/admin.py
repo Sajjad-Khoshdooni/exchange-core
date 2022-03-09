@@ -107,7 +107,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
             'fields': (
                 'get_payment_address', 'get_withdraw_address',
                 'get_otctrade_address', 'get_wallet_address', 'get_bank_card_link',
-                'get_bank_link', 'get_transfer_link', 'get_finotech_request_link',
+                'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
@@ -130,7 +130,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'get_selfie_image', 'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
         'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
-        'get_bank_card_link', 'get_bank_link', 'get_transfer_link', 'get_finotech_request_link',
+        'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
     )
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
@@ -193,25 +193,25 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         link = url_to_admin_list(BankCard) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
-    get_bank_card_link.short_description = 'لیست کیف‌ها'
+    get_bank_card_link.short_description = 'کارت‌های بانکی'
 
-    def get_bank_link(self, user: User):
+    def get_bank_account_link(self, user: User):
         link = url_to_admin_list(BankAccount) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
-    get_bank_link.short_description = 'آدرس حساب‌های بانکی'
+    get_bank_account_link.short_description = 'حساب‌های بانکی'
 
     def get_transfer_link(self, user: User):
         link = url_to_admin_list(Transfer) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link) \
 
-    get_transfer_link.short_description = 'آدرس عملیات‌های انتقال'
+    get_transfer_link.short_description = 'تراکنش‌های رمزارزی'
 
     def get_finotech_request_link(self, user: User):
         link = url_to_admin_list(FinotechRequest) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
-    get_finotech_request_link.short_description = 'آدرس finotech_requests'
+    get_finotech_request_link.short_description = 'درخواست‌های فینوتک'
 
     def get_birth_date_jalali(self, user: User):
         return gregorian_to_jalali_date(user.birth_date).strftime('%Y/%m/%d')
