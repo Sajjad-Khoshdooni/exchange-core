@@ -34,8 +34,8 @@ class TelephoneOTPVerifySerializer(serializers.ModelSerializer):
     code = serializers.CharField(write_only=True, required=True)
 
     def update(self, user, validated_data):
-        code = validated_data['code']
-        telephone = validated_data['telephone']
+        code = validated_data.get('code')
+        telephone = validated_data.get('telephone')
 
         otp_code = VerificationCode.get_by_code(code, telephone, VerificationCode.SCOPE_TELEPHONE)
 
