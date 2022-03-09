@@ -35,6 +35,21 @@ MANUAL_VERIFY_CONDITION = Q(
 )
 
 
+class UserStatusFilter(SimpleListFilter):
+    title = 'تایید سطح دو یا سه'
+    parameter_name = 'status_is_pending_or_rejected'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('status_is_pending_or_rejected')
+        if user is not None:
+            return queryset.filter((Q(verify_status='pending') | Q(verify_status='rejected')))
+        else:
+            return queryset
+
+
 class ManualNameVerifyFilter(SimpleListFilter):
     title = 'نیازمند تایید دستی نام'
     parameter_name = 'manual_name_verify'
@@ -104,8 +119,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     list_filter = (
         'is_staff', 'is_superuser', 'is_active', 'groups',
         ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
-        'level_3_verify_datetime',
-    )
+        'level_3_verify_datetime', UserStatusFilter)
     inlines = [UserCommentInLine, ]
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')
