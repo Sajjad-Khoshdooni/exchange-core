@@ -35,8 +35,9 @@ class TelephoneOTPVerifySerializer(serializers.ModelSerializer):
 
     def update(self, user, validated_data):
         code = validated_data['code']
+        telephone = validated_data['telephone']
 
-        otp_code = VerificationCode.get_by_code(code, user.telephone, VerificationCode.SCOPE_TELEPHONE)
+        otp_code = VerificationCode.get_by_code(code, telephone, VerificationCode.SCOPE_TELEPHONE)
 
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
@@ -44,7 +45,7 @@ class TelephoneOTPVerifySerializer(serializers.ModelSerializer):
         otp_code.set_code_used()
 
         user.telephone_verified = True
-        user.telephone = validated_data['telephone']
+        user.telephone = telephone
         user.save()
 
         return user
@@ -53,6 +54,10 @@ class TelephoneOTPVerifySerializer(serializers.ModelSerializer):
         model = User
         fields = ('code', 'telephone', 'telephone_verified')
         read_only_fields = ('telephone_verified', )
+
+        extra_kwargs = {
+            'telephone': {'required': True},
+        }
 
 
 class TelephoneOTPVerifyView(UpdateAPIView):
