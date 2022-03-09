@@ -62,7 +62,9 @@ class AssetAdmin(AdvancedAdmin):
         return super(AssetAdmin, self).save_model(request, obj, form, change)
 
     def get_ledger_balance_users(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(self.overview.get_ledger_balance(Account.ORDINARY, asset))
+        return self.overview and asset.get_presentation_amount(
+            self.overview.get_ledger_balance(Account.ORDINARY, asset)
+        )
 
     get_ledger_balance_users.short_description = 'users'
 
@@ -177,8 +179,10 @@ class OTCTradeAdmin(admin.ModelAdmin):
     list_display = ('created', 'otc_request',  'status', 'get_otc_trade_from_amount')
     list_filter = (OTCUserFilter, 'status')
 
-    def get_otc_trade_from_amount(self, otc_trade : models.OTCTrade):
-        return humanize_number(otc_trade.otc_request.from_asset.get_presentation_amount(otc_trade.otc_request.from_amount))
+    def get_otc_trade_from_amount(self, otc_trade: models.OTCTrade):
+        return humanize_number(
+            otc_trade.otc_request.from_asset.get_presentation_amount(otc_trade.otc_request.from_amount)
+        )
 
     get_otc_trade_from_amount.short_description = 'مقدار پایه'
 
@@ -230,11 +234,26 @@ class WalletAdmin(admin.ModelAdmin):
     get_free_usdt.short_description = 'ارزش دلاری'
 
 
+class TransferUserFilter(SimpleListFilter):
+    title = 'کاربر'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(wallet__account__user_id=user)
+        else:
+            return queryset
+
+
 @admin.register(models.Transfer)
 class TransferAdmin(admin.ModelAdmin):
     list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount', 'deposit', 'status', 'is_fee', 'source')
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address')
-    list_filter = ('deposit', 'status', 'is_fee', 'source', 'status')
+    list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
 
 
 @admin.register(models.BalanceLock)

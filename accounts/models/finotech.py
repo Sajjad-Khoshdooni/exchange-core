@@ -4,7 +4,7 @@ from django.db import models
 
 
 class FinotechRequest(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
 
     track_id = models.UUIDField(
         default=uuid.uuid4,
@@ -16,7 +16,7 @@ class FinotechRequest(models.Model):
     data = models.JSONField(blank=True, null=True)
     method = models.CharField(max_length=8)
 
-    status_code = models.PositiveSmallIntegerField(default=0)
+    status_code = models.PositiveSmallIntegerField(default=0, verbose_name='وضعیت')
     response = models.JSONField(blank=True, null=True)
 
     user = models.ForeignKey(to='accounts.User', on_delete=models.CASCADE)
