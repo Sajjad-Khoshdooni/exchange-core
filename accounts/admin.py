@@ -85,7 +85,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
             'get_last_login_jalali', 'get_date_joined_jalali', 'get_first_fiat_deposit_date_jalali',
             'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
         )}),
-        (_('لینک های مالی کاربر'), {
+        (_('لینک های مهم'), {
             'fields': ('get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet_address')
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
@@ -150,12 +150,12 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     def get_otctrade_address(self, user: User):
         link = url_to_admin_list(OTCTrade)+'?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
-    get_otctrade_address.short_description = 'OTC_Trade'
+    get_otctrade_address.short_description = 'خریدهای OTC'
 
     def get_wallet_address(self, user: User):
         link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
-    get_wallet_address.short_description = 'آدرس کیف اعتباری'
+    get_wallet_address.short_description = 'لیست کیف‌ها'
 
     def get_sum_of_value_buy_sell(self, user: User):
         value = OTCRequest.objects.filter(
@@ -164,7 +164,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         ).aggregate(
             amount=Sum(F('to_price_absolute_irt') * F('to_amount'))
         )
-        return humanize_number(float(value['amount'] or 0))
+        return humanize_number(int(value['amount'] or 0))
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
 
     def get_birth_date_jalali(self, user: User):
