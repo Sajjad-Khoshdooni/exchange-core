@@ -25,10 +25,7 @@ class InitiateTelephoneVerifyView(APIView):
         if user.telephone_verified:
             raise ValidationError('شماره تلفن تایید شده است.')
 
-        if User.objects.filter(telephone=telephone).exclude(id=user.id).exists():
-            raise ValidationError('این شماره تلفن توسط کاربر دیگری ثبت شده است.')
-
-        VerificationCode.send_otp_code(telephone, VerificationCode.SCOPE_TELEPHONE)
+        VerificationCode.send_otp_code(telephone, VerificationCode.SCOPE_TELEPHONE, user=user)
 
         return Response({'msg': 'otp sent', 'code': 0})
 
@@ -40,7 +37,7 @@ class TelephoneOTPVerifySerializer(serializers.ModelSerializer):
         code = validated_data.get('code')
         telephone = validated_data.get('telephone')
 
-        otp_code = VerificationCode.get_by_code(code, telephone, VerificationCode.SCOPE_TELEPHONE)
+        otp_code = VerificationCode.get_by_code(code, telephone, VerificationCode.SCOPE_TELEPHONE, user=user)
 
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})

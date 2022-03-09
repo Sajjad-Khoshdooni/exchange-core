@@ -90,10 +90,7 @@ class User(AbstractUser):
         verbose_name='شماره تلفن',
         blank=True,
         null=True,
-        unique=True,
-        error_messages={
-            'unique': 'شماره موبایل وارد شده از قبل در سیستم موجود است.'
-        }
+        db_index=True,
     )
 
     selfie_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس سلفی')
