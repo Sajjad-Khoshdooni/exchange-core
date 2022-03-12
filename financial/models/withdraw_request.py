@@ -70,11 +70,13 @@ class FiatWithdrawRequest(models.Model):
             message = 'درخواست برداشت شما با موفقیت انجام شد'
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
-        if (not old or old.status != CANCELED) and self.status == CANCELED:
+        elif (not old or old.status != CANCELED) and self.status == CANCELED:
             title = 'درخواست برداشت شما انجام نشد'
             message = 'درخواست برداشت شما انجام نشد'
             level = Notification.ERROR
             template = 'withdraw-rejected'
+        else:
+            return
 
         Notification.send(
             recipient=self.bank_account.user,
