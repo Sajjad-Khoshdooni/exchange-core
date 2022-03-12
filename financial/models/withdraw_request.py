@@ -1,11 +1,11 @@
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-
+from accounts.models import Notification
 from accounts.models import Account
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
-from ledger.utils.fields import get_status_field, DONE, get_group_id_field, get_lock_field, PENDING
-
+from ledger.utils.fields import get_status_field, DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
+from accounts.tasks.send_sms import send_sms_by_kavenegar
 
 class FiatWithdrawRequest(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -64,6 +64,29 @@ class FiatWithdrawRequest(models.Model):
         if self.status == DONE and not self.ref_id:
             raise ValidationError('رسید انتقال خالی است.')
 
+    def alert_withdraw_verify_status(self, old):
+        if (not old or old.status != DONE) and self.status == DONE:
+            title = 'درخواست برداشت شما با موفقیت انجام شد'
+            message = 'درخواست برداشت شما با موفقیت انجام شد'
+            level = Notification.SUCCESS
+            template = 'withdraw-accepted'
+        if (not old or old.status != CANCELED) and self.status == CANCELED:
+            title = 'درخواست برداشت شما انجام نشد'
+            message = 'درخواست برداشت شما انجام نشد'
+            level = Notification.ERROR
+            template = 'withdraw-rejected'
+
+        Notification.send(
+            recipient=self.bank_account.user,
+            title=title,
+            message=message,
+            level=level
+        )
+        send_sms_by_kavenegar(
+            phone=self.bank_account.user.phone,
+            template=template,
+        )
+
     def save(self, *args, **kwargs):
         old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
         old_status = old and old.status
@@ -79,6 +102,8 @@ class FiatWithdrawRequest(models.Model):
 
             if self.status != PENDING:
                 self.lock.release()
+
+        self.alert_withdraw_verify_status(old)
 
     def __str__(self):
         return '%s %s' % (self.bank_account, self.amount)
