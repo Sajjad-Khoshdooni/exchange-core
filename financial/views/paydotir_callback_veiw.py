@@ -15,10 +15,10 @@ class PaydotirCallbackView(TemplateView):
     authentication_classes = permission_classes = ()
 
     def get(self, request, *args, **kwargs):
-        status = request.GET.get('Status')
-        authority = request.GET.get('Authority')
+        status = request.GET.get('status')
+        authority = request.GET.get('token')
 
-        if status not in ['OK', 'NOK']:
+        if status not in ['1', '0']:
             return HttpResponseBadRequest('Invalid data')
 
         payment_request = get_object_or_404(PaymentRequest, authority=authority)
@@ -30,7 +30,7 @@ class PaydotirCallbackView(TemplateView):
             )
 
         if payment.status == Payment.PENDING:
-            if status == 'NOK':
+            if status == '0':
                 payment.status = CANCELED
                 payment.save()
             else:

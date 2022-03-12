@@ -41,7 +41,8 @@ class Gateway(models.Model):
 
     def get_concrete_gateway(self) -> 'Gateway':
         mapping = {
-            self.ZARINPAL: ZarinpalGateway
+            self.ZARINPAL: ZarinpalGateway,
+            self.PAYDOTIR: PaydotirGateway
         }
 
         self.__class__ = mapping[self.type]
@@ -139,10 +140,10 @@ class PaydotirGateway(Gateway):
             }
         )
 
-        if not resp.ok or resp.json()['data']['status'] != 1:
+        if not resp.ok or resp.json()['status'] != 1:
             raise GatewayFailed
 
-        authority = resp.json()['data']['token']
+        authority = resp.json()['token']
 
         return PaymentRequest.objects.create(
             bank_card=bank_card,
@@ -165,12 +166,12 @@ class PaydotirGateway(Gateway):
             }
         )
 
-        data = resp.json()['data']
+        data = resp.json()
 
         if data['status'] == 1:
             with transaction.atomic():
                 payment.status = DONE
-                payment.ref_id = data.get('ref_id')
+                payment.ref_id = data.get('transId')
                 payment.ref_status = data['status']
                 payment.save()
 
