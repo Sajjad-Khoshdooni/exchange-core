@@ -37,6 +37,7 @@ def send_sms_by_kavenegar(phone: str, template: str, send_type: str = 'sms', ):
             'receptor': phone,
             'template': template,
             'type': send_type,
+            'token': ''
         }
 
         api.verify_lookup(params)

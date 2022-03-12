@@ -148,7 +148,7 @@ class OTCRequest(models.Model):
         self.to_price = to_price
         self.from_amount = from_amount
         self.to_amount = to_amount
-        self.to_price_absolute_irt = self.get_to_price_absolute_irt()
+        self.to_price_absolute_irt = self._get_to_price_absolute_irt()
 
     def get_expire_time(self) -> datetime:
         return self.created + timedelta(seconds=OTCRequest.EXPIRE_TIME)

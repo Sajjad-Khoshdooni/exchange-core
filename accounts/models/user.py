@@ -144,4 +144,5 @@ class User(AbstractUser):
 
                 if not any_none and any_false:
                     self.change_status(self.REJECTED)
+
             alert_user_verify_status(self)
