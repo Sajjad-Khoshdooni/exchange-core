@@ -7,3 +7,4 @@ from .basic_verify_user_view import BasicInfoVerificationViewSet
 from .notification_view import NotificationViewSet, UnreadAllNotificationView
 from .full_verify_user_view import FullVerificationViewSet
 from .telephone_verify_view import InitiateTelephoneVerifyView, TelephoneOTPVerifyView
+from .dashboard import dashboard

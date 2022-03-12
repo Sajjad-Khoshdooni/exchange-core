@@ -10,6 +10,7 @@ from simple_history.admin import SimpleHistoryAdmin
 
 from accounts.models import UserComment
 from accounts.utils.admin import url_to_admin_list
+from financial.models.bank_card import BankCard, BankAccount
 from financial.models.payment import Payment
 from financial.models.withdraw_request import FiatWithdrawRequest
 from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdraw_irt_value, CRYPTO_WITHDRAW_LIMIT, \
@@ -17,6 +18,7 @@ from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdra
 from ledger.models import OTCRequest, OTCTrade
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import humanize_number
+from ledger.models.transfer import Transfer
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
@@ -31,6 +33,21 @@ MANUAL_VERIFY_CONDITION = Q(
     level=User.LEVEL1,
     verify_status=User.PENDING
 )
+
+
+class UserStatusFilter(SimpleListFilter):
+    title = 'تایید سطح دو یا سه'
+    parameter_name = 'status_is_pending_or_rejected'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('status_is_pending_or_rejected')
+        if user is not None:
+            return queryset.filter((Q(verify_status='pending') | Q(verify_status='rejected')))
+        else:
+            return queryset
 
 
 class ManualNameVerifyFilter(SimpleListFilter):
@@ -67,6 +84,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'last_name': ~M('last_name_verified'),
         'national_code': M.superuser & ~M('national_code_verified'),
         'birth_date': M.superuser & ~M('birth_date_verified'),
+        'selfie_image_verified': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
     }
 
     fieldsets = (
@@ -85,8 +103,12 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
             'get_last_login_jalali', 'get_date_joined_jalali', 'get_first_fiat_deposit_date_jalali',
             'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
         )}),
-        (_('لینک های مالی کاربر'), {
-            'fields': ('get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet_address')
+        (_('لینک های مهم'), {
+            'fields': (
+                'get_payment_address', 'get_withdraw_address',
+                'get_otctrade_address', 'get_wallet_address', 'get_bank_card_link',
+                'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
+            )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
             'get_sum_of_value_buy_sell', 'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit'
@@ -98,8 +120,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     list_filter = (
         'is_staff', 'is_superuser', 'is_active', 'groups',
         ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
-        'level_3_verify_datetime',
-    )
+        'level_3_verify_datetime', UserStatusFilter)
     inlines = [UserCommentInLine, ]
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')
@@ -108,7 +129,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'get_sum_of_value_buy_sell', 'get_birth_date_jalali', 'get_national_card_image',
         'get_selfie_image', 'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
         'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
-        'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit'
+        'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
+        'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
     )
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
@@ -150,12 +172,12 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     def get_otctrade_address(self, user: User):
         link = url_to_admin_list(OTCTrade)+'?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
-    get_otctrade_address.short_description = 'OTC_Trade'
+    get_otctrade_address.short_description = 'خریدهای OTC'
 
     def get_wallet_address(self, user: User):
         link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
-    get_wallet_address.short_description = 'آدرس کیف اعتباری'
+    get_wallet_address.short_description = 'لیست کیف‌ها'
 
     def get_sum_of_value_buy_sell(self, user: User):
         value = OTCRequest.objects.filter(
@@ -164,8 +186,32 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         ).aggregate(
             amount=Sum(F('to_price_absolute_irt') * F('to_amount'))
         )
-        return humanize_number(float(value['amount'] or 0))
+        return humanize_number(int(value['amount'] or 0))
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
+
+    def get_bank_card_link(self, user: User):
+        link = url_to_admin_list(BankCard) + '?user={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+
+    get_bank_card_link.short_description = 'کارت‌های بانکی'
+
+    def get_bank_account_link(self, user: User):
+        link = url_to_admin_list(BankAccount) + '?user={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+
+    get_bank_account_link.short_description = 'حساب‌های بانکی'
+
+    def get_transfer_link(self, user: User):
+        link = url_to_admin_list(Transfer) + '?user={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link) \
+
+    get_transfer_link.short_description = 'تراکنش‌های رمزارزی'
+
+    def get_finotech_request_link(self, user: User):
+        link = url_to_admin_list(FinotechRequest) + '?user={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+
+    get_finotech_request_link.short_description = 'درخواست‌های فینوتک'
 
     def get_birth_date_jalali(self, user: User):
         return gregorian_to_jalali_date(user.birth_date).strftime('%Y/%m/%d')
@@ -225,9 +271,25 @@ class AccountAdmin(admin.ModelAdmin):
     list_display = ('user', 'type')
 
 
+class FinotechRequestUserFilter(SimpleListFilter):
+    title = 'کاربر'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(user_id=user)
+        else:
+            return queryset
+
+
 @admin.register(FinotechRequest)
 class FinotechRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'url', 'data', 'status_code')
+    list_filter = (FinotechRequestUserFilter, )
     ordering = ('-created', )
 
 

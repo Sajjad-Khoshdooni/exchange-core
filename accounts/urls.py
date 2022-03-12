@@ -40,4 +40,6 @@ urlpatterns = [
     })),
 
     path('notifs/all/', views.UnreadAllNotificationView.as_view()),
+
+
 ]
