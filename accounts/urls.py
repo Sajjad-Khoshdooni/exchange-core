@@ -22,6 +22,14 @@ urlpatterns = [
         'post': 'update',
     })),
 
+    path('verify/full/', views.FullVerificationViewSet.as_view({
+        'get': 'retrieve',
+        'post': 'update',
+    })),
+
+    path('verify/tel/init/', views.InitiateTelephoneVerifyView.as_view()),
+    path('verify/tel/otp/', views.TelephoneOTPVerifyView.as_view()),
+
     path('notifs/', views.NotificationViewSet.as_view({
         'get': 'list',
     })),
@@ -32,4 +40,6 @@ urlpatterns = [
     })),
 
     path('notifs/all/', views.UnreadAllNotificationView.as_view()),
+
+
 ]

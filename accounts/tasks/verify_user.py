@@ -2,8 +2,10 @@ import logging
 
 from celery import shared_task
 
-from accounts.models import User, Notification
+from accounts.models import Notification
+from accounts.models import User
 from accounts.verifiers.basic_verify import basic_verify
+from .send_sms import send_message_by_kavenegar
 
 logger = logging.getLogger(__name__)
 
@@ -12,32 +14,33 @@ logger = logging.getLogger(__name__)
 def basic_verify_user(user_id: int):
     user = User.objects.get(id=user_id)  # type: User
 
-    try:
-        basic_verify(user)
-        alert_user_verify_status(user)
-
-    except:
-        user.refresh_from_db()
-        if user.verify_status == User.PENDING:
-            user.change_status(User.REJECTED)
-
-        raise
+    basic_verify(user)
+    alert_user_verify_status(user)
 
 
 def alert_user_verify_status(user: User):
+    if user.verify_status == User.PENDING:
+        return
+
     if user.level >= User.LEVEL2 or user.verify_status == User.REJECTED:
-        if user.level >= User.LEVEL2:
-            title = 'شما احراز هویت شدید.'
-            message = 'احراز هویت شما با موفقیت انجام شد.'
-            level = Notification.SUCCESS
-        else:
+        if user.verify_status == User.REJECTED:
             title = 'اطلاعات وارد شده نیاز به بازنگری دارد.'
-            message = 'اطلاعات احراز هویتی نیاز به بازنگری دارد'
             level = Notification.ERROR
+            template = 'levelup-rejected'
+            levelup = user.level + 1
+        else:
+            title = 'احراز هویت سطح {} شما با موفقیت انجام شد.'.format(user.level)
+            level = Notification.SUCCESS
+            template = 'levelup-accepted'
+            levelup = user.level
 
         Notification.send(
             recipient=user,
             title=title,
-            message=message,
             level=level
+        )
+        send_message_by_kavenegar(
+            phone=user.phone,
+            template=template,
+            token=str(levelup)
         )

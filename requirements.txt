@@ -21,10 +21,12 @@ cryptography==36.0.1
 defusedxml==0.7.1
 Deprecated==1.2.13
 Django==4.0
+django-admin-list-filter-dropdown==1.0.3
 django-cors-headers==3.10.1
 django-filter==21.1
 django-hijack==3.1.4
 django-redis==5.2.0
+django-simple-history==3.0.0
 django-templated-mail==1.1.1
 djangorestframework==3.13.1
 djangorestframework-simplejwt==4.8.0
@@ -70,3 +72,4 @@ web3==5.27.0
 websocket-client==1.2.3
 wrapt==1.13.3
 yekta-config==0.2.1
+yekta-metrics==4.0.0

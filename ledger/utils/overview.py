@@ -115,13 +115,15 @@ class AssetOverview:
         return total
 
     def get_hedge_value(self, asset: Asset):
-        price = self._prices.get(asset.symbol, 0)
+        price = self._prices.get(asset.symbol)
+        if price is None:
+            return None
 
         return Decimal(self.get_hedge_amount(asset)) * price
 
     def get_total_hedge_value(self):
         return sum([
-            self.get_hedge_value(asset) for asset in Asset.objects.all()
+            self.get_hedge_value(asset) or 0 for asset in Asset.objects.all()
         ])
 
     def get_binance_balance(self, asset: Asset) -> Decimal:

@@ -69,7 +69,7 @@ class BinanceSpotHandler:
         return {b['asset']: Decimal(b['free']) for b in balances_list}
 
     @classmethod
-    @cache_for()
+    @cache_for(time=120)
     def get_all_coins(cls):
         return cls.collect_api('/sapi/v1/capital/config/getall', method='GET')
 
@@ -96,6 +96,14 @@ class BinanceSpotHandler:
         return cls.collect_api(f'/sapi/v1/{market}/transfer', method='POST', data={
             'asset': asset, 'amount': amount, 'type': transfer_type
         })
+
+    @classmethod
+    def get_step_size(cls, symbol: str) -> Decimal:
+        data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol + 'USDT'})
+        filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['symbols'][0]['filters']))
+        lot_size = filters[0]
+
+        return Decimal(lot_size['stepSize'])
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):

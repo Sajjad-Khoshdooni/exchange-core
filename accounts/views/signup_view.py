@@ -50,10 +50,17 @@ class SignupSerializer(serializers.Serializer):
         phone = otp_code.phone
         otp_code.set_token_used()
 
-        return User.objects.create_user(
+        user = User.objects.create_user(
             username=phone,
             phone=phone,
         )
+
+        user.set_password(validated_data['password'])
+        user.save()
+
+        otp_code.set_token_used()
+
+        return user
 
 
 class SignupView(CreateAPIView):

@@ -21,8 +21,7 @@ class VerifyOTPSerializer(serializers.ModelSerializer):
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
 
-        otp_code.code_used = True
-        otp_code.save()
+        otp_code.set_code_used()
 
         return otp_code
 
@@ -48,7 +47,15 @@ class OTPSerializer(serializers.ModelSerializer):
         scope = validated_data['scope']
         user = validated_data['user']
 
-        return VerificationCode.send_otp_code(phone=user.phone, scope=scope)
+        if scope == VerificationCode.SCOPE_TELEPHONE:
+            phone = user.telephone
+        else:
+            phone = user.phone
+
+        if not phone:
+            raise ValidationError('امکان ارسال کد وجود ندارد.')
+
+        return VerificationCode.send_otp_code(phone=phone, scope=scope)
 
     class Meta:
         model = VerificationCode

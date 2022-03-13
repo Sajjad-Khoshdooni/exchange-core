@@ -19,13 +19,9 @@ def random_number(lower_bound, upper_bound):
     return lower_bound + randbelow(upper_bound - lower_bound)
 
 
-def generate_random_code():
-    code = random_number(100000, 999999)
+def generate_random_code(n: int):
+    code = random_number(10 ** (n - 1), 10 ** n)
     return code
-
-
-def is_phone(phone: str):
-    return re.match(r'(09)(\d){9}', phone)
 
 
 def is_email(email: str):

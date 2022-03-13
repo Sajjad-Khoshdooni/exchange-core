@@ -2,12 +2,14 @@ import datetime
 import logging
 
 import requests
+from django.core.cache import caches
 from django.utils import timezone
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 from yekta_config import secret
 
 from accounts.models import FinotechRequest
 from accounts.utils.validation import gregorian_to_jalali_date
-from django.core.cache import caches
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +17,17 @@ token_cache = caches['token']
 
 
 FINOTECH_TOKEN_KEY = 'finotech-token'
+
+
+retry_strategy = Retry(
+    total=5,
+    backoff_factor=2,
+    status_forcelist=[0, 429, 500, 502, 503, 504],
+)
+adapter = HTTPAdapter(max_retries=retry_strategy)
+http = requests.Session()
+http.mount("https://", adapter)
+http.mount("http://", adapter)
 
 
 class FinotechRequester:
@@ -76,15 +89,14 @@ class FinotechRequester:
             method=method,
             data=data,
             user=self._user,
-            search_key=search_key
         )
 
         url += '?trackId=%s' % req_object.track_id
 
         if method == 'GET':
-            resp = requests.get(url, timeout=60, params=data, headers={'Authorization': 'Bearer ' + token})
+            resp = http.get(url, timeout=60, params=data, headers={'Authorization': 'Bearer ' + token})
         else:
-            method_prop = getattr(requests, method.lower())
+            method_prop = getattr(http, method.lower())
             resp = method_prop(url, timeout=60, data=data, headers={'Authorization': 'Bearer ' + token})
 
         if not force_renew_token and resp.status_code == 403:
@@ -94,6 +106,10 @@ class FinotechRequester:
 
         req_object.response = resp_data
         req_object.status_code = resp.status_code
+
+        if resp.ok:
+            req_object.search_key = search_key
+
         req_object.save()
 
         if not resp.ok:

@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'raven.contrib.django.raven_compat',
+    'django_admin_listfilter_dropdown',
     'rest_framework',
     'corsheaders',
     'hijack',
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     'provider',
     'wallet',
     'collector',
+    'simple_history',
 ]
 
 MIDDLEWARE = [
@@ -59,6 +61,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'hijack.middleware.HijackUserMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
 ]
 
 MIDDLEWARE.insert(0, 'accounts.middleware.DisableCsrfCheck')
@@ -126,6 +129,8 @@ CACHES = {
     },
 }
 
+PROVIDER_CACHE_LOCATION = secret('PROVIDER_CACHE_LOCATION', default='redis://127.0.0.1:6379/0')
+METRICS_CACHE_LOCATION = secret('METRICS_CACHE_LOCATION', default='redis://127.0.0.1:6379/0')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators

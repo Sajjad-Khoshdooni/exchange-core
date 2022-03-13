@@ -5,9 +5,9 @@ from tronpy import Tron
 from tronpy.exceptions import AddressNotFound
 from web3 import Web3
 
-from _helpers.blockchain.bsc import get_web3_bsc_client
-from _helpers.blockchain.eth import get_web3_eth_client
-from _helpers.blockchain.tron import get_tron_client
+from tracker.clients.bsc import get_web3_bsc_client
+from tracker.clients.eth import get_web3_eth_client
+from tracker.clients.tron import get_tron_client
 from tracker.blockchain.amount_normalizer import AmountNormalizer
 from ledger.models import Asset, DepositAddress, Network
 from ledger.symbol_contract_mapper import (

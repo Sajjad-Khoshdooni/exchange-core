@@ -6,9 +6,9 @@ from tronpy.exceptions import TransactionNotFound as TronTransactionNotFound
 from web3 import Web3
 from web3.exceptions import TransactionNotFound as Web3TransactionNotFound
 
-from _helpers.blockchain.bsc import get_web3_bsc_client
-from _helpers.blockchain.eth import get_web3_eth_client
-from _helpers.blockchain.tron import get_tron_client
+from tracker.clients.bsc import get_web3_bsc_client
+from tracker.clients.eth import get_web3_eth_client
+from tracker.clients.tron import get_tron_client
 from ledger.models import Transfer, Network
 
 

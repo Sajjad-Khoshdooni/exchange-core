@@ -6,6 +6,7 @@ from rest_framework import serializers
 from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.precision import get_precision, get_presentation_amount
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class InvalidAmount(Exception):
@@ -21,6 +22,9 @@ class Asset(models.Model):
     IRT = 'IRT'
     USDT = 'USDT'
     SHIB = 'SHIB'
+
+    HEDGE_BINANCE_FUTURE = 'binance-future'
+    HEDGE_BINANCE_SPOT = 'binance-spot'
 
     objects = models.Manager()
     live_objects = LiveAssetManager()
@@ -43,6 +47,20 @@ class Asset(models.Model):
 
     trend = models.BooleanField(default=False)
     pin_to_top = models.BooleanField(default=False)
+
+    hedge_method = models.CharField(max_length=16, default=HEDGE_BINANCE_FUTURE, choices=[
+        (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE), (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
+    ])
+
+    bid_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
+        MinValueValidator(0),
+        MaxValueValidator(Decimal('0.1')),
+    ], help_text='our bid (taker sell price) = (1 - bid_diff) * binance_bid')
+
+    ask_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
+        MinValueValidator(0),
+        MaxValueValidator(Decimal('0.1')),
+    ], help_text='our ask (taker buy price) = (1 + ask_diff) * binance_ask')
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )

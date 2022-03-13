@@ -1,5 +1,5 @@
-from _helpers.blockchain.bsc import get_web3_bsc_client
-from _helpers.blockchain.tron import get_tron_client
+from tracker.clients.bsc import get_web3_bsc_client
+from tracker.clients.tron import get_tron_client
 from ledger.models import Network
 from tracker.blockchain.requester import Requester
 from tracker.blockchain.trx.history_builder import TRXRequester

@@ -22,7 +22,7 @@ class TokenExpired(Exception):
 class OTCTrade(models.Model):
     PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 
-    created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(auto_now_add=True, verbose_name= 'تاریخ ایجاد')
     otc_request = models.OneToOneField('ledger.OTCRequest', on_delete=models.PROTECT)
 
     group_id = models.UUIDField(default=uuid4, db_index=True)
@@ -30,7 +30,8 @@ class OTCTrade(models.Model):
     status = models.CharField(
         default=PENDING,
         max_length=8,
-        choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)]
+        choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
+        verbose_name='وضعیت'
     )
 
     lock = get_lock_field()
