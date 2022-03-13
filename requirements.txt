@@ -72,3 +72,4 @@ web3==5.27.0
 websocket-client==1.2.3
 wrapt==1.13.3
 yekta-config==0.2.1
+yekta-metrics==4.0.0
