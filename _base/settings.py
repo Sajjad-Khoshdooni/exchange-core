@@ -249,8 +249,8 @@ if not DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = 'smtp.zoho.com'
     EMAIL_PORT = 587
-    EMAIL_HOST_USER = config('info@raastin.com', default='')
-    EMAIL_HOST_PASSWORD = secret('9DHFvkbqNpEt0ohCNf6dO4BubPJQE7cMJ6uJN488kSI=!', default='')
+    EMAIL_HOST_USER = 'info@raastin.com'
+    EMAIL_HOST_PASSWORD = ''
 
 else:
     # start a smtp server with `python -m smtpd -n -c DebuggingServer localhost:1025`
