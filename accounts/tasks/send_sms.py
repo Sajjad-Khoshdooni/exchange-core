@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='sms')
-def send_verification_code_by_kavenegar(phone: str, code: str, send_type: str = 'sms', template: str = 'verify'):
+def send_message_by_kavenegar(phone: str, template: str, token: str, send_type: str = 'sms'):
     api_key = settings.KAVENEGAR_KEY
 
     try:
@@ -19,30 +19,12 @@ def send_verification_code_by_kavenegar(phone: str, code: str, send_type: str = 
             'receptor': phone,
             'template': template,
             'type': send_type,
-            'token': code,
+            'token': token,
         }
 
         api.verify_lookup(params)
     except (APIException, HTTPException) as e:
         logger.exception("Failed to send verification code")
-
-
-@shared_task(queue='sms')
-def send_sms_by_kavenegar(phone: str, template: str, send_type: str = 'sms', ):
-    api_key = settings.KAVENEGAR_KEY
-
-    try:
-        api = KavenegarAPI(apikey=api_key)
-        params = {
-            'receptor': phone,
-            'template': template,
-            'type': send_type,
-            'token': ''
-        }
-
-        api.verify_lookup(params)
-    except (APIException, HTTPException) as e:
-        logger.exception("Failed to send sms")
 
 
 def change_datetime_to_jalali(gregorian_datetime):

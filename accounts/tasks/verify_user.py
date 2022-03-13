@@ -5,7 +5,7 @@ from celery import shared_task
 from accounts.models import Notification
 from accounts.models import User
 from accounts.verifiers.basic_verify import basic_verify
-from .send_sms import send_sms_by_kavenegar
+from .send_sms import send_message_by_kavenegar
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +28,13 @@ def alert_user_verify_status(user: User):
             message = 'اطلاعات احراز هویتی نیاز به بازنگری دارد'
             level = Notification.ERROR
             template = 'levelup-rejected'
+            levelup = user.level + 1
         else:
             title = 'احراز هویت سطح {} شما با موفقیت انجام شد'.format(user.level)
             message = 'احراز هویت سطح {} شما با موفقیت انجام شد'.format(user.level)
             level = Notification.SUCCESS
             template = 'levelup-accepted'
+            levelup = user.level
 
         Notification.send(
             recipient=user,
@@ -40,7 +42,8 @@ def alert_user_verify_status(user: User):
             message=message,
             level=level
         )
-        send_sms_by_kavenegar(
+        send_message_by_kavenegar(
             phone=user.phone,
             template=template,
+            token=str(levelup)
         )

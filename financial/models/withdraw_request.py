@@ -5,7 +5,9 @@ from accounts.models import Account
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_status_field, DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
-from accounts.tasks.send_sms import send_sms_by_kavenegar
+from accounts.tasks.send_sms import send_message_by_kavenegar
+from ledger.utils.precision import humanize_number
+
 
 class FiatWithdrawRequest(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -84,9 +86,10 @@ class FiatWithdrawRequest(models.Model):
             message=message,
             level=level
         )
-        send_sms_by_kavenegar(
+        send_message_by_kavenegar(
             phone=self.bank_account.user.phone,
             template=template,
+            token=humanize_number(self.amount)
         )
 
     def save(self, *args, **kwargs):
