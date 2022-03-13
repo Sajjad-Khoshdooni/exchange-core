@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'provider',
     'wallet',
     'collector',
+    'market',
     'simple_history',
 ]
 
@@ -236,10 +237,10 @@ LOGGING = {
     }
 }
 
-# SESSION_COOKIE_DOMAIN = '.chavosh.org'
-SESSION_COOKIE_SAMESITE = 'None'
-SESSION_COOKIE_SECURE = True
+if not DEBUG:
+    SESSION_COOKIE_SAMESITE = 'None'
+    SESSION_COOKIE_SECURE = True
 
-CSRF_COOKIE_DOMAIN = '.raastin.com'
-CSRF_COOKIE_SAMESITE = 'None'
-CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_DOMAIN = '.raastin.com'
+    CSRF_COOKIE_SAMESITE = 'None'
+    CSRF_COOKIE_SECURE = True

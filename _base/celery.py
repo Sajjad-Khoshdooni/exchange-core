@@ -88,4 +88,22 @@ app.conf.beat_schedule = {
             'expire': 1
         },
     },
+
+    # market tasks
+    'create depth orders': {
+        'task': 'market.tasks.market_maker.create_depth_orders',
+        'schedule': 5,
+        'options': {
+            'queue': 'market_depth',
+            'expire': 5
+        },
+    },
+    'update maker orders': {
+        'task': 'market.tasks.market_maker.update_maker_orders',
+        'schedule': 1,
+        'options': {
+            'queue': 'market_maker',
+            'expire': 2
+        },
+    },
 }
