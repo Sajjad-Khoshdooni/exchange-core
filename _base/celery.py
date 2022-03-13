@@ -88,4 +88,12 @@ app.conf.beat_schedule = {
             'expire': 1
         },
     },
+    'collect_metrics': {
+        'task': 'collector.tasks.metrics.collect_metrics',
+        'schedule': 5,
+        'options': {
+            'queue': 'metrics',
+            'expire': 5
+        },
+    },
 }
