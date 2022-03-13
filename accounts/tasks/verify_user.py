@@ -25,13 +25,11 @@ def alert_user_verify_status(user: User):
     if user.level >= User.LEVEL2 or user.verify_status == User.REJECTED:
         if user.verify_status == User.REJECTED:
             title = 'اطلاعات وارد شده نیاز به بازنگری دارد.'
-            message = 'اطلاعات احراز هویتی نیاز به بازنگری دارد'
             level = Notification.ERROR
             template = 'levelup-rejected'
             levelup = user.level + 1
         else:
-            title = 'احراز هویت سطح {} شما با موفقیت انجام شد'.format(user.level)
-            message = 'احراز هویت سطح {} شما با موفقیت انجام شد'.format(user.level)
+            title = 'احراز هویت سطح {} شما با موفقیت انجام شد.'.format(user.level)
             level = Notification.SUCCESS
             template = 'levelup-accepted'
             levelup = user.level
@@ -39,7 +37,6 @@ def alert_user_verify_status(user: User):
         Notification.send(
             recipient=user,
             title=title,
-            message=message,
             level=level
         )
         send_message_by_kavenegar(

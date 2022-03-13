@@ -68,13 +68,11 @@ class FiatWithdrawRequest(models.Model):
 
     def alert_withdraw_verify_status(self, old):
         if (not old or old.status != DONE) and self.status == DONE:
-            title = 'درخواست برداشت شما با موفقیت انجام شد'
-            message = 'درخواست برداشت شما با موفقیت انجام شد'
+            title = 'درخواست برداشت شما با موفقیت انجام شد.'
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
         elif (not old or old.status != CANCELED) and self.status == CANCELED:
-            title = 'درخواست برداشت شما انجام نشد'
-            message = 'درخواست برداشت شما انجام نشد'
+            title = 'درخواست برداشت شما انجام نشد.'
             level = Notification.ERROR
             template = 'withdraw-rejected'
         else:
@@ -83,7 +81,6 @@ class FiatWithdrawRequest(models.Model):
         Notification.send(
             recipient=self.bank_account.user,
             title=title,
-            message=message,
             level=level
         )
         send_message_by_kavenegar(
