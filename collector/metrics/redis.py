@@ -3,7 +3,7 @@ from redis import Redis
 
 
 prefix_metrics = 'met'
-metrics_redis = Redis.from_url(settings.PROVIDER_CACHE_LOCATION, decode_responses=True)
+metrics_redis = Redis.from_url(settings.METRICS_CACHE_LOCATION, decode_responses=True)
 
 
 def set_metric(name: str, labels: dict = None, value: float = 0, timeout: int = 60):
