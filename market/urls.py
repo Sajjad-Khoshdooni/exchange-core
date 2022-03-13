@@ -1,7 +1,14 @@
-from django.urls import path
-from market.views import MarketInfoView
+from django.urls import path, include
+from rest_framework import routers
 
+from market.views import *
+
+router = routers.DefaultRouter()
+router.register(r'^orders', OrderViewSet, basename='order')
 
 urlpatterns = [
     path('irt/info/', MarketInfoView.as_view()),
+    path('depth/<str:symbol>/', OrderBookAPIView.as_view()),
+    path('orders/cancel', CancelOrderAPIView.as_view()),
+    path('', include(router.urls)),
 ]
