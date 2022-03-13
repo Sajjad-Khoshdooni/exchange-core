@@ -92,7 +92,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
                                          'get_birth_date_jalali',
                                          'telephone', 'get_national_card_image', 'get_selfie_image')}),
-        (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
+        (_('Authentication'), {'fields': ('level', 'verify_status', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
                                           'telephone_verified', 'selfie_image_verified',
                                           )}),

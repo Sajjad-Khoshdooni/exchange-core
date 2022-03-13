@@ -4,3 +4,4 @@ from .finotech import FinotechRequest
 from .phone_verification import VerificationCode
 from .account import Account
 from .user_comment import UserComment
+from .email_verification import EmailVerificationCode

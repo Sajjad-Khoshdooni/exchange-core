@@ -11,6 +11,7 @@ HOUR = 60 * MINUTES
 DAY = 24 * HOUR
 
 PHONE_MAX_LENGTH = 16
+EMAIL_MAX_LENGTH = 320
 
 
 def random_number(lower_bound, upper_bound):

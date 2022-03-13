@@ -243,3 +243,19 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_DOMAIN = '.raastin.com'
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SECURE = True
+EMAIL_HOST_USER = 'mhfarani'
+
+if not DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.zoho.com'
+    EMAIL_PORT = 587
+    EMAIL_HOST_USER = config('info@raastin.com', default='')
+    EMAIL_HOST_PASSWORD = secret('9DHFvkbqNpEt0ohCNf6dO4BubPJQE7cMJ6uJN488kSI=!', default='')
+
+else:
+    # start a smtp server with `python -m smtpd -n -c DebuggingServer localhost:1025`
+    EMAIL_HOST = 'localhost'
+    EMAIL_PORT = 1025
+    EMAIL_USE_TLS = False
+    EMAIL_USE_SSL = False
+

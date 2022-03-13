@@ -38,8 +38,7 @@ class User(AbstractUser):
         }
     )
 
-    email_verified = models.BooleanField(default=False, verbose_name='تاییدیه ایمیل',)
-    email_verification_date = models.DateTimeField(null=True, blank=True)
+    email = models.EmailField(blank=True, null=True, verbose_name='ایمیل', )
 
     first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام',)
     last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی',)
