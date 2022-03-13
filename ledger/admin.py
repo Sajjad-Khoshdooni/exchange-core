@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
-
+from ledger.utils.precision import get_presentation_amount
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
@@ -176,7 +176,7 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request',  'status', 'get_otc_trade_from_amount')
+    list_display = ('created', 'otc_request',  'status','get_otc_trade_to_price_absolute_irt', )
     list_filter = (OTCUserFilter, 'status')
 
     def get_otc_trade_from_amount(self, otc_trade: models.OTCTrade):
@@ -185,6 +185,12 @@ class OTCTradeAdmin(admin.ModelAdmin):
         )
 
     get_otc_trade_from_amount.short_description = 'مقدار پایه'
+
+    def get_otc_trade_to_price_absolute_irt(self, otc_trade: models.OTCTrade):
+        return humanize_number(get_presentation_amount(
+            otc_trade.otc_request.to_price_absolute_irt * otc_trade.otc_request.to_amount
+        ))
+    get_otc_trade_to_price_absolute_irt.short_description = 'ارزش ریالی'
 
 
 @admin.register(models.Trx)

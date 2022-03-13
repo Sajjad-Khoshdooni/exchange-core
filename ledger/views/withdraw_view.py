@@ -4,6 +4,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
 
+from accounts.models import VerificationCode
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
@@ -17,6 +18,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
     address = serializers.CharField(write_only=True)
     coin = serializers.CharField(write_only=True)
     network = serializers.CharField(write_only=True)
+    code = serializers.CharField(write_only=True, required=True)
 
     def validate(self, attrs):
         user = self.context['request'].user
@@ -25,6 +27,12 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         if asset.symbol == Asset.IRT:
             raise ValidationError('نشانه دارایی اشتباه است.')
+
+        code = attrs['code']
+        otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_WITHDRAW)
+
+        if not otp_code:
+            raise ValidationError({'code': 'کد نامعتبر است.'})
 
         if not is_48h_rule_passed(user):
             raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
@@ -58,6 +66,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if user_reached_crypto_withdraw_limit(user, irt_value):
             raise ValidationError({'amount': 'شما به سقف برداشت رمزارزی خورده اید.'})
 
+        otp_code.set_code_used()
+
         return {
             'network': network,
             'asset': asset,
@@ -80,7 +90,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transfer
-        fields = ('amount', 'address', 'coin', 'network')
+        fields = ('amount', 'address', 'coin', 'network', 'code')
 
 
 class WithdrawView(CreateAPIView):
