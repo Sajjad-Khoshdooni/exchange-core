@@ -159,7 +159,7 @@ class PaydotirGateway(Gateway):
         payment_request = payment.payment_request
 
         resp = requests.post(
-            self.BASE_URL + '/pg/verify ',
+            self.BASE_URL + '/pg/verify',
             data={
                 'api': payment_request.gateway.merchant_id,
                 'token': payment_request.authority

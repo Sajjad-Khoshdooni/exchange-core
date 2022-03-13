@@ -3,7 +3,6 @@ from django.db import models
 from django.db.models import Q
 from simple_history.models import HistoricalRecords
 from django.utils import timezone
-
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import PHONE_MAX_LENGTH
@@ -125,6 +124,7 @@ class User(AbstractUser):
         return User.objects.filter(Q(phone=email_or_phone) | Q(email=email_or_phone)).first()
 
     def save(self, *args, **kwargs):
+        from accounts.tasks.verify_user import alert_user_verify_status
         creating = not self.id
         super(User, self).save(*args, **kwargs)
 
@@ -143,3 +143,5 @@ class User(AbstractUser):
 
                 if not any_none and any_false:
                     self.change_status(self.REJECTED)
+
+            alert_user_verify_status(self)
