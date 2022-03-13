@@ -38,7 +38,6 @@ class User(AbstractUser):
         }
     )
 
-    email = models.EmailField(blank=True, null=True, verbose_name='ایمیل', )
 
     first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام',)
     last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی',)

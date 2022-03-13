@@ -243,7 +243,6 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_DOMAIN = '.raastin.com'
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SECURE = True
-EMAIL_HOST_USER = 'mhfarani'
 
 if not DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

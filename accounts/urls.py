@@ -12,8 +12,6 @@ urlpatterns = [
     path('otp/verify/', views.VerifyOTPView.as_view()),
     path('otp/send/', views.SendOTPView.as_view()),
 
-
-
     path('user/', views.UserDetailView.as_view()),
 
     path('forget/init/', views.InitiateForgetPasswordView.as_view()),
@@ -32,7 +30,7 @@ urlpatterns = [
     path('verify/tel/init/', views.InitiateTelephoneVerifyView.as_view()),
     path('verify/tel/otp/', views.TelephoneOTPVerifyView.as_view()),
 
-    path('verify/email/', views.EmailVerifyView.as_view()),
+    path('verify/email/init/', views.EmailVerifyView.as_view()),
     path('verify/email/otp/', views.EmailOTPVerifyView.as_view()),
 
     path('notifs/', views.NotificationViewSet.as_view({
