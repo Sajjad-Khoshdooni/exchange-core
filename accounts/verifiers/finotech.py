@@ -94,6 +94,10 @@ class FinotechRequester:
 
         req_object.response = resp_data
         req_object.status_code = resp.status_code
+
+        if not resp.ok:
+            req_object.search_key = ''
+
         req_object.save()
 
         if not resp.ok:
