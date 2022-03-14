@@ -98,10 +98,10 @@ app.conf.beat_schedule = {
     },
     'monitor': {
         'task': 'collector.tasks.monitor.collect_values',
-        'schedule': 600,
+        'schedule': 300,
         'options': {
             'queue': 'celery',
-            'expire': 600
+            'expire': 300
         },
     },
 }
