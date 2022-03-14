@@ -1,8 +1,10 @@
+import logging
+
 from celery import shared_task
+from prometheus_client import Counter, Gauge
 
 from collector.metrics.defs import METRICS
 from collector.metrics.redis import metrics_redis, prefix_metrics
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +29,20 @@ def collect_metrics():
 
         labels = {l: v for (l, v) in map(lambda s: s.split('-'), parts[2:])}
 
-        gauge = METRICS.pop[metric_key]
+        prom = METRICS[metric_key]
 
         if labels:
-            for label in gauge._labelnames:
+            for label in prom._labelnames:
                 if label not in labels:
                     labels[label] = 'null'
 
-            gauge.labels(**labels).set(float(metrics_values[key]))
+            prom = prom.labels(**labels)
+
+        value = float(value)
+
+        if isinstance(prom, Gauge):
+            prom.set(value)
+        elif isinstance(prom, Counter):
+            prom.inc(value)
         else:
-            gauge.metrics[metric_key].set(float(value))
+            raise NotImplementedError

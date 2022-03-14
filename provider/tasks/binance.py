@@ -12,8 +12,6 @@ def inject_tether_to_futures():
     details = BinanceFuturesHandler.get_account_details()
     futures_margin_ratio = float(details.get('totalMarginBalance', 0)) / float(details.get('totalInitialMargin', 1e-10))
 
-    set_metric('margin_ratio', value=futures_margin_ratio)
-
     if futures_margin_ratio < 0.9:
         balance_map = BinanceSpotHandler.get_free_dict()
         usdt_amount = min(balance_map[Asset.USDT], 5000)
@@ -25,3 +23,5 @@ def inject_tether_to_futures():
             message='small margin ratio = %s' % round(futures_margin_ratio, 3),
             link=url_to_admin_list(Asset)
         )
+
+    set_metric('binance_future_margin_ratio', value=futures_margin_ratio)
