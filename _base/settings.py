@@ -237,10 +237,10 @@ LOGGING = {
     }
 }
 
-if not DEBUG:
-    SESSION_COOKIE_SAMESITE = 'None'
-    SESSION_COOKIE_SECURE = True
 
-    CSRF_COOKIE_DOMAIN = '.raastin.com'
-    CSRF_COOKIE_SAMESITE = 'None'
-    CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='None')
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', cast=bool, default=True)
+
+CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN', default='.raastin.com')
+CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='None')
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', cast=bool, default=True)
