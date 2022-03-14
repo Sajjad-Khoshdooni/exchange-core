@@ -10,7 +10,7 @@ METRICS = {
     'binance_initial_margin': prom.gauge('binance_initial_margin', 'binance initial margin', ['currency']),
     'binance_maintenance_margin': prom.gauge('binance_maintenance_margin', 'binance maintenance margin', ['currency']),
     'binance_spot_tether': prom.gauge('binance_spot_tether', 'binance spot tether'),
-    'binance_future_margin_ratio': prom.gauge('binance_future_margin_ratio', 'binance future margin ratio', ['currency']),
+    'binance_future_margin_ratio': prom.gauge('binance_future_margin_ratio', 'binance future margin ratio'),
 
     'binance_spot_value': prom.gauge('binance_spot_value', 'binance spot value', ['currency']),
     'internal_value': prom.gauge('internal_value', 'internal value', ['currency']),
