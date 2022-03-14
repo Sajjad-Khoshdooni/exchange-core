@@ -9,13 +9,12 @@ from django.db import transaction
 from django.db.models import Max, Min, Count
 
 from accounts.models import Account
-from ledger.exceptions import InsufficientBalance
 from market.models import Order, PairSymbol
 
 logger = logging.getLogger(__name__)
 
 
-@shared_task(queue='market_maker')
+@shared_task(queue='market')
 def update_maker_orders():
     market_top_prices = defaultdict(lambda: Decimal())
 
@@ -34,24 +33,20 @@ def update_maker_orders():
                 price = Order.get_maker_price(symbol, side)
                 order = Order.init_top_maker_order(
                     symbol, side, price,
-                    market_top_prices[(symbol, side)], market_top_prices[(symbol, Order.get_opposite_side(side))]
+                    market_top_prices[(symbol.id, side)], market_top_prices[(symbol.id, Order.get_opposite_side(side))]
                 )
                 logger.info(f'{symbol} {side} maker order created: {bool(order)}')
                 if order:
                     with transaction.atomic():
                         order.save()
                         Order.submit(order=order)
-        except InsufficientBalance as e:
-            if settings.DEBUG:
-                raise e
-            logger.exception(f'insufficient balance on creating maker order for {symbol}')
         except Exception as e:
             if settings.DEBUG:
                 raise e
             logger.exception(f'update maker order failed for {symbol}', extra={'exp': e, })
 
 
-@shared_task(queue='market_depth')
+@shared_task(queue='market')
 def create_depth_orders():
     def get_price_factor(order_side, distance):
         factor = Decimal(1 + (log10(11 + distance) - 1) / 4)
@@ -59,23 +54,19 @@ def create_depth_orders():
 
     open_depth_orders_count = defaultdict(int)
     for depth in Order.open_objects.filter(type=Order.DEPTH).values('symbol', 'side').annotate(count=Count('*')):
-        open_depth_orders_count[('symbol', 'side')] = depth['count'] or 0
+        open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
 
     system = Account.system()
     for symbol in PairSymbol.objects.filter(market_maker_enabled=True):
         try:
             for side in (Order.BUY, Order.SELL):
                 price = Order.get_maker_price(symbol, side)
-                for i in range(Order.MAKER_ORDERS_COUNT - open_depth_orders_count[(symbol, side)]):
+                for i in range(Order.MAKER_ORDERS_COUNT - open_depth_orders_count[(symbol.id, side)]):
                     order = Order.init_maker_order(symbol, side, price * get_price_factor(side, i), system)
                     if order:
                         with transaction.atomic():
                             order.save()
                             Order.submit(order=order)
-        except InsufficientBalance as e:
-            if settings.DEBUG:
-                raise e
-            logger.exception(f'insufficient balance on creating depth order for {symbol}')
         except Exception as e:
             if settings.DEBUG:
                 raise e
