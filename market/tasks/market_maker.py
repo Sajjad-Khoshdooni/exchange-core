@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def update_maker_orders():
     market_top_prices = defaultdict(lambda: Decimal())
 
-    for depth in Order.open_objects.filter(type=Order.ORDINARY).values('symbol', 'side').annotate(
+    for depth in Order.open_objects.values('symbol', 'side').annotate(
             max_price=Max('price'), min_price=Min('price')):
         market_top_prices[
             (depth['symbol'], depth['side'])
@@ -30,14 +30,10 @@ def update_maker_orders():
             with transaction.atomic():
                 Order.cancel_invalid_maker_orders(symbol)
 
-            existing_maker_types = set(
-                Order.open_objects.filter(symbol=symbol, type__in=Order.TOP_ORDER_TYPES).values_list('type', flat=True))
-
-            for top_order_type in set(Order.TOP_ORDER_TYPES) - existing_maker_types:
-                side = top_order_type
+            for side in (Order.BUY, Order.SELL):
                 price = Order.get_maker_price(symbol, side)
                 order = Order.init_top_maker_order(
-                    symbol, side, top_order_type, price,
+                    symbol, side, price,
                     market_top_prices[(symbol, side)], market_top_prices[(symbol, Order.get_opposite_side(side))]
                 )
                 logger.info(f'{symbol} {side} maker order created: {bool(order)}')
@@ -63,16 +59,15 @@ def create_depth_orders():
 
     open_depth_orders_count = defaultdict(int)
     for depth in Order.open_objects.filter(type=Order.DEPTH).values('symbol', 'side').annotate(count=Count('*')):
-        depth[('symbol', 'side')] = depth['count'] or 0
+        open_depth_orders_count[('symbol', 'side')] = depth['count'] or 0
 
     system = Account.system()
     for symbol in PairSymbol.objects.filter(market_maker_enabled=True):
         try:
-            for top_order_type in Order.TOP_ORDER_TYPES:
-                side = top_order_type
+            for side in (Order.BUY, Order.SELL):
                 price = Order.get_maker_price(symbol, side)
                 for i in range(Order.MAKER_ORDERS_COUNT - open_depth_orders_count[(symbol, side)]):
-                    order = Order.init_maker_order(symbol, side, Order.DEPTH, price * get_price_factor(side, i), system)
+                    order = Order.init_maker_order(symbol, side, price * get_price_factor(side, i), system)
                     if order:
                         with transaction.atomic():
                             order.save()

@@ -45,8 +45,7 @@ class Order(models.Model):
     DEPTH = 'depth'
     ORDINARY = None
 
-    TOP_ORDER_TYPES = (BUY, SELL)
-    TYPE_CHOICES = ((SELL, SELL), (BUY, BUY), (DEPTH, 'depth'), (ORDINARY, 'ordinary'))
+    TYPE_CHOICES = ((DEPTH, 'depth'), (ORDINARY, 'ordinary'))
 
     type = models.CharField(
         max_length=8,
@@ -281,14 +280,14 @@ class Order(models.Model):
 
     # Market Maker related methods
     @staticmethod
-    def init_maker_order(symbol: PairSymbol, side, maker_type, maker_price: Decimal, system=None, market=Wallet.SPOT):
+    def init_maker_order(symbol: PairSymbol, side, maker_price: Decimal, system=None, market=Wallet.SPOT):
         if system is None:
             system = Account.system()
 
         amount = floor_precision(symbol.maker_amount * Decimal(1 + random()), symbol.step_size)
         wallet = symbol.asset.get_wallet(system, market=market)
         return Order(
-            type=maker_type,
+            type=Order.DEPTH,
             wallet=wallet,
             symbol=symbol,
             amount=amount,
@@ -298,7 +297,7 @@ class Order(models.Model):
         )
 
     @classmethod
-    def init_top_maker_order(cls, symbol, side, maker_type, price, best_order, best_opp_order, market=Wallet.SPOT,
+    def init_top_maker_order(cls, symbol, side, price, best_order, best_opp_order, market=Wallet.SPOT,
                              system=None):
         if system is None:
             system = Account.system()
@@ -318,7 +317,7 @@ class Order(models.Model):
         if not best_order or \
                 (side == Order.BUY and maker_price > best_order) or \
                 (side == Order.SELL and maker_price < best_order):
-            return cls.init_maker_order(symbol, side, maker_type, maker_price, system, market)
+            return cls.init_maker_order(symbol, side, maker_price, system, market)
 
     @classmethod
     def cancel_invalid_maker_orders(cls, symbol: PairSymbol):
