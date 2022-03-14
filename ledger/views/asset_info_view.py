@@ -54,7 +54,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
         cap = self.get_cap(asset)
 
         if cap:
-            return int(cap.volume_24h
+            return int(cap.volume_24h)
 
     def get_cap(self, asset) -> CoinMarketCap:
         return self.context['cap_info'].get(asset.symbol)
