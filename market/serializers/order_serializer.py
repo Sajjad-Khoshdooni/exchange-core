@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    symbol = serializers.CharField(source='symbol.name')
     filled_amount = serializers.SerializerMethodField()
     filled_price = serializers.SerializerMethodField()
 
@@ -28,7 +29,7 @@ class OrderSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol'])
+        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'])
         if not symbol.enable:
             raise ValidationError(f'{symbol} is not enable')
 
@@ -40,7 +41,9 @@ class OrderSerializer(serializers.ModelSerializer):
 
         try:
             with transaction.atomic():
-                created_order = super(OrderSerializer, self).create({**validated_data, 'wallet': wallet})
+                created_order = super(OrderSerializer, self).create(
+                    {**validated_data, 'wallet': wallet, 'symbol': symbol}
+                )
                 Order.submit(order=created_order)
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
@@ -93,5 +96,5 @@ class OrderSerializer(serializers.ModelSerializer):
                   'fill_type', 'status')
         read_only_fields = ('id', 'created', 'status',)
         extra_kwargs = {
-            'wallet': {'write_only': True}
+            'wallet': {'write_only': True, 'required': False}
         }
