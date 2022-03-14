@@ -89,6 +89,9 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ('wallet', 'symbol', 'amount', 'filled_amount', 'price', 'filled_price', 'side', 'fill_type',
-                  'status', 'client_order_id')
-        read_only_fields = ('wallet', 'status')
+        fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'price', 'filled_price', 'side',
+                  'fill_type', 'status')
+        read_only_fields = ('id', 'created', 'status',)
+        extra_kwargs = {
+            'wallet': {'write_only': True}
+        }

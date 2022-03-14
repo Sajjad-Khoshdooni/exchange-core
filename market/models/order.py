@@ -66,7 +66,7 @@ class Order(models.Model):
 
     lock = get_lock_field(null=True, related_name='market_order')
 
-    client_order_id = models.CharField(default=uuid4, max_length=36)
+    client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
     def __str__(self):
         return f'{self.symbol}-{self.side} [p:{self.price:.2f}] (a:{self.amount:.5f})'
@@ -74,9 +74,6 @@ class Order(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['symbol', 'type', 'status', 'created']),
-        ]
-        unique_together = [
-            ('wallet', 'client_order_id')
         ]
 
     all_objects = models.Manager()

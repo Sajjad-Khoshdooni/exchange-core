@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 
 
 class CancelRequestSerializer(serializers.ModelSerializer):
-    client_order_id = serializers.CharField(source='order.client_order_id')
+    id = serializers.CharField(source='order.id')
     canceled_at = serializers.CharField(source='created', read_only=True)
 
     def create(self, validated_data):
         order = Order.open_objects.filter(
             wallet__account=self.context['account'],
-            client_order_id=validated_data.pop('order')['client_order_id'],
+            id=validated_data.pop('order')['id'],
         ).first()
         if not order:
             raise NotFound(_('Order not found'))
@@ -37,4 +37,4 @@ class CancelRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CancelRequest
-        fields = ('client_order_id', 'canceled_at')
+        fields = ('id', 'canceled_at')
