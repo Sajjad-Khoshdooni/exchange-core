@@ -41,8 +41,8 @@ class OrderBookAPIView(APIView):
             })
 
         results = {
-            'bids': filtered_bids,
-            'asks': asks,
+            'bids': filtered_bids[:20],
+            'asks': asks[:20],
         }
         return Response(results, status=status.HTTP_200_OK)
 
