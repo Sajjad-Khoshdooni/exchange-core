@@ -40,6 +40,8 @@ def collect_metrics():
 
         value = float(value)
 
+        print('settings key %s %s %s' % (metric_key, labels, value))
+
         if isinstance(prom, Gauge):
             prom.set(value)
         elif isinstance(prom, Counter):
