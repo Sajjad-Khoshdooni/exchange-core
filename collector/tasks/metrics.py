@@ -44,5 +44,6 @@ def collect_metrics():
             prom.set(value)
         elif isinstance(prom, Counter):
             prom.inc(value)
+            metrics_redis.set(key, 0)
         else:
             raise NotImplementedError

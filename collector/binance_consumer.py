@@ -90,7 +90,7 @@ class BinanceConsumer:
 
         self.queue = {}
         self.last_flush_time = time.time()
-        set_metric('binance_price_updates', value=flushed_count)
+        set_metric('binance_price_updates', value=flushed_count, incr=True)
 
     def exit_gracefully(self, signum, frame):
         self.loop = False
