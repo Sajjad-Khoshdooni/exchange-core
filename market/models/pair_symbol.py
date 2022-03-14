@@ -39,3 +39,7 @@ class PairSymbol(models.Model):
         if not self.name:
             raise Exception('Could not set name for pair symbol!')
         return super(PairSymbol, self).save(**kwargs)
+
+    class Meta:
+        unique_together = ('asset', 'base_asset')
+
