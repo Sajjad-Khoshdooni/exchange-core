@@ -135,7 +135,7 @@ class Order(models.Model):
         return {'price__lte': price} if side == Order.BUY else {'price__gte': price}
 
     @staticmethod
-    def get_maker_price(symbol: PairSymbol, side: str):
+    def get_maker_price(symbol: PairSymbol, side: str, loose_factor=Decimal(1)):
         coin = symbol.asset.symbol
         base_symbol = symbol.base_asset.symbol
         if base_symbol == IRT:
@@ -144,7 +144,7 @@ class Order(models.Model):
             boundary_price = get_trading_price_usdt(coin, side)
         else:
             raise NotImplementedError('Invalid trading symbol')
-        return boundary_price
+        return boundary_price * loose_factor if side == Order.BUY else boundary_price / loose_factor
 
     @classmethod
     def get_lock_wallet(cls, wallet, base_wallet, side):
@@ -323,8 +323,9 @@ class Order(models.Model):
     @classmethod
     def cancel_invalid_maker_orders(cls, symbol: PairSymbol):
         for side in (Order.BUY, Order.SELL):
-            price = cls.get_maker_price(symbol, side)
-            invalid_orders = cls.open_objects.select_for_update().exclude(type=Order.ORDINARY).exclude(
-                **cls.get_price_filter(price, side)
-            )
-            cls.cancel_orders(symbol, to_cancel_orders=invalid_orders)
+            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.0005'))
+            invalid_orders = cls.open_objects.select_for_update().filter(side=side).exclude(
+                type=Order.ORDINARY
+            ).exclude(**cls.get_price_filter(price, side))
+            cancels = cls.cancel_orders(symbol, to_cancel_orders=invalid_orders)
+            logger.info(f'maker {side} cancels: {cancels}, price: {price}')
