@@ -18,7 +18,7 @@ class OrderBookAPIView(APIView):
     permission_classes = ()
 
     def get(self, request, symbol):
-        symbol = get_object_or_404(PairSymbol, name=symbol)
+        symbol = get_object_or_404(PairSymbol, name=symbol.upper())
         if not symbol.enable:
             raise ValidationError(f'{symbol} is not enable')
         open_orders = Order.open_objects.filter(symbol=symbol).annotate(

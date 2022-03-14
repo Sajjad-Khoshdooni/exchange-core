@@ -29,7 +29,7 @@ class OrderSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'])
+        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
         if not symbol.enable:
             raise ValidationError(f'{symbol} is not enable')
 
