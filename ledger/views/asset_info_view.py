@@ -1,3 +1,4 @@
+import time
 from decimal import Decimal
 
 from rest_framework import serializers
@@ -38,7 +39,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
     def get_trend_url(self, asset: Asset):
         cap = CoinMarketCap.objects.filter(symbol=asset.symbol).first()
         if cap:
-            return 'https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/%d.svg' % cap.internal_id
+            return 'https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/%d.svg?v=%s' % \
+                   (cap.internal_id, str(int(time.time()) // 3600))
         else:
             return '/'
 
@@ -52,7 +54,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
         cap = self.get_cap(asset)
 
         if cap:
-            return asset.get_presentation_amount(Decimal(cap.volume_24h))
+            return int(asset.get_presentation_amount(Decimal(cap.volume_24h)))
 
     def get_cap(self, asset) -> CoinMarketCap:
         return self.context['cap_info'].get(asset.symbol)
