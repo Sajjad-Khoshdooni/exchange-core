@@ -35,9 +35,7 @@ class OrderViewSet(mixins.CreateModelMixin,
     filter_class = OrderFilter
 
     def get_queryset(self):
-        if self.kwargs.get('client_order_id') or self.request.query_params.get('status'):
-            return Order.objects.filter(wallet__account=self.request.user.account)
-        return Order.open_objects.filter(wallet__account=self.request.user.account)
+        return Order.objects.filter(wallet__account=self.request.user.account)
 
     def get_serializer_context(self):
         return {
