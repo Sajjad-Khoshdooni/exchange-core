@@ -38,12 +38,13 @@ def collect_metrics():
 
             prom = prom.labels(**labels)
 
-        value = float(value)
-
         if isinstance(prom, Gauge):
-            prom.set(value)
+            prom.set(float(value))
+
         elif isinstance(prom, Counter):
-            prom.inc(value)
+            value = metrics_redis.get(key)
             metrics_redis.set(key, 0)
+
+            prom.inc(float(value))
         else:
             raise NotImplementedError
