@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def collect_metrics():
-    metrics = list(metrics_redis.keys(f'{prefix_metrics}_*'))
+    metrics = list(metrics_redis.keys(f'{prefix_metrics}:*'))
     pipeline = metrics_redis.pipeline(transaction=False)
 
     for metric in metrics:
