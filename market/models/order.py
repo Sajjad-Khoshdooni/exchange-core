@@ -2,7 +2,6 @@ import logging
 from decimal import Decimal
 from itertools import groupby
 from random import random
-from uuid import uuid4
 
 from django.conf import settings
 from django.db import models, transaction
@@ -11,7 +10,7 @@ from django.db.models import Sum, F
 from accounts.models import Account
 from ledger.models import Trx, Wallet
 from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
-from ledger.utils.precision import floor_precision
+from ledger.utils.precision import floor_precision, get_presentation_amount
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt
 from market.models import PairSymbol
 from provider.models import ProviderOrder
@@ -271,8 +270,8 @@ class Order(models.Model):
     def quantize_values(symbol: PairSymbol, open_orders):
         return [{
             'side': order['side'],
-            'price': floor_precision(order['price'], symbol.tick_size),
-            'unfilled_amount': floor_precision(order['unfilled_amount'], symbol.step_size),
+            'price': get_presentation_amount(order['price'], symbol.tick_size),
+            'unfilled_amount': get_presentation_amount(order['unfilled_amount'], symbol.step_size),
         } for order in open_orders]
 
     # Market Maker related methods

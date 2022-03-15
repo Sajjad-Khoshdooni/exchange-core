@@ -10,7 +10,7 @@ from rest_framework.generics import get_object_or_404
 
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet
-from ledger.utils.precision import floor_precision, get_precision
+from ledger.utils.precision import floor_precision, get_precision, get_presentation_amount
 from market.models import Order, PairSymbol
 
 logger = logging.getLogger(__name__)
@@ -23,8 +23,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
-        data['amount'] = str(floor_precision(Decimal(data['amount']), order.symbol.step_size))
-        data['price'] = str(floor_precision(Decimal(data['price']), order.symbol.tick_size))
+        data['amount'] = str(get_presentation_amount(Decimal(data['amount']), order.symbol.step_size))
+        data['price'] = str(get_presentation_amount(Decimal(data['price']), order.symbol.tick_size))
         data['symbol'] = order.symbol.name
         return data
 
