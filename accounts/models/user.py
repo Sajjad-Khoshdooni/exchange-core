@@ -95,6 +95,10 @@ class User(AbstractUser):
     selfie_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس سلفی')
     telephone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه شماره تلفن')
 
+    level_2_prize_activate_mood = models.BooleanField(default=False,verbose_name='امکان دریافت جایزه ارتقا به سطح ۲')
+    sign_up_prize_activate_mood = models.BooleanField(default=False, verbose_name='امکان دریافت جایزه ایجاد حساب کاربری')
+    first_trade_activate_mood = models.BooleanField(default=False, verbose_name='امکان دریافت جایزه اولین معامله')
+
     def change_status(self, status: str):
         if self.verify_status == self.PENDING and status == self.VERIFIED:
             self.verify_status = self.INIT
