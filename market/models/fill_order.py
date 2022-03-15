@@ -52,7 +52,7 @@ class FillOrder(models.Model):
         return Trx(
             sender=self.maker_order.base_wallet if self.taker_order.side == Order.SELL else self.taker_order.base_wallet,
             receiver=self.taker_order.base_wallet if self.taker_order.side == Order.SELL else self.maker_order.base_wallet,
-            amount=self.amount,
+            amount=self.amount * self.price,
             group_id=self.group_id,
             scope=Trx.TRADE
         )
