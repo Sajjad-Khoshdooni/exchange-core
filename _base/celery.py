@@ -112,4 +112,12 @@ app.conf.beat_schedule = {
             'expire': 10
         },
     },
+    'fill_future_binance_income': {
+        'task': 'collector.tasks.binance.fill_future_binance_income',
+        'schedule': crontab(minute=5),
+        'options': {
+            'queue': 'binance',
+            'expire': 3600
+        },
+    },
 }
