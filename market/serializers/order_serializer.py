@@ -82,13 +82,13 @@ class OrderSerializer(serializers.ModelSerializer):
         return price
 
     def get_filled_amount(self, order: Order):
-        return str(order.filled_amount)
+        return get_presentation_amount(order.filled_amount)
 
     def get_filled_price(self, order: Order):
         filled_price = order.filled_price
         if filled_price is None:
             return None
-        return str(filled_price)
+        return get_presentation_amount(filled_price)
 
     class Meta:
         model = Order
