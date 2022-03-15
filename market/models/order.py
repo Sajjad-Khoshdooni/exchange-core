@@ -311,9 +311,10 @@ class Order(models.Model):
             logger.warning(f'cannot calculate maker price for {symbol} {side}')
             return
 
+        loose_factor = Decimal('1.0005') if side == Order.BUY else 1 / Decimal('1.0005')
         if not best_order or \
-                (side == Order.BUY and maker_price > best_order) or \
-                (side == Order.SELL and maker_price < best_order):
+                (side == Order.BUY and maker_price > best_order * loose_factor) or \
+                (side == Order.SELL and maker_price < best_order * loose_factor):
             return cls.init_maker_order(symbol, side, maker_price, system, market)
 
     @classmethod
