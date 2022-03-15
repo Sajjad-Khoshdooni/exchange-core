@@ -42,12 +42,13 @@ def gregorian_to_jalali_date_str(date: datetime.date):
 
 
 def gregorian_to_jalali_datetime(d: datetime):
+    d = d.astimezone()
     return jdatetime.datetime.fromgregorian(year=d.year, month=d.month, day=d.day, hour=d.hour, minute=d.minute,
                                             second=d.second)
 
 
-def gregorian_to_jalali_datetime_str(date: datetime.date):
-    return gregorian_to_jalali_date(date).strftime('%Y/%m/%d %H:%M:%S')
+def gregorian_to_jalali_datetime_str(d: datetime):
+    return gregorian_to_jalali_datetime(d).strftime('%Y/%m/%d %H:%M:%S')
 
 
 def parse_positive_int(inp: str, default: int = None):
