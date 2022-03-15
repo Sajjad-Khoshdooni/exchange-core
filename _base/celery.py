@@ -96,12 +96,20 @@ app.conf.beat_schedule = {
             'expire': 5
         },
     },
-    'monitor': {
+    'monitor_values': {
         'task': 'collector.tasks.monitor.collect_values',
         'schedule': 300,
         'options': {
             'queue': 'celery',
             'expire': 300
+        },
+    },
+    'monitor_blockchain_delays': {
+        'task': 'tracker.tasks.monitor_blockchain_delays',
+        'schedule': 10,
+        'options': {
+            'queue': 'celery',
+            'expire': 10
         },
     },
 }
