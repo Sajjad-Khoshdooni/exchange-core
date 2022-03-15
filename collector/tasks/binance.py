@@ -10,14 +10,21 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@shared_task()
-def fill_future_binance_income(start: datetime = None, end: datetime = None):
+DATE_PATTERN = '%Y-%m-%d %H:%M:%S.%f%z'
 
-    if not end:
+
+@shared_task()
+def fill_future_binance_income(start: str = None, end: str = None):
+
+    if end:
+        end = datetime.strptime(end, DATE_PATTERN)
+    else:
         end = timezone.now()
         end -= timedelta(minutes=end.minute, seconds=end.second, microseconds=end.microsecond)
 
-    if not start:
+    if start:
+        start = datetime.strptime(start, DATE_PATTERN)
+    else:
         start = end - timedelta(hours=1)
 
     logger.info('Fetching income in range %s and %s' % (start, end))
