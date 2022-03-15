@@ -21,7 +21,6 @@ class SymbolFilter(django_filters.FilterSet):
 class SymbolListAPIView(ListAPIView):
     authentication_classes = (SessionAuthentication,)
     permission_classes = (IsAuthenticated,)
-    pagination_class = LimitOffsetPagination
 
     serializer_class = SymbolSerializer
 
