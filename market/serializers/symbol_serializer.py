@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class SymbolSerializer(serializers.ModelSerializer):
     asset = serializers.CharField(source='asset.symbol', read_only=True)
-    base_asset = serializers.CharField(source='asset.symbol', read_only=True)
+    base_asset = serializers.CharField(source='base_asset.symbol', read_only=True)
 
     class Meta:
         model = PairSymbol
