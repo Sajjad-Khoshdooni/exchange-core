@@ -187,7 +187,7 @@ class OTCTradeAdmin(admin.ModelAdmin):
     get_otc_trade_from_amount.short_description = 'مقدار پایه'
 
     def get_otc_trade_to_price_absolute_irt(self, otc_trade: models.OTCTrade):
-        return humanize_number(get_presentation_amount(
+        return humanize_number(int(
             otc_trade.otc_request.to_price_absolute_irt * otc_trade.otc_request.to_amount
         ))
     get_otc_trade_to_price_absolute_irt.short_description = 'ارزش ریالی'

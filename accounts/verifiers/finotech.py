@@ -9,7 +9,7 @@ from requests.packages.urllib3.util.retry import Retry
 from yekta_config import secret
 
 from accounts.models import FinotechRequest
-from accounts.utils.validation import gregorian_to_jalali_date
+from accounts.utils.validation import gregorian_to_jalali_date_str
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +162,7 @@ class FinotechRequester:
         return resp['isValid']
 
     def verify_basic_info(self, national_code: str, birth_date: datetime.date, first_name: str, last_name: str, ) -> dict:
-        jalali_date = gregorian_to_jalali_date(birth_date).strftime('%Y/%m/%d')
+        jalali_date = gregorian_to_jalali_date_str(birth_date)
 
         resp = self.collect_api(
             path='/facility/v2/clients/{clientId}/users/%s/cc/nidVerification' % national_code,
