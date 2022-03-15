@@ -254,7 +254,7 @@ class Order(models.Model):
         # hedge_orders = cls.get_hedge_orders(symbol, order_type)
         aggregated_orders = cls.get_aggregated_orders(*filtered_orders)
 
-        sort_func = (lambda o: -o['price']) if order_type == Order.BUY else (lambda o: o['price'])
+        sort_func = (lambda o: -Decimal(o['price'])) if order_type == Order.BUY else (lambda o: Decimal(o['price']))
 
         return sorted(aggregated_orders, key=sort_func)
 
