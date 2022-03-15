@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 from itertools import groupby
 from random import random
+from uuid import uuid4
 
 from django.conf import settings
 from django.db import models, transaction
@@ -263,7 +264,7 @@ class Order(models.Model):
         grouped_by_price = groupby(sorted(orders, key=key_func), key=key_func)
         return [{
             'price': price,
-            'amount': sum(map(lambda i: i['unfilled_amount'], price_orders)),
+            'amount': get_presentation_amount(sum(map(lambda i: i['unfilled_amount'], price_orders))),
         } for price, price_orders in grouped_by_price]
 
     @staticmethod
@@ -271,7 +272,7 @@ class Order(models.Model):
         return [{
             'side': order['side'],
             'price': get_presentation_amount(order['price'], symbol.tick_size),
-            'unfilled_amount': get_presentation_amount(order['unfilled_amount'], symbol.step_size),
+            'unfilled_amount': floor_precision(order['unfilled_amount'], symbol.step_size),
         } for order in open_orders]
 
     # Market Maker related methods
