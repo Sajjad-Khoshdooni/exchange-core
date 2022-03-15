@@ -320,7 +320,7 @@ class Order(models.Model):
     def cancel_invalid_maker_orders(cls, symbol: PairSymbol):
         for side in (Order.BUY, Order.SELL):
             price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.0005'))
-            invalid_orders = cls.open_objects.select_for_update().filter(side=side).exclude(
+            invalid_orders = cls.open_objects.select_for_update().filter(symbol=symbol, side=side).exclude(
                 type=Order.ORDINARY
             ).exclude(**cls.get_price_filter(price, side))
             cancels = cls.cancel_orders(symbol, to_cancel_orders=invalid_orders)
