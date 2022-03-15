@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-DATE_PATTERN = '%Y-%m-%d %H:%M:%S.%f%z'
+DATE_PATTERN = '%Y-%m-%dT%H:%M:%S.%f%z'
 
 
 @shared_task()
