@@ -1,15 +1,13 @@
 import logging
-from decimal import Decimal
 
-from django.db.models import Sum, F
-from django.db.models.functions import Coalesce
+from django.db.models import Sum, F, Subquery, OuterRef
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from market.models import PairSymbol, Order
+from market.models import PairSymbol, Order, FillOrder
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +20,14 @@ class OrderBookAPIView(APIView):
         if not symbol.enable:
             raise ValidationError(f'{symbol} is not enable')
         open_orders = Order.open_objects.filter(symbol=symbol).annotate(
-            total_made=Sum(Coalesce(F('made_fills__amount'), Decimal(0)))).annotate(
-            total_taken=Sum(Coalesce(F('taken_fills__amount'), Decimal(0)))).annotate(
+            total_made=Subquery(
+                FillOrder.objects.filter(maker_order_id=OuterRef('pk')).values('maker_order_id').annotate(
+                    sum=Sum('amount')).values('sum')[:1]),
+            total_taken=Subquery(FillOrder.objects.filter(taker_order=OuterRef('pk')).values('taker_order_id').annotate(
+                sum=Sum('amount')).values('sum')[:1]),
+        ).annotate(
             unfilled_amount=F('amount') - F('total_made') - F('total_taken')
-        ).exclude(unfilled_amount=0).values('side', 'price', 'unfilled_amount')
+        ).values('side', 'price', 'unfilled_amount')
 
         open_orders = Order.quantize_values(symbol, open_orders)
 
