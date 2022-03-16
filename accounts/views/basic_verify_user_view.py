@@ -14,7 +14,7 @@ class CardPanField(serializers.CharField):
             return BankCardSerializer(instance=value).data
 
     def get_attribute(self, user: User):
-        return BankCard.objects.filter(user=user).order_by('verified', '-id').first()
+        return BankCard.objects.filter(user=user).order_by('verified', 'id').first()
 
 
 class IbanField(serializers.CharField):
@@ -23,7 +23,7 @@ class IbanField(serializers.CharField):
             return BankAccountSerializer(instance=value).data
 
     def get_attribute(self, user: User):
-        return BankAccount.objects.filter(user=user).order_by('verified', '-id').first()
+        return BankAccount.objects.filter(user=user).order_by('verified', 'id').first()
 
 
 class BasicInfoSerializer(serializers.ModelSerializer):
