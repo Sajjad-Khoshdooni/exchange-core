@@ -30,7 +30,6 @@ class BankCard(models.Model):
         verbose_name = 'کارت بانکی'
         verbose_name_plural = 'کارت‌های بانکی'
 
-        ordering = ('-verified', )
         unique_together = [('card_pan', 'user')]
 
         constraints = [
@@ -79,7 +78,6 @@ class BankAccount(models.Model):
     class Meta:
         verbose_name = 'حساب بانکی'
         verbose_name_plural = 'حساب‌های بانکی'
-        ordering = ('-verified', )
 
         unique_together = [('iban', 'user')]
 
