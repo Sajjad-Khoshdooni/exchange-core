@@ -7,9 +7,18 @@ from ledger.models import Trx, Asset
 from ledger.utils.fields import get_status_field, DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
 from accounts.tasks.send_sms import send_message_by_kavenegar
 from ledger.utils.precision import humanize_number
+import requests
+import logging
+from accounts.utils.admin import url_to_edit_object
+from accounts.utils.telegram import send_support_message
+
+logger = logging.getLogger(__name__)
 
 
 class FiatWithdrawRequest(models.Model):
+
+    BASE_URL ='https://pay.ir'
+
     created = models.DateTimeField(auto_now_add=True)
     group_id = get_group_id_field()
 
@@ -19,6 +28,7 @@ class FiatWithdrawRequest(models.Model):
     fee_amount = models.PositiveIntegerField()
 
     status = get_status_field()
+    providing_status = get_status_field()
     lock = get_lock_field()
 
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
@@ -66,6 +76,59 @@ class FiatWithdrawRequest(models.Model):
         if self.status == DONE and not self.ref_id:
             raise ValidationError('رسید انتقال خالی است.')
 
+    def get_available_wallet_id(self):
+
+        resp = requests.get(
+            self.BASE_URL + '/api/v2/wallets',
+            headers='Authorization: Bearer {token}'
+        )
+        resp = resp.json()
+        if resp['success']:
+            wallet_id = None
+            for wallet in resp['data']['wallet']:
+                if wallet['cashoutableAmount'] >= self.amount * 10:
+                    wallet_id = wallet['id']
+            return wallet_id
+        else:
+            logger.error(
+                'Fale to get wallet'
+            )
+            raise Exception('Fale to get wallet')
+
+    def create_withdraw_request_paydotir(self):
+
+            wallet_id = self.get_available_wallet_id()
+
+            if wallet_id is None:
+                self.providing_status = CANCELED
+                self.save()
+                link = url_to_edit_object(self)
+                send_support_message(
+                    message='موجودی هیچ یک از کیف پول‌ها برای انجام این تراکنش کافی نیست.',
+                    link=link
+                )
+
+            else:
+                second_resp = requests.post(
+                    self.BASE_URL + '/api/v2/cashouts',
+                    headers='Authorization: Bearer {token}',
+                    json={
+                        'walletid': wallet_id,
+                        'amount': self.amount * 10,
+                        'name': self.bank_account.user.get_full_name(),
+                        'iban': self.bank_account.iban,
+                        'uid': self.pk,
+                    }
+                )
+                if second_resp.json()['data']['success']:
+                    self.providing_status = PENDING
+                    self.save()
+                else:
+                    logger.error(
+                        'Bank transfer registration failed'
+                    )
+                    return
+
     def alert_withdraw_verify_status(self, old):
         if (not old or old.status != DONE) and self.status == DONE:
             title = 'درخواست برداشت شما با موفقیت انجام شد.'
@@ -106,6 +169,7 @@ class FiatWithdrawRequest(models.Model):
                 self.lock.release()
 
         self.alert_withdraw_verify_status(old)
+
 
     def __str__(self):
         return '%s %s' % (self.bank_account, self.amount)
