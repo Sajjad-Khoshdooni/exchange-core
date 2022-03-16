@@ -42,4 +42,4 @@ class TradeSerializer(FillOrderSerializer):
 
     class Meta:
         model = FillOrder
-        fields = ('created', 'coin', 'pair', 'amount', 'price', 'pair_amount',)
+        fields = ('created', 'coin', 'pair', 'amount', 'price', 'pair_amount', 'is_buyer_maker')
