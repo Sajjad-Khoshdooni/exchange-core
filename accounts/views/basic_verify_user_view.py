@@ -54,8 +54,8 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         if BankAccount.objects.filter(iban=iban, verified=True).exclude(user=user).exists():
             raise ValidationError('این شماره شبا قبلا ثبت شده است.')
 
-        bank_card = BankCard.objects.filter(user=user, card_pan=card_pan).order_by('-verified').first()
-        bank_account = BankAccount.objects.filter(user=user, iban=iban).order_by('-verified').first()
+        bank_card = BankCard.objects.filter(user=user, card_pan=card_pan).order_by('verified').first()
+        bank_account = BankAccount.objects.filter(user=user, iban=iban).order_by('verified').first()
 
         if not bank_card:
             # new bank_card
