@@ -1,6 +1,8 @@
 import logging
+from decimal import Decimal
 
 from django.db.models import Sum, F, Subquery, OuterRef
+from django.db.models.functions import Coalesce
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
@@ -23,10 +25,10 @@ class OrderBookAPIView(APIView):
             total_made=Subquery(
                 FillOrder.objects.filter(maker_order_id=OuterRef('pk')).values('maker_order_id').annotate(
                     sum=Sum('amount')).values('sum')[:1]),
-            total_taken=Subquery(FillOrder.objects.filter(taker_order=OuterRef('pk')).values('taker_order_id').annotate(
+            total_taken=Subquery(FillOrder.objects.filter(taker_order_id=OuterRef('pk')).values('taker_order_id').annotate(
                 sum=Sum('amount')).values('sum')[:1]),
         ).annotate(
-            unfilled_amount=F('amount') - F('total_made') - F('total_taken')
+            unfilled_amount=F('amount') - Coalesce(F('total_made'), Decimal(0)) - Coalesce(F('total_taken'), Decimal(0))
         ).exclude(unfilled_amount=0).values('side', 'price', 'unfilled_amount')
 
         open_orders = Order.quantize_values(symbol, open_orders)
