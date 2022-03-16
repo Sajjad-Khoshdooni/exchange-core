@@ -80,11 +80,23 @@ class FinotechRequester:
 
         url += '?trackId=%s' % req_object.track_id
 
-        if method == 'GET':
-            resp = requests.get(url, timeout=60, params=data, headers={'Authorization': 'Bearer ' + token})
-        else:
-            method_prop = getattr(request, method.lower())
-            resp = method_prop(url, timeout=60, data=data, headers={'Authorization': 'Bearer ' + token})
+        try:
+            if method == 'GET':
+                resp = requests.get(url, timeout=60, params=data, headers={'Authorization': 'Bearer ' + token})
+            else:
+                method_prop = getattr(requests, method.lower())
+                resp = method_prop(url, timeout=60, data=data, headers={'Authorization': 'Bearer ' + token})
+        except requests.exceptions.ConnectionError:
+            req_object.response = 'timeout'
+            req_object.status_code = 100
+            req_object.save()
+
+            logger.error('finnotech connection error', extra={
+                'path': path,
+                'method': method,
+                'data': data,
+            })
+            return
 
         if not force_renew_token and resp.status_code == 403:
             return self.collect_api(path, method, data, force_renew_token=True, search_key=search_key)

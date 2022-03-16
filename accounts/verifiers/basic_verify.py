@@ -63,7 +63,7 @@ def basic_verify(user: User):
     if not bank_account.verified:
         logger.info('verifying bank_account for user_d = %d' % user.id)
 
-        if not verify_bank_account(bank_account):
+        if verify_bank_account(bank_account) is False:
             user.change_status(User.REJECTED)
             return
 
@@ -164,9 +164,13 @@ def verify_bank_account(bank_account: BankAccount) -> bool:
     data = requester.get_iban_info(bank_account.iban)
 
     if not data:
-        bank_account.verified = False
-        bank_account.save()
-        return False
+        link = url_to_edit_object(bank_account.user)
+        send_support_message(
+            message='تایید شماره شبای کاربر با مشکل مواجه شد. لطفا دستی بررسی شود.',
+            link=link
+        )
+
+        return
 
     bank_account.bank_name = data['bankName']
     bank_account.deposit_address = data['deposit']
