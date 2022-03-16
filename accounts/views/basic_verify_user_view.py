@@ -14,7 +14,7 @@ class CardPanField(serializers.CharField):
             return BankCardSerializer(instance=value).data
 
     def get_attribute(self, user: User):
-        return BankCard.objects.filter(user=user).order_by('verified', 'id').first()
+        return BankCard.objects.filter(user=user).order_by('verified', '-id').first()
 
 
 class IbanField(serializers.CharField):
@@ -23,7 +23,7 @@ class IbanField(serializers.CharField):
             return BankAccountSerializer(instance=value).data
 
     def get_attribute(self, user: User):
-        return BankAccount.objects.filter(user=user).order_by('verified', 'id').first()
+        return BankAccount.objects.filter(user=user).order_by('verified', '-id').first()
 
 
 class BasicInfoSerializer(serializers.ModelSerializer):
@@ -62,7 +62,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             if BankCard.objects.filter(user=user, verified=True).exists():
                 raise ValidationError('امکان تغییر شماره کارت تایید شده وجود ندارد.')
 
-            BankCard.objects.filter(user=user).delete()
+            # BankCard.objects.filter(user=user).delete()
             BankCard.objects.create(user=user, card_pan=card_pan)
 
         if not bank_account:
@@ -70,7 +70,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             if BankAccount.objects.filter(user=user, verified=True).exists():
                 raise ValidationError('امکان تغییر شماره شبای تایید شده وجود ندارد.')
 
-            BankAccount.objects.filter(user=user).delete()
+            # BankAccount.objects.filter(user=user).delete()
             BankAccount.objects.create(user=user, iban=iban)
 
         if not user.national_code_verified:
