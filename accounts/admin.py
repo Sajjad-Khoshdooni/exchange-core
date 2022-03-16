@@ -113,9 +113,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         (_('اطلاعات مالی کاربر'), {'fields': (
             'get_sum_of_value_buy_sell', 'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit'
         )}),
-        (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)}
-        )
-
+        (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)})
     )
 
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'level')
