@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 
 from accounts.models import Account
@@ -19,8 +21,37 @@ class FillOrder(models.Model):
 
     group_id = get_group_id_field()
 
+    trade_trx_list = None
+    base_amount = get_amount_field()
+    taker_fee_amount = get_amount_field()
+    maker_fee_amount = get_amount_field()
+
+    def side(self, account: Account, list_index: int):
+        buy_order = self.maker_order if self.is_buyer_maker else self.taker_order
+        sell_order = self.taker_order if self.is_buyer_maker else self.maker_order
+        if buy_order.wallet.account != sell_order.wallet.account:
+            if account == buy_order.wallet.account:
+                return Order.BUY
+            if account == sell_order.wallet.account:
+                return Order.SELL
+            raise Exception('invalid account')
+        else:
+            return Order.BUY if list_index % 2 == 0 else Order.SELL
+
+    def fee(self, account: Account, list_index: int):
+        if self.is_buyer_maker:
+            return self.maker_fee_amount if self.side(account, list_index) == Order.BUY else self.taker_fee_amount
+        else:
+            return self.maker_fee_amount if self.side(account, list_index) == Order.SELL else self.taker_fee_amount
+
     def save(self, **kwargs):
         assert self.taker_order.symbol == self.maker_order.symbol == self.symbol
+        assert self.trade_trx_list
+        self.base_amount = self.trade_trx_list['base'].amount
+        self.taker_fee_amount = self.trade_trx_list['taker_fee'].amount if self.trade_trx_list[
+            'taker_fee'] else Decimal(0)
+        self.maker_fee_amount = self.trade_trx_list['maker_fee'].amount if self.trade_trx_list[
+            'maker_fee'] else Decimal(0)
         return super(FillOrder, self).save(**kwargs)
 
     def __str__(self):
@@ -32,12 +63,13 @@ class FillOrder(models.Model):
         if not system:
             system = Account.system()
 
-        return (
-            self.__init_trade_trx(),
-            self.__init_base_trx(),
-            self.__init_fee_trx(self.taker_order, is_taker=True, system=system),
-            self.__init_fee_trx(self.maker_order, is_taker=False, system=system),
-        )
+        self.trade_trx_list = {
+            'amount': self.__init_trade_trx(),
+            'base': self.__init_base_trx(),
+            'taker_fee': self.__init_fee_trx(self.taker_order, is_taker=True, system=system),
+            'maker_fee': self.__init_fee_trx(self.maker_order, is_taker=False, system=system),
+        }
+        return list(self.trade_trx_list.values())
 
     def __init_trade_trx(self):
         return Trx(

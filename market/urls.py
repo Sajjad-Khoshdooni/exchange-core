@@ -11,5 +11,6 @@ urlpatterns = [
     path('depth/<str:symbol>/', OrderBookAPIView.as_view()),
     path('orders/cancel', CancelOrderAPIView.as_view()),
     path('symbols/', SymbolListAPIView.as_view()),
+    path('trades/history/', TradeHistoryView.as_view()),
     path('', include(router.urls)),
 ]
