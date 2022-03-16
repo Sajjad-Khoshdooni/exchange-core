@@ -69,7 +69,7 @@ class Order(models.Model):
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
     def __str__(self):
-        return f'{self.symbol}-{self.side} [p:{self.price:.2f}] (a:{self.amount:.5f})'
+        return f'{self.symbol}-{self.side} [p:{self.price:.2f}] (a:{self.unfilled_amount:.5f}/{self.amount:.5f})'
 
     class Meta:
         indexes = [
