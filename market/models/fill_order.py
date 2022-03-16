@@ -53,13 +53,16 @@ class FillOrder(models.Model):
 
     def save(self, **kwargs):
         assert self.taker_order.symbol == self.maker_order.symbol == self.symbol
+        self.calculate_amounts_from_trx()
+        return super(FillOrder, self).save(**kwargs)
+
+    def calculate_amounts_from_trx(self):
         assert self.trade_trx_list
         self.base_amount = self.trade_trx_list['base'].amount
         self.taker_fee_amount = self.trade_trx_list['taker_fee'].amount if self.trade_trx_list[
             'taker_fee'] else Decimal(0)
         self.maker_fee_amount = self.trade_trx_list['maker_fee'].amount if self.trade_trx_list[
             'maker_fee'] else Decimal(0)
-        return super(FillOrder, self).save(**kwargs)
 
     def __str__(self):
         return f'{self.symbol}-{Order.BUY if self.is_buyer_maker else Order.SELL} ' \

@@ -30,7 +30,7 @@ class OpenOrderManager(models.Manager):
 
 
 class Order(models.Model):
-    MIN_IRT_ORDER_SIZE = Decimal(1e6)
+    MIN_IRT_ORDER_SIZE = Decimal(1e5)
     MAKER_ORDERS_COUNT = 10 if settings.DEBUG else 50
 
     BUY, SELL = 'buy', 'sell'
@@ -208,9 +208,10 @@ class Order(models.Model):
                     price=trade_price,
                     is_buyer_maker=(self.side == Order.SELL),
                 )
-                fill_orders.append(fill_order)
-
                 trx_list.extend(fill_order.init_trade_trxs(system))
+                fill_order.calculate_amounts_from_trx()
+
+                fill_orders.append(fill_order)
 
                 self.release_lock(match_amount)
                 matching_order.release_lock(match_amount)
@@ -252,19 +253,21 @@ class Order(models.Model):
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):
         filtered_orders = list(filter(lambda o: o['side'] == order_type, open_orders))
         # hedge_orders = cls.get_hedge_orders(symbol, order_type)
-        aggregated_orders = cls.get_aggregated_orders(*filtered_orders)
+        aggregated_orders = cls.get_aggregated_orders(symbol, *filtered_orders)
 
         sort_func = (lambda o: -Decimal(o['price'])) if order_type == Order.BUY else (lambda o: Decimal(o['price']))
 
         return sorted(aggregated_orders, key=sort_func)
 
     @staticmethod
-    def get_aggregated_orders(*orders):
+    def get_aggregated_orders(symbol: PairSymbol, *orders):
         key_func = (lambda o: o['price'])
         grouped_by_price = groupby(sorted(orders, key=key_func), key=key_func)
         return [{
             'price': price,
-            'amount': get_presentation_amount(sum(map(lambda i: i['unfilled_amount'], price_orders))),
+            'amount': get_presentation_amount(sum(map(lambda i: i['unfilled_amount'], price_orders)), symbol.step_size),
+            'total': get_presentation_amount(
+                sum(map(lambda i: i['unfilled_amount'] * price, price_orders)), symbol.tick_size)
         } for price, price_orders in grouped_by_price]
 
     @staticmethod
