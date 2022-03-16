@@ -22,9 +22,9 @@ class OrderBookAPIView(APIView):
         if not symbol.enable:
             raise ValidationError(f'{symbol} is not enable')
         open_orders = Order.open_objects.filter(symbol=symbol).annotate(
-            unfilled_amount=F('amount') - (
-                Coalesce(F('taken_fills__amount'), Decimal(0)) + Coalesce(F('made_fills__amount'), Decimal(0))
-            )
+            total_made=Sum(Coalesce(F('made_fills__amount'), Decimal(0)))).annotate(
+            total_taken=Sum(Coalesce(F('taken_fills__amount'), Decimal(0)))).annotate(
+            unfilled_amount=F('amount') - F('total_made') - F('total_taken')
         ).exclude(unfilled_amount=0).values('side', 'price', 'unfilled_amount')
 
         open_orders = Order.quantize_values(symbol, open_orders)
@@ -45,4 +45,3 @@ class OrderBookAPIView(APIView):
             'asks': asks[:20],
         }
         return Response(results, status=status.HTTP_200_OK)
-
