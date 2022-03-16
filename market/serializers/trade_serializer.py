@@ -22,12 +22,24 @@ class FillOrderSerializer(serializers.ModelSerializer):
     def to_representation(self, trade: FillOrder):
         data = super(FillOrderSerializer, self).to_representation(trade)
         data['amount'] = str(get_presentation_amount(Decimal(data['amount']), trade.symbol.step_size))
+        data['price'] = str(get_presentation_amount(Decimal(data['price']), trade.symbol.tick_size))
         data['pair_amount'] = str(get_presentation_amount(Decimal(data['pair_amount']), trade.symbol.tick_size))
-        data['fee_amount'] = str(get_presentation_amount(Decimal(data['fee_amount']), trade.symbol.step_size)) \
-            if data['side'] == Order.BUY else \
-            str(get_presentation_amount(Decimal(data['fee_amount']), trade.symbol.tick_size))
+        if 'fee_amount' in data:
+            data['fee_amount'] = str(get_presentation_amount(Decimal(data['fee_amount']), trade.symbol.step_size)) \
+                if data['side'] == Order.BUY else \
+                str(get_presentation_amount(Decimal(data['fee_amount']), trade.symbol.tick_size))
         return data
 
     class Meta:
         model = FillOrder
-        fields = ('created', 'coin', 'pair', 'side', 'amount', 'pair_amount', 'fee_amount',)
+        fields = ('created', 'coin', 'pair', 'side', 'amount', 'price', 'pair_amount', 'fee_amount',)
+
+
+class TradeSerializer(FillOrderSerializer):
+    coin = serializers.CharField(source='symbol.asset.symbol')
+    pair = serializers.CharField(source='symbol.base_asset.symbol')
+    pair_amount = serializers.CharField(source='base_amount')
+
+    class Meta:
+        model = FillOrder
+        fields = ('created', 'coin', 'pair', 'amount', 'price', 'pair_amount',)
