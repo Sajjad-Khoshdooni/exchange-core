@@ -15,6 +15,7 @@ class Trx(models.Model):
     MARGIN_BORROW = 'b'
     LIQUID = 'l'
     COMMISSION = 'c'
+    PRIZE = 'p'
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -27,7 +28,7 @@ class Trx(models.Model):
     scope = models.CharField(
         max_length=1,
         choices=((TRADE, 'trade'), (TRANSFER, 'transfer'), (MARGIN_TRANSFER, 'margin transfer'),
-                 (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'))
+                 (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (PRIZE, 'prize'))
     )
 
     class Meta:

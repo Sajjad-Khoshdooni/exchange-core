@@ -8,7 +8,7 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.models import Asset
+from ledger.models import Asset, Prize
 from ledger.utils.overview import AssetOverview
 from provider.exchanges import BinanceFuturesHandler
 from ledger.utils.precision import humanize_number
@@ -176,7 +176,7 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request',  'status','get_otc_trade_to_price_absolute_irt', )
+    list_display = ('created', 'otc_request',  'status', 'get_otc_trade_to_price_absolute_irt', )
     list_filter = (OTCUserFilter, 'status')
 
     def get_otc_trade_from_amount(self, otc_trade: models.OTCTrade):
@@ -307,3 +307,13 @@ class CryptoBalanceAdmin(admin.ModelAdmin):
         return str(crypto_balance.deposit_address.account_secret.account)
 
     get_owner.short_description = 'owner'
+
+
+@admin.register(models.Prize)
+class PrizeAdmin(admin.ModelAdmin):
+    list_display = ('created', 'scope', 'account', 'get_asset_amount')
+
+    def get_asset_amount(self, prize: Prize):
+        return str(get_presentation_amount(prize.amount)) + str(prize.asset)
+
+    get_asset_amount.short_description = 'مقدار'

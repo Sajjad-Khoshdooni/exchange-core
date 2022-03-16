@@ -1,6 +1,7 @@
 from decimal import Decimal
 from math import log10
 
+from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Sum
 
@@ -25,7 +26,11 @@ class ProviderOrder(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     exchange = models.CharField(max_length=8, default=BINANCE)
-    market = models.CharField(max_length=4, default=FUTURE, choices=((SPOT, 'spot'), (FUTURE, 'future'), (MARGIN, 'margin')))
+    market = models.CharField(
+        max_length=4,
+        default=FUTURE,
+        choices=((SPOT, 'spot'), (FUTURE, 'future'), (MARGIN, 'margin'))
+    )
 
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     amount = get_amount_field()
@@ -109,6 +114,8 @@ class ProviderOrder(models.Model):
 
     @classmethod
     def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '') -> bool:
+        if settings.DEBUG:
+            return True
         # todo: this method should not called more than once at a single time
 
         to_buy = amount if side == cls.BUY else -amount

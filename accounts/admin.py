@@ -112,7 +112,9 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
             'get_sum_of_value_buy_sell', 'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit'
-        )})
+        )}),
+        (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)}
+        )
 
     )
 
@@ -121,7 +123,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'is_staff', 'is_superuser', 'is_active', 'groups',
         ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter)
-    inlines = [UserCommentInLine, ]
+    inlines = [UserCommentInLine,]
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name')
     readonly_fields = (
@@ -131,6 +133,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
+        'get_user_prizes',
     )
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
@@ -264,6 +267,15 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         return mark_safe("<img src='%s' width='200' height='200' />" % user.selfie_image.get_absolute_image_url())
 
     get_selfie_image.short_description = 'عکس سلفی'
+
+    def get_user_prizes(self, user: User):
+        prizes = user.account.prize_set.all()
+        prize_list = []
+        for prize in prizes:
+            prize_list.append(prize.scope)
+        return prize_list
+
+    get_user_prizes.short_description = ('جایزه‌های دریافتی کاربر')
 
 
 @admin.register(Account)

@@ -1,7 +1,6 @@
+
 import logging
-
 from celery import shared_task
-
 from accounts.models import Notification
 from accounts.models import User
 from accounts.verifiers.basic_verify import basic_verify
@@ -44,3 +43,30 @@ def alert_user_verify_status(user: User):
             template=template,
             token=str(levelup)
         )
+
+
+def alert_user_prize(user: User, scope: str):
+    from ledger.models import Prize
+    level = Notification.SUCCESS
+
+    if scope == Prize.SIGN_UP_PRIZE:
+        title = '۱۰۰۰شیبا به کیف پول شما اضافه شد.'
+
+    if scope == Prize.LEVEL2_PRIZE:
+        title = '۱۰۰۰شیبا به کیف پول شما اضافه شد.'
+
+    if scope == Prize.FIRST_TRADE_PRIZE:
+        title = '۱۰۰۰شیبا به کیف پول شما اضافه شد.'
+
+    Notification.send(
+        recipient=user,
+        title=title,
+        level=level
+    )
+
+
+
+
+
+
+

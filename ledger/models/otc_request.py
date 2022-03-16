@@ -23,7 +23,7 @@ class TradeConfig:
 
 
 class OTCRequest(models.Model):
-    EXPIRE_TIME = 6
+    EXPIRE_TIME = 6000
 
     created = models.DateTimeField(auto_now_add=True)
     token = models.UUIDField(default=secure_uuid4, db_index=True)
@@ -157,4 +157,4 @@ class OTCRequest(models.Model):
         return (timezone.now() - self.created).total_seconds() >= self.EXPIRE_TIME
 
     def __str__(self):
-        return 'Buy %s %s from %s' % (self.to_asset.get_presentation_amount(self.to_amount), self.to_asset, self.from_asset,)
+        return 'Buy %s %s from %s' % (self.to_asset.get_presentation_amount(self.to_amount), self.to_asset, self.from_asset)

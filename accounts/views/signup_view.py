@@ -1,4 +1,5 @@
 from django.contrib.auth import login
+from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
@@ -8,6 +9,8 @@ from rest_framework.views import APIView
 from accounts.models import User
 from accounts.models.phone_verification import VerificationCode
 from accounts.validators import mobile_number_validator, password_validator
+from ledger.models import Prize, Asset
+from accounts.tasks.verify_user import alert_user_prize
 
 
 class InitiateSignupSerializer(serializers.Serializer):
@@ -59,7 +62,16 @@ class SignupSerializer(serializers.Serializer):
         user.save()
 
         otp_code.set_token_used()
-
+        if Prize.SIGN_UP_PRIZE_ACTIVATE:
+            with transaction.atomic():
+                prize = Prize.objects.create(
+                    account=user.account,
+                    amount=Prize.SIGN_UP_PRIZE_AMOUNT,
+                    scope=Prize.SIGN_UP_PRIZE,
+                    asset=Asset.objects.get(symbol=Asset.SHIB),
+                )
+                prize.bult_trx()
+                alert_user_prize(user, prize.scope)
         return user
 
 

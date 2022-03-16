@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Dict, List
 
 from cachetools.func import ttl_cache
+from django.conf import settings
 
 from collector.price.grpc_client import gRPCClient
 from collector.utils.price import price_redis
@@ -152,6 +153,8 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
 @ttl_cache(maxsize=1000, ttl=0.5)
 def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
               now: datetime = None) -> Decimal:
+    if settings.DEBUG:
+        return Decimal(1000)
 
     if PriceManager.active():
         price = PriceManager.get_price(coin, side, exchange, market_symbol, now)
