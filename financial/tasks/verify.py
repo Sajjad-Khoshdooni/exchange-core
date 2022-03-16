@@ -34,10 +34,13 @@ def verify_bank_card_task(bank_card_id: int):
 
 
 @shared_task(queue='celery')
-def verify_bank_account_task(bank_account_id: int):
+def verify_bank_account_task(bank_account_id: int, silent: bool = False):
     bank_account = BankAccount.objects.get(id=bank_account_id)  # type: BankAccount
 
     verified = verify_bank_account(bank_account)
+
+    if silent:
+        return verified
 
     if verified:
         title = 'شماره شبای وارد شده تایید شد.'
