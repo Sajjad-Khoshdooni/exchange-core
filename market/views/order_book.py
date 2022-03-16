@@ -23,7 +23,7 @@ class OrderBookAPIView(APIView):
             raise ValidationError(f'{symbol} is not enable')
         open_orders = Order.open_objects.filter(symbol=symbol).annotate(
             unfilled_amount=F('amount') - (
-                Sum(Coalesce(F('taken_fills__amount'), Decimal(0)) + Coalesce(F('made_fills__amount'), Decimal(0)))
+                Coalesce(F('taken_fills__amount'), Decimal(0)) + Coalesce(F('made_fills__amount'), Decimal(0))
             )
         ).exclude(unfilled_amount=0).values('side', 'price', 'unfilled_amount')
 
