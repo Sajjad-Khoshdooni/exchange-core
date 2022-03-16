@@ -2,15 +2,15 @@ import logging
 from decimal import Decimal
 from uuid import uuid4
 
+from django.conf import settings
 from django.db import models, transaction
 
 from accounts.models import Account
 from ledger.exceptions import AbruptDecrease
-from ledger.models import OTCRequest, Trx, BalanceLock, Asset
-from ledger.utils.fields import get_lock_field, get_status_field
+from ledger.models import OTCRequest, Trx, Asset
+from ledger.utils.fields import get_lock_field
 from ledger.utils.price import SELL
 from provider.models import ProviderOrder
-
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class OTCTrade(models.Model):
                     scope=Trx.TRADE
                 ),
             ])
-    
+
     @property
     def client_order_id(self):
         return 'otc-%s' % self.id
@@ -112,9 +112,11 @@ class OTCTrade(models.Model):
 
         if hedged:
             with transaction.atomic():
+                from market.models import FillOrder
                 self.change_status(self.DONE)
                 self.create_ledger()
                 self.lock.release()
+                FillOrder.create_for_otc_trade(self)
 
     @classmethod
     def check_abrupt_decrease(cls, otc_request: OTCRequest):

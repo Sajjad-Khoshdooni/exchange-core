@@ -1,11 +1,15 @@
-from decimal import Decimal
+import logging
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import models
 
 from accounts.models import Account
-from ledger.models import Trx
+from ledger.models import Trx, OTCTrade
 from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_field
+from ledger.utils.precision import floor_precision, precision_to_step
 from market.models import Order, PairSymbol
+
+logger = logging.getLogger(__name__)
 
 
 class FillOrder(models.Model):
@@ -21,10 +25,13 @@ class FillOrder(models.Model):
 
     group_id = get_group_id_field()
 
-    trade_trx_list = None
     base_amount = get_amount_field()
     taker_fee_amount = get_amount_field()
     maker_fee_amount = get_amount_field()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.trade_trx_list = None
 
     def side(self, account: Account, list_index: int):
         buy_order = self.maker_order if self.is_buyer_maker else self.taker_order
@@ -59,15 +66,17 @@ class FillOrder(models.Model):
                f'({self.taker_order_id}-{self.maker_order_id}) ' \
                f'[p:{self.price:.2f}] (a:{self.amount:.5f})'
 
-    def init_trade_trxs(self, system: 'Account' = None):
+    def init_trade_trxs(self, system: 'Account' = None, ignore_fee=False):
         if not system:
             system = Account.system()
 
         self.trade_trx_list = {
             'amount': self.__init_trade_trx(),
             'base': self.__init_base_trx(),
-            'taker_fee': self.__init_fee_trx(self.taker_order, is_taker=True, system=system),
-            'maker_fee': self.__init_fee_trx(self.maker_order, is_taker=False, system=system),
+            'taker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.taker_order, is_taker=True,
+                                                                           system=system),
+            'maker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.maker_order, is_taker=False,
+                                                                           system=system),
         }
         return list(self.trade_trx_list.values())
 
@@ -106,3 +115,50 @@ class FillOrder(models.Model):
                 group_id=self.group_id,
                 scope=Trx.TRADE
             )
+
+    @classmethod
+    def create_for_otc_trade(cls, otc_trade: 'OTCTrade'):
+        market_symbol = None
+        try:
+            config = otc_trade.otc_request.get_trade_config()
+            market_symbol = f'{config.coin.symbol}{config.cash.symbol}'.upper()
+            symbol = PairSymbol.get_by(name=market_symbol)
+            amount = floor_precision(config.coin_amount, symbol.step_size)
+            price = (config.cash_amount / config.coin_amount).quantize(
+                precision_to_step(symbol.tick_size), rounding=ROUND_HALF_UP)
+            system_wallet = symbol.asset.get_wallet(Account.system(), market=otc_trade.otc_request.market)
+            maker_order = Order.objects.create(
+                wallet=system_wallet,
+                symbol=symbol,
+                amount=amount,
+                price=price,
+                side=Order.get_opposite_side(config.side),
+                fill_type=Order.MARKET,
+                status=Order.FILLED,
+            )
+            taker_wallet = symbol.asset.get_wallet(otc_trade.otc_request.account, market=otc_trade.otc_request.market)
+            taker_order = Order.objects.create(
+                wallet=taker_wallet,
+                symbol=symbol,
+                amount=amount,
+                price=price,
+                side=config.side,
+                fill_type=Order.MARKET,
+                status=Order.FILLED,
+            )
+            fill_order = cls(
+                symbol=symbol,
+                taker_order=taker_order,
+                maker_order=maker_order,
+                amount=amount,
+                price=price,
+                is_buyer_maker=(maker_order.side == Order.BUY),
+                group_id=otc_trade.group_id
+            )
+            fill_order.init_trade_trxs(ignore_fee=True)
+            fill_order.save()
+            # for key in ('taker_fee', 'maker_fee'):
+            #     if fill_order.trade_trx_list[key]:
+            #         fill_order.trade_trx_list[key].save()
+        except PairSymbol.DoesNotExist:
+            logger.exception(f'Could not found market {market_symbol}')
