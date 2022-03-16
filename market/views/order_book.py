@@ -27,7 +27,7 @@ class OrderBookAPIView(APIView):
                 sum=Sum('amount')).values('sum')[:1]),
         ).annotate(
             unfilled_amount=F('amount') - F('total_made') - F('total_taken')
-        ).values('side', 'price', 'unfilled_amount')
+        ).exclude(unfilled_amount=0).values('side', 'price', 'unfilled_amount')
 
         open_orders = Order.quantize_values(symbol, open_orders)
 
