@@ -4,8 +4,6 @@ import logging
 import requests
 from django.core.cache import caches
 from django.utils import timezone
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
 from yekta_config import secret
 
 from accounts.models import FinotechRequest
@@ -17,17 +15,6 @@ token_cache = caches['token']
 
 
 FINOTECH_TOKEN_KEY = 'finotech-token'
-
-
-retry_strategy = Retry(
-    total=5,
-    backoff_factor=2,
-    status_forcelist=[0, 429, 500, 502, 503, 504],
-)
-adapter = HTTPAdapter(max_retries=retry_strategy)
-http = requests.Session()
-http.mount("https://", adapter)
-http.mount("http://", adapter)
 
 
 class FinotechRequester:
@@ -94,9 +81,9 @@ class FinotechRequester:
         url += '?trackId=%s' % req_object.track_id
 
         if method == 'GET':
-            resp = http.get(url, timeout=60, params=data, headers={'Authorization': 'Bearer ' + token})
+            resp = requests.get(url, timeout=60, params=data, headers={'Authorization': 'Bearer ' + token})
         else:
-            method_prop = getattr(http, method.lower())
+            method_prop = getattr(request, method.lower())
             resp = method_prop(url, timeout=60, data=data, headers={'Authorization': 'Bearer ' + token})
 
         if not force_renew_token and resp.status_code == 403:
