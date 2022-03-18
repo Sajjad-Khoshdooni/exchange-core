@@ -111,7 +111,7 @@ class BankCardAdmin(AdvancedAdmin):
 
     @admin.action(description='تایید خودکار شماره کارت')
     def verify_bank_cards(self, request, queryset):
-        for bank_card in queryset.filter(verified=False):
+        for bank_card in queryset.exclude(verified=True):
             verify_bank_card_task.delay(bank_card.id)
 
 
@@ -145,6 +145,6 @@ class BankAccountAdmin(AdvancedAdmin):
 
     @admin.action(description='تایید خودکار شماره شبا')
     def verify_bank_accounts(self, request, queryset):
-        for bank_account in queryset.filter(verified=False):
+        for bank_account in queryset.exclude(verified=True):
             verify_bank_account_task.delay(bank_account.id)
 
