@@ -96,7 +96,7 @@ class FinotechRequester:
                 'method': method,
                 'data': data,
             })
-            return
+            raise TimeoutError
 
         if not force_renew_token and resp.status_code == 403:
             return self.collect_api(path, method, data, force_renew_token=True, search_key=search_key)

@@ -132,4 +132,3 @@ class BankAccountSerializer(serializers.ModelSerializer):
         verify_bank_account_task.delay(bank_account.id)
 
         return bank_account
-

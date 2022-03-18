@@ -1,5 +1,8 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
+
+from accounts.admin_guard import M
+from accounts.admin_guard.admin import AdvancedAdmin
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
     FiatWithdrawRequest
 from ledger.utils.precision import humanize_number
@@ -93,9 +96,15 @@ class BankCardUserFilter(SimpleListFilter):
 
 
 @admin.register(BankCard)
-class BankCardAdmin(admin.ModelAdmin):
+class BankCardAdmin(AdvancedAdmin):
+    default_edit_condition = M.superuser
+
     list_display = ('created', 'card_pan', 'user', 'verified')
     list_filter = (BankCardUserFilter,)
+
+    fields_edit_conditions = {
+        'verified': ~M('verified')
+    }
 
 
 class BankUserFilter(SimpleListFilter):
@@ -114,8 +123,12 @@ class BankUserFilter(SimpleListFilter):
 
 
 @admin.register(BankAccount)
-class BankAccountAdmin(admin.ModelAdmin):
+class BankAccountAdmin(AdvancedAdmin):
+    default_edit_condition = M.superuser
+
     list_display = ('created', 'iban', 'user', 'verified')
     list_filter = (BankUserFilter, )
 
-
+    fields_edit_conditions = {
+        'verified': ~M('verified')
+    }
