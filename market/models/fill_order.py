@@ -8,6 +8,8 @@ from ledger.models import Trx, OTCTrade
 from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_field
 from ledger.utils.precision import floor_precision, precision_to_step
 from market.models import Order, PairSymbol
+from ledger.utils.precision import get_presentation_amount
+
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +120,17 @@ class FillOrder(models.Model):
                 group_id=self.group_id,
                 scope=Trx.TRADE
             )
+    
+    @classmethod
+    def get_last(cls, symbol: 'PairSymbol'):
+        return cls.objects.filter(symbol=symbol).order_by('-id').first()
+
+    def format_values(self):
+        return {
+            'amount': str(get_presentation_amount(self.amount, self.symbol.step_size)),
+            'price': str(get_presentation_amount(self.price, self.symbol.tick_size)),
+            'total': str(get_presentation_amount(self.amount * self.price, self.symbol.tick_size)),
+        }
 
     @classmethod
     def create_for_otc_trade(cls, otc_trade: 'OTCTrade'):
