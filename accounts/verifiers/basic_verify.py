@@ -67,7 +67,7 @@ def basic_verify(user: User):
             user.change_status(User.REJECTED)
             return
 
-    user.change_status(User.VERIFIED)
+    user.verify_level2_if_not()
 
 
 def verify_national_code(user: User) -> bool:
@@ -83,6 +83,8 @@ def verify_national_code(user: User) -> bool:
 
     if not verified:
         user.change_status(User.REJECTED)
+
+    user.verify_level2_if_not()
 
     return verified
 
@@ -125,6 +127,8 @@ def verify_user_primary_info(user: User) -> bool:
 
         return False
 
+    user.verify_level2_if_not()
+
     return True
 
 
@@ -149,6 +153,8 @@ def verify_bank_card(bank_card: BankCard) -> bool:
 
     bank_card.verified = verified
     bank_card.save()
+
+    bank_card.user.verify_level2_if_not()
 
     return bank_card.verified
 
@@ -201,5 +207,6 @@ def verify_bank_account(bank_account: BankAccount) -> bool:
     bank_account.verified = verified
     bank_account.save()
 
-    return verified
+    bank_account.user.verify_level2_if_not()
 
+    return verified

@@ -5,6 +5,7 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
     FiatWithdrawRequest
+from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from ledger.utils.precision import humanize_number
 
 
@@ -106,6 +107,13 @@ class BankCardAdmin(AdvancedAdmin):
         'verified': ~M('verified')
     }
 
+    actions = ['verify_bank_cards']
+
+    @admin.action(description='تایید خودکار شماره کارت')
+    def verify_bank_cards(self, request, queryset):
+        for bank_card in queryset.filter(verified=False):
+            verify_bank_card_task.delay(bank_card.id)
+
 
 class BankUserFilter(SimpleListFilter):
     title = 'کاربر'
@@ -132,3 +140,11 @@ class BankAccountAdmin(AdvancedAdmin):
     fields_edit_conditions = {
         'verified': ~M('verified')
     }
+
+    actions = ['verify_bank_accounts']
+
+    @admin.action(description='تایید خودکار شماره شبا')
+    def verify_bank_accounts(self, request, queryset):
+        for bank_account in queryset.filter(verified=False):
+            verify_bank_account_task.delay(bank_account.id)
+

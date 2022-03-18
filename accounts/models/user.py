@@ -116,9 +116,23 @@ class User(AbstractUser):
         self.save()
 
     @property
-    def primary_data_verified(self):
-        return self.first_name and self.first_name_verified and self.last_name and self.last_name_verified and \
-            self.birth_date and self.birth_date_verified
+    def primary_data_verified(self) -> bool:
+        return self.first_name and self.first_name_verified and self.last_name and self.last_name_verified \
+               and self.birth_date and self.birth_date_verified
+
+    def is_level2_verifiable(self) -> bool:
+        from financial.models import BankCard, BankAccount
+
+        return self.national_code and self.national_code_verified and self.primary_data_verified and \
+               BankCard.objects.filter(user=self, verified=True) and \
+               BankAccount.objects.filter(user=self, verified=True)
+
+    def verify_level2_if_not(self) -> bool:
+        if self.level == User.LEVEL1 and self.is_level2_verifiable():
+            self.change_status(User.VERIFIED)
+            return True
+
+        return False
 
     @classmethod
     def get_user_from_login(cls, email_or_phone: str) -> 'User':
