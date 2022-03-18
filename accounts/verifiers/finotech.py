@@ -82,10 +82,10 @@ class FinotechRequester:
 
         try:
             if method == 'GET':
-                resp = requests.get(url, timeout=60, params=data, headers={'Authorization': 'Bearer ' + token})
+                resp = requests.get(url, timeout=120, params=data, headers={'Authorization': 'Bearer ' + token})
             else:
                 method_prop = getattr(requests, method.lower())
-                resp = method_prop(url, timeout=60, data=data, headers={'Authorization': 'Bearer ' + token})
+                resp = method_prop(url, timeout=120, data=data, headers={'Authorization': 'Bearer ' + token})
         except requests.exceptions.ConnectionError:
             req_object.response = 'timeout'
             req_object.status_code = 100
