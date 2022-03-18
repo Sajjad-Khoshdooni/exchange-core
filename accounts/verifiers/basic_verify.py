@@ -178,6 +178,9 @@ def verify_bank_account(bank_account: BankAccount) -> bool:
 
     try:
         data = requester.get_iban_info(bank_account.iban)
+        if not data:
+            raise TimeoutError
+
     except TimeoutError:
         link = url_to_edit_object(bank_account)
         send_support_message(
