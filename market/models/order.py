@@ -10,6 +10,7 @@ from django.db.models import Sum, F
 
 from accounts.models import Account
 from ledger.models import Trx, Wallet
+from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
 from ledger.utils.precision import floor_precision, get_presentation_amount
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt
@@ -31,6 +32,8 @@ class OpenOrderManager(models.Manager):
 
 class Order(models.Model):
     MIN_IRT_ORDER_SIZE = Decimal(1e5)
+    MAX_ORDER_DEPTH_SIZE_IRT = Decimal(2e8)
+    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(8000)
     MAKER_ORDERS_COUNT = 10 if settings.DEBUG else 50
 
     BUY, SELL = 'buy', 'sell'
@@ -252,7 +255,6 @@ class Order(models.Model):
     @classmethod
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):
         filtered_orders = list(filter(lambda o: o['side'] == order_type, open_orders))
-        # hedge_orders = cls.get_hedge_orders(symbol, order_type)
         aggregated_orders = cls.get_aggregated_orders(symbol, *filtered_orders)
 
         sort_func = (lambda o: -Decimal(o['price'])) if order_type == Order.BUY else (lambda o: Decimal(o['price']))
@@ -266,9 +268,17 @@ class Order(models.Model):
         return [{
             'price': price,
             'amount': get_presentation_amount(sum(map(lambda i: i['unfilled_amount'], price_orders)), symbol.step_size),
+            'depth': Order.get_depth_value(sum(map(lambda i: i['unfilled_amount'], price_orders)), price, symbol.base_asset.symbol),
             'total': get_presentation_amount(
                 sum(map(lambda i: i['unfilled_amount'] * price, price_orders)), symbol.tick_size)
         } for price, price_orders in grouped_by_price]
+
+    @staticmethod
+    def get_depth_value(amount, price, base_asset: str):
+        if base_asset == Asset.IRT:
+            return get_presentation_amount((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_IRT * 100, 0)
+        if base_asset == Asset.USDT:
+            return get_presentation_amount((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_USDT * 100, 0)
 
     @staticmethod
     def quantize_values(symbol: PairSymbol, open_orders):

@@ -44,7 +44,7 @@ class OrderBookAPIView(APIView):
                 'asks': asks,
             })
 
-        last_trade = FillOrder.format_values(FillOrder.get_last(symbol=symbol))
+        last_trade = FillOrder.get_last(symbol=symbol)
 
         results = {
             'last_trade': last_trade.format_values() if last_trade else None,
