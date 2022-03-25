@@ -35,6 +35,16 @@ class FillOrder(models.Model):
         super().__init__(*args, **kwargs)
         self.trade_trx_list = None
 
+    def save(self, **kwargs):
+        assert self.taker_order.symbol == self.maker_order.symbol == self.symbol
+        self.calculate_amounts_from_trx()
+        return super(FillOrder, self).save(**kwargs)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['created', 'symbol',]),
+        ]
+
     def side(self, account: Account, list_index: int):
         buy_order = self.maker_order if self.is_buyer_maker else self.taker_order
         sell_order = self.taker_order if self.is_buyer_maker else self.maker_order
@@ -52,11 +62,6 @@ class FillOrder(models.Model):
             return self.maker_fee_amount if self.side(account, list_index) == Order.BUY else self.taker_fee_amount
         else:
             return self.maker_fee_amount if self.side(account, list_index) == Order.SELL else self.taker_fee_amount
-
-    def save(self, **kwargs):
-        assert self.taker_order.symbol == self.maker_order.symbol == self.symbol
-        self.calculate_amounts_from_trx()
-        return super(FillOrder, self).save(**kwargs)
 
     def calculate_amounts_from_trx(self):
         assert self.trade_trx_list
@@ -122,8 +127,11 @@ class FillOrder(models.Model):
             )
     
     @classmethod
-    def get_last(cls, symbol: 'PairSymbol'):
-        return cls.objects.filter(symbol=symbol).order_by('-id').first()
+    def get_last(cls, symbol: 'PairSymbol', max_datetime=None):
+        qs = cls.objects.filter(symbol=symbol).order_by('-id')
+        if max_datetime:
+            qs.filter(created__lte=max_datetime)
+        return qs.first()
 
     def format_values(self):
         return {
