@@ -2,6 +2,7 @@ from celery import shared_task
 
 from accounts.utils.admin import url_to_admin_list
 from accounts.utils.telegram import send_system_message
+from collector.metrics import set_metric
 from ledger.models import Asset
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
@@ -22,3 +23,5 @@ def inject_tether_to_futures():
             message='small margin ratio = %s' % round(futures_margin_ratio, 3),
             link=url_to_admin_list(Asset)
         )
+
+    set_metric('binance_future_margin_ratio', value=futures_margin_ratio)

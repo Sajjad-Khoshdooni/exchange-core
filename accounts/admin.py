@@ -16,15 +16,15 @@ from financial.models.withdraw_request import FiatWithdrawRequest
 from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdraw_irt_value, CRYPTO_WITHDRAW_LIMIT, \
     get_crypto_withdraw_irt_value
 from ledger.models import OTCRequest, OTCTrade
+from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import humanize_number
-from ledger.models.transfer import Transfer
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
 from .tasks import basic_verify_user
 from .tasks.verify_user import alert_user_verify_status
-from .utils.validation import gregorian_to_jalali_date
+from .utils.validation import gregorian_to_jalali_date, gregorian_to_jalali_date_str, gregorian_to_jalali_datetime_str
 
 MANUAL_VERIFY_CONDITION = Q(
     Q(first_name_verified=None) | Q(last_name_verified=None),
@@ -214,32 +214,32 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     get_finotech_request_link.short_description = 'درخواست‌های فینوتک'
 
     def get_birth_date_jalali(self, user: User):
-        return gregorian_to_jalali_date(user.birth_date).strftime('%Y/%m/%d')
+        return gregorian_to_jalali_date_str(user.birth_date)
 
     get_birth_date_jalali.short_description = 'تاریخ تولد شمسی'
 
     def get_level_2_verify_datetime_jalali(self, user: User):
-        return gregorian_to_jalali_date(user.level_2_verify_datetime).strftime('%Y/%m/%d')
+        return gregorian_to_jalali_datetime_str(user.level_2_verify_datetime)
 
     get_level_2_verify_datetime_jalali.short_description = 'تاریخ تایید سطح ۲'
 
     def get_level_3_verify_datetime_jalali(self, user: User):
-        return gregorian_to_jalali_date(user.level_3_verify_datetime).strftime('%Y/%m/%d')
+        return gregorian_to_jalali_datetime_str(user.level_3_verify_datetime)
 
     get_level_3_verify_datetime_jalali.short_description = 'تاریخ تایید سطح ۳'
 
     def get_first_fiat_deposit_date_jalali(self, user: User):
-        return gregorian_to_jalali_date(user.first_fiat_deposit_date).strftime('%Y/%m/%d')
+        return gregorian_to_jalali_datetime_str(user.first_fiat_deposit_date)
 
     get_first_fiat_deposit_date_jalali.short_description = 'تاریخ اولین واریز ریالی'
 
     def get_date_joined_jalali(self, user: User):
-        return gregorian_to_jalali_date(user.date_joined).strftime('%Y/%m/%d')
+        return gregorian_to_jalali_date_str(user.date_joined)
 
     get_date_joined_jalali.short_description = 'تاریخ پیوستن'
 
     def get_last_login_jalali(self, user: User):
-        return gregorian_to_jalali_date(user.last_login).strftime('%Y/%m/%d')
+        return gregorian_to_jalali_date_str(user.last_login)
 
     get_last_login_jalali.short_description = 'آخرین ورود'
 

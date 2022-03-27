@@ -96,6 +96,15 @@ class AssetOverview:
     def get_binance_spot_amount(self, asset: Asset) -> float:
         return self._binance_spot_balance_map.get(asset.symbol, 0)
 
+    def get_binance_spot_total_value(self) -> float:
+        value = 0
+
+        for symbol, amount in self._binance_spot_balance_map.items():
+            if amount > 0:
+                value += Decimal(amount) * self._prices.get(symbol)
+
+        return value
+
     def get_future_position_value(self, asset: Asset):
         return float(self._future_positions.get(asset.future_symbol + 'USDT', {}).get('notional', 0))
 
@@ -103,7 +112,7 @@ class AssetOverview:
         if asset.symbol in (Asset.IRT, Asset.USDT):
             return 0
 
-        return self.get_binance_balance(asset) + self.get_internal_deposits_balance(asset) \
+        return self.get_binance_balance(asset) + self.get_internal_deposits_balance(asset)\
                - self.get_ledger_balance(Account.ORDINARY, asset)
 
     def get_internal_usdt_value(self):
@@ -123,7 +132,7 @@ class AssetOverview:
 
     def get_total_hedge_value(self):
         return sum([
-            self.get_hedge_value(asset) or 0 for asset in Asset.objects.all()
+            abs(self.get_hedge_value(asset) or 0) for asset in Asset.objects.all()
         ])
 
     def get_binance_balance(self, asset: Asset) -> Decimal:

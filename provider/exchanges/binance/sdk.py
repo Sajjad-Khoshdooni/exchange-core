@@ -11,6 +11,8 @@ from yekta_config import secret
 
 logger = logging.getLogger(__name__)
 
+TIMEOUT = 30
+
 if not settings.DEBUG:
     SPOT_BASE_URL = "https://api.binance.com"
     FUTURES_BASE_URL = 'https://fapi.binance.com'
@@ -56,7 +58,7 @@ def spot_send_signed_request(http_method, url_path, payload: dict):
         SPOT_BASE_URL + url_path + "?" + query_string + "&signature=" + hashing(query_string)
     )
     print("{} {}".format(http_method, url))
-    params = {"url": url, "params": {}}
+    params = {"url": url, "params": {}, "timeout": TIMEOUT}
 
     response = dispatch_request(http_method)(**params)
     resp_data = response.json()
@@ -85,7 +87,7 @@ def spot_send_public_request(url_path: str, payload: dict):
     if query_string:
         url = url + "?" + query_string
     print("{}".format(url))
-    response = dispatch_request("GET")(url=url)
+    response = dispatch_request("GET")(url=url, timeout=TIMEOUT)
     return response.json()
 
 
@@ -103,7 +105,7 @@ def futures_send_signed_request(http_method: str, url_path: str, payload: dict):
         FUTURES_BASE_URL + url_path + "?" + query_string + "&signature=" + hashing(query_string)
     )
     print("{} {}".format(http_method, url))
-    params = {"url": url, "params": {}}
+    params = {"url": url, "params": {}, "timeout": TIMEOUT}
 
     response = dispatch_request(http_method)(**params)
 
@@ -133,5 +135,5 @@ def futures_send_public_request(url_path, payload: dict):
     if query_string:
         url = url + "?" + query_string
     print("{}".format(url))
-    response = dispatch_request("GET")(url=url)
+    response = dispatch_request("GET")(url=url, timeout=TIMEOUT)
     return response.json()

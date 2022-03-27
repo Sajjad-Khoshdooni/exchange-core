@@ -6,7 +6,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
 
-from accounts.tasks import send_verification_code_by_kavenegar
+from accounts.tasks import send_message_by_kavenegar
 from accounts.utils.validation import generate_random_code, PHONE_MAX_LENGTH, fifteen_minutes_later_datetime, MINUTES
 
 
@@ -114,9 +114,9 @@ class VerificationCode(models.Model):
                 send_type = 'call'
                 template = 'telephone'
 
-            send_verification_code_by_kavenegar(
+            send_message_by_kavenegar(
                 phone=otp_code.phone,
-                code=otp_code.code,
+                token=otp_code.code,
                 send_type=send_type,
                 template=template
             )

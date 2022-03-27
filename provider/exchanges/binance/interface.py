@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from django.conf import settings
@@ -130,3 +131,14 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         return float(futures_rules.get(
             symbol, {'filters': {'LOT_SIZE': {'stepSize': 0.0001}}}
         )['filters']['LOT_SIZE']['stepSize'])
+
+    @classmethod
+    def get_incomes(cls, start_date: datetime, end_date: datetime) -> list:
+        return cls.collect_api(
+            '/fapi/v1/income', method='GET', data={
+                # 'incomeType': income_type,
+                'startTime': int(start_date.timestamp() * 1000),
+                'endTime': int(end_date.timestamp() * 1000),
+                'limit': 1000
+            }
+        )

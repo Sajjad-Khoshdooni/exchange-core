@@ -1,7 +1,11 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
+
+from accounts.admin_guard import M
+from accounts.admin_guard.admin import AdvancedAdmin
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
     FiatWithdrawRequest
+from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from ledger.utils.precision import humanize_number
 
 
@@ -93,9 +97,22 @@ class BankCardUserFilter(SimpleListFilter):
 
 
 @admin.register(BankCard)
-class BankCardAdmin(admin.ModelAdmin):
+class BankCardAdmin(AdvancedAdmin):
+    default_edit_condition = M.superuser
+
     list_display = ('created', 'card_pan', 'user', 'verified')
     list_filter = (BankCardUserFilter,)
+
+    fields_edit_conditions = {
+        'verified': ~M('verified')
+    }
+
+    actions = ['verify_bank_cards']
+
+    @admin.action(description='تایید خودکار شماره کارت')
+    def verify_bank_cards(self, request, queryset):
+        for bank_card in queryset.filter(verified__isnull=True):
+            verify_bank_card_task.delay(bank_card.id)
 
 
 class BankUserFilter(SimpleListFilter):
@@ -114,8 +131,20 @@ class BankUserFilter(SimpleListFilter):
 
 
 @admin.register(BankAccount)
-class BankAccountAdmin(admin.ModelAdmin):
+class BankAccountAdmin(AdvancedAdmin):
+    default_edit_condition = M.superuser
+
     list_display = ('created', 'iban', 'user', 'verified')
     list_filter = (BankUserFilter, )
 
+    fields_edit_conditions = {
+        'verified': ~M('verified')
+    }
+
+    actions = ['verify_bank_accounts']
+
+    @admin.action(description='تایید خودکار شماره شبا')
+    def verify_bank_accounts(self, request, queryset):
+        for bank_account in queryset.filter(verified__isnull=True):
+            verify_bank_account_task.delay(bank_account.id)
 

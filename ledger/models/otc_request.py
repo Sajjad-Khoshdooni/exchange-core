@@ -64,7 +64,7 @@ class OTCRequest(models.Model):
             else:
                 check_asset, check_amount = to_asset, to_amount
 
-            if check_amount * get_trading_price_irt(check_asset.symbol, BUY, raw_price=True) < 98_000:
+            if check_amount * get_trading_price_irt(check_asset.symbol, BUY, raw_price=True) < 8_000:
                 raise SmallAmountTrade()
 
         from_wallet = from_asset.get_wallet(account, otc_request.market)
@@ -117,7 +117,7 @@ class OTCRequest(models.Model):
 
         return trading_price
 
-    def get_to_price_absolute_irt(self):
+    def _get_to_price_absolute_irt(self):
         conf = self.get_trade_config()
         other_side = get_other_side(conf.side)
         return get_trading_price_irt(self.to_asset.symbol, other_side)
@@ -148,7 +148,7 @@ class OTCRequest(models.Model):
         self.to_price = to_price
         self.from_amount = from_amount
         self.to_amount = to_amount
-        self.to_price_absolute_irt = self.get_to_price_absolute_irt()
+        self.to_price_absolute_irt = self._get_to_price_absolute_irt()
 
     def get_expire_time(self) -> datetime:
         return self.created + timedelta(seconds=OTCRequest.EXPIRE_TIME)

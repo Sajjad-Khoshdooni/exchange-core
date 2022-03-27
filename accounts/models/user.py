@@ -3,7 +3,6 @@ from django.db import models
 from django.db.models import Q
 from simple_history.models import HistoricalRecords
 from django.utils import timezone
-
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import PHONE_MAX_LENGTH
@@ -117,15 +116,30 @@ class User(AbstractUser):
         self.save()
 
     @property
-    def primary_data_verified(self):
-        return self.first_name and self.first_name_verified and self.last_name and self.last_name_verified and \
-            self.birth_date and self.birth_date_verified
+    def primary_data_verified(self) -> bool:
+        return self.first_name and self.first_name_verified and self.last_name and self.last_name_verified \
+               and self.birth_date and self.birth_date_verified
+
+    def is_level2_verifiable(self) -> bool:
+        from financial.models import BankCard, BankAccount
+
+        return self.national_code and self.national_code_verified and self.primary_data_verified and \
+               BankCard.objects.filter(user=self, verified=True) and \
+               BankAccount.objects.filter(user=self, verified=True)
+
+    def verify_level2_if_not(self) -> bool:
+        if self.level == User.LEVEL1 and self.is_level2_verifiable():
+            self.change_status(User.VERIFIED)
+            return True
+
+        return False
 
     @classmethod
     def get_user_from_login(cls, email_or_phone: str) -> 'User':
         return User.objects.filter(Q(phone=email_or_phone) | Q(email=email_or_phone)).first()
 
     def save(self, *args, **kwargs):
+        from accounts.tasks.verify_user import alert_user_verify_status
         creating = not self.id
         super(User, self).save(*args, **kwargs)
 
@@ -144,3 +158,5 @@ class User(AbstractUser):
 
                 if not any_none and any_false:
                     self.change_status(self.REJECTED)
+
+            alert_user_verify_status(self)
