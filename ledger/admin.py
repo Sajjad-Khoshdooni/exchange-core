@@ -307,3 +307,15 @@ class CryptoBalanceAdmin(admin.ModelAdmin):
         return str(crypto_balance.deposit_address.account_secret.account)
 
     get_owner.short_description = 'owner'
+
+
+@admin.register(models.MarginTransfer)
+class MarginTransferAdmin(admin.ModelAdmin):
+    list_display = ('created', 'account', 'amount', 'type', )
+    search_fields = ('group_id',)
+
+
+@admin.register(models.MarginLoan)
+class MarginLoanAdmin(admin.ModelAdmin):
+    list_display = ('created', 'account', 'amount', 'type', 'asset', 'status')
+    search_fields = ('group_id',)

@@ -112,6 +112,9 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
     @classmethod
     def collect_api(cls, url: str, method: str = 'POST', data: dict = None):
+        if settings.DEBUG:
+            return {}
+
         return futures_send_signed_request(method, url, data or {})
 
     @classmethod

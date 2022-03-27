@@ -7,7 +7,7 @@ from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
 from ledger.models import Asset, Wallet, Trx
 from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_lock_field, DONE
-from ledger.utils.margin import MarginInfo, get_margin_level, TRANSFER_OUT_BLOCK_ML
+from ledger.utils.margin import MarginInfo
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt
 from provider.models import ProviderOrder
 
@@ -56,7 +56,7 @@ class MarginTransfer(models.Model):
             super(MarginTransfer, self).save(*args, **kwargs)
 
         with transaction.atomic():
-            Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_TRANSFER)
+            Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_TRANSFER, self.group_id)
             self.lock.release()
 
 
@@ -115,7 +115,7 @@ class MarginLoan(models.Model):
 
             with transaction.atomic():
                 self.status = DONE
-                Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_BORROW)
+                Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_BORROW, self.group_id)
                 if self.lock:
                     self.lock.release()
 
