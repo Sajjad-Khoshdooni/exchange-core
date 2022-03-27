@@ -2,13 +2,29 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 
 from market.models import *
+from ledger.models import Asset
+
+
+class BaseAssetFilter(SimpleListFilter):                                           
+      title = 'Base Asset'                                                           
+      parameter_name = 'base_asset'
+
+      def lookups(self, request, model_admin):                                        
+          assets = set([t for t in Asset.objects.filter(symbol__in=(Asset.USDT, Asset.IRT))])       
+          return zip(assets, assets)                                                    
+
+      def queryset(self, request, queryset):                                          
+          if self.value():                                                            
+              return queryset.filter(base_asset__symbol=self.value())
+          else:                                                                       
+              return queryset                                                         
 
 
 @admin.register(PairSymbol)
 class PairSymbolAdmin(admin.ModelAdmin):
     list_display = ('name', 'enable', 'market_maker_enabled', 'maker_amount', 'taker_fee', 'maker_fee',)
     list_editable = ('enable',)
-    list_filter = ('enable', 'base_asset', 'market_maker_enabled',)
+    list_filter = ('enable', BaseAssetFilter, 'market_maker_enabled',)
     readonly_fields = ('name',)
 
 

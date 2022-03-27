@@ -264,13 +264,12 @@ class Order(models.Model):
     @staticmethod
     def get_aggregated_orders(symbol: PairSymbol, *orders):
         key_func = (lambda o: o['price'])
-        grouped_by_price = groupby(sorted(orders, key=key_func), key=key_func)
+        grouped_by_price = [(i[0], list(i[1])) for i in groupby(sorted(orders, key=key_func), key=key_func)]
         return [{
             'price': price,
             'amount': get_presentation_amount(sum(map(lambda i: i['unfilled_amount'], price_orders)), symbol.step_size),
             'depth': Order.get_depth_value(sum(map(lambda i: i['unfilled_amount'], price_orders)), price, symbol.base_asset.symbol),
-            'total': get_presentation_amount(
-                sum(map(lambda i: i['unfilled_amount'] * price, price_orders)), symbol.tick_size)
+            'total': get_presentation_amount(sum(map(lambda i: i['unfilled_amount'] * price, price_orders)), 0)
         } for price, price_orders in grouped_by_price]
 
     @staticmethod
@@ -284,7 +283,7 @@ class Order(models.Model):
     def quantize_values(symbol: PairSymbol, open_orders):
         return [{
             'side': order['side'],
-            'price': get_presentation_amount(order['price'], symbol.tick_size),
+            'price': order['price'],
             'unfilled_amount': floor_precision(order['unfilled_amount'], symbol.step_size),
         } for order in open_orders]
 

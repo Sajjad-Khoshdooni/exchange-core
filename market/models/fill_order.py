@@ -1,7 +1,10 @@
+from datetime import date, datetime
 import logging
 from decimal import Decimal, ROUND_HALF_UP
+from attr import fields
 
 from django.db import models
+from django.db.models import F
 
 from accounts.models import Account
 from ledger.models import Trx, OTCTrade
@@ -9,6 +12,7 @@ from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_
 from ledger.utils.precision import floor_precision, precision_to_step
 from market.models import Order, PairSymbol
 from ledger.utils.precision import get_presentation_amount
+from market.utils import Epoch
 
 
 logger = logging.getLogger(__name__)
@@ -139,6 +143,21 @@ class FillOrder(models.Model):
             'price': str(get_presentation_amount(self.price, self.symbol.tick_size)),
             'total': str(get_presentation_amount(self.amount * self.price, self.symbol.tick_size)),
         }
+
+    @classmethod
+    def get_grouped_by_interval(cls, symbol_id: int, interval_in_secs: int, start: datetime, end: datetime):
+        return [
+            {'timestamp': group.tf, 'open': group.open[1], 'high': group.high, 'low': group.low, 'close': group.close[1], 'value': group.value}
+            for group in cls.objects.raw(
+                "select min(id) as id, "
+                "min(array[id, price]) as open, max(array[id, price]) as close, "
+                "max(price) as high, min(price) as low, "
+                "sum(amount) as value, "
+                "(date_trunc('seconds', (created - timestamptz 'epoch') / %s) * %s + timestamptz 'epoch') as tf "
+                "from market_fillorder where symbol_id = %s and created between %s and %s group by tf order by tf",
+                [interval_in_secs, interval_in_secs, symbol_id, start, end]
+            )
+        ]
 
     @classmethod
     def create_for_otc_trade(cls, otc_trade: 'OTCTrade'):
