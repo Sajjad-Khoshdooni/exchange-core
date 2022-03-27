@@ -1,19 +1,15 @@
-from datetime import date, datetime
 import logging
+from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
-from attr import fields
 
 from django.db import models
-from django.db.models import F
 
 from accounts.models import Account
 from ledger.models import Trx, OTCTrade
 from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_field
 from ledger.utils.precision import floor_precision, precision_to_step
-from market.models import Order, PairSymbol
 from ledger.utils.precision import get_presentation_amount
-from market.utils import Epoch
-
+from market.models import Order, PairSymbol
 
 logger = logging.getLogger(__name__)
 
