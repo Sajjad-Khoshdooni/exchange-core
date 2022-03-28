@@ -120,10 +120,14 @@ class OTCTradeRequestView(CreateAPIView):
 
 class OTCTradeSerializer(serializers.ModelSerializer):
     token = serializers.CharField(write_only=True)
+    value_usdt = serializers.SerializerMethodField()
+
+    def get_value_irt(self, otc_trade: OTCTrade):
+        return otc_trade.otc_request.to_price_absolute_irt * otc_trade.otc_request.to_amount
 
     class Meta:
         model = OTCTrade
-        fields = ('id', 'token', 'status')
+        fields = ('id', 'token', 'status', 'value_usdt')
         read_only_fields = ('token', )
 
     def create(self, validated_data):
