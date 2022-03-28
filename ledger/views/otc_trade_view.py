@@ -122,8 +122,8 @@ class OTCTradeSerializer(serializers.ModelSerializer):
     token = serializers.CharField(write_only=True)
     value_usdt = serializers.SerializerMethodField()
 
-    def get_value_irt(self, otc_trade: OTCTrade):
-        return otc_trade.otc_request.to_price_absolute_irt * otc_trade.otc_request.to_amount
+    def get_value_usdt(self, otc_trade: OTCTrade):
+        return otc_trade.otc_request.to_price_absolute_usdt * otc_trade.otc_request.to_amount
 
     class Meta:
         model = OTCTrade
