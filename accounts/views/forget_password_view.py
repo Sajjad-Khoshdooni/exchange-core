@@ -3,7 +3,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from rest_framework.throttling import UserRateThrottle
 from accounts import codes
 from accounts.models import User
 from accounts.models.phone_verification import VerificationCode
@@ -27,6 +27,7 @@ class InitiateForgotPasswordSerializer(serializers.Serializer):
 
 class InitiateForgetPasswordView(APIView):
     permission_classes = []
+    throttle_classes = [UserRateThrottle]
 
     def post(self, request):
 
