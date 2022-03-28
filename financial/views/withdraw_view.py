@@ -57,6 +57,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             lock=lock,
             bank_account=bank_account
         )
+        withdraw_request.create_withdraw_request_paydotir()
 
         link = url_to_edit_object(withdraw_request)
         send_support_message(
