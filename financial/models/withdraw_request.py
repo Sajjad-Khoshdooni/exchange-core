@@ -97,37 +97,54 @@ class FiatWithdrawRequest(models.Model):
 
     def create_withdraw_request_paydotir(self):
 
-            wallet_id = self.get_available_wallet_id()
+        wallet_id = self.get_available_wallet_id()
 
-            if wallet_id is None:
-                self.providing_status = CANCELED
+        if wallet_id is None:
+            self.providing_status = CANCELED
+            self.save()
+            link = url_to_edit_object(self)
+            send_support_message(
+                message='موجودی هیچ یک از کیف پول‌ها برای انجام این تراکنش کافی نیست.',
+                link=link
+            )
+
+        else:
+            second_resp = requests.post(
+                self.BASE_URL + '/api/v2/cashouts',
+                headers='Authorization: Bearer {token}',
+                json={
+                    'walletid': wallet_id,
+                    'amount': self.amount * 10,
+                    'name': self.bank_account.user.get_full_name(),
+                    'iban': self.bank_account.iban,
+                    'uid': self.pk,
+                }
+            )
+            if second_resp.json()['success']:
+                self.providing_status = PENDING
                 self.save()
-                link = url_to_edit_object(self)
-                send_support_message(
-                    message='موجودی هیچ یک از کیف پول‌ها برای انجام این تراکنش کافی نیست.',
-                    link=link
-                )
-
             else:
-                second_resp = requests.post(
-                    self.BASE_URL + '/api/v2/cashouts',
-                    headers='Authorization: Bearer {token}',
-                    json={
-                        'walletid': wallet_id,
-                        'amount': self.amount * 10,
-                        'name': self.bank_account.user.get_full_name(),
-                        'iban': self.bank_account.iban,
-                        'uid': self.pk,
-                    }
+                logger.error(
+                    'Bank transfer registration failed'
                 )
-                if second_resp.json()['data']['success']:
-                    self.providing_status = PENDING
-                    self.save()
-                else:
-                    logger.error(
-                        'Bank transfer registration failed'
-                    )
-                    return
+                return
+
+    def update_providing_status(self):
+        resp = requests.get(
+            self.BASE_URL + '/api/v2/cashouts/%s' % self.pk,
+            headers='Authorization: Bearer {token}',
+        )
+        if resp.json()['success']:
+            if resp.json()['data']['id'] == 4:
+                self.providing_status = DONE
+                self.save()
+
+    @staticmethod
+    def withdraw_update_proivding_status():
+        withdraws = FiatWithdrawRequest.objects.filter(providing_status=PENDING)
+
+        for withdraw in withdraws:
+            withdraw.update_providing_status()
 
     def alert_withdraw_verify_status(self, old):
         if (not old or old.status != DONE) and self.status == DONE:

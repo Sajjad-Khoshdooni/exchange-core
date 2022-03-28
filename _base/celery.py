@@ -120,4 +120,12 @@ app.conf.beat_schedule = {
             'expire': 3600
         },
     },
-}
+    'update_withdraw_providing_status': {
+            'task': 'financial.models.withdraw_request.FiatWithdrawRequest.withdraw_update_proivding_status',
+            'schedule': 30,
+            'options': {
+                'queue': '',
+                'expire': 30
+            },
+        },
+    }
