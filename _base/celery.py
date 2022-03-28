@@ -122,10 +122,10 @@ app.conf.beat_schedule = {
     },
     'update_withdraw_providing_status': {
             'task': 'financial.models.withdraw_request.FiatWithdrawRequest.withdraw_update_proivding_status',
-            'schedule': 30,
+            'schedule': 300,
             'options': {
-                'queue': '',
-                'expire': 30
+                'queue': 'celery',
+                'expire': 300
             },
         },
     }
