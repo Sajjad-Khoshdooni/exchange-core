@@ -57,6 +57,6 @@ class FullVerificationSerializer(serializers.ModelSerializer):
 
 class FullVerificationViewSet(ModelViewSet):
     serializer_class = FullVerificationSerializer
-    throttle_classes = [UserRateThrottle]
+
     def get_object(self):
         return self.request.user
