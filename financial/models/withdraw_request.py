@@ -28,7 +28,7 @@ class FiatWithdrawRequest(models.Model):
     fee_amount = models.PositiveIntegerField()
 
     status = get_status_field()
-    providing_status = get_status_field()
+    provider_request_status = get_status_field()
     lock = get_lock_field()
 
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
@@ -100,7 +100,7 @@ class FiatWithdrawRequest(models.Model):
         wallet_id = self.get_available_wallet_id()
 
         if wallet_id is None:
-            self.providing_status = CANCELED
+            self.provider_request_status = CANCELED
             self.save()
             link = url_to_edit_object(self)
             send_support_message(
@@ -121,7 +121,7 @@ class FiatWithdrawRequest(models.Model):
                 }
             )
             if second_resp.json()['success']:
-                self.providing_status = PENDING
+                self.provider_request_status = PENDING
                 self.save()
             else:
                 logger.error(
@@ -129,22 +129,19 @@ class FiatWithdrawRequest(models.Model):
                 )
                 return
 
-    def update_providing_status(self):
+    def update_provider_request_status(self):
         resp = requests.get(
             self.BASE_URL + '/api/v2/cashouts/%s' % self.pk,
             headers='Authorization: Bearer {token}',
         )
-        if resp.json()['success']:
-            if resp.json()['data']['id'] == 4:
-                self.providing_status = DONE
-                self.save()
+        resp_json = resp.json()
+        if resp_json['success']:
+            if resp_json['data']['id'] == 4:
+                self.provider_request_status = DONE
+            if resp_json['data']['id'] == (5 or 3):
+                self.provider_request_status = CANCELED
 
-    @staticmethod
-    def withdraw_update_proivding_status():
-        withdraws = FiatWithdrawRequest.objects.filter(providing_status=PENDING)
-
-        for withdraw in withdraws:
-            withdraw.update_providing_status()
+            self.save()
 
     def alert_withdraw_verify_status(self, old):
         if (not old or old.status != DONE) and self.status == DONE:
@@ -186,7 +183,6 @@ class FiatWithdrawRequest(models.Model):
                 self.lock.release()
 
         self.alert_withdraw_verify_status(old)
-
 
     def __str__(self):
         return '%s %s' % (self.bank_account, self.amount)

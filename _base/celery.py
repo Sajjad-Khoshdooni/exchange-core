@@ -120,8 +120,8 @@ app.conf.beat_schedule = {
             'expire': 3600
         },
     },
-    'update_withdraw_providing_status': {
-            'task': 'financial.models.withdraw_request.FiatWithdrawRequest.withdraw_update_proivding_status',
+    'update_withdraw_update_provider_request_status': {
+            'task': 'financial.tasks.withdraw.withdraw_update_provider_request_status',
             'schedule': 300,
             'options': {
                 'queue': 'celery',
