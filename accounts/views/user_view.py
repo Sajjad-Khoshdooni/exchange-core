@@ -6,14 +6,20 @@ from accounts.models import User
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 
 
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date')
+
+
 class ProfileSerializer(serializers.ModelSerializer):
     bank_cards = serializers.SerializerMethodField()
     bank_accounts = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = (
-            'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'national_code', 'birth_date', 'level',
+        fields = UserSerializer.Meta.fields + (
+            'national_code', 'birth_date', 'level',
             'national_code_verified', 'first_name_verified', 'last_name_verified', 'birth_date_verified',
             'verify_status', 'bank_cards', 'bank_accounts', 'telephone', 'telephone_verified'
         )
@@ -23,12 +29,6 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_bank_accounts(self, user: User):
         return BankAccountSerializer(instance=user.bankaccount_set.all(), many=True).data
-
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ('id', 'phone', 'email', 'first_name', 'last_name', 'level')
 
 
 class UserDetailView(RetrieveAPIView):

@@ -95,6 +95,8 @@ class User(AbstractUser):
     selfie_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس سلفی')
     telephone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه شماره تلفن')
 
+    margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
+
     def change_status(self, status: str):
         if self.verify_status == self.PENDING and status == self.VERIFIED:
             self.verify_status = self.INIT
