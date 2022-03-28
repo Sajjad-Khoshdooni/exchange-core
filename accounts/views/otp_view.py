@@ -1,8 +1,7 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
-from rest_framework.throttling import UserRateThrottle
-
+from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
 from accounts.models.phone_verification import VerificationCode
 
 
@@ -65,7 +64,7 @@ class OTPSerializer(serializers.ModelSerializer):
 
 class SendOTPView(CreateAPIView):
     serializer_class = OTPSerializer
-    throttle_classes = [UserRateThrottle]
+    throttle_classes = [SustainedRateThrottle, BurstRateThrottle]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
