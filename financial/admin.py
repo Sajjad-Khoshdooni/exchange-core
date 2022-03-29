@@ -103,10 +103,6 @@ class BankCardAdmin(AdvancedAdmin):
     list_display = ('created', 'card_pan', 'user', 'verified')
     list_filter = (BankCardUserFilter,)
 
-    fields_edit_conditions = {
-        'verified': ~M('verified')
-    }
-
     actions = ['verify_bank_cards']
 
     @admin.action(description='تایید خودکار شماره کارت')
@@ -136,10 +132,6 @@ class BankAccountAdmin(AdvancedAdmin):
 
     list_display = ('created', 'iban', 'user', 'verified')
     list_filter = (BankUserFilter, )
-
-    fields_edit_conditions = {
-        'verified': ~M('verified')
-    }
 
     actions = ['verify_bank_accounts']
 
