@@ -207,10 +207,10 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
             if field == 'bank_card':
                 bank_card = user.bankcard_set.all().order_by('-verified').first()
-                value = bank_card.verified
+                value = bank_card and bank_card.verified
             elif field == 'bank_account':
                 bank_account = user.bankaccount_set.all().order_by('-verified').first()
-                value = bank_account.verified
+                value = bank_account and bank_account.verified
             else:
                 value = getattr(user, verify_field)
 
