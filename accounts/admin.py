@@ -91,7 +91,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
                                          'get_birth_date_jalali',
-                                         'telephone', 'get_national_card_image', 'get_selfie_image')}),
+                                         'telephone', 'get_national_card_image', 'get_selfie_image', 'archived')}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
                                           'telephone_verified', 'selfie_image_verified',
@@ -116,14 +116,15 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     )
 
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'level')
+    list_display = ('username', 'email', 'first_name', 'last_name', 'level', 'archived')
     list_filter = (
+        'archived', ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
+        'level_3_verify_datetime', UserStatusFilter,
         'is_staff', 'is_superuser', 'is_active', 'groups',
-        ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
-        'level_3_verify_datetime', UserStatusFilter)
+    )
     inlines = [UserCommentInLine, ]
     ordering = ('-id', )
-    actions = ('verify_user_name', 'reject_user_name')
+    actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users')
     readonly_fields = (
         'get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet_address',
         'get_sum_of_value_buy_sell', 'get_birth_date_jalali', 'get_national_card_image',
@@ -132,6 +133,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
     )
+    preserve_filters = ('archived', )
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
@@ -150,6 +152,14 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         for user in to_reject_users:
             user.change_status(User.REJECTED)
             alert_user_verify_status(user)
+
+    @admin.action(description='بایگانی کاربر', permissions=['view'])
+    def archive_users(self, request, queryset):
+        queryset.update(archived=True)
+
+    @admin.action(description='خارج کردن از بایگانی', permissions=['view'])
+    def unarchive_users(self, request, queryset):
+        queryset.update(archived=False)
 
     def save_model(self, request, user: User, form, change):
         if not request.user.is_superuser:

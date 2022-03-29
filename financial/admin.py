@@ -133,10 +133,16 @@ class BankAccountAdmin(AdvancedAdmin):
     list_display = ('created', 'iban', 'user', 'verified')
     list_filter = (BankUserFilter, )
 
-    actions = ['verify_bank_accounts']
+    actions = ['verify_bank_accounts_manual', 'verify_bank_accounts_auto']
 
-    @admin.action(description='تایید خودکار شماره شبا')
-    def verify_bank_accounts(self, request, queryset):
+    @admin.action(description='درخواست تایید خودکار شماره شبا')
+    def verify_bank_accounts_auto(self, request, queryset):
         for bank_account in queryset.filter(verified__isnull=True):
             verify_bank_account_task.delay(bank_account.id)
 
+    @admin.action(description='تایید دستی شماره شبا')
+    def verify_bank_accounts_manual(self, request, queryset):
+        for bank_account in queryset.filter(verified__isnull=True):
+            bank_account.verified = True
+            bank_account.save()
+            bank_account.user.verify_level2_if_not()
