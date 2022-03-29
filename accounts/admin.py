@@ -202,7 +202,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
                 value = getattr(user, verify_field)
 
             if not value:
-                return getattr(user, field).field.verbose_name
+                return getattr(User, field).field.verbose_name
 
         return ''
 
