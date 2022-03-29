@@ -11,19 +11,29 @@ def dashboard(request):
     if request.method == 'GET':
         users = User.objects.all()
         user_count = users.count()
-        user_pendin_or_reject_level_2_verification_count = users.filter(
-            (Q(verify_status=User.PENDING) | Q(verify_status=User.REJECTED))
-        ).filter(level=1).count()
-        user_pendin_or_reject_level_3_verification_count = users.filter(
-            (Q(verify_status=User.PENDING) | Q(verify_status=User.REJECTED))
-        ).filter(level=2).count()
-        withdraw_request_pendeng_or_reject_count = FiatWithdrawRequest.objects.filter(
-            status='pending',
+
+        pending_or_reject_level_2_users = users.filter(
+            Q(verify_status=User.PENDING) | Q(verify_status=User.REJECTED),
+            level=User.LEVEL1,
+            archived=False
         ).count()
 
-        contex = {'user_count':user_count,
-                  'user_pendin_or_reject_level_2_verification_count': user_pendin_or_reject_level_2_verification_count,
-                  'user_pendin_or_reject_level_3_verification_count': user_pendin_or_reject_level_3_verification_count,
-                  'withdraw_request_pendeng_or_reject_count': withdraw_request_pendeng_or_reject_count,
-                  }
-        return render(request, 'accounts/board.html',contex)
+        pending_or_reject_level_3_users = users.filter(
+            Q(verify_status=User.PENDING) | Q(verify_status=User.REJECTED),
+            level=User.LEVEL2,
+            archived=False
+        ).count()
+
+        pending_or_reject_withdraw_requests = FiatWithdrawRequest.objects.filter(
+            status=User.PENDING,
+        ).count()
+
+        context = {
+            'user_count':user_count,
+            'pending_or_reject_level_2_users': pending_or_reject_level_2_users,
+            'pending_or_reject_level_3_users': pending_or_reject_level_3_users,
+            'pending_or_reject_withdraw_requests': pending_or_reject_withdraw_requests,
+            'archived_users': users.filter(archived=True).count(),
+        }
+
+        return render(request, 'accounts/board.html', context)

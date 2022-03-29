@@ -16,19 +16,24 @@
             ({{ user_count }}) لیست کاربران
         </a>
         <br>
-        <a type="button" href="/admin/accounts/user/?level__exact=1&status_is_pending_or_rejected=1"
+        <a type="button" href="/admin/accounts/user/?level__exact=1&status_is_pending_or_rejected=1&archived=0"
            class="btn btn-warning btn-lg btn-block">
-            ({{ user_pendin_or_reject_level_2_verification_count }}) لیست کاربران منتظر تایید سطح ۲
+            ({{ pending_or_reject_level_2_users }}) لیست کاربران منتظر تایید سطح ۲
         </a>
         <br>
-        <a type="button" href="/admin/accounts/user/?level__exact=2&status_is_pending_or_rejected=1"
+        <a type="button" href="/admin/accounts/user/?level__exact=2&status_is_pending_or_rejected=1&archived=0"
            class="btn btn-secondary btn-lg btn-block" >
-            ({{ user_pendin_or_reject_level_3_verification_count }}) لیست کاربران منتظر تایید سطح ۳
+            ({{ pending_or_reject_level_3_users }}) لیست کاربران منتظر تایید سطح ۳
         </a>
         <br>
         <a type="button" href="/admin/financial/fiatwithdrawrequest/?status__exact=pending"
            class="btn btn-warning btn-lg btn-block">
-            ({{ withdraw_request_pendeng_or_reject_count }}) لیست برداشت‌های ریالی در انتظار تایید
+            ({{ pending_or_reject_withdraw_requests }}) لیست برداشت‌های ریالی در انتظار تایید
+        </a>
+        <br>
+        <a type="button" href="/admin/accounts/user/?archived=1"
+           class="btn btn-secondary btn-lg btn-block" >
+            ({{ archived_users }}) کاربران بایگانی شده
         </a>
         <br>
     </div>
