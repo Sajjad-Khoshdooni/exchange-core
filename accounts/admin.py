@@ -117,7 +117,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     )
 
-    list_display = ('username', 'email', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason')
+    list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason')
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter,
@@ -202,7 +202,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
                 value = getattr(user, verify_field)
 
             if not value:
-                return field
+                return getattr(user, field).field.verbose_name
 
         return ''
 
