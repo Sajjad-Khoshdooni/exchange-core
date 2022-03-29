@@ -66,6 +66,9 @@ class MarginTransferViewSet(ModelViewSet):
     serializer_class = MarginTransferSerializer
     pagination_class = LimitOffsetPagination
 
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['type']
+
     def perform_create(self, serializer):
         try:
             serializer.save(account=self.request.user.account)
