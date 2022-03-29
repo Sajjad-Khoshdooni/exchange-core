@@ -57,7 +57,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             lock=lock,
             bank_account=bank_account
         )
-        withdraw_request.create_withdraw_request_paydotir()
+        from financial.tasks import create_withdraw_request_paydotir_task
+        create_withdraw_request_paydotir_task.delay(withdraw_request.id)
 
         link = url_to_edit_object(withdraw_request)
         send_support_message(

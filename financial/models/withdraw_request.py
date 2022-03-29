@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class FiatWithdrawRequest(models.Model):
+    INIT, SENT, DONE, CANCELED = 'init', 'sent', 'done', 'canceled'
 
     BASE_URL ='https://pay.ir'
 
@@ -28,7 +29,11 @@ class FiatWithdrawRequest(models.Model):
     fee_amount = models.PositiveIntegerField()
 
     status = get_status_field()
-    provider_request_status = get_status_field()
+    provider_request_status = models.CharField(
+        default=INIT,
+        max_length=10,
+        choices=[(INIT, 'مرحله اولیه'), (SENT, 'ارسال شده'), (DONE, 'انجام شده'), (CANCELED, 'لغو شده')]
+    )
     lock = get_lock_field()
 
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
@@ -100,7 +105,7 @@ class FiatWithdrawRequest(models.Model):
         wallet_id = self.get_available_wallet_id()
 
         if wallet_id is None:
-            self.provider_request_status = CANCELED
+            self.status = CANCELED
             self.save()
             link = url_to_edit_object(self)
             send_support_message(
@@ -121,7 +126,7 @@ class FiatWithdrawRequest(models.Model):
                 }
             )
             if second_resp.json()['success']:
-                self.provider_request_status = PENDING
+                self.provider_request_status = FiatWithdrawRequest.SENT
                 self.save()
             else:
                 logger.error(
@@ -138,9 +143,10 @@ class FiatWithdrawRequest(models.Model):
         if resp_json['success']:
             if resp_json['data']['id'] == 4:
                 self.provider_request_status = DONE
+                self.status = DONE
             if resp_json['data']['id'] == (5 or 3):
                 self.provider_request_status = CANCELED
-
+                self.status = CANCELED
             self.save()
 
     def alert_withdraw_verify_status(self, old):

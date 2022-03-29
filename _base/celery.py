@@ -120,12 +120,20 @@ app.conf.beat_schedule = {
             'expire': 3600
         },
     },
-    'update_withdraw_update_provider_request_status': {
+    'withdraw_update_provider_request_status': {
             'task': 'financial.tasks.withdraw.withdraw_update_provider_request_status',
             'schedule': 300,
             'options': {
                 'queue': 'celery',
                 'expire': 300
+            },
+        },
+    'create_withdraw_request_paydotir': {
+            'task': 'financial.tasks.withdraw.create_withdraw_request_paydotir_task',
+            'schedule': 100,
+            'options': {
+                'queue': 'celery',
+                'expire': 100
             },
         },
     }
