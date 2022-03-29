@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class FiatWithdrawRequest(models.Model):
     INIT, SENT, DONE, CANCELED = 'init', 'sent', 'done', 'canceled'
 
-    BASE_URL ='https://pay.ir'
+    BASE_URL = 'https://pay.ir'
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = get_group_id_field()
@@ -85,7 +85,7 @@ class FiatWithdrawRequest(models.Model):
 
         resp = requests.get(
             self.BASE_URL + '/api/v2/wallets',
-            headers='Authorization: Bearer {token}'
+            headers={'Authorization': 'Bearer {test}'}
         )
         resp = resp.json()
         if resp['success']:
@@ -116,7 +116,7 @@ class FiatWithdrawRequest(models.Model):
         else:
             second_resp = requests.post(
                 self.BASE_URL + '/api/v2/cashouts',
-                headers='Authorization: Bearer {token}',
+                headers={'Authorization': 'Bearer {test}'},
                 json={
                     'walletid': wallet_id,
                     'amount': self.amount * 10,
@@ -137,7 +137,7 @@ class FiatWithdrawRequest(models.Model):
     def update_provider_request_status(self):
         resp = requests.get(
             self.BASE_URL + '/api/v2/cashouts/%s' % self.pk,
-            headers='Authorization: Bearer {token}',
+            headers={'Authorization': 'Bearer {test}'},
         )
         resp_json = resp.json()
         if resp_json['success']:

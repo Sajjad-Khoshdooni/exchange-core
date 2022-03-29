@@ -15,4 +15,6 @@ def withdraw_update_provider_request_status():
 def create_withdraw_request_paydotir_task(withdraw_request_id: int):
 
     withdraw_request = FiatWithdrawRequest.objects.get(id=withdraw_request_id)
-    withdraw_request.create_withdraw_request_paydotir()
+
+    if withdraw_request.provider_request_status == FiatWithdrawRequest.INIT and withdraw_request.status == PENDING:
+        withdraw_request.create_withdraw_request_paydotir()
