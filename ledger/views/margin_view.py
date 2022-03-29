@@ -86,6 +86,11 @@ class MarginLoanSerializer(serializers.ModelSerializer):
     amount = get_serializer_amount_field()
 
     def create(self, validated_data):
+        user = self.context['request'].user
+
+        if not user.margin_quiz_pass_date:
+            raise ValidationError('شما باید ابتدا به سوالات این بخش پاسخ دهید.')
+
         validated_data['loan_type'] = validated_data.pop('type')
 
         try:
