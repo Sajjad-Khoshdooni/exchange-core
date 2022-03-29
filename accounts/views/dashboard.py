@@ -36,4 +36,4 @@ def dashboard(request):
             'archived_users': users.filter(archived=True).count(),
         }
 
-        return render(request, 'accounts/board.html', context)
+        return render(request, 'accounts/dashboard.html', context)
