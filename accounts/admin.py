@@ -125,7 +125,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     )
     inlines = [UserCommentInLine, ]
     ordering = ('-id', )
-    actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users')
+    actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify')
     readonly_fields = (
         'get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet_address',
         'get_sum_of_value_buy_sell', 'get_birth_date_jalali', 'get_national_card_image',
@@ -145,6 +145,16 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
             user.first_name_verified = True
             user.last_name_verified = True
             user.save()
+            basic_verify_user.delay(user.id)
+
+    @admin.action(description='شروع احراز هویت پایه کاربر', permissions=['change'])
+    def reevaluate_basic_verify(self, request, queryset):
+        to_verify_users = queryset.filter(
+            level=User.LEVEL1,
+            verify_status=User.PENDING
+        )
+
+        for user in to_verify_users:
             basic_verify_user.delay(user.id)
 
     @admin.action(description='رد کردن نام کاربر', permissions=['view'])
