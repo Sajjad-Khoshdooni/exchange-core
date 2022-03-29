@@ -206,9 +206,11 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
             field = verify_field[:-9]
 
             if field == 'bank_card':
-                value = user.bankcard_set.filter(verified=True).exists()
+                bank_card = user.bankcard_set.all().order_by('-verified').first()
+                value = bank_card.verified
             elif field == 'bank_account':
-                value = user.bankaccount_set.filter(verified=True).exists()
+                bank_account = user.bankaccount_set.all().order_by('-verified').first()
+                value = bank_account.verified
             else:
                 value = getattr(user, verify_field)
 
