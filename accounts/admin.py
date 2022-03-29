@@ -90,8 +90,9 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
-                                         'get_birth_date_jalali',
-                                         'telephone', 'get_national_card_image', 'get_selfie_image', 'archived')}),
+                                         'get_birth_date_jalali', 'telephone', 'get_national_card_image',
+                                         'get_selfie_image', 'archived', 'get_user_reject_reason'
+                                         )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
                                           'telephone_verified', 'selfie_image_verified',
@@ -116,7 +117,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     )
 
-    list_display = ('username', 'email', 'first_name', 'last_name', 'level', 'archived')
+    list_display = ('username', 'email', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason')
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter,
@@ -183,6 +184,29 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         link = url_to_admin_list(OTCTrade)+'?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_otctrade_address.short_description = 'خریدهای OTC'
+
+    def get_user_reject_reason(self, user: User):
+        verify_fields = [
+            'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
+            'bank_card_verified', 'bank_account_verified', 'telephone_verified', 'selfie_image_verified'
+        ]
+
+        for verify_field in verify_fields:
+            field = verify_field[:-9]
+
+            if field == 'bank_card':
+                value = user.bankcard_set.filter(verified=True).exists()
+            elif field == 'bank_account':
+                value = user.bankaccount_set.filter(verified=True).exists()
+            else:
+                value = getattr(user, verify_field)
+
+            if not value:
+                return field
+
+        return ''
+
+    get_user_reject_reason.short_description = 'دلیل رد'
 
     def get_wallet_address(self, user: User):
         link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
