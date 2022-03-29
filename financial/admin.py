@@ -142,7 +142,7 @@ class BankAccountAdmin(AdvancedAdmin):
 
     @admin.action(description='تایید دستی شماره شبا')
     def verify_bank_accounts_manual(self, request, queryset):
-        for bank_account in queryset.filter(verified__isnull=True):
+        for bank_account in queryset.exclude(verified=True):
             bank_account.verified = True
             bank_account.save()
             bank_account.user.verify_level2_if_not()
