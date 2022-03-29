@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404
 from rest_framework.request import Request
@@ -17,11 +19,10 @@ class MarginInfoView(APIView):
         margin_info = MarginInfo.get(account)
 
         return Response({
-            'total_assets': margin_info.total_assets,
-            'total_debt': margin_info.total_debt,
-            'margin_level': margin_info.get_margin_level(),
-            'total_equity': margin_info.get_total_equity(),
-            'max_debt': margin_info.get_total_max_borrow(),
+            'total_assets': round(margin_info.total_assets, 2),
+            'total_debt': round(margin_info.total_debt, 2),
+            'margin_level': round(margin_info.get_margin_level(), 2),
+            'total_equity': round(margin_info.get_total_equity(), 2),
         })
 
 
@@ -36,17 +37,14 @@ class AssetMarginInfoView(APIView):
         loan_wallet = asset.get_wallet(account, Wallet.LOAN)
 
         price = get_trading_price_usdt(asset.symbol, BUY)
-        if price == 0:
-            max_borrow = 0
-        else:
-            max_borrow = margin_info.get_total_max_borrow() / price
-
-        debt = loan_wallet.get_free()
+        max_borrow = max(margin_info.get_max_borrowable() / price, Decimal(0))
+        max_transfer = max(margin_info.get_max_transferable() / price, Decimal(0))
 
         return Response({
-            'balance': margin_wallet.get_free(),
-            'debt': -debt,
-            'max_borrow': max(max_borrow, debt),
+            'balance': asset.get_presentation_amount(margin_wallet.get_free()),
+            'debt': asset.get_presentation_amount(-loan_wallet.get_free()),
+            'max_borrow': asset.get_presentation_amount(max_borrow),
+            'max_transfer': asset.get_presentation_amount(max_transfer),
         })
 
 
