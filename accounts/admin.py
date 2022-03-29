@@ -206,11 +206,13 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
                 status = 'رد شده' if value is False else 'نامشخص'
 
                 if field == 'bank_card':
-                    return 'شماره کارت'
+                    reason = 'شماره کارت'
                 elif field == 'bank_account':
-                    return 'شماره حساب'
+                    reason = 'شماره حساب'
                 else:
-                    return getattr(User, field).field.verbose_name + ' ' + status
+                    reason = getattr(User, field).field.verbose_name
+
+                return reason + ' ' + status
 
         return ''
 
