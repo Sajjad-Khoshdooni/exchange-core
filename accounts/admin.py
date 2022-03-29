@@ -216,7 +216,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
         return ''
 
-    get_user_reject_reason.short_description = 'دلیل رد'
+    get_user_reject_reason.short_description = 'وضعیت احراز'
 
     def get_wallet_address(self, user: User):
         link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
