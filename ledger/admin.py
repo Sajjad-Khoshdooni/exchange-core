@@ -178,6 +178,7 @@ class OTCUserFilter(SimpleListFilter):
 class OTCTradeAdmin(admin.ModelAdmin):
     list_display = ('created', 'otc_request',  'status','get_otc_trade_to_price_absolute_irt', )
     list_filter = (OTCUserFilter, 'status')
+    search_fields = ('group_id', )
 
     def get_otc_trade_from_amount(self, otc_trade: models.OTCTrade):
         return humanize_number(
