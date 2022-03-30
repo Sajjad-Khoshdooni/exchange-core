@@ -21,6 +21,9 @@ class CryptoBalance(models.Model):
     class Meta:
         unique_together = ('deposit_address', 'asset')
 
+    def __str__(self):
+        return '%s %s %f' % (self.asset, self.deposit_address, self.amount)
+
     def update(self):
         balance = CryptoAccountBalanceGetterFactory.build(self.deposit_address.network).get_asset_of_account(
             self.deposit_address, self.asset
