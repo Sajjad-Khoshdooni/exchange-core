@@ -8,22 +8,39 @@ from accounts.models import VerificationCode
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Asset, Network, Transfer, NetworkAsset
+from ledger.models import Asset, Network, Transfer, NetworkAsset, AddressBook
 from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
 from ledger.utils.price import get_trading_price_irt, BUY
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
-    address = serializers.CharField(write_only=True)
+    address_book_id = serializers.CharField(write_only=True, required=False, default=None)
     coin = serializers.CharField(write_only=True)
     network = serializers.CharField(write_only=True)
     code = serializers.CharField(write_only=True, required=True)
+    book_address = serializers.CharField(write_only=True, required=False)
 
     def validate(self, attrs):
         user = self.context['request'].user
         account = user.account
-        asset = get_object_or_404(Asset, symbol=attrs['coin'])
+
+        if attrs['address_book_id']:
+            address_book = get_object_or_404(AddressBook, id=attrs['address_book_id'])
+
+            if address_book.account.user != user:
+                raise ValidationError('این دفترچه متعلق به کاربر دیگری است')
+
+            address = address_book.address
+            network = address_book.network
+            if address_book.asset:
+                asset = address_book.asset
+            else:
+                asset = get_object_or_404(Asset, symbol=attrs['coin'])
+        else:
+            asset = get_object_or_404(Asset, symbol=attrs['coin'])
+            network = get_object_or_404(Network, symbol=attrs['network'])
+            address = attrs['address']
 
         if asset.symbol == Asset.IRT:
             raise ValidationError('نشانه دارایی اشتباه است.')
@@ -37,11 +54,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if not is_48h_rule_passed(user):
             raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
 
-        network = get_object_or_404(Network, symbol=attrs['network'])
-
         network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
 
-        address = attrs['address']
         amount = attrs['amount']
 
         if not re.match(network.address_regex, address):

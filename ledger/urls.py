@@ -26,4 +26,14 @@ urlpatterns = [
     path('v1/margin/info/<slug:symbol>/', views.AssetMarginInfoView.as_view()),
     path('v1/margin/transfer/', views.MarginTransferView.as_view()),
     path('v1/margin/loan/', views.MarginLoanView.as_view()),
+
+    path('addressbook/<int:pk>/', views.AddressBookView.as_view({
+        'get': 'retrieve',
+        'delete': 'destroy',
+        'patch': 'partial_update',
+    })),
+    path('addressbook/', views.AddressBookView.as_view({
+        'post': 'create',
+        'get': 'list',
+    })),
 ]
