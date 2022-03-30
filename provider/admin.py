@@ -5,8 +5,9 @@ from provider import models
 
 @admin.register(models.ProviderOrder)
 class ProviderOrderAdmin(admin.ModelAdmin):
-    list_display = ('created', 'asset', 'side', 'market', 'amount', 'order_id')
+    list_display = ('created', 'asset', 'side', 'market', 'amount', 'order_id', 'scope')
     search_fields = ('asset__symbol', 'order_id')
+    list_filter = ('scope', )
 
 
 @admin.register(models.ProviderTransfer)
