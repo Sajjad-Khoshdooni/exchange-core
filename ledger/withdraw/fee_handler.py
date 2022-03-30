@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from tracker.clients.tron import get_tron_client
 from accounts.models import Account
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
@@ -16,7 +18,7 @@ class FeeHandler:
         },
         'BSC': {
             'BNB': 0,
-            'DEFAULT': 0.00040
+            'DEFAULT': Decimal('0.00040')
         },
         'ETH': {
             'ETH': 0,

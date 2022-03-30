@@ -106,10 +106,10 @@ app.conf.beat_schedule = {
     },
     'monitor_blockchain_delays': {
         'task': 'tracker.tasks.monitor_blockchain_delays',
-        'schedule': 10,
+        'schedule': 30,
         'options': {
             'queue': 'celery',
-            'expire': 10
+            'expire': 30
         },
     },
     'fill_future_binance_income': {
