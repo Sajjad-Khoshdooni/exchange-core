@@ -120,4 +120,12 @@ app.conf.beat_schedule = {
             'expire': 3600
         },
     },
+    'auto_hedge_assets': {
+        'task': 'provider.tasks.auto_hedge.auto_hedge_assets',
+        'schedule': crontab(hour=1, minute=30),
+        'options': {
+            'queue': 'binance',
+            'expire': 36000
+        },
+    },
 }
