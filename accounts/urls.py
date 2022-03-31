@@ -40,6 +40,7 @@ urlpatterns = [
     })),
 
     path('notifs/all/', views.UnreadAllNotificationView.as_view()),
+    path('change/password/<int:user_id>', views.ChangePasswordView.as_view()),
 
 
 ]
