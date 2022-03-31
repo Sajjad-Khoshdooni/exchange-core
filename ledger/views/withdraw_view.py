@@ -26,13 +26,11 @@ class WithdrawSerializer(serializers.ModelSerializer):
         account = user.account
 
         if attrs['address_book_id']:
-            address_book = get_object_or_404(AddressBook, id=attrs['address_book_id'])
-
-            if address_book.account.user != user:
-                raise ValidationError('این دفترچه متعلق به کاربر دیگری است')
+            address_book = get_object_or_404(AddressBook, id=attrs['address_book_id'], account=account)
 
             address = address_book.address
             network = address_book.network
+
             if address_book.asset:
                 asset = address_book.asset
             else:
@@ -57,6 +55,13 @@ class WithdrawSerializer(serializers.ModelSerializer):
         network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
 
         amount = attrs['amount']
+
+        if not address:
+            raise ValidationError('آدرس وارد نشده است')
+        if not network:
+            raise ValidationError('شبکه‌ای انتخاب نشده است')
+        if not asset:
+            raise ValidationError('رمزارزی انتخاب نشده است')
 
         if not re.match(network.address_regex, address):
             raise ValidationError('آدرس به فرمت درستی وارد نشده است.')

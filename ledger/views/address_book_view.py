@@ -5,11 +5,9 @@ from rest_framework.response import Response
 from ledger.models import AddressBook, Asset, Network
 
 
-class address_book_serializer(serializers.ModelSerializer):
+class Address_Book_Serializer(serializers.ModelSerializer):
 
     asset = serializers.CharField(read_only=True)
-    name = serializers.CharField()
-    address = serializers.CharField()
     network = serializers.CharField()
     coin = serializers.CharField(write_only=True, required=False, default=None)
 
@@ -39,16 +37,7 @@ class address_book_serializer(serializers.ModelSerializer):
 
 
 class AddressBookView(ModelViewSet):
-    serializer_class = address_book_serializer
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
-
-        return Response({
-            'address_book_list': serializer.data,
-        })
-    queryset = AddressBook.objects.all()
+    serializer_class = Address_Book_Serializer
 
     def get_queryset(self):
         address_book = AddressBook.objects.filter(deleted=False, account=self.request.user.account)
