@@ -35,6 +35,11 @@ class ChangePasswordView(APIView):
 
     def put(self, request, user_id):
         user = get_object_or_404(User, id=user_id)
+        user_who_requested = self.context['request'].user\
+
+        if not user_who_requested == user:
+            raise ValidationError('شما اجازه تغییر رمز کاربر دیگری را ندارید')
+
         change_password_serializer = ChangePasswordSerializer(
             instance=user,
             data=request.data,
