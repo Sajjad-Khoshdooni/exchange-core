@@ -28,7 +28,6 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 
 class ChangePasswordView(APIView):
-    permission_classes = []
 
     def patch(self, request):
         user = self.request.user
