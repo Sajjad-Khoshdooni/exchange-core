@@ -10,6 +10,7 @@ from accounts.models import Account
 from ledger import models
 from ledger.models import Asset
 from ledger.utils.overview import AssetOverview
+from ledger.utils.price import get_trading_price_usdt, BUY
 from provider.exchanges import BinanceFuturesHandler
 from ledger.utils.precision import humanize_number
 
@@ -292,9 +293,10 @@ class CryptoAccountTypeFilter(SimpleListFilter):
 
 @admin.register(models.CryptoBalance)
 class CryptoBalanceAdmin(admin.ModelAdmin):
-    list_display = ('asset', 'get_network', 'get_address', 'get_owner', 'amount', 'updated_at', )
+    list_display = ('asset', 'get_network', 'get_address', 'get_owner', 'amount', 'get_value_usdt', 'updated_at', )
     search_fields = ('asset__symbol', 'deposit_address__address',)
     list_filter = (CryptoAccountTypeFilter, )
+    actions = ('collect_asset_action', )
 
     def get_network(self, crypto_balance: models.CryptoBalance):
         return crypto_balance.deposit_address.network
@@ -310,3 +312,14 @@ class CryptoBalanceAdmin(admin.ModelAdmin):
         return str(crypto_balance.deposit_address.account_secret.account)
 
     get_owner.short_description = 'owner'
+
+    def get_value_usdt(self, crypto_balance: models.CryptoBalance):
+        value = crypto_balance.amount * get_trading_price_usdt(crypto_balance.asset.symbol, BUY, raw_price=True)
+        return get_presentation_amount(value)
+
+    get_value_usdt.short_description = 'value'
+
+    @admin.action(description='ارسال به بایننس')
+    def collect_asset_action(self, request, queryset):
+        for crypto in queryset:
+            crypto.collect()
