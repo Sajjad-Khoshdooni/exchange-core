@@ -293,7 +293,7 @@ class CryptoAccountTypeFilter(SimpleListFilter):
 
 @admin.register(models.CryptoBalance)
 class CryptoBalanceAdmin(admin.ModelAdmin):
-    list_display = ('asset', 'get_network', 'get_address', 'get_owner', 'amount', 'updated_at', 'get_value_usdt')
+    list_display = ('asset', 'get_network', 'get_address', 'get_owner', 'amount', 'get_value_usdt', 'updated_at', )
     search_fields = ('asset__symbol', 'deposit_address__address',)
     list_filter = (CryptoAccountTypeFilter, )
 
@@ -313,6 +313,7 @@ class CryptoBalanceAdmin(admin.ModelAdmin):
     get_owner.short_description = 'owner'
 
     def get_value_usdt(self, crypto_balance: models.CryptoBalance):
-        return crypto_balance.amount * get_trading_price_usdt(crypto_balance.asset.symbol, BUY, raw_price=True)
+        value = crypto_balance.amount * get_trading_price_usdt(crypto_balance.asset.symbol, BUY, raw_price=True)
+        return get_presentation_amount(value)
 
     get_value_usdt.short_description = 'value'
