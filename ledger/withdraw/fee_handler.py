@@ -13,7 +13,7 @@ tron = get_tron_client()
 class FeeHandler:
     NETWORK_ASSET_FEE = {
         'TRX': {
-            'TRX': 1,
+            'TRX': 1.1,
             'USDT': 10
         },
         'BSC': {
