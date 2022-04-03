@@ -1,12 +1,9 @@
+import logging
 from abc import ABC, abstractmethod
 
 from tronpy.keys import PrivateKey
 from web3 import Web3
 
-from tracker.clients.bsc import get_web3_bsc_client
-from tracker.clients.eth import get_web3_eth_client
-from tracker.clients.tron import get_tron_client
-from tracker.blockchain.amount_normalizer import AmountNormalizer
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Transfer, Network, Asset
 from ledger.symbol_contract_mapper import (
@@ -14,7 +11,13 @@ from ledger.symbol_contract_mapper import (
     erc20_symbol_contract_mapper,
 )
 from tracker.blockchain.abi_getter import AbiGetter, bsc_abi_getter, eth_abi_getter
+from tracker.blockchain.amount_normalizer import AmountNormalizer
+from tracker.clients.bsc import get_web3_bsc_client
+from tracker.clients.eth import get_web3_eth_client
+from tracker.clients.tron import get_tron_client
 from wallet.models import TRXWallet, CryptoWallet, ETHWallet
+
+logger = logging.getLogger(__name__)
 
 
 class TransactionCreationFailure(Exception):
@@ -65,6 +68,8 @@ class TRXTransactionCreator(TransactionCreator):
                 .sign(self._private_key)
         )
         result = transaction.broadcast()
+        logger.info('tronpy result')
+        logger.info(result)
 
         if not result.get('result', False):
             raise TransactionCreationFailure
