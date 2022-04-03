@@ -18,7 +18,7 @@ class FeeHandler:
         },
         'BSC': {
             'BNB': 0,
-            'DEFAULT': Decimal('0.00040')
+            'DEFAULT': Decimal('0.00030')
         },
         'ETH': {
             'ETH': 0,

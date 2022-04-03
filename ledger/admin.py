@@ -296,6 +296,7 @@ class CryptoBalanceAdmin(admin.ModelAdmin):
     list_display = ('asset', 'get_network', 'get_address', 'get_owner', 'amount', 'get_value_usdt', 'updated_at', )
     search_fields = ('asset__symbol', 'deposit_address__address',)
     list_filter = (CryptoAccountTypeFilter, )
+    actions = ('collect_asset_action', )
 
     def get_network(self, crypto_balance: models.CryptoBalance):
         return crypto_balance.deposit_address.network
@@ -317,3 +318,8 @@ class CryptoBalanceAdmin(admin.ModelAdmin):
         return get_presentation_amount(value)
 
     get_value_usdt.short_description = 'value'
+
+    @admin.action(description='ارسال به بایننس')
+    def collect_asset_action(self, request, queryset):
+        for crypto in queryset:
+            crypto.collect()
