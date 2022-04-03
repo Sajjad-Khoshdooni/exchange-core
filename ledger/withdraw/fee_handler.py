@@ -13,17 +13,17 @@ tron = get_tron_client()
 class FeeHandler:
     NETWORK_ASSET_FEE = {
         'TRX': {
-            'TRX': 1.1,
-            'USDT': 10
+            'TRX': Decimal('1.1'),
+            'USDT': Decimal('10')
         },
         'BSC': {
             'BNB': Decimal('0.000105'),
             'DEFAULT': Decimal('0.00030')
         },
-        'ETH': {
-            'ETH': 0,
-            'DEFAULT': 0.004  # todo: check fee
-        }
+        # 'ETH': {
+        #     'ETH': 0,
+        #     'DEFAULT': 0.004  # todo: check fee
+        # }
     }
 
     def __init__(self, network: Network, asset: Asset):
