@@ -90,8 +90,9 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
-                                         'get_birth_date_jalali',
-                                         'telephone', 'get_national_card_image', 'get_selfie_image')}),
+                                         'get_birth_date_jalali', 'telephone', 'get_national_card_image',
+                                         'get_selfie_image', 'archived', 'get_user_reject_reason'
+                                         )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
                                           'telephone_verified', 'selfie_image_verified',
@@ -116,14 +117,15 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     )
 
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'level')
+    list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason')
     list_filter = (
+        'archived', ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
+        'level_3_verify_datetime', UserStatusFilter,
         'is_staff', 'is_superuser', 'is_active', 'groups',
-        ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
-        'level_3_verify_datetime', UserStatusFilter)
+    )
     inlines = [UserCommentInLine, ]
     ordering = ('-id', )
-    actions = ('verify_user_name', 'reject_user_name')
+    actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify')
     readonly_fields = (
         'get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet_address',
         'get_sum_of_value_buy_sell', 'get_birth_date_jalali', 'get_national_card_image',
@@ -131,7 +133,9 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
+        'get_user_reject_reason'
     )
+    preserve_filters = ('archived', )
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
@@ -143,6 +147,16 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
             user.save()
             basic_verify_user.delay(user.id)
 
+    @admin.action(description='شروع احراز هویت پایه کاربر', permissions=['change'])
+    def reevaluate_basic_verify(self, request, queryset):
+        to_verify_users = queryset.filter(
+            level=User.LEVEL1,
+            verify_status=User.PENDING
+        )
+
+        for user in to_verify_users:
+            basic_verify_user.delay(user.id)
+
     @admin.action(description='رد کردن نام کاربر', permissions=['view'])
     def reject_user_name(self, request, queryset):
         to_reject_users = queryset.filter(MANUAL_VERIFY_CONDITION).distinct()
@@ -150,6 +164,14 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         for user in to_reject_users:
             user.change_status(User.REJECTED)
             alert_user_verify_status(user)
+
+    @admin.action(description='بایگانی کاربر', permissions=['view'])
+    def archive_users(self, request, queryset):
+        queryset.update(archived=True)
+
+    @admin.action(description='خارج کردن از بایگانی', permissions=['view'])
+    def unarchive_users(self, request, queryset):
+        queryset.update(archived=False)
 
     def save_model(self, request, user: User, form, change):
         if not request.user.is_superuser:
@@ -173,6 +195,40 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         link = url_to_admin_list(OTCTrade)+'?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_otctrade_address.short_description = 'خریدهای OTC'
+
+    def get_user_reject_reason(self, user: User):
+        verify_fields = [
+            'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
+            'bank_card_verified', 'bank_account_verified', 'telephone_verified', 'selfie_image_verified'
+        ]
+
+        for verify_field in verify_fields:
+            field = verify_field[:-9]
+
+            if field == 'bank_card':
+                bank_card = user.bankcard_set.all().order_by('-verified').first()
+                value = bank_card and bank_card.verified
+            elif field == 'bank_account':
+                bank_account = user.bankaccount_set.all().order_by('-verified').first()
+                value = bank_account and bank_account.verified
+            else:
+                value = getattr(user, verify_field)
+
+            if not value:
+                status = 'رد شده' if value is False else 'نامشخص'
+
+                if field == 'bank_card':
+                    reason = 'شماره کارت'
+                elif field == 'bank_account':
+                    reason = 'شماره حساب'
+                else:
+                    reason = getattr(User, field).field.verbose_name
+
+                return reason + ' ' + status
+
+        return ''
+
+    get_user_reject_reason.short_description = 'وضعیت احراز'
 
     def get_wallet_address(self, user: User):
         link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
