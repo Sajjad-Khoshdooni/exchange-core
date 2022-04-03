@@ -51,7 +51,7 @@ class CryptoBalance(models.Model):
         WithdrawHandler.withdraw_from_transfer(transfer)
 
     @classmethod
-    def collect_all(cls):
+    def collect_all(cls, exclude_base_assets: bool = True):
         from ledger.withdraw.fee_handler import FeeHandler
 
         binance_network_addresses = {
@@ -66,12 +66,18 @@ class CryptoBalance(models.Model):
         )
 
         for crypto in all_crypto:
-            value = crypto.amount * get_trading_price_usdt(coin=crypto.asset.symbol, side=BUY, raw_price=True)
+            network = crypto.deposit_address.network
+            coin = crypto.asset.symbol
 
-            fee_amount = FeeHandler(crypto.deposit_address.network, crypto.asset).get_asset_fee()
-            default_coin = DEFAULT_COIN_OF_NETWORK[crypto.deposit_address.network.symbol]
+            base_coin = DEFAULT_COIN_OF_NETWORK[network.symbol]
 
-            fee_value = fee_amount * get_trading_price_usdt(default_coin, side=BUY, raw_price=True)
+            if exclude_base_assets and coin == base_coin:
+                logger.info('ignoring base asset transfer')
+                continue
+
+            value = crypto.amount * get_trading_price_usdt(coin=coin, side=BUY, raw_price=True)
+            fee_amount = FeeHandler(network, crypto.asset).get_asset_fee()
+            fee_value = fee_amount * get_trading_price_usdt(base_coin, side=BUY, raw_price=True)
 
             if value <= fee_value * 2:
                 logger.info('ignoring crypto = %d for small value' % crypto.id)
