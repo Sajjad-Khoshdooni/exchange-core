@@ -69,6 +69,36 @@ class ManualNameVerifyFilter(SimpleListFilter):
         return queryset
 
 
+class UserNationalCodeFilter(SimpleListFilter):
+    title = 'کد ملی'
+    parameter_name = 'national_code'
+
+    def lookups(self, request, model_admin):
+        return (1, 1),
+
+    def queryset(self, request, queryset):
+        national_code = request.GET.get('national_code')
+        if national_code is not None:
+            return queryset.filter(~Q(national_code='') & Q(national_code=national_code))
+        else:
+            return queryset
+
+
+class AnotherUserFilter(SimpleListFilter):
+    title = 'دیگر کاربرها'
+    parameter_name = 'user_id_exclude'
+
+    def lookups(self, request, model_admin):
+        return (1, 1),
+
+    def queryset(self, request, queryset):
+        user_id = request.GET.get('user_id_exclude')
+        if user_id is not None:
+            return queryset.filter(~Q(id=user_id))
+        else:
+            return queryset
+
+
 class UserCommentInLine(admin.TabularInline):
     model = UserComment
     extra = 1
@@ -109,6 +139,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
                 'get_payment_address', 'get_withdraw_address',
                 'get_otctrade_address', 'get_wallet_address', 'get_bank_card_link',
                 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
+                'get_user_with_same_national_code',
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
@@ -120,7 +151,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason')
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
-        'level_3_verify_datetime', UserStatusFilter,
+        'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter,
         'is_staff', 'is_superuser', 'is_active', 'groups',
     )
     inlines = [UserCommentInLine, ]
@@ -133,7 +164,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
-        'get_user_reject_reason'
+        'get_user_reject_reason', 'get_user_with_same_national_code'
     )
     preserve_filters = ('archived', )
 
@@ -269,6 +300,16 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     get_finotech_request_link.short_description = 'درخواست‌های فینوتک'
 
+    def get_user_with_same_national_code(self, user: User):
+        user_count = User.objects.filter(~Q(id=user.id) & Q(national_code=user.national_code) & ~Q(national_code='')).count()
+        return mark_safe(
+            "<a href='/admin/accounts/user/?national_code=%s&user_id_exclude=%s'> دیدن (%sکاربر)  </a>" % (
+                user.national_code, user.id, user_count
+            )
+        )
+
+    get_user_with_same_national_code.short_description = 'کاربرانی با این کد ملی'
+
     def get_birth_date_jalali(self, user: User):
         return gregorian_to_jalali_date_str(user.birth_date)
 
@@ -320,6 +361,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         return mark_safe("<img src='%s' width='200' height='200' />" % user.selfie_image.get_absolute_image_url())
 
     get_selfie_image.short_description = 'عکس سلفی'
+
+
 
 
 @admin.register(Account)
