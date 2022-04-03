@@ -41,3 +41,4 @@ class ChangePasswordView(APIView):
             change_password_serializer.save(raise_exception=True)
             return Response({'msg': 'password update successfully'})
 
+
