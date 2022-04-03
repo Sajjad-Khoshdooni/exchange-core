@@ -16,7 +16,7 @@ from ledger.utils.margin import MarginInfo
 logger = logging.getLogger(__name__)
 
 
-@shared_task()
+@shared_task(queue='margin')
 def check_margin_level():
     margin_accounts = set(Wallet.objects.filter(market=Wallet.MARGIN).values_list('account', flat=True))
     accounts = Account.objects.filter(id__in=margin_accounts, user__isnull=False)

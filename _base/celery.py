@@ -128,4 +128,12 @@ app.conf.beat_schedule = {
             'expire': 36000
         },
     },
+    'check_margin_level': {
+        'task': 'ledger.tasks.margin.check_margin_level',
+        'schedule': 5,
+        'options': {
+            'queue': 'margin',
+            'expire': 5
+        },
+    },
 }
