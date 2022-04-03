@@ -99,6 +99,8 @@ class User(AbstractUser):
 
     margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
 
+    show_margin = models.BooleanField(default=False)
+
     def change_status(self, status: str):
         if self.verify_status == self.PENDING and status == self.VERIFIED:
             self.verify_status = self.INIT

@@ -9,7 +9,10 @@ from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff')
+        fields = (
+            'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
+            'show_margin'
+        )
 
 
 class ProfileSerializer(serializers.ModelSerializer):
