@@ -6,7 +6,8 @@ from django.db import models, transaction
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
 from ledger.models import Asset, Wallet, Trx
-from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_lock_field, DONE
+from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_lock_field, DONE, \
+    get_created_field
 from ledger.utils.margin import MarginInfo
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt
 from provider.models import ProviderOrder
@@ -148,3 +149,11 @@ class MarginLoan(models.Model):
         loan.finalize()
 
         return loan
+
+
+class MarginLiquidation(models.Model):
+    created = get_created_field()
+    group_id = get_group_id_field()
+
+    account = models.ForeignKey(Account, on_delete=models.CASCADE)
+    margin_level = get_amount_field()

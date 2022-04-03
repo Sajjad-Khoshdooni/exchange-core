@@ -10,5 +10,5 @@ from .order import Order
 from .otc_request import OTCRequest
 from .otc_trade import OTCTrade
 from .transfer import Transfer
-from .margin import MarginTransfer, MarginLoan
+from .margin import MarginTransfer, MarginLoan, MarginLiquidation
 from .crypto_balance import CryptoBalance
