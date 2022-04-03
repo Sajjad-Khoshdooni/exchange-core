@@ -16,10 +16,10 @@ from ledger.utils.price import get_trading_price_irt, BUY
 
 class WithdrawSerializer(serializers.ModelSerializer):
     address_book_id = serializers.CharField(write_only=True, required=False, default=None)
-    coin = serializers.CharField(write_only=True)
-    network = serializers.CharField(write_only=True)
+    coin = serializers.CharField(write_only=True, required=False)
+    network = serializers.CharField(write_only=True, required=False)
     code = serializers.CharField(write_only=True, required=True)
-    book_address = serializers.CharField(write_only=True, required=False)
+    address = serializers.CharField(write_only=True, required=False)
 
     def validate(self, attrs):
         user = self.context['request'].user
@@ -40,6 +40,16 @@ class WithdrawSerializer(serializers.ModelSerializer):
             network = get_object_or_404(Network, symbol=attrs['network'])
             address = attrs['address']
 
+        if not address:
+            raise ValidationError('آدرس وارد نشده است.')
+        if not network:
+            raise ValidationError('شبکه‌ای انتخاب نشده است.')
+        if not asset:
+            raise ValidationError('رمزارزی انتخاب نشده است.')
+
+        if not re.match(network.address_regex, address):
+            raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
+
         if asset.symbol == Asset.IRT:
             raise ValidationError('نشانه دارایی اشتباه است.')
 
@@ -56,15 +66,6 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         amount = attrs['amount']
 
-        if not address:
-            raise ValidationError('آدرس وارد نشده است')
-        if not network:
-            raise ValidationError('شبکه‌ای انتخاب نشده است')
-        if not asset:
-            raise ValidationError('رمزارزی انتخاب نشده است')
-
-        if not re.match(network.address_regex, address):
-            raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
 
         if get_precision(amount) > asset.precision:
             raise ValidationError('مقدار وارد شده اشتباه است.')

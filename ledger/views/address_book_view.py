@@ -1,11 +1,11 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import serializers
+from rest_framework import serializers, status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from ledger.models import AddressBook, Asset, Network
 
 
-class Address_Book_Serializer(serializers.ModelSerializer):
+class AddressBookSerializer(serializers.ModelSerializer):
 
     asset = serializers.CharField(read_only=True)
     network = serializers.CharField()
@@ -37,15 +37,14 @@ class Address_Book_Serializer(serializers.ModelSerializer):
 
 
 class AddressBookView(ModelViewSet):
-    serializer_class = Address_Book_Serializer
+    serializer_class = AddressBookSerializer
 
     def get_queryset(self):
-        address_book = AddressBook.objects.filter(deleted=False, account=self.request.user.account)
-        return address_book
+        return AddressBook.objects.filter(deleted=False, account=self.request.user.account)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.deleted = True
         instance.save()
 
-        return Response({'msg': 'address book deleted'})
+        return Response({'msg': 'address book deleted'},status=status.HTTP_204_NO_CONTENT)
