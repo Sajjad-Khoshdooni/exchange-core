@@ -62,8 +62,14 @@ class CryptoBalance(models.Model):
         coin = self.asset.symbol
         base_coin = DEFAULT_COIN_OF_NETWORK[network.symbol]
 
-        value = self.amount * get_trading_price_usdt(coin=coin, side=BUY, raw_price=True)
         fee_amount = FeeHandler(network, self.asset).get_asset_fee()
+
+        if coin == base_coin:
+            amount = self.amount - fee_amount
+        else:
+            amount = self.amount
+
+        value = amount * get_trading_price_usdt(coin=coin, side=BUY, raw_price=True)
         fee_value = fee_amount * get_trading_price_usdt(base_coin, side=BUY, raw_price=True)
 
         if value <= fee_value * 2:
@@ -71,7 +77,7 @@ class CryptoBalance(models.Model):
             return
 
         address = binance_network_addresses[self.deposit_address.network.symbol]
-        self.send_to(address, self.amount)
+        self.send_to(address, amount)
 
     @classmethod
     def collect_all(cls, exclude_base_assets: bool = True):
