@@ -17,7 +17,7 @@ class VerificationCode(models.Model):
     SCOPE_VERIFY_PHONE = 'verify'
     SCOPE_WITHDRAW = 'withdraw'
     SCOPE_TELEPHONE = 'tel'
-    SCOPE_CHANGE_PASSWORD = 'change'
+    SCOPE_CHANGE_PASSWORD = 'change password'
 
     SCOPE_CHOICES = [
         (SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_PHONE, SCOPE_VERIFY_PHONE),
