@@ -8,15 +8,8 @@
         <caption>
           <a  class="section" title="">داشبورد</a>
         </caption>
-{#        {% for model in app.models %}#}
-{#          <tr class="model-{{ model.object_name|lower }}{% if model.admin_url in request.path|urlencode %} current-model{% endif %}">#}
-{#            {% if model.admin_url %}#}
-{#              <th scope="row"><a href="{{ model.admin_url }}"{% if model.admin_url in request.path|urlencode %} aria-current="page"{% endif %}>{{ model.name }}</a></th>#}
-{#            {% else %}#}
               <th scope="row"><a href="/dashboard/"> رقتن به داشبورد</a></th>
-{#            {% endif %}#}
           </tr>
-{#        {% endfor %}#}
       </table>
     </div>
 
