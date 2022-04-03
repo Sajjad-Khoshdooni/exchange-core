@@ -112,7 +112,7 @@ class AssetOverview:
         if asset.symbol in (Asset.IRT, Asset.USDT):
             return 0
 
-        return self.get_binance_balance(asset) + self.get_internal_deposits_balance(asset)\
+        return self.get_binance_balance(asset) + self.get_internal_deposits_balance(asset) \
                - self.get_ledger_balance(Account.ORDINARY, asset)
 
     def get_internal_usdt_value(self):

@@ -20,8 +20,9 @@ class ProviderOrder(models.Model):
     BUY, SELL = 'buy', 'sell'
     ORDER_CHOICES = [(BUY, BUY), (SELL, SELL)]
 
-    TRADE, BORROW, LIQUIDATION, WITHDRAW = 'trade', 'borrow', 'liquid', 'withdraw'
-    SCOPE_CHOICES = ((TRADE, 'trade'), (BORROW, 'borrow'), (LIQUIDATION, 'liquidation'), (WITHDRAW, 'withdraw'))
+    TRADE, BORROW, LIQUIDATION, WITHDRAW, HEDGE = 'trade', 'borrow', 'liquid', 'withdraw', 'hedge'
+    SCOPE_CHOICES = ((TRADE, 'trade'), (BORROW, 'borrow'), (LIQUIDATION, 'liquidation'), (WITHDRAW, 'withdraw'),
+                     (HEDGE, HEDGE))
 
     created = models.DateTimeField(auto_now_add=True)
 

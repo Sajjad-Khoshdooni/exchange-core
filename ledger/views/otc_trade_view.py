@@ -25,6 +25,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     expire = serializers.SerializerMethodField()
     coin = serializers.SerializerMethodField()
     coin_price = serializers.SerializerMethodField()
+    cash = serializers.SerializerMethodField()
 
     def validate(self, attrs):
         market = attrs['market']
@@ -105,6 +106,10 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         conf = otc_request.get_trade_config()
         return conf.coin.symbol
 
+    def get_cash(self, otc_request: OTCRequest):
+        conf = otc_request.get_trade_config()
+        return conf.cash.symbol
+
     def get_coin_price(self, otc_request: OTCRequest):
         conf = otc_request.get_trade_config()
 
@@ -118,7 +123,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = OTCRequest
         fields = ('from_asset', 'to_asset', 'from_amount', 'to_amount', 'token', 'price', 'expire', 'market', 'coin',
-                  'coin_price')
+                  'coin_price', 'cash')
         read_only_fields = ('token', 'price')
 
 
@@ -128,10 +133,14 @@ class OTCTradeRequestView(CreateAPIView):
 
 class OTCTradeSerializer(serializers.ModelSerializer):
     token = serializers.CharField(write_only=True)
+    value_usdt = serializers.SerializerMethodField()
+
+    def get_value_usdt(self, otc_trade: OTCTrade):
+        return otc_trade.otc_request.to_price_absolute_usdt * otc_trade.otc_request.to_amount
 
     class Meta:
         model = OTCTrade
-        fields = ('id', 'token', 'status')
+        fields = ('id', 'token', 'status', 'value_usdt')
         read_only_fields = ('token', )
 
     def create(self, validated_data):

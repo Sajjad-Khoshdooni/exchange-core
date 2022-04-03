@@ -106,7 +106,7 @@ class BinanceSpotHandler:
 
     @classmethod
     def get_step_size(cls, symbol: str) -> Decimal:
-        data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol + 'USDT'}, signed=False)
+        data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False)
         filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['symbols'][0]['filters']))
         lot_size = filters[0]
 

@@ -2,6 +2,7 @@ from django.db import models, IntegrityError
 from django.db.models import UniqueConstraint, Q
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from simple_history.models import HistoricalRecords
 
 from financial.validators import iban_validator, bank_card_pan_validator
 
@@ -19,6 +20,8 @@ class BankCard(models.Model):
     )
 
     verified = models.BooleanField(null=True, blank=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         if len(self.card_pan) < 10:
@@ -71,6 +74,8 @@ class BankAccount(models.Model):
     owners = models.JSONField(blank=True, null=True)
 
     verified = models.BooleanField(null=True, blank=True)
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.iban[:6] + '********' + self.iban[-4:]
