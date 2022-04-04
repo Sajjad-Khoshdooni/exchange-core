@@ -128,7 +128,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
                                           'telephone_verified', 'selfie_image_verified',
                                           )}),
         (_('Permissions'), {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'show_margin'),
         }),
         (_('Important dates'), {'fields': (
             'get_last_login_jalali', 'get_date_joined_jalali', 'get_first_fiat_deposit_date_jalali',

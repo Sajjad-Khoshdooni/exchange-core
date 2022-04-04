@@ -54,3 +54,9 @@ def humanize_number(num):
         num = Decimal(num)
 
     return '{:,}'.format(num)
+
+
+def normalize_fraction(d: Decimal):
+    normalized = d.normalize()
+    sign, digit, exponent = normalized.as_tuple()
+    return normalized if exponent <= 0 else normalized.quantize(1)
