@@ -228,6 +228,9 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     get_otctrade_address.short_description = 'خریدهای OTC'
 
     def get_user_reject_reason(self, user: User):
+        if user.national_code_duplicated_alert:
+            return 'کد ملی تکراری'
+
         verify_fields = [
             'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
             'bank_card_verified', 'bank_account_verified', 'telephone_verified', 'selfie_image_verified'

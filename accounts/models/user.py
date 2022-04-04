@@ -100,8 +100,8 @@ class User(AbstractUser):
 
     margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
 
-    show_margin = models.BooleanField(default=False)
-    national_code_duplicated_alert = models.BooleanField(default=False)
+    show_margin = models.BooleanField(default=False, verbose_name='امکان مشاهده حساب تعهدی')
+    national_code_duplicated_alert = models.BooleanField(default=False, verbose_name='آیا شماره ملی تکراری است؟')
 
     def change_status(self, status: str):
         if self.verify_status == self.PENDING and status == self.VERIFIED:
