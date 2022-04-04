@@ -17,11 +17,11 @@ class MarginInfoView(APIView):
         margin_info = MarginInfo.get(account)
 
         return Response({
-            'total_assets': str(margin_info.total_assets),
-            'total_debt': str(margin_info.total_debt),
-            'margin_level': str(margin_info.get_margin_level()),
-            'total_equity': str(margin_info.get_total_equity()),
-            'max_debt': str(margin_info.get_total_max_borrow()),
+            'total_assets': margin_info.total_assets,
+            'total_debt': margin_info.total_debt,
+            'margin_level': margin_info.get_margin_level(),
+            'total_equity': margin_info.get_total_equity(),
+            'max_debt': margin_info.get_total_max_borrow(),
         })
 
 
@@ -51,13 +51,6 @@ class AssetMarginInfoView(APIView):
 
 
 class MarginTransferSerializer(serializers.ModelSerializer):
-
-    def validate(self, attrs):
-
-        if attrs['amount'] <= 0:
-            raise ValidationError('مقدار باید مثبت باشد.')
-
-        return attrs
 
     class Meta:
         fields = ('amount', 'type')
