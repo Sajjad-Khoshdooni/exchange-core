@@ -37,6 +37,9 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         if user.level > User.LEVEL1:
             raise ValidationError('کاربر تایید شده است.')
 
+        if user.national_code_duplicated_alert:
+            raise ValidationError('کد ملی تکراری است. لطفا به حساب اصلی‌تان وارد شوید.')
+
         date_delta = timezone.now().date() - validated_data['birth_date']
         age = date_delta.days / 365
 

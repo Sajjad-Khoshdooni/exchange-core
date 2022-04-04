@@ -47,9 +47,10 @@ class User(AbstractUser):
         max_length=10,
         blank=True,
         verbose_name='کد ملی',
+        db_index=True,
         validators=[national_card_code_validator],
     )
-    national_code_verified = models.BooleanField(null=True, blank=True, db_index=True, verbose_name='تاییدیه کد ملی',)
+    national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی',)
 
     birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد',)
     birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد',)
@@ -100,6 +101,7 @@ class User(AbstractUser):
     margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
 
     show_margin = models.BooleanField(default=False)
+    national_code_duplicated_alert = models.BooleanField(default=False)
 
     def change_status(self, status: str):
         if self.verify_status == self.PENDING and status == self.VERIFIED:
