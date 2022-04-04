@@ -78,6 +78,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         model = Asset
         fields = ('symbol', 'precision', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt', 'buy_price_irt',
                   'can_deposit', 'can_withdraw')
+        ref_name = 'ledger asset'
 
 
 class TransferSerializer(serializers.ModelSerializer):
