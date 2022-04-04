@@ -1,6 +1,7 @@
 from decimal import Decimal
 from math import log10
 
+from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Sum
 
@@ -19,8 +20,9 @@ class ProviderOrder(models.Model):
     BUY, SELL = 'buy', 'sell'
     ORDER_CHOICES = [(BUY, BUY), (SELL, SELL)]
 
-    TRADE, BORROW, LIQUIDATION, WITHDRAW = 'trade', 'borrow', 'liquid', 'withdraw'
-    SCOPE_CHOICES = ((TRADE, 'trade'), (BORROW, 'borrow'), (LIQUIDATION, 'liquidation'), (WITHDRAW, 'withdraw'))
+    TRADE, BORROW, LIQUIDATION, WITHDRAW, HEDGE = 'trade', 'borrow', 'liquid', 'withdraw', 'hedge'
+    SCOPE_CHOICES = ((TRADE, 'trade'), (BORROW, 'borrow'), (LIQUIDATION, 'liquidation'), (WITHDRAW, 'withdraw'),
+                     (HEDGE, HEDGE))
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -110,6 +112,9 @@ class ProviderOrder(models.Model):
     @classmethod
     def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '') -> bool:
         # todo: this method should not called more than once at a single time
+
+        if settings.DEBUG:
+            return True
 
         to_buy = amount if side == cls.BUY else -amount
         hedge_amount = cls.get_hedge(asset) - to_buy

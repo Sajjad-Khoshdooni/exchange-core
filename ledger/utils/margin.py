@@ -41,9 +41,6 @@ class MarginInfo:
     def get_liquidation_amount(self) -> Decimal:
         return -self.get_max_borrowable()
 
-    def get_total_max_borrow(self) -> Decimal:
-        return self.total_debt + self.get_max_borrowable()
-
 
 def get_total_debt(account: Account) -> Decimal:
     return -account.get_total_balance_usdt(Wallet.LOAN, SELL)

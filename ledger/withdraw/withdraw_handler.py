@@ -41,6 +41,7 @@ class WithdrawHandler:
             fee_handler = FeeHandler(transfer.network, transfer.wallet.asset)
 
             if not fee_handler.is_balance_enough_for_fee(transfer.wallet.account):
+                logger.info('transfer handling ignored due to not enough fee!')
                 continue
 
             cls._create_transaction_from_transfer(transfer)

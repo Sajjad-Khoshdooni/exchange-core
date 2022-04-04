@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from tracker.clients.tron import get_tron_client
 from accounts.models import Account
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
@@ -11,17 +13,17 @@ tron = get_tron_client()
 class FeeHandler:
     NETWORK_ASSET_FEE = {
         'TRX': {
-            'TRX': 0,
-            'USDT': 10
+            'TRX': Decimal('1.1'),
+            'USDT': Decimal('10')
         },
         'BSC': {
-            'BNB': 0,
-            'DEFAULT': 0.00040
+            'BNB': Decimal('0.000105'),
+            'DEFAULT': Decimal('0.00030')
         },
-        'ETH': {
-            'ETH': 0,
-            'DEFAULT': 0.004  # todo: check fee
-        }
+        # 'ETH': {
+        #     'ETH': 0,
+        #     'DEFAULT': 0.004  # todo: check fee
+        # }
     }
 
     def __init__(self, network: Network, asset: Asset):

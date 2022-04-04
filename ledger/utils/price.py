@@ -173,7 +173,10 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
 
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Decimal:
     from ledger.models.asset import Asset
-    assert coin != IRT
+
+    if coin == IRT:
+        return 1 / get_tether_irt_price(get_other_side(side))
+
     asset = Asset.get(coin)
 
     bid_diff = asset.bid_diff
@@ -191,6 +194,7 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Dec
             multiplier = 1 - bid_diff
         else:
             multiplier = 1 + ask_diff
+
     price = get_price(coin, side)
 
     return price * multiplier

@@ -1,12 +1,12 @@
+from decimal import Decimal
 from uuid import uuid4
 
 from django.core.validators import MinValueValidator
 from django.db import models
-from rest_framework import serializers
-from decimal import Decimal
-
 from django.db.models import CharField
+from rest_framework import serializers
 
+from ledger.utils.precision import normalize_fraction
 
 PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 
@@ -49,7 +49,7 @@ def get_price_field(max_digits: int = None, decimal_places: int = None, default:
 
 def get_serializer_amount_field(max_digits: int = None, decimal_places: int = None, **kwargs):
 
-    return serializers.DecimalField(
+    return SerializerDecimalField(
         max_digits=max_digits or AMOUNT_MAX_DIGITS,
         decimal_places=decimal_places or AMOUNT_DECIMAL_PLACES,
         **kwargs
@@ -85,3 +85,13 @@ def get_created_field():
 def get_modified_field():
     return models.DateTimeField(auto_now=True)
 
+
+class SerializerDecimalField(serializers.DecimalField):
+    def to_representation(self, data: Decimal):
+        if data is None:
+            return None
+
+        if not isinstance(data, Decimal):
+            data = Decimal(str(data).strip())
+
+        return str(normalize_fraction(data))

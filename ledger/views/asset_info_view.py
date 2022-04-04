@@ -6,7 +6,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 
 from collector.models import CoinMarketCap
-from ledger.models import Asset
+from ledger.models import Asset, Wallet
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
 from ledger.utils.price_manager import PriceManager
@@ -96,7 +96,8 @@ class AssetsViewSet(ModelViewSet):
     def get_options(self, key: str):
         options = {
             'prices': self.request.query_params.get('prices') == '1',
-            'trend': self.request.query_params.get('trend') == '1'
+            'trend': self.request.query_params.get('trend') == '1',
+            'market': self.request.query_params.get('market')
         }
 
         return options[key]
@@ -111,6 +112,9 @@ class AssetsViewSet(ModelViewSet):
 
         if self.get_options('trend'):
             queryset = queryset.filter(trend=True)
+
+        if self.get_options('market') == Wallet.MARGIN:
+            queryset = queryset.exclude(symbol=Asset.IRT)
 
         return queryset
 

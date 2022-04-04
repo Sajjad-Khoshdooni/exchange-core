@@ -122,7 +122,7 @@ CACHES = {
     },
     'token': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': secret('TOKEN_CACHE_LOCATION', default='redis://127.0.0.1:6379/0'),
+        'LOCATION': secret('TOKEN_CACHE_LOCATION', default='redis://127.0.0.1:6379/1'),
 
         'OPTIONS': {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -130,7 +130,7 @@ CACHES = {
     },
 }
 
-PROVIDER_CACHE_LOCATION = secret('PROVIDER_CACHE_LOCATION', default='redis://127.0.0.1:6379/0')
+PROVIDER_CACHE_LOCATION = secret('PROVIDER_CACHE_LOCATION', default='redis://127.0.0.1:6379/2')
 METRICS_CACHE_LOCATION = secret('METRICS_CACHE_LOCATION', default='redis://127.0.0.1:6379/0')
 
 # Password validation

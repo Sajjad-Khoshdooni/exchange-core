@@ -89,7 +89,22 @@ app.conf.beat_schedule = {
             'expire': 1
         },
     },
-
+    'collect_metrics': {
+        'task': 'collector.tasks.metrics.collect_metrics',
+        'schedule': 5,
+        'options': {
+            'queue': 'metrics',
+            'expire': 5
+        },
+    },
+    'monitor_values': {
+        'task': 'collector.tasks.monitor.collect_values',
+        'schedule': 300,
+        'options': {
+            'queue': 'celery',
+            'expire': 300
+        },
+    },
     # market tasks
     'create depth orders': {
         'task': 'market.tasks.market_maker.create_depth_orders',
@@ -105,6 +120,38 @@ app.conf.beat_schedule = {
         'options': {
             'queue': 'market',
             'expire': 2
+        },
+    },
+    'monitor_blockchain_delays': {
+        'task': 'tracker.tasks.monitor_blockchain_delays',
+        'schedule': 30,
+        'options': {
+            'queue': 'celery',
+            'expire': 30
+        },
+    },
+    'fill_future_binance_income': {
+        'task': 'collector.tasks.binance.fill_future_binance_income',
+        'schedule': crontab(minute=5),
+        'options': {
+            'queue': 'binance',
+            'expire': 3600
+        },
+    },
+    'auto_hedge_assets': {
+        'task': 'provider.tasks.auto_hedge.auto_hedge_assets',
+        'schedule': crontab(hour=1, minute=30),
+        'options': {
+            'queue': 'binance',
+            'expire': 36000
+        },
+    },
+    'check_margin_level': {
+        'task': 'ledger.tasks.margin.check_margin_level',
+        'schedule': 5,
+        'options': {
+            'queue': 'margin',
+            'expire': 5
         },
     },
 }
@@ -134,3 +181,4 @@ if settings.DEBUG:
             },
         },
     }
+
