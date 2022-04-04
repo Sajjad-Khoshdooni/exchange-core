@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'hijack',
     'hijack.contrib.admin',
     'django_filters',
+    'drf_yasg',
 
     'financial',
     'multimedia',
@@ -200,6 +201,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
 }
 
 AUTH_USER_MODEL = 'accounts.User'
