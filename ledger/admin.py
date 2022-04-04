@@ -335,3 +335,9 @@ class MarginTransferAdmin(admin.ModelAdmin):
 class MarginLoanAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'amount', 'type', 'asset', 'status')
     search_fields = ('group_id',)
+
+
+@admin.register(models.MarginLiquidation)
+class MarginLiquidationAdmin(admin.ModelAdmin):
+    list_display = ('created', 'account', 'margin_level', 'group_id')
+    search_fields = ('group_id',)
