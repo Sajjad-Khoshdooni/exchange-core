@@ -136,7 +136,7 @@ class BankCardAdmin(AdvancedAdmin):
     actions = ['verify_bank_cards']
 
     fields_edit_conditions = {
-        'verified': True
+        'verified': M('verified')
     }
 
     @admin.action(description='تایید خودکار شماره کارت')
@@ -170,7 +170,7 @@ class BankAccountAdmin(AdvancedAdmin):
     actions = ['verify_bank_accounts_manual', 'verify_bank_accounts_auto']
 
     fields_edit_conditions = {
-        'verified': True
+        'verified': M('verified')
     }
 
     @admin.action(description='درخواست تایید خودکار شماره شبا')
