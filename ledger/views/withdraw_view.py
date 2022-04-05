@@ -36,6 +36,13 @@ class WithdrawSerializer(serializers.ModelSerializer):
             else:
                 asset = get_object_or_404(Asset, symbol=attrs['coin'])
         else:
+            if not attrs['coin']:
+                raise ValidationError('رمزارزی انتخاب نشده است.')
+            if not attrs['network']:
+                raise ValidationError('شبکه‌ای انتخاب نشده است.')
+            if not attrs['address']:
+                raise ValidationError('آدرس وارد نشده است.')
+
             asset = get_object_or_404(Asset, symbol=attrs['coin'])
             network = get_object_or_404(Network, symbol=attrs['network'])
             address = attrs['address']
@@ -110,7 +117,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transfer
-        fields = ('amount', 'address', 'coin', 'network', 'code')
+        fields = ('amount', 'address', 'coin', 'network', 'code', 'address_book_id')
 
 
 class WithdrawView(CreateAPIView):
