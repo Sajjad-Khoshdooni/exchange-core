@@ -48,15 +48,14 @@ class ForgotPasswordSerializer(serializers.Serializer):
     def create(self, validated_data):
         token = validated_data.pop('token')
         password = validated_data.pop('password')
-        user = self.instance
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_FORGET_PASSWORD)
 
         if not otp_code:
             raise ValidationError({'token': 'توکن نامعتبر است.'})
 
-        validate_password(password=password, user=user)
-
         user = User.objects.get(phone=otp_code.phone)
+
+        validate_password(password=password, user=user)
         user.set_password(password)
         user.save()
 
