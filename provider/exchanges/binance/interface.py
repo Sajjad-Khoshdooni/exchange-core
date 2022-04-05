@@ -21,7 +21,7 @@ class BinanceSpotHandler:
 
     @classmethod
     def collect_api(cls, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        if settings.DEBUG:
+        if settings.DEBUG_OR_TESTING:
             return {}
 
         data = data or {}
@@ -118,7 +118,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
     @classmethod
     def collect_api(cls, url: str, method: str = 'POST', data: dict = None):
-        if settings.DEBUG:
+        if settings.DEBUG_OR_TESTING:
             return {}
 
         return futures_send_signed_request(method, url, data or {})

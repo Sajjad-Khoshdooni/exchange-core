@@ -39,8 +39,10 @@ class LiquidationEngine:
             logger.info('Skipping liquidation...')
             return
 
-        self.margin_wallets = get_wallet_balances(account, Wallet.MARGIN)
-        self.borrowed_wallets = {wallet: -amount for (wallet, amount) in get_wallet_balances(account, Wallet.LOAN).items()}
+        self.margin_wallets = get_wallet_balances(self.account, Wallet.MARGIN)
+        self.borrowed_wallets = {
+            wallet: -amount for (wallet, amount) in get_wallet_balances(self.account, Wallet.LOAN).items()
+        }
 
     def start(self):
         logger.info('Starting liquidation for %s' % self.account.id)
@@ -73,12 +75,16 @@ class LiquidationEngine:
                 margin_wallet = margin_asset_to_wallet[asset]
                 margin_amount = self.margin_wallets[margin_wallet]
 
-                price = get_trading_price_usdt(asset.symbol, SELL)
+                price = get_trading_price_usdt(asset.symbol, BUY)
                 max_amount = self.liquidation_amount / price
 
                 amount = min(margin_amount, borrowed_amount, max_amount)
 
-                logger.info('Fast liquidating %s %s' % (amount, asset))
+                logger.info(
+                    'Fast liquidating %s %s (margin_amount=%s, borrowed_amount=%s, liquid_amount=%s, price=%s, max_amount=%s)' % (
+                        amount, asset, margin_amount, borrowed_amount, self.liquidation_amount, price, max_amount
+                    )
+                )
 
                 Trx.transaction(
                     sender=margin_asset_to_wallet[asset],

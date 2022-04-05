@@ -116,6 +116,7 @@ class MarginLoan(models.Model):
 
             with transaction.atomic():
                 self.status = DONE
+                self.save()
                 Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_BORROW, self.group_id)
                 if self.lock:
                     self.lock.release()
