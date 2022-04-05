@@ -44,12 +44,11 @@ class SignupSerializer(serializers.Serializer):
         token = validated_data.pop('token')
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_VERIFY_PHONE)
         password = validated_data.pop('password')
-        user = self.instance
 
         if not otp_code or User.objects.filter(phone=otp_code.phone).exists():
             raise ValidationError({'token': 'توکن نامعتبر است.'})
 
-        validate_password(password=password, user=user)
+        validate_password(password=password)
 
         phone = otp_code.phone
         otp_code.set_token_used()
