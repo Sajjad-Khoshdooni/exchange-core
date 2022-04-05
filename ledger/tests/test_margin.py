@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.test import Client
 from django.utils import timezone
 
-from ledger.models import Asset, Wallet
+from ledger.models import Asset, Wallet, OTCRequest, OTCTrade
 from ledger.tasks import check_margin_level
 from ledger.utils.price import get_tether_irt_price
 from ledger.utils.test import new_account, new_trx, set_price
@@ -123,8 +123,13 @@ class MarginTestCase(TestCase):
         self.loan('XRP', 1, type='repay', check_status=400)
         self.assert_margin_info(TO_TRANSFER_USDT, 0, TO_TRANSFER_USDT, 999)
 
-    def print_wallets(self):
-        for w in Wallet.objects.all():
+    def print_wallets(self, account=None):
+        wallets = Wallet.objects.all()
+
+        if account:
+            wallets = wallets.filter(account=account)
+
+        for w in wallets:
             print('%s %s %s: %s' % (w.account, w.asset.symbol, w.market, w.get_free()))
 
         print()
@@ -136,11 +141,11 @@ class MarginTestCase(TestCase):
         self.pass_quiz()
         self.transfer(TO_TRANSFER_USDT)
 
-        # self.assertEqual(check_margin_level(), 0)
+        self.assertEqual(check_margin_level(), 0)
 
         self.loan('XRP', 2 * TO_TRANSFER_USDT / XRP_USDT_PRICE)
 
-        # self.assertEqual(check_margin_level(), 0)
+        self.assertEqual(check_margin_level(), 0)
 
         self.assert_margin_info(TO_TRANSFER_USDT, 2 * TO_TRANSFER_USDT, 3 * TO_TRANSFER_USDT, Decimal('1.5'))
 
@@ -154,3 +159,38 @@ class MarginTestCase(TestCase):
         self.assertEqual(check_margin_level(), 2)
 
         self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('1.5'))
+
+    def test_liquidate2(self):
+        self.pass_quiz()
+        self.transfer(TO_TRANSFER_USDT)
+        self.loan('USDT', 2 * TO_TRANSFER_USDT)
+
+        self.assertEqual(check_margin_level(), 0)
+
+        otc_request = OTCRequest.new_trade(
+            self.account,
+            market=Wallet.MARGIN,
+            from_asset=self.usdt,
+            to_asset=self.xrp,
+            from_amount=Decimal(3 * TO_TRANSFER_USDT),
+            allow_small_trades=True
+        )
+
+        OTCTrade.execute_trade(otc_request)
+
+        self.print_wallets(self.account)
+
+        self.assertEqual(check_margin_level(), 0)
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('1.4'))
+
+        set_price(self.xrp, XRP_USDT_PRICE * 2)
+
+        self.assertEqual(check_margin_level(), 0)
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2.9'))
+
+        set_price(self.xrp, XRP_USDT_PRICE * 0.7)
+
+        self.assertEqual(check_margin_level(), 2)
+
+        self.print_wallets(self.account)
+        self.assertLessEqual(self.get_margin_info()['margin_level'], Decimal('1.45'))
