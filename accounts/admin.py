@@ -79,7 +79,7 @@ class UserNationalCodeFilter(SimpleListFilter):
     def queryset(self, request, queryset):
         national_code = request.GET.get('national_code')
         if national_code is not None:
-            return queryset.filter(~Q(national_code='') & Q(national_code=national_code))
+            return queryset.filter(national_code=national_code).exclude(national_code='')
         else:
             return queryset
 
@@ -94,7 +94,7 @@ class AnotherUserFilter(SimpleListFilter):
     def queryset(self, request, queryset):
         user_id = request.GET.get('user_id_exclude')
         if user_id is not None:
-            return queryset.filter(~Q(id=user_id))
+            return queryset.exclude(id=user_id)
         else:
             return queryset
 
