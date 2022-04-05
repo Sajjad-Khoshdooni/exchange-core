@@ -1,9 +1,7 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.throttling import UserRateThrottle
-from accounts.models import User, VerificationCode
+from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from multimedia.fields import ImageField
