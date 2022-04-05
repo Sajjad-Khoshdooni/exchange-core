@@ -203,6 +203,11 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+
+    'DEFAULT_THROTTLE_RATES': {
+        'burst': '2/min',
+        'sustained': '10/hour'
+    }
 }
 
 AUTH_USER_MODEL = 'accounts.User'
