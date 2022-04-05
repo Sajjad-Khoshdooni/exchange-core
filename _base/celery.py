@@ -128,12 +128,22 @@ app.conf.beat_schedule = {
             'expire': 36000
         },
     },
+
     'lock_monitor': {
         'task': 'ledger.tasks.lock_monitor.lock_monitor',
         'schedule': crontab(minute=0),
         'options': {
             'queue': 'celery',
             'expire': 3600
+        },
+    },
+
+    'check_margin_level': {
+        'task': 'ledger.tasks.margin.check_margin_level',
+        'schedule': 5,
+        'options': {
+            'queue': 'margin',
+            'expire': 5
         },
     },
 }

@@ -135,6 +135,10 @@ class BankCardAdmin(AdvancedAdmin):
 
     actions = ['verify_bank_cards']
 
+    fields_edit_conditions = {
+        'verified': M('verified')
+    }
+
     @admin.action(description='تایید خودکار شماره کارت')
     def verify_bank_cards(self, request, queryset):
         for bank_card in queryset.filter(verified__isnull=True):
@@ -164,6 +168,10 @@ class BankAccountAdmin(AdvancedAdmin):
     list_filter = (BankUserFilter, )
 
     actions = ['verify_bank_accounts_manual', 'verify_bank_accounts_auto']
+
+    fields_edit_conditions = {
+        'verified': M('verified')
+    }
 
     @admin.action(description='درخواست تایید خودکار شماره شبا')
     def verify_bank_accounts_auto(self, request, queryset):

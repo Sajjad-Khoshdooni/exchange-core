@@ -28,6 +28,14 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     cash = serializers.SerializerMethodField()
 
     def validate(self, attrs):
+        market = attrs['market']
+
+        if market == Wallet.MARGIN:
+            user = self.context['request'].user
+
+            if not user.margin_quiz_pass_date:
+                raise ValidationError('شما باید ابتدا به سوالات این بخش پاسخ دهید.')
+
         from_symbol = attrs['from_asset']['symbol']
         to_symbol = attrs['to_asset']['symbol']
 
@@ -37,7 +45,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         if from_symbol == to_symbol:
             raise ValidationError('هر دو دارایی نمی‌تواند یکی باشد.')
 
-        if attrs['market'] == Wallet.MARGIN and Asset.IRT in (from_symbol, to_symbol):
+        if market == Wallet.MARGIN and Asset.IRT in (from_symbol, to_symbol):
             raise ValidationError('در بازار معاملات تعهدی نمی‌توان به تومان معامله کرد.')
 
         try:

@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from accounts.models import Account
 from ledger.models import Wallet, Trx, OTCTrade, OTCRequest, Asset
+from ledger.models.margin import MarginLiquidation
 from ledger.utils.margin import MarginInfo
 from ledger.utils.price import get_trading_price_usdt, SELL, BUY
 from provider.utils import round_with_step_size
@@ -25,9 +26,10 @@ def get_wallet_balances(account: Account, market: str):
 
 class LiquidationEngine:
 
-    def __init__(self, account: Account, margin_info: MarginInfo):
-        self.account = account
+    def __init__(self, margin_liquidation: MarginLiquidation, margin_info: MarginInfo):
+        self.account = margin_liquidation.account
         self.margin_info = margin_info
+        self.margin_liquidation = margin_liquidation
 
         self.liquidation_amount = self.margin_info.get_liquidation_amount()
 
@@ -82,7 +84,8 @@ class LiquidationEngine:
                     sender=margin_asset_to_wallet[asset],
                     receiver=borrowed_asset_to_wallet[asset],
                     amount=amount,
-                    scope=Trx.LIQUID
+                    scope=Trx.LIQUID,
+                    group_id=self.margin_liquidation.group_id
                 )
 
                 self.liquidation_amount -= amount * price
@@ -180,7 +183,8 @@ class LiquidationEngine:
                 sender=wallet.asset.get_wallet(self.account, market=Wallet.MARGIN),
                 receiver=wallet,
                 amount=amount,
-                scope=Trx.LIQUID
+                scope=Trx.LIQUID,
+                group_id=self.margin_liquidation.group_id,
             )
 
             tether_amount = margin_tether_wallet.get_balance()
