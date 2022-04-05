@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from accounts.models import User
 from accounts.models.phone_verification import VerificationCode
 from accounts.validators import mobile_number_validator, password_validator
-
+from django.contrib.auth.password_validation import validate_password
 
 class InitiateSignupSerializer(serializers.Serializer):
     phone = serializers.CharField(required=True, validators=[mobile_number_validator], trim_whitespace=True)
@@ -43,9 +43,13 @@ class SignupSerializer(serializers.Serializer):
     def create(self, validated_data):
         token = validated_data.pop('token')
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_VERIFY_PHONE)
+        password = validated_data.pop('password')
+        user = self.instance
 
         if not otp_code or User.objects.filter(phone=otp_code.phone).exists():
             raise ValidationError({'token': 'توکن نامعتبر است.'})
+
+        validate_password(password=password, user=user)
 
         phone = otp_code.phone
         otp_code.set_token_used()
@@ -55,7 +59,7 @@ class SignupSerializer(serializers.Serializer):
             phone=phone,
         )
 
-        user.set_password(validated_data['password'])
+        user.set_password(password)
         user.save()
 
         otp_code.set_token_used()
