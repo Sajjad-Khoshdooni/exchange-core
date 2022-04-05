@@ -6,10 +6,11 @@ from ledger.models import AddressBook, Asset, Network
 
 
 class AddressBookSerializer(serializers.ModelSerializer):
-
+    account = serializers.CharField(read_only=True)
     asset = serializers.CharField(read_only=True)
     network = serializers.CharField()
     coin = serializers.CharField(write_only=True, required=False, default=None)
+    deleted = serializers.BooleanField(read_only=True)
 
     def validate(self, attrs):
         user = self.context['request'].user
