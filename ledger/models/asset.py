@@ -136,3 +136,15 @@ class AssetSerializerMini(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = ('symbol', 'trade_precision')
+
+
+class CoinField(serializers.CharField):
+    def to_representation(self, value: Asset):
+        if value:
+            return value.symbol
+
+    def to_internal_value(self, data: str):
+        if not data:
+            return
+        else:
+            return Asset.get(symbol=data)

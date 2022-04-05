@@ -226,8 +226,10 @@ class WalletViewSet(ModelViewSet):
 class WalletBalanceView(APIView):
 
     def get(self, request, *args, **kwargs):
+        market = request.query_params.get('market', Wallet.SPOT)
         asset = get_object_or_404(Asset, symbol=kwargs['symbol'].upper())
-        wallet = asset.get_wallet(request.user.account)
+
+        wallet = asset.get_wallet(request.user.account, market=market)
 
         return Response({
             'symbol': asset.symbol,

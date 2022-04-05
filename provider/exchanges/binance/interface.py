@@ -5,7 +5,8 @@ from django.conf import settings
 
 from ledger.utils.cache import cache_for
 from ledger.utils.precision import decimal_to_str
-from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request
+from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request, \
+    spot_send_public_request
 from provider.exchanges.binance_rules import futures_rules
 
 BINANCE = 'binance'
@@ -19,11 +20,16 @@ class BinanceSpotHandler:
     order_url = '/api/v3/order'
 
     @classmethod
-    def collect_api(cls, url: str, method: str = 'GET', data: dict = None):
+    def collect_api(cls, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
         if settings.DEBUG:
             return {}
 
-        return spot_send_signed_request(method, url, data or {})
+        data = data or {}
+
+        if signed:
+            return spot_send_signed_request(method, url, data)
+        else:
+            return spot_send_public_request(url, data)
 
     @classmethod
     def place_order(cls, symbol: str, side: str, amount: Decimal, order_type: str = MARKET,
@@ -100,7 +106,7 @@ class BinanceSpotHandler:
 
     @classmethod
     def get_step_size(cls, symbol: str) -> Decimal:
-        data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol + 'USDT'})
+        data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False)
         filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['symbols'][0]['filters']))
         lot_size = filters[0]
 
@@ -112,6 +118,9 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
     @classmethod
     def collect_api(cls, url: str, method: str = 'POST', data: dict = None):
+        if settings.DEBUG:
+            return {}
+
         return futures_send_signed_request(method, url, data or {})
 
     @classmethod
