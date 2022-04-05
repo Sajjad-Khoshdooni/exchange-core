@@ -95,3 +95,13 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
 class WithdrawView(CreateAPIView):
     serializer_class = WithdrawSerializer
+
+    def get_serializer_context(self):
+        """
+        Extra context provided to the serializer class.
+        """
+        return {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }

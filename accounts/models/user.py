@@ -95,9 +95,6 @@ class User(AbstractUser):
     selfie_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس سلفی')
     telephone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه شماره تلفن')
 
-    level_2_prize_activate = models.BooleanField(default=False, verbose_name='امکان دریافت جایزه ارتقا به سطح ۲')
-    first_trade_prize_activate = models.BooleanField(default=False, verbose_name='امکان دریافت جایزه اولین معامله')
-
     archived = models.BooleanField(default=False, verbose_name='بایگانی')
 
     def change_status(self, status: str):
