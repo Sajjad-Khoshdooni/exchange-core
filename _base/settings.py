@@ -199,13 +199,10 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle'
-    ],
+
     'DEFAULT_THROTTLE_RATES': {
         'burst': '2/min',
-        'sustained': '10/day'
+        'sustained': '10/hour'
     }
 }
 
