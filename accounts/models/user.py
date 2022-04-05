@@ -47,6 +47,7 @@ class User(AbstractUser):
         max_length=10,
         blank=True,
         verbose_name='کد ملی',
+        db_index=True,
         validators=[national_card_code_validator],
     )
     national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی',)
@@ -96,6 +97,11 @@ class User(AbstractUser):
     telephone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه شماره تلفن')
 
     archived = models.BooleanField(default=False, verbose_name='بایگانی')
+
+    margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
+
+    show_margin = models.BooleanField(default=False, verbose_name='امکان مشاهده حساب تعهدی')
+    national_code_duplicated_alert = models.BooleanField(default=False, verbose_name='آیا شماره ملی تکراری است؟')
 
     def change_status(self, status: str):
         if self.verify_status == self.PENDING and status == self.VERIFIED:
