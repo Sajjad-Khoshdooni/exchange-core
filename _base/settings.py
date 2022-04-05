@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -19,6 +20,9 @@ SECRET_KEY = secret('SECRET')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', cast=bool, default=False)
+TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
+
+DEBUG_OR_TESTING = DEBUG or TESTING
 
 HOST_URL = config('HOST_URL')
 

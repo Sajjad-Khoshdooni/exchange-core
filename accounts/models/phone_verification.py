@@ -104,7 +104,7 @@ class VerificationCode(models.Model):
             user=user,
         )
 
-        if settings.DEBUG:
+        if settings.DEBUG_OR_TESTING:
             print('[OTP] code for %s is: %s' % (otp_code.phone, otp_code.code))
         else:
             if scope != cls.SCOPE_TELEPHONE:  # is_phone(phone):
