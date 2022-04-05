@@ -8,7 +8,7 @@ from accounts import codes
 from accounts.models import User
 from accounts.models.phone_verification import VerificationCode
 from accounts.validators import password_validator
-
+from django.contrib.auth.password_validation import validate_password
 
 class InitiateForgotPasswordSerializer(serializers.Serializer):
     login = serializers.CharField(required=True)
@@ -47,13 +47,16 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         token = validated_data.pop('token')
+        password = validated_data.pop('password')
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_FORGET_PASSWORD)
 
         if not otp_code:
             raise ValidationError({'token': 'توکن نامعتبر است.'})
 
         user = User.objects.get(phone=otp_code.phone)
-        user.set_password(validated_data.pop('password'))
+
+        validate_password(password=password, user=user)
+        user.set_password(password)
         user.save()
 
         otp_code.set_token_used()

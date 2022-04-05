@@ -55,7 +55,7 @@ class OTPSerializer(serializers.ModelSerializer):
         if not phone:
             raise ValidationError('امکان ارسال کد وجود ندارد.')
 
-        return VerificationCode.send_otp_code(phone=phone, scope=scope)
+        return VerificationCode.send_otp_code(phone=phone, scope=scope, user=user)
 
     class Meta:
         model = VerificationCode
