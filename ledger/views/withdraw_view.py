@@ -49,13 +49,6 @@ class WithdrawSerializer(serializers.ModelSerializer):
             network = get_object_or_404(Network, symbol=attrs['network'])
             address = attrs['address']
 
-        if not address:
-            raise ValidationError('آدرس وارد نشده است.')
-        if not network:
-            raise ValidationError('شبکه‌ای انتخاب نشده است.')
-        if not asset:
-            raise ValidationError('رمزارزی انتخاب نشده است.')
-
         if not re.match(network.address_regex, address):
             raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
 
