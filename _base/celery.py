@@ -132,7 +132,7 @@ app.conf.beat_schedule = {
         'task': 'ledger.tasks.lock_monitor.lock_monitor',
         'schedule': crontab(minute=0),
         'options': {
-            'queue': 'binance',
+            'queue': 'celery',
             'expire': 3600
         },
     },

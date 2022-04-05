@@ -12,9 +12,9 @@ def lock_monitor():
     five_min_ago = timezone.now() - timedelta(minutes=5)
     balance_lock_count = BalanceLock.objects.filter(created__lte=five_min_ago, freed=False).count()
     if balance_lock_count > 0:
-        link = url_to_admin_list(BalanceLock) + '?freed__exact={}'.format(0)
+        link = url_to_admin_list(BalanceLock) + '?freed__exact=0'
         send_system_message(
-            message='BalanceLock Count is {}'.format(balance_lock_count), link=link
+            message='Non freed locks exists {}'.format(balance_lock_count), link=link
         )
     return
 
