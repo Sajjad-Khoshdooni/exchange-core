@@ -79,7 +79,7 @@ class UserNationalCodeFilter(SimpleListFilter):
     def queryset(self, request, queryset):
         national_code = request.GET.get('national_code')
         if national_code is not None:
-            return queryset.filter(~Q(national_code='') & Q(national_code=national_code))
+            return queryset.filter(national_code=national_code).exclude(national_code='')
         else:
             return queryset
 
@@ -94,7 +94,7 @@ class AnotherUserFilter(SimpleListFilter):
     def queryset(self, request, queryset):
         user_id = request.GET.get('user_id_exclude')
         if user_id is not None:
-            return queryset.filter(~Q(id=user_id))
+            return queryset.exclude(id=user_id)
         else:
             return queryset
 
@@ -125,10 +125,10 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
                                          )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
-                                          'telephone_verified', 'selfie_image_verified',
+                                          'telephone_verified', 'selfie_image_verified', 'national_code_duplicated_alert'
                                           )}),
         (_('Permissions'), {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'show_margin'),
         }),
         (_('Important dates'), {'fields': (
             'get_last_login_jalali', 'get_date_joined_jalali', 'get_first_fiat_deposit_date_jalali',
@@ -228,6 +228,9 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     get_otctrade_address.short_description = 'خریدهای OTC'
 
     def get_user_reject_reason(self, user: User):
+        if user.national_code_duplicated_alert:
+            return 'کد ملی تکراری'
+
         verify_fields = [
             'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
             'bank_card_verified', 'bank_account_verified', 'telephone_verified', 'selfie_image_verified'

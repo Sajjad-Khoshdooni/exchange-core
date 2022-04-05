@@ -83,8 +83,14 @@ def verify_national_code(user: User) -> bool:
 
     if not verified:
         user.change_status(User.REJECTED)
+    else:
+        # check duplicated national_code
+        if User.objects.exclude(id=user.id).filter(national_code=user.national_code, level__gt=User.LEVEL1).exists():
+            user.national_code_duplicated_alert = True
+            user.change_status(User.REJECTED)
+            return False
 
-    user.verify_level2_if_not()
+        user.verify_level2_if_not()
 
     return verified
 
