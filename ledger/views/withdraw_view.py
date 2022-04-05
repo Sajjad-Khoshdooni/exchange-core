@@ -123,4 +123,4 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
 class WithdrawView(CreateAPIView):
     serializer_class = WithdrawSerializer
-    queryset = Transfer.objects.all()
+
