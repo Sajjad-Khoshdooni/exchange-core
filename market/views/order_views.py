@@ -35,7 +35,7 @@ class OrderViewSet(mixins.CreateModelMixin,
     filter_class = OrderFilter
 
     def get_queryset(self):
-        return Order.objects.filter(wallet__account=self.request.user.account)
+        return Order.objects.filter(wallet__account=self.request.user.account).order_by('-created')
 
     def get_serializer_context(self):
         return {
