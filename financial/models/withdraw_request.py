@@ -96,9 +96,9 @@ class FiatWithdrawRequest(models.Model):
             return wallet_id
         else:
             logger.error(
-                'Fale to get wallet'
+                'fail in get wallet'
             )
-            raise Exception('Fale to get wallet')
+            raise Exception('fail in get wallet')
 
     def create_withdraw_request_paydotir(self):
 
