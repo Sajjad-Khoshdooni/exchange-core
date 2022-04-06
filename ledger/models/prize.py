@@ -41,7 +41,7 @@ class Prize(models.Model):
         )
 
     def __str__(self):
-        return 'a'
+        return '%s %s %s' % (self.account, self.amountm, self.asset)
 
 
 def alert_user_prize(user: User, scope: str):
