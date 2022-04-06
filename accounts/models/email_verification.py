@@ -74,10 +74,14 @@ class EmailVerificationCode(models.Model):
         if settings.DEBUG:
             print('[OTP] code for %s is: %s' % (otp_code.email, otp_code.code))
         else:
-
-            message = get_template("accounts/email_content.html").render(
-                {'context': otp_code.code}
-            )
+            if otp_code.scope == EmailVerificationCode.SCOPE_VERIFY_EMAIL:
+                message = get_template("accounts/email_verify_content.html").render(
+                    {'context': otp_code.code}
+                )
+            elif otp_code.scope == EmailVerificationCode.SCOPE_FORGET_PASSWORD:
+                message = get_template("accounts/email_forgot_content.html").render(
+                    {'context': otp_code.code}
+                )
             mail = EmailMessage(
                 subject='Subject here',
                 body=message,
