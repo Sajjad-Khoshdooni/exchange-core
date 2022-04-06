@@ -64,7 +64,7 @@ class OTPSerializer(serializers.ModelSerializer):
 
 class SendOTPView(CreateAPIView):
     serializer_class = OTPSerializer
-    throttle_classes = [SustainedRateThrottle, BurstRateThrottle]
+    throttle_classes = [BurstRateThrottle]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

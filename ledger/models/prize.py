@@ -1,3 +1,4 @@
+import logging
 from uuid import uuid4
 
 from django.db import models
@@ -5,6 +6,8 @@ from django.db import models
 from accounts.models import Account, User, Notification
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_amount_field
+
+logger = logging.getLogger(__name__)
 
 
 class Prize(models.Model):
@@ -51,12 +54,13 @@ def alert_user_prize(user: User, scope: str):
 
     if scope == Prize.SIGN_UP_PRIZE:
         title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(Prize.SIGN_UP_PRIZE_AMOUNT))
-
-    if scope == Prize.LEVEL2_PRIZE:
+    elif scope == Prize.LEVEL2_PRIZE:
         title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(Prize.LEVEL2_PRIZE_AMOUNT))
-
-    if scope == Prize.FIRST_TRADE_PRIZE:
+    elif scope == Prize.FIRST_TRADE_PRIZE:
         title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(Prize.FIRST_TRADE_PRIZE_AMOUNT))
+    else:
+        logger.warning('unhandled scope received', extra={'scope': scope})
+        return
 
     Notification.send(
         recipient=user,

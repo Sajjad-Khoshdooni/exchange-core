@@ -108,7 +108,7 @@ class User(AbstractUser):
 
     def change_status(self, status: str):
         from ledger.models import Prize, Asset
-        from ledger.models import alert_user_prize
+        from ledger.models.prize import alert_user_prize
         if self.verify_status == self.PENDING and status == self.VERIFIED:
             self.verify_status = self.INIT
             self.level += 1

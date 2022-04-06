@@ -8,7 +8,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import UserComment
+from accounts.models import UserComment, TrafficSource
 from accounts.utils.admin import url_to_admin_list
 from financial.models.bank_card import BankCard, BankAccount
 from financial.models.payment import Payment
@@ -414,3 +414,9 @@ class NotificationAdmin(admin.ModelAdmin):
 @admin.register(UserComment)
 class UserCommentAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ['user', 'created']
+
+
+@admin.register(TrafficSource)
+class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    list_display = ['user', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
+    search_fields = ['user__phone']
