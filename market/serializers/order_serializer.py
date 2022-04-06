@@ -11,6 +11,7 @@ from rest_framework.generics import get_object_or_404
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet
 from ledger.utils.precision import floor_precision, get_precision, get_presentation_amount
+from ledger.utils.price import IRT
 from market.models import Order, PairSymbol
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,8 @@ class OrderSerializer(serializers.ModelSerializer):
         validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
 
         wallet = symbol.asset.get_wallet(self.context['account'], market=self.context.get('market', Wallet.SPOT))
-        self.validate_order_size(validated_data['amount'], validated_data['price'])
+        min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
+        self.validate_order_size(validated_data['amount'], validated_data['price'], min_order_size)
 
         try:
             with transaction.atomic():
@@ -69,8 +71,8 @@ class OrderSerializer(serializers.ModelSerializer):
         return quantize_amount
 
     @staticmethod
-    def validate_order_size(amount: Decimal, price: Decimal):
-        if (amount * price) < Order.MIN_IRT_ORDER_SIZE:
+    def validate_order_size(amount: Decimal, price: Decimal, min_order_size: Decimal):
+        if (amount * price) < min_order_size:
             raise ValidationError({'amount': _('Small order size')})
 
     @staticmethod
