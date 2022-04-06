@@ -6,7 +6,7 @@ from django.db import models, transaction
 from django.db.models import Q
 
 from accounts.models import Account
-from accounts.tasks.verify_user import alert_user_prize
+from ledger.models import alert_user_prize
 from ledger.exceptions import AbruptDecrease
 from ledger.models import OTCRequest, Trx, Asset
 from ledger.utils.fields import get_lock_field
@@ -108,7 +108,7 @@ class OTCTrade(models.Model):
                         scope=Prize.FIRST_TRADE_PRIZE,
                         asset=Asset.objects.get(symbol=Asset.SHIB),
                     )
-                    prize.bult_trx()
+                    prize.build_trx()
                 alert_user_prize(account.user, Prize.FIRST_TRADE_PRIZE)
         return otc_trade
 

@@ -108,7 +108,7 @@ class User(AbstractUser):
 
     def change_status(self, status: str):
         from ledger.models import Prize, Asset
-        from accounts.tasks.verify_user import alert_user_prize
+        from ledger.models import alert_user_prize
         if self.verify_status == self.PENDING and status == self.VERIFIED:
             self.verify_status = self.INIT
             self.level += 1
@@ -122,7 +122,7 @@ class User(AbstractUser):
                             scope=Prize.LEVEL2_PRIZE,
                             asset=Asset.objects.get(symbol=Asset.SHIB),
                         )
-                        prize.bult_trx()
+                        prize.build_trx()
                         alert_user_prize(self, Prize.LEVEL2_PRIZE)
                 elif self.level == User.LEVEL3:
                     self.level_3_verify_datetime = timezone.now()

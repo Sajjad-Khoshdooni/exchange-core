@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from accounts.models import User
 from accounts.models.phone_verification import VerificationCode
-from accounts.tasks.verify_user import alert_user_prize
+from ledger.models import alert_user_prize
 from accounts.validators import mobile_number_validator, password_validator
 from ledger.models import Prize, Asset
 
@@ -76,7 +76,7 @@ class SignupSerializer(serializers.Serializer):
                     scope=Prize.SIGN_UP_PRIZE,
                     asset=Asset.objects.get(symbol=Asset.SHIB),
                 )
-                prize.bult_trx()
+                prize.build_trx()
                 alert_user_prize(user, prize.scope)
         return user
 

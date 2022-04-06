@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from django.db import models
 
-from accounts.models import Account
+from accounts.models import Account, User, Notification
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_amount_field
 
@@ -30,7 +30,7 @@ class Prize(models.Model):
     class Meta:
         unique_together = [('account', 'scope')]
 
-    def bult_trx(self):
+    def build_trx(self):
         system = Account.system()
         Trx.transaction(
             group_id=self.group_id,
@@ -42,3 +42,24 @@ class Prize(models.Model):
 
     def __str__(self):
         return 'a'
+
+
+def alert_user_prize(user: User, scope: str):
+    from ledger.models import Prize
+    from ledger.utils.precision import humanize_number
+    level = Notification.SUCCESS
+
+    if scope == Prize.SIGN_UP_PRIZE:
+        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(Prize.SIGN_UP_PRIZE_AMOUNT))
+
+    if scope == Prize.LEVEL2_PRIZE:
+        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(Prize.LEVEL2_PRIZE_AMOUNT))
+
+    if scope == Prize.FIRST_TRADE_PRIZE:
+        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(Prize.FIRST_TRADE_PRIZE_AMOUNT))
+
+    Notification.send(
+        recipient=user,
+        title=title,
+        level=level
+    )
