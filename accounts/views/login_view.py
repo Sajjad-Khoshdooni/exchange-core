@@ -20,7 +20,7 @@ class LoginView(APIView):
     def post(self, request):
 
         if request.user.is_authenticated:
-            return Response({'msg': 'already logged in', 'code': 1})
+            return Response({'msg': 'already logged in', 'code': 1, 'user_id': request.user.id})
 
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -29,7 +29,7 @@ class LoginView(APIView):
 
         if user:
             login(request, user)
-            return Response({'msg': 'success', 'code': 0})
+            return Response({'msg': 'success', 'code': 0, 'user_id': user.id})
         else:
             return Response({'msg': 'authentication failed', 'code': -1}, status=status.HTTP_401_UNAUTHORIZED)
 

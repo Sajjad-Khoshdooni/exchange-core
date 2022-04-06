@@ -106,10 +106,10 @@ app.conf.beat_schedule = {
     },
     'monitor_blockchain_delays': {
         'task': 'tracker.tasks.monitor_blockchain_delays',
-        'schedule': 10,
+        'schedule': 30,
         'options': {
             'queue': 'celery',
-            'expire': 10
+            'expire': 30
         },
     },
     'fill_future_binance_income': {
@@ -120,20 +120,46 @@ app.conf.beat_schedule = {
             'expire': 3600
         },
     },
+    'auto_hedge_assets': {
+        'task': 'provider.tasks.auto_hedge.auto_hedge_assets',
+        'schedule': crontab(hour=1, minute=30),
+        'options': {
+            'queue': 'binance',
+            'expire': 36000
+        },
+    },
+
+    'lock_monitor': {
+        'task': 'ledger.tasks.lock_monitor.lock_monitor',
+        'schedule': crontab(minute=0),
+        'options': {
+            'queue': 'celery',
+            'expire': 3600
+        },
+    },
+
+    'check_margin_level': {
+        'task': 'ledger.tasks.margin.check_margin_level',
+        'schedule': 5,
+        'options': {
+            'queue': 'margin',
+            'expire': 5
+        },
+    },
     'withdraw_update_provider_request_status': {
-            'task': 'financial.tasks.withdraw.withdraw_update_provider_request_status',
-            'schedule': 300,
-            'options': {
-                'queue': 'celery',
-                'expire': 300
-            },
+        'task': 'financial.tasks.withdraw.withdraw_update_provider_request_status',
+        'schedule': 300,
+        'options': {
+            'queue': 'celery',
+            'expire': 300
         },
+    },
     'create_withdraw_request_paydotir': {
-            'task': 'financial.tasks.withdraw.create_withdraw_request_paydotir_task',
-            'schedule': 100,
-            'options': {
-                'queue': 'celery',
-                'expire': 100
-            },
+        'task': 'financial.tasks.withdraw.create_withdraw_request_paydotir_task',
+        'schedule': 100,
+        'options': {
+            'queue': 'celery',
+            'expire': 100
         },
-    }
+    },
+}

@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 
 import websocket
+from django.utils import timezone
 
 from collector.metrics import set_metric
 from collector.utils.price import price_redis
@@ -79,7 +80,7 @@ class BinanceConsumer:
 
     def flush(self):
         flushed_count = len(self.queue)
-        logger.info('flushing %d items' % flushed_count)
+        logger.info('%s flushing %d items' % (timezone.now().astimezone().strftime('%Y-%m-%d %H:%M:%S'), flushed_count))
         pipe = price_redis.pipeline(transaction=False)
 
         for (name, data) in self.queue.items():

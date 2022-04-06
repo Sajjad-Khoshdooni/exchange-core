@@ -39,6 +39,8 @@ def verify_bank_account_task(bank_account_id: int, silent: bool = False):
 
     verified = verify_bank_account(bank_account)
 
+    logger.info('bank account %d verified %s' % (bank_account_id, verified))
+
     if silent:
         return verified
 
@@ -57,5 +59,3 @@ def verify_bank_account_task(bank_account_id: int, silent: bool = False):
         message=message,
         level=level
     )
-
-    logger.info('bank account %d verified %s' % (bank_account_id, verified))

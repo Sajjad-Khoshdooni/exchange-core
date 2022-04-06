@@ -10,6 +10,7 @@ from accounts.models import Account
 from ledger import models
 from ledger.models import Asset
 from ledger.utils.overview import AssetOverview
+from ledger.utils.price import get_trading_price_usdt, BUY
 from provider.exchanges import BinanceFuturesHandler
 from ledger.utils.precision import humanize_number
 
@@ -176,8 +177,10 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request',  'status','get_otc_trade_to_price_absolute_irt', )
+    list_display = ('created', 'otc_request', 'status','get_otc_trade_to_price_absolute_irt', )
     list_filter = (OTCUserFilter, 'status')
+    search_fields = ('group_id', )
+    readonly_fields = ('otc_request', )
 
     def get_otc_trade_from_amount(self, otc_trade: models.OTCTrade):
         return humanize_number(
@@ -196,6 +199,7 @@ class OTCTradeAdmin(admin.ModelAdmin):
 @admin.register(models.Trx)
 class TrxAdmin(admin.ModelAdmin):
     list_display = ('created', 'sender', 'receiver', 'amount', 'group_id')
+    search_fields = ('sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone')
 
 
 class WalletUserFilter(SimpleListFilter):
@@ -258,7 +262,7 @@ class TransferUserFilter(SimpleListFilter):
 @admin.register(models.Transfer)
 class TransferAdmin(admin.ModelAdmin):
     list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount', 'deposit', 'status', 'is_fee', 'source')
-    search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address')
+    search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
 
 
@@ -289,9 +293,10 @@ class CryptoAccountTypeFilter(SimpleListFilter):
 
 @admin.register(models.CryptoBalance)
 class CryptoBalanceAdmin(admin.ModelAdmin):
-    list_display = ('asset', 'get_network', 'get_address', 'get_owner', 'amount', 'updated_at', )
+    list_display = ('asset', 'get_network', 'get_address', 'get_owner', 'amount', 'get_value_usdt', 'updated_at', )
     search_fields = ('asset__symbol', 'deposit_address__address',)
     list_filter = (CryptoAccountTypeFilter, )
+    actions = ('collect_asset_action', )
 
     def get_network(self, crypto_balance: models.CryptoBalance):
         return crypto_balance.deposit_address.network
@@ -307,3 +312,38 @@ class CryptoBalanceAdmin(admin.ModelAdmin):
         return str(crypto_balance.deposit_address.account_secret.account)
 
     get_owner.short_description = 'owner'
+
+    def get_value_usdt(self, crypto_balance: models.CryptoBalance):
+        value = crypto_balance.amount * get_trading_price_usdt(crypto_balance.asset.symbol, BUY, raw_price=True)
+        return get_presentation_amount(value)
+
+    get_value_usdt.short_description = 'value'
+
+    @admin.action(description='ارسال به بایننس')
+    def collect_asset_action(self, request, queryset):
+        for crypto in queryset:
+            crypto.collect()
+
+
+@admin.register(models.MarginTransfer)
+class MarginTransferAdmin(admin.ModelAdmin):
+    list_display = ('created', 'account', 'amount', 'type', )
+    search_fields = ('group_id',)
+
+
+@admin.register(models.MarginLoan)
+class MarginLoanAdmin(admin.ModelAdmin):
+    list_display = ('created', 'account', 'amount', 'type', 'asset', 'status')
+    search_fields = ('group_id',)
+
+
+@admin.register(models.MarginLiquidation)
+class MarginLiquidationAdmin(admin.ModelAdmin):
+    list_display = ('created', 'account', 'margin_level', 'group_id')
+    search_fields = ('group_id',)
+
+
+@admin.register(models.AddressBook)
+class AdressBookAdmin(admin.ModelAdmin):
+    list_display = ('name', 'account', 'network', 'address', 'asset',)
+    search_fields = ('address', 'name')

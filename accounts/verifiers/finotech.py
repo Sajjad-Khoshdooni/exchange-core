@@ -5,6 +5,7 @@ import requests
 from django.core.cache import caches
 from django.utils import timezone
 from yekta_config import secret
+from yekta_config.config import config
 
 from accounts.models import FinotechRequest
 from accounts.utils.validation import gregorian_to_jalali_date_str
@@ -80,12 +81,21 @@ class FinotechRequester:
 
         url += '?trackId=%s' % req_object.track_id
 
+        request_kwargs = {
+            'url': url,
+            'timeout': 60,
+            'headers': {'Authorization': 'Bearer ' + token},
+            'proxies': {
+                'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            }
+        }
+
         try:
             if method == 'GET':
-                resp = requests.get(url, timeout=60, params=data, headers={'Authorization': 'Bearer ' + token})
+                resp = requests.get(params=data, **request_kwargs)
             else:
                 method_prop = getattr(requests, method.lower())
-                resp = method_prop(url, timeout=60, data=data, headers={'Authorization': 'Bearer ' + token})
+                resp = method_prop(data=data, **request_kwargs)
         except requests.exceptions.ConnectionError:
             req_object.response = 'timeout'
             req_object.status_code = 100
@@ -96,7 +106,7 @@ class FinotechRequester:
                 'method': method,
                 'data': data,
             })
-            return
+            raise TimeoutError
 
         if not force_renew_token and resp.status_code == 403:
             return self.collect_api(path, method, data, force_renew_token=True, search_key=search_key)
