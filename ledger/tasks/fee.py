@@ -21,7 +21,7 @@ def update_network_fees():
                 info['withdrawMin'] = Decimal(info['withdrawMin']) * 2
 
             if symbol_pair == ('BSC', 'SHIB'):
-                info['withdrawMin'] = Decimal(info['withdrawMin']) * 7  # to prevent prize withdrawing
+                info['withdrawMin'] = Decimal(info['withdrawMin']) * 5  # to prevent prize withdrawing
 
             ns.withdraw_fee = info['withdrawFee']
             ns.withdraw_min = info['withdrawMin']
