@@ -1,5 +1,8 @@
 from celery import shared_task
+from django.db.models import Max
+from django.utils import timezone
 
+from collector.metrics import set_metric
 from tracker.clients.bsc import get_web3_bsc_client
 from tracker.clients.eth import get_web3_eth_client
 from tracker.clients.tron import get_tron_client
@@ -20,7 +23,7 @@ from tracker.blockchain.web3 import (
     Web3Requester, Web3BaseNetworkCoinHandler, Web3ERC20BasedCoinHandler,
     Web3TransactionParser,
 )
-from tracker.models.block_tracker import TRXBlockTracker, BSCBlockTracker, ETHBlockTracker
+from tracker.models.block_tracker import TRXBlockTracker, BSCBlockTracker, ETHBlockTracker, BlockTracker
 
 
 @shared_task()
@@ -100,3 +103,15 @@ def eth_network_consumer(initial=False):
 def add_block_infos():
     for populator in AllPopulatorGetter.get():
         populator.populate()
+
+
+@shared_task()
+def monitor_blockchain_delays():
+    last_blocks = BlockTracker.objects.values('network__symbol').annotate(last_block_date=Max('block_date'))
+    last_blocks_dict = dict(last_blocks.values_list('network__symbol', 'last_block_date'))
+
+    now = timezone.now()
+
+    for network, last_date in last_blocks_dict.items():
+        delay = (now - last_date).total_seconds()
+        set_metric('blockchain_delay', labels={'network': network}, value=delay)

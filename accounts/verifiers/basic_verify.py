@@ -56,18 +56,18 @@ def basic_verify(user: User):
     if not bank_card.verified:
         logger.info('verifying bank_card for user_d = %d' % user.id)
 
-        if not verify_bank_card(bank_card):
+        if verify_bank_card(bank_card) is False:
             user.change_status(User.REJECTED)
             return
 
     if not bank_account.verified:
         logger.info('verifying bank_account for user_d = %d' % user.id)
 
-        if not verify_bank_account(bank_account):
+        if verify_bank_account(bank_account) is False:
             user.change_status(User.REJECTED)
             return
 
-    user.change_status(User.VERIFIED)
+    user.verify_level2_if_not()
 
 
 def verify_national_code(user: User) -> bool:
@@ -83,6 +83,14 @@ def verify_national_code(user: User) -> bool:
 
     if not verified:
         user.change_status(User.REJECTED)
+    else:
+        # check duplicated national_code
+        if User.objects.exclude(id=user.id).filter(national_code=user.national_code, level__gt=User.LEVEL1).exists():
+            user.national_code_duplicated_alert = True
+            user.change_status(User.REJECTED)
+            return False
+
+        user.verify_level2_if_not()
 
     return verified
 
@@ -125,6 +133,8 @@ def verify_user_primary_info(user: User) -> bool:
 
         return False
 
+    user.verify_level2_if_not()
+
     return True
 
 
@@ -137,9 +147,20 @@ def verify_bank_card(bank_card: BankCard) -> bool:
 
     requester = FinotechRequester(bank_card.user)
 
-    verified = requester.verify_card_pan_phone_number(bank_card.user.phone, bank_card.card_pan)
+    try:
+        verified = requester.verify_card_pan_phone_number(bank_card.user.phone, bank_card.card_pan)
+    except TimeoutError:
+        link = url_to_edit_object(bank_card)
+        send_support_message(
+            message='تایید شماره کارت کاربر با مشکل مواجه شد. لطفا دستی بررسی شود.',
+            link=link
+        )
+        return
+
     bank_card.verified = verified
     bank_card.save()
+
+    bank_card.user.verify_level2_if_not()
 
     return bank_card.verified
 
@@ -161,12 +182,19 @@ def verify_bank_account(bank_account: BankAccount) -> bool:
 
     requester = FinotechRequester(bank_account.user)
 
-    data = requester.get_iban_info(bank_account.iban)
+    try:
+        data = requester.get_iban_info(bank_account.iban)
+        if not data:
+            raise TimeoutError
 
-    if not data:
-        bank_account.verified = False
-        bank_account.save()
-        return False
+    except TimeoutError:
+        link = url_to_edit_object(bank_account)
+        send_support_message(
+            message='تایید شماره شبای کاربر با مشکل مواجه شد. لطفا دستی بررسی شود.',
+            link=link
+        )
+
+        return
 
     bank_account.bank_name = data['bankName']
     bank_account.deposit_address = data['deposit']
@@ -188,5 +216,6 @@ def verify_bank_account(bank_account: BankAccount) -> bool:
     bank_account.verified = verified
     bank_account.save()
 
-    return verified
+    bank_account.user.verify_level2_if_not()
 
+    return verified

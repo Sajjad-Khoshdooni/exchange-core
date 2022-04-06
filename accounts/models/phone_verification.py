@@ -17,10 +17,12 @@ class VerificationCode(models.Model):
     SCOPE_VERIFY_PHONE = 'verify'
     SCOPE_WITHDRAW = 'withdraw'
     SCOPE_TELEPHONE = 'tel'
+    SCOPE_CHANGE_PASSWORD = 'change_pass'
 
     SCOPE_CHOICES = [
         (SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_PHONE, SCOPE_VERIFY_PHONE),
-        (SCOPE_WITHDRAW, SCOPE_WITHDRAW), (SCOPE_TELEPHONE, SCOPE_TELEPHONE)
+        (SCOPE_WITHDRAW, SCOPE_WITHDRAW), (SCOPE_TELEPHONE, SCOPE_TELEPHONE),
+        (SCOPE_CHANGE_PASSWORD, SCOPE_CHANGE_PASSWORD),
     ]
 
     created = models.DateTimeField(auto_now_add=True)
@@ -53,7 +55,7 @@ class VerificationCode(models.Model):
     )
 
     scope = models.CharField(
-        max_length=8,
+        max_length=16,
         choices=SCOPE_CHOICES
     )
 
@@ -104,7 +106,7 @@ class VerificationCode(models.Model):
             user=user,
         )
 
-        if settings.DEBUG:
+        if settings.DEBUG_OR_TESTING:
             print('[OTP] code for %s is: %s' % (otp_code.phone, otp_code.code))
         else:
             if scope != cls.SCOPE_TELEPHONE:  # is_phone(phone):

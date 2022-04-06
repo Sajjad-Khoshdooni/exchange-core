@@ -1,15 +1,17 @@
+import logging
+
 from celery import shared_task
+from prometheus_client import Counter, Gauge
 
 from collector.metrics.defs import METRICS
 from collector.metrics.redis import metrics_redis, prefix_metrics
-import logging
 
 logger = logging.getLogger(__name__)
 
 
 @shared_task
 def collect_metrics():
-    metrics = list(metrics_redis.keys(f'{prefix_metrics}_*'))
+    metrics = list(metrics_redis.keys(f'{prefix_metrics}:*'))
     pipeline = metrics_redis.pipeline(transaction=False)
 
     for metric in metrics:
@@ -27,13 +29,22 @@ def collect_metrics():
 
         labels = {l: v for (l, v) in map(lambda s: s.split('-'), parts[2:])}
 
-        gauge = METRICS.pop[metric_key]
+        prom = METRICS[metric_key]
 
         if labels:
-            for label in gauge._labelnames:
+            for label in prom._labelnames:
                 if label not in labels:
                     labels[label] = 'null'
 
-            gauge.labels(**labels).set(float(metrics_values[key]))
+            prom = prom.labels(**labels)
+
+        if isinstance(prom, Gauge):
+            prom.set(float(value))
+
+        elif isinstance(prom, Counter):
+            value = metrics_redis.get(key)
+            metrics_redis.set(key, 0)
+
+            prom.inc(float(value))
         else:
-            gauge.metrics[metric_key].set(float(value))
+            raise NotImplementedError

@@ -75,3 +75,14 @@ class Account(models.Model):
 
         if self.type and self.user:
             raise Exception('User connected to system account')
+
+    def print(self):
+        from ledger.models import Wallet
+        wallets = Wallet.objects.filter(account=self).order_by('market')
+
+        print('Wallets')
+
+        for w in wallets:
+            print('%s %s %s: %s' % (w.account, w.asset.symbol, w.market, w.get_free()))
+
+        print()

@@ -1,3 +1,4 @@
+import time
 from decimal import Decimal
 
 from rest_framework import serializers
@@ -5,7 +6,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 
 from collector.models import CoinMarketCap
-from ledger.models import Asset
+from ledger.models import Asset, Wallet
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
 from ledger.utils.price_manager import PriceManager
@@ -38,7 +39,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
     def get_trend_url(self, asset: Asset):
         cap = CoinMarketCap.objects.filter(symbol=asset.symbol).first()
         if cap:
-            return 'https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/%d.svg' % cap.internal_id
+            return 'https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/%d.svg?v=%s' % \
+                   (cap.internal_id, str(int(time.time()) // 3600))
         else:
             return '/'
 
@@ -52,7 +54,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
         cap = self.get_cap(asset)
 
         if cap:
-            return asset.get_presentation_amount(Decimal(cap.volume_24h))
+            return int(cap.volume_24h)
 
     def get_cap(self, asset) -> CoinMarketCap:
         return self.context['cap_info'].get(asset.symbol)
@@ -94,7 +96,8 @@ class AssetsViewSet(ModelViewSet):
     def get_options(self, key: str):
         options = {
             'prices': self.request.query_params.get('prices') == '1',
-            'trend': self.request.query_params.get('trend') == '1'
+            'trend': self.request.query_params.get('trend') == '1',
+            'market': self.request.query_params.get('market')
         }
 
         return options[key]
@@ -109,6 +112,9 @@ class AssetsViewSet(ModelViewSet):
 
         if self.get_options('trend'):
             queryset = queryset.filter(trend=True)
+
+        if self.get_options('market') == Wallet.MARGIN:
+            queryset = queryset.exclude(symbol=Asset.IRT)
 
         return queryset
 

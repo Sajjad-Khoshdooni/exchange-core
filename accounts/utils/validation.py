@@ -1,9 +1,8 @@
-import re
+import datetime
 from datetime import timedelta
 from secrets import randbelow
-import datetime
-import jdatetime
 
+import jdatetime
 from django.utils import timezone
 
 MINUTES = 60
@@ -36,6 +35,20 @@ def fifteen_minutes_later_datetime():
 
 def gregorian_to_jalali_date(date: datetime.date):
     return jdatetime.date.fromgregorian(day=date.day, month=date.month, year=date.year)
+
+
+def gregorian_to_jalali_date_str(date: datetime.date):
+    return gregorian_to_jalali_date(date).strftime('%Y/%m/%d')
+
+
+def gregorian_to_jalali_datetime(d: datetime):
+    d = d.astimezone()
+    return jdatetime.datetime.fromgregorian(year=d.year, month=d.month, day=d.day, hour=d.hour, minute=d.minute,
+                                            second=d.second)
+
+
+def gregorian_to_jalali_datetime_str(d: datetime):
+    return gregorian_to_jalali_datetime(d).strftime('%Y/%m/%d %H:%M:%S')
 
 
 def parse_positive_int(inp: str, default: int = None):

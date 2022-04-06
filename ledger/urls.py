@@ -24,6 +24,22 @@ urlpatterns = [
 
     path('v1/margin/info/', views.MarginInfoView.as_view()),
     path('v1/margin/info/<slug:symbol>/', views.AssetMarginInfoView.as_view()),
-    path('v1/margin/transfer/', views.MarginTransferView.as_view()),
-    path('v1/margin/loan/', views.MarginLoanView.as_view()),
+    path('v1/margin/transfer/', views.MarginTransferViewSet.as_view({
+        'get': 'list',
+        'post': 'create'
+    })),
+    path('v1/margin/loan/', views.MarginLoanViewSet.as_view({
+        'get': 'list',
+        'post': 'create'
+    })),
+
+    path('v1/addressbook/<int:pk>/', views.AddressBookView.as_view({
+        'get': 'retrieve',
+        'delete': 'destroy',
+        'patch': 'partial_update',
+    })),
+    path('v1/addressbook/', views.AddressBookView.as_view({
+        'post': 'create',
+        'get': 'list',
+    })),
 ]

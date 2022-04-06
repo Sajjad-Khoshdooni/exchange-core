@@ -8,6 +8,7 @@ from .basic_verify_user_view import BasicInfoVerificationViewSet
 from .notification_view import NotificationViewSet, UnreadAllNotificationView
 from .full_verify_user_view import FullVerificationViewSet
 from .telephone_verify_view import InitiateTelephoneVerifyView, TelephoneOTPVerifyView
+from .dashboard import dashboard
+from .change_password_view import ChangePasswordView
+from .quiz_passed_view import QuizPassedView
 from .email_verify_view import EmailOTPVerifyView, EmailVerifyView
-
-

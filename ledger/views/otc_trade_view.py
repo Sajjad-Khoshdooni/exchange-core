@@ -25,8 +25,17 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     expire = serializers.SerializerMethodField()
     coin = serializers.SerializerMethodField()
     coin_price = serializers.SerializerMethodField()
+    cash = serializers.SerializerMethodField()
 
     def validate(self, attrs):
+        market = attrs['market']
+
+        if market == Wallet.MARGIN:
+            user = self.context['request'].user
+
+            if not user.margin_quiz_pass_date:
+                raise ValidationError('شما باید ابتدا به سوالات این بخش پاسخ دهید.')
+
         from_symbol = attrs['from_asset']['symbol']
         to_symbol = attrs['to_asset']['symbol']
 
@@ -36,7 +45,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         if from_symbol == to_symbol:
             raise ValidationError('هر دو دارایی نمی‌تواند یکی باشد.')
 
-        if attrs['market'] == Wallet.MARGIN and Asset.IRT in (from_symbol, to_symbol):
+        if market == Wallet.MARGIN and Asset.IRT in (from_symbol, to_symbol):
             raise ValidationError('در بازار معاملات تعهدی نمی‌توان به تومان معامله کرد.')
 
         try:
@@ -78,7 +87,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         except InvalidAmount as e:
             raise ValidationError(str(e))
         except SmallAmountTrade:
-            raise ValidationError('ارزش معامله باید حداقل 100,000 تومان باشد.')
+            raise ValidationError('ارزش معامله باید حداقل 10,000 تومان باشد.')
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست.'})
 
@@ -97,6 +106,10 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         conf = otc_request.get_trade_config()
         return conf.coin.symbol
 
+    def get_cash(self, otc_request: OTCRequest):
+        conf = otc_request.get_trade_config()
+        return conf.cash.symbol
+
     def get_coin_price(self, otc_request: OTCRequest):
         conf = otc_request.get_trade_config()
 
@@ -110,7 +123,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = OTCRequest
         fields = ('from_asset', 'to_asset', 'from_amount', 'to_amount', 'token', 'price', 'expire', 'market', 'coin',
-                  'coin_price')
+                  'coin_price', 'cash')
         read_only_fields = ('token', 'price')
 
 
@@ -120,10 +133,14 @@ class OTCTradeRequestView(CreateAPIView):
 
 class OTCTradeSerializer(serializers.ModelSerializer):
     token = serializers.CharField(write_only=True)
+    value_usdt = serializers.SerializerMethodField()
+
+    def get_value_usdt(self, otc_trade: OTCTrade):
+        return otc_trade.otc_request.to_price_absolute_usdt * otc_trade.otc_request.to_amount
 
     class Meta:
         model = OTCTrade
-        fields = ('id', 'token', 'status')
+        fields = ('id', 'token', 'status', 'value_usdt')
         read_only_fields = ('token', )
 
     def create(self, validated_data):
