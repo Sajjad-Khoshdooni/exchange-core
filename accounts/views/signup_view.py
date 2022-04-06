@@ -1,14 +1,16 @@
 from django.contrib.auth import login
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from accounts.throttle import SustainedRateThrottle,BurstRateThrottle
-from accounts.models import User
+
+from accounts.models import User, TrafficSource
 from accounts.models.phone_verification import VerificationCode
+from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
 from accounts.validators import mobile_number_validator, password_validator
-from django.contrib.auth.password_validation import validate_password
+
 
 class InitiateSignupSerializer(serializers.Serializer):
     phone = serializers.CharField(required=True, validators=[mobile_number_validator], trim_whitespace=True)
@@ -40,6 +42,7 @@ class SignupSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
     token = serializers.UUIDField(write_only=True, required=True)
     password = serializers.CharField(required=True, write_only=True, validators=[password_validator])
+    utm = serializers.JSONField(allow_null=True, required=False)
 
     def create(self, validated_data):
         token = validated_data.pop('token')
@@ -63,6 +66,19 @@ class SignupSerializer(serializers.Serializer):
         user.save()
 
         otp_code.set_token_used()
+
+        utm = validated_data['utm'] or {}
+        utm_source = utm.get('utm_source')
+
+        if utm_source:
+            TrafficSource.objects.create(
+                user=user,
+                utm_source=utm_source,
+                utm_medium=utm.get('utm_medium', ''),
+                utm_campaign=utm.get('utm_campaign', ''),
+                utm_content=utm.get('utm_content', ''),
+                utm_term=utm.get('utm_term', ''),
+            )
 
         return user
 
