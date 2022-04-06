@@ -1,4 +1,6 @@
+from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
 from django.contrib.auth import login
+from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -8,9 +10,9 @@ from rest_framework.views import APIView
 
 from accounts.models import User
 from accounts.models.phone_verification import VerificationCode
+from accounts.tasks.verify_user import alert_user_prize
 from accounts.validators import mobile_number_validator, password_validator
 from ledger.models import Prize, Asset
-from accounts.tasks.verify_user import alert_user_prize
 
 
 class InitiateSignupSerializer(serializers.Serializer):
@@ -19,6 +21,7 @@ class InitiateSignupSerializer(serializers.Serializer):
 
 class InitiateSignupView(APIView):
     permission_classes = []
+    throttle_classes = [SustainedRateThrottle, BurstRateThrottle]
 
     def post(self, request):
 
@@ -46,9 +49,12 @@ class SignupSerializer(serializers.Serializer):
     def create(self, validated_data):
         token = validated_data.pop('token')
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_VERIFY_PHONE)
+        password = validated_data.pop('password')
 
         if not otp_code or User.objects.filter(phone=otp_code.phone).exists():
             raise ValidationError({'token': 'توکن نامعتبر است.'})
+
+        validate_password(password=password)
 
         phone = otp_code.phone
         otp_code.set_token_used()
@@ -58,7 +64,7 @@ class SignupSerializer(serializers.Serializer):
             phone=phone,
         )
 
-        user.set_password(validated_data['password'])
+        user.set_password(password)
         user.save()
 
         otp_code.set_token_used()

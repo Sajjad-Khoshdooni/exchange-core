@@ -21,6 +21,9 @@ class CryptoBalance(models.Model):
     class Meta:
         unique_together = ('deposit_address', 'asset')
 
+    def __str__(self):
+        return '%s %s %f' % (self.asset, self.deposit_address, self.amount)
+
     def update(self):
         balance = CryptoAccountBalanceGetterFactory.build(self.deposit_address.network).get_asset_of_account(
             self.deposit_address, self.asset
@@ -47,8 +50,7 @@ class CryptoBalance(models.Model):
 
         WithdrawHandler.withdraw_from_transfer(transfer)
 
-    @classmethod
-    def collect_all(cls):
+    def collect(self):
         from ledger.withdraw.fee_handler import FeeHandler
 
         binance_network_addresses = {
@@ -56,6 +58,29 @@ class CryptoBalance(models.Model):
             'BSC': '0x4b6c77358c69ed0a3af7c1a1131560432b824d69'
         }
 
+        network = self.deposit_address.network
+        coin = self.asset.symbol
+        base_coin = DEFAULT_COIN_OF_NETWORK[network.symbol]
+
+        fee_amount = FeeHandler(network, self.asset).get_asset_fee()
+
+        if coin == base_coin:
+            amount = self.amount - fee_amount
+        else:
+            amount = self.amount
+
+        value = amount * get_trading_price_usdt(coin=coin, side=BUY, raw_price=True)
+        fee_value = fee_amount * get_trading_price_usdt(base_coin, side=BUY, raw_price=True)
+
+        if value <= fee_value * 2:
+            logger.info('ignoring crypto = %d for small value' % self.id)
+            return
+
+        address = binance_network_addresses[self.deposit_address.network.symbol]
+        self.send_to(address, amount)
+
+    @classmethod
+    def collect_all(cls, exclude_base_assets: bool = True):
         all_crypto = CryptoBalance.objects.filter(
             amount__gt=0
         ).exclude(
@@ -63,16 +88,11 @@ class CryptoBalance(models.Model):
         )
 
         for crypto in all_crypto:
-            value = crypto.amount * get_trading_price_usdt(coin=crypto.asset.symbol, side=BUY, raw_price=True)
+            coin = crypto.asset.symbol
+            base_coin = DEFAULT_COIN_OF_NETWORK[crypto.deposit_address.network.symbol]
 
-            fee_amount = FeeHandler(crypto.deposit_address.network, crypto.asset).get_asset_fee()
-            default_coin = DEFAULT_COIN_OF_NETWORK[crypto.deposit_address.network.symbol]
-
-            fee_value = fee_amount * get_trading_price_usdt(default_coin, side=BUY, raw_price=True)
-
-            if value <= fee_value * 2:
-                logger.info('ignoring crypto = %d for small value' % crypto.id)
+            if exclude_base_assets and coin == base_coin:
+                logger.info('ignoring base asset transfer')
                 continue
 
-            address = binance_network_addresses[crypto.deposit_address.network.symbol]
-            crypto.send_to(address, crypto.amount)
+            crypto.collect()

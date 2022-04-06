@@ -23,8 +23,6 @@ class User(AbstractUser):
 
     USERNAME_FIELD = 'phone'
 
-
-
     objects = CustomUserManager()
     history = HistoricalRecords()
 
@@ -49,6 +47,7 @@ class User(AbstractUser):
         max_length=10,
         blank=True,
         verbose_name='کد ملی',
+        db_index=True,
         validators=[national_card_code_validator],
     )
     national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی',)
@@ -97,6 +96,13 @@ class User(AbstractUser):
     selfie_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس سلفی')
     telephone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه شماره تلفن')
 
+    archived = models.BooleanField(default=False, verbose_name='بایگانی')
+
+    margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
+
+    show_margin = models.BooleanField(default=False, verbose_name='امکان مشاهده حساب تعهدی')
+    national_code_duplicated_alert = models.BooleanField(default=False, verbose_name='آیا شماره ملی تکراری است؟')
+
     level_2_prize_activate = models.BooleanField(default=False, verbose_name='امکان دریافت جایزه ارتقا به سطح ۲')
     first_trade_prize_activate = models.BooleanField(default=False, verbose_name='امکان دریافت جایزه اولین معامله')
 
@@ -134,9 +140,23 @@ class User(AbstractUser):
 
 
     @property
-    def primary_data_verified(self):
-        return self.first_name and self.first_name_verified and self.last_name and self.last_name_verified and \
-            self.birth_date and self.birth_date_verified
+    def primary_data_verified(self) -> bool:
+        return self.first_name and self.first_name_verified and self.last_name and self.last_name_verified \
+               and self.birth_date and self.birth_date_verified
+
+    def is_level2_verifiable(self) -> bool:
+        from financial.models import BankCard, BankAccount
+
+        return self.national_code and self.national_code_verified and self.primary_data_verified and \
+               BankCard.objects.filter(user=self, verified=True) and \
+               BankAccount.objects.filter(user=self, verified=True)
+
+    def verify_level2_if_not(self) -> bool:
+        if self.level == User.LEVEL1 and self.is_level2_verifiable():
+            self.change_status(User.VERIFIED)
+            return True
+
+        return False
 
     @classmethod
     def get_user_from_login(cls, email_or_phone: str) -> 'User':

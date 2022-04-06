@@ -1,4 +1,3 @@
-from prometheus_client.utils import INF
 from yekta_metrics import PrometheusClient
 
 
@@ -16,4 +15,6 @@ METRICS = {
     'internal_value': prom.gauge('internal_value', 'internal value', ['currency']),
 
     'binance_price_updates': prom.counter('binance_price_updates', 'binance price updates'),
+
+    'blockchain_delay': prom.gauge('blockchain_delay', 'blockchain delay', ['network']),
 }

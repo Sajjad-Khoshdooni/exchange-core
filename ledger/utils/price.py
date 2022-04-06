@@ -170,13 +170,20 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
 
 
 def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
+    price = price_redis.hget('nob:usdtirt', SIDE_MAP[side])
+    if price:
+        return Decimal(price)
+
     tether_rial = get_price('USDT', side=side, exchange=NOBITEX, market_symbol=IRT, now=now)
     return Decimal(tether_rial / 10)
 
 
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Decimal:
     from ledger.models.asset import Asset
-    assert coin != IRT
+
+    if coin == IRT:
+        return 1 / get_tether_irt_price(get_other_side(side))
+
     asset = Asset.get(coin)
 
     bid_diff = asset.bid_diff
@@ -194,6 +201,7 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Dec
             multiplier = 1 - bid_diff
         else:
             multiplier = 1 + ask_diff
+
     price = get_price(coin, side)
 
     return price * multiplier

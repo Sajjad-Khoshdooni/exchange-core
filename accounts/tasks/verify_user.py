@@ -21,9 +21,16 @@ def alert_user_verify_status(user: User):
     if user.verify_status == User.PENDING:
         return
 
+    notif_message = ''
+
     if user.level >= User.LEVEL2 or user.verify_status == User.REJECTED:
         if user.verify_status == User.REJECTED:
-            title = 'اطلاعات وارد شده نیاز به بازنگری دارد.'
+            if user.national_code_duplicated_alert:
+                title = 'کد ملی تکراری است. لطفا به حساب اصلی‌تان وارد شوید.'
+                notif_message = 'شما قبلا در راستین با شماره موبایل دیگری ثبت‌نام کرده‌اید و احراز هویت‌تان انجام شده است. لطفا از آن حساب استفاده کنید.'
+            else:
+                title = 'اطلاعات وارد شده نیاز به بازنگری دارد.'
+
             level = Notification.ERROR
             template = 'levelup-rejected'
             levelup = user.level + 1
@@ -36,7 +43,8 @@ def alert_user_verify_status(user: User):
         Notification.send(
             recipient=user,
             title=title,
-            level=level
+            level=level,
+            message=notif_message
         )
         send_message_by_kavenegar(
             phone=user.phone,
