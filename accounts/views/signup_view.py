@@ -1,5 +1,6 @@
 from django.contrib.auth import login
 from django.contrib.auth.password_validation import validate_password
+from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
@@ -18,7 +19,7 @@ class InitiateSignupSerializer(serializers.Serializer):
 
 class InitiateSignupView(APIView):
     permission_classes = []
-    throttle_classes = [SustainedRateThrottle, BurstRateThrottle]
+    throttle_classes = [BurstRateThrottle]
 
     def post(self, request):
 
@@ -42,7 +43,7 @@ class SignupSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
     token = serializers.UUIDField(write_only=True, required=True)
     password = serializers.CharField(required=True, write_only=True, validators=[password_validator])
-    utm = serializers.JSONField(allow_null=True, required=False)
+    utm = serializers.JSONField(allow_null=True, required=False, write_only=True)
 
     def create(self, validated_data):
         token = validated_data.pop('token')
@@ -62,23 +63,24 @@ class SignupSerializer(serializers.Serializer):
             phone=phone,
         )
 
-        user.set_password(password)
-        user.save()
+        with transaction.atomic():
+            user.set_password(password)
+            user.save()
 
-        otp_code.set_token_used()
+            otp_code.set_token_used()
 
-        utm = validated_data['utm'] or {}
-        utm_source = utm.get('utm_source')
+            utm = validated_data.get('utm') or {}
+            utm_source = utm.get('utm_source')
 
-        if utm_source:
-            TrafficSource.objects.create(
-                user=user,
-                utm_source=utm_source,
-                utm_medium=utm.get('utm_medium', ''),
-                utm_campaign=utm.get('utm_campaign', ''),
-                utm_content=utm.get('utm_content', ''),
-                utm_term=utm.get('utm_term', ''),
-            )
+            if utm_source:
+                TrafficSource.objects.create(
+                    user=user,
+                    utm_source=utm_source,
+                    utm_medium=utm.get('utm_medium', ''),
+                    utm_campaign=utm.get('utm_campaign', ''),
+                    utm_content=utm.get('utm_content', ''),
+                    utm_term=utm.get('utm_term', ''),
+                )
 
         return user
 
