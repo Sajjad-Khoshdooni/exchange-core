@@ -16,6 +16,7 @@ class Trx(models.Model):
     FAST_LIQUID = 'fl'
     LIQUID = 'l'
     COMMISSION = 'c'
+    PRIZE = 'p'
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -29,7 +30,7 @@ class Trx(models.Model):
         max_length=2,
         choices=((TRADE, 'trade'), (TRANSFER, 'transfer'), (MARGIN_TRANSFER, 'margin transfer'),
                  (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (LIQUID, 'liquid'),
-                 (FAST_LIQUID, 'fast liquid'))
+                 (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'))
     )
 
     class Meta:
