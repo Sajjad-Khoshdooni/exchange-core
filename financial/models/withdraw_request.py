@@ -1,5 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from yekta_config import secret
+
 from accounts.models import Notification
 from accounts.models import Account
 from financial.models import BankAccount
@@ -85,7 +87,7 @@ class FiatWithdrawRequest(models.Model):
 
         resp = requests.get(
             self.BASE_URL + '/api/v2/wallets',
-            headers={'Authorization': 'Bearer {test}'}
+            headers={'Authorization': '%s' % secret('PAYDOTIR_WITHDRAW_KEY')}
         )
         resp = resp.json()
         if resp['success']:
@@ -113,7 +115,7 @@ class FiatWithdrawRequest(models.Model):
         else:
             second_resp = requests.post(
                 self.BASE_URL + '/api/v2/cashouts',
-                headers={'Authorization': 'Bearer {test}'},
+                headers={'Authorization': '%s' % secret('PAYDOTIR_WITHDRAW_KEY')},
                 json={
                     'walletid': wallet_id,
                     'amount': self.amount * 10,
@@ -134,7 +136,7 @@ class FiatWithdrawRequest(models.Model):
     def update_provider_request_status(self):
         resp = requests.get(
             self.BASE_URL + '/api/v2/cashouts/%s' % self.pk,
-            headers={'Authorization': 'Bearer {test}'},
+            headers={'Authorization': '%s' % secret('PAYDOTIR_WITHDRAW_KEY')},
         )
         resp_json = resp.json()
         if resp_json['success']:
