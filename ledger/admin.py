@@ -341,3 +341,9 @@ class MarginLoanAdmin(admin.ModelAdmin):
 class MarginLiquidationAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'margin_level', 'group_id')
     search_fields = ('group_id',)
+
+
+@admin.register(models.AddressBook)
+class AdressBookAdmin(admin.ModelAdmin):
+    list_display = ('name', 'account', 'network', 'address', 'asset',)
+    search_fields = ('address', 'name')

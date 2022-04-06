@@ -12,3 +12,4 @@ from .otc_trade import OTCTrade
 from .transfer import Transfer
 from .margin import MarginTransfer, MarginLoan, MarginLiquidation
 from .crypto_balance import CryptoBalance
+from .address_book import AddressBook
