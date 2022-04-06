@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import timedelta
 
@@ -8,6 +9,8 @@ from django.utils import timezone
 
 from accounts.tasks import send_message_by_kavenegar
 from accounts.utils.validation import generate_random_code, PHONE_MAX_LENGTH, fifteen_minutes_later_datetime, MINUTES
+
+logger = logging.getLogger(__name__)
 
 
 class VerificationCode(models.Model):
@@ -93,6 +96,16 @@ class VerificationCode(models.Model):
     @classmethod
     def send_otp_code(cls, phone: str, scope: str, user = None) -> 'VerificationCode':
         # todo: handle throttling (don't allow to send more than twice in minute per phone / scope)
+        # todo: use user devices / ip , ...
+
+        prev_codes = VerificationCode.objects.filter(
+            phone=phone,
+            created__gte=timezone.now() - timedelta(minutes=15),
+        ).order_by('created')
+
+        if prev_codes.count() >= 3:
+            logger.info('Ignored sending otp to kavenegar')
+            return prev_codes.last()
 
         if scope == cls.SCOPE_TELEPHONE:
             code_length = 4
