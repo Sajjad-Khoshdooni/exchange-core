@@ -14,7 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'on_boarding_flow', 'snackbar_status',
+            'show_margin', 'on_boarding_flow', 'on_boarding_status',
         )
 
     def get_on_boarding_status(self, user: User):
