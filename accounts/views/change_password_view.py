@@ -1,11 +1,10 @@
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 from accounts.models import VerificationCode
-from accounts.models import User
-from django.contrib.auth.password_validation import validate_password
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -51,5 +50,3 @@ class ChangePasswordView(APIView):
 
         change_password_serializer.save()
         return Response({'msg': 'password update successfully'})
-
-

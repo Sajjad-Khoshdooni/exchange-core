@@ -23,6 +23,8 @@ class User(AbstractUser):
 
     USERNAME_FIELD = 'phone'
 
+    FIAT, CRYPTO = 'fiat', 'crypto'
+
     objects = CustomUserManager()
     history = HistoricalRecords()
 
@@ -102,6 +104,13 @@ class User(AbstractUser):
 
     show_margin = models.BooleanField(default=False, verbose_name='امکان مشاهده حساب تعهدی')
     national_code_duplicated_alert = models.BooleanField(default=False, verbose_name='آیا شماره ملی تکراری است؟')
+
+    on_boarding_flow = models.CharField(
+        max_length=10,
+        choices=((FIAT, FIAT), (CRYPTO, CRYPTO),),
+        blank=True,
+        default=''
+    )
 
     def change_status(self, status: str):
         from ledger.models import Prize, Asset
