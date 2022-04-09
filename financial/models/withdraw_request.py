@@ -15,7 +15,7 @@ class FiatWithdrawRequest(models.Model):
 
     bank_account = models.ForeignKey(to=BankAccount, on_delete=models.PROTECT, verbose_name='حساب بانکی')
 
-    amount = models.PositiveIntegerField(verbose_name='میزان قابل برداشت')
+    amount = models.PositiveIntegerField(verbose_name='میزان برداشت')
     fee_amount = models.PositiveIntegerField(verbose_name='کارمزد')
 
     status = get_status_field()
