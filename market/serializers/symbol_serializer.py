@@ -27,6 +27,7 @@ class SymbolSerializer(serializers.ModelSerializer):
         fields = ('name', 'asset', 'base_asset', 'taker_fee', 'maker_fee', 'tick_size', 'step_size',
                   'min_trade_quantity', 'max_trade_quantity', 'enable',)
 
+
 class SymbolBreifStatsSerializer(serializers.ModelSerializer):
     asset = serializers.CharField(source='asset.symbol', read_only=True)
     base_asset = serializers.CharField(source='base_asset.symbol', read_only=True)

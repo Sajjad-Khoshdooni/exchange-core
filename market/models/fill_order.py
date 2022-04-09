@@ -130,7 +130,7 @@ class FillOrder(models.Model):
     def get_last(cls, symbol: 'PairSymbol', max_datetime=None):
         qs = cls.objects.filter(symbol=symbol).order_by('-id')
         if max_datetime:
-            qs.filter(created__lte=max_datetime)
+            qs = qs.filter(created__lte=max_datetime)
         return qs.first()
 
     def format_values(self):
