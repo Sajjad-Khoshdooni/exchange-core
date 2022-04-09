@@ -23,6 +23,8 @@ class User(AbstractUser):
 
     USERNAME_FIELD = 'phone'
 
+    FIAT, CRYPTO = 'fiat', 'crypto'
+
     objects = CustomUserManager()
     history = HistoricalRecords()
 
@@ -105,6 +107,13 @@ class User(AbstractUser):
 
     level_2_prize_activate = models.BooleanField(default=False, verbose_name='امکان دریافت جایزه ارتقا به سطح ۲')
     first_trade_prize_activate = models.BooleanField(default=False, verbose_name='امکان دریافت جایزه اولین معامله')
+
+    after_sign_up_status = models.CharField(
+        max_length=10,
+        choices=((FIAT, FIAT), (CRYPTO, CRYPTO),),
+        blank=True,
+        default=''
+    )
 
     def change_status(self, status: str):
         from ledger.models import Prize, Asset
