@@ -91,7 +91,7 @@ class VerificationCode(models.Model):
         ).first()
 
     @classmethod
-    def send_otp_code(cls, phone: str, scope: str, user = None) -> 'VerificationCode':
+    def send_otp_code(cls, phone: str, scope: str, user=None) -> 'VerificationCode':
         # todo: handle throttling (don't allow to send more than twice in minute per phone / scope)
 
         if scope == cls.SCOPE_TELEPHONE:

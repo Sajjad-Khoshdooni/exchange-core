@@ -5,3 +5,5 @@ from .phone_verification import VerificationCode
 from .account import Account
 from .user_comment import UserComment
 from .traffic_source import TrafficSource
+from .external_notif import ExternalNotification
+
