@@ -32,6 +32,6 @@ class Confirmer:
             Notification.send(
                 recipient=transfer.wallet.account.user,
                 title='دریافت شد: %s %s' % (humanize_number(received_amount), transfer.wallet.asset.symbol),
-                message='از آدرس %s' % transfer.out_address
+                message='از آدرس %s ...' % transfer.out_address[:4]
             )
 
