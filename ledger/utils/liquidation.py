@@ -48,13 +48,19 @@ class LiquidationEngine:
         logger.info(msg + ' (id=%s)' % self.margin_liquidation.id)
 
     def start(self):
-        self.info_log('Starting liquidation')
+        self.info_log('Starting liquidation (liquidation_amount=%s$)' % self.liquidation_amount)
 
         self._fast_liquidate()
 
+        self.info_log('After fast_liquidation (liquidation_amount=%s$)' % self.liquidation_amount)
+
         if not self.finished:
             self._provide_tether()
+            self.info_log('After providing_tether (liquidation_amount=%s$)' % self.liquidation_amount)
+
             self._liquidate_funds()
+
+            self.info_log('After liquidate_funds (liquidation_amount=%s$)' % self.liquidation_amount)
 
         self.info_log('Liquidation completed')
 
@@ -120,11 +126,11 @@ class LiquidationEngine:
         self.info_log('providing tether %s$' % to_provide_tether)
 
         for wallet in margin_wallets:
-            if wallet.asset.symbol == Asset.USDT:
-                continue
-
             if to_provide_tether < 0.1:
                 return
+
+            if wallet.asset.symbol == Asset.USDT:
+                continue
 
             self.info_log('providing tether with %s' % wallet.asset)
 

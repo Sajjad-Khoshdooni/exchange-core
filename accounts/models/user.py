@@ -103,9 +103,6 @@ class User(AbstractUser):
     show_margin = models.BooleanField(default=False, verbose_name='امکان مشاهده حساب تعهدی')
     national_code_duplicated_alert = models.BooleanField(default=False, verbose_name='آیا شماره ملی تکراری است؟')
 
-    level_2_prize_activate = models.BooleanField(default=False, verbose_name='امکان دریافت جایزه ارتقا به سطح ۲')
-    first_trade_prize_activate = models.BooleanField(default=False, verbose_name='امکان دریافت جایزه اولین معامله')
-
     def change_status(self, status: str):
         from ledger.models import Prize, Asset
         from ledger.models.prize import alert_user_prize
@@ -115,15 +112,17 @@ class User(AbstractUser):
             with transaction.atomic():
                 if self.level == User.LEVEL2:
                     self.level_2_verify_datetime = timezone.now()
-                    if self.level_2_prize_activate:
-                        prize = Prize.objects.create(
-                            account=self.account,
-                            amount=Prize.LEVEL2_PRIZE_AMOUNT,
-                            scope=Prize.LEVEL2_PRIZE,
-                            asset=Asset.objects.get(symbol=Asset.SHIB),
-                        )
-                        prize.build_trx()
-                        alert_user_prize(self, Prize.LEVEL2_PRIZE)
+
+                    prize = Prize.objects.create(
+                        account=self.account,
+                        amount=Prize.LEVEL2_PRIZE_AMOUNT,
+                        scope=Prize.LEVEL2_PRIZE,
+                        asset=Asset.objects.get(symbol=Asset.SHIB),
+                    )
+                    prize.build_trx()
+
+                    alert_user_prize(self, Prize.LEVEL2_PRIZE)
+
                 elif self.level == User.LEVEL3:
                     self.level_3_verify_datetime = timezone.now()
                 self.save()
