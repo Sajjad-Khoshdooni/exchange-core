@@ -14,9 +14,14 @@ def update_network_fees():
         info = BinanceSpotHandler.get_network_info(ns.asset.symbol, ns.network.symbol)
 
         if info:
-            if (ns.network.symbol, ns.asset.symbol) not in [('TRX', 'USDT'), ('TRX', 'TRX'), ('BSC', 'USDT')]:
+            symbol_pair = (ns.network.symbol, ns.asset.symbol)
+
+            if symbol_pair not in [('TRX', 'USDT'), ('TRX', 'TRX'), ('BSC', 'USDT')]:
                 info['withdrawFee'] = Decimal(info['withdrawFee']) * 2
                 info['withdrawMin'] = Decimal(info['withdrawMin']) * 2
+
+            if symbol_pair == ('BSC', 'SHIB'):
+                info['withdrawMin'] = Decimal(info['withdrawMin']) * 5  # to prevent prize withdrawing
 
             ns.withdraw_fee = info['withdrawFee']
             ns.withdraw_min = info['withdrawMin']

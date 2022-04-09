@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Dict, List
 
 from cachetools.func import ttl_cache
+from django.conf import settings
 
 from collector.price.grpc_client import gRPCClient
 from collector.utils.price import price_redis
@@ -167,6 +168,10 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
 
 
 def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
+    price = price_redis.hget('nob:usdtirt', SIDE_MAP[side])
+    if price:
+        return Decimal(price)
+
     tether_rial = get_price('USDT', side=side, exchange=NOBITEX, market_symbol=IRT, now=now)
     return Decimal(tether_rial / 10)
 

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
-
+from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
 from accounts.models.phone_verification import VerificationCode
 
 
@@ -55,7 +55,15 @@ class OTPSerializer(serializers.ModelSerializer):
         if not phone:
             raise ValidationError('امکان ارسال کد وجود ندارد.')
 
-        return VerificationCode.send_otp_code(phone=phone, scope=scope)
+        VerificationCode.send_otp_code(phone=phone, scope=scope, user=user)
+
+        return {}
+
+    @property
+    def data(self):
+        return {
+            'msg': 'sent'
+        }
 
     class Meta:
         model = VerificationCode
@@ -64,6 +72,7 @@ class OTPSerializer(serializers.ModelSerializer):
 
 class SendOTPView(CreateAPIView):
     serializer_class = OTPSerializer
+    throttle_classes = [BurstRateThrottle]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

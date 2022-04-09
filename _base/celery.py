@@ -146,6 +146,16 @@ app.conf.beat_schedule = {
             'expire': 36000
         },
     },
+
+    'lock_monitor': {
+        'task': 'ledger.tasks.lock_monitor.lock_monitor',
+        'schedule': crontab(minute=0),
+        'options': {
+            'queue': 'celery',
+            'expire': 3600
+        },
+    },
+
     'check_margin_level': {
         'task': 'ledger.tasks.margin.check_margin_level',
         'schedule': 5,
@@ -154,6 +164,22 @@ app.conf.beat_schedule = {
             'expire': 5
         },
     },
+    # 'send_level_2_prize_sms': {
+    #     'task': 'accounts.tasks.send_sms.send_level_2_prize_sms',
+    #     'schedule': crontab(hour=4, minute=30),
+    #     'options': {
+    #         'queue': 'celery',
+    #         'expire': 3600
+    #     }
+    # },
+    # 'send_first_fiat_deposit_sms': {
+    #     'task': 'accounts.tasks.send_first_fiat_deposit_sms',
+    #     'schedule': crontab(hour=4, minute=30),
+    #     'options': {
+    #         'queue': 'celery',
+    #         'expire': 3600
+    #     }
+    # },
 }
 
 if settings.DEBUG:

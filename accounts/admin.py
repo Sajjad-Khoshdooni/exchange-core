@@ -8,7 +8,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import UserComment
+from accounts.models import UserComment, TrafficSource
 from accounts.utils.admin import url_to_admin_list
 from financial.models.bank_card import BankCard, BankAccount
 from financial.models.payment import Payment
@@ -79,7 +79,7 @@ class UserNationalCodeFilter(SimpleListFilter):
     def queryset(self, request, queryset):
         national_code = request.GET.get('national_code')
         if national_code is not None:
-            return queryset.filter(~Q(national_code='') & Q(national_code=national_code))
+            return queryset.filter(national_code=national_code).exclude(national_code='')
         else:
             return queryset
 
@@ -94,7 +94,7 @@ class AnotherUserFilter(SimpleListFilter):
     def queryset(self, request, queryset):
         user_id = request.GET.get('user_id_exclude')
         if user_id is not None:
-            return queryset.filter(~Q(id=user_id))
+            return queryset.exclude(id=user_id)
         else:
             return queryset
 
@@ -125,7 +125,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
                                          )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
-                                          'telephone_verified', 'selfie_image_verified',
+                                          'telephone_verified', 'selfie_image_verified', 'national_code_duplicated_alert'
                                           )}),
         (_('Permissions'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'show_margin'),
@@ -144,8 +144,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
             'get_sum_of_value_buy_sell', 'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit'
-        )})
-
+        )}),
+        (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)})
     )
 
     list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason')
@@ -154,7 +154,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter,
         'is_staff', 'is_superuser', 'is_active', 'groups',
     )
-    inlines = [UserCommentInLine, ]
+    inlines = [UserCommentInLine,]
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify')
     readonly_fields = (
@@ -164,7 +164,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
-        'get_user_reject_reason', 'get_user_with_same_national_code'
+        'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes'
     )
     preserve_filters = ('archived', )
 
@@ -228,6 +228,9 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     get_otctrade_address.short_description = 'خریدهای OTC'
 
     def get_user_reject_reason(self, user: User):
+        if user.national_code_duplicated_alert:
+            return 'کد ملی تکراری'
+
         verify_fields = [
             'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
             'bank_card_verified', 'bank_account_verified', 'telephone_verified', 'selfie_image_verified'
@@ -362,6 +365,15 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     get_selfie_image.short_description = 'عکس سلفی'
 
+    def get_user_prizes(self, user: User):
+        prizes = user.account.prize_set.all()
+        prize_list = []
+        for prize in prizes:
+            prize_list.append(prize.scope)
+        return prize_list
+
+    get_user_prizes.short_description = ('جایزه‌های دریافتی کاربر')
+
 
 
 
@@ -402,3 +414,9 @@ class NotificationAdmin(admin.ModelAdmin):
 @admin.register(UserComment)
 class UserCommentAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ['user', 'created']
+
+
+@admin.register(TrafficSource)
+class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    list_display = ['user', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
+    search_fields = ['user__phone']

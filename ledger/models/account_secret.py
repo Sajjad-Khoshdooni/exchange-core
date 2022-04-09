@@ -1,10 +1,11 @@
 from django.db import models
 
-from accounts.models import Account
+
 from wallet.models import Secret, CryptoWallet
 
 
 class AccountSecret(models.Model):
+    from accounts.models import Account
 
     secret = models.ForeignKey(Secret, on_delete=models.PROTECT)
     account = models.OneToOneField(Account, on_delete=models.PROTECT)

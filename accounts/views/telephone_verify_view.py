@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, UpdateAPIView
 from rest_framework.response import Response
+from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
 from rest_framework.views import APIView
 
 from accounts.models import VerificationCode, User
@@ -13,6 +14,7 @@ class InitiateTelephoneSerializer(serializers.Serializer):
 
 
 class InitiateTelephoneVerifyView(APIView):
+    throttle_classes = [BurstRateThrottle]
 
     def post(self, request):
         serializer = InitiateTelephoneSerializer(data=request.data)

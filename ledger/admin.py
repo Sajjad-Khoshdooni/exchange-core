@@ -8,7 +8,7 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.models import Asset
+from ledger.models import Asset, Prize
 from ledger.utils.overview import AssetOverview
 from ledger.utils.price import get_trading_price_usdt, BUY
 from provider.exchanges import BinanceFuturesHandler
@@ -177,7 +177,7 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request', 'status','get_otc_trade_to_price_absolute_irt', )
+    list_display = ('created', 'otc_request', 'status', 'get_otc_trade_to_price_absolute_irt', )
     list_filter = (OTCUserFilter, 'status')
     search_fields = ('group_id', )
     readonly_fields = ('otc_request', )
@@ -335,3 +335,25 @@ class MarginTransferAdmin(admin.ModelAdmin):
 class MarginLoanAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'amount', 'type', 'asset', 'status')
     search_fields = ('group_id',)
+
+
+@admin.register(models.MarginLiquidation)
+class MarginLiquidationAdmin(admin.ModelAdmin):
+    list_display = ('created', 'account', 'margin_level', 'group_id')
+    search_fields = ('group_id',)
+
+
+@admin.register(models.AddressBook)
+class AddressBookAdmin(admin.ModelAdmin):
+    list_display = ('name', 'account', 'network', 'address', 'asset',)
+    search_fields = ('address', 'name')
+
+
+@admin.register(models.Prize)
+class PrizeAdmin(admin.ModelAdmin):
+    list_display = ('created', 'scope', 'account', 'get_asset_amount')
+
+    def get_asset_amount(self, prize: Prize):
+        return str(get_presentation_amount(prize.amount)) + str(prize.asset)
+
+    get_asset_amount.short_description = 'مقدار'

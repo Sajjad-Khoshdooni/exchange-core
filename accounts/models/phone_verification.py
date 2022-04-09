@@ -1,5 +1,7 @@
+import logging
 import uuid
 from datetime import timedelta
+from typing import Union
 
 from django.conf import settings
 from django.core.validators import RegexValidator
@@ -9,6 +11,8 @@ from django.utils import timezone
 from accounts.tasks import send_message_by_kavenegar
 from accounts.utils.validation import generate_random_code, PHONE_MAX_LENGTH, fifteen_minutes_later_datetime, MINUTES
 
+logger = logging.getLogger(__name__)
+
 
 class VerificationCode(models.Model):
     EXPIRATION_TIME = 15 * MINUTES
@@ -17,10 +21,12 @@ class VerificationCode(models.Model):
     SCOPE_VERIFY_PHONE = 'verify'
     SCOPE_WITHDRAW = 'withdraw'
     SCOPE_TELEPHONE = 'tel'
+    SCOPE_CHANGE_PASSWORD = 'change_pass'
 
     SCOPE_CHOICES = [
         (SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_PHONE, SCOPE_VERIFY_PHONE),
-        (SCOPE_WITHDRAW, SCOPE_WITHDRAW), (SCOPE_TELEPHONE, SCOPE_TELEPHONE)
+        (SCOPE_WITHDRAW, SCOPE_WITHDRAW), (SCOPE_TELEPHONE, SCOPE_TELEPHONE),
+        (SCOPE_CHANGE_PASSWORD, SCOPE_CHANGE_PASSWORD),
     ]
 
     created = models.DateTimeField(auto_now_add=True)
@@ -53,7 +59,7 @@ class VerificationCode(models.Model):
     )
 
     scope = models.CharField(
-        max_length=8,
+        max_length=16,
         choices=SCOPE_CHOICES
     )
 
@@ -89,8 +95,31 @@ class VerificationCode(models.Model):
         ).first()
 
     @classmethod
-    def send_otp_code(cls, phone: str, scope: str, user = None) -> 'VerificationCode':
+    def send_otp_code(cls, phone: str, scope: str, user=None) -> Union['VerificationCode', None]:
         # todo: handle throttling (don't allow to send more than twice in minute per phone / scope)
+        # todo: use user devices / ip , ...
+
+        if phone == '09120889956':
+            logger.info('Ignored sending otp to kavenegar due to blacklist')
+            return
+
+        any_recent_code = VerificationCode.objects.filter(
+            phone=phone,
+            created__gte=timezone.now() - timedelta(minutes=2),
+        ).exists()
+
+        if any_recent_code:
+            logger.info('Ignored sending otp to kavenegar because of recent')
+            return
+
+        prev_codes = VerificationCode.objects.filter(
+            phone=phone,
+            created__gte=timezone.now() - timedelta(minutes=15),
+        ).count()
+
+        if prev_codes >= 3:
+            logger.info('Ignored sending otp to kavenegar because of multiple prev')
+            return
 
         if scope == cls.SCOPE_TELEPHONE:
             code_length = 4
@@ -104,7 +133,7 @@ class VerificationCode(models.Model):
             user=user,
         )
 
-        if settings.DEBUG:
+        if settings.DEBUG_OR_TESTING:
             print('[OTP] code for %s is: %s' % (otp_code.phone, otp_code.code))
         else:
             if scope != cls.SCOPE_TELEPHONE:  # is_phone(phone):

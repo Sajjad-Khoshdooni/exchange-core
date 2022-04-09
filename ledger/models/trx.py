@@ -13,8 +13,10 @@ class Trx(models.Model):
     TRANSFER = 'f'
     MARGIN_TRANSFER = 'm'
     MARGIN_BORROW = 'b'
+    FAST_LIQUID = 'fl'
     LIQUID = 'l'
     COMMISSION = 'c'
+    PRIZE = 'p'
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -25,9 +27,10 @@ class Trx(models.Model):
     group_id = models.UUIDField(default=uuid4, db_index=True)
 
     scope = models.CharField(
-        max_length=1,
+        max_length=2,
         choices=((TRADE, 'trade'), (TRANSFER, 'transfer'), (MARGIN_TRANSFER, 'margin transfer'),
-                 (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'))
+                 (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (LIQUID, 'liquid'),
+                 (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'))
     )
 
     class Meta:

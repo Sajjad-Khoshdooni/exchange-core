@@ -40,6 +40,9 @@ urlpatterns = [
     })),
 
     path('notifs/all/', views.UnreadAllNotificationView.as_view()),
+    path('password', views.ChangePasswordView.as_view()),
 
     path('quiz/passed/', views.QuizPassedView.as_view()),
+
+    path('user/onboarding/', views.OnBoardingFlowStatus.as_view())
 ]

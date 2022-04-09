@@ -1,5 +1,5 @@
 from django.contrib.auth.models import AbstractUser, UserManager
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 from simple_history.models import HistoricalRecords
 from django.utils import timezone
@@ -22,6 +22,8 @@ class User(AbstractUser):
     INIT, PENDING, REJECTED, VERIFIED = 'init', 'pending', 'rejected', 'verified'
 
     USERNAME_FIELD = 'phone'
+
+    FIAT, CRYPTO = 'fiat', 'crypto'
 
     objects = CustomUserManager()
     history = HistoricalRecords()
@@ -47,9 +49,10 @@ class User(AbstractUser):
         max_length=10,
         blank=True,
         verbose_name='کد ملی',
+        db_index=True,
         validators=[national_card_code_validator],
     )
-    national_code_verified = models.BooleanField(null=True, blank=True, db_index=True, verbose_name='تاییدیه کد ملی',)
+    national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی',)
 
     birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد',)
     birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد',)
@@ -99,16 +102,39 @@ class User(AbstractUser):
 
     margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
 
-    show_margin = models.BooleanField(default=False)
+    show_margin = models.BooleanField(default=False, verbose_name='امکان مشاهده حساب تعهدی')
+    national_code_duplicated_alert = models.BooleanField(default=False, verbose_name='آیا شماره ملی تکراری است؟')
+
+    on_boarding_flow = models.CharField(
+        max_length=10,
+        choices=((FIAT, FIAT), (CRYPTO, CRYPTO),),
+        blank=True,
+        default=''
+    )
 
     def change_status(self, status: str):
+        from ledger.models import Prize, Asset
+        from ledger.models.prize import alert_user_prize
         if self.verify_status == self.PENDING and status == self.VERIFIED:
             self.verify_status = self.INIT
             self.level += 1
-            if self.level == User.LEVEL2:
-                self.level_2_verify_datetime = timezone.now()
-            if self.level == User.LEVEL3:
-                self.level_3_verify_datetime = timezone.now()
+            with transaction.atomic():
+                if self.level == User.LEVEL2:
+                    self.level_2_verify_datetime = timezone.now()
+
+                    prize = Prize.objects.create(
+                        account=self.account,
+                        amount=Prize.LEVEL2_PRIZE_AMOUNT,
+                        scope=Prize.LEVEL2_PRIZE,
+                        asset=Asset.objects.get(symbol=Asset.SHIB),
+                    )
+                    prize.build_trx()
+
+                    alert_user_prize(self, Prize.LEVEL2_PRIZE)
+
+                elif self.level == User.LEVEL3:
+                    self.level_3_verify_datetime = timezone.now()
+                self.save()
         else:
             if self.level == self.LEVEL1 and self.verify_status != self.REJECTED and status == self.REJECTED:
                 link = url_to_edit_object(self)
@@ -118,8 +144,8 @@ class User(AbstractUser):
                 )
 
             self.verify_status = status
+            self.save()
 
-        self.save()
 
     @property
     def primary_data_verified(self) -> bool:
