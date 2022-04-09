@@ -23,3 +23,4 @@ class OnBoardingFlowStatus(APIView):
         on_boarding_flow_serializer.is_valid(raise_exception=True)
         on_boarding_flow_serializer.save()
         return Response({'msg': 'status update successfully'})
+
