@@ -6,8 +6,9 @@ from accounts.utils.validation import PHONE_MAX_LENGTH
 
 class ExternalNotification(models.Model):
 
-    SCOPE_LEVEL_2_PRIZE, LEVEL_2_PRIZE_AMOUNT = 'level_2_prize', '50000'
-    SCOPE_FIRST_FIAT_DEPOSIT_PRIZE, FIRST_FIAT_DEPOSIT_PRIZE_AMOUNT = 'first_deposit_prize', '50000'
+    SCOPE_LEVEL_2_PRIZE, LEVEL_2_PRIZE_AMOUNT = 'level_2_prize'
+    SCOPE_FIRST_FIAT_DEPOSIT_PRIZE, FIRST_FIAT_DEPOSIT_PRIZE_AMOUNT = 'first_deposit_prize'
+    TOKEN = 'پنجاه هزار شیبا'
 
     SCOPE_CHOICES = (
         (SCOPE_LEVEL_2_PRIZE, SCOPE_LEVEL_2_PRIZE),
@@ -35,13 +36,12 @@ class ExternalNotification(models.Model):
     def send_sms(cls, user: User, scope: str, ):
         from accounts.tasks import send_message_by_kavenegar
         ExternalNotification.objects.create(phone=user.phone, scope=scope, user=user)
-
+        token = cls.TOKEN
         if scope == cls.SCOPE_LEVEL_2_PRIZE:
-            template = 'level_2_prize'
-            token = cls.LEVEL_2_PRIZE_AMOUNT
+            template = 'ret-level2-verify'
+
         elif scope == cls.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE:
-            template = 'first_fiat_deposit_prize'
-            token = cls.FIRST_FIAT_DEPOSIT_PRIZE_AMOUNT
+            template = 'ret-first-fiat-deposit'
         else:
             raise NotImplementedError
 
