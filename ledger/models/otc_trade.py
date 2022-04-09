@@ -95,22 +95,22 @@ class OTCTrade(models.Model):
 
         otc_trade.hedge_and_finalize()
 
-        if otc_request.account.user.first_trade_prize_activate:
-            from ledger.models import Asset, Prize
-            from ledger.models.prize import alert_user_prize
-
-            account = otc_request.account
-            if OTCTrade.objects.filter(Q(otc_request__account__user_id=account.user)).count() == 1:
-                with transaction.atomic():
-                    prize = Prize.objects.create(
-                        account=account,
-                        amount=Prize.FIRST_TRADE_PRIZE_AMOUNT,
-                        scope=Prize.FIRST_TRADE_PRIZE,
-                        asset=Asset.objects.get(symbol=Asset.SHIB),
-                    )
-                    prize.build_trx()
-
-                alert_user_prize(account.user, Prize.FIRST_TRADE_PRIZE)
+        # if otc_request.account.user.first_trade_prize_activate:
+        #     from ledger.models import Asset, Prize
+        #     from ledger.models.prize import alert_user_prize
+        #
+        #     account = otc_request.account
+        #     if OTCTrade.objects.filter(Q(otc_request__account__user_id=account.user)).count() == 1:
+        #         with transaction.atomic():
+        #             prize = Prize.objects.create(
+        #                 account=account,
+        #                 amount=Prize.FIRST_TRADE_PRIZE_AMOUNT,
+        #                 scope=Prize.FIRST_TRADE_PRIZE,
+        #                 asset=Asset.objects.get(symbol=Asset.SHIB),
+        #             )
+        #             prize.build_trx()
+        #
+        #         alert_user_prize(account.user, Prize.FIRST_TRADE_PRIZE)
 
         return otc_trade
 

@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 class Prize(models.Model):
     SIGN_UP_PRIZE_ACTIVATE = False
 
-    SIGN_UP_PRIZE, SIGN_UP_PRIZE_AMOUNT = 'sign up', 1000
-    LEVEL2_PRIZE, LEVEL2_PRIZE_AMOUNT = 'level 2 verification', 2000
-    FIRST_TRADE_PRIZE, FIRST_TRADE_PRIZE_AMOUNT = 'first trade', 3000
+    SIGN_UP_PRIZE, SIGN_UP_PRIZE_AMOUNT = 'signup', 0
+    LEVEL2_PRIZE, LEVEL2_PRIZE_AMOUNT = 'level2_verify', 50_000
+    FIRST_TRADE_PRIZE, FIRST_TRADE_PRIZE_AMOUNT = 'first_trade', 0
 
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE, verbose_name='کاربر')
@@ -44,7 +44,7 @@ class Prize(models.Model):
         )
 
     def __str__(self):
-        return '%s %s %s' % (self.account, self.amountm, self.asset)
+        return '%s %s %s' % (self.account, self.amount, self.asset)
 
 
 def alert_user_prize(user: User, scope: str):
