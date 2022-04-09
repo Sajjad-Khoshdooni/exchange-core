@@ -6,8 +6,8 @@ from accounts.utils.validation import PHONE_MAX_LENGTH
 
 class ExternalNotification(models.Model):
 
-    SCOPE_LEVEL_2_PRIZE, LEVEL_2_PRIZE_AMOUNT = 'level_2_prize'
-    SCOPE_FIRST_FIAT_DEPOSIT_PRIZE, FIRST_FIAT_DEPOSIT_PRIZE_AMOUNT = 'first_deposit_prize'
+    SCOPE_LEVEL_2_PRIZE = 'level_2_prize'
+    SCOPE_FIRST_FIAT_DEPOSIT_PRIZE = 'first_deposit_prize'
     TOKEN = 'پنجاه هزار شیبا'
 
     SCOPE_CHOICES = (
