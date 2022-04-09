@@ -108,7 +108,7 @@ class User(AbstractUser):
     level_2_prize_activate = models.BooleanField(default=False, verbose_name='امکان دریافت جایزه ارتقا به سطح ۲')
     first_trade_prize_activate = models.BooleanField(default=False, verbose_name='امکان دریافت جایزه اولین معامله')
 
-    after_sign_up_status = models.CharField(
+    on_boarding_flow = models.CharField(
         max_length=10,
         choices=((FIAT, FIAT), (CRYPTO, CRYPTO),),
         blank=True,
