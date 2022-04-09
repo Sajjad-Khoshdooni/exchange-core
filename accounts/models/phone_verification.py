@@ -1,6 +1,7 @@
 import logging
 import uuid
 from datetime import timedelta
+from typing import Union
 
 from django.conf import settings
 from django.core.validators import RegexValidator
@@ -94,18 +95,31 @@ class VerificationCode(models.Model):
         ).first()
 
     @classmethod
-    def send_otp_code(cls, phone: str, scope: str, user = None) -> 'VerificationCode':
+    def send_otp_code(cls, phone: str, scope: str, user=None) -> Union['VerificationCode', None]:
         # todo: handle throttling (don't allow to send more than twice in minute per phone / scope)
         # todo: use user devices / ip , ...
+
+        if phone == '09120889956':
+            logger.info('Ignored sending otp to kavenegar due to blacklist')
+            return
+
+        any_recent_code = VerificationCode.objects.filter(
+            phone=phone,
+            created__gte=timezone.now() - timedelta(minutes=2),
+        ).exists()
+
+        if any_recent_code:
+            logger.info('Ignored sending otp to kavenegar because of recent')
+            return
 
         prev_codes = VerificationCode.objects.filter(
             phone=phone,
             created__gte=timezone.now() - timedelta(minutes=15),
-        ).order_by('created')
+        ).count()
 
-        if prev_codes.count() >= 3:
-            logger.info('Ignored sending otp to kavenegar')
-            return prev_codes.last()
+        if prev_codes >= 3:
+            logger.info('Ignored sending otp to kavenegar because of multiple prev')
+            return
 
         if scope == cls.SCOPE_TELEPHONE:
             code_length = 4
