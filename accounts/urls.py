@@ -44,5 +44,5 @@ urlpatterns = [
 
     path('quiz/passed/', views.QuizPassedView.as_view()),
 
-    path('user/onboarding/', views.ChangeAfterSignUpStatus.as_view())
+    path('user/onboarding/', views.OnBoardingFlowStatus.as_view())
 ]

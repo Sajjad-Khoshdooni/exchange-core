@@ -14,7 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'after_sign_up_status', 'snackbar_status',
+            'show_margin', 'on_boarding_flow', 'snackbar_status',
         )
 
     def get_on_boarding_status(self, user: User):
@@ -23,7 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
         if otc_request:
             resp = 'trade_is_done'
         else:
-            if user.after_sign_up_status == 'crypto':
+            if user.on_boarding_flow == 'crypto':
                 if transfer:
                     resp = 'waiting_for_trade'
                 else:
@@ -37,8 +37,6 @@ class UserSerializer(serializers.ModelSerializer):
                     else:
                         resp = 'waiting_for_fiat_deposit'
         return resp
-
-
 
 
 class ProfileSerializer(serializers.ModelSerializer):

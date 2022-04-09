@@ -4,22 +4,22 @@ from accounts.models import User
 from rest_framework.response import Response
 
 
-class AfterSignUpStatusSerializer(serializers.ModelSerializer):
+class OnBoardingFlowSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('after_sign_up_status',)
+        fields = ('on_boarding_flow',)
 
 
-class ChangeAfterSignUpStatus(APIView):
+class OnBoardingFlowStatus(APIView):
 
     def patch(self, request):
         user = self.request.user
-        after_sign_up_status_serializer = AfterSignUpStatusSerializer(
+        on_boarding_flow_serializer = OnBoardingFlowSerializer(
             instance=user,
             data=request.data,
             partial=True,
         )
-        after_sign_up_status_serializer.is_valid(raise_exception=True)
-        after_sign_up_status_serializer.save()
+        on_boarding_flow_serializer.is_valid(raise_exception=True)
+        on_boarding_flow_serializer.save()
         return Response({'msg': 'status update successfully'})
