@@ -15,7 +15,7 @@ from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
 from ledger.utils.precision import humanize_number
 
-MIN_WITHDRAW = 50000
+MIN_WITHDRAW = 100_000
 
 
 class WithdrawRequestSerializer(serializers.ModelSerializer):
