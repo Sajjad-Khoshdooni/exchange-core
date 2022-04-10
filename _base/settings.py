@@ -6,11 +6,13 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 import raven
 from decouple import Csv
+from django.conf import settings
 from yekta_config import secret
 from yekta_config.config import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+if True:
+    CELERY_TASK_ALWAYS_EAGER = True
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
