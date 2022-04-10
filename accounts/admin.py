@@ -164,7 +164,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
-        'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes'
+        'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium'
     )
     preserve_filters = ('archived', )
 
