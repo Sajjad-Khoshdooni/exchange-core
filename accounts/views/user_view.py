@@ -25,11 +25,11 @@ class UserSerializer(serializers.ModelSerializer):
         else:
             if user.on_boarding_flow == 'crypto':
                 if transfer:
-                    resp = 'waiting_for_trade'
+                    resp = 'waiting_for_crypto_trade'
                 else:
                     resp = 'waiting_for_crypto_deposit'
             else:
-                if User.LEVEL1:
+                if user.level == User.LEVEL1:
                     resp = 'waiting_for_auth'
                 else:
                     if user.first_fiat_deposit_date:
