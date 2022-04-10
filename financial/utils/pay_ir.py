@@ -10,7 +10,9 @@ logger = logging.getLogger(__name__)
 class Payir:
 
     @classmethod
-    def collect_api(cls, url: str, method: str = 'GET', data: dict = None):
+    def collect_api(cls, path: str, method: str = 'GET', data: dict = None):
+
+        url = 'https://pay.ir' + path
 
         request_kwargs = {
             'url': url,
