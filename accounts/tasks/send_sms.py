@@ -1,14 +1,22 @@
 import logging
 from datetime import timedelta
-from django.utils import timezone
-import jdatetime
+
+import requests
 from celery import shared_task
 from django.conf import settings
+from django.utils import timezone
 from kavenegar import KavenegarAPI, APIException, HTTPException
-from accounts.models.external_notif import ExternalNotification
+from yekta_config import secret
+from yekta_config.config import config
+
 from accounts.models import User
+from accounts.models.external_notif import ExternalNotification
+from accounts.verifiers.finotech import token_cache
 
 logger = logging.getLogger(__name__)
+
+
+SMS_IR_TOKEN_KEY = 'sms-ir-token'
 
 
 @shared_task(queue='sms')
@@ -26,18 +34,55 @@ def send_message_by_kavenegar(phone: str, template: str, token: str, send_type: 
 
         api.verify_lookup(params)
     except (APIException, HTTPException) as e:
-        logger.exception("Failed to send verification code")
+        logger.exception("Failed to send sms by kavenegar")
 
 
-def change_datetime_to_jalali(gregorian_datetime):
-    jalali_datetime = jdatetime.datetime.fromgregorian(
-        year=gregorian_datetime.year,
-        month=gregorian_datetime.month,
-        day=gregorian_datetime.day,
-        hour=gregorian_datetime.hour,
-        minute=gregorian_datetime.minute,
+def get_sms_ir_token():
+    resp = requests.post(
+        url='https://RestfulSms.com/api/Token',
+        data={
+            'UserApiKey': config('SMS_IR_API_KEY'),
+            'SecretKey': secret('SMS_IR_API_SECRET'),
+        }
     )
-    return jalali_datetime.strftime('%Y/%m/%d %H:%M')
+
+    if resp.ok:
+        resp_data = resp.json()['result']
+        token = resp_data['value']
+        expire = 30 * 60
+
+        token_cache.set(SMS_IR_TOKEN_KEY, token, expire)
+
+        return token
+
+
+@shared_task(queue='sms')
+def send_message_by_sms_ir(phone: str, template: str, params: dict):
+
+    param_array = [
+        {"Parameter": key, "ParameterValue": value} for (key, value) in params.items()
+    ]
+
+    token = get_sms_ir_token()
+
+    resp = requests.post(
+        url='https://RestfulSms.com/api/UltraFastSend',
+        data={
+            "ParameterArray": param_array,
+            "Mobile":phone,
+            "TemplateId": template
+        },
+        headers={
+            'x-sms-ir-secure-token': token
+        }
+    )
+
+    if not resp.json()['IsSuccessful']:
+        logger.error('Failed to send sms via sms.ir', extra={
+            'phone': phone,
+            'template': template,
+            'params': params
+        })
 
 
 @shared_task(queue='celery')
