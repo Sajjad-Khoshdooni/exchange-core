@@ -87,6 +87,8 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
             'data': data
         })
 
+    return data
+
 
 @shared_task(queue='celery')
 def send_level_2_prize_notif():
