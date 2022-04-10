@@ -47,8 +47,8 @@ def get_sms_ir_token():
     )
 
     if resp.ok:
-        resp_data = resp.json()['result']
-        token = resp_data['value']
+        resp_data = resp.json()
+        token = resp_data['TokenKey']
         expire = 30 * 60
 
         token_cache.set(SMS_IR_TOKEN_KEY, token, expire)
