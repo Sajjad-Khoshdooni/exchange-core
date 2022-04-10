@@ -108,14 +108,15 @@ class AssetOverview:
     def get_future_position_value(self, asset: Asset):
         return float(self._future_positions.get(asset.future_symbol + 'USDT', {}).get('notional', 0))
 
-    def get_hedge_amount(self, asset: Asset):
+    def get_total_assets(self, asset: Asset):
         if asset.symbol == Asset.IRT:
-            # todo: change hedge with = real money in gateway - user
-            # IRT hedge = system - user = 2system + out
-            return 2 * asset.get_wallet(Account.system()).get_balance() + asset.get_wallet(Account.out()).get_balance()
+            return asset.get_wallet(Account.out()).get_balance()
+        else:
+            return self.get_binance_balance(asset) + self.get_internal_deposits_balance(asset)
 
-        return self.get_binance_balance(asset) + self.get_internal_deposits_balance(asset) \
-               - self.get_ledger_balance(Account.ORDINARY, asset)
+    def get_hedge_amount(self, asset: Asset):
+        # Hedge = Real assets - Promised assets to users (user)
+        return self.get_total_assets(asset) - self.get_ledger_balance(Account.ORDINARY, asset)
 
     def get_internal_usdt_value(self):
         total = 0
