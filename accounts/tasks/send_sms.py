@@ -97,23 +97,26 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
 
 
 @shared_task(queue='celery')
-def send_level_2_prize_notif():
-    three_days_ago = timezone.now() - timedelta(days=3)
-    user_ids = ExternalNotification.get_users_sent_sms_notif(ExternalNotification.SCOPE_LEVEL_2_PRIZE)
-    users = User.objects.filter(level=User.LEVEL1, date_joined__lte=three_days_ago).exclude(id__in=user_ids)
+def send_level_2_prize_notifs():
+    to_exclude_user_ids = ExternalNotification.get_users_sent_sms_notif(ExternalNotification.SCOPE_LEVEL_2_PRIZE)
+
+    users = User.objects.filter(
+        level=User.LEVEL1,
+        date_joined__lte=timezone.now() - timedelta(days=3)
+    ).exclude(id__in=to_exclude_user_ids)
 
     for user in users:
         ExternalNotification.send_sms(user, ExternalNotification.SCOPE_LEVEL_2_PRIZE)
 
 
 @shared_task(queue='celery')
-def send_first_fiat_deposit_notif():
-    one_day_ago = timezone.now() - timedelta(days=1)
-    user_ids = ExternalNotification.get_users_sent_sms_notif(ExternalNotification.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE)
+def send_first_fiat_deposit_notifs():
+    to_exclude_user_ids = ExternalNotification.get_users_sent_sms_notif(ExternalNotification.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE)
+
     users = User.objects.filter(
         level=User.LEVEL2, first_fiat_deposit_date=None,
-        level_2_verify_datetime__lte=one_day_ago,
-    ).exclude(id__in=user_ids)
+        level_2_verify_datetime__lte=timezone.now() - timedelta(days=2),
+    ).exclude(id__in=to_exclude_user_ids)
 
     for user in users:
         ExternalNotification.send_sms(user, ExternalNotification.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE)
