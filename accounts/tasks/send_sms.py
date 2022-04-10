@@ -38,6 +38,12 @@ def send_message_by_kavenegar(phone: str, template: str, token: str, send_type: 
 
 
 def get_sms_ir_token():
+
+    token = token_cache.get(SMS_IR_TOKEN_KEY)
+
+    if token:
+        return token
+
     resp = requests.post(
         url='https://RestfulSms.com/api/Token',
         data={
@@ -67,7 +73,7 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
 
     resp = requests.post(
         url='https://RestfulSms.com/api/UltraFastSend',
-        data={
+        json={
             "ParameterArray": param_array,
             "Mobile":phone,
             "TemplateId": template
