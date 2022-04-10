@@ -9,7 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounts.models import UserComment, TrafficSource
-from accounts.utils.admin import url_to_admin_list
+from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
 from financial.models.payment import Payment
 from financial.models.withdraw_request import FiatWithdrawRequest
@@ -121,7 +121,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
                                          'get_birth_date_jalali', 'telephone', 'get_national_card_image',
-                                         'get_selfie_image', 'archived', 'get_user_reject_reason'
+                                         'get_selfie_image', 'archived', 'get_user_reject_reason', 'get_source_medium'
                                          )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
@@ -148,7 +148,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)})
     )
 
-    list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason')
+    list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason', 'get_source_medium')
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter,
@@ -226,6 +226,14 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         link = url_to_admin_list(OTCTrade)+'?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_otctrade_address.short_description = 'خریدهای OTC'
+
+    def get_source_medium(self, user: User):
+        if hasattr(user, 'trafficsource'):
+            link = url_to_edit_object(user.trafficsource)
+            text = '%s/%s' % (user.trafficsource.utm_source, user.trafficsource.utm_medium)
+
+            return mark_safe("<a href='%s'>%s</a>" % (link, text))
+    get_source_medium.short_description = 'source/medium'
 
     def get_user_reject_reason(self, user: User):
         if user.national_code_duplicated_alert:
