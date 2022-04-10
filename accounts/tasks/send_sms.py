@@ -103,7 +103,8 @@ def send_level_2_prize_notifs():
 
     users = User.objects.filter(
         level=User.LEVEL1,
-        date_joined__lte=timezone.now() - timedelta(days=3)
+        date_joined__lte=timezone.now() - timedelta(days=3),
+        date_joined__gte=timezone.now() - timedelta(days=6),
     ).exclude(id__in=to_exclude_user_ids)
 
     for user in users:
