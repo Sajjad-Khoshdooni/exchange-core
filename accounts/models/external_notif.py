@@ -8,7 +8,6 @@ class ExternalNotification(models.Model):
 
     SCOPE_LEVEL_2_PRIZE = 'level_2_prize'
     SCOPE_FIRST_FIAT_DEPOSIT_PRIZE = 'first_deposit_prize'
-    TOKEN = 'پنجاه هزار شیبا'
 
     SCOPE_CHOICES = (
         (SCOPE_LEVEL_2_PRIZE, SCOPE_LEVEL_2_PRIZE),
@@ -34,24 +33,27 @@ class ExternalNotification(models.Model):
 
     @classmethod
     def send_sms(cls, user: User, scope: str, ):
-        from accounts.tasks import send_message_by_kavenegar
+        from accounts.tasks import send_message_by_sms_ir
         ExternalNotification.objects.create(phone=user.phone, scope=scope, user=user)
-        token = cls.TOKEN
+
         if scope == cls.SCOPE_LEVEL_2_PRIZE:
-            template = 'ret-level2-verify'
+            template = '64694'
+            params = {'token': 'پنجاه هزار شیبا هدیه راستین'}
 
         elif scope == cls.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE:
-            template = 'ret-first-fiat-deposit'
+            template = '64695'
+            params = {'brand': 'راستین'}
+
         else:
             raise NotImplementedError
 
         if settings.DEBUG_OR_TESTING:
-            print('template={},phone={},token={}'.format(template, user.phone, token))
+            print('template={},phone={},params={}'.format(template, user.phone, params))
             return
 
-        send_message_by_kavenegar(
+        send_message_by_sms_ir(
             phone=user.phone,
-            token=token,
+            params=params,
             template=template
         )
 

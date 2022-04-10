@@ -39,7 +39,7 @@ class UserSerializer(serializers.ModelSerializer):
         return resp
 
 
-class ProfileSerializer(serializers.ModelSerializer):
+class ProfileSerializer(UserSerializer):
     bank_cards = serializers.SerializerMethodField()
     bank_accounts = serializers.SerializerMethodField()
 

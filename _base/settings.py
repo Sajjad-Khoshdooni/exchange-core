@@ -104,6 +104,8 @@ CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', cast=Csv(), default='')
 CORS_ALLOW_CREDENTIALS = True
 
 KAVENEGAR_KEY = secret('KAVENEGAR_KEY')
+SMS_IR_API_KEY = secret('SMS_IR_API_KEY')
+SMS_IR_API_SECRET = secret('SMS_IR_API_SECRET')
 
 DATABASES = {
     'default': {

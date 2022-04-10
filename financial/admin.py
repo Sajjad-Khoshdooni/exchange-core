@@ -54,6 +54,8 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
                        'get_withdraw_request_user', 'get_withdraw_request_user_mobile',
                        )
 
+    list_display = ('bank_account', 'status', 'amount', 'ref_id')
+
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.user.get_full_name()
     get_withdraw_request_user.short_description = 'نام و نام خانوادگی'

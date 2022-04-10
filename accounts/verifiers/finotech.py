@@ -116,7 +116,7 @@ class FinotechRequester:
         req_object.response = resp_data
         req_object.status_code = resp.status_code
 
-        if resp.ok:
+        if resp.ok or (resp.status_code == 400 and 'nidVerification' in path):
             req_object.search_key = search_key
 
         req_object.save()

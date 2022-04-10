@@ -13,10 +13,10 @@ class FiatWithdrawRequest(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     group_id = get_group_id_field()
 
-    bank_account = models.ForeignKey(to=BankAccount, on_delete=models.PROTECT)
+    bank_account = models.ForeignKey(to=BankAccount, on_delete=models.PROTECT, verbose_name='حساب بانکی')
 
-    amount = models.PositiveIntegerField()
-    fee_amount = models.PositiveIntegerField()
+    amount = models.PositiveIntegerField(verbose_name='میزان برداشت')
+    fee_amount = models.PositiveIntegerField(verbose_name='کارمزد')
 
     status = get_status_field()
     lock = get_lock_field()
