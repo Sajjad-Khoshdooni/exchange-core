@@ -28,6 +28,7 @@ class FillOrderSerializer(serializers.ModelSerializer):
             data['fee_amount'] = str(get_presentation_amount(Decimal(data['fee_amount']), trade.symbol.step_size)) \
                 if data['side'] == Order.BUY else \
                 str(get_presentation_amount(Decimal(data['fee_amount']), trade.symbol.tick_size))
+            data['fee_asset'] = data['coin'] if data['side'] == Order.BUY else data['pair']
         return data
 
     class Meta:
