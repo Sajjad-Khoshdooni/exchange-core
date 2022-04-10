@@ -110,7 +110,7 @@ class AssetOverview:
 
     def get_total_assets(self, asset: Asset):
         if asset.symbol == Asset.IRT:
-            return asset.get_wallet(Account.out()).get_balance()
+            return -asset.get_wallet(Account.out()).get_balance()
         else:
             return self.get_binance_balance(asset) + self.get_internal_deposits_balance(asset)
 
