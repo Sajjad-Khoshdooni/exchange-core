@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import timedelta
 
 import requests
@@ -107,6 +108,7 @@ def send_level_2_prize_notifs():
 
     for user in users:
         ExternalNotification.send_sms(user, ExternalNotification.SCOPE_LEVEL_2_PRIZE)
+        time.sleep(1)
 
 
 @shared_task(queue='celery')
@@ -120,3 +122,4 @@ def send_first_fiat_deposit_notifs():
 
     for user in users:
         ExternalNotification.send_sms(user, ExternalNotification.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE)
+        time.sleep(1)
