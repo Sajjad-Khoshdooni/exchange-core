@@ -107,6 +107,7 @@ def send_level_2_prize_notifs():
     ).exclude(id__in=to_exclude_user_ids)
 
     for user in users:
+        logger.info('Sending level_2_prize_notif to user_id=%s' % user.id)
         ExternalNotification.send_sms(user, ExternalNotification.SCOPE_LEVEL_2_PRIZE)
         time.sleep(1)
 
@@ -121,5 +122,6 @@ def send_first_fiat_deposit_notifs():
     ).exclude(id__in=to_exclude_user_ids)
 
     for user in users:
+        logger.info('Sending first_fiat_deposit_notif to user_id=%s' % user.id)
         ExternalNotification.send_sms(user, ExternalNotification.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE)
         time.sleep(1)
