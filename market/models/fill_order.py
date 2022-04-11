@@ -45,7 +45,8 @@ class FillOrder(models.Model):
             models.Index(fields=['created', 'symbol',]),
         ]
 
-    def side(self, account: Account, list_index: int):
+    def get_side(self, account: Account, list_index: int):
+        # refactor to remove list_index
         buy_order = self.maker_order if self.is_buyer_maker else self.taker_order
         sell_order = self.taker_order if self.is_buyer_maker else self.maker_order
         if buy_order.wallet.account != sell_order.wallet.account:
@@ -57,11 +58,11 @@ class FillOrder(models.Model):
         else:
             return Order.BUY if list_index % 2 == 0 else Order.SELL
 
-    def fee(self, account: Account, list_index: int):
+    def get_fee(self, account: Account, list_index: int):
         if self.is_buyer_maker:
-            return self.maker_fee_amount if self.side(account, list_index) == Order.BUY else self.taker_fee_amount
+            return self.maker_fee_amount if self.get_side(account, list_index) == Order.BUY else self.taker_fee_amount
         else:
-            return self.maker_fee_amount if self.side(account, list_index) == Order.SELL else self.taker_fee_amount
+            return self.maker_fee_amount if self.get_side(account, list_index) == Order.SELL else self.taker_fee_amount
 
     def calculate_amounts_from_trx(self):
         assert self.trade_trx_list

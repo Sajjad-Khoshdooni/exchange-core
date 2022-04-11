@@ -15,10 +15,10 @@ class FillOrderSerializer(serializers.ModelSerializer):
     fee_amount = serializers.SerializerMethodField()
 
     def get_side(self, instance: FillOrder):
-        return instance.side(self.context['account'], self.context['index'])
+        return instance.get_side(self.context['account'], self.context['index'])
 
     def get_fee_amount(self, instance: FillOrder):
-        return instance.fee(self.context['account'], self.context['index'])
+        return instance.get_fee(self.context['account'], self.context['index'])
 
     def to_representation(self, trade: FillOrder):
         data = super(FillOrderSerializer, self).to_representation(trade)
