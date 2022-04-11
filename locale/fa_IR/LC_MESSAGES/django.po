@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-04-09 09:45+0200\n"
+"POT-Creation-Date: 2022-04-11 18:58+0430\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -44,8 +44,8 @@ msgid "amount is more than {max_quantity}"
 msgstr "مقدار سفارش از {max_quantity} بیشتر است"
 
 #: market/serializers/order_serializer.py:76
-msgid "Small order size"
-msgstr "ارزش سفارش از حداقل ارزش سفارش کمتر است"
+msgid "Small order size {min_order_size}"
+msgstr "ارزش سفارش از {min_order_size} کمتر است"
 
 #: market/serializers/order_serializer.py:82
 #, python-brace-format

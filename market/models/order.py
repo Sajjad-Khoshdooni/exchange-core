@@ -270,7 +270,7 @@ class Order(models.Model):
             'price': price,
             'amount': get_presentation_amount(sum(map(lambda i: i['unfilled_amount'], price_orders)), symbol.step_size),
             'depth': Order.get_depth_value(sum(map(lambda i: i['unfilled_amount'], price_orders)), price, symbol.base_asset.symbol),
-            'total': get_presentation_amount(sum(map(lambda i: i['unfilled_amount'] * price, price_orders)), 0)
+            'total': sum(map(lambda i: i['unfilled_amount'] * price, price_orders))
         } for price, price_orders in grouped_by_price]
 
     @staticmethod

@@ -58,12 +58,13 @@ def create_depth_orders():
 
     system = Account.system()
     for symbol in PairSymbol.objects.filter(market_maker_enabled=True):
+        present_prices = set(Order.open_objects.filter(symbol=symbol, type=Order.DEPTH).values_list('price', flat=True))
         try:
             for side in (Order.BUY, Order.SELL):
                 price = Order.get_maker_price(symbol, side)
                 for i in range(Order.MAKER_ORDERS_COUNT - open_depth_orders_count[(symbol.id, side)]):
                     order = Order.init_maker_order(symbol, side, price * get_price_factor(side, i), system)
-                    if order:
+                    if order and order.price not in present_prices:
                         with transaction.atomic():
                             order.save()
                             Order.submit(order=order)
