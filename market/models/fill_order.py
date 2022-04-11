@@ -123,7 +123,7 @@ class FillOrder(models.Model):
                 receiver=fee_wallet.asset.get_wallet(system, market=fee_wallet.market),
                 amount=trx_amount,
                 group_id=self.group_id,
-                scope=Trx.TRADE
+                scope=Trx.COMMISSION
             )
     
     @classmethod

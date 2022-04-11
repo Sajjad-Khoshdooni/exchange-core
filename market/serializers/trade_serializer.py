@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
+from ledger.models import Asset
 from ledger.utils.precision import get_presentation_amount
 from market.models import FillOrder, Order
 
@@ -25,9 +26,13 @@ class FillOrderSerializer(serializers.ModelSerializer):
         data['price'] = str(get_presentation_amount(Decimal(data['price']), trade.symbol.tick_size))
         data['pair_amount'] = str(get_presentation_amount(Decimal(data['pair_amount']), trade.symbol.tick_size))
         if 'fee_amount' in data:
-            data['fee_amount'] = str(get_presentation_amount(Decimal(data['fee_amount']), trade.symbol.step_size)) \
-                if data['side'] == Order.BUY else \
-                str(get_presentation_amount(Decimal(data['fee_amount']), trade.symbol.tick_size))
+            if data['side'] == Order.BUY:
+                data['fee_amount'] = trade.symbol.asset.get_presentation_amount(data['fee_amount'])
+            elif trade.symbol.base_asset.symbol == Asset.IRT:
+                data['fee_amount'] = trade.symbol.asset.get_presentation_price_irt(data['fee_amount'])
+            elif trade.symbol.base_asset.symbol == Asset.USDT:
+                data['fee_amount'] = trade.symbol.asset.get_presentation_price_usdt(data['fee_amount'])
+            data['fee_asset'] = data['coin'] if data['side'] == Order.BUY else data['pair']
         return data
 
     class Meta:
