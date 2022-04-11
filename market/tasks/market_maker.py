@@ -24,7 +24,7 @@ def update_maker_orders():
             (depth['symbol'], depth['side'])
         ] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) or Decimal()
 
-    for symbol in PairSymbol.objects.filter(market_maker_enabled=True):
+    for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True):
         try:
             with transaction.atomic():
                 Order.cancel_invalid_maker_orders(symbol)
@@ -57,7 +57,7 @@ def create_depth_orders():
         open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
 
     system = Account.system()
-    for symbol in PairSymbol.objects.filter(market_maker_enabled=True):
+    for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True):
         try:
             for side in (Order.BUY, Order.SELL):
                 price = Order.get_maker_price(symbol, side)
