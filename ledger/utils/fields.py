@@ -15,12 +15,29 @@ COMMISSION_MAX_DIGITS = 25
 AMOUNT_DECIMAL_PLACES = 18
 AMOUNT_MAX_DIGITS = 40
 
+PRICE_DECIMAL_PLACES = 18
+PRICE_MAX_DIGITS = 40
+
 
 def get_amount_field(max_digits: int = None, decimal_places: int = None, default: Decimal = None):
 
     kwargs = {
         'max_digits': max_digits or AMOUNT_MAX_DIGITS,
         'decimal_places': decimal_places or AMOUNT_DECIMAL_PLACES,
+        'validators': [MinValueValidator(0)]
+    }
+
+    if default is not None:
+        kwargs['default'] = default
+
+    return models.DecimalField(**kwargs)
+
+
+def get_price_field(max_digits: int = None, decimal_places: int = None, default: Decimal = None):
+
+    kwargs = {
+        'max_digits': max_digits or PRICE_MAX_DIGITS,
+        'decimal_places': decimal_places or PRICE_DECIMAL_PLACES,
         'validators': [MinValueValidator(0)]
     }
 
@@ -48,8 +65,9 @@ def get_status_field():
     )
 
 
-def get_lock_field(null: bool = False):
-    return models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE, null=null, blank=null, editable=False)
+def get_lock_field(null: bool = False, **kwargs):
+    return models.OneToOneField(
+        'ledger.BalanceLock', on_delete=models.CASCADE, null=null, blank=null, editable=False, **kwargs)
 
 
 def get_group_id_field(db_index: bool = False):

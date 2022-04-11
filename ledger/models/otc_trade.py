@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 from uuid import uuid4
 
+from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Q
 
@@ -64,7 +65,7 @@ class OTCTrade(models.Model):
                     scope=Trx.TRADE
                 ),
             ])
-    
+
     @property
     def client_order_id(self):
         return 'otc-%s' % self.id
@@ -129,9 +130,11 @@ class OTCTrade(models.Model):
 
         if hedged:
             with transaction.atomic():
+                from market.models import FillOrder
                 self.change_status(self.DONE)
                 self.create_ledger()
                 self.lock.release()
+                FillOrder.create_for_otc_trade(self)
 
     @classmethod
     def check_abrupt_decrease(cls, otc_request: OTCRequest):

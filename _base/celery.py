@@ -4,6 +4,7 @@ from celery import Celery
 
 # Set the default Django settings module for the 'celery' program.
 from celery.schedules import crontab
+from django.conf import settings
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', '_base.settings')
 
@@ -104,6 +105,23 @@ app.conf.beat_schedule = {
             'expire': 300
         },
     },
+    # market tasks
+    'create depth orders': {
+        'task': 'market.tasks.market_maker.create_depth_orders',
+        'schedule': 5,
+        'options': {
+            'queue': 'market',
+            'expire': 5
+        },
+    },
+    'update maker orders': {
+        'task': 'market.tasks.market_maker.update_maker_orders',
+        'schedule': 1,
+        'options': {
+            'queue': 'market',
+            'expire': 2
+        },
+    },
     'monitor_blockchain_delays': {
         'task': 'tracker.tasks.monitor_blockchain_delays',
         'schedule': 30,
@@ -163,3 +181,30 @@ app.conf.beat_schedule = {
         }
     },
 }
+
+if settings.DEBUG:
+    app.conf.beat_schedule = {
+        'coin_market_cap_update': {
+            'task': 'collector.tasks.coin_market_cap.update_coin_market_cap',
+            # 'schedule': crontab(minute=0, hour=2),
+            'schedule': crontab(minute="*/30"),
+        },
+        # market tasks
+        'create depth orders': {
+            'task': 'market.tasks.market_maker.create_depth_orders',
+            'schedule': 5,
+            'options': {
+                'queue': 'market',
+                'expire': 5
+            },
+        },
+        'update maker orders': {
+            'task': 'market.tasks.market_maker.update_maker_orders',
+            'schedule': 1,
+            'options': {
+                'queue': 'market',
+                'expire': 2
+            },
+        },
+    }
+

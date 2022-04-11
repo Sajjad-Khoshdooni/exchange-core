@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.db import models
 from django.db.models import Sum
 
+from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
 from ledger.models import BalanceLock
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt, get_tether_irt_price
@@ -46,7 +47,8 @@ class Wallet(models.Model):
     def lock_balance(self, amount: Decimal) -> BalanceLock:
         assert amount > 0
 
-        self.has_balance(amount, raise_exception=True)
+        if self.account.type != Account.SYSTEM:
+            self.has_balance(amount, raise_exception=True)
 
         return BalanceLock.objects.create(wallet=self, amount=amount)
 

@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'hijack',
     'hijack.contrib.admin',
     'django_filters',
+    'drf_yasg',
 
     'financial',
     'multimedia',
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
     'provider',
     'wallet',
     'collector',
+    'market',
     'simple_history',
 ]
 
@@ -161,6 +163,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
 
 LANGUAGE_CODE = 'fa-IR'
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale/'),
+]
 
 TIME_ZONE = 'Asia/Tehran'
 
@@ -205,6 +210,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
 
     'DEFAULT_THROTTLE_RATES': {
         'burst': '5/min',
@@ -247,10 +253,10 @@ LOGGING = {
     }
 }
 
-# SESSION_COOKIE_DOMAIN = '.chavosh.org'
-SESSION_COOKIE_SAMESITE = 'None'
-SESSION_COOKIE_SECURE = True
 
-CSRF_COOKIE_DOMAIN = '.raastin.com'
-CSRF_COOKIE_SAMESITE = 'None'
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='None')
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', cast=bool, default=True)
+
+CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN', default='.raastin.com')
+CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='None')
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', cast=bool, default=True)
