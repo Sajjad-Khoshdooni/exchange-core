@@ -10,15 +10,14 @@ logger = logging.getLogger(__name__)
 class Payir:
 
     @classmethod
-    def collect_api(cls, url: str, method: str = 'GET', data: dict = None):
+    def collect_api(cls, path: str, method: str = 'GET', data: dict = None):
+
+        url = 'https://pay.ir' + path
 
         request_kwargs = {
             'url': url,
             'timeout': 60,
-            'headers': {'Authorization': 'Bearer ' + secret('PAY_IR_TOKEN')},
-            'proxies': {
-                'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            }
+            'headers': {'Authorization': 'Bearer ' + secret('PAY_IR_TOKEN')}
         }
 
         try:

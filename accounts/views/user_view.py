@@ -18,12 +18,14 @@ class UserSerializer(serializers.ModelSerializer):
         )
 
     def get_on_boarding_status(self, user: User):
-        otc_request = OTCRequest.objects.filter(account__user=user)
-        transfer = Transfer.objects.filter(wallet__account__user=user)
+        otc_request = OTCRequest.objects.filter(account=user.account)
+
         if otc_request:
             resp = 'trade_is_done'
         else:
             if user.on_boarding_flow == 'crypto':
+                transfer = Transfer.objects.filter(wallet__account=user.account, deposit=True)
+
                 if transfer:
                     resp = 'waiting_for_crypto_trade'
                 else:

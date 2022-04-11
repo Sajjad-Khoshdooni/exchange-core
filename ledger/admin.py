@@ -28,9 +28,8 @@ class AssetAdmin(AdvancedAdmin):
 
     list_display = (
         'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount',
-        'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance', 'get_ledger_balance_users',
-
-        'get_hedge_threshold', 'get_future_value',
+        'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
+        'get_ledger_balance_users', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
         'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'hedge_method', 'bid_diff', 'ask_diff'
     )
     list_filter = ('enable', 'trend')
@@ -78,6 +77,11 @@ class AssetAdmin(AdvancedAdmin):
         return self.overview and asset.get_presentation_amount(self.overview.get_ledger_balance(Account.OUT, asset))
 
     get_ledger_balance_out.short_description = 'out'
+
+    def get_total_asset(self, asset: Asset):
+        return self.overview and asset.get_presentation_amount(self.overview.get_total_assets(asset))
+
+    get_total_asset.short_description = 'total assets'
 
     def get_future_amount(self, asset: Asset):
         return self.overview and asset.get_presentation_amount(self.overview.get_future_position_amount(asset))
