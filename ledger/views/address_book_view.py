@@ -45,7 +45,7 @@ class AddressBookView(ModelViewSet):
         addressbook = AddressBook.objects.filter(deleted=False, account=self.request.user.account)
 
         if 'coin' in query_params:
-            addressbook = addressbook.filter(asset=get_object_or_404(Asset, symbol=query_params['coin']))
+            addressbook = addressbook.filter(asset__symbol=query_params['coin'])
 
         if 'type' in query_params:
             if query_params['type'] == 'standard':
