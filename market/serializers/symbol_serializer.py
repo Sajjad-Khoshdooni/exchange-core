@@ -5,7 +5,7 @@ from django.db.models import Max, Min, Sum
 from django.utils import timezone
 from rest_framework import serializers
 
-from ledger.utils.precision import floor_precision
+from ledger.utils.precision import get_presentation_amount, floor_precision
 from market.models import PairSymbol, FillOrder
 
 
@@ -19,7 +19,7 @@ class SymbolSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         for field in ('taker_fee', 'maker_fee', 'min_trade_quantity', 'max_trade_quantity'):
-            representation[field] = str(floor_precision(representation[field]))
+            representation[field] = get_presentation_amount(representation[field])
         return representation
 
     class Meta:
