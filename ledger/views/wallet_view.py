@@ -4,12 +4,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.models import Wallet, DepositAddress, Transfer, NetworkAsset
+from ledger.models import Wallet, DepositAddress, Transfer, NetworkAsset, Network
 from ledger.models.asset import Asset
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.price import get_trading_price_irt, BUY, SELL, get_prices_dict
 from ledger.utils.price_manager import PriceManager
 from wallet.utils import get_presentation_address
+from rest_framework.generics import ListAPIView
 
 
 class AssetListSerializer(serializers.ModelSerializer):
@@ -235,3 +236,34 @@ class WalletBalanceView(APIView):
             'symbol': asset.symbol,
             'balance': wallet.asset.get_presentation_amount(wallet.get_free()),
         })
+
+
+class BriefNetworkAssetsSerializer(serializers.ModelSerializer):
+
+    name = serializers.SerializerMethodField()
+    address_regex = serializers.SerializerMethodField()
+
+    def get_name(self, network_asset: NetworkAsset):
+        return network_asset.network.name
+
+    def get_address_regex(self, network_asset: NetworkAsset):
+        return network_asset.network.address_regex
+
+    class Meta:
+        fields = ('name', 'address_regex')
+        model = NetworkAsset
+
+
+class BriefNetworkAssetsView(ListAPIView):
+
+    serializer_class = BriefNetworkAssetsSerializer
+
+    def get_queryset(self):
+        query_params = self.request.query_params
+        if query_params:
+            return NetworkAsset.objects.filter(asset__symbol=query_params['symbol'].upper(),
+                                               network__can_withdraw=True,
+                                               binance_withdraw_enable=True)
+        return Network.objects.filter(network__can_withdraw=True, is_universal=True)
+
+

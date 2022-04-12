@@ -6,6 +6,8 @@ urlpatterns = [
     path('v1/assets/', views.AssetsViewSet.as_view({'get': 'list'})),
     path('v1/networkassets/', views.NetworkAssetView.as_view()),
 
+    path('v1/briefnetworkassets/', views.BriefNetworkAssetsView.as_view()),
+
     path('v1/assets/<slug:symbol>/', views.AssetsViewSet.as_view({'get': 'retrieve'})),
 
     path('v1/wallets/', views.WalletViewSet.as_view({'get': 'list'})),
@@ -36,7 +38,6 @@ urlpatterns = [
     path('v1/addressbook/<int:pk>/', views.AddressBookView.as_view({
         'get': 'retrieve',
         'delete': 'destroy',
-        'patch': 'partial_update',
     })),
     path('v1/addressbook/', views.AddressBookView.as_view({
         'post': 'create',
