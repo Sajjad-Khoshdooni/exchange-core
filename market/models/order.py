@@ -284,8 +284,8 @@ class Order(models.Model):
     def quantize_values(symbol: PairSymbol, open_orders):
         return [{
             'side': order['side'],
-            'price': str(floor_precision(order['price'], symbol.tick_size)),
-            'unfilled_amount': str(floor_precision(order['unfilled_amount'], symbol.step_size)),
+            'price': floor_precision(order['price'], symbol.tick_size),
+            'unfilled_amount': floor_precision(order['unfilled_amount'], symbol.step_size),
         } for order in open_orders]
 
     # Market Maker related methods
