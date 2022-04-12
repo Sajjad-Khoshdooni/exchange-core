@@ -267,10 +267,10 @@ class Order(models.Model):
         key_func = (lambda o: o['price'])
         grouped_by_price = [(i[0], list(i[1])) for i in groupby(sorted(orders, key=key_func), key=key_func)]
         return [{
-            'price': price,
+            'price': str(price),
             'amount': get_presentation_amount(sum(map(lambda i: i['unfilled_amount'], price_orders)), symbol.step_size),
             'depth': Order.get_depth_value(sum(map(lambda i: i['unfilled_amount'], price_orders)), price, symbol.base_asset.symbol),
-            'total': sum(map(lambda i: i['unfilled_amount'] * price, price_orders))
+            'total': get_presentation_amount(sum(map(lambda i: i['unfilled_amount'] * price, price_orders)), 0)
         } for price, price_orders in grouped_by_price]
 
     @staticmethod
