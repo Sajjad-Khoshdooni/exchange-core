@@ -1,10 +1,10 @@
 from decimal import Decimal
 
 from rest_framework import serializers
-import soupsieve
 
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.precision import floor_precision
 from market.models import PairSymbol
+
 
 class OHLCVSerializer(serializers.Serializer):
     timestamp = serializers.DateTimeField(source='timestamp')
@@ -12,7 +12,7 @@ class OHLCVSerializer(serializers.Serializer):
     high = serializers.SerializerMethodField()
     low = serializers.SerializerMethodField()
     close = serializers.SerializerMethodField()
-    value = serializers.SerializerMethodField()
+    volume = serializers.SerializerMethodField()
 
     def get_open(self, obj):
         return self.format_price(self.context['symbol'], obj['open'])
@@ -26,11 +26,9 @@ class OHLCVSerializer(serializers.Serializer):
     def get_close(self, obj):
         return self.format_price(self.context['symbol'], obj['close'])
 
-    def get_value(self, obj):
-        return get_presentation_amount(obj['value'], self.context['symbol'].step_size)
+    def get_volume(self, obj):
+        return floor_precision(obj['volume'], self.context['symbol'].step_size)
 
     @staticmethod
     def format_price(symbol: PairSymbol, price: Decimal):
-        return get_presentation_amount(price, symbol.tick_size)
-
-        
+        return floor_precision(price, symbol.tick_size)

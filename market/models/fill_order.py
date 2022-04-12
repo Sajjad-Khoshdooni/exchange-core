@@ -8,7 +8,6 @@ from accounts.models import Account
 from ledger.models import Trx, OTCTrade
 from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_field
 from ledger.utils.precision import floor_precision, precision_to_step
-from ledger.utils.precision import get_presentation_amount
 from market.models import Order, PairSymbol
 
 logger = logging.getLogger(__name__)
@@ -42,7 +41,7 @@ class FillOrder(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['created', 'symbol',]),
+            models.Index(fields=['created', 'symbol', ]),
         ]
 
     def get_side(self, account: Account, list_index: int):
@@ -126,7 +125,7 @@ class FillOrder(models.Model):
                 group_id=self.group_id,
                 scope=Trx.COMMISSION
             )
-    
+
     @classmethod
     def get_last(cls, symbol: 'PairSymbol', max_datetime=None):
         qs = cls.objects.filter(symbol=symbol).order_by('-id')
@@ -136,20 +135,21 @@ class FillOrder(models.Model):
 
     def format_values(self):
         return {
-            'amount': str(get_presentation_amount(self.amount, self.symbol.step_size)),
-            'price': str(get_presentation_amount(self.price, self.symbol.tick_size)),
-            'total': str(get_presentation_amount(self.amount * self.price, self.symbol.tick_size)),
+            'amount': str(floor_precision(self.amount, self.symbol.step_size)),
+            'price': str(floor_precision(self.price, self.symbol.tick_size)),
+            'total': str(floor_precision(self.amount * self.price, self.symbol.tick_size)),
         }
 
     @classmethod
     def get_grouped_by_interval(cls, symbol_id: int, interval_in_secs: int, start: datetime, end: datetime):
         return [
-            {'timestamp': group.tf, 'open': group.open[1], 'high': group.high, 'low': group.low, 'close': group.close[1], 'value': group.value}
+            {'timestamp': group.tf, 'open': group.open[1], 'high': group.high, 'low': group.low,
+             'close': group.close[1], 'volume': group.volume}
             for group in cls.objects.raw(
                 "select min(id) as id, "
                 "min(array[id, price]) as open, max(array[id, price]) as close, "
                 "max(price) as high, min(price) as low, "
-                "sum(amount) as value, "
+                "sum(amount) as volume, "
                 "(date_trunc('seconds', (created - timestamptz 'epoch') / %s) * %s + timestamptz 'epoch') as tf "
                 "from market_fillorder where symbol_id = %s and created between %s and %s group by tf order by tf",
                 [interval_in_secs, interval_in_secs, symbol_id, start, end]

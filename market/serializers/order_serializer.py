@@ -10,7 +10,7 @@ from rest_framework.generics import get_object_or_404
 
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet
-from ledger.utils.precision import floor_precision, get_precision, get_presentation_amount
+from ledger.utils.precision import floor_precision, get_precision
 from ledger.utils.price import IRT
 from market.models import Order, PairSymbol
 
@@ -24,8 +24,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
-        data['amount'] = str(get_presentation_amount(Decimal(data['amount']), order.symbol.step_size))
-        data['price'] = str(get_presentation_amount(Decimal(data['price']), order.symbol.tick_size))
+        data['amount'] = str(floor_precision(Decimal(data['amount']), order.symbol.step_size))
+        data['price'] = str(floor_precision(Decimal(data['price']), order.symbol.tick_size))
         data['symbol'] = order.symbol.name
         return data
 
@@ -84,13 +84,13 @@ class OrderSerializer(serializers.ModelSerializer):
         return price
 
     def get_filled_amount(self, order: Order):
-        return get_presentation_amount(order.filled_amount)
+        return str(floor_precision(order.filled_amount, order.symbol.step_size))
 
     def get_filled_price(self, order: Order):
         filled_price = order.filled_price
         if filled_price is None:
             return None
-        return get_presentation_amount(filled_price)
+        return str(floor_precision(filled_price, order.symbol.tick_size))
 
     class Meta:
         model = Order

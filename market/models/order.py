@@ -2,7 +2,6 @@ import logging
 from decimal import Decimal
 from itertools import groupby
 from random import random
-from uuid import uuid4
 
 from django.conf import settings
 from django.db import models, transaction
@@ -12,7 +11,7 @@ from accounts.models import Account
 from ledger.models import Trx, Wallet
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
-from ledger.utils.precision import floor_precision, get_presentation_amount
+from ledger.utils.precision import floor_precision
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt
 from market.models import PairSymbol
 from provider.models import ProviderOrder
@@ -268,24 +267,25 @@ class Order(models.Model):
         grouped_by_price = [(i[0], list(i[1])) for i in groupby(sorted(orders, key=key_func), key=key_func)]
         return [{
             'price': str(price),
-            'amount': get_presentation_amount(sum(map(lambda i: i['unfilled_amount'], price_orders)), symbol.step_size),
-            'depth': Order.get_depth_value(sum(map(lambda i: i['unfilled_amount'], price_orders)), price, symbol.base_asset.symbol),
-            'total': get_presentation_amount(sum(map(lambda i: i['unfilled_amount'] * price, price_orders)), 0)
+            'amount': str(floor_precision(sum(map(lambda i: i['unfilled_amount'], price_orders)), symbol.step_size)),
+            'depth': Order.get_depth_value(sum(map(lambda i: i['unfilled_amount'], price_orders)), price,
+                                           symbol.base_asset.symbol),
+            'total': str(floor_precision(sum(map(lambda i: i['unfilled_amount'] * price, price_orders)), 0))
         } for price, price_orders in grouped_by_price]
 
     @staticmethod
     def get_depth_value(amount, price, base_asset: str):
         if base_asset == Asset.IRT:
-            return get_presentation_amount((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_IRT * 100, 0)
+            return str(floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_IRT * 100, 0))
         if base_asset == Asset.USDT:
-            return get_presentation_amount((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_USDT * 100, 0)
+            return str(floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_USDT * 100, 0))
 
     @staticmethod
     def quantize_values(symbol: PairSymbol, open_orders):
         return [{
             'side': order['side'],
-            'price': floor_precision(order['price'], symbol.tick_size),
-            'unfilled_amount': floor_precision(order['unfilled_amount'], symbol.step_size),
+            'price': str(floor_precision(order['price'], symbol.tick_size)),
+            'unfilled_amount': str(floor_precision(order['unfilled_amount'], symbol.step_size)),
         } for order in open_orders]
 
     # Market Maker related methods
