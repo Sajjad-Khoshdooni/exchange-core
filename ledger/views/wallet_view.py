@@ -9,7 +9,6 @@ from ledger.models.asset import Asset
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.price import get_trading_price_irt, BUY, SELL, get_prices_dict
 from ledger.utils.price_manager import PriceManager
-from wallet.utils import get_presentation_address
 from rest_framework.generics import ListAPIView
 
 

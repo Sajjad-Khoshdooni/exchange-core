@@ -1,10 +1,8 @@
 from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers, status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from ledger.models import AddressBook, Asset, Network
-from rest_framework import filters
 
 
 class AddressBookSerializer(serializers.ModelSerializer):
@@ -64,4 +62,4 @@ class AddressBookView(ModelViewSet):
         instance.deleted = True
         instance.save()
 
-        return Response({'msg': 'address book deleted'},status=status.HTTP_204_NO_CONTENT)
+        return Response({'msg': 'address book deleted'}, status=status.HTTP_204_NO_CONTENT)
