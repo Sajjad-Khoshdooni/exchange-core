@@ -37,6 +37,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
                 if not 'coin' in attrs:
                     raise ValidationError('رمزارزی انتخاب نشده است.')
                 asset = get_object_or_404(Asset, symbol=attrs['coin'])
+
         else:
             if not 'coin' in attrs:
                 raise ValidationError('رمزارزی انتخاب نشده است.')

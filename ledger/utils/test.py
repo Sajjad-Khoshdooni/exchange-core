@@ -92,12 +92,13 @@ if settings.TESTING:
         return network_asset
 
 
-    def new_address_book(account, network, asset) -> AddressBook:
+    def new_address_book(account, network, asset=None) -> AddressBook:
         name = 'test'
         address = 'addressbook1'
         account = account
         network = network
-        asset = Asset.get(asset)
+        if asset:
+            asset = Asset.get(asset)
         address_book = AddressBook.objects.create(name=name, address=address, account=account, network=network,
                                                   asset=asset)
         return address_book

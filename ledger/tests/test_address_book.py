@@ -18,6 +18,7 @@ class AddressBookTestCase(TestCase):
         self.client.force_login(self.user)
         self.network = new_network()
         self.address_book = new_address_book(account=self.account, network=self.network, asset='USDT')
+        self.address_book_without_coin = new_address_book(account=self.account, network=self.network )
         self.usdt = Asset.get(Asset.USDT)
         network_asset = new_network_asset(self.usdt, self.network)
 
@@ -40,27 +41,10 @@ class AddressBookTestCase(TestCase):
 
     def test_list_address_book(self):
         resp = self.client.get('/api/v1/addressbook/')
-        self.assertEqual(len(resp.data), 1)
+        self.assertEqual(len(resp.data), 2)
         self.assertEqual(resp.status_code, 200)
 
     def test_delete_address_book(self):
-        resp = self.client.get('/api/v1/addressbook/{}'.format(self.address_book.pk))
-        self.assertEqual(resp.status_code, 200)
+        resp = self.client.delete('/api/v1/addressbook/{}'.format(self.address_book.pk))
+        self.assertEqual(resp.status_code, self.address_book.pk)
 
-    # def test_delete_address_book(self):
-    #     pass
-    # #
-    # # def test_withdraw_1(self):
-    # #     resp = self.client.post('/api/v1/withdraw/')
-    # #     self.assertEqual(resp.status_code, 400)
-
-    def test_withdraw_2(self):
-        amount = '50'
-        resp = self.client.post('/api/v1/withdraw/', {
-            'amount': amount,
-            'address': 'asdf',
-            'coin': 'USDT',
-            'network': 'BSC',
-            'code': generate_otp_code(self.user, 'withdraw')
-        })
-        self.assertEqual((get_presentation_amount(resp.data['amount'])), amount)
