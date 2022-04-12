@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class VerificationCode(models.Model):
-    EXPIRATION_TIME = 15     * MINUTES
+    EXPIRATION_TIME = 15 * MINUTES
 
     SCOPE_FORGET_PASSWORD = 'forget'
     SCOPE_VERIFY_PHONE = 'verify'
