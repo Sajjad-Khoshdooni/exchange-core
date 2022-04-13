@@ -241,16 +241,20 @@ class WalletBalanceView(APIView):
 class BriefNetworkAssetsSerializer(serializers.ModelSerializer):
 
     name = serializers.SerializerMethodField()
+    symbol = serializers.SerializerMethodField()
     address_regex = serializers.SerializerMethodField()
 
     def get_name(self, network_asset: NetworkAsset):
         return network_asset.network.name
 
+    def get_symbol(self, network_asset: NetworkAsset):
+        return network_asset.network.symbol
+
     def get_address_regex(self, network_asset: NetworkAsset):
         return network_asset.network.address_regex
 
     class Meta:
-        fields = ('name', 'address_regex')
+        fields = ('name', 'symbol', 'address_regex')
         model = NetworkAsset
 
 
@@ -260,10 +264,11 @@ class BriefNetworkAssetsView(ListAPIView):
 
     def get_queryset(self):
         query_params = self.request.query_params
+        query_set = NetworkAsset.objects.all()
         if 'symbol' in query_params:
-            return NetworkAsset.objects.filter(asset__symbol=query_params['symbol'].upper(),
-                                               network__can_withdraw=True,
-                                               binance_withdraw_enable=True)
-        return Network.objects.filter(network__can_withdraw=True, is_universal=True)
+            return query_set.filter(asset__symbol=query_params['symbol'].upper(),
+                                    network__can_withdraw=True,
+                                    binance_withdraw_enable=True)
+        return query_set.filter(network__can_withdraw=True, network__is_universal=True)
 
 
