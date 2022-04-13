@@ -41,6 +41,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
 
 
 class PaymentRequestView(CreateAPIView):
+    queryset = PaymentRequest.objects.all()
     permission_classes = (IsBasicVerified, )
     serializer_class = PaymentRequestSerializer
 
