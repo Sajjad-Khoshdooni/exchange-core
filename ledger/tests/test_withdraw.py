@@ -7,12 +7,11 @@ from ledger.utils.precision import get_presentation_amount
 from ledger.utils.test import new_account, new_address_book, generate_otp_code, new_network, new_network_asset
 
 
-class AddressBookTestCase(TestCase):
+class WithdrawTestCase(TestCase):
 
     def setUp(self):
         self.account = new_account()
         self.user = self.account.user
-        self.user.telephone = '09355913457'
         self.client = Client()
         self.client.force_login(self.user)
         self.network = new_network()
@@ -68,12 +67,12 @@ class AddressBookTestCase(TestCase):
         })
         self.assertEqual(resp.status_code, 201)
 
-    def test_withdraw_with_coin_with_addressbook_without_coin(self):
+    def test_withdraw_with_coin_with_addressbook_with_coin(self):
         amount = '50'
         resp = self.client.post('/api/v1/withdraw/', {
             'amount': amount,
             'code': generate_otp_code(self.user, 'withdraw'),
-            'coin': 'USDT',
-            'address_book_id': self.address_book_without_coin.id
+            'coin': 'BTC',
+            'address_book_id': self.address_book.id
         })
         self.assertEqual(resp.status_code, 201)

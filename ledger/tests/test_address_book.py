@@ -1,10 +1,9 @@
 from uuid import uuid4
 
 from django.test import TestCase
-from ledger.utils.precision import get_presentation_amount
 from accounts.models import Account
-from ledger.models import AddressBook, Asset, Trx
-from ledger.utils.test import new_account, new_address_book, generate_otp_code, new_network, new_network_asset
+from ledger.models import Asset, Trx
+from ledger.utils.test import new_account, new_address_book, new_network, new_network_asset
 from django.test import Client
 
 
@@ -13,7 +12,6 @@ class AddressBookTestCase(TestCase):
     def setUp(self):
         self.account = new_account()
         self.user = self.account.user
-        self.user.telephone = '09355913457'
         self.client = Client()
         self.client.force_login(self.user)
         self.network = new_network()

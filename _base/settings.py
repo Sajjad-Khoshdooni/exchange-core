@@ -11,7 +11,7 @@ from yekta_config import secret
 from yekta_config.config import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-if settings.DEBUG:
+if True:
     CELERY_TASK_ALWAYS_EAGER = True
 
 # Quick-start development settings - unsuitable for production
