@@ -385,7 +385,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('user', 'type')
+    list_display = ('user', 'type', 'name')
     search_fields = ('user__phone', )
     list_filter = ('type', 'primary')
 
