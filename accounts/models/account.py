@@ -26,6 +26,12 @@ class Account(models.Model):
 
     last_margin_warn = models.DateTimeField(null=True, blank=True)
 
+    referred_by = models.ForeignKey(
+        to='accounts.Referral',
+        on_delete=models.SET_NULL,
+        null=True, blank=True
+    )
+
     @classmethod
     def system(cls) -> 'Account':
         return Account.objects.get(type=cls.SYSTEM)
