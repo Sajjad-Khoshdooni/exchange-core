@@ -6,7 +6,7 @@ urlpatterns = [
     path('v1/assets/', views.AssetsViewSet.as_view({'get': 'list'})),
     path('v1/networkassets/', views.NetworkAssetView.as_view()),
 
-    path('v1/briefnetworkassets/', views.BriefNetworkAssetsView.as_view()),
+    path('v1/networks/', views.BriefNetworkAssetsView.as_view()),
 
     path('v1/assets/<slug:symbol>/', views.AssetsViewSet.as_view({'get': 'retrieve'})),
 

@@ -259,7 +259,7 @@ class BriefNetworkAssetsView(ListAPIView):
 
     def get_queryset(self):
         query_params = self.request.query_params
-        if query_params:
+        if 'symbol' in query_params:
             return NetworkAsset.objects.filter(asset__symbol=query_params['symbol'].upper(),
                                                network__can_withdraw=True,
                                                binance_withdraw_enable=True)
