@@ -35,7 +35,10 @@ class OrderBookAPIView(APIView):
 
         bids = Order.get_formatted_orders(open_orders, symbol, Order.BUY)
         asks = Order.get_formatted_orders(open_orders, symbol, Order.SELL)
-        filtered_bids = list(filter(lambda o: o['price'] < asks[0]['price'] if asks else True, bids))
+
+        top_ask = Decimal(asks[0]['price'])
+
+        filtered_bids = list(filter(lambda o: Decimal(o['price']) < top_ask if asks else True, bids))
 
         if len(filtered_bids) < len(bids):
             logger.critical(f'There are unmatched orders in {symbol} order book', extra={
