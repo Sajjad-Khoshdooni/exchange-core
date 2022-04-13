@@ -1,7 +1,7 @@
 import logging
 from decimal import Decimal
 from itertools import groupby
-from random import random
+from random import randrange
 
 from django.conf import settings
 from django.db import models, transaction
@@ -294,7 +294,7 @@ class Order(models.Model):
         if system is None:
             system = Account.system()
 
-        amount = floor_precision(symbol.maker_amount * Decimal(1 + random()), symbol.step_size)
+        amount = floor_precision(symbol.maker_amount * Decimal(randrange(1, 40) / 20.0), symbol.step_size)
         wallet = symbol.asset.get_wallet(system, market=market)
         return Order(
             type=Order.DEPTH,
