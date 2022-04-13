@@ -21,6 +21,7 @@ class GatewayAdmin(admin.ModelAdmin):
 @admin.register(FiatTransaction)
 class FiatTransferRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'deposit', 'status', 'amount')
+    raw_id_fields = ('account', )
     list_filter = ('deposit', 'status')
     ordering = ('-created', )
 
