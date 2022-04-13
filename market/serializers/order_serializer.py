@@ -75,7 +75,7 @@ class OrderSerializer(serializers.ModelSerializer):
     @staticmethod
     def validate_order_size(amount: Decimal, price: Decimal, min_order_size: Decimal):
         if (amount * price) < min_order_size:
-            raise ValidationError({'amount': _('Small order size {min_order_size}').format(min_order_size)})
+            raise ValidationError({'amount': _('Small order size {min_order_size}').format(min_order_size=min_order_size)})
 
     @staticmethod
     def post_validate_price(symbol: PairSymbol, price: Decimal):
