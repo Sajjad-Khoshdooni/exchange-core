@@ -11,8 +11,7 @@ from yekta_config import secret
 from yekta_config.config import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-if True:
-    CELERY_TASK_ALWAYS_EAGER = True
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
@@ -27,6 +26,9 @@ TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 DEBUG_OR_TESTING = DEBUG or TESTING
 
 HOST_URL = config('HOST_URL')
+
+if settings.DEBUG_OR_TESTING:
+    CELERY_TASK_ALWAYS_EAGER = True
 
 # Application definition
 

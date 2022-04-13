@@ -1,14 +1,16 @@
 from uuid import uuid4
 from django.test import Client
 from django.test import TestCase
+
+from ledger.withdraw import binance
 from accounts.models import Account
 from ledger.models import Asset, Trx
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.test import new_account, new_address_book, generate_otp_code, new_network, new_network_asset
+from unittest.mock import patch
 
 
 class WithdrawTestCase(TestCase):
-
     def setUp(self):
         self.account = new_account()
         self.user = self.account.user
@@ -39,7 +41,11 @@ class WithdrawTestCase(TestCase):
         })
         self.assertEqual((get_presentation_amount(resp.data['amount'])), amount)
 
-    def test_withdraw_with_addressbook(self):
+    @patch.object(binance, 'handle_binance_withdraw')
+    def test_withdraw_with_addressbook(self, handle_binance_withdraw):
+
+        handle_binance_withdraw.return_value = '1'
+
         amount = '50'
         resp = self.client.post('/api/v1/withdraw/', {
             'amount': amount,

@@ -43,6 +43,6 @@ class AddressBookTestCase(TestCase):
         self.assertEqual(resp.status_code, 200)
 
     def test_delete_address_book(self):
-        resp = self.client.delete('/api/v1/addressbook/{}'.format(self.address_book.pk))
-        self.assertEqual(resp.status_code, self.address_book.pk)
+        resp = self.client.delete('/api/v1/addressbook/{}/'.format(self.address_book.pk))
+        self.assertEqual(resp.status_code, 204)
 
