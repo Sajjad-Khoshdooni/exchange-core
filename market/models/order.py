@@ -137,12 +137,14 @@ class Order(models.Model):
     def get_maker_price(symbol: PairSymbol, side: str, loose_factor=Decimal(1)):
         coin = symbol.asset.symbol
         base_symbol = symbol.base_asset.symbol
+
         if base_symbol == IRT:
             boundary_price = get_trading_price_irt(coin, side)
         elif base_symbol == USDT:
             boundary_price = get_trading_price_usdt(coin, side)
         else:
             raise NotImplementedError('Invalid trading symbol')
+
         return boundary_price * loose_factor if side == Order.BUY else boundary_price / loose_factor
 
     @classmethod
@@ -185,6 +187,7 @@ class Order(models.Model):
             matching_orders = Order.open_objects.select_for_update().filter(
                 symbol=self.symbol, side=opp_side, **Order.get_price_filter(self.price, self.side)
             ).order_by(*self.get_order_by(opp_side))
+
             logger.info(f'open orders: {matching_orders}')
 
             system = Account.system()
@@ -219,8 +222,7 @@ class Order(models.Model):
                 self.release_lock(match_amount)
                 matching_order.release_lock(match_amount)
 
-                orders_types = {self.type, matching_order.type}
-                if Order.ORDINARY in orders_types and len(orders_types) == 2 and not settings.DEBUG:
+                if self.wallet.account.is_ordinary_user() != matching_order.wallet.account.is_ordinary_user():
                     ordinary_order = self if self.type == Order.ORDINARY else matching_order
                     placed_hedge_order = ProviderOrder.try_hedge_for_new_order(
                         asset=self.wallet.asset,
@@ -228,8 +230,14 @@ class Order(models.Model):
                         amount=match_amount,
                         scope=ProviderOrder.TRADE
                     )
+
                     if not placed_hedge_order:
-                        raise Exception('failed placing hedge order', self)
+                        logger.exception(
+                            'failed placing hedge order',
+                            extra={
+                                'order': ordinary_order
+                            }
+                        )
 
                 unfilled_amount -= match_amount
                 if match_amount == matching_order.unfilled_amount:
