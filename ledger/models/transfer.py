@@ -104,6 +104,7 @@ class Transfer(models.Model):
     @classmethod
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):
         assert wallet.asset.symbol != Asset.IRT
+        assert wallet.account.is_ordinary_user()
 
         network_asset = NetworkAsset.objects.get(network=network, asset=wallet.asset)
         assert network_asset.withdraw_max >= amount >= max(network_asset.withdraw_min, network_asset.withdraw_fee)

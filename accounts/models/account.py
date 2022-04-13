@@ -80,7 +80,7 @@ class Account(models.Model):
     def save(self, *args, **kwargs):
         super(Account, self).save(*args, **kwargs)
 
-        if self.type and self.user:
+        if self.type and self.user and self.primary:
             raise Exception('User connected to system account')
 
     def print(self):

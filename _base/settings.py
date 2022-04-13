@@ -6,6 +6,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 import raven
 from decouple import Csv
+from django.conf import settings
 from yekta_config import secret
 from yekta_config.config import config
 
@@ -25,6 +26,9 @@ TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 DEBUG_OR_TESTING = DEBUG or TESTING
 
 HOST_URL = config('HOST_URL')
+
+if settings.DEBUG_OR_TESTING:
+    CELERY_TASK_ALWAYS_EAGER = True
 
 # Application definition
 
