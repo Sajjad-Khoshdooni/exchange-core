@@ -69,7 +69,9 @@ if settings.TESTING:
     def new_network() -> Network:
         symbol = 'BSC'
         name = 'BSC'
-        network = Network.objects.create(symbol=symbol, name=name)
+        address_regex = '[1-9]'
+        network = Network.objects.create(symbol=symbol, name=name, address_regex=address_regex)
+
         return network
 
 

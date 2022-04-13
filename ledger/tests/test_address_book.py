@@ -16,7 +16,7 @@ class AddressBookTestCase(TestCase):
         self.client.force_login(self.user)
         self.network = new_network()
         self.address_book = new_address_book(account=self.account, network=self.network, asset='USDT')
-        self.address_book_without_coin = new_address_book(account=self.account, network=self.network )
+        self.address_book_without_coin = new_address_book(account=self.account, network=self.network)
         self.usdt = Asset.get(Asset.USDT)
         network_asset = new_network_asset(self.usdt, self.network)
 
@@ -35,7 +35,7 @@ class AddressBookTestCase(TestCase):
             'coin': 'USDT',
             'address': 'test'
         })
-        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.status_code, 400)
 
     def test_list_address_book(self):
         resp = self.client.get('/api/v1/addressbook/')
