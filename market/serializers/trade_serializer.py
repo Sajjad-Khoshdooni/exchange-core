@@ -3,7 +3,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from ledger.models import Asset
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.precision import floor_precision
 from market.models import FillOrder, Order
 
 
@@ -22,9 +22,12 @@ class FillOrderSerializer(serializers.ModelSerializer):
 
     def to_representation(self, trade: FillOrder):
         data = super(FillOrderSerializer, self).to_representation(trade)
-        data['amount'] = str(get_presentation_amount(Decimal(data['amount']), trade.symbol.step_size))
-        data['price'] = str(get_presentation_amount(Decimal(data['price']), trade.symbol.tick_size))
-        data['pair_amount'] = str(get_presentation_amount(Decimal(data['pair_amount']), trade.symbol.tick_size))
+        amount = floor_precision(Decimal(data['amount']), trade.symbol.step_size)
+        if not amount:
+            amount = floor_precision(trade.symbol.min_trade_quantity, trade.symbol.step_size)
+        data['amount'] = str(amount)
+        data['price'] = str(floor_precision(Decimal(data['price']), trade.symbol.tick_size))
+        data['pair_amount'] = str(floor_precision(Decimal(data['pair_amount']), trade.symbol.tick_size))
         if 'fee_amount' in data:
             if data['side'] == Order.BUY:
                 data['fee_amount'] = trade.symbol.asset.get_presentation_amount(data['fee_amount'])

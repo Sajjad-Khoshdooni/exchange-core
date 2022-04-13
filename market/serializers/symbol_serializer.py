@@ -5,7 +5,7 @@ from django.db.models import Max, Min, Sum
 from django.utils import timezone
 from rest_framework import serializers
 
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.precision import get_presentation_amount, floor_precision
 from market.models import PairSymbol, FillOrder
 
 
@@ -54,7 +54,7 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
         if not (last_price and previous_price):
             return
         change_percent = 100 * (last_price - previous_price) / previous_price
-        return str(get_presentation_amount((change_percent), 2))
+        return str(floor_precision(change_percent, 2))
     
     class Meta:
         model = PairSymbol
@@ -72,7 +72,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
         last_price, previous_price = self.get_change_value_pairs(symbol)
         if not (last_price and previous_price):
             return
-        return str(get_presentation_amount((last_price - previous_price), symbol.tick_size))
+        return str(floor_precision((last_price - previous_price), symbol.tick_size))
 
     def get_high(self, symbol: PairSymbol):
         high_price = FillOrder.objects.filter(
@@ -81,7 +81,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             created__lte=timezone.now(),
         ).aggregate(max_price=Max('price'))['max_price']
         if high_price:
-            return str(get_presentation_amount(high_price, symbol.tick_size))
+            return str(floor_precision(high_price, symbol.tick_size))
 
     def get_low(self, symbol: PairSymbol):
         low_price = FillOrder.objects.filter(
@@ -90,7 +90,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             created__lte=timezone.now(),
         ).aggregate(min_price=Min('price'))['min_price']
         if low_price:
-            return str(get_presentation_amount(low_price, symbol.tick_size))
+            return str(floor_precision(low_price, symbol.tick_size))
 
     def get_volume(self, symbol: PairSymbol):
         total_amount = FillOrder.objects.filter(
@@ -99,7 +99,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             created__lte=timezone.now(),
         ).aggregate(total_amount=Sum('amount'))['total_amount']
         if total_amount:
-            return str(get_presentation_amount(total_amount, symbol.step_size))
+            return str(floor_precision(total_amount, symbol.step_size))
 
     def get_base_volume(self, symbol: PairSymbol):
         total_amount = FillOrder.objects.filter(
@@ -108,7 +108,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             created__lte=timezone.now(),
         ).aggregate(total_amount=Sum('base_amount'))['total_amount']
         if total_amount:
-            return str(get_presentation_amount(total_amount, symbol.step_size))
+            return str(floor_precision(total_amount, symbol.step_size))
 
     class Meta:
         model = PairSymbol
