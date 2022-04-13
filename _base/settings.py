@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'hijack.contrib.admin',
     'django_filters',
     'drf_yasg',
+    'rest_framework.authtoken',
 
     'financial',
     'multimedia',

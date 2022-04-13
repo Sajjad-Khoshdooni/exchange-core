@@ -1,6 +1,6 @@
 from django.urls import path
 from accounts import views
-
+from accounts.views.user_view import CreateAuthToken
 
 urlpatterns = [
     path('login/', views.LoginView.as_view()),
@@ -44,5 +44,6 @@ urlpatterns = [
 
     path('quiz/passed/', views.QuizPassedView.as_view()),
 
-    path('user/onboarding/', views.OnBoardingFlowStatus.as_view())
+    path('user/onboarding/', views.OnBoardingFlowStatus.as_view()),
+    path('api-token-auth/', CreateAuthToken.as_view())
 ]

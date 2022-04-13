@@ -1,5 +1,9 @@
 from rest_framework import serializers
-from rest_framework.generics import RetrieveAPIView
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.authtoken.models import Token
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.generics import RetrieveAPIView, get_object_or_404
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import User
@@ -76,3 +80,30 @@ class UserDetailView(RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class CreateAuthToken(ObtainAuthToken):
+    authentication_classes = (SessionAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = None
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        token, created = Token.objects.get_or_create(user=user)
+        if created:
+            return Response({
+                'token': token.key,
+                'user_id': user.pk,
+                'email': user.email
+            })
+        else:
+            return Response({
+                'token': ('*' * (len(token.key) - 4)) + token.key[-4:],
+                'user_id': user.pk,
+                'email': user.email
+            })
+
+    def delete(self, request, *args, **kwargs):
+        token = get_object_or_404(Token, user=request.user)
+        token.delete()
+        return Response({'success': True})
