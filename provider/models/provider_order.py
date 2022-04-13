@@ -115,11 +115,12 @@ class ProviderOrder(models.Model):
 
     @classmethod
     def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '') -> bool:
-        if settings.DEBUG:
-            return True
         # todo: this method should not called more than once at a single time
 
         if settings.DEBUG_OR_TESTING:
+            return True
+
+        if asset.symbol == Asset.USDT:
             return True
 
         to_buy = amount if side == cls.BUY else -amount
