@@ -1,5 +1,8 @@
+import re
+
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from ledger.models import AddressBook, Asset, Network
@@ -23,6 +26,9 @@ class AddressBookSerializer(serializers.ModelSerializer):
             asset = get_object_or_404(Asset, symbol=attrs['coin'])
         else:
             asset = None
+
+        if not re.match(network.address_regex, address):
+            raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
 
         return {
             'account': account,
