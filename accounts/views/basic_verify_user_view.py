@@ -120,6 +120,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
 class BasicInfoVerificationViewSet(ModelViewSet):
     serializer_class = BasicInfoSerializer
+    queryset = User.objects.all()
 
     def get_object(self):
         return self.request.user

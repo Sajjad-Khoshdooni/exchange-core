@@ -5,10 +5,10 @@ from financial.models import BankCard, Gateway
 if settings.TESTING:
     from accounts.models import User
 
-    def new_user() -> User:
-        name = 'testuser'
+    def new_user(level=User.LEVEL2) -> User:
+        name = 'test_user'
         phone = '09121111111'
-        user = User.objects.create(username=name, phone=phone, level=User.LEVEL2)
+        user = User.objects.create(username=name, phone=phone, level=level)
         return user
 
     def new_bank_card(user: User) -> BankCard:

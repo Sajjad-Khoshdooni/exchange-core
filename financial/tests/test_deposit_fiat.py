@@ -17,5 +17,4 @@ class DepositFiatTestCase(TestCase):
             'amount': '100000',
             'card_pan': self.bank_card.card_pan
         })
-        print(resp)
         self.assertEqual(resp.status_code, 201)
