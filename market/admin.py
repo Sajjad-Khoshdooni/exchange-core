@@ -74,6 +74,6 @@ class MatchTypeFilter(SimpleListFilter):
 
 @admin.register(FillOrder)
 class FillOrderAdmin(admin.ModelAdmin):
-    list_display = ('created', 'symbol', 'amount', 'price',)
+    list_display = ('created', 'symbol', 'amount', 'price', 'irt_value')
     list_filter = (MatchTypeFilter, 'symbol',)
     readonly_fields = ('symbol', 'taker_order', 'maker_order')
