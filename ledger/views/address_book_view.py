@@ -3,6 +3,7 @@ import re
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
@@ -46,6 +47,8 @@ class AddressBookSerializer(serializers.ModelSerializer):
 
 class AddressBookView(ModelViewSet):
     serializer_class = AddressBookSerializer
+
+    pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
         query_params = self.request.query_params
