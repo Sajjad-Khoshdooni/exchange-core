@@ -231,7 +231,9 @@ class Order(models.Model):
                 trade_trx_list = fill_order.init_trade_trxs(system)
                 trx_list.extend(trade_trx_list.values())
                 fill_order.calculate_amounts_from_trx(trade_trx_list)
-                referral_list.extend(fill_order.get_referral_trx_instances())
+                referral_trx = fill_order.init_referrals()
+                trx_list.extend(referral_trx.trx)
+                referral_list.extend(referral_trx.referral)
 
                 fill_orders.append(fill_order)
 
@@ -273,7 +275,7 @@ class Order(models.Model):
                     break
 
             Trx.objects.bulk_create(filter(lambda trx: trx and trx.amount, trx_list))
-            ReferralTrx.objects.bulk_create(referral_list)
+            ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referral_list))
             FillOrder.objects.bulk_create(fill_orders)
 
     # OrderBook related methods
