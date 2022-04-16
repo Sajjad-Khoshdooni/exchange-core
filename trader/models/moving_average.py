@@ -32,8 +32,7 @@ class MovingAverage(models.Model):
     enable = models.BooleanField(default=True)
 
     def log(self, msg: str):
-        logger.info("MA %s: " % self.symbol)
-
+        logger.info("MA %s: %s" % (self.symbol, msg))
 
     def update(self, dry_run: bool = False):
         ask, bid = (self.get_current_price(ASK), self.get_current_price(BID))
