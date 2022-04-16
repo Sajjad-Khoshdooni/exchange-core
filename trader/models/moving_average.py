@@ -60,6 +60,8 @@ class MovingAverage(models.Model):
             max_value = min(wallet.get_free(), ORDER_VALUE)
             amount = floor_precision(Decimal(max_value / ask), self.symbol.step_size)
 
+            self.log('buying %s with price=%s' % (amount, price))
+
             new_order(self.symbol, self.get_account(), amount, price, side=BUY)
             self.reverse_below()
 
@@ -73,6 +75,8 @@ class MovingAverage(models.Model):
 
             max_value = min(wallet.get_free(), ORDER_VALUE)
             amount = floor_precision(Decimal(max_value / bid), self.symbol.step_size)
+
+            self.log('selling %s with price=%s' % (amount, price))
 
             new_order(self.symbol, self.get_account(), amount, price, side=SELL)
             self.reverse_below()
