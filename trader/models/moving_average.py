@@ -48,7 +48,7 @@ class MovingAverage(models.Model):
 
         avg_ask, avg_bid = avg_prices['a'], avg_prices['b']
 
-        self.log('ask=%s, bid=%s, avg_ask=%s, avg_bid=%s' % (ask, bid, avg_ask, avg_bid))
+        self.log('ask=%s, bid=%s, median=%s, avg_ask=%s, avg_bid=%s' % (ask, bid, median_price, avg_ask, avg_bid))
 
         if self.below and median_price > avg_ask:
             # buy
