@@ -28,6 +28,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         bank_account = get_object_or_404(BankAccount, iban=iban, user=user)
 
+        assert user.account.is_ordinary_user()
+
         if not is_48h_rule_passed(user):
             raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
 

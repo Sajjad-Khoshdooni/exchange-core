@@ -6,6 +6,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 import raven
 from decouple import Csv
+from django.conf import settings
 from yekta_config import secret
 from yekta_config.config import config
 
@@ -26,6 +27,8 @@ DEBUG_OR_TESTING = DEBUG or TESTING
 
 HOST_URL = config('HOST_URL')
 
+CELERY_TASK_ALWAYS_EAGER = config('CELERY_ALWAYS_EAGER', default=False)
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -43,6 +46,7 @@ INSTALLED_APPS = [
     'hijack.contrib.admin',
     'django_filters',
     'drf_yasg',
+    'simple_history',
 
     'financial',
     'multimedia',
@@ -53,7 +57,7 @@ INSTALLED_APPS = [
     'wallet',
     'collector',
     'market',
-    'simple_history',
+    'trader',
 ]
 
 MIDDLEWARE = [
@@ -135,10 +139,19 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     },
+    'trader': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': secret('TRADER_CACHE_LOCATION', default='redis://127.0.0.1:6379/1'),
+
+        'OPTIONS': {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    },
 }
 
 PROVIDER_CACHE_LOCATION = secret('PROVIDER_CACHE_LOCATION', default='redis://127.0.0.1:6379/2')
 METRICS_CACHE_LOCATION = secret('METRICS_CACHE_LOCATION', default='redis://127.0.0.1:6379/0')
+TRADER_CACHE_LOCATION = secret('TRADER_CACHE_LOCATION', default='redis://127.0.0.1:6379/1')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators

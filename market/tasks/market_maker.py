@@ -39,7 +39,7 @@ def update_maker_orders():
                 if order:
                     with transaction.atomic():
                         order.save()
-                        Order.submit(order=order)
+                        order.submit()
         except Exception as e:
             if settings.DEBUG:
                 raise e
@@ -67,7 +67,7 @@ def create_depth_orders():
                     if order and order.price not in present_prices:
                         with transaction.atomic():
                             order.save()
-                            Order.submit(order=order)
+                            order.submit()
         except Exception as e:
             if settings.DEBUG:
                 raise e

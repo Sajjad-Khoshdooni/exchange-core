@@ -43,7 +43,13 @@ class Account(models.Model):
 
     def __str__(self):
         if self.type == self.SYSTEM:
-            return 'system'
+            name = 'system'
+
+            if self.name:
+                name += ' - %s' % self.name
+
+            return name
+
         elif self.type == self.OUT:
             return 'out'
         else:
@@ -80,7 +86,7 @@ class Account(models.Model):
     def save(self, *args, **kwargs):
         super(Account, self).save(*args, **kwargs)
 
-        if self.type and self.user:
+        if self.type and self.user and self.primary:
             raise Exception('User connected to system account')
 
     def print(self):

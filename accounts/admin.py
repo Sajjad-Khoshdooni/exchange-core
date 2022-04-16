@@ -383,11 +383,11 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     get_user_prizes.short_description = ('جایزه‌های دریافتی کاربر')
 
 
-
-
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('user', 'type')
+    list_display = ('user', 'type', 'name')
+    search_fields = ('user__phone', )
+    list_filter = ('type', 'primary')
 
 
 class FinotechRequestUserFilter(SimpleListFilter):

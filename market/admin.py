@@ -49,7 +49,7 @@ class TypeFilter(SimpleListFilter):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('created', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount',)
+    list_display = ('created', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount', 'wallet')
     list_filter = (TypeFilter, 'side', 'fill_type', 'status', 'symbol',)
 
 
@@ -76,3 +76,4 @@ class MatchTypeFilter(SimpleListFilter):
 class FillOrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'symbol', 'amount', 'price',)
     list_filter = (MatchTypeFilter, 'symbol',)
+    readonly_fields = ('symbol', 'taker_order', 'maker_order')
