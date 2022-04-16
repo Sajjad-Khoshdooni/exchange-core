@@ -33,6 +33,7 @@ class InitiateSignupView(APIView):
 
         phone = serializer.validated_data['phone']
 
+        # todo: privacy error
         if User.objects.filter(phone=phone).exists():
             raise ValidationError('شماره موبایل وارد شده در سیستم وجود دارد.')
 

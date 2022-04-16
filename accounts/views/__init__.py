@@ -11,3 +11,4 @@ from .dashboard import dashboard
 from .change_password_view import ChangePasswordView
 from .quiz_passed_view import QuizPassedView
 from .on_boarding_flow import OnBoardingFlowStatus
+from .change_phone_before_verify import ChangePhoneView
