@@ -30,6 +30,8 @@ class FillOrder(models.Model):
     taker_fee_amount = get_amount_field()
     maker_fee_amount = get_amount_field()
 
+    irt_value = models.PositiveIntegerField()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.trade_trx_list = None

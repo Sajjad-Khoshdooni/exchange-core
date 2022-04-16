@@ -12,7 +12,7 @@ from ledger.models import Trx, Wallet
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
 from ledger.utils.precision import floor_precision
-from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt
+from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
 from market.models import PairSymbol
 from provider.models import ProviderOrder
 
@@ -209,6 +209,14 @@ class Order(models.Model):
                 if match_amount <= 0:
                     continue
 
+                base_irt_price = 1
+
+                if self.symbol.base_asset.symbol == Asset.USDT:
+                    try:
+                        base_irt_price = get_tether_irt_price(self.side)
+                    except:
+                        base_irt_price = 27000
+
                 fill_order = FillOrder(
                     symbol=self.symbol,
                     taker_order=self,
@@ -216,6 +224,7 @@ class Order(models.Model):
                     amount=match_amount,
                     price=trade_price,
                     is_buyer_maker=(self.side == Order.SELL),
+                    irt_value=base_irt_price * trade_price * match_amount
                 )
                 trx_list.extend(fill_order.init_trade_trxs(system))
                 fill_order.calculate_amounts_from_trx()
