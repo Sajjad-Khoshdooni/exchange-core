@@ -24,6 +24,10 @@ class ReferralTrx(models.Model):
         to='accounts.Referral',
         on_delete=models.CASCADE,
     )
+    trader = models.ForeignKey(
+        to='accounts.Account',
+        on_delete=models.CASCADE,
+    )
 
     group_id = models.UUIDField(default=uuid4, db_index=True)
 
@@ -70,6 +74,7 @@ class ReferralTrx(models.Model):
             )
 
         if self.trx_dict[ReferralTrx.TRADER]:
+            self.trader = self.trx_dict[ReferralTrx.TRADER].receiver.account
             self.referral = self.trx_dict[ReferralTrx.TRADER].receiver.account.referred_by
             self.group_id = self.trx_dict[ReferralTrx.TRADER].group_id
             self.trader_amount = self.trx_dict[ReferralTrx.TRADER].amount

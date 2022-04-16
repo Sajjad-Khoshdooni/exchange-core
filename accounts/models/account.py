@@ -29,6 +29,7 @@ class Account(models.Model):
     referred_by = models.ForeignKey(
         to='accounts.Referral',
         on_delete=models.SET_NULL,
+        related_name='referred_accounts',
         null=True, blank=True
     )
 

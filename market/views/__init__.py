@@ -4,3 +4,4 @@ from .order_book import OrderBookAPIView
 from .symbol_views import SymbolListAPIView, SymbolDetailedStatsAPIView
 from .trade_views import AccountTradeHistoryView, TradeHistoryView
 from .tradingview_views import OHLCVAPIView
+from .referral import ReferralListAPIView, ReferralReportAPIView
