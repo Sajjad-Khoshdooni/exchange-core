@@ -226,8 +226,9 @@ class Order(models.Model):
                     is_buyer_maker=(self.side == Order.SELL),
                     irt_value=base_irt_price * trade_price * match_amount
                 )
-                trx_list.extend(fill_order.init_trade_trxs(system))
-                fill_order.calculate_amounts_from_trx()
+                trade_trx_list = fill_order.init_trade_trxs(system)
+                trx_list.extend(trade_trx_list.values())
+                fill_order.calculate_amounts_from_trx(trade_trx_list)
 
                 fill_orders.append(fill_order)
 
