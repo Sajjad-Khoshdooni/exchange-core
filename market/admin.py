@@ -76,3 +76,9 @@ class MatchTypeFilter(SimpleListFilter):
 class FillOrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'symbol', 'amount', 'price',)
     list_filter = (MatchTypeFilter, 'symbol',)
+
+
+@admin.register(ReferralTrx)
+class ReferralTrxAdmin(admin.ModelAdmin):
+    list_display = ('created', 'referral', 'referrer_amount', 'trader_amount',)
+    list_filter = ('referral', 'referral__owner')

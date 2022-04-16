@@ -8,7 +8,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import UserComment, TrafficSource
+from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
 from financial.models.payment import Payment
@@ -383,11 +383,14 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     get_user_prizes.short_description = ('جایزه‌های دریافتی کاربر')
 
 
-
-
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
     list_display = ('user', 'type')
+
+
+@admin.register(Referral)
+class ReferralAdmin(admin.ModelAdmin):
+    list_display = ('owner', 'owner_share_percent')
 
 
 class FinotechRequestUserFilter(SimpleListFilter):

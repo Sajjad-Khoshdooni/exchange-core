@@ -10,7 +10,6 @@ from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_
 from ledger.utils.precision import floor_precision, precision_to_step
 from ledger.utils.price import get_tether_irt_price, BUY
 from market.models import Order, PairSymbol
-from market.models.referral_trx import ReferralTrx
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +38,7 @@ class FillOrder(models.Model):
     def save(self, **kwargs):
         assert self.taker_order.symbol == self.maker_order.symbol == self.symbol
         self.calculate_amounts_from_trx()
+        from market.models import ReferralTrx
         ReferralTrx.objects.bulk_create(self.get_referral_trx_instances())
         return super(FillOrder, self).save(**kwargs)
 
@@ -75,16 +75,8 @@ class FillOrder(models.Model):
             'maker_fee'] else Decimal(0)
 
     def get_referral_trx_instances(self):
-        assert self.referral_trx_list is not None
-        referral_trx_instances = []
-        for trx_dict in self.referral_trx_list.values():
-            referral_trx_instances.append(ReferralTrx(
-                referral=trx_dict[ReferralTrx.TRADER].receiver.account.referral,
-                group_id=trx_dict[ReferralTrx.TRADER].group_id,
-                trader_amount=trx_dict[ReferralTrx.TRADER].amount,
-                referrer_amount=trx_dict[ReferralTrx.REFERRER].amount,
-            ))
-        return referral_trx_instances
+        assert self.referrals is not None
+        return list(filter(bool, self.referrals))
 
     def __str__(self):
         return f'{self.symbol}-{Order.BUY if self.is_buyer_maker else Order.SELL} ' \
@@ -103,24 +95,17 @@ class FillOrder(models.Model):
             'maker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.maker_order, is_taker=False,
                                                                            system=system),
         }
-        tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.asset.IRT else get_tether_irt_price(BUY)
+        tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
+            get_tether_irt_price(BUY)
 
-        self.referral_trx_list = {
-            'maker': {
-                ReferralTrx.TRADER: ReferralTrx.init_trx(
-                    ReferralTrx.TRADER, self.trade_trx_list['maker_fee'], self.price, tether_irt),
-                ReferralTrx.REFERRER: ReferralTrx.init_trx(
-                    ReferralTrx.REFERRER, self.trade_trx_list['maker_fee'], self.price, tether_irt)
-            },
-            'taker': {
-                ReferralTrx.TRADER: ReferralTrx.init_trx(
-                    ReferralTrx.TRADER, self.trade_trx_list['taker_fee'], self.price, tether_irt),
-                ReferralTrx.REFERRER: ReferralTrx.init_trx(
-                    ReferralTrx.REFERRER, self.trade_trx_list['taker_fee'], self.price, tether_irt)
-            },
-        }
-        return list(self.trade_trx_list.values()) + list(self.referral_trx_list['maker'].values()) + list(
-            self.referral_trx_list['taker'].values())
+        from market.models import ReferralTrx
+        self.referrals = ReferralTrx.get_trade_referrals(
+            self.trade_trx_list['maker_fee'],
+            self.trade_trx_list['taker_fee'],
+            self.price,
+            tether_irt
+        )
+        return list(self.trade_trx_list.values()) + ReferralTrx.get_trx_list(self.referrals)
 
     def __init_trade_trx(self):
         return Trx(

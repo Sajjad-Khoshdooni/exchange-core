@@ -29,3 +29,7 @@ class Referral(models.Model):
         if not self.id:
             self.code = generate_random_code(6)
         return super(Referral, self).save(**kwargs)
+
+    def __str__(self):
+        return f'{self.owner} ({self.owner_share_percent})'
+
