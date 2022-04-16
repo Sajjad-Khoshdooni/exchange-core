@@ -43,7 +43,13 @@ class Account(models.Model):
 
     def __str__(self):
         if self.type == self.SYSTEM:
-            return 'system'
+            name = 'system'
+
+            if self.name:
+                name += ' [%s]' % self.name
+
+            return name
+
         elif self.type == self.OUT:
             return 'out'
         else:
