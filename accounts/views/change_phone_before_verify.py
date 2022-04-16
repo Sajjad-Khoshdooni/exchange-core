@@ -52,11 +52,3 @@ class ChangePhoneView(APIView):
         change_phone.is_valid(raise_exception=True)
         change_phone.save()
         return Response({'msg': 'phone change successfully'})
-
-
-
-
-
-
-
-
