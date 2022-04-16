@@ -193,7 +193,7 @@ class FillOrder(models.Model):
                 except:
                     base_irt_price = 27000
 
-            fill_order = cls(
+            fill_order = FillOrder(
                 symbol=symbol,
                 taker_order=taker_order,
                 maker_order=maker_order,

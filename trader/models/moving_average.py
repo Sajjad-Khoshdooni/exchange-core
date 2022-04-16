@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 ASK, BID = SELL, BUY
 
-ORDER_VALUE = 500_000
+ORDER_VALUE = 300_000
 MA_INTERVAL = 60
 MA_LENGTH = 9
 
