@@ -6,9 +6,9 @@ from django.utils import timezone
 
 from accounts.models import Account
 from ledger.exceptions import SmallAmountTrade
-from ledger.models import Asset, Order, Wallet
+from ledger.models import Asset, Wallet
 from ledger.utils.fields import get_amount_field
-from ledger.utils.price import get_other_side, get_trading_price_irt, BUY, get_trading_price_usdt
+from ledger.utils.price import get_other_side, get_trading_price_irt, BUY, get_trading_price_usdt, SELL
 from ledger.utils.random import secure_uuid4
 from dataclasses import dataclass
 
@@ -82,7 +82,7 @@ class OTCRequest(models.Model):
 
         if from_symbol in (Asset.IRT, Asset.USDT) and to_symbol != Asset.IRT:
             return TradeConfig(
-                side=Order.BUY,
+                side=BUY,
                 cash=self.from_asset,
                 coin=self.to_asset,
                 cash_amount=self.from_amount,
@@ -91,7 +91,7 @@ class OTCRequest(models.Model):
 
         elif to_symbol in (Asset.IRT, Asset.USDT):
             return TradeConfig(
-                side=Order.SELL,
+                side=SELL,
                 cash=self.to_asset,
                 coin=self.from_asset,
                 cash_amount=self.to_amount,

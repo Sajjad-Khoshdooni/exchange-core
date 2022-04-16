@@ -10,7 +10,7 @@ from rest_framework.generics import get_object_or_404
 
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet
-from ledger.utils.precision import floor_precision, get_precision, humanize_number
+from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount
 from ledger.utils.price import IRT
 from market.models import Order, PairSymbol
 
@@ -46,7 +46,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 created_order = super(OrderSerializer, self).create(
                     {**validated_data, 'wallet': wallet, 'symbol': symbol}
                 )
-                Order.submit(order=created_order)
+                created_order.submit()
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
         except Exception as e:
@@ -62,11 +62,13 @@ class OrderSerializer(serializers.ModelSerializer):
         quantize_amount = floor_precision(Decimal(amount), symbol.step_size)
         if quantize_amount < symbol.min_trade_quantity:
             raise ValidationError(
-                {'amount': _('amount is less than {min_quantity}').format(min_quantity=symbol.min_trade_quantity)}
+                {'amount': _('amount is less than {min_quantity}').format(
+                    min_quantity=get_presentation_amount(symbol.min_trade_quantity, symbol.step_size))}
             )
         if quantize_amount > symbol.max_trade_quantity:
             raise ValidationError(
-                {'amount': _('amount is more than {max_quantity}').format(max_quantity=symbol.max_trade_quantity)}
+                {'amount': _('amount is more than {max_quantity}').format(
+                    max_quantity=get_presentation_amount(symbol.max_trade_quantity, symbol.step_size))}
             )
         return quantize_amount
 

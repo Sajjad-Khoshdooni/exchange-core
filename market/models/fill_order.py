@@ -31,15 +31,14 @@ class FillOrder(models.Model):
     taker_fee_amount = get_amount_field()
     maker_fee_amount = get_amount_field()
 
+    irt_value = models.PositiveIntegerField()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.trade_trx_list = None
 
     def save(self, **kwargs):
         assert self.taker_order.symbol == self.maker_order.symbol == self.symbol
-        self.calculate_amounts_from_trx()
-        from market.models import ReferralTrx
-        ReferralTrx.objects.bulk_create(self.get_referral_trx_instances())
         return super(FillOrder, self).save(**kwargs)
 
     class Meta:
@@ -66,17 +65,14 @@ class FillOrder(models.Model):
         else:
             return self.maker_fee_amount if self.get_side(account, list_index) == Order.SELL else self.taker_fee_amount
 
-    def calculate_amounts_from_trx(self):
-        assert self.trade_trx_list
-        self.base_amount = self.trade_trx_list['base'].amount
-        self.taker_fee_amount = self.trade_trx_list['taker_fee'].amount if self.trade_trx_list[
-            'taker_fee'] else Decimal(0)
-        self.maker_fee_amount = self.trade_trx_list['maker_fee'].amount if self.trade_trx_list[
-            'maker_fee'] else Decimal(0)
+    def calculate_amounts_from_trx(self, trade_trx_list):
+        self.base_amount = trade_trx_list['base'].amount
+        self.taker_fee_amount = trade_trx_list['taker_fee'].amount if trade_trx_list['taker_fee'] else Decimal(0)
+        self.maker_fee_amount = trade_trx_list['maker_fee'].amount if trade_trx_list['maker_fee'] else Decimal(0)
 
-    def get_referral_trx_instances(self):
-        assert self.referrals is not None
-        return list(filter(bool, self.referrals))
+    # def get_referral_trx_instances(self):
+    #     assert self.referrals is not None
+    #     return list(filter(bool, self.referrals))
 
     def __str__(self):
         return f'{self.symbol}-{Order.BUY if self.is_buyer_maker else Order.SELL} ' \
@@ -87,7 +83,7 @@ class FillOrder(models.Model):
         if not system:
             system = Account.system()
 
-        self.trade_trx_list = {
+        return {
             'amount': self.__init_trade_trx(),
             'base': self.__init_base_trx(),
             'taker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.taker_order, is_taker=True,
@@ -95,17 +91,17 @@ class FillOrder(models.Model):
             'maker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.maker_order, is_taker=False,
                                                                            system=system),
         }
-        tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
-            get_tether_irt_price(BUY)
-
-        from market.models import ReferralTrx
-        self.referrals = ReferralTrx.get_trade_referrals(
-            self.trade_trx_list['maker_fee'],
-            self.trade_trx_list['taker_fee'],
-            self.price,
-            tether_irt
-        )
-        return list(self.trade_trx_list.values()) + ReferralTrx.get_trx_list(self.referrals)
+        # tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
+        #     get_tether_irt_price(BUY)
+        #
+        # from market.models import ReferralTrx
+        # self.referrals = ReferralTrx.get_trade_referrals(
+        #     self.trade_trx_list['maker_fee'],
+        #     self.trade_trx_list['taker_fee'],
+        #     self.price,
+        #     tether_irt
+        # )
+        # return list(self.trade_trx_list.values()) + ReferralTrx.get_trx_list(self.referrals)
 
     def __init_trade_trx(self):
         return Trx(
@@ -212,7 +208,8 @@ class FillOrder(models.Model):
                 is_buyer_maker=(maker_order.side == Order.BUY),
                 group_id=otc_trade.group_id
             )
-            fill_order.init_trade_trxs(ignore_fee=True)
+            trade_trx_list = fill_order.init_trade_trxs(ignore_fee=True)
+            fill_order.calculate_amounts_from_trx(trade_trx_list)
             fill_order.save()
             # for key in ('taker_fee', 'maker_fee'):
             #     if fill_order.trade_trx_list[key]:

@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.db import models
+from django.db.models import UniqueConstraint, Q
 
 from accounts.models import User
 from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt
@@ -14,6 +15,8 @@ class Account(models.Model):
 
     TYPE_CHOICES = ((SYSTEM, 'system'), (OUT, 'out'), (ORDINARY, 'ordinary'))
 
+    name = models.CharField(max_length=16, blank=True)
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
 
     type = models.CharField(
@@ -21,10 +24,14 @@ class Account(models.Model):
         choices=TYPE_CHOICES,
         blank=True,
         null=True,
-        unique=True
     )
 
+    primary = models.BooleanField(default=True)
+
     last_margin_warn = models.DateTimeField(null=True, blank=True)
+
+    def is_ordinary_user(self) -> bool:
+        return not bool(self.type)
 
     referred_by = models.ForeignKey(
         to='accounts.Referral',
@@ -35,7 +42,7 @@ class Account(models.Model):
 
     @classmethod
     def system(cls) -> 'Account':
-        return Account.objects.get(type=cls.SYSTEM)
+        return Account.objects.get(type=cls.SYSTEM, primary=True)
 
     @classmethod
     def out(cls) -> 'Account':
@@ -43,7 +50,13 @@ class Account(models.Model):
 
     def __str__(self):
         if self.type == self.SYSTEM:
-            return 'system'
+            name = 'system'
+
+            if self.name:
+                name += ' - %s' % self.name
+
+            return name
+
         elif self.type == self.OUT:
             return 'out'
         else:
@@ -80,7 +93,7 @@ class Account(models.Model):
     def save(self, *args, **kwargs):
         super(Account, self).save(*args, **kwargs)
 
-        if self.type and self.user:
+        if self.type and self.user and self.primary:
             raise Exception('User connected to system account')
 
     def print(self):
@@ -93,3 +106,12 @@ class Account(models.Model):
             print('%s %s %s: %s' % (w.account, w.asset.symbol, w.market, w.get_free()))
 
         print()
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=["type"],
+                name="unique_account_type_primary",
+                condition=Q(primary=True),
+            )
+        ]

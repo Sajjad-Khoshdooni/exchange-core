@@ -12,7 +12,7 @@ from ledger.models import Trx, Wallet
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
 from ledger.utils.precision import floor_precision
-from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt
+from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
 from market.models import PairSymbol
 from market.models.referral_trx import ReferralTrx
 from provider.models import ProviderOrder
@@ -119,12 +119,15 @@ class Order(models.Model):
     def get_order_by(side):
         return ('-price', '-created') if side == Order.BUY else ('price', '-created')
 
-    @staticmethod
-    def cancel_orders(symbol: PairSymbol, to_cancel_orders=None):
+    @classmethod
+    def cancel_orders(cls, symbol: PairSymbol, to_cancel_orders=None):
         if to_cancel_orders is None:
             to_cancel_orders = Order.open_objects.select_for_update().filter(
                 symbol=symbol, cancel_request__isnull=False
             )
+        else:
+            to_cancel_orders = to_cancel_orders.exclude(status=cls.FILLED)
+
         for order in to_cancel_orders:
             order.release_lock()
 
@@ -138,12 +141,14 @@ class Order(models.Model):
     def get_maker_price(symbol: PairSymbol, side: str, loose_factor=Decimal(1)):
         coin = symbol.asset.symbol
         base_symbol = symbol.base_asset.symbol
+
         if base_symbol == IRT:
             boundary_price = get_trading_price_irt(coin, side)
         elif base_symbol == USDT:
             boundary_price = get_trading_price_usdt(coin, side)
         else:
             raise NotImplementedError('Invalid trading symbol')
+
         return boundary_price * loose_factor if side == Order.BUY else boundary_price / loose_factor
 
     @classmethod
@@ -154,10 +159,9 @@ class Order(models.Model):
     def get_lock_amount(cls, amount, price, side):
         return amount * price if side == Order.BUY else amount
 
-    @classmethod
-    def submit(cls, order: 'Order'):
-        order.acquire_lock()
-        order.make_match()
+    def submit(self):
+        self.acquire_lock()
+        self.make_match()
 
     def acquire_lock(self):
         lock_wallet = self.get_lock_wallet(self.wallet, self.base_wallet, self.side)
@@ -186,6 +190,7 @@ class Order(models.Model):
             matching_orders = Order.open_objects.select_for_update().filter(
                 symbol=self.symbol, side=opp_side, **Order.get_price_filter(self.price, self.side)
             ).order_by(*self.get_order_by(opp_side))
+
             logger.info(f'open orders: {matching_orders}')
 
             system = Account.system()
@@ -194,6 +199,7 @@ class Order(models.Model):
 
             fill_orders = []
             trx_list = []
+
             referral_list = []
             for matching_order in matching_orders:
                 trade_price = matching_order.price
@@ -205,6 +211,14 @@ class Order(models.Model):
                 if match_amount <= 0:
                     continue
 
+                base_irt_price = 1
+
+                if self.symbol.base_asset.symbol == Asset.USDT:
+                    try:
+                        base_irt_price = get_tether_irt_price(self.side)
+                    except:
+                        base_irt_price = 27000
+
                 fill_order = FillOrder(
                     symbol=self.symbol,
                     taker_order=self,
@@ -212,9 +226,11 @@ class Order(models.Model):
                     amount=match_amount,
                     price=trade_price,
                     is_buyer_maker=(self.side == Order.SELL),
+                    irt_value=base_irt_price * trade_price * match_amount
                 )
-                trx_list.extend(fill_order.init_trade_trxs(system))
-                fill_order.calculate_amounts_from_trx()
+                trade_trx_list = fill_order.init_trade_trxs(system)
+                trx_list.extend(trade_trx_list.values())
+                fill_order.calculate_amounts_from_trx(trade_trx_list)
                 referral_list.extend(fill_order.get_referral_trx_instances())
 
                 fill_orders.append(fill_order)
@@ -222,8 +238,7 @@ class Order(models.Model):
                 self.release_lock(match_amount)
                 matching_order.release_lock(match_amount)
 
-                orders_types = {self.type, matching_order.type}
-                if Order.ORDINARY in orders_types and len(orders_types) == 2 and not settings.DEBUG:
+                if self.wallet.account.is_ordinary_user() != matching_order.wallet.account.is_ordinary_user():
                     ordinary_order = self if self.type == Order.ORDINARY else matching_order
                     placed_hedge_order = ProviderOrder.try_hedge_for_new_order(
                         asset=self.wallet.asset,
@@ -231,8 +246,14 @@ class Order(models.Model):
                         amount=match_amount,
                         scope=ProviderOrder.TRADE
                     )
+
                     if not placed_hedge_order:
-                        raise Exception('failed placing hedge order', self)
+                        logger.exception(
+                            'failed placing hedge order',
+                            extra={
+                                'order': ordinary_order
+                            }
+                        )
 
                 unfilled_amount -= match_amount
                 if match_amount == matching_order.unfilled_amount:
@@ -338,8 +359,11 @@ class Order(models.Model):
     def cancel_invalid_maker_orders(cls, symbol: PairSymbol):
         for side in (Order.BUY, Order.SELL):
             price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.0005'))
+
             invalid_orders = cls.open_objects.select_for_update().filter(symbol=symbol, side=side).exclude(
                 type=Order.ORDINARY
             ).exclude(**cls.get_price_filter(price, side))
+
             cancels = cls.cancel_orders(symbol, to_cancel_orders=invalid_orders)
+
             logger.info(f'maker {side} cancels: {cancels}, price: {price}')
