@@ -41,10 +41,7 @@ class WithdrawTestCase(TestCase):
         })
         self.assertEqual((get_presentation_amount(resp.data['amount'])), amount)
 
-    @patch.object(binance, 'handle_binance_withdraw')
-    def test_withdraw_with_addressbook(self, handle_binance_withdraw):
-
-        handle_binance_withdraw.return_value = '1'
+    def test_withdraw_with_addressbook(self):
 
         amount = '50'
         resp = self.client.post('/api/v1/withdraw/', {
@@ -61,7 +58,6 @@ class WithdrawTestCase(TestCase):
             'code': generate_otp_code(self.user, 'withdraw'),
             'address_book_id': self.address_book_without_coin.id
         })
-        print(resp.data)
         self.assertEqual(resp.status_code, 400)
 
     def test_withdraw_with_coin_with_addressbook_without_coin(self):
