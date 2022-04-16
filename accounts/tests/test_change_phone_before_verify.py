@@ -1,7 +1,4 @@
-import json
-
 from django.test import TestCase, Client
-
 from accounts.models import User
 from financial.utils.test import new_user
 from accounts.utils.test import generate_otp_code
