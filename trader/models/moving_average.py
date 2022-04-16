@@ -51,7 +51,7 @@ class MovingAverage(models.Model):
 
         if self.below and ask > avg_ask and bid > avg_bid:
             # buy
-            self.log('below avg => buying')
+            self.log('below avg crossing => buying')
 
             wallet = self.symbol.base_asset.get_wallet(self.get_account())
 
@@ -65,7 +65,7 @@ class MovingAverage(models.Model):
 
         elif not self.below and ask < avg_ask and bid < avg_bid:
             # sell!
-            self.log('above avg => selling')
+            self.log('above avg crossing => selling')
 
             price = floor_precision(bid * Decimal('0.99'), self.symbol.tick_size)
 
