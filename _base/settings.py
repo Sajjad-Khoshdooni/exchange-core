@@ -27,8 +27,7 @@ DEBUG_OR_TESTING = DEBUG or TESTING
 
 HOST_URL = config('HOST_URL')
 
-if settings.DEBUG_OR_TESTING:
-    CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_ALWAYS_EAGER = config('CELERY_ALWAYS_EAGER', default=False)
 
 # Application definition
 
