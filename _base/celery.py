@@ -220,7 +220,7 @@ if settings.DEBUG:
             'task': 'trader.tasks.moving_average.check_moving_average',
             'schedule': 1,
             'options': {
-                'queue': 'trader',
+                'queue': 'trader-ma',
                 'expire': 2
             }
         },
