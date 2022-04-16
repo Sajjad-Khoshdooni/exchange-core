@@ -94,9 +94,9 @@ if settings.TESTING:
         return network_asset
 
 
-    def new_address_book(account, network, asset=None) -> AddressBook:
+    def new_address_book(account, network, asset=None, address='123') -> AddressBook:
         name = 'test'
-        address = 'addressbook1'
+        address = address
         account = account
         network = network
         if asset:

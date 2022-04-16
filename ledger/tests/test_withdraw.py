@@ -34,7 +34,7 @@ class WithdrawTestCase(TestCase):
         amount = '50'
         resp = self.client.post('/api/v1/withdraw/', {
             'amount': amount,
-            'address': 'asdf',
+            'address': '123',
             'coin': 'USDT',
             'network': 'BSC',
             'code': generate_otp_code(self.user, 'withdraw')
@@ -61,6 +61,7 @@ class WithdrawTestCase(TestCase):
             'code': generate_otp_code(self.user, 'withdraw'),
             'address_book_id': self.address_book_without_coin.id
         })
+        print(resp.data)
         self.assertEqual(resp.status_code, 400)
 
     def test_withdraw_with_coin_with_addressbook_without_coin(self):
