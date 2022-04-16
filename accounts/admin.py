@@ -120,8 +120,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
-                                         'get_birth_date_jalali', 'telephone', 'get_national_card_image',
-                                         'get_selfie_image', 'archived', 'get_user_reject_reason', 'get_source_medium'
+                                         'get_birth_date_jalali', 'telephone', 'get_selfie_image', 'archived',
+                                         'get_user_reject_reason', 'get_source_medium'
                                          )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
@@ -159,7 +159,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify')
     readonly_fields = (
         'get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet_address',
-        'get_sum_of_value_buy_sell', 'get_birth_date_jalali', 'get_national_card_image',
+        'get_sum_of_value_buy_sell', 'get_birth_date_jalali',
         'get_selfie_image', 'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
         'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
@@ -278,11 +278,17 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     get_wallet_address.short_description = 'لیست کیف‌ها'
 
     def get_sum_of_value_buy_sell(self, user: User):
-        value = OTCRequest.objects.filter(
-            account__user_id=user.id,
-            otctrade__isnull=False,
+        from market.models import FillOrder
+
+        if not hasattr(user, 'account'):
+            return 0
+
+        account_id = user.account.id
+
+        value = FillOrder.objects.filter(
+            Q(maker_order__wallet__account_id=account_id) | Q(taker_order__wallet__account_id=account_id),
         ).aggregate(
-            amount=Sum(F('to_price_absolute_irt') * F('to_amount'))
+            amount=Sum('irt_value')
         )
         return humanize_number(int(value['amount'] or 0))
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
@@ -360,13 +366,6 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         return humanize_number(CRYPTO_WITHDRAW_LIMIT[user.level] - get_crypto_withdraw_irt_value(user))
 
     get_remaining_crypto_withdraw_limit.short_description = 'باقی مانده سقف مجاز برداشت رمزارز   روزانه'
-
-    def get_national_card_image(self, user: User):
-        return mark_safe(
-            "<img src='%s' width='200' height='200' />" % user.national_card_image.get_absolute_image_url()
-        )
-
-    get_national_card_image.short_description = 'عکس کارت ملی'
 
     def get_selfie_image(self, user: User):
         return mark_safe("<img src='%s' width='200' height='200' />" % user.selfie_image.get_absolute_image_url())
