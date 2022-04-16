@@ -185,7 +185,7 @@ app.conf.beat_schedule = {
         'task': 'trader.tasks.moving_average.check_moving_average',
         'schedule': 2,
         'options': {
-            'queue': 'trader',
+            'queue': 'trader-ma',
             'expire': 4
         }
     },
