@@ -36,6 +36,7 @@ class MovingAverage(models.Model):
 
     def update(self, dry_run: bool = False):
         ask, bid = (self.get_current_price(ASK), self.get_current_price(BID))
+        median_price = (ask + bid) / 2
 
         self.push_prices(ask, bid)
 
@@ -49,7 +50,7 @@ class MovingAverage(models.Model):
 
         self.log('ask=%s, bid=%s, avg_ask=%s, avg_bid=%s' % (ask, bid, avg_ask, avg_bid))
 
-        if self.below and bid > avg_ask:
+        if self.below and median_price > avg_ask:
             # buy
             self.log('below avg crossing => buying')
 
@@ -72,7 +73,7 @@ class MovingAverage(models.Model):
 
             self.reverse_below()
 
-        elif not self.below and ask < avg_bid:
+        elif not self.below and median_price < avg_bid:
             # sell!
             self.log('above avg crossing => selling')
 
