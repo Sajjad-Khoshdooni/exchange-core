@@ -22,11 +22,12 @@ class VerificationCode(models.Model):
     SCOPE_WITHDRAW = 'withdraw'
     SCOPE_TELEPHONE = 'tel'
     SCOPE_CHANGE_PASSWORD = 'change_pass'
+    SCOPE_CHANGE_PHONE = 'change_phone'
 
     SCOPE_CHOICES = [
         (SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_PHONE, SCOPE_VERIFY_PHONE),
         (SCOPE_WITHDRAW, SCOPE_WITHDRAW), (SCOPE_TELEPHONE, SCOPE_TELEPHONE),
-        (SCOPE_CHANGE_PASSWORD, SCOPE_CHANGE_PASSWORD),
+        (SCOPE_CHANGE_PASSWORD, SCOPE_CHANGE_PASSWORD), (SCOPE_CHANGE_PHONE,SCOPE_CHANGE_PHONE)
     ]
 
     created = models.DateTimeField(auto_now_add=True)
@@ -108,18 +109,18 @@ class VerificationCode(models.Model):
             created__gte=timezone.now() - timedelta(minutes=2),
         ).exists()
 
-        if any_recent_code:
-            logger.info('Ignored sending otp to kavenegar because of recent')
-            return
+        # if any_recent_code:
+        #     logger.info('Ignored sending otp to kavenegar because of recent')
+        #     return
 
         prev_codes = VerificationCode.objects.filter(
             phone=phone,
             created__gte=timezone.now() - timedelta(minutes=15),
         ).count()
 
-        if prev_codes >= 3:
-            logger.info('Ignored sending otp to kavenegar because of multiple prev')
-            return
+        # if prev_codes >= 3:
+        #     logger.info('Ignored sending otp to kavenegar because of multiple prev')
+        #     return
 
         if scope == cls.SCOPE_TELEPHONE:
             code_length = 4
