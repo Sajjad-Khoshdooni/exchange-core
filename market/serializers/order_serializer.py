@@ -46,7 +46,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 created_order = super(OrderSerializer, self).create(
                     {**validated_data, 'wallet': wallet, 'symbol': symbol}
                 )
-                Order.submit(order=created_order)
+                created_order.submit()
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
         except Exception as e:
