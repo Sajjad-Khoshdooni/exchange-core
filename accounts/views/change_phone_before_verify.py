@@ -9,18 +9,18 @@ from accounts.validators import mobile_number_validator
 
 class ChangePhoneSerializer(serializers.ModelSerializer):
     new_phone = serializers.CharField(required=True, validators=[mobile_number_validator], trim_whitespace=True)
-    otp_code = serializers.CharField(write_only=True)
+    code = serializers.CharField(write_only=True)
 
     def validate(self, data):
         user = self.instance
         new_phone = data.get('new_phone')
-        code = data.get('otp_code')
-        otp_code = VerificationCode.get_by_code(code, new_phone, VerificationCode.SCOPE_CHANGE_PHONE, user)
+        code = data.get('code')
+        code = VerificationCode.get_by_code(code, new_phone, VerificationCode.SCOPE_CHANGE_PHONE, user)
 
         if user.national_code_verified:
             raise ValidationError({'با توجه به تایید کد ملی امکان تغییر شماره وجود ندارد.'})
 
-        if not otp_code:
+        if not code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
 
         if User.objects.filter(phone=new_phone):
@@ -35,7 +35,7 @@ class ChangePhoneSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('new_phone', 'otp_code',)
+        fields = ('new_phone', 'code',)
 
 
 class ChangePhoneView(APIView):

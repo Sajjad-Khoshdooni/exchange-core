@@ -15,7 +15,7 @@ class ChangePhoneBeforeVerifyTestCAse(TestCase):
         code = generate_otp_code(scope='change_phone', phone='09315913458', user=self.user_1)
         resp = self.client.patch('/api/v1/accounts/phone/change/', {
             "new_phone": "09315913458",
-            "otp_code": code,
+            "code": code,
         }, content_type='application/json')
         print(resp.data)
         self.assertEqual(resp.status_code, 200)
@@ -26,7 +26,7 @@ class ChangePhoneBeforeVerifyTestCAse(TestCase):
         code = generate_otp_code(scope='change_phone', phone='09315913458', user=self.user_1)
         resp = self.client.patch('/api/v1/accounts/phone/change/', {
             "new_phone": "09315913458",
-            "otp_code": code,
+            "code": code,
         }, content_type='application/json')
         print(self.user_1.national_code_verified)
         self.assertEqual(resp.status_code, 400)
