@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 ASK, BID = SELL, BUY
 
-ORDER_VALUE = 10_000_000
+ORDER_VALUE = 500_000
 MA_INTERVAL = 60
 MA_LENGTH = 9
 
@@ -55,7 +55,7 @@ class MovingAverage(models.Model):
 
             wallet = self.symbol.base_asset.get_wallet(self.get_account())
 
-            price = floor_precision(ask * Decimal('1.01'), self.symbol.tick_size)
+            price = floor_precision(ask * Decimal('1.03'), self.symbol.tick_size)
 
             balance = wallet.get_free()
 
@@ -76,7 +76,7 @@ class MovingAverage(models.Model):
             # sell!
             self.log('above avg crossing => selling')
 
-            price = floor_precision(bid * Decimal('0.99'), self.symbol.tick_size)
+            price = floor_precision(bid * Decimal('0.97'), self.symbol.tick_size)
 
             wallet = self.symbol.asset.get_wallet(self.get_account())
 
