@@ -57,7 +57,12 @@ class MovingAverage(models.Model):
 
             price = floor_precision(ask * Decimal('1.01'), self.symbol.tick_size)
 
-            max_value = min(wallet.get_free(), ORDER_VALUE)
+            balance = wallet.get_free()
+
+            if balance < ORDER_VALUE / 10:
+                self.log('ignore selling not enough balance')
+
+            max_value = min(balance, ORDER_VALUE)
             amount = floor_precision(Decimal(max_value / ask), self.symbol.step_size)
 
             self.log('buying %s with price=%s' % (amount, price))
@@ -73,8 +78,12 @@ class MovingAverage(models.Model):
 
             wallet = self.symbol.asset.get_wallet(self.get_account())
 
-            max_value = min(wallet.get_free(), ORDER_VALUE)
-            amount = floor_precision(Decimal(max_value / bid), self.symbol.step_size)
+            balance = wallet.get_free()
+
+            if balance * bid < ORDER_VALUE / 10:
+                self.log('ignore selling not enough balance')
+
+            amount = floor_precision(Decimal(wallet.get_free() / bid), self.symbol.step_size)
 
             self.log('selling %s with price=%s' % (amount, price))
 
