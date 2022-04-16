@@ -46,7 +46,7 @@ class Account(models.Model):
             name = 'system'
 
             if self.name:
-                name += ' [%s]' % self.name
+                name += ' - %s' % self.name
 
             return name
 
