@@ -49,7 +49,7 @@ class MovingAverage(models.Model):
 
         self.log('ask=%s, bid=%s, avg_ask=%s, avg_bid=%s' % (ask, bid, avg_ask, avg_bid))
 
-        if self.below and ask > avg_ask and bid > avg_bid:
+        if self.below and bid > avg_ask:
             # buy
             self.log('below avg crossing => buying')
 
@@ -72,7 +72,7 @@ class MovingAverage(models.Model):
 
             self.reverse_below()
 
-        elif not self.below and ask < avg_ask and bid < avg_bid:
+        elif not self.below and ask < avg_bid:
             # sell!
             self.log('above avg crossing => selling')
 
