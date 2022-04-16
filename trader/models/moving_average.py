@@ -83,7 +83,7 @@ class MovingAverage(models.Model):
             if balance * bid < ORDER_VALUE / 10:
                 self.log('ignore selling not enough balance')
 
-            amount = floor_precision(Decimal(wallet.get_free() / bid), self.symbol.step_size)
+            amount = floor_precision(Decimal(wallet.get_free()), self.symbol.step_size)
 
             self.log('selling %s with price=%s' % (amount, price))
 
