@@ -118,12 +118,15 @@ class Order(models.Model):
     def get_order_by(side):
         return ('-price', '-created') if side == Order.BUY else ('price', '-created')
 
-    @staticmethod
-    def cancel_orders(symbol: PairSymbol, to_cancel_orders=None):
+    @classmethod
+    def cancel_orders(cls, symbol: PairSymbol, to_cancel_orders=None):
         if to_cancel_orders is None:
             to_cancel_orders = Order.open_objects.select_for_update().filter(
                 symbol=symbol, cancel_request__isnull=False
             )
+        else:
+            to_cancel_orders = to_cancel_orders.exclude(status=cls.FILLED)
+
         for order in to_cancel_orders:
             order.release_lock()
 
@@ -155,10 +158,9 @@ class Order(models.Model):
     def get_lock_amount(cls, amount, price, side):
         return amount * price if side == Order.BUY else amount
 
-    @classmethod
-    def submit(cls, order: 'Order'):
-        order.acquire_lock()
-        order.make_match()
+    def submit(self):
+        self.acquire_lock()
+        self.make_match()
 
     def acquire_lock(self):
         lock_wallet = self.get_lock_wallet(self.wallet, self.base_wallet, self.side)
@@ -196,6 +198,7 @@ class Order(models.Model):
 
             fill_orders = []
             trx_list = []
+
             for matching_order in matching_orders:
                 trade_price = matching_order.price
                 if (self.side == Order.BUY and self.price < trade_price) or (
@@ -223,8 +226,9 @@ class Order(models.Model):
                     is_buyer_maker=(self.side == Order.SELL),
                     irt_value=base_irt_price * trade_price * match_amount
                 )
-                trx_list.extend(fill_order.init_trade_trxs(system))
-                fill_order.calculate_amounts_from_trx()
+                trade_trx_list = fill_order.init_trade_trxs(system)
+                trx_list.extend(trade_trx_list.values())
+                fill_order.calculate_amounts_from_trx(trade_trx_list)
 
                 fill_orders.append(fill_order)
 
@@ -351,8 +355,11 @@ class Order(models.Model):
     def cancel_invalid_maker_orders(cls, symbol: PairSymbol):
         for side in (Order.BUY, Order.SELL):
             price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.0005'))
+
             invalid_orders = cls.open_objects.select_for_update().filter(symbol=symbol, side=side).exclude(
                 type=Order.ORDINARY
             ).exclude(**cls.get_price_filter(price, side))
+
             cancels = cls.cancel_orders(symbol, to_cancel_orders=invalid_orders)
+
             logger.info(f'maker {side} cancels: {cancels}, price: {price}')

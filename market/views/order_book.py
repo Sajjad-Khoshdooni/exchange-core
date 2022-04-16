@@ -36,7 +36,7 @@ class OrderBookAPIView(APIView):
         bids = Order.get_formatted_orders(open_orders, symbol, Order.BUY)
         asks = Order.get_formatted_orders(open_orders, symbol, Order.SELL)
 
-        top_ask = Decimal(asks[0]['price'])
+        top_ask = Decimal(asks[0]['price']) if asks else Decimal('inf')
 
         filtered_bids = list(filter(lambda o: Decimal(o['price']) < top_ask if asks else True, bids))
 
