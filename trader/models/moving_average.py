@@ -12,7 +12,7 @@ from ledger.models import Asset
 from ledger.utils.precision import floor_precision
 from ledger.utils.price import BUY, SELL, get_trading_price_irt, get_trading_price_usdt
 from market.models import PairSymbol
-from market.utils import new_order
+from market.utils import new_order, get_open_orders, cancel_orders
 
 logger = logging.getLogger(__name__)
 
@@ -65,9 +65,11 @@ class MovingAverage(models.Model):
             max_value = min(balance, ORDER_VALUE)
             amount = floor_precision(Decimal(max_value / ask), self.symbol.step_size)
 
-            self.log('buying %s with price=%s' % (amount, price))
+            self.cancel_open_orders()
 
+            self.log('buying %s with price=%s' % (amount, price))
             new_order(self.symbol, self.get_account(), amount, price, side=BUY)
+
             self.reverse_below()
 
         elif not self.below and ask < avg_ask and bid < avg_bid:
@@ -85,15 +87,25 @@ class MovingAverage(models.Model):
 
             amount = floor_precision(balance, self.symbol.step_size)
 
-            self.log('selling %s with price=%s' % (amount, price))
+            self.cancel_open_orders()
 
+            self.log('selling %s with price=%s' % (amount, price))
             new_order(self.symbol, self.get_account(), amount, price, side=SELL)
+
             self.reverse_below()
 
     def reverse_below(self):
         self.below = not self.below
         self.change_date = timezone.now()
         self.save()
+
+    def cancel_open_orders(self):
+        wallet = self.symbol.asset.get_wallet(self.get_account())
+        open_orders = get_open_orders(wallet)
+
+        if len(open_orders) > 0:
+            cancel_orders(open_orders)
+            self.log('%s orders canceled.' % len(open_orders))
 
     def get_account(self) -> Account:
         account_id = config('BOT_MOVING_AVERAGE_ACCOUNT_ID')
