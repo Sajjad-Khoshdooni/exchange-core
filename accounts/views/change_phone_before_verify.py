@@ -15,7 +15,7 @@ class ChangePhoneSerializer(serializers.ModelSerializer):
         user = self.instance
         new_phone = data.get('new_phone')
         code = data.get('otp_code')
-        otp_code = VerificationCode.get_by_code(code, new_phone, VerificationCode.SCOPE_CHANGE_PHONE)
+        otp_code = VerificationCode.get_by_code(code, new_phone, VerificationCode.SCOPE_CHANGE_PHONE, user)
 
         if user.national_code_verified:
             raise ValidationError({'با توجه به تایید کد ملی امکان تغییر شماره وجود ندارد.'})
@@ -52,3 +52,4 @@ class ChangePhoneView(APIView):
         change_phone.is_valid(raise_exception=True)
         change_phone.save()
         return Response({'msg': 'phone change successfully'})
+
