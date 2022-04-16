@@ -26,7 +26,7 @@ class FillOrder(models.Model):
 
     group_id = get_group_id_field()
 
-    base_amount = get_amount_field()
+    base_amount = get_amount_field()  # = amount * price
     taker_fee_amount = get_amount_field()
     maker_fee_amount = get_amount_field()
 
