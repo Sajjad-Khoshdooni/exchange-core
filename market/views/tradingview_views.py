@@ -73,8 +73,8 @@ class OHLCVAPIView(APIView):
         candles = FillOrder.get_grouped_by_interval(
             symbol_id=symbol.id,
             interval_in_secs=request.query_params.get('resolution', 3600),
-            start=datetime.fromtimestamp(start / 1000, tz=pytz.UTC),
-            end=datetime.fromtimestamp(end / 1000, tz=pytz.UTC)
+            start=datetime.fromtimestamp(int(start) / 1000, tz=pytz.UTC),
+            end=datetime.fromtimestamp(int(end) / 1000, tz=pytz.UTC)
         )
         results = OHLCVSerializer(candles=candles, symbol=symbol).format_data()
         return Response(results, status=status.HTTP_200_OK)
