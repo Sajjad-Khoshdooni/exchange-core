@@ -77,6 +77,7 @@ class Order(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['symbol', 'type', 'status', 'created']),
+            models.Index(fields=['symbol', 'status']),
         ]
 
     all_objects = models.Manager()
