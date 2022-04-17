@@ -42,7 +42,7 @@ class AddressBookSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AddressBook
-        fields = ('name', 'account', 'network', 'asset', 'coin', 'address', 'deleted')
+        fields = ('id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted')
 
 
 class AddressBookView(ModelViewSet):
@@ -52,7 +52,7 @@ class AddressBookView(ModelViewSet):
 
     def get_queryset(self):
         query_params = self.request.query_params
-        addressbook = AddressBook.objects.filter(deleted=False, account=self.request.user.account)
+        addressbook = AddressBook.objects.filter(deleted=False, account=self.request.user.account).order_by('-id')
 
         if 'coin' in query_params:
             addressbook = addressbook.filter(asset__symbol=query_params['coin'])
