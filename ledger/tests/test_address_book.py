@@ -31,7 +31,7 @@ class AddressBookTestCase(TestCase):
 
     def test_list_address_book(self):
         resp = self.client.get('/api/v1/addressbook/')
-        self.assertEqual(len(resp.data), 2)
+        self.assertEqual(len(resp.data['results']), 2)
         self.assertEqual(resp.status_code, 200)
 
     def test_delete_address_book(self):
