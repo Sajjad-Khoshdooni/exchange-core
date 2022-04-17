@@ -15,7 +15,6 @@ class AddressBookSerializer(serializers.ModelSerializer):
     network = serializers.CharField()
     coin = serializers.CharField(write_only=True, required=False, default=None)
     deleted = serializers.BooleanField(read_only=True)
-    id = serializers.SerializerMethodField(read_only=True)
 
     def validate(self, attrs):
         user = self.context['request'].user
@@ -40,12 +39,9 @@ class AddressBookSerializer(serializers.ModelSerializer):
             'address': address,
         }
 
-    def get_id(self, addressbook: AddressBook):
-        return addressbook.id
-
     class Meta:
         model = AddressBook
-        fields = ('name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'id')
+        fields = ('id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted')
 
 
 class AddressBookView(ModelViewSet):
