@@ -1,6 +1,8 @@
 import logging
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from accounts.models import Referral
 
@@ -14,8 +16,12 @@ class ReferralSerializer(serializers.ModelSerializer):
         return referral.owner == self.context['account']
 
     def to_internal_value(self, data):
+        try:
+            owner_share_percent = int(data['owner_share_percent'])
+        except ValueError:
+            raise ValidationError({'owner_share_percent': _('A valid integer is required.')})
         return super(ReferralSerializer, self).to_internal_value(
-            {'owner_share_percent': int(data['owner_share_percent']), 'owner': self.context['account'].id}
+            {'owner_share_percent': owner_share_percent, 'owner': self.context['account'].id}
         )
 
     class Meta:
@@ -36,4 +42,3 @@ class ReferralTrxSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         pass
-
