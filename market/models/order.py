@@ -5,7 +5,7 @@ from random import randrange
 
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Q
 
 from accounts.models import Account
 from ledger.models import Trx, Wallet
@@ -78,6 +78,7 @@ class Order(models.Model):
         indexes = [
             models.Index(fields=['symbol', 'type', 'status', 'created']),
             models.Index(fields=['symbol', 'status']),
+            models.Index(name='market_new_orders_price_idx', fields=['price'], condition=Q(status='new')),
         ]
 
     all_objects = models.Manager()
