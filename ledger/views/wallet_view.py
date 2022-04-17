@@ -30,7 +30,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        return asset.get_presentation_amount(wallet.get_free())
+        return asset.get_presentation_amount(wallet.get_balance())
 
     def get_balance_usdt(self, asset: Asset):
         wallet = self.get_wallet(asset)
@@ -38,7 +38,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        amount = wallet.get_free_usdt()
+        amount = wallet.get_balance_usdt()
         return asset.get_presentation_price_usdt(amount)
 
     def get_balance_irt(self, asset: Asset):
@@ -47,7 +47,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        amount = wallet.get_free_irt()
+        amount = wallet.get_balance_irt()
         return asset.get_presentation_price_irt(amount)
 
     def get_sell_price_irt(self, asset: Asset):
@@ -234,7 +234,7 @@ class WalletBalanceView(APIView):
 
         return Response({
             'symbol': asset.symbol,
-            'balance': wallet.asset.get_presentation_amount(wallet.get_free()),
+            'balance': wallet.asset.get_presentation_amount(wallet.get_balance()),
         })
 
 
@@ -269,6 +269,7 @@ class BriefNetworkAssetsView(ListAPIView):
             return query_set.filter(asset__symbol=query_params['symbol'].upper(),
                                     network__can_withdraw=True,
                                     binance_withdraw_enable=True)
+        else:
+            query_set = query_set.distinct('network__symbol')
+
         return query_set.filter(network__can_withdraw=True, network__is_universal=True)
-
-
