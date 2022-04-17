@@ -26,7 +26,7 @@ class OHLCVSerializer:
 
     @staticmethod
     def get_timestamp(obj):
-        return int(obj['timestamp'].timestamp() * 1000)
+        return obj['timestamp'].timestamp()
 
     def get_open(self, obj):
         return self.format_price(self.symbol, obj['open'])
@@ -68,13 +68,13 @@ class OHLCVAPIView(APIView):
         symbol = get_object_or_404(PairSymbol, name=symbol.upper())
         if not symbol.enable:
             raise ValidationError(f'{symbol} is not enable')
-        start = request.query_params.get('from', (timezone.now() - timedelta(hours=24)).timestamp() * 1000)
-        end = request.query_params.get('to', timezone.now().timestamp() * 1000)
+        start = request.query_params.get('from', (timezone.now() - timedelta(hours=24)).timestamp())
+        end = request.query_params.get('to', timezone.now().timestamp())
         candles = FillOrder.get_grouped_by_interval(
             symbol_id=symbol.id,
             interval_in_secs=request.query_params.get('resolution', 3600),
-            start=datetime.fromtimestamp(int(start) / 1000, tz=pytz.UTC),
-            end=datetime.fromtimestamp(int(end) / 1000, tz=pytz.UTC)
+            start=datetime.fromtimestamp(int(start), tz=pytz.UTC),
+            end=datetime.fromtimestamp(int(end), tz=pytz.UTC)
         )
         results = OHLCVSerializer(candles=candles, symbol=symbol).format_data()
         return Response(results, status=status.HTTP_200_OK)
