@@ -27,6 +27,10 @@ class WithdrawTestCase(TestCase):
             scope=Trx.TRANSFER
         )
 
+    def tearDown(self) -> None:
+        del self.address_book
+        del self.address_book_without_coin
+
     def test_withdraw_without_addressbook(self):
         amount = '50'
         resp = self.client.post('/api/v1/withdraw/', {
