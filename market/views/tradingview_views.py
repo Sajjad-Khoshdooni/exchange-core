@@ -26,7 +26,7 @@ class OHLCVSerializer:
 
     @staticmethod
     def get_timestamp(obj):
-        return obj['timestamp'].timestamp()
+        return int(obj['timestamp'].timestamp())
 
     def get_open(self, obj):
         return self.format_price(self.symbol, obj['open'])
