@@ -5,7 +5,6 @@ from market.views import *
 
 router = routers.DefaultRouter()
 router.register(r'^orders', OrderViewSet, basename='order')
-router.register(r'^referrals', ReferralViewSet, basename='referral')
 
 urlpatterns = [
     path('irt/info/', MarketInfoView.as_view()),
@@ -15,7 +14,6 @@ urlpatterns = [
     path('symbols/', SymbolListAPIView.as_view()),
     path('myTrades/', AccountTradeHistoryView.as_view()),
     path('trades/', TradeHistoryView.as_view()),
-    path('referrals/report/', ReferralReportAPIView.as_view()),
     path('tradingview/<str:symbol>/ohlcv', OHLCVAPIView.as_view()),
     path('', include(router.urls)),
 ]
