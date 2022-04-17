@@ -106,22 +106,22 @@ app.conf.beat_schedule = {
         },
     },
     # market tasks
-    'create depth orders': {
-        'task': 'market.tasks.market_maker.create_depth_orders',
-        'schedule': 5,
-        'options': {
-            'queue': 'market',
-            'expire': 5
-        },
-    },
-    'update maker orders': {
-        'task': 'market.tasks.market_maker.update_maker_orders',
-        'schedule': 1,
-        'options': {
-            'queue': 'market',
-            'expire': 2
-        },
-    },
+    # 'create depth orders': {
+    #     'task': 'market.tasks.market_maker.create_depth_orders',
+    #     'schedule': 5,
+    #     'options': {
+    #         'queue': 'market',
+    #         'expire': 5
+    #     },
+    # },
+    # 'update maker orders': {
+    #     'task': 'market.tasks.market_maker.update_maker_orders',
+    #     'schedule': 1,
+    #     'options': {
+    #         'queue': 'market',
+    #         'expire': 2
+    #     },
+    # },
     'monitor_blockchain_delays': {
         'task': 'tracker.tasks.monitor_blockchain_delays',
         'schedule': 30,
