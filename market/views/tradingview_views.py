@@ -49,7 +49,7 @@ class OHLCVSerializer:
 
     def format_single_obj(self, obj):
         return {
-            'timestamp': self.get_timestamp(obj),
+            'time': self.get_timestamp(obj),
             'open': self.get_open(obj),
             'high': self.get_high(obj),
             'low': self.get_low(obj),
