@@ -26,6 +26,7 @@ class PairSymbolAdmin(admin.ModelAdmin):
     list_editable = ('enable',)
     list_filter = ('enable', BaseAssetFilter, 'market_maker_enabled',)
     readonly_fields = ('name',)
+    search_fields = ('name', )
 
 
 class TypeFilter(SimpleListFilter):
