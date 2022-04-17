@@ -4,7 +4,6 @@ from decimal import Decimal
 from typing import Union
 
 from django.core.cache import caches
-from django.db import models
 from django.utils import timezone
 from yekta_config.config import config
 
@@ -26,11 +25,9 @@ MA_LENGTH = 9
 cache = caches['trader']
 
 
-class MovingAverage(models.Model):
-    symbol = models.OneToOneField(to=PairSymbol, on_delete=models.CASCADE)
-    below = models.BooleanField(default=True)
-    change_date = models.DateTimeField(null=True, blank=True)
-    enable = models.BooleanField(default=True)
+class MovingAverage:
+    def __init__(self, symbol: PairSymbol):
+        self.symbol = symbol
 
     def log(self, msg: str):
         logger.info("MA %s: %s" % (self.symbol, msg))
@@ -51,7 +48,9 @@ class MovingAverage(models.Model):
 
         self.log('ask=%s, bid=%s, median=%s, avg_ask=%s, avg_bid=%s' % (ask, bid, median_price, avg_ask, avg_bid))
 
-        if self.below and ask > avg_ask and bid > avg_bid:
+        below = self.is_below()
+
+        if below and ask > avg_ask and bid > avg_bid:
             # buy
             self.log('below avg crossing => buying')
 
@@ -68,9 +67,9 @@ class MovingAverage(models.Model):
 
             self.log('buying %s with price=%s' % (amount, price))
             if new_order(self.symbol, self.get_account(), amount, price, side=BUY, raise_exception=False):
-                self.reverse_below()
+                self.set_below(False)
 
-        elif not self.below and ask < avg_ask and bid < avg_bid:
+        elif not below and ask < avg_ask and bid < avg_bid:
             # sell!
             self.log('above avg crossing => selling')
 
@@ -86,12 +85,7 @@ class MovingAverage(models.Model):
 
             self.log('selling %s with price=%s' % (amount, price))
             if new_order(self.symbol, self.get_account(), amount, price, side=SELL, raise_exception=False):
-                self.reverse_below()
-
-    def reverse_below(self):
-        self.below = not self.below
-        self.change_date = timezone.now()
-        self.save()
+                self.set_below(True)
 
     def cancel_open_orders(self):
         wallet = self.symbol.asset.get_wallet(self.get_account())
@@ -106,7 +100,7 @@ class MovingAverage(models.Model):
         return Account.objects.get(id=account_id)
 
     def get_average_prices(self) -> Union[None, dict]:
-        key = self.get_cache_key()
+        key = self.get_cache_history_key()
         prices_dict = cache.get(key) or {}
         prices = list(prices_dict.items())
 
@@ -125,7 +119,7 @@ class MovingAverage(models.Model):
     def push_prices(self, ask: Decimal, bid: Decimal):
         timestamp = round(timezone.now().timestamp()) // MA_INTERVAL
 
-        key = self.get_cache_key()
+        key = self.get_cache_history_key()
         prices = cache.get(key) or {}
 
         prices[timestamp] = {'a': ask, 'b': bid}
@@ -141,5 +135,18 @@ class MovingAverage(models.Model):
         else:
             raise NotImplementedError
 
-    def get_cache_key(self):
+    def get_cache_history_key(self):
         return 'ma-9-60:' + str(self.symbol.name)
+
+    def get_cache_below_key(self):
+        return 'ma-9-60:' + str(self.symbol.name) + ':below'
+
+    def is_below(self) -> bool:
+        b = cache.get(self.get_cache_below_key())
+        if b is None:
+            return True
+        else:
+            return b
+
+    def set_below(self, value):
+        cache.set(self.get_cache_below_key(), value)

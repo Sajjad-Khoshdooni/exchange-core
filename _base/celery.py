@@ -182,7 +182,7 @@ app.conf.beat_schedule = {
     },
 
     'moving_average_trader': {
-        'task': 'trader.tasks.moving_average.check_moving_average',
+        'task': 'trader.tasks.moving_average.update_all_moving_averages',
         'schedule': 2,
         'options': {
             'queue': 'trader-ma',
@@ -217,7 +217,7 @@ if settings.DEBUG:
         },
 
         'moving_average_trader': {
-            'task': 'trader.tasks.moving_average.check_moving_average',
+            'task': 'trader.tasks.moving_average.update_all_moving_averages',
             'schedule': 2,
             'options': {
                 'queue': 'trader-ma',
