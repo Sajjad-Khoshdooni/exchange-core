@@ -32,8 +32,8 @@ class OpenOrderManager(models.Manager):
 class Order(models.Model):
     MIN_IRT_ORDER_SIZE = Decimal(1e5)
     MIN_USDT_ORDER_SIZE = Decimal(5)
-    MAX_ORDER_DEPTH_SIZE_IRT = Decimal(2e8)
-    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(8000)
+    MAX_ORDER_DEPTH_SIZE_IRT = Decimal(5e7)
+    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(2000)
     MAKER_ORDERS_COUNT = 10 if settings.DEBUG else 50
 
     BUY, SELL = 'buy', 'sell'
