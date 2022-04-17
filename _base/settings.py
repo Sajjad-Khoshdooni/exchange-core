@@ -211,6 +211,12 @@ RAVEN_CONFIG = {
 }
 
 REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ] if DEBUG else [
+        'rest_framework.renderers.JSONRenderer',
+    ],
     # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'DEFAULT_PAGINATION_CLASS': None,
     'PAGE_SIZE': 20,
