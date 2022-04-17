@@ -1,4 +1,5 @@
 import logging
+import random
 from decimal import Decimal
 from typing import Union
 
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 ASK, BID = SELL, BUY
 
-ORDER_VALUE = 300_000
+ORDER_VALUE = 150_000
 MA_INTERVAL = 60
 MA_LENGTH = 9
 
@@ -60,18 +61,14 @@ class MovingAverage(models.Model):
 
             balance = wallet.get_free()
 
-            if balance < ORDER_VALUE / 10:
-                self.log('ignore selling not enough balance')
-
-            max_value = min(balance, ORDER_VALUE)
+            max_value = min(balance, random.randint(ORDER_VALUE, ORDER_VALUE * 5))
             amount = floor_precision(Decimal(max_value / ask), self.symbol.step_size)
 
             self.cancel_open_orders()
 
             self.log('buying %s with price=%s' % (amount, price))
-            new_order(self.symbol, self.get_account(), amount, price, side=BUY)
-
-            self.reverse_below()
+            if new_order(self.symbol, self.get_account(), amount, price, side=BUY, raise_exception=False):
+                self.reverse_below()
 
         elif not self.below and ask < avg_ask and bid < avg_bid:
             # sell!
@@ -83,17 +80,13 @@ class MovingAverage(models.Model):
 
             balance = wallet.get_free()
 
-            if balance * bid < ORDER_VALUE / 10:
-                self.log('ignore selling not enough balance')
-
             amount = floor_precision(balance, self.symbol.step_size)
 
             self.cancel_open_orders()
 
             self.log('selling %s with price=%s' % (amount, price))
-            new_order(self.symbol, self.get_account(), amount, price, side=SELL)
-
-            self.reverse_below()
+            if new_order(self.symbol, self.get_account(), amount, price, side=SELL, raise_exception=False):
+                self.reverse_below()
 
     def reverse_below(self):
         self.below = not self.below
