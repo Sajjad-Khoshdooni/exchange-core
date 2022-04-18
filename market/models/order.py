@@ -62,6 +62,7 @@ class Order(models.Model):
 
     symbol = models.ForeignKey(PairSymbol, on_delete=models.CASCADE)
     amount = get_amount_field()
+    filled_amount = get_amount_field(default=Decimal(0))
     price = get_price_field()
     side = models.CharField(max_length=8, choices=ORDER_CHOICES)
     fill_type = models.CharField(max_length=8, choices=FILL_TYPE_CHOICES)
@@ -88,12 +89,6 @@ class Order(models.Model):
     @property
     def base_wallet(self):
         return self.symbol.base_asset.get_wallet(self.wallet.account, self.wallet.market)
-
-    @property
-    def filled_amount(self):
-        amount = (self.made_fills.all().aggregate(sum=Sum('amount'))['sum'] or 0) + \
-                 (self.taken_fills.all().aggregate(sum=Sum('amount'))['sum'] or 0)
-        return floor_precision(Decimal(amount), self.symbol.step_size)
 
     @property
     def filled_price(self):
@@ -183,6 +178,8 @@ class Order(models.Model):
     def make_match(self):
         with transaction.atomic():
             from market.models import FillOrder
+            # lock current order
+            Order.objects.select_for_update().filter(id=self.id).first()
 
             self.cancel_orders(self.symbol)
 
@@ -236,6 +233,7 @@ class Order(models.Model):
 
                 self.release_lock(match_amount)
                 matching_order.release_lock(match_amount)
+                self.update_filled_amount((self.id, matching_order.id), match_amount)
 
                 if self.wallet.account.is_ordinary_user() != matching_order.wallet.account.is_ordinary_user():
                     ordinary_order = self if self.type == Order.ORDINARY else matching_order
@@ -365,3 +363,7 @@ class Order(models.Model):
             cls.cancel_orders(symbol, to_cancel_orders=invalid_orders)
 
             logger.info(f'maker {side} cancels with price: {price}')
+
+    @classmethod
+    def update_filled_amount(cls, order_ids, match_amount):
+        Order.objects.filter(id__in=order_ids).update(filled_amount=F('filled_amount') + match_amount)
