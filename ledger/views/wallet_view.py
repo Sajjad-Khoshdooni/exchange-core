@@ -4,12 +4,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.models import Wallet, DepositAddress, Transfer, NetworkAsset
+from ledger.models import Wallet, DepositAddress, Transfer, NetworkAsset, Network
 from ledger.models.asset import Asset
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.price import get_trading_price_irt, BUY, SELL, get_prices_dict
 from ledger.utils.price_manager import PriceManager
-from wallet.utils import get_presentation_address
+from rest_framework.generics import ListAPIView
 
 
 class AssetListSerializer(serializers.ModelSerializer):
@@ -30,7 +30,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        return asset.get_presentation_amount(wallet.get_free())
+        return asset.get_presentation_amount(wallet.get_balance())
 
     def get_balance_usdt(self, asset: Asset):
         wallet = self.get_wallet(asset)
@@ -38,7 +38,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        amount = wallet.get_free_usdt()
+        amount = wallet.get_balance_usdt()
         return asset.get_presentation_price_usdt(amount)
 
     def get_balance_irt(self, asset: Asset):
@@ -47,7 +47,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        amount = wallet.get_free_irt()
+        amount = wallet.get_balance_irt()
         return asset.get_presentation_price_irt(amount)
 
     def get_sell_price_irt(self, asset: Asset):
@@ -234,5 +234,42 @@ class WalletBalanceView(APIView):
 
         return Response({
             'symbol': asset.symbol,
-            'balance': wallet.asset.get_presentation_amount(wallet.get_free()),
+            'balance': wallet.asset.get_presentation_amount(wallet.get_balance()),
         })
+
+
+class BriefNetworkAssetsSerializer(serializers.ModelSerializer):
+
+    name = serializers.SerializerMethodField()
+    symbol = serializers.SerializerMethodField()
+    address_regex = serializers.SerializerMethodField()
+
+    def get_name(self, network_asset: NetworkAsset):
+        return network_asset.network.name
+
+    def get_symbol(self, network_asset: NetworkAsset):
+        return network_asset.network.symbol
+
+    def get_address_regex(self, network_asset: NetworkAsset):
+        return network_asset.network.address_regex
+
+    class Meta:
+        fields = ('name', 'symbol', 'address_regex')
+        model = NetworkAsset
+
+
+class BriefNetworkAssetsView(ListAPIView):
+
+    serializer_class = BriefNetworkAssetsSerializer
+
+    def get_queryset(self):
+        query_params = self.request.query_params
+        query_set = NetworkAsset.objects.all()
+        if 'symbol' in query_params:
+            return query_set.filter(asset__symbol=query_params['symbol'].upper(),
+                                    network__can_withdraw=True,
+                                    binance_withdraw_enable=True)
+        else:
+            query_set = query_set.distinct('network__symbol')
+
+        return query_set.filter(network__can_withdraw=True, network__is_universal=True)

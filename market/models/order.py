@@ -5,7 +5,7 @@ from random import randrange
 
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Q
 
 from accounts.models import Account
 from ledger.models import Trx, Wallet
@@ -32,8 +32,8 @@ class OpenOrderManager(models.Manager):
 class Order(models.Model):
     MIN_IRT_ORDER_SIZE = Decimal(1e5)
     MIN_USDT_ORDER_SIZE = Decimal(5)
-    MAX_ORDER_DEPTH_SIZE_IRT = Decimal(2e8)
-    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(8000)
+    MAX_ORDER_DEPTH_SIZE_IRT = Decimal(5e7)
+    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(2000)
     MAKER_ORDERS_COUNT = 10 if settings.DEBUG else 50
 
     BUY, SELL = 'buy', 'sell'
@@ -77,6 +77,8 @@ class Order(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['symbol', 'type', 'status', 'created']),
+            models.Index(fields=['symbol', 'status']),
+            models.Index(name='market_new_orders_price_idx', fields=['price'], condition=Q(status='new')),
         ]
 
     all_objects = models.Manager()
@@ -118,12 +120,15 @@ class Order(models.Model):
     def get_order_by(side):
         return ('-price', '-created') if side == Order.BUY else ('price', '-created')
 
-    @staticmethod
-    def cancel_orders(symbol: PairSymbol, to_cancel_orders=None):
+    @classmethod
+    def cancel_orders(cls, symbol: PairSymbol, to_cancel_orders=None):
         if to_cancel_orders is None:
             to_cancel_orders = Order.open_objects.select_for_update().filter(
                 symbol=symbol, cancel_request__isnull=False
             )
+        else:
+            to_cancel_orders = to_cancel_orders.exclude(status=cls.FILLED)
+
         for order in to_cancel_orders:
             order.release_lock()
 
@@ -155,10 +160,9 @@ class Order(models.Model):
     def get_lock_amount(cls, amount, price, side):
         return amount * price if side == Order.BUY else amount
 
-    @classmethod
-    def submit(cls, order: 'Order'):
-        order.acquire_lock()
-        order.make_match()
+    def submit(self):
+        self.acquire_lock()
+        self.make_match()
 
     def acquire_lock(self):
         lock_wallet = self.get_lock_wallet(self.wallet, self.base_wallet, self.side)
@@ -196,6 +200,7 @@ class Order(models.Model):
 
             fill_orders = []
             trx_list = []
+
             for matching_order in matching_orders:
                 trade_price = matching_order.price
                 if (self.side == Order.BUY and self.price < trade_price) or (
@@ -352,8 +357,11 @@ class Order(models.Model):
     def cancel_invalid_maker_orders(cls, symbol: PairSymbol):
         for side in (Order.BUY, Order.SELL):
             price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.0005'))
+
             invalid_orders = cls.open_objects.select_for_update().filter(symbol=symbol, side=side).exclude(
                 type=Order.ORDINARY
             ).exclude(**cls.get_price_filter(price, side))
+
             cancels = cls.cancel_orders(symbol, to_cancel_orders=invalid_orders)
+
             logger.info(f'maker {side} cancels: {cancels}, price: {price}')

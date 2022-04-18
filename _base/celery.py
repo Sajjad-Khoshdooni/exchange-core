@@ -180,6 +180,15 @@ app.conf.beat_schedule = {
             'expire': 3600
         }
     },
+
+    'moving_average_trader': {
+        'task': 'trader.tasks.moving_average.update_all_moving_averages',
+        'schedule': 2,
+        'options': {
+            'queue': 'trader-ma',
+            'expire': 4
+        }
+    },
 }
 
 if settings.DEBUG:
@@ -205,6 +214,15 @@ if settings.DEBUG:
                 'queue': 'market',
                 'expire': 2
             },
+        },
+
+        'moving_average_trader': {
+            'task': 'trader.tasks.moving_average.update_all_moving_averages',
+            'schedule': 2,
+            'options': {
+                'queue': 'trader-ma',
+                'expire': 4
+            }
         },
     }
 

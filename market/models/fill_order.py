@@ -5,9 +5,10 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db import models
 
 from accounts.models import Account
-from ledger.models import Trx, OTCTrade
+from ledger.models import Trx, OTCTrade, Asset
 from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_field
 from ledger.utils.precision import floor_precision, precision_to_step
+from ledger.utils.price import get_tether_irt_price, BUY
 from market.models import Order, PairSymbol
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ class FillOrder(models.Model):
 
     group_id = get_group_id_field()
 
-    base_amount = get_amount_field()
+    base_amount = get_amount_field()  # = amount * price
     taker_fee_amount = get_amount_field()
     maker_fee_amount = get_amount_field()
 
@@ -183,14 +184,24 @@ class FillOrder(models.Model):
                 fill_type=Order.MARKET,
                 status=Order.FILLED,
             )
-            fill_order = cls(
+
+            base_irt_price = 1
+
+            if symbol.base_asset.symbol == Asset.USDT:
+                try:
+                    base_irt_price = get_tether_irt_price(BUY)
+                except:
+                    base_irt_price = 27000
+
+            fill_order = FillOrder(
                 symbol=symbol,
                 taker_order=taker_order,
                 maker_order=maker_order,
                 amount=amount,
                 price=price,
                 is_buyer_maker=(maker_order.side == Order.BUY),
-                group_id=otc_trade.group_id
+                group_id=otc_trade.group_id,
+                irt_value=base_irt_price * price * amount
             )
             trade_trx_list = fill_order.init_trade_trxs(ignore_fee=True)
             fill_order.calculate_amounts_from_trx(trade_trx_list)

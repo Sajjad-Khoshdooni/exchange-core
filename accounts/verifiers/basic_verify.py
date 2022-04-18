@@ -45,8 +45,12 @@ def basic_verify(user: User):
         if not verify_user_primary_info(user):
             return
 
-    bank_account = user.bankaccount_set.all().order_by('-verified').first()
-    bank_card = user.bankcard_set.all().order_by('-verified').first()
+    def get_first_verify_qs(queryset):
+        return queryset.filter(verified=True).first() or queryset.filter(verified=None).first() or \
+                   queryset.filter(verified=False).first()
+
+    bank_account = get_first_verify_qs(user.bankaccount_set.all())
+    bank_card = get_first_verify_qs(user.bankcard_set.all())
 
     if not bank_account or not bank_card:
         user.change_status(User.REJECTED)

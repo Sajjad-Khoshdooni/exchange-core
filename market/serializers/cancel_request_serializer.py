@@ -7,6 +7,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import APIException, NotFound
 
 from market.models import CancelRequest, Order
+from market.utils import cancel_order
 
 logger = logging.getLogger(__name__)
 
@@ -25,15 +26,14 @@ class CancelRequestSerializer(serializers.ModelSerializer):
 
         try:
             with transaction.atomic():
-                created_cancel_request = super(CancelRequestSerializer, self).create({**validated_data, 'order': order})
-                Order.cancel_orders(order.symbol)
+                cancel_request = cancel_order(order)
         except Exception as e:
             logger.error('failed canceling order', extra={'exp': e, 'order': validated_data})
             if settings.DEBUG:
                 raise e
             raise APIException(_('Could not cancel order'))
 
-        return created_cancel_request
+        return cancel_request
 
     class Meta:
         model = CancelRequest

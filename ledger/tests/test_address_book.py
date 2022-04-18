@@ -20,14 +20,6 @@ class AddressBookTestCase(TestCase):
         self.usdt = Asset.get(Asset.USDT)
         network_asset = new_network_asset(self.usdt, self.network)
 
-        Trx.transaction(
-            group_id=uuid4(),
-            sender=self.usdt.get_wallet(Account.system()),
-            receiver=self.usdt.get_wallet(self.user.account),
-            amount=100000,
-            scope=Trx.TRANSFER
-        )
-
     def test_create_address_book(self):
         resp = self.client.post('/api/v1/addressbook/', {
             'name': 'test_addressbook',
@@ -39,7 +31,7 @@ class AddressBookTestCase(TestCase):
 
     def test_list_address_book(self):
         resp = self.client.get('/api/v1/addressbook/')
-        self.assertEqual(len(resp.data), 2)
+        self.assertEqual(len(resp.data['results']), 2)
         self.assertEqual(resp.status_code, 200)
 
     def test_delete_address_book(self):
