@@ -123,16 +123,17 @@ class Order(models.Model):
     @classmethod
     def cancel_orders(cls, symbol: PairSymbol, to_cancel_orders=None):
         if to_cancel_orders is None:
-            to_cancel_orders = Order.open_objects.select_for_update().filter(
+            to_cancel_orders = Order.open_objects.filter(
                 symbol=symbol, cancel_request__isnull=False
             )
         else:
             to_cancel_orders = to_cancel_orders.exclude(status=cls.FILLED)
 
+        cancels = to_cancel_orders.update(status=Order.CANCELED)
+        logger.info(f'cancels: {cancels}')
+
         for order in to_cancel_orders:
             order.release_lock()
-
-        return to_cancel_orders.update(status=Order.CANCELED)
 
     @staticmethod
     def get_price_filter(price, side):
@@ -183,8 +184,7 @@ class Order(models.Model):
         with transaction.atomic():
             from market.models import FillOrder
 
-            cancels = self.cancel_orders(self.symbol)
-            logger.info(f'cancels: {cancels}')
+            self.cancel_orders(self.symbol)
 
             opp_side = self.get_opposite_side(self.side)
 
@@ -362,6 +362,6 @@ class Order(models.Model):
                 type=Order.ORDINARY
             ).exclude(**cls.get_price_filter(price, side))
 
-            cancels = cls.cancel_orders(symbol, to_cancel_orders=invalid_orders)
+            cls.cancel_orders(symbol, to_cancel_orders=invalid_orders)
 
-            logger.info(f'maker {side} cancels: {cancels}, price: {price}')
+            logger.info(f'maker {side} cancels with price: {price}')
