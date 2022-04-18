@@ -32,6 +32,16 @@ class FillOrder(models.Model):
     maker_fee_amount = get_amount_field()
 
     irt_value = models.PositiveIntegerField()
+    OTC = 'otc'
+    MARKET = None
+    SOURCE_CHOICES = ((OTC, 'otc'), (MARKET, 'market'))
+
+    trade_source = models.CharField(
+        max_length=8,
+        choices=SOURCE_CHOICES,
+        null=True,
+        blank=True
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -201,7 +211,8 @@ class FillOrder(models.Model):
                 price=price,
                 is_buyer_maker=(maker_order.side == Order.BUY),
                 group_id=otc_trade.group_id,
-                irt_value=base_irt_price * price * amount
+                irt_value=base_irt_price * price * amount,
+                trade_source=FillOrder.OTC
             )
             trade_trx_list = fill_order.init_trade_trxs(ignore_fee=True)
             fill_order.calculate_amounts_from_trx(trade_trx_list)
