@@ -47,7 +47,7 @@ class Wallet(models.Model):
     def lock_balance(self, amount: Decimal) -> BalanceLock:
         assert amount > 0
 
-        if self.account.type != Account.SYSTEM:
+        if not (self.account.type == Account.SYSTEM and self.account.primary):
             self.has_balance(amount, raise_exception=True)
 
         return BalanceLock.objects.create(wallet=self, amount=amount)
