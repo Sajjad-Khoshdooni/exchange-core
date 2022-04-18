@@ -63,6 +63,10 @@ class FinotechRequester:
             ).order_by('-created').first()
 
             if request:
+
+                if request.status_code not in (200, 201):
+                    return
+
                 return request.response['result']
 
         token = self._get_cc_token()
