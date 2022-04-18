@@ -216,6 +216,8 @@ class Order(models.Model):
                     except:
                         base_irt_price = 27000
 
+                is_system_trade = self.wallet.account.is_system() and matching_order.wallet.account.is_system()
+
                 fill_order = FillOrder(
                     symbol=self.symbol,
                     taker_order=self,
@@ -223,7 +225,8 @@ class Order(models.Model):
                     amount=match_amount,
                     price=trade_price,
                     is_buyer_maker=(self.side == Order.SELL),
-                    irt_value=base_irt_price * trade_price * match_amount
+                    irt_value=base_irt_price * trade_price * match_amount,
+                    trade_source=FillOrder.SYSTEM if is_system_trade else FillOrder.MARKET
                 )
                 trade_trx_list = fill_order.init_trade_trxs(system)
                 trx_list.extend(trade_trx_list.values())
