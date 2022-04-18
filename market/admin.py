@@ -54,27 +54,8 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = (TypeFilter, 'side', 'fill_type', 'status', 'symbol',)
 
 
-class MatchTypeFilter(SimpleListFilter):
-    title = "match_type"
-    parameter_name = "match_type"
-
-    def lookups(self, request, model_admin):
-        return [
-            (Order.ORDINARY, 'Only ordinary'),
-            ('system', 'System Maker Orders'),
-            ('all', 'All orders')
-        ]
-
-    def queryset(self, request, queryset):
-        if self.value() is None:
-            return queryset.filter(taker_order__type=Order.ORDINARY, maker_order__type=Order.ORDINARY)
-        if self.value() == 'system':
-            return queryset.exclude(taker_order__type=Order.ORDINARY, maker_order__type=Order.ORDINARY)
-        return queryset
-
-
 @admin.register(FillOrder)
 class FillOrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'symbol', 'amount', 'price', 'irt_value')
-    list_filter = (MatchTypeFilter, 'symbol',)
+    list_filter = ('symbol', 'trade_source')
     readonly_fields = ('symbol', 'taker_order', 'maker_order')
