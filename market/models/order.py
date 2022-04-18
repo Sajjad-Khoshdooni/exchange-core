@@ -62,7 +62,7 @@ class Order(models.Model):
 
     symbol = models.ForeignKey(PairSymbol, on_delete=models.CASCADE)
     amount = get_amount_field()
-    filled_amount = get_amount_field()
+    filled_amount = get_amount_field(default=Decimal(0))
     price = get_price_field()
     side = models.CharField(max_length=8, choices=ORDER_CHOICES)
     fill_type = models.CharField(max_length=8, choices=FILL_TYPE_CHOICES)
