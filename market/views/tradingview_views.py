@@ -26,7 +26,7 @@ class OHLCVSerializer:
 
     @staticmethod
     def get_timestamp(obj):
-        return int(obj['timestamp'].timestamp())
+        return int(obj['timestamp'].timestamp() * 1000)
 
     def get_open(self, obj):
         return self.format_price(self.symbol, obj['open'])
@@ -73,8 +73,8 @@ class OHLCVAPIView(APIView):
         candles = FillOrder.get_grouped_by_interval(
             symbol_id=symbol.id,
             interval_in_secs=request.query_params.get('resolution', 3600),
-            start=datetime.fromtimestamp(int(start), tz=pytz.UTC),
-            end=datetime.fromtimestamp(int(end), tz=pytz.UTC)
+            start=datetime.fromtimestamp(int(start)).astimezone(),
+            end=datetime.fromtimestamp(int(end)).astimezone()
         )
         results = OHLCVSerializer(candles=candles, symbol=symbol).format_data()
         return Response(results, status=status.HTTP_200_OK)

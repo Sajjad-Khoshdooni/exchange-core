@@ -148,7 +148,7 @@ class FillOrder(models.Model):
                 "min(array[id, price]) as open, max(array[id, price]) as close, "
                 "max(price) as high, min(price) as low, "
                 "sum(amount) as volume, "
-                "(date_trunc('seconds', (created - timestamptz 'epoch') / %s) * %s + timestamptz 'epoch') as tf "
+                "(date_trunc('seconds', (created - (timestamptz 'epoch' - interval '30 min')) / %s) * %s + (timestamptz 'epoch' - interval '30 min')) as tf "
                 "from market_fillorder where symbol_id = %s and created between %s and %s group by tf order by tf",
                 [interval_in_secs, interval_in_secs, symbol_id, start, end]
             )
