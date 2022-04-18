@@ -179,7 +179,7 @@ class Order(models.Model):
         with transaction.atomic():
             from market.models import FillOrder
             # lock current order
-            _ = Order.objects.select_for_update().filter(id=self.id).first()
+            Order.objects.select_for_update().filter(id=self.id).first()
 
             self.cancel_orders(self.symbol)
 
