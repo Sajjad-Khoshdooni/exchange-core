@@ -25,6 +25,7 @@ class ChangePhoneSerializer(serializers.ModelSerializer):
 
         if User.objects.filter(phone=new_phone):
             raise ValidationError({'کاربری با این شماره همراه قبلا ثبت نام کرده است.'})
+
         return data
 
     def update(self, instance, validated_data):

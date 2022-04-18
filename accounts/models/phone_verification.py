@@ -60,7 +60,7 @@ class VerificationCode(models.Model):
     )
 
     scope = models.CharField(
-        max_length=16,
+        max_length=32,
         choices=SCOPE_CHOICES
     )
 
