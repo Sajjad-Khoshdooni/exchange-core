@@ -14,6 +14,7 @@ from ledger.utils.fields import get_amount_field, get_price_field, get_lock_fiel
 from ledger.utils.precision import floor_precision
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
 from market.models import PairSymbol
+from market.models.referral_trx import ReferralTrx
 from provider.models import ProviderOrder
 
 logger = logging.getLogger(__name__)
@@ -192,6 +193,7 @@ class Order(models.Model):
             fill_orders = []
             trx_list = []
 
+            referral_list = []
             for matching_order in matching_orders:
                 trade_price = matching_order.price
                 if (self.side == Order.BUY and self.price < trade_price) or (
@@ -225,6 +227,9 @@ class Order(models.Model):
                 trade_trx_list = fill_order.init_trade_trxs(system)
                 trx_list.extend(trade_trx_list.values())
                 fill_order.calculate_amounts_from_trx(trade_trx_list)
+                referral_trx = fill_order.init_referrals()
+                trx_list.extend(referral_trx.trx)
+                referral_list.extend(referral_trx.referral)
 
                 fill_orders.append(fill_order)
 
@@ -266,7 +271,8 @@ class Order(models.Model):
                         })
                     break
 
-            Trx.objects.bulk_create(filter(bool, trx_list))
+            Trx.objects.bulk_create(filter(lambda trx: trx and trx.amount, trx_list))
+            ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referral_list))
             FillOrder.objects.bulk_create(fill_orders)
 
     # OrderBook related methods

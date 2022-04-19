@@ -10,7 +10,7 @@ from rest_framework.generics import get_object_or_404
 
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet
-from ledger.utils.precision import floor_precision, get_precision, get_presentation_amount
+from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount
 from ledger.utils.price import IRT
 from market.models import Order, PairSymbol
 
@@ -75,7 +75,9 @@ class OrderSerializer(serializers.ModelSerializer):
     @staticmethod
     def validate_order_size(amount: Decimal, price: Decimal, min_order_size: Decimal):
         if (amount * price) < min_order_size:
-            raise ValidationError({'amount': _('Small order size {min_order_size}').format(min_order_size=min_order_size)})
+            raise ValidationError({
+                'amount': _('Small order size {min_order_size}').format(min_order_size=humanize_number(min_order_size))
+            })
 
     @staticmethod
     def post_validate_price(symbol: PairSymbol, price: Decimal):
