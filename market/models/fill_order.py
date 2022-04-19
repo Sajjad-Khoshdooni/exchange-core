@@ -34,15 +34,14 @@ class FillOrder(models.Model):
     irt_value = models.PositiveIntegerField()
     OTC = 'otc'
     SYSTEM = 'system'
-    MARKET = None
+    MARKET = 'market'
     SOURCE_CHOICES = ((OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'))
 
     trade_source = models.CharField(
         max_length=8,
         choices=SOURCE_CHOICES,
-        null=True,
-        blank=True,
         db_index=True,
+        default=MARKET
     )
 
     def __init__(self, *args, **kwargs):
