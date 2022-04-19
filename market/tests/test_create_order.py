@@ -72,27 +72,31 @@ class CreateOrderTestCase(TestCase):
 
         self.assertEqual(order_3.status, 'filled')
         self.assertEqual(order_4.status, 'filled')
+
         self.assertEqual(order_3.filled_amount, 2)
         self.assertEqual(order_4.filled_amount, 2)
+
         self.assertEqual(order_3.filled_price, 200000)
         self.assertEqual(order_4.filled_price, 200000)
+
         self.assertEqual(fill_order.price, 200000)
         self.assertEqual(fill_order.amount, 2)
 
     def test_fill_three_order(self):
         order_5 = new_order(self.btcirt, Account.system(), 2, 200000, 'sell')
         order_6 = new_order(self.btcirt, Account.system(), 3, 200010, 'sell')
-        order_7 = new_order(self.btcirt, Account.system(), 6, 400020, 'buy')
+        order_7 = new_order(self.btcirt, Account.system(), 6, 200020, 'buy')
 
         order_5.refresh_from_db(), order_6.refresh_from_db(), order_7.refresh_from_db()
 
         fill_order_between_5_7 = FillOrder.objects.get(maker_order=order_5)
         fill_order_between_6_7 = FillOrder.objects.get(maker_order=order_6)
 
-        self.assertEqual(get_presentation_amount(fill_order_between_5_7.taker_fee_amount), '0.004')
-        self.assertEqual(fill_order_between_5_7.maker_fee_amount, 0)
-        self.assertEqual(get_presentation_amount(fill_order_between_6_7.taker_fee_amount), '0.006')
-        self.assertEqual(fill_order_between_6_7.maker_fee_amount, 0)
+        # todo use symbol fee amounts
+        self.assertEqual(get_presentation_amount(fill_order_between_5_7.taker_fee_amount), 2 * self.btcirt.taker_fee)
+        self.assertEqual(fill_order_between_5_7.maker_fee_amount, 2 * self.btcirt.maker_fee)
+        self.assertEqual(get_presentation_amount(fill_order_between_6_7.taker_fee_amount), 3 * self.btcirt.taker_fee)
+        self.assertEqual(fill_order_between_6_7.maker_fee_amount, 3 * self.btcirt.maker_fee)
 
         self.assertEqual(order_5.filled_amount, 2)
         self.assertEqual(order_6.filled_amount, 3)
