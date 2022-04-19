@@ -5,7 +5,7 @@ from ledger.utils.test import new_account
 from ledger.models import Asset, Trx
 from uuid import uuid4
 from market.models import PairSymbol, FillOrder
-from market.utils import new_order
+from market.utils import new_order, cancel_order
 
 
 class CreateOrderTestCase(TestCase):
@@ -68,7 +68,10 @@ class CreateOrderTestCase(TestCase):
         order_4 = new_order(self.btcirt, Account.system(), 2, 200010, 'buy')
         order_3.refresh_from_db()
 
-        fill_order = FillOrder.objects.last()
+        fill_order = FillOrder.objects.get(maker_order=order_3)
+        trx_asset = Trx.objects.get(group_id=fill_order.group_id, scope='trade')
+
+        self.assertEqual(trx_asset.amount, 2)
 
         self.assertEqual(order_3.status, 'filled')
         self.assertEqual(order_4.status, 'filled')
@@ -92,10 +95,9 @@ class CreateOrderTestCase(TestCase):
         fill_order_between_5_7 = FillOrder.objects.get(maker_order=order_5)
         fill_order_between_6_7 = FillOrder.objects.get(maker_order=order_6)
 
-        # todo use symbol fee amounts
-        self.assertEqual(get_presentation_amount(fill_order_between_5_7.taker_fee_amount), 2 * self.btcirt.taker_fee)
+        self.assertEqual(fill_order_between_5_7.taker_fee_amount, 2 * self.btcirt.taker_fee)
         self.assertEqual(fill_order_between_5_7.maker_fee_amount, 2 * self.btcirt.maker_fee)
-        self.assertEqual(get_presentation_amount(fill_order_between_6_7.taker_fee_amount), 3 * self.btcirt.taker_fee)
+        self.assertEqual(fill_order_between_6_7.taker_fee_amount, 3 * self.btcirt.taker_fee)
         self.assertEqual(fill_order_between_6_7.maker_fee_amount, 3 * self.btcirt.maker_fee)
 
         self.assertEqual(order_5.filled_amount, 2)
@@ -125,6 +127,60 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(order_9.filled_amount, 0)
         self.assertEqual(order_8.status, 'new')
         self.assertEqual(order_9.status, 'new')
+
+    def test_cancel_order_after_partial_filled(self):
+
+        order_10 = new_order(self.btcirt, Account.system(), 20, 200000, 'sell')
+        order_11 = new_order(self.btcirt, Account.system(), 10, 200005, 'buy')
+
+        cancel_order(order_10)
+
+        order_10.refresh_from_db(), order_11.refresh_from_db()
+
+        fill_order = FillOrder.objects.get(maker_order=order_10)
+
+        self.assertEqual(order_10.status, 'canceled')
+        self.assertEqual(order_11.status, 'filled')
+
+        self.assertEqual(order_10.filled_amount, 10)
+        self.assertEqual(order_11.filled_amount, 10)
+
+        self.assertEqual(fill_order.price, 200000)
+        self.assertEqual(fill_order.amount, 10)
+
+    def test_cancel_order_after_complete_filled(self):
+
+        order_12 = new_order(self.btcirt, Account.system(), 20, 200000, 'sell')
+        order_13 = new_order(self.btcirt, Account.system(), 20, 200005, 'buy')
+
+        cancel_order(order_12)
+
+        order_12.refresh_from_db(), order_13.refresh_from_db()
+
+        fill_order = FillOrder.objects.get(maker_order=order_12)
+
+        self.assertEqual(order_12.status, 'filled')
+        self.assertEqual(order_13.status, 'filled')
+
+        self.assertEqual(order_12.filled_amount, 20)
+        self.assertEqual(order_13.filled_amount, 20)
+
+        self.assertEqual(fill_order.price, 200000)
+        self.assertEqual(fill_order.amount, 20)
+
+    def test_cancel_before_fill(self):
+
+        order_14 = new_order(self.btcirt, Account.system(), 20, 200000, 'sell')
+        cancel_order(order_14)
+        order_15 = new_order(self.btcirt, Account.system(), 20, 200000, 'buy')
+
+        order_14.refresh_from_db(), order_15.refresh_from_db()
+
+        self.assertEqual(order_14.status, 'canceled')
+        self.assertEqual(order_15.status, 'new')
+
+        self.assertEqual(order_14.filled_amount, 0)
+        self.assertEqual(order_15.filled_amount, 0)
 
     def test_not_enough_for_sell(self):
         self.client.force_login(self.account_2.user)
