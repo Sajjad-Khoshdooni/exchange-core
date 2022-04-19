@@ -17,11 +17,12 @@ def cancel_order(order: Order) -> CancelRequest:
 
 
 def cancel_orders(orders):
+    if not orders:
+        return
     with transaction.atomic():
+        Order.cancel_orders(orders[0].symbol, to_cancel_orders=orders)
         for order in orders:
             CancelRequest.objects.create(order=order)
-
-        Order.cancel_orders(order.symbol, to_cancel_orders=orders)
 
 
 def get_open_orders(wallet: Wallet):
