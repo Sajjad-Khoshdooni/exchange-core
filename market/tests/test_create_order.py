@@ -65,13 +65,30 @@ class CreateOrderTestCase(TestCase):
 
     def test_fill_order_with_different_price(self):
         order_3 = new_order(self.btcirt, Account.system(), 2, 200000, 'sell')
-        order_4 = new_order(self.btcirt, Account.system(), 2, 200010, 'buy')
+        order_4 = new_order(self.btcirt, self.account, 2, 200010, 'buy')
         order_3.refresh_from_db()
 
         fill_order = FillOrder.objects.get(maker_order=order_3)
-        trx_asset = Trx.objects.get(group_id=fill_order.group_id, scope='trade')
+
+        trx_asset = Trx.objects.get(
+            group_id=fill_order.group_id,
+            scope='t',
+            sender=self.btc.get_wallet(Account.system())
+        )
+        trx_base_asset = Trx.objects.get(
+            group_id=fill_order.group_id,
+            scope='t',
+            sender=self.irt.get_wallet(self.account)
+        )
+        trx_taker_fee = Trx.objects.get(
+            group_id=fill_order.group_id,
+            scope='c',
+            sender=self.btc.get_wallet(self.account)
+        )
 
         self.assertEqual(trx_asset.amount, 2)
+        self.assertEqual(trx_base_asset.amount, 400000)
+        self.assertEqual(trx_taker_fee.amount, 2 * self.btcirt.taker_fee)
 
         self.assertEqual(order_3.status, 'filled')
         self.assertEqual(order_4.status, 'filled')
