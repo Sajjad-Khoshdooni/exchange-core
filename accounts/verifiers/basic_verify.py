@@ -122,8 +122,8 @@ def verify_user_primary_info(user: User) -> bool:
         user.change_status(User.REJECTED)
         return False
 
-    user.first_name_verified = data['firstNameSimilarity'] >= 80 or None
-    user.last_name_verified = data['lastNameSimilarity'] >= 80 or None
+    user.first_name_verified = data['firstNameSimilarity'] >= 70 or None
+    user.last_name_verified = data['lastNameSimilarity'] >= 70 or None
     user.save()
 
     if not user.first_name_verified or not user.last_name_verified:

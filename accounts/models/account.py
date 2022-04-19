@@ -33,6 +33,9 @@ class Account(models.Model):
     def is_ordinary_user(self) -> bool:
         return not bool(self.type)
 
+    def is_system(self) -> bool:
+        return self.type == self.SYSTEM
+
     @classmethod
     def system(cls) -> 'Account':
         return Account.objects.get(type=cls.SYSTEM, primary=True)

@@ -19,11 +19,6 @@ from provider.models import ProviderOrder
 logger = logging.getLogger(__name__)
 
 
-class MarketOrderManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(type=Order.ORDINARY)
-
-
 class OpenOrderManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(status=Order.NEW)
@@ -73,7 +68,7 @@ class Order(models.Model):
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
     def __str__(self):
-        return f'{self.symbol}-{self.side} [p:{self.price:.2f}] (a:{self.unfilled_amount:.5f}/{self.amount:.5f})'
+        return f'({self.id}) {self.symbol}-{self.side} [p:{self.price:.2f}] (a:{self.unfilled_amount:.5f}/{self.amount:.5f})'
 
     class Meta:
         indexes = [
@@ -82,8 +77,7 @@ class Order(models.Model):
             models.Index(name='market_new_orders_price_idx', fields=['price'], condition=Q(status='new')),
         ]
 
-    all_objects = models.Manager()
-    objects = MarketOrderManager()
+    objects = models.Manager()
     open_objects = OpenOrderManager()
 
     @property
@@ -216,6 +210,8 @@ class Order(models.Model):
                     except:
                         base_irt_price = 27000
 
+                is_system_trade = self.wallet.account.is_system() and matching_order.wallet.account.is_system()
+
                 fill_order = FillOrder(
                     symbol=self.symbol,
                     taker_order=self,
@@ -223,7 +219,8 @@ class Order(models.Model):
                     amount=match_amount,
                     price=trade_price,
                     is_buyer_maker=(self.side == Order.SELL),
-                    irt_value=base_irt_price * trade_price * match_amount
+                    irt_value=base_irt_price * trade_price * match_amount,
+                    trade_source=FillOrder.SYSTEM if is_system_trade else FillOrder.MARKET
                 )
                 trade_trx_list = fill_order.init_trade_trxs(system)
                 trx_list.extend(trade_trx_list.values())

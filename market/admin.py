@@ -56,6 +56,7 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(FillOrder)
 class FillOrderAdmin(admin.ModelAdmin):
-    list_display = ('created', 'symbol', 'amount', 'price', 'irt_value')
-    list_filter = ('symbol', 'trade_source')
+    list_display = ('created', 'symbol', 'amount', 'price', 'irt_value', 'trade_source')
+    list_filter = ('trade_source', )
     readonly_fields = ('symbol', 'taker_order', 'maker_order')
+    search_fields = ('symbol__name', )
