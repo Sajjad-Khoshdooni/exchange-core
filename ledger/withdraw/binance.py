@@ -2,6 +2,8 @@ import logging
 import time
 from decimal import Decimal
 
+from django.conf import settings
+
 from ledger.models import Transfer, Asset
 from ledger.utils.price import BUY, get_price, SELL
 from provider.exchanges import BinanceSpotHandler
@@ -11,6 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 def handle_binance_withdraw(transfer_id: int):
+    if settings.DEBUG_OR_TESTING:
+        return
+
     logger.info('withdraw handling transfer_id = %d' % transfer_id)
 
     transfer = Transfer.objects.get(id=transfer_id)

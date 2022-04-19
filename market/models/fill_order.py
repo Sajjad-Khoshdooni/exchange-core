@@ -5,9 +5,10 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db import models
 
 from accounts.models import Account
-from ledger.models import Trx, OTCTrade
+from ledger.models import Trx, OTCTrade, Asset
 from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_field
 from ledger.utils.precision import floor_precision, precision_to_step
+from ledger.utils.price import get_tether_irt_price, BUY
 from market.models import Order, PairSymbol
 
 logger = logging.getLogger(__name__)
@@ -26,9 +27,22 @@ class FillOrder(models.Model):
 
     group_id = get_group_id_field()
 
-    base_amount = get_amount_field()
+    base_amount = get_amount_field()  # = amount * price
     taker_fee_amount = get_amount_field()
     maker_fee_amount = get_amount_field()
+
+    irt_value = models.PositiveIntegerField()
+    OTC = 'otc'
+    SYSTEM = 'system'
+    MARKET = 'market'
+    SOURCE_CHOICES = ((OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'))
+
+    trade_source = models.CharField(
+        max_length=8,
+        choices=SOURCE_CHOICES,
+        db_index=True,
+        default=MARKET
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -36,7 +50,6 @@ class FillOrder(models.Model):
 
     def save(self, **kwargs):
         assert self.taker_order.symbol == self.maker_order.symbol == self.symbol
-        self.calculate_amounts_from_trx()
         return super(FillOrder, self).save(**kwargs)
 
     class Meta:
@@ -63,13 +76,10 @@ class FillOrder(models.Model):
         else:
             return self.maker_fee_amount if self.get_side(account, list_index) == Order.SELL else self.taker_fee_amount
 
-    def calculate_amounts_from_trx(self):
-        assert self.trade_trx_list
-        self.base_amount = self.trade_trx_list['base'].amount
-        self.taker_fee_amount = self.trade_trx_list['taker_fee'].amount if self.trade_trx_list[
-            'taker_fee'] else Decimal(0)
-        self.maker_fee_amount = self.trade_trx_list['maker_fee'].amount if self.trade_trx_list[
-            'maker_fee'] else Decimal(0)
+    def calculate_amounts_from_trx(self, trade_trx_list):
+        self.base_amount = trade_trx_list['base'].amount
+        self.taker_fee_amount = trade_trx_list['taker_fee'].amount if trade_trx_list['taker_fee'] else Decimal(0)
+        self.maker_fee_amount = trade_trx_list['maker_fee'].amount if trade_trx_list['maker_fee'] else Decimal(0)
 
     def __str__(self):
         return f'{self.symbol}-{Order.BUY if self.is_buyer_maker else Order.SELL} ' \
@@ -80,7 +90,7 @@ class FillOrder(models.Model):
         if not system:
             system = Account.system()
 
-        self.trade_trx_list = {
+        return {
             'amount': self.__init_trade_trx(),
             'base': self.__init_base_trx(),
             'taker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.taker_order, is_taker=True,
@@ -88,7 +98,6 @@ class FillOrder(models.Model):
             'maker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.maker_order, is_taker=False,
                                                                            system=system),
         }
-        return list(self.trade_trx_list.values())
 
     def __init_trade_trx(self):
         return Trx(
@@ -150,7 +159,7 @@ class FillOrder(models.Model):
                 "min(array[id, price]) as open, max(array[id, price]) as close, "
                 "max(price) as high, min(price) as low, "
                 "sum(amount) as volume, "
-                "(date_trunc('seconds', (created - timestamptz 'epoch') / %s) * %s + timestamptz 'epoch') as tf "
+                "(date_trunc('seconds', (created - (timestamptz 'epoch' - interval '30 min')) / %s) * %s + (timestamptz 'epoch' - interval '30 min')) as tf "
                 "from market_fillorder where symbol_id = %s and created between %s and %s group by tf order by tf",
                 [interval_in_secs, interval_in_secs, symbol_id, start, end]
             )
@@ -186,16 +195,28 @@ class FillOrder(models.Model):
                 fill_type=Order.MARKET,
                 status=Order.FILLED,
             )
-            fill_order = cls(
+
+            base_irt_price = 1
+
+            if symbol.base_asset.symbol == Asset.USDT:
+                try:
+                    base_irt_price = get_tether_irt_price(BUY)
+                except:
+                    base_irt_price = 27000
+
+            fill_order = FillOrder(
                 symbol=symbol,
                 taker_order=taker_order,
                 maker_order=maker_order,
                 amount=amount,
                 price=price,
                 is_buyer_maker=(maker_order.side == Order.BUY),
-                group_id=otc_trade.group_id
+                group_id=otc_trade.group_id,
+                irt_value=base_irt_price * price * amount,
+                trade_source=FillOrder.OTC
             )
-            fill_order.init_trade_trxs(ignore_fee=True)
+            trade_trx_list = fill_order.init_trade_trxs(ignore_fee=True)
+            fill_order.calculate_amounts_from_trx(trade_trx_list)
             fill_order.save()
             # for key in ('taker_fee', 'maker_fee'):
             #     if fill_order.trade_trx_list[key]:

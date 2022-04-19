@@ -8,6 +8,7 @@ from django.conf import settings
 
 from collector.price.grpc_client import gRPCClient
 from collector.utils.price import price_redis
+from ledger.utils.cache import cache_for
 from ledger.utils.price_manager import PriceManager
 
 BINANCE = 'binance'
@@ -167,6 +168,7 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
         return Decimal(0)
 
 
+@cache_for(time=5)
 def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
     price = price_redis.hget('nob:usdtirt', SIDE_MAP[side])
     if price:

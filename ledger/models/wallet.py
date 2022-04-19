@@ -47,7 +47,7 @@ class Wallet(models.Model):
     def lock_balance(self, amount: Decimal) -> BalanceLock:
         assert amount > 0
 
-        if self.account.type != Account.SYSTEM:
+        if not (self.account.type == Account.SYSTEM and self.account.primary):
             self.has_balance(amount, raise_exception=True)
 
         return BalanceLock.objects.create(wallet=self, amount=amount)
@@ -68,6 +68,20 @@ class Wallet(models.Model):
 
         tether_irt = get_tether_irt_price(SELL)
         return self.get_free_usdt() * tether_irt
+
+    def get_balance_usdt(self) -> Decimal:
+        if self.asset.symbol == self.asset.IRT:
+            tether_irt = get_tether_irt_price(SELL)
+            return self.get_balance() / tether_irt
+
+        return self.get_balance() * get_trading_price_usdt(self.asset.symbol, BUY, raw_price=True)
+
+    def get_balance_irt(self):
+        if self.asset.symbol == self.asset.IRT:
+            return self.get_balance()
+
+        tether_irt = get_tether_irt_price(SELL)
+        return self.get_balance_usdt() * tether_irt
 
     def has_balance(self, amount: Decimal, raise_exception: bool = False) -> bool:
         if amount < 0:

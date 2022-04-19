@@ -22,11 +22,12 @@ class VerificationCode(models.Model):
     SCOPE_WITHDRAW = 'withdraw'
     SCOPE_TELEPHONE = 'tel'
     SCOPE_CHANGE_PASSWORD = 'change_pass'
+    SCOPE_CHANGE_PHONE = 'change_phone'
 
     SCOPE_CHOICES = [
         (SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_PHONE, SCOPE_VERIFY_PHONE),
         (SCOPE_WITHDRAW, SCOPE_WITHDRAW), (SCOPE_TELEPHONE, SCOPE_TELEPHONE),
-        (SCOPE_CHANGE_PASSWORD, SCOPE_CHANGE_PASSWORD),
+        (SCOPE_CHANGE_PASSWORD, SCOPE_CHANGE_PASSWORD), (SCOPE_CHANGE_PHONE, SCOPE_CHANGE_PHONE),
     ]
 
     created = models.DateTimeField(auto_now_add=True)
@@ -59,7 +60,7 @@ class VerificationCode(models.Model):
     )
 
     scope = models.CharField(
-        max_length=16,
+        max_length=32,
         choices=SCOPE_CHOICES
     )
 
