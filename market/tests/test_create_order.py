@@ -4,7 +4,7 @@ from accounts.models import Account
 from ledger.utils.test import new_account
 from ledger.models import Asset, Trx
 from uuid import uuid4
-from market.models import PairSymbol, FillOrder
+from market.models import PairSymbol, FillOrder, Order
 from market.utils import new_order, cancel_order
 
 
@@ -72,26 +72,33 @@ class CreateOrderTestCase(TestCase):
 
         trx_asset = Trx.objects.get(
             group_id=fill_order.group_id,
-            scope='t',
+            scope=Trx.TRADE,
             sender=self.btc.get_wallet(Account.system())
         )
         trx_base_asset = Trx.objects.get(
             group_id=fill_order.group_id,
-            scope='t',
+            scope=Trx.TRADE,
             sender=self.irt.get_wallet(self.account)
         )
         trx_taker_fee = Trx.objects.get(
             group_id=fill_order.group_id,
-            scope='c',
+            scope=Trx.COMMISSION,
             sender=self.btc.get_wallet(self.account)
         )
+        if fill_order.symbol.maker_fee != 0:
+            trx_maker_fee = Trx.objects.get(
+                group_id=fill_order.group_id,
+                scope=Trx.COMMISSION,
+                sender=self.btc.get_wallet(Account.system())
+            )
+            self.assertEqual(trx_maker_fee, 2 * self.btcirt.maker_fee)
 
         self.assertEqual(trx_asset.amount, 2)
         self.assertEqual(trx_base_asset.amount, 400000)
         self.assertEqual(trx_taker_fee.amount, 2 * self.btcirt.taker_fee)
 
-        self.assertEqual(order_3.status, 'filled')
-        self.assertEqual(order_4.status, 'filled')
+        self.assertEqual(order_3.status, Order.FILLED)
+        self.assertEqual(order_4.status, Order.FILLED)
 
         self.assertEqual(order_3.filled_amount, 2)
         self.assertEqual(order_4.filled_amount, 2)
@@ -103,9 +110,9 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(fill_order.amount, 2)
 
     def test_fill_three_order(self):
-        order_5 = new_order(self.btcirt, Account.system(), 2, 200000, 'sell')
-        order_6 = new_order(self.btcirt, Account.system(), 3, 200010, 'sell')
-        order_7 = new_order(self.btcirt, Account.system(), 6, 200020, 'buy')
+        order_5 = new_order(self.btcirt, Account.system(), 2, 200000, Order.SELL)
+        order_6 = new_order(self.btcirt, Account.system(), 3, 200010, Order.SELL)
+        order_7 = new_order(self.btcirt, Account.system(), 6, 200020, Order.BUY)
 
         order_5.refresh_from_db(), order_6.refresh_from_db(), order_7.refresh_from_db()
 
@@ -124,9 +131,9 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(order_5.filled_price, 200000)
         self.assertEqual(order_6.filled_price, 200010)
 
-        self.assertEqual(order_5.status, 'filled')
-        self.assertEqual(order_6.status, 'filled')
-        self.assertEqual(order_7.status, 'new')
+        self.assertEqual(order_5.status, Order.FILLED)
+        self.assertEqual(order_6.status, Order.FILLED)
+        self.assertEqual(order_7.status, Order.NEW)
 
         self.assertEqual(fill_order_between_5_7.amount, 2)
         self.assertEqual(fill_order_between_6_7.amount, 3)
@@ -135,20 +142,20 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(fill_order_between_6_7.price, 200010)
 
     def test_not_fill_order(self):
-        order_8 = new_order(self.btcirt, Account.system(), 2, 200000, 'sell')
-        order_9 = new_order(self.btcirt, Account.system(), 2, 150000, 'buy')
+        order_8 = new_order(self.btcirt, Account.system(), 2, 200000, Order.SELL)
+        order_9 = new_order(self.btcirt, Account.system(), 2, 150000, Order.BUY)
 
         order_8.refresh_from_db(), order_9.refresh_from_db()
 
         self.assertEqual(order_8.filled_amount, 0)
         self.assertEqual(order_9.filled_amount, 0)
-        self.assertEqual(order_8.status, 'new')
-        self.assertEqual(order_9.status, 'new')
+        self.assertEqual(order_8.status, Order.NEW)
+        self.assertEqual(order_9.status, Order.NEW)
 
     def test_cancel_order_after_partial_filled(self):
 
-        order_10 = new_order(self.btcirt, Account.system(), 20, 200000, 'sell')
-        order_11 = new_order(self.btcirt, Account.system(), 10, 200005, 'buy')
+        order_10 = new_order(self.btcirt, Account.system(), 20, 200000, Order.SELL)
+        order_11 = new_order(self.btcirt, Account.system(), 10, 200005, Order.BUY)
 
         cancel_order(order_10)
 
@@ -156,8 +163,8 @@ class CreateOrderTestCase(TestCase):
 
         fill_order = FillOrder.objects.get(maker_order=order_10)
 
-        self.assertEqual(order_10.status, 'canceled')
-        self.assertEqual(order_11.status, 'filled')
+        self.assertEqual(order_10.status, Order.CANCELED)
+        self.assertEqual(order_11.status, Order.FILLED)
 
         self.assertEqual(order_10.filled_amount, 10)
         self.assertEqual(order_11.filled_amount, 10)
@@ -167,8 +174,8 @@ class CreateOrderTestCase(TestCase):
 
     def test_cancel_order_after_complete_filled(self):
 
-        order_12 = new_order(self.btcirt, Account.system(), 20, 200000, 'sell')
-        order_13 = new_order(self.btcirt, Account.system(), 20, 200005, 'buy')
+        order_12 = new_order(self.btcirt, Account.system(), 20, 200000, Order.SELL)
+        order_13 = new_order(self.btcirt, Account.system(), 20, 200005, Order.BUY)
 
         cancel_order(order_12)
 
@@ -176,8 +183,8 @@ class CreateOrderTestCase(TestCase):
 
         fill_order = FillOrder.objects.get(maker_order=order_12)
 
-        self.assertEqual(order_12.status, 'filled')
-        self.assertEqual(order_13.status, 'filled')
+        self.assertEqual(order_12.status, Order.FILLED)
+        self.assertEqual(order_13.status, Order.FILLED)
 
         self.assertEqual(order_12.filled_amount, 20)
         self.assertEqual(order_13.filled_amount, 20)
@@ -187,14 +194,14 @@ class CreateOrderTestCase(TestCase):
 
     def test_cancel_before_fill(self):
 
-        order_14 = new_order(self.btcirt, Account.system(), 20, 200000, 'sell')
+        order_14 = new_order(self.btcirt, Account.system(), 20, 200000, Order.SELL)
         cancel_order(order_14)
-        order_15 = new_order(self.btcirt, Account.system(), 20, 200000, 'buy')
+        order_15 = new_order(self.btcirt, Account.system(), 20, 200000, Order.BUY)
 
         order_14.refresh_from_db(), order_15.refresh_from_db()
 
-        self.assertEqual(order_14.status, 'canceled')
-        self.assertEqual(order_15.status, 'new')
+        self.assertEqual(order_14.status, Order.CANCELED)
+        self.assertEqual(order_15.status, Order.NEW)
 
         self.assertEqual(order_14.filled_amount, 0)
         self.assertEqual(order_15.filled_amount, 0)
