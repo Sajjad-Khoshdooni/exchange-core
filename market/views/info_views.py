@@ -21,6 +21,7 @@ class AssetListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = ('symbol', 'ask', 'bid')
+        ref_name = 'market asset'
 
 
 class MarketInfoView(ListAPIView):

@@ -40,7 +40,7 @@ class BinanceConsumer:
         streams = self.get_streams()
         socket_url = BINANCE_WSS_URL + '/'.join(streams)
 
-        self.socket.connect(socket_url)
+        self.socket.connect(socket_url, timeout=5)
 
         self.socket.send(json.dumps({"method": "SUBSCRIBE", "params": streams,"id": 1}))
 

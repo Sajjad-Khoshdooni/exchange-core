@@ -6,6 +6,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 import raven
 from decouple import Csv
+from django.conf import settings
 from yekta_config import secret
 from yekta_config.config import config
 
@@ -26,6 +27,8 @@ DEBUG_OR_TESTING = DEBUG or TESTING
 
 HOST_URL = config('HOST_URL')
 
+CELERY_TASK_ALWAYS_EAGER = config('CELERY_ALWAYS_EAGER', default=False)
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -42,6 +45,8 @@ INSTALLED_APPS = [
     'hijack',
     'hijack.contrib.admin',
     'django_filters',
+    'drf_yasg',
+    'simple_history',
 
     'financial',
     'multimedia',
@@ -51,7 +56,8 @@ INSTALLED_APPS = [
     'provider',
     'wallet',
     'collector',
-    'simple_history',
+    'market',
+    'trader',
 ]
 
 MIDDLEWARE = [
@@ -102,6 +108,8 @@ CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', cast=Csv(), default='')
 CORS_ALLOW_CREDENTIALS = True
 
 KAVENEGAR_KEY = secret('KAVENEGAR_KEY')
+SMS_IR_API_KEY = secret('SMS_IR_API_KEY')
+SMS_IR_API_SECRET = secret('SMS_IR_API_SECRET')
 
 DATABASES = {
     'default': {
@@ -131,10 +139,19 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     },
+    'trader': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': secret('TRADER_CACHE_LOCATION', default='redis://127.0.0.1:6379/1'),
+
+        'OPTIONS': {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    },
 }
 
 PROVIDER_CACHE_LOCATION = secret('PROVIDER_CACHE_LOCATION', default='redis://127.0.0.1:6379/2')
 METRICS_CACHE_LOCATION = secret('METRICS_CACHE_LOCATION', default='redis://127.0.0.1:6379/0')
+TRADER_CACHE_LOCATION = secret('TRADER_CACHE_LOCATION', default='redis://127.0.0.1:6379/1')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -159,6 +176,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
 
 LANGUAGE_CODE = 'fa-IR'
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale/'),
+]
 
 TIME_ZONE = 'Asia/Tehran'
 
@@ -191,6 +211,12 @@ RAVEN_CONFIG = {
 }
 
 REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ] if DEBUG else [
+        'rest_framework.renderers.JSONRenderer',
+    ],
     # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'DEFAULT_PAGINATION_CLASS': None,
     'PAGE_SIZE': 20,
@@ -203,10 +229,10 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
 
     'DEFAULT_THROTTLE_RATES': {
-        'burst': '2/min',
-        'sustained': '10/hour'
+        'burst': '5/min',
     }
 }
 
@@ -246,13 +272,13 @@ LOGGING = {
     }
 }
 
-# SESSION_COOKIE_DOMAIN = '.chavosh.org'
-SESSION_COOKIE_SAMESITE = 'None'
-SESSION_COOKIE_SECURE = True
 
-CSRF_COOKIE_DOMAIN = '.raastin.com'
-CSRF_COOKIE_SAMESITE = 'None'
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='None')
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', cast=bool, default=True)
+
+CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN', default='.raastin.com')
+CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='None')
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', cast=bool, default=True)
 
 if not DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

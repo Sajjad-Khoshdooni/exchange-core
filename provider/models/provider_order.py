@@ -6,7 +6,7 @@ from django.db import models, transaction
 from django.db.models import Sum
 
 from accounts.models import Account
-from ledger.models import Asset
+from ledger.models import Asset, Trx
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_trading_price_usdt, SELL
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
@@ -27,7 +27,11 @@ class ProviderOrder(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     exchange = models.CharField(max_length=8, default=BINANCE)
-    market = models.CharField(max_length=4, default=FUTURE, choices=((SPOT, 'spot'), (FUTURE, 'future'), (MARGIN, 'margin')))
+    market = models.CharField(
+        max_length=4,
+        default=FUTURE,
+        choices=((SPOT, 'spot'), (FUTURE, 'future'), (MARGIN, 'margin'))
+    )
 
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     amount = get_amount_field()
@@ -84,12 +88,25 @@ class ProviderOrder(models.Model):
     def get_hedge(cls, asset: Asset):
         """
         how much assets we have more!
-        :param asset:
-        :return:
+
+        out = -internal - binance transfer deposit
+        hedge = all assets - users = (internal + binance manual deposit + binance transfer deposit + binance trades)
+                + system + out = system + binance trades + binance manual deposit
+
+        given binance manual deposit = 0 -> hedge = system + binance manual deposit + binance trades
         """
 
-        system_wallet = asset.get_wallet(Account.system())
-        system_balance = system_wallet.get_balance()
+        received = Trx.objects.filter(
+            receiver__account__type=Account.SYSTEM,
+            receiver__asset=asset
+        ).aggregate(amount=Sum('amount'))['amount'] or 0
+
+        sent = Trx.objects.filter(
+            sender__account__type=Account.SYSTEM,
+            receiver__asset=asset
+        ).aggregate(amount=Sum('amount'))['amount'] or 0
+
+        system_balance = received - sent
 
         orders = ProviderOrder.objects.filter(asset=asset).values('side').annotate(amount=Sum('amount'))
 
@@ -116,6 +133,9 @@ class ProviderOrder(models.Model):
         if settings.DEBUG_OR_TESTING:
             return True
 
+        if asset.symbol == Asset.USDT:
+            return True
+
         to_buy = amount if side == cls.BUY else -amount
         hedge_amount = cls.get_hedge(asset) - to_buy
 
@@ -132,7 +152,14 @@ class ProviderOrder(models.Model):
 
         step_size = handler.get_step_size(symbol)
 
-        if abs(hedge_amount) > step_size / 2:
+        # Hedge strategy: don't sell assets ASAP and hold them!
+
+        if hedge_amount < 0:
+            threshold = step_size / 2
+        else:
+            threshold = step_size * 2
+
+        if abs(hedge_amount) > threshold:
             side = cls.SELL
 
             if hedge_amount < 0:

@@ -5,6 +5,7 @@ from django.utils.safestring import mark_safe
 from accounts.models import User
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
+from accounts.tasks.verify_user import alert_user_verify_status
 from accounts.utils.admin import url_to_admin_list
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
     FiatWithdrawRequest
@@ -21,6 +22,7 @@ class GatewayAdmin(admin.ModelAdmin):
 @admin.register(FiatTransaction)
 class FiatTransferRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'deposit', 'status', 'amount')
+    raw_id_fields = ('account', )
     list_filter = ('deposit', 'status')
     ordering = ('-created', )
 
@@ -43,7 +45,7 @@ class UserRialWithdrawRequestFilter(SimpleListFilter):
 @admin.register(FiatWithdrawRequest)
 class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     fieldsets = (
-        ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount',)}),
+        ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'ref_doc')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
                                       'get_withdraw_request_user_mobile')})
     )
@@ -53,6 +55,8 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     readonly_fields = ('amount', 'fee_amount', 'bank_account', 'created', 'get_withdraw_request_iban',
                        'get_withdraw_request_user', 'get_withdraw_request_user_mobile',
                        )
+
+    list_display = ('bank_account', 'status', 'amount', 'ref_id')
 
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.user.get_full_name()
@@ -167,7 +171,7 @@ class BankAccountAdmin(AdvancedAdmin):
     list_display = ('created', 'iban', 'user', 'verified')
     list_filter = (BankUserFilter, )
 
-    actions = ['verify_bank_accounts_manual', 'verify_bank_accounts_auto']
+    actions = ['verify_bank_accounts_manual', 'verify_bank_accounts_auto', 'reject_bank_accounts_manual']
 
     fields_edit_conditions = {
         'verified': M('verified')
@@ -178,9 +182,21 @@ class BankAccountAdmin(AdvancedAdmin):
         for bank_account in queryset.filter(verified__isnull=True):
             verify_bank_account_task.delay(bank_account.id)
 
-    @admin.action(description='تایید دستی شماره شبا')
+    @admin.action(description='تایید شماره شبا')
     def verify_bank_accounts_manual(self, request, queryset):
         for bank_account in queryset.exclude(verified=True):
             bank_account.verified = True
             bank_account.save()
             bank_account.user.verify_level2_if_not()
+
+    @admin.action(description='رد شماره شبا')
+    def reject_bank_accounts_manual(self, request, queryset):
+        for bank_account in queryset.exclude(verified=False):
+            bank_account.verified = False
+            bank_account.save()
+
+            user = bank_account.user
+
+            if user.level == User.LEVEL1 and user.verify_status == User.PENDING:
+                user.change_status(User.REJECTED)
+                alert_user_verify_status(user)

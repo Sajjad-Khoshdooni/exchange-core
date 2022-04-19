@@ -63,6 +63,10 @@ class FinotechRequester:
             ).order_by('-created').first()
 
             if request:
+
+                if request.status_code not in (200, 201):
+                    return
+
                 return request.response['result']
 
         token = self._get_cc_token()
@@ -116,7 +120,7 @@ class FinotechRequester:
         req_object.response = resp_data
         req_object.status_code = resp.status_code
 
-        if resp.ok:
+        if resp.ok or (resp.status_code == 400 and 'nidVerification' in path):
             req_object.search_key = search_key
 
         req_object.save()

@@ -30,6 +30,7 @@ django-simple-history==3.0.0
 django-templated-mail==1.1.1
 djangorestframework==3.13.1
 djangorestframework-simplejwt==4.8.0
+drf-yasg==1.20.0
 fcache==0.4.7
 grpcio==1.43.0
 grpcio-tools==1.43.0

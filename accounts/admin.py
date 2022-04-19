@@ -8,8 +8,8 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import UserComment
-from accounts.utils.admin import url_to_admin_list
+from accounts.models import UserComment, TrafficSource
+from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
 from financial.models.payment import Payment
 from financial.models.withdraw_request import FiatWithdrawRequest
@@ -120,8 +120,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
-                                         'get_birth_date_jalali', 'telephone', 'get_national_card_image',
-                                         'get_selfie_image', 'archived', 'get_user_reject_reason'
+                                         'get_birth_date_jalali', 'telephone', 'get_selfie_image', 'archived',
+                                         'get_user_reject_reason', 'get_source_medium'
                                          )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
@@ -144,27 +144,27 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
             'get_sum_of_value_buy_sell', 'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit'
-        )})
-
+        )}),
+        (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)})
     )
 
-    list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason')
+    list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason', 'get_source_medium')
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter,
         'is_staff', 'is_superuser', 'is_active', 'groups',
     )
-    inlines = [UserCommentInLine, ]
+    inlines = [UserCommentInLine,]
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify')
     readonly_fields = (
         'get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet_address',
-        'get_sum_of_value_buy_sell', 'get_birth_date_jalali', 'get_national_card_image',
+        'get_sum_of_value_buy_sell', 'get_birth_date_jalali',
         'get_selfie_image', 'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
         'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
-        'get_user_reject_reason', 'get_user_with_same_national_code'
+        'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium'
     )
     preserve_filters = ('archived', )
 
@@ -227,6 +227,14 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_otctrade_address.short_description = 'خریدهای OTC'
 
+    def get_source_medium(self, user: User):
+        if hasattr(user, 'trafficsource'):
+            link = url_to_edit_object(user.trafficsource)
+            text = '%s/%s' % (user.trafficsource.utm_source, user.trafficsource.utm_medium)
+
+            return mark_safe("<a href='%s'>%s</a>" % (link, text))
+    get_source_medium.short_description = 'source/medium'
+
     def get_user_reject_reason(self, user: User):
         if user.national_code_duplicated_alert:
             return 'کد ملی تکراری'
@@ -270,11 +278,17 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     get_wallet_address.short_description = 'لیست کیف‌ها'
 
     def get_sum_of_value_buy_sell(self, user: User):
-        value = OTCRequest.objects.filter(
-            account__user_id=user.id,
-            otctrade__isnull=False,
+        from market.models import FillOrder
+
+        if not hasattr(user, 'account'):
+            return 0
+
+        account_id = user.account.id
+
+        value = FillOrder.objects.filter(
+            Q(maker_order__wallet__account_id=account_id) | Q(taker_order__wallet__account_id=account_id),
         ).aggregate(
-            amount=Sum(F('to_price_absolute_irt') * F('to_amount'))
+            amount=Sum('irt_value')
         )
         return humanize_number(int(value['amount'] or 0))
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
@@ -353,24 +367,26 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     get_remaining_crypto_withdraw_limit.short_description = 'باقی مانده سقف مجاز برداشت رمزارز   روزانه'
 
-    def get_national_card_image(self, user: User):
-        return mark_safe(
-            "<img src='%s' width='200' height='200' />" % user.national_card_image.get_absolute_image_url()
-        )
-
-    get_national_card_image.short_description = 'عکس کارت ملی'
-
     def get_selfie_image(self, user: User):
         return mark_safe("<img src='%s' width='200' height='200' />" % user.selfie_image.get_absolute_image_url())
 
     get_selfie_image.short_description = 'عکس سلفی'
 
+    def get_user_prizes(self, user: User):
+        prizes = user.account.prize_set.all()
+        prize_list = []
+        for prize in prizes:
+            prize_list.append(prize.scope)
+        return prize_list
 
+    get_user_prizes.short_description = ('جایزه‌های دریافتی کاربر')
 
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('user', 'type')
+    list_display = ('user', 'type', 'name')
+    search_fields = ('user__phone', )
+    list_filter = ('type', 'primary')
 
 
 class FinotechRequestUserFilter(SimpleListFilter):
@@ -405,3 +421,9 @@ class NotificationAdmin(admin.ModelAdmin):
 @admin.register(UserComment)
 class UserCommentAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ['user', 'created']
+
+
+@admin.register(TrafficSource)
+class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    list_display = ['user', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
+    search_fields = ['user__phone']

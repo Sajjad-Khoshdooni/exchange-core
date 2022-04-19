@@ -1,7 +1,6 @@
+
 import logging
-
 from celery import shared_task
-
 from accounts.models import Notification
 from accounts.models import User
 from accounts.verifiers.basic_verify import basic_verify

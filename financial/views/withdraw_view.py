@@ -15,7 +15,7 @@ from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
 from ledger.utils.precision import humanize_number
 
-MIN_WITHDRAW = 15000
+MIN_WITHDRAW = 100_000
 
 
 class WithdrawRequestSerializer(serializers.ModelSerializer):
@@ -27,6 +27,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         user = self.context['request'].user
         bank_account = get_object_or_404(BankAccount, iban=iban, user=user)
+
+        assert user.account.is_ordinary_user()
 
         if not is_48h_rule_passed(user):
             raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
@@ -51,8 +53,10 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست'})
 
+        withdraw_amount = amount - fee_amount
+
         withdraw_request = FiatWithdrawRequest.objects.create(
-            amount=amount - fee_amount,
+            amount=withdraw_amount,
             fee_amount=fee_amount,
             lock=lock,
             bank_account=bank_account
@@ -60,7 +64,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         link = url_to_edit_object(withdraw_request)
         send_support_message(
-            message='درخواست برداشت ریالی به ارزش %s تومان ایجاد شد.' % humanize_number(amount),
+            message='درخواست برداشت ریالی به ارزش %s تومان ایجاد شد.' % humanize_number(withdraw_amount),
             link=link
         )
 

@@ -4,18 +4,44 @@ from rest_framework.response import Response
 
 from accounts.models import User
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
+from ledger.models import OTCRequest, Transfer
 
 
 class UserSerializer(serializers.ModelSerializer):
+    on_boarding_status = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin'
+            'show_margin', 'on_boarding_flow', 'on_boarding_status',
         )
 
+    def get_on_boarding_status(self, user: User):
+        otc_request = OTCRequest.objects.filter(account=user.account)
 
-class ProfileSerializer(serializers.ModelSerializer):
+        if otc_request:
+            resp = 'trade_is_done'
+        else:
+            if user.on_boarding_flow == 'crypto':
+                transfer = Transfer.objects.filter(wallet__account=user.account, deposit=True)
+
+                if transfer:
+                    resp = 'waiting_for_crypto_trade'
+                else:
+                    resp = 'waiting_for_crypto_deposit'
+            else:
+                if user.level == User.LEVEL1:
+                    resp = 'waiting_for_auth'
+                else:
+                    if user.first_fiat_deposit_date:
+                        resp = 'waiting_for_trade'
+                    else:
+                        resp = 'waiting_for_fiat_deposit'
+        return resp
+
+
+class ProfileSerializer(UserSerializer):
     bank_cards = serializers.SerializerMethodField()
     bank_accounts = serializers.SerializerMethodField()
 

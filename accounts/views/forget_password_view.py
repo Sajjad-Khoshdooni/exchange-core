@@ -27,7 +27,7 @@ class InitiateForgotPasswordSerializer(serializers.Serializer):
 
 class InitiateForgetPasswordView(APIView):
     permission_classes = []
-    throttle_classes = [SustainedRateThrottle, BurstRateThrottle]
+    throttle_classes = [BurstRateThrottle]
 
     def post(self, request):
 
