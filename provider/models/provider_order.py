@@ -152,7 +152,14 @@ class ProviderOrder(models.Model):
 
         step_size = handler.get_step_size(symbol)
 
-        if abs(hedge_amount) > step_size / 2:
+        # Hedge strategy: don't sell assets ASAP and hold them!
+
+        if hedge_amount < 0:
+            threshold = step_size / 2
+        else:
+            threshold = step_size * 2
+
+        if abs(hedge_amount) > threshold:
             side = cls.SELL
 
             if hedge_amount < 0:
