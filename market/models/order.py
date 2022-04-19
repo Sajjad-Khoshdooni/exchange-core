@@ -19,11 +19,6 @@ from provider.models import ProviderOrder
 logger = logging.getLogger(__name__)
 
 
-class MarketOrderManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(type=Order.ORDINARY)
-
-
 class OpenOrderManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(status=Order.NEW)
@@ -82,8 +77,7 @@ class Order(models.Model):
             models.Index(name='market_new_orders_price_idx', fields=['price'], condition=Q(status='new')),
         ]
 
-    all_objects = models.Manager()
-    objects = MarketOrderManager()
+    objects = models.Manager()
     open_objects = OpenOrderManager()
 
     @property
