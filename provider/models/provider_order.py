@@ -6,7 +6,7 @@ from django.db import models, transaction
 from django.db.models import Sum
 
 from accounts.models import Account
-from ledger.models import Asset, Trx
+from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_trading_price_usdt, SELL
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
@@ -88,18 +88,12 @@ class ProviderOrder(models.Model):
     def get_hedge(cls, asset: Asset):
         """
         how much assets we have more!
-
-        out = -internal - binance transfer deposit
-        hedge = all assets - users = (internal + binance manual deposit + binance transfer deposit + binance trades)
-                + system + out = system + binance trades + binance manual deposit
-
-        given binance manual deposit = 0 -> hedge = system + binance manual deposit + binance trades
+        :param asset:
+        :return:
         """
 
-        received = Trx.objects.filter(receiver__account__type=Account.SYSTEM).aggregate(amount=Sum('amount'))['amount'] or 0
-        sent = Trx.objects.filter(sender__account__type=Account.SYSTEM).aggregate(amount=Sum('amount'))['amount'] or 0
-
-        system_balance = received - sent
+        system_wallet = asset.get_wallet(Account.system())
+        system_balance = system_wallet.get_balance()
 
         orders = ProviderOrder.objects.filter(asset=asset).values('side').annotate(amount=Sum('amount'))
 
