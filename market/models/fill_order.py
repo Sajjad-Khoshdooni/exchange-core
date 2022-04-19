@@ -89,14 +89,14 @@ class FillOrder(models.Model):
                                                                            system=system),
         }
 
-    def init_referrals(self):
+    def init_referrals(self, trade_trx_list):
         tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
             get_tether_irt_price(BUY)
 
         from market.models import ReferralTrx
         referrals = ReferralTrx.get_trade_referrals(
-            self.trade_trx_list['maker_fee'],
-            self.trade_trx_list['taker_fee'],
+            trade_trx_list['maker_fee'],
+            trade_trx_list['taker_fee'],
             self.price,
             tether_irt
         )
@@ -211,7 +211,7 @@ class FillOrder(models.Model):
             trade_trx_list = fill_order.init_trade_trxs(ignore_fee=True)
             fill_order.calculate_amounts_from_trx(trade_trx_list)
             from market.models import ReferralTrx
-            referral_trx = fill_order.init_referrals()
+            referral_trx = fill_order.init_referrals(trade_trx_list)
             ReferralTrx.objects.bulk_create(list(filter(bool, referral_trx.referral)))
             Trx.objects.bulk_create(list(filter(lambda trx: trx and trx.amount, referral_trx.trx)))
             fill_order.save()
