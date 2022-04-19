@@ -53,19 +53,19 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(resp.status_code, 201)
 
     def test_fill_order(self):
-        order = new_order(self.btcirt, Account.system(), 2, 200000, 'sell')
-        order_2 = new_order(self.btcirt, Account.system(), 2, 200000, 'buy')
+        order = new_order(self.btcirt, Account.system(), 2, 200000, Order.SELL)
+        order_2 = new_order(self.btcirt, Account.system(), 2, 200000, Order.BUY)
         order.refresh_from_db()
 
         fill_order = FillOrder.objects.last()
 
-        self.assertEqual(order.status, 'filled')
+        self.assertEqual(order.status, Order.FILLED)
         self.assertEqual(fill_order.price, 200000)
         self.assertEqual(fill_order.amount, 2)
 
     def test_fill_order_with_different_price(self):
-        order_3 = new_order(self.btcirt, Account.system(), 2, 200000, 'sell')
-        order_4 = new_order(self.btcirt, self.account, 2, 200010, 'buy')
+        order_3 = new_order(self.btcirt, Account.system(), 2, 200000, Order.SELL)
+        order_4 = new_order(self.btcirt, self.account, 2, 200010, Order.BUY)
         order_3.refresh_from_db()
 
         fill_order = FillOrder.objects.get(maker_order=order_3)
