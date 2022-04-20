@@ -96,7 +96,7 @@ class ReferralTrx(models.Model):
         if receiver_type == ReferralTrx.TRADER:
             return Decimal(cls.REFERRAL_MAX_RETURN_PERCENT) / 100 - Decimal(referral.owner_share_percent) / 100
         else:
-            return referral.owner_share_percent / 100
+            return Decimal(referral.owner_share_percent) / 100
 
     @staticmethod
     def get_trx_list(referrals):
