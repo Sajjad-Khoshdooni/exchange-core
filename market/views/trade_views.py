@@ -51,7 +51,7 @@ class AccountTradeHistoryView(ListAPIView):
 
 class TradeHistoryView(ListAPIView):
     pagination_class = LimitOffsetPagination
-    queryset = FillOrder.objects.all().order_by('-created')
+    queryset = FillOrder.objects.exclude(trade_source=FillOrder.OTC).order_by('-created')
     serializer_class = TradeSerializer
 
     filter_backends = [DjangoFilterBackend]

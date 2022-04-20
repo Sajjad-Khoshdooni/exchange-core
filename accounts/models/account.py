@@ -40,6 +40,9 @@ class Account(models.Model):
         null=True, blank=True
     )
 
+    def is_system(self) -> bool:
+        return self.type == self.SYSTEM
+
     @classmethod
     def system(cls) -> 'Account':
         return Account.objects.get(type=cls.SYSTEM, primary=True)

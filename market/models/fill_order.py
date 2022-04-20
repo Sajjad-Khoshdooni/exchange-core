@@ -6,7 +6,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db import models
 
 from accounts.models import Account
-from ledger.models import Trx, OTCTrade
+from ledger.models import Trx, OTCTrade, Asset
 from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_field
 from ledger.utils.precision import floor_precision, precision_to_step
 from ledger.utils.price import get_tether_irt_price, BUY
@@ -28,11 +28,22 @@ class FillOrder(models.Model):
 
     group_id = get_group_id_field()
 
-    base_amount = get_amount_field()
+    base_amount = get_amount_field()  # = amount * price
     taker_fee_amount = get_amount_field()
     maker_fee_amount = get_amount_field()
 
     irt_value = models.PositiveIntegerField()
+    OTC = 'otc'
+    SYSTEM = 'system'
+    MARKET = 'market'
+    SOURCE_CHOICES = ((OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'))
+
+    trade_source = models.CharField(
+        max_length=8,
+        choices=SOURCE_CHOICES,
+        db_index=True,
+        default=MARKET
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -163,7 +174,7 @@ class FillOrder(models.Model):
                 "min(array[id, price]) as open, max(array[id, price]) as close, "
                 "max(price) as high, min(price) as low, "
                 "sum(amount) as volume, "
-                "(date_trunc('seconds', (created - timestamptz 'epoch') / %s) * %s + timestamptz 'epoch') as tf "
+                "(date_trunc('seconds', (created - (timestamptz 'epoch' - interval '30 min')) / %s) * %s + (timestamptz 'epoch' - interval '30 min')) as tf "
                 "from market_fillorder where symbol_id = %s and created between %s and %s group by tf order by tf",
                 [interval_in_secs, interval_in_secs, symbol_id, start, end]
             )
@@ -199,14 +210,25 @@ class FillOrder(models.Model):
                 fill_type=Order.MARKET,
                 status=Order.FILLED,
             )
-            fill_order = cls(
+
+            base_irt_price = 1
+
+            if symbol.base_asset.symbol == Asset.USDT:
+                try:
+                    base_irt_price = get_tether_irt_price(BUY)
+                except:
+                    base_irt_price = 27000
+
+            fill_order = FillOrder(
                 symbol=symbol,
                 taker_order=taker_order,
                 maker_order=maker_order,
                 amount=amount,
                 price=price,
                 is_buyer_maker=(maker_order.side == Order.BUY),
-                group_id=otc_trade.group_id
+                group_id=otc_trade.group_id,
+                irt_value=base_irt_price * price * amount,
+                trade_source=FillOrder.OTC
             )
             trade_trx_list = fill_order.init_trade_trxs(ignore_fee=True)
             fill_order.calculate_amounts_from_trx(trade_trx_list)

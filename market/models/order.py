@@ -5,7 +5,7 @@ from random import randrange
 
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Q
 
 from accounts.models import Account
 from ledger.models import Trx, Wallet
@@ -20,11 +20,6 @@ from provider.models import ProviderOrder
 logger = logging.getLogger(__name__)
 
 
-class MarketOrderManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(type=Order.ORDINARY)
-
-
 class OpenOrderManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(status=Order.NEW)
@@ -33,8 +28,8 @@ class OpenOrderManager(models.Manager):
 class Order(models.Model):
     MIN_IRT_ORDER_SIZE = Decimal(1e5)
     MIN_USDT_ORDER_SIZE = Decimal(5)
-    MAX_ORDER_DEPTH_SIZE_IRT = Decimal(2e8)
-    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(8000)
+    MAX_ORDER_DEPTH_SIZE_IRT = Decimal(5e7)
+    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(2000)
     MAKER_ORDERS_COUNT = 10 if settings.DEBUG else 50
 
     BUY, SELL = 'buy', 'sell'
@@ -63,6 +58,7 @@ class Order(models.Model):
 
     symbol = models.ForeignKey(PairSymbol, on_delete=models.CASCADE)
     amount = get_amount_field()
+    filled_amount = get_amount_field(default=Decimal(0))
     price = get_price_field()
     side = models.CharField(max_length=8, choices=ORDER_CHOICES)
     fill_type = models.CharField(max_length=8, choices=FILL_TYPE_CHOICES)
@@ -73,26 +69,21 @@ class Order(models.Model):
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
     def __str__(self):
-        return f'{self.symbol}-{self.side} [p:{self.price:.2f}] (a:{self.unfilled_amount:.5f}/{self.amount:.5f})'
+        return f'({self.id}) {self.symbol}-{self.side} [p:{self.price:.2f}] (a:{self.unfilled_amount:.5f}/{self.amount:.5f})'
 
     class Meta:
         indexes = [
             models.Index(fields=['symbol', 'type', 'status', 'created']),
+            models.Index(fields=['symbol', 'status']),
+            models.Index(name='market_new_orders_price_idx', fields=['price'], condition=Q(status='new')),
         ]
 
-    all_objects = models.Manager()
-    objects = MarketOrderManager()
+    objects = models.Manager()
     open_objects = OpenOrderManager()
 
     @property
     def base_wallet(self):
         return self.symbol.base_asset.get_wallet(self.wallet.account, self.wallet.market)
-
-    @property
-    def filled_amount(self):
-        amount = (self.made_fills.all().aggregate(sum=Sum('amount'))['sum'] or 0) + \
-                 (self.taken_fills.all().aggregate(sum=Sum('amount'))['sum'] or 0)
-        return floor_precision(Decimal(amount), self.symbol.step_size)
 
     @property
     def filled_price(self):
@@ -122,16 +113,17 @@ class Order(models.Model):
     @classmethod
     def cancel_orders(cls, symbol: PairSymbol, to_cancel_orders=None):
         if to_cancel_orders is None:
-            to_cancel_orders = Order.open_objects.select_for_update().filter(
+            to_cancel_orders = Order.open_objects.filter(
                 symbol=symbol, cancel_request__isnull=False
             )
         else:
             to_cancel_orders = to_cancel_orders.exclude(status=cls.FILLED)
 
+        cancels = to_cancel_orders.update(status=Order.CANCELED)
+        logger.info(f'cancels: {cancels}')
+
         for order in to_cancel_orders:
             order.release_lock()
-
-        return to_cancel_orders.update(status=Order.CANCELED)
 
     @staticmethod
     def get_price_filter(price, side):
@@ -181,9 +173,10 @@ class Order(models.Model):
     def make_match(self):
         with transaction.atomic():
             from market.models import FillOrder
+            # lock current order
+            Order.objects.select_for_update().filter(id=self.id).first()
 
-            cancels = self.cancel_orders(self.symbol)
-            logger.info(f'cancels: {cancels}')
+            self.cancel_orders(self.symbol)
 
             opp_side = self.get_opposite_side(self.side)
 
@@ -219,6 +212,8 @@ class Order(models.Model):
                     except:
                         base_irt_price = 27000
 
+                is_system_trade = self.wallet.account.is_system() and matching_order.wallet.account.is_system()
+
                 fill_order = FillOrder(
                     symbol=self.symbol,
                     taker_order=self,
@@ -226,7 +221,8 @@ class Order(models.Model):
                     amount=match_amount,
                     price=trade_price,
                     is_buyer_maker=(self.side == Order.SELL),
-                    irt_value=base_irt_price * trade_price * match_amount
+                    irt_value=base_irt_price * trade_price * match_amount,
+                    trade_source=FillOrder.SYSTEM if is_system_trade else FillOrder.MARKET
                 )
                 trade_trx_list = fill_order.init_trade_trxs(system)
                 trx_list.extend(trade_trx_list.values())
@@ -239,6 +235,7 @@ class Order(models.Model):
 
                 self.release_lock(match_amount)
                 matching_order.release_lock(match_amount)
+                self.update_filled_amount((self.id, matching_order.id), match_amount)
 
                 if self.wallet.account.is_ordinary_user() != matching_order.wallet.account.is_ordinary_user():
                     ordinary_order = self if self.type == Order.ORDINARY else matching_order
@@ -366,6 +363,10 @@ class Order(models.Model):
                 type=Order.ORDINARY
             ).exclude(**cls.get_price_filter(price, side))
 
-            cancels = cls.cancel_orders(symbol, to_cancel_orders=invalid_orders)
+            cls.cancel_orders(symbol, to_cancel_orders=invalid_orders)
 
-            logger.info(f'maker {side} cancels: {cancels}, price: {price}')
+            logger.info(f'maker {side} cancels with price: {price}')
+
+    @classmethod
+    def update_filled_amount(cls, order_ids, match_amount):
+        Order.objects.filter(id__in=order_ids).update(filled_amount=F('filled_amount') + match_amount)

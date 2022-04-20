@@ -45,8 +45,12 @@ def basic_verify(user: User):
         if not verify_user_primary_info(user):
             return
 
-    bank_account = user.bankaccount_set.all().order_by('-verified').first()
-    bank_card = user.bankcard_set.all().order_by('-verified').first()
+    def get_first_verify_qs(queryset):
+        return queryset.filter(verified=True).first() or queryset.filter(verified=None).first() or \
+                   queryset.filter(verified=False).first()
+
+    bank_account = get_first_verify_qs(user.bankaccount_set.all())
+    bank_card = get_first_verify_qs(user.bankcard_set.all())
 
     if not bank_account or not bank_card:
         user.change_status(User.REJECTED)
@@ -118,8 +122,8 @@ def verify_user_primary_info(user: User) -> bool:
         user.change_status(User.REJECTED)
         return False
 
-    user.first_name_verified = data['firstNameSimilarity'] >= 80 or None
-    user.last_name_verified = data['lastNameSimilarity'] >= 80 or None
+    user.first_name_verified = data['firstNameSimilarity'] >= 70 or None
+    user.last_name_verified = data['lastNameSimilarity'] >= 70 or None
     user.save()
 
     if not user.first_name_verified or not user.last_name_verified:
