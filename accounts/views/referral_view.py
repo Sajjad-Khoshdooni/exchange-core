@@ -40,6 +40,9 @@ class ReferralSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def validate_owner_share_percent(value):
+        if value < 0:
+            raise ValidationError(_('Invalid share percent'))
+
         if value > ReferralTrx.REFERRAL_MAX_RETURN_PERCENT:
             raise ValidationError(_('Input value is greater than {max_percent}').format(max_percent=ReferralTrx.REFERRAL_MAX_RETURN_PERCENT))
         return value

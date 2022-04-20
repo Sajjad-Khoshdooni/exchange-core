@@ -89,12 +89,14 @@ class ReferralTrx(models.Model):
         else:
             return irt_asset.get_wallet(fee_trx.sender.account.referred_by.owner, Wallet.SPOT)
 
-    @staticmethod
-    def get_share_factor(referral, receiver_type):
+    @classmethod
+    def get_share_factor(cls, referral, receiver_type):
+        assert 0 <= referral.owner_share_percent <= cls.REFERRAL_MAX_RETURN_PERCENT
+
         if receiver_type == ReferralTrx.TRADER:
-            return (Decimal(1) - (referral.owner_share_percent / Decimal(100)))
+            return Decimal(cls.REFERRAL_MAX_RETURN_PERCENT) / 100 - referral.owner_share_percent / 100
         else:
-            return referral.owner_share_percent / Decimal(100)
+            return referral.owner_share_percent / 100
 
     @staticmethod
     def get_trx_list(referrals):
