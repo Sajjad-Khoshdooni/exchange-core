@@ -11,14 +11,16 @@ from accounts.models import Account
 from ledger.models import Asset
 from ledger.utils.precision import floor_precision
 from ledger.utils.price import BUY, SELL, get_trading_price_irt, get_trading_price_usdt
-from market.models import PairSymbol
+from market.models import PairSymbol, Order
 from market.utils import new_order, get_open_orders, cancel_orders
 
 logger = logging.getLogger(__name__)
 
 ASK, BID = SELL, BUY
 
-ORDER_VALUE = 150_000
+ORDER_VALUE_IRT = 150_000
+ORDER_VALUE_USDT = 7
+
 MA_INTERVAL = 60
 MA_LENGTH = 9
 
@@ -31,6 +33,13 @@ class MovingAverage:
 
     def log(self, msg: str):
         logger.info("MA %s: %s" % (self.symbol, msg))
+
+    @property
+    def order_value_step(self):
+        if self.symbol.base_asset.symbol == Asset.IRT:
+            return ORDER_VALUE_IRT
+        else:
+            return ORDER_VALUE_USDT
 
     def update(self, dry_run: bool = False):
         ask, bid = (self.get_current_price(ASK), self.get_current_price(BID))
@@ -60,13 +69,13 @@ class MovingAverage:
 
             balance = wallet.get_free()
 
-            max_value = min(balance, random.randint(ORDER_VALUE, ORDER_VALUE * 5))
+            max_value = min(balance, random.randint(self.order_value_step, self.order_value_step * 5))
             amount = floor_precision(Decimal(max_value / ask), self.symbol.step_size)
 
             self.cancel_open_orders()
 
-            self.log('buying %s with price=%s' % (amount, price))
             if new_order(self.symbol, self.get_account(), amount, price, side=BUY, raise_exception=False):
+                self.log('buying %s with price=%s' % (amount, price))
                 self.set_below(False)
 
         elif not below and ask < avg_ask and bid < avg_bid:
@@ -79,12 +88,21 @@ class MovingAverage:
 
             balance = wallet.get_free()
 
+            if self.symbol.name == 'USDTIRT':
+                last_buy = Order.objects.filter(
+                    wallet=wallet,
+                    side=Order.BUY
+                ).order_by('-created').first()
+
+                if last_buy:
+                    balance = min(balance, last_buy.filled_amount)
+
             amount = floor_precision(balance, self.symbol.step_size)
 
             self.cancel_open_orders()
 
-            self.log('selling %s with price=%s' % (amount, price))
             if new_order(self.symbol, self.get_account(), amount, price, side=SELL, raise_exception=False):
+                self.log('selling %s with price=%s' % (amount, price))
                 self.set_below(True)
 
     def cancel_open_orders(self):

@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task(queue='trader-ma')
 def update_all_moving_averages():
-    for symbol in PairSymbol.objects.filter(enable=True, market_maker_enabled=True, base_asset__symbol='IRT'):
+    for symbol in PairSymbol.objects.filter(enable=True, market_maker_enabled=True):
         update_moving_average.apply_async(args=(symbol.id, ), expires=5)
 
 
