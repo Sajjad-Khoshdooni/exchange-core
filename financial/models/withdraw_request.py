@@ -24,6 +24,8 @@ class FiatWithdrawRequest(models.Model):
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
     ref_doc = models.FileField(verbose_name='رسید انتقال', null=True, blank=True)
 
+    comment = models.TextField(verbose_name='نظر', blank=True)
+
     @property
     def total_amount(self):
         return self.amount + self.fee_amount
