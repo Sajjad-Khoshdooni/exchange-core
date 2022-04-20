@@ -20,45 +20,45 @@ msgstr ""
 #: accounts/views/referral_view.py:44
 #, python-brace-format
 msgid "Input value is greater than {max_percent}"
-msgstr "درصد سهم وارد شده از {max_percent} بیشتر است"
+msgstr "درصد سهم وارد شده از {max_percent} بیشتر است."
 
 #: accounts/views/signup_view.py:55
 msgid "Referral code is invalid"
-msgstr "کد دعوت وارد شده نامعتبر است"
+msgstr "کد معرف نامعتبر است."
 
 #: market/serializers/cancel_request_serializer.py:25
 msgid "Order not found"
-msgstr "سفارش موردنظر یافت نشد"
+msgstr "سفارش موردنظر یافت نشد."
 
 #: market/serializers/cancel_request_serializer.py:34
 msgid "Could not cancel order"
-msgstr "سفارش لغو نشد"
+msgstr "سفارش لغو نشد."
 
 #: market/serializers/order_serializer.py:51
 msgid "Insufficient Balance"
-msgstr "موجودی کافی نیست"
+msgstr "موجودی کافی نیست."
 
 #: market/serializers/order_serializer.py:56
 msgid "Could not place order"
-msgstr "ثبت سفارش امکان‌پذیر نیست"
+msgstr "ثبت سفارش امکان‌پذیر نیست."
 
 #: market/serializers/order_serializer.py:65
 #, python-brace-format
 msgid "amount is less than {min_quantity}"
-msgstr "مقدار سفارش از {min_quantity} کمتر است"
+msgstr "مقدار سفارش از {min_quantity} کمتر است."
 
 #: market/serializers/order_serializer.py:70
 #, python-brace-format
 msgid "amount is more than {max_quantity}"
-msgstr "مقدار سفارش از {max_quantity} بیشتر است"
+msgstr "مقدار سفارش از {max_quantity} بیشتر است."
 
 #: market/serializers/order_serializer.py:79
 #, python-brace-format
 msgid "Small order size {min_order_size}"
-msgstr "ارزش سفارش از {min_order_size} کمتر است"
+msgstr "ارزش سفارش از {min_order_size} کمتر است."
 
 #: market/serializers/order_serializer.py:86
 #, python-brace-format
 msgid "price precision is more than {tick_size}"
-msgstr "مقدار اعشار از {tick_size} یبشتر است"
+msgstr "مقدار اعشار از {tick_size} یبشتر است."
 
