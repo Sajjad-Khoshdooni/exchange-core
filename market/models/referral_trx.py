@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class ReferralTrx(models.Model):
-    REFERRAL_MAX_RETURN_PERCENT = Decimal('0.3')
+    REFERRAL_MAX_RETURN_PERCENT = 30
 
     REFERRER = 'referrer'
     TRADER = 'trader'
@@ -92,9 +92,9 @@ class ReferralTrx(models.Model):
     @staticmethod
     def get_share_factor(referral, receiver_type):
         if receiver_type == ReferralTrx.TRADER:
-            return ReferralTrx.REFERRAL_MAX_RETURN_PERCENT * (Decimal(1) - (referral.owner_share_percent / Decimal(100)))
+            return (Decimal(1) - (referral.owner_share_percent / Decimal(100)))
         else:
-            return ReferralTrx.REFERRAL_MAX_RETURN_PERCENT * (referral.owner_share_percent / Decimal(100))
+            return referral.owner_share_percent / Decimal(100)
 
     @staticmethod
     def get_trx_list(referrals):

@@ -76,13 +76,13 @@ class ReferralTestCase(TestCase):
         )
         self.assertEqual(
             trx_referral.amount,
-            self.account_1_referral.owner_share_percent / Decimal('100') * ReferralTrx.REFERRAL_MAX_RETURN_PERCENT *
+            self.account_1_referral.owner_share_percent / Decimal('100') *
             self.btcitr.taker_fee * fill_order.amount * fill_order.price
         )
         self.assertEqual(
             trx_referred.amount,
             (Decimal('1') - (self.account_1_referral.owner_share_percent) / Decimal('100')) *
-            ReferralTrx.REFERRAL_MAX_RETURN_PERCENT * self.btcitr.taker_fee * fill_order.amount * fill_order.price
+            self.btcitr.taker_fee * fill_order.amount * fill_order.price
         )
 
     @mock.patch('market.models.order.get_tether_irt_price')
@@ -114,11 +114,11 @@ class ReferralTestCase(TestCase):
         )
         self.assertEqual(
             trx_referral.amount,
-            self.account_1_referral.owner_share_percent / Decimal('100') * ReferralTrx.REFERRAL_MAX_RETURN_PERCENT *
+            self.account_1_referral.owner_share_percent / Decimal('100') *
             self.btcitr.taker_fee * fill_order.amount * fill_order.price
         )
         self.assertEqual(
             trx_referred.amount,
             (Decimal('1') - (self.account_1_referral.owner_share_percent) / Decimal('100')) *
-            ReferralTrx.REFERRAL_MAX_RETURN_PERCENT * self.btcitr.taker_fee * fill_order.amount * fill_order.price
+            self.btcitr.taker_fee * fill_order.amount * fill_order.price
         )

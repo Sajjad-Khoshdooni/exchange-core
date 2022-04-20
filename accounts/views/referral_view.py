@@ -38,6 +38,12 @@ class ReferralSerializer(serializers.ModelSerializer):
             {'owner_share_percent': owner_share_percent, 'owner': self.context['account'].id}
         )
 
+    @staticmethod
+    def validate_owner_share_percent(value):
+        if value > ReferralTrx.REFERRAL_MAX_RETURN_PERCENT:
+            raise ValidationError(_('Input value is greater than {max_percent}').format(max_percent=ReferralTrx.REFERRAL_MAX_RETURN_PERCENT))
+        return value
+
     class Meta:
         model = Referral
         fields = ('id', 'owner', 'created', 'code', 'owner_share_percent', 'revenue')
