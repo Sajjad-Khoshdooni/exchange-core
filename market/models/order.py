@@ -227,7 +227,7 @@ class Order(models.Model):
                 trade_trx_list = fill_order.init_trade_trxs(system)
                 trx_list.extend(trade_trx_list.values())
                 fill_order.calculate_amounts_from_trx(trade_trx_list)
-                referral_trx = fill_order.init_referrals()
+                referral_trx = fill_order.init_referrals(trade_trx_list)
                 trx_list.extend(referral_trx.trx)
                 referral_list.extend(referral_trx.referral)
 

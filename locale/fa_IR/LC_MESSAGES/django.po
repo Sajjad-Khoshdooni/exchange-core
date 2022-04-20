@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-04-11 18:58+0430\n"
+"POT-Creation-Date: 2022-04-20 10:02+0430\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,16 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: market/serializers/cancel_request_serializer.py:24
+#: accounts/views/referral_view.py:44
+#, python-brace-format
+msgid "Input value is greater than {max_percent}"
+msgstr "درصد سهم وارد شده از {max_percent} بیشتر است"
+
+#: accounts/views/signup_view.py:55
+msgid "Referral code is invalid"
+msgstr "کد دعوت وارد شده نامعتبر است"
+
+#: market/serializers/cancel_request_serializer.py:25
 msgid "Order not found"
 msgstr "سفارش موردنظر یافت نشد"
 
@@ -38,16 +47,17 @@ msgstr "ثبت سفارش امکان‌پذیر نیست"
 msgid "amount is less than {min_quantity}"
 msgstr "مقدار سفارش از {min_quantity} کمتر است"
 
-#: market/serializers/order_serializer.py:69
+#: market/serializers/order_serializer.py:70
 #, python-brace-format
 msgid "amount is more than {max_quantity}"
 msgstr "مقدار سفارش از {max_quantity} بیشتر است"
 
-#: market/serializers/order_serializer.py:76
+#: market/serializers/order_serializer.py:79
+#, python-brace-format
 msgid "Small order size {min_order_size}"
 msgstr "ارزش سفارش از {min_order_size} کمتر است"
 
-#: market/serializers/order_serializer.py:82
+#: market/serializers/order_serializer.py:86
 #, python-brace-format
 msgid "price precision is more than {tick_size}"
 msgstr "مقدار اعشار از {tick_size} یبشتر است"

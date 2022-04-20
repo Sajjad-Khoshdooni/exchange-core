@@ -1,3 +1,4 @@
+from decimal import Decimal
 import logging
 
 from django.db.models import Q, DateField, Case, When, F, Sum
@@ -9,8 +10,8 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.viewsets import ModelViewSet
-
+from rest_framework import mixins
+from rest_framework.viewsets import GenericViewSet
 from accounts.models import Referral
 from market.models import ReferralTrx
 
@@ -18,10 +19,15 @@ logger = logging.getLogger(__name__)
 
 
 class ReferralSerializer(serializers.ModelSerializer):
-    is_editable = serializers.SerializerMethodField()
+    revenue = serializers.SerializerMethodField()
 
-    def get_is_editable(self, referral: Referral):
-        return referral.owner == self.context['account']
+    def get_revenue(self, referral: Referral):
+        account = self.context['account']
+        if referral.owner == account:
+            revenue = ReferralTrx.objects.filter(referral=referral).aggregate(total=Sum('referrer_amount'))
+        else:
+            revenue = ReferralTrx.objects.filter(trader=account).aggregate(total=Sum('trader_amount'))
+        return revenue['total'] or Decimal(0)
 
     def to_internal_value(self, data):
         try:
@@ -32,10 +38,16 @@ class ReferralSerializer(serializers.ModelSerializer):
             {'owner_share_percent': owner_share_percent, 'owner': self.context['account'].id}
         )
 
+    @staticmethod
+    def validate_owner_share_percent(value):
+        if value > ReferralTrx.REFERRAL_MAX_RETURN_PERCENT:
+            raise ValidationError(_('Input value is greater than {max_percent}').format(max_percent=ReferralTrx.REFERRAL_MAX_RETURN_PERCENT))
+        return value
+
     class Meta:
         model = Referral
-        fields = ('id', 'owner', 'created', 'code', 'owner_share_percent', 'is_editable')
-        read_only_fields = ('id', 'created', 'code', 'is_editable')
+        fields = ('id', 'owner', 'created', 'code', 'owner_share_percent', 'revenue')
+        read_only_fields = ('id', 'created', 'code', 'revenue')
         extra_kwargs = {
             'owner': {'write_only': True},
         }
@@ -52,7 +64,10 @@ class ReferralTrxSerializer(serializers.Serializer):
         pass
 
 
-class ReferralViewSet(ModelViewSet):
+class ReferralViewSet(
+        mixins.CreateModelMixin,
+        mixins.ListModelMixin,
+        GenericViewSet):
     authentication_classes = (SessionAuthentication,)
     permission_classes = (IsAuthenticated,)
 

@@ -22,8 +22,9 @@ class Referral(models.Model):
         unique=True
     )
 
-    owner_share_percent = models.SmallIntegerField(default=100,
-                                                   validators=[MinValueValidator(0), MaxValueValidator(100)])
+    from market.models.referral_trx import ReferralTrx
+    owner_share_percent = models.SmallIntegerField(default=0,
+                                                   validators=[MinValueValidator(0), MaxValueValidator(ReferralTrx.REFERRAL_MAX_RETURN_PERCENT)])
 
     def save(self, **kwargs):
         if not self.id:
