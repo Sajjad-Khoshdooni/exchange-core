@@ -3,6 +3,7 @@ from django.db import models, transaction
 from django.db.models import Q
 from simple_history.models import HistoricalRecords
 from django.utils import timezone
+from accounts.models import Notification
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import PHONE_MAX_LENGTH
@@ -171,6 +172,7 @@ class User(AbstractUser):
         return User.objects.filter(Q(phone=email_or_phone) | Q(email=email_or_phone)).first()
 
     def save(self, *args, **kwargs):
+        old = self.id and User.objects.get(id=self.id)
         from accounts.tasks.verify_user import alert_user_verify_status
         creating = not self.id
         super(User, self).save(*args, **kwargs)
@@ -192,3 +194,12 @@ class User(AbstractUser):
                     self.change_status(self.REJECTED)
 
             alert_user_verify_status(self)
+
+        if old and old.selfie_image_verified is None:
+            if not self.selfie_image_verified:
+                Notification.send(
+                    recipient=self,
+                    title='عکس سلفی شما تایید نشد',
+                    level=Notification.WARNING,
+                    message=''
+                )
