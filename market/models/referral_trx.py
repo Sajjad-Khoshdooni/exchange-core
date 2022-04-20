@@ -94,7 +94,7 @@ class ReferralTrx(models.Model):
         assert 0 <= referral.owner_share_percent <= cls.REFERRAL_MAX_RETURN_PERCENT
 
         if receiver_type == ReferralTrx.TRADER:
-            return Decimal(cls.REFERRAL_MAX_RETURN_PERCENT) / 100 - referral.owner_share_percent / 100
+            return Decimal(cls.REFERRAL_MAX_RETURN_PERCENT) / 100 - Decimal(referral.owner_share_percent) / 100
         else:
             return referral.owner_share_percent / 100
 
