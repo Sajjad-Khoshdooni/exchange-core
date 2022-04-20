@@ -96,8 +96,15 @@ class ProviderOrder(models.Model):
         given binance manual deposit = 0 -> hedge = system + binance manual deposit + binance trades
         """
 
-        received = Trx.objects.filter(receiver__account__type=Account.SYSTEM).aggregate(amount=Sum('amount'))['amount'] or 0
-        sent = Trx.objects.filter(sender__account__type=Account.SYSTEM).aggregate(amount=Sum('amount'))['amount'] or 0
+        received = Trx.objects.filter(
+            receiver__account__type=Account.SYSTEM,
+            receiver__asset=asset
+        ).aggregate(amount=Sum('amount'))['amount'] or 0
+
+        sent = Trx.objects.filter(
+            sender__account__type=Account.SYSTEM,
+            receiver__asset=asset
+        ).aggregate(amount=Sum('amount'))['amount'] or 0
 
         system_balance = received - sent
 
@@ -145,7 +152,14 @@ class ProviderOrder(models.Model):
 
         step_size = handler.get_step_size(symbol)
 
-        if abs(hedge_amount) > step_size / 2:
+        # Hedge strategy: don't sell assets ASAP and hold them!
+
+        if hedge_amount < 0:
+            threshold = step_size / 2
+        else:
+            threshold = step_size * 2
+
+        if abs(hedge_amount) > threshold:
             side = cls.SELL
 
             if hedge_amount < 0:

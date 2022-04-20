@@ -13,6 +13,7 @@ from ledger.utils.overview import AssetOverview
 from ledger.utils.price import get_trading_price_usdt, BUY
 from provider.exchanges import BinanceFuturesHandler
 from ledger.utils.precision import humanize_number
+from provider.models import ProviderOrder
 
 
 @admin.register(models.Asset)
@@ -27,7 +28,7 @@ class AssetAdmin(AdvancedAdmin):
     }
 
     list_display = (
-        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount',
+        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calculated_hedge_amount',
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
         'get_ledger_balance_users', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
         'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'hedge_method', 'bid_diff', 'ask_diff'
@@ -107,6 +108,11 @@ class AssetAdmin(AdvancedAdmin):
         return self.overview and asset.get_presentation_amount(self.overview.get_hedge_amount(asset))
 
     get_hedge_amount.short_description = 'hedge amount'
+
+    def get_calculated_hedge_amount(self, asset: Asset):
+        return asset.get_presentation_amount(ProviderOrder.get_hedge(asset))
+
+    get_calculated_hedge_amount.short_description = 'calc hedge amount'
 
     def get_hedge_value(self, asset: Asset):
         hedge_value = self.overview and self.overview.get_hedge_value(asset)

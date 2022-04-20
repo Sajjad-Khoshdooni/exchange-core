@@ -87,12 +87,13 @@ class OTCTrade(models.Model):
 
         cls.check_abrupt_decrease(otc_request)
 
-        lock = from_wallet.lock_balance(otc_request.from_amount)
+        with transaction.atomic():
+            lock = from_wallet.lock_balance(otc_request.from_amount)
 
-        otc_trade = OTCTrade.objects.create(
-            otc_request=otc_request,
-            lock=lock
-        )
+            otc_trade = OTCTrade.objects.create(
+                otc_request=otc_request,
+                lock=lock
+            )
 
         otc_trade.hedge_and_finalize()
 

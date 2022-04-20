@@ -47,7 +47,8 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     fieldsets = (
         ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'ref_doc')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
-                                      'get_withdraw_request_user_mobile')})
+                                      'get_withdraw_request_user_mobile')}),
+        ('نظر', {'fields': ('comment',)})
     )
     # list_display = ('bank_account', )
     list_filter = ('status', UserRialWithdrawRequestFilter, )
@@ -137,7 +138,7 @@ class BankCardAdmin(AdvancedAdmin):
     list_display = ('created', 'card_pan', 'user', 'verified')
     list_filter = (BankCardUserFilter,)
 
-    actions = ['verify_bank_cards']
+    actions = ['verify_bank_cards', 'verify_bank_cards_manual', 'reject_bank_cards_manual']
 
     fields_edit_conditions = {
         'verified': M('verified')
@@ -147,6 +148,25 @@ class BankCardAdmin(AdvancedAdmin):
     def verify_bank_cards(self, request, queryset):
         for bank_card in queryset.filter(verified__isnull=True):
             verify_bank_card_task.delay(bank_card.id)
+
+    @admin.action(description='تایید شماره کارت')
+    def verify_bank_cards_manual(self, request, queryset):
+        for card in queryset.exclude(verified=True):
+            card.verified = True
+            card.save()
+            card.user.verify_level2_if_not()
+
+    @admin.action(description='رد شماره کارت')
+    def reject_bank_cards_manual(self, request, queryset):
+        for card in queryset:
+            card.verified = False
+            card.save()
+
+            user = card.user
+
+            if user.level == User.LEVEL1 and user.verify_status == User.PENDING:
+                user.change_status(User.REJECTED)
+                alert_user_verify_status(user)
 
 
 class BankUserFilter(SimpleListFilter):
@@ -191,7 +211,7 @@ class BankAccountAdmin(AdvancedAdmin):
 
     @admin.action(description='رد شماره شبا')
     def reject_bank_accounts_manual(self, request, queryset):
-        for bank_account in queryset.exclude(verified=False):
+        for bank_account in queryset:
             bank_account.verified = False
             bank_account.save()
 

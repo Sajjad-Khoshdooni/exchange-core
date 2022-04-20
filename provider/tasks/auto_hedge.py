@@ -8,4 +8,3 @@ from provider.models import ProviderOrder
 def auto_hedge_assets():
     for asset in Asset.objects.exclude(symbol__in=[Asset.IRT, Asset.USDT]):
         ProviderOrder.try_hedge_for_new_order(asset, ProviderOrder.HEDGE)
-

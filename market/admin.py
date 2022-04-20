@@ -17,7 +17,22 @@ class BaseAssetFilter(SimpleListFilter):
           if self.value():                                                            
               return queryset.filter(base_asset__symbol=self.value())
           else:                                                                       
-              return queryset                                                         
+              return queryset
+
+
+class UserFillOrderFilter(SimpleListFilter):
+    title = 'کاربر'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(taker_order__wallet__account__user=user)
+        else:
+            return queryset
 
 
 @admin.register(PairSymbol)
@@ -57,7 +72,7 @@ class OrderAdmin(admin.ModelAdmin):
 @admin.register(FillOrder)
 class FillOrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'symbol', 'amount', 'price', 'irt_value', 'trade_source')
-    list_filter = ('trade_source', )
+    list_filter = ('trade_source', UserFillOrderFilter)
     readonly_fields = ('symbol', 'taker_order', 'maker_order')
     search_fields = ('symbol__name', )
 
