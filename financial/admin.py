@@ -157,7 +157,7 @@ class BankCardAdmin(AdvancedAdmin):
 
     @admin.action(description='رد شماره کارت')
     def reject_bank_cards_manual(self, request, queryset):
-        for card in queryset.exclude(verified=False):
+        for card in queryset:
             card.verified = False
             card.save()
 
@@ -210,7 +210,7 @@ class BankAccountAdmin(AdvancedAdmin):
 
     @admin.action(description='رد شماره شبا')
     def reject_bank_accounts_manual(self, request, queryset):
-        for bank_account in queryset.exclude(verified=False):
+        for bank_account in queryset:
             bank_account.verified = False
             bank_account.save()
 
