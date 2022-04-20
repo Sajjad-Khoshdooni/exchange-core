@@ -195,11 +195,10 @@ class User(AbstractUser):
 
             alert_user_verify_status(self)
 
-        if old and old.selfie_image_verified is None:
-            if not self.selfie_image_verified:
-                Notification.send(
-                    recipient=self,
-                    title='عکس سلفی شما تایید نشد',
-                    level=Notification.WARNING,
-                    message=''
-                )
+        if old and old.selfie_image_verified is None and self.selfie_image_verified is False:
+            Notification.send(
+                recipient=self,
+                title='عکس سلفی شما تایید نشد',
+                level=Notification.WARNING,
+                message=''
+            )
