@@ -106,6 +106,8 @@ class User(AbstractUser):
     show_margin = models.BooleanField(default=False, verbose_name='امکان مشاهده حساب تعهدی')
     national_code_duplicated_alert = models.BooleanField(default=False, verbose_name='آیا شماره ملی تکراری است؟')
 
+    selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
+
     on_boarding_flow = models.CharField(
         max_length=10,
         choices=((FIAT, FIAT), (CRYPTO, CRYPTO),),
@@ -200,5 +202,7 @@ class User(AbstractUser):
                 recipient=self,
                 title='عکس سلفی شما تایید نشد',
                 level=Notification.WARNING,
-                message=''
+                message=self.selfie_image_discard_text
             )
+            self.selfie_image_discard_text = ''
+            super(User, self).save(*args, **kwargs)
