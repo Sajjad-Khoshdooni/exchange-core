@@ -1,7 +1,11 @@
+import logging
+
 from celery import shared_task
 
 from market.models import PairSymbol
 from trader.bots.moving_average import MovingAverage
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='trader-ma')
@@ -14,4 +18,7 @@ def update_all_moving_averages():
 def update_moving_average(symbol_id: int):
     symbol = PairSymbol.objects.get(id=symbol_id)
 
-    MovingAverage(symbol).update()
+    try:
+        MovingAverage(symbol).update()
+    except Exception as exp:
+        logger.exception('Handling moving average failed', extra={'symbol': symbol, 'exp': exp})
