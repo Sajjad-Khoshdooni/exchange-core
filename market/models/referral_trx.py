@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class ReferralTrx(models.Model):
-    REFERRAL_RETURN_PERCENT = Decimal('0.3')
+    REFERRAL_MAX_RETURN_PERCENT = Decimal('0.3')
 
     REFERRER = 'referrer'
     TRADER = 'trader'
@@ -59,9 +59,9 @@ class ReferralTrx(models.Model):
         system_wallet = irt_asset.get_wallet(fee_trx.receiver.account, Wallet.SPOT)
 
         if fee_trx.sender.asset.symbol in (Asset.IRT, Asset.USDT):
-            amount = self.REFERRAL_RETURN_PERCENT * fee_trx.amount * tether_factor
+            amount = fee_trx.amount * tether_factor
         else:
-            amount = self.REFERRAL_RETURN_PERCENT * fee_trx.amount * trade_price * tether_factor
+            amount = fee_trx.amount * trade_price * tether_factor
 
         self.trx_dict = {}
         for receiver_type in [self.TRADER, self.REFERRER]:
@@ -92,9 +92,9 @@ class ReferralTrx(models.Model):
     @staticmethod
     def get_share_factor(referral, receiver_type):
         if receiver_type == ReferralTrx.TRADER:
-            return (100 - referral.owner_share_percent) / Decimal(100)
+            return ReferralTrx.REFERRAL_MAX_RETURN_PERCENT * (Decimal(1) - (referral.owner_share_percent / Decimal(100)))
         else:
-            return referral.owner_share_percent / Decimal(100)
+            return ReferralTrx.REFERRAL_MAX_RETURN_PERCENT * (referral.owner_share_percent / Decimal(100))
 
     @staticmethod
     def get_trx_list(referrals):
