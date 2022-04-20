@@ -155,7 +155,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter,
         'is_staff', 'is_superuser', 'is_active', 'groups',
     )
-    inlines = [UserCommentInLine,]
+    inlines = [UserCommentInLine]
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify')
     readonly_fields = (
