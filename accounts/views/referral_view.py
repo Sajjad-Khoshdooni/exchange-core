@@ -74,10 +74,10 @@ class ReferralViewSet(
     serializer_class = ReferralSerializer
 
     def get_queryset(self):
-        if self.action == 'list':
-            return Referral.objects.filter(owner=self.request.user.account).union(
-                Referral.objects.filter(id=self.request.user.account.referred_by_id)
-            )
+        # if self.action == 'list':
+        #     return Referral.objects.filter(owner=self.request.user.account).union(
+        #         Referral.objects.filter(id=self.request.user.account.referred_by_id)
+        #     )
         return Referral.objects.filter(owner=self.request.user.account)
 
     def get_serializer_context(self):
