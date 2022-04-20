@@ -4,6 +4,7 @@ from django.core.validators import RegexValidator, MaxValueValidator, MinValueVa
 from django.db import models
 
 from accounts.utils.validation import generate_random_code
+from market.models.referral_trx import ReferralTrx
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +23,10 @@ class Referral(models.Model):
         unique=True
     )
 
-    from market.models.referral_trx import ReferralTrx
-    owner_share_percent = models.SmallIntegerField(default=0,
-                                                   validators=[MinValueValidator(0), MaxValueValidator(ReferralTrx.REFERRAL_MAX_RETURN_PERCENT)])
+    owner_share_percent = models.SmallIntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(ReferralTrx.REFERRAL_MAX_RETURN_PERCENT)]
+    )
 
     def save(self, **kwargs):
         if not self.id:
