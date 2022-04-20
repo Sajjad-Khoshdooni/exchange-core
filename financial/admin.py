@@ -48,7 +48,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
         ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'ref_doc')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
                                       'get_withdraw_request_user_mobile')}),
-        ('کامنت‌', {'fields': ('comment',)})
+        ('نظر', {'fields': ('comment',)})
     )
     # list_display = ('bank_account', )
     list_filter = ('status', UserRialWithdrawRequestFilter, )
