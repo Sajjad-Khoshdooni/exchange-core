@@ -12,7 +12,7 @@ from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import mixins
 from rest_framework.viewsets import GenericViewSet
-from accounts.models import Referral
+from accounts.models import Referral, User
 from market.models import ReferralTrx
 
 logger = logging.getLogger(__name__)
@@ -88,6 +88,12 @@ class ReferralViewSet(
             **super(ReferralViewSet, self).get_serializer_context(),
             'account': self.request.user.account
         }
+
+    def perform_create(self, serializer):
+        if self.request.user.level < User.LEVEL2:
+            raise ValidationError('برای ساخت کد معرف، ابتدا باید احراز هویت مرحله ۲ را انجام دهید.')
+
+        serializer.save()
 
 
 class ReferralReportAPIView(ListAPIView):
