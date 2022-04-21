@@ -201,7 +201,7 @@ class User(AbstractUser):
             Notification.send(
                 recipient=self,
                 title='عکس سلفی شما تایید نشد',
-                level=Notification.WARNING,
+                level=Notification.ERROR,
                 message=self.selfie_image_discard_text
             )
             self.selfie_image_discard_text = ''
