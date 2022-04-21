@@ -300,9 +300,9 @@ class Order(models.Model):
     @staticmethod
     def get_depth_value(amount, price, base_asset: str):
         if base_asset == Asset.IRT:
-            return str(floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_IRT * 100, 0))
+            return str(min(100, floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_IRT * 100, 0)))
         if base_asset == Asset.USDT:
-            return str(floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_USDT * 100, 0))
+            return str(min(100, floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_USDT * 100, 0)))
 
     @staticmethod
     def quantize_values(symbol: PairSymbol, open_orders):
