@@ -48,7 +48,7 @@ class SignupSerializer(serializers.Serializer):
     token = serializers.UUIDField(write_only=True, required=True)
     password = serializers.CharField(required=True, write_only=True, validators=[password_validator])
     utm = serializers.JSONField(allow_null=True, required=False, write_only=True)
-    referral_code = serializers.CharField(allow_null=True, required=False, write_only=True)
+    referral_code = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
 
     @staticmethod
     def validate_referral_code(code):
