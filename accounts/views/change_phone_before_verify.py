@@ -36,12 +36,6 @@ class ChangePhoneSerializer(serializers.ModelSerializer):
 
         code.set_code_used()
 
-        if user.verify_status != User.PENDING and user.level == User.LEVEL1:
-            from accounts.tasks import basic_verify_user
-
-            user.change_status(User.PENDING)
-            basic_verify_user.delay(user.id)
-
         return instance
 
     class Meta:
@@ -62,5 +56,13 @@ class ChangePhoneView(APIView):
 
         change_phone.is_valid(raise_exception=True)
         change_phone.save()
+
+        if user.verify_status != User.PENDING and user.level == User.LEVEL1:
+            from accounts.tasks import basic_verify_user
+
+            user.national_code_verified = None
+            user.change_status(User.PENDING)
+            basic_verify_user.delay(user.id)
+
         return Response({'msg': 'phone change successfully'})
 
