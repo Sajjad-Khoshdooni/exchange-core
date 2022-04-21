@@ -2,15 +2,12 @@
 
 from django.db import migrations, models
 
-from ledger.models import Asset
-from market.models import FillOrder
-
-
 def populate_fill_order_values(apps, schema_editor):
+    FillOrder = apps.get_model('market', 'FillOrder')
     for fill in FillOrder.objects.all():
         fill.irt_value = fill.price * fill.amount
 
-        if fill.symbol.base_asset.symbol == Asset.USDT:
+        if fill.symbol.base_asset.symbol == 'USDT':
             fill.irt_value *= 27000
 
         fill.save()

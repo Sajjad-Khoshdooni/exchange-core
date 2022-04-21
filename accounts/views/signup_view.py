@@ -1,13 +1,14 @@
 from django.contrib.auth import login
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.models import User, TrafficSource
+from accounts.models import User, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle
 from accounts.validators import mobile_number_validator, password_validator
@@ -47,6 +48,13 @@ class SignupSerializer(serializers.Serializer):
     token = serializers.UUIDField(write_only=True, required=True)
     password = serializers.CharField(required=True, write_only=True, validators=[password_validator])
     utm = serializers.JSONField(allow_null=True, required=False, write_only=True)
+    referral_code = serializers.CharField(allow_null=True, required=False, write_only=True)
+
+    @staticmethod
+    def validate_referral_code(code):
+        if code and not Referral.objects.filter(code=code).exists():
+            raise ValidationError(_('Referral code is invalid'))
+        return code
 
     def create(self, validated_data):
         token = validated_data.pop('token')
@@ -69,6 +77,9 @@ class SignupSerializer(serializers.Serializer):
         with transaction.atomic():
             user.set_password(password)
             user.save()
+            if validated_data.get('referral_code'):
+                user.account.referred_by = Referral.objects.get(code=validated_data['referral_code'])
+                user.account.save()
 
             otp_code.set_token_used()
 

@@ -1,4 +1,5 @@
 import logging
+from collections import namedtuple
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -98,6 +99,20 @@ class FillOrder(models.Model):
             'maker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.maker_order, is_taker=False,
                                                                            system=system),
         }
+
+    def init_referrals(self, trade_trx_list):
+        tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
+            get_tether_irt_price(BUY)
+
+        from market.models import ReferralTrx
+        referrals = ReferralTrx.get_trade_referrals(
+            trade_trx_list['maker_fee'],
+            trade_trx_list['taker_fee'],
+            self.price,
+            tether_irt
+        )
+        ReferralTrxTuple = namedtuple("ReferralTrx", "referral trx")
+        return ReferralTrxTuple(referrals, ReferralTrx.get_trx_list(referrals))
 
     def __init_trade_trx(self):
         return Trx(
@@ -217,6 +232,10 @@ class FillOrder(models.Model):
             )
             trade_trx_list = fill_order.init_trade_trxs(ignore_fee=True)
             fill_order.calculate_amounts_from_trx(trade_trx_list)
+            from market.models import ReferralTrx
+            referral_trx = fill_order.init_referrals(trade_trx_list)
+            ReferralTrx.objects.bulk_create(list(filter(bool, referral_trx.referral)))
+            Trx.objects.bulk_create(list(filter(lambda trx: trx and trx.amount, referral_trx.trx)))
             fill_order.save()
             # for key in ('taker_fee', 'maker_fee'):
             #     if fill_order.trade_trx_list[key]:

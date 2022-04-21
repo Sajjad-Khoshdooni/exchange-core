@@ -75,3 +75,9 @@ class FillOrderAdmin(admin.ModelAdmin):
     list_filter = ('trade_source', UserFillOrderFilter)
     readonly_fields = ('symbol', 'taker_order', 'maker_order')
     search_fields = ('symbol__name', )
+
+
+@admin.register(ReferralTrx)
+class ReferralTrxAdmin(admin.ModelAdmin):
+    list_display = ('created', 'referral', 'referrer_amount', 'trader_amount',)
+    list_filter = ('referral', 'referral__owner')
