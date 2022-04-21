@@ -348,7 +348,7 @@ class Order(models.Model):
             logger.warning(f'cannot calculate maker price for {symbol} {side}')
             return
 
-        loose_factor = Decimal('1.0005') if side == Order.BUY else 1 / Decimal('1.0005')
+        loose_factor = Decimal('1.001') if side == Order.BUY else 1 / Decimal('1.001')
         if not best_order or \
                 (side == Order.BUY and maker_price > best_order * loose_factor) or \
                 (side == Order.SELL and maker_price < best_order * loose_factor):
@@ -357,7 +357,7 @@ class Order(models.Model):
     @classmethod
     def cancel_invalid_maker_orders(cls, symbol: PairSymbol):
         for side in (Order.BUY, Order.SELL):
-            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.0005'))
+            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.001'))
 
             invalid_orders = cls.open_objects.select_for_update().filter(symbol=symbol, side=side).exclude(
                 type=Order.ORDINARY
