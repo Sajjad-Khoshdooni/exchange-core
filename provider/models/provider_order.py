@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 from math import log10
 
@@ -10,6 +11,8 @@ from ledger.models import Asset, Trx
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_trading_price_usdt, SELL
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
+
+logger = logging.getLogger(__name__)
 
 
 class ProviderOrder(models.Model):
@@ -127,7 +130,7 @@ class ProviderOrder(models.Model):
         return asset.symbol + 'USDT'
 
     @classmethod
-    def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '') -> bool:
+    def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '', dry_run: bool = False) -> bool:
         # todo: this method should not called more than once at a single time
 
         if settings.DEBUG_OR_TESTING:
@@ -151,6 +154,8 @@ class ProviderOrder(models.Model):
             raise NotImplementedError
 
         step_size = handler.get_step_size(symbol)
+
+        logger.info('Hedge amount for %s: %s' % (asset, hedge_amount))
 
         # Hedge strategy: don't sell assets ASAP and hold them!
 
@@ -176,8 +181,15 @@ class ProviderOrder(models.Model):
             if order_amount * price < 10:
                 return True
 
-            order = cls.new_order(asset, side, order_amount, scope, market=market)
+            if not dry_run:
+                order = cls.new_order(asset, side, order_amount, scope, market=market)
+                return bool(order)
 
-            return bool(order)
+            else:
+                logger.info('New provider order with %s, %s, %s, %s, %s' % (asset, side, order_amount, scope, market))
+                if order_amount * price > 20:
+                    logger.info('Large value: %s' % (order_amount * price))
+
+                return True
 
         return True
