@@ -146,12 +146,12 @@ class BankCardAdmin(AdvancedAdmin):
 
     @admin.action(description='تایید خودکار شماره کارت')
     def verify_bank_cards(self, request, queryset):
-        for bank_card in queryset.filter(verified__isnull=True):
+        for bank_card in queryset:
             verify_bank_card_task.delay(bank_card.id)
 
     @admin.action(description='تایید شماره کارت')
     def verify_bank_cards_manual(self, request, queryset):
-        for card in queryset.exclude(verified=True):
+        for card in queryset:
             card.verified = True
             card.save()
             card.user.verify_level2_if_not()
@@ -199,12 +199,12 @@ class BankAccountAdmin(AdvancedAdmin):
 
     @admin.action(description='درخواست تایید خودکار شماره شبا')
     def verify_bank_accounts_auto(self, request, queryset):
-        for bank_account in queryset.filter(verified__isnull=True):
+        for bank_account in queryset:
             verify_bank_account_task.delay(bank_account.id)
 
     @admin.action(description='تایید شماره شبا')
     def verify_bank_accounts_manual(self, request, queryset):
-        for bank_account in queryset.exclude(verified=True):
+        for bank_account in queryset:
             bank_account.verified = True
             bank_account.save()
             bank_account.user.verify_level2_if_not()
