@@ -7,7 +7,7 @@ from django.db.models import Sum
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from simple_history.admin import SimpleHistoryAdmin
-
+from ledger.utils.precision import get_presentation_amount,humanize_number
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -392,9 +392,34 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('user', 'type', 'name')
+    list_display = ('user', 'type', 'name',)
     search_fields = ('user__phone', )
     list_filter = ('type', 'primary')
+
+    fieldsets = (
+        ('اطلاعات', {'fields': (
+            'name', 'user', 'type', 'get_wallet_address',
+            'get_total_balance_irt_admin', 'get_total_balance_usdt_admin'
+        )}),
+    )
+    readonly_fields = ('get_wallet_address', 'get_total_balance_irt_admin','get_total_balance_usdt_admin')
+
+    def get_wallet_address(self, user: User):
+        link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+    get_wallet_address.short_description = 'لیست کیف‌ها'
+
+    def get_total_balance_irt_admin(self, account: Account):
+        total_balance_irt = account.get_total_balance_irt(market=Wallet.SPOT, side='buy')
+        return humanize_number(get_presentation_amount((total_balance_irt)))
+
+    get_total_balance_irt_admin.short_description = 'دارایی به تومان'
+
+    def get_total_balance_usdt_admin(self, account: Account):
+        total_blance_usdt = account.get_total_balance_usdt(market=Wallet.SPOT, side='buy')
+        return humanize_number(get_presentation_amount((total_blance_usdt)))
+
+    get_total_balance_usdt_admin.short_description = 'دارایی به تتر'
 
 
 @admin.register(Referral)

@@ -370,12 +370,14 @@ class Order(models.Model):
     @classmethod
     def cancel_waste_maker_orders(cls, symbol: PairSymbol, open_orders_count):
         for side in (Order.BUY, Order.SELL):
-            wasted_orders = Order.open_objects.select_for_update().filter(symbol=symbol, side=side).exclude(
+            wasted_orders = Order.open_objects.filter(symbol=symbol, side=side).exclude(
                 type=Order.ORDINARY
             )
             wasted_orders = wasted_orders.order_by('price') if side == Order.BUY else wasted_orders.order_by('-price')
             cancel_count = open_orders_count[side] - Order.MAKER_ORDERS_COUNT
-            logger.info(f'maker {symbol} {side}: {len(wasted_orders)} {cancel_count}')
+
+            logger.info(f'maker {symbol} {side}: wasted={len(wasted_orders)} cancels={cancel_count}')
+
             if cancel_count > 0:
                 cls.cancel_orders(
                     symbol,
