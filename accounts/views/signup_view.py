@@ -112,6 +112,7 @@ class SignupSerializer(serializers.Serializer):
 
 class SignupView(CreateAPIView):
     permission_classes = []
+    throttle_classes = [BurstRateThrottle]
     serializer_class = SignupSerializer
 
     def perform_create(self, serializer):
