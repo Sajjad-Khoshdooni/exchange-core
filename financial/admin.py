@@ -7,11 +7,12 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.tasks.verify_user import alert_user_verify_status
 from accounts.utils.admin import url_to_admin_list
+from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
     FiatWithdrawRequest
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from ledger.utils.precision import humanize_number
-
+from financial.utils.withdraw_limit import rial_estimate_receive_time
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
@@ -45,7 +46,8 @@ class UserRialWithdrawRequestFilter(SimpleListFilter):
 @admin.register(FiatWithdrawRequest)
 class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     fieldsets = (
-        ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'ref_doc')}),
+        ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'ref_doc',
+                                        'get_withdraw_request_receive_time')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
                                       'get_withdraw_request_user_mobile')}),
         ('نظر', {'fields': ('comment',)})
@@ -55,6 +57,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     ordering = ('-created', )
     readonly_fields = ('amount', 'fee_amount', 'bank_account', 'created', 'get_withdraw_request_iban',
                        'get_withdraw_request_user', 'get_withdraw_request_user_mobile',
+                       'get_withdraw_request_receive_time'
                        )
 
     list_display = ('bank_account', 'status', 'amount', 'ref_id')
@@ -71,6 +74,16 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     def get_withdraw_request_iban(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.iban
     get_withdraw_request_iban.short_description = 'شماره شبا'
+
+    def get_withdraw_request_receive_time(self, with_draw: FiatWithdrawRequest):
+        data_time =rial_estimate_receive_time(with_draw)
+
+        return ('زمان : %s تاریخ %s' % (
+            data_time.time().strftime("%H:%M"),
+            gregorian_to_jalali_date_str(data_time.date())
+        ))
+
+    get_withdraw_request_receive_time.short_description = 'زمان تقریبی واریز'
 
 
 @admin.register(PaymentRequest)
