@@ -19,7 +19,11 @@ logger = logging.getLogger(__name__)
 
 
 class ReferralSerializer(serializers.ModelSerializer):
+    owned = serializers.SerializerMethodField()
     revenue = serializers.SerializerMethodField()
+
+    def get_owned(self, referral: Referral):
+        return referral.owner == self.context['account']
 
     def get_revenue(self, referral: Referral):
         account = self.context['account']
@@ -49,8 +53,8 @@ class ReferralSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Referral
-        fields = ('id', 'owner', 'created', 'code', 'owner_share_percent', 'revenue')
-        read_only_fields = ('id', 'created', 'code', 'revenue')
+        fields = ('id', 'owner', 'created', 'code', 'owner_share_percent', 'revenue', 'owned')
+        read_only_fields = ('id', 'created', 'code', 'revenue', 'owned')
         extra_kwargs = {
             'owner': {'write_only': True},
         }
@@ -77,10 +81,10 @@ class ReferralViewSet(
     serializer_class = ReferralSerializer
 
     def get_queryset(self):
-        # if self.action == 'list':
-        #     return Referral.objects.filter(owner=self.request.user.account).union(
-        #         Referral.objects.filter(id=self.request.user.account.referred_by_id)
-        #     )
+        if self.action == 'list':
+            return Referral.objects.filter(owner=self.request.user.account).union(
+                Referral.objects.filter(id=self.request.user.account.referred_by_id)
+            )
         return Referral.objects.filter(owner=self.request.user.account)
 
     def get_serializer_context(self):
