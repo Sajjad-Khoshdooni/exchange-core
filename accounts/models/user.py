@@ -159,8 +159,8 @@ class User(AbstractUser):
         from financial.models import BankCard, BankAccount
 
         return self.national_code and self.national_code_verified and self.primary_data_verified and \
-               BankCard.objects.filter(user=self, verified=True) and \
-               BankAccount.objects.filter(user=self, verified=True)
+               BankCard.live_objects.filter(user=self, verified=True) and \
+               BankAccount.live_objects.filter(user=self, verified=True)
 
     def verify_level2_if_not(self) -> bool:
         if self.level == User.LEVEL1 and self.is_level2_verifiable():

@@ -7,6 +7,11 @@ from simple_history.models import HistoricalRecords
 from financial.validators import iban_validator, bank_card_pan_validator
 
 
+class LiveManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(deleted=False)
+
+
 class BankCard(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -23,6 +28,9 @@ class BankCard(models.Model):
     deleted = models.BooleanField(default=False)
 
     history = HistoricalRecords()
+
+    objects = models.Manager()
+    live_objects = LiveManager()
 
     def __str__(self):
         if len(self.card_pan) < 10:
@@ -79,6 +87,9 @@ class BankAccount(models.Model):
 
     history = HistoricalRecords()
 
+    objects = models.Manager()
+    live_objects = LiveManager()
+
     def __str__(self):
         return self.iban[:6] + '********' + self.iban[-4:]
 
@@ -108,7 +119,7 @@ class BankCardSerializer(serializers.ModelSerializer):
         user = validated_data['user']
         card_pan = validated_data['card_pan']
 
-        if BankCard.objects.filter(Q(user=user) | Q(verified=True), card_pan=card_pan).exists():
+        if BankCard.live_objects.filter(Q(user=user) | Q(verified=True), card_pan=card_pan).exists():
             raise ValidationError('این شماره کارت قبلا ثبت شده است.')
 
         bank_card = super().create(validated_data)
@@ -130,7 +141,7 @@ class BankAccountSerializer(serializers.ModelSerializer):
         user = validated_data['user']
         iban = validated_data['iban']
 
-        if BankAccount.objects.filter(Q(user=user) | Q(verified=True), iban=iban).exists():
+        if BankAccount.live_objects.filter(Q(user=user) | Q(verified=True), iban=iban).exists():
             raise ValidationError('این شماره شما قبلا ثبت شده است.')
 
         bank_account = super().create(validated_data)

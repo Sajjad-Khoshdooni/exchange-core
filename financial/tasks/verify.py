@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task(queue='celery')
 def verify_bank_card_task(bank_card_id: int):
-    bank_card = BankCard.objects.get(id=bank_card_id)  # type: BankCard
+    bank_card = BankCard.live_objects.get(id=bank_card_id)  # type: BankCard
 
     verified = verify_bank_card(bank_card)
 
@@ -35,7 +35,7 @@ def verify_bank_card_task(bank_card_id: int):
 
 @shared_task(queue='celery')
 def verify_bank_account_task(bank_account_id: int, silent: bool = False):
-    bank_account = BankAccount.objects.get(id=bank_account_id)  # type: BankAccount
+    bank_account = BankAccount.live_objects.get(id=bank_account_id)  # type: BankAccount
 
     verified = verify_bank_account(bank_account)
 
