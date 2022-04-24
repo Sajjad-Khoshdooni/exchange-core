@@ -50,6 +50,7 @@ def update_maker_orders(symbol_id=None, market_top_prices=None, open_depth_order
                 Order.cancel_invalid_maker_orders(symbol)
 
             for side in (Order.BUY, Order.SELL):
+                logger.info(f'{symbol} {side} open count: {open_depth_orders_count[side]}')
                 if open_depth_orders_count[side] > Order.MAKER_ORDERS_COUNT:
                     with transaction.atomic():
                         Order.cancel_waste_maker_orders(symbol, open_depth_orders_count)
