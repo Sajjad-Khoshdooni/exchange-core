@@ -40,10 +40,14 @@ class OHLCVSerializer:
         return self.format_price(self.symbol, obj['close'])
 
     def get_volume(self, obj):
+        if obj['volume'] is None:
+            return
         return floor_precision(obj['volume'], self.symbol.step_size)
 
     @staticmethod
     def format_price(symbol: PairSymbol, price: Decimal):
+        if price is None:
+            return
         return floor_precision(price, symbol.tick_size)
 
     def format_single_obj(self, obj):
@@ -68,17 +72,19 @@ class OHLCVAPIView(APIView):
         first_candle = candles[0]
         last_candle = candles[-1]
         candle_datetime = first_candle['timestamp']
-        included_timestamps = {candle['timestamp'] for candle in candles}
+        current_candle = first_candle
+        included_timestamps = {candle['timestamp']: candle for candle in candles}
         position = 0
-        zero = Decimal(0)
         while candle_datetime < last_candle['timestamp']:
+            close = current_candle['close']
             candle_datetime += interval
             position += 1
             if candle_datetime in included_timestamps:
+                current_candle = included_timestamps[candle_datetime]
                 continue
             candles.insert(
                 position, {
-                    'timestamp': candle_datetime, 'open': zero, 'high': zero, 'low': zero, 'close': zero, 'volume': zero
+                    'timestamp': candle_datetime, 'open': close, 'high': close, 'low': close, 'close': close, 'volume': None
                 }
             )
             position += 1
