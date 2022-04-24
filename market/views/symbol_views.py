@@ -20,7 +20,7 @@ class SymbolFilter(django_filters.FilterSet):
 class SymbolListAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filter_class = SymbolFilter
-    queryset = PairSymbol.objects.all()
+    queryset = PairSymbol.objects.all().order_by('-asset__trend', 'asset__order')
 
     def get_serializer_class(self):
         if self.request.query_params.get('stats') == '1':

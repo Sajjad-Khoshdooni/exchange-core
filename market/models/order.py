@@ -6,6 +6,7 @@ from random import randrange
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Sum, F, Q
+from django.utils import timezone
 
 from accounts.models import Account
 from ledger.models import Trx, Wallet
@@ -119,11 +120,9 @@ class Order(models.Model):
         else:
             to_cancel_orders = to_cancel_orders.exclude(status=cls.FILLED)
 
-        cancels = to_cancel_orders.update(status=Order.CANCELED)
+        now = timezone.now()
+        cancels = to_cancel_orders.update(status=Order.CANCELED, lock__freed=True, lock__release_date=now)
         logger.info(f'cancels: {cancels}')
-
-        for order in to_cancel_orders:
-            order.release_lock()
 
     @staticmethod
     def get_price_filter(price, side):
@@ -344,7 +343,7 @@ class Order(models.Model):
             logger.warning(f'cannot calculate maker price for {symbol} {side}')
             return
 
-        loose_factor = Decimal('1.0005') if side == Order.BUY else 1 / Decimal('1.0005')
+        loose_factor = Decimal('1.001') if side == Order.BUY else 1 / Decimal('1.001')
         if not best_order or \
                 (side == Order.BUY and maker_price > best_order * loose_factor) or \
                 (side == Order.SELL and maker_price < best_order * loose_factor):
@@ -353,7 +352,7 @@ class Order(models.Model):
     @classmethod
     def cancel_invalid_maker_orders(cls, symbol: PairSymbol):
         for side in (Order.BUY, Order.SELL):
-            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.0005'))
+            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.001'))
 
             invalid_orders = cls.open_objects.select_for_update().filter(symbol=symbol, side=side).exclude(
                 type=Order.ORDINARY

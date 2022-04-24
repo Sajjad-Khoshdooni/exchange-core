@@ -91,7 +91,7 @@ class ReferralViewSet(
 
     def perform_create(self, serializer):
         if self.request.user.level < User.LEVEL2:
-            raise ValidationError('برای ساخت کد معرف، ابتدا باید احراز هویت مرحله ۲ را انجام دهید.')
+            raise ValidationError('برای ساخت کد معرف، ابتدا باید احراز هویت سطح دو را انجام دهید.')
 
         serializer.save()
 

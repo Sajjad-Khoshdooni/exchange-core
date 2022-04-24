@@ -93,10 +93,6 @@ class FiatWithdrawRequest(models.Model):
 
     def save(self, *args, **kwargs):
         old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
-        old_status = old and old.status
-
-        if old and old_status != PENDING:
-            return
 
         with transaction.atomic():
             super().save(*args, **kwargs)

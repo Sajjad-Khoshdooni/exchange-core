@@ -108,15 +108,15 @@ app.conf.beat_schedule = {
     # market tasks
     'create depth orders': {
         'task': 'market.tasks.market_maker.create_depth_orders',
-        'schedule': 5,
+        'schedule': 30,
         'options': {
             'queue': 'market',
-            'expire': 5
+            'expire': 30
         },
     },
     'update maker orders': {
         'task': 'market.tasks.market_maker.update_maker_orders',
-        'schedule': 1,
+        'schedule': 2,
         'options': {
             'queue': 'market',
             'expire': 2
