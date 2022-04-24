@@ -8,7 +8,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import UserComment, TrafficSource
+from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
 from financial.models.payment import Payment
@@ -19,6 +19,7 @@ from ledger.models import OTCRequest, OTCTrade
 from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import humanize_number
+from market.models import FillOrder
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
@@ -125,7 +126,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
                                          )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
-                                          'telephone_verified', 'selfie_image_verified', 'national_code_duplicated_alert'
+                                          'telephone_verified', 'selfie_image_verified', 'national_code_duplicated_alert',
+                                          'selfie_image_discard_text',
                                           )}),
         (_('Permissions'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'show_margin'),
@@ -139,7 +141,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
                 'get_payment_address', 'get_withdraw_address',
                 'get_otctrade_address', 'get_wallet_address', 'get_bank_card_link',
                 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
-                'get_user_with_same_national_code',
+                'get_user_with_same_national_code', 'get_fill_order_address'
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
@@ -154,7 +156,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter,
         'is_staff', 'is_superuser', 'is_active', 'groups',
     )
-    inlines = [UserCommentInLine,]
+    inlines = [UserCommentInLine]
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify')
     readonly_fields = (
@@ -164,7 +166,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
-        'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium'
+        'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium',
+        'get_fill_order_address',
     )
     preserve_filters = ('archived', )
 
@@ -216,6 +219,11 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         link = url_to_admin_list(Payment)+'?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_payment_address.short_description = 'واریزهای ریالی'
+
+    def get_fill_order_address(self, user: User):
+        link = url_to_admin_list(FillOrder) + '?user={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+    get_fill_order_address.short_description = 'معاملات'
 
     def get_withdraw_address(self, user: User):
         link = url_to_admin_list(FiatWithdrawRequest)+'?user={}'.format(user.id)
@@ -387,6 +395,11 @@ class AccountAdmin(admin.ModelAdmin):
     list_display = ('user', 'type', 'name')
     search_fields = ('user__phone', )
     list_filter = ('type', 'primary')
+
+
+@admin.register(Referral)
+class ReferralAdmin(admin.ModelAdmin):
+    list_display = ('owner', 'owner_share_percent')
 
 
 class FinotechRequestUserFilter(SimpleListFilter):

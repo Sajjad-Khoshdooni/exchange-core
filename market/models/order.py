@@ -6,6 +6,7 @@ from random import randrange
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Sum, F, Q
+from django.utils import timezone
 
 from accounts.models import Account
 from ledger.models import Trx, Wallet
@@ -14,6 +15,7 @@ from ledger.utils.fields import get_amount_field, get_price_field, get_lock_fiel
 from ledger.utils.precision import floor_precision
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
 from market.models import PairSymbol
+from market.models.referral_trx import ReferralTrx
 from provider.models import ProviderOrder
 
 logger = logging.getLogger(__name__)
@@ -118,11 +120,9 @@ class Order(models.Model):
         else:
             to_cancel_orders = to_cancel_orders.exclude(status=cls.FILLED)
 
-        cancels = to_cancel_orders.update(status=Order.CANCELED)
+        now = timezone.now()
+        cancels = to_cancel_orders.update(status=Order.CANCELED, lock__freed=True, lock__release_date=now)
         logger.info(f'cancels: {cancels}')
-
-        for order in to_cancel_orders:
-            order.release_lock()
 
     @staticmethod
     def get_price_filter(price, side):
@@ -160,11 +160,7 @@ class Order(models.Model):
         self.lock = lock_wallet.lock_balance(lock_amount)
         self.save()
 
-    def release_lock(self, release_amount=None):
-        if release_amount is None:
-            self.lock.release()
-            return
-
+    def release_lock(self, release_amount):
         from ledger.models import BalanceLock
         release_amount = Order.get_lock_amount(release_amount, self.price, self.side)
         BalanceLock.objects.filter(id=self.lock.id).update(amount=F('amount') - release_amount)
@@ -192,6 +188,7 @@ class Order(models.Model):
             fill_orders = []
             trx_list = []
 
+            referral_list = []
             for matching_order in matching_orders:
                 trade_price = matching_order.price
                 if (self.side == Order.BUY and self.price < trade_price) or (
@@ -225,6 +222,9 @@ class Order(models.Model):
                 trade_trx_list = fill_order.init_trade_trxs(system)
                 trx_list.extend(trade_trx_list.values())
                 fill_order.calculate_amounts_from_trx(trade_trx_list)
+                referral_trx = fill_order.init_referrals(trade_trx_list)
+                trx_list.extend(referral_trx.trx)
+                referral_list.extend(referral_trx.referral)
 
                 fill_orders.append(fill_order)
 
@@ -266,7 +266,8 @@ class Order(models.Model):
                         })
                     break
 
-            Trx.objects.bulk_create(filter(bool, trx_list))
+            Trx.objects.bulk_create(filter(lambda trx: trx and trx.amount, trx_list))
+            ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referral_list))
             FillOrder.objects.bulk_create(fill_orders)
 
     # OrderBook related methods
@@ -294,9 +295,9 @@ class Order(models.Model):
     @staticmethod
     def get_depth_value(amount, price, base_asset: str):
         if base_asset == Asset.IRT:
-            return str(floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_IRT * 100, 0))
+            return str(min(100, floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_IRT * 100, 0)))
         if base_asset == Asset.USDT:
-            return str(floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_USDT * 100, 0))
+            return str(min(100, floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_USDT * 100, 0)))
 
     @staticmethod
     def quantize_values(symbol: PairSymbol, open_orders):
@@ -342,7 +343,7 @@ class Order(models.Model):
             logger.warning(f'cannot calculate maker price for {symbol} {side}')
             return
 
-        loose_factor = Decimal('1.0005') if side == Order.BUY else 1 / Decimal('1.0005')
+        loose_factor = Decimal('1.001') if side == Order.BUY else 1 / Decimal('1.001')
         if not best_order or \
                 (side == Order.BUY and maker_price > best_order * loose_factor) or \
                 (side == Order.SELL and maker_price < best_order * loose_factor):
@@ -351,7 +352,7 @@ class Order(models.Model):
     @classmethod
     def cancel_invalid_maker_orders(cls, symbol: PairSymbol):
         for side in (Order.BUY, Order.SELL):
-            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.0005'))
+            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.001'))
 
             invalid_orders = cls.open_objects.select_for_update().filter(symbol=symbol, side=side).exclude(
                 type=Order.ORDINARY

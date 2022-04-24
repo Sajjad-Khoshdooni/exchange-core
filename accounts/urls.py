@@ -1,6 +1,12 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework import routers
+
 from accounts import views
 from accounts.views.user_view import CreateAuthToken
+
+router = routers.DefaultRouter()
+
+router.register(r'^referrals', views.ReferralViewSet, basename='referral')
 
 urlpatterns = [
     path('login/', views.LoginView.as_view()),
@@ -48,5 +54,8 @@ urlpatterns = [
 
     path('phone/change/', views.ChangePhoneView.as_view()),
     path('user/onboarding/', views.OnBoardingFlowStatus.as_view()),
-    path('api-token-auth/', CreateAuthToken.as_view())
+    path('api-token-auth/', CreateAuthToken.as_view()),
+
+    path('referrals/report/', views.ReferralReportAPIView.as_view()),
+    path('', include(router.urls)),
 ]
