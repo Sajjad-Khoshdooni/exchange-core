@@ -24,6 +24,8 @@ class FiatWithdrawRequest(models.Model):
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
     ref_doc = models.FileField(verbose_name='رسید انتقال', null=True, blank=True)
 
+    comment = models.TextField(verbose_name='نظر', blank=True)
+
     @property
     def total_amount(self):
         return self.amount + self.fee_amount
@@ -91,10 +93,6 @@ class FiatWithdrawRequest(models.Model):
 
     def save(self, *args, **kwargs):
         old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
-        old_status = old and old.status
-
-        if old and old_status != PENDING:
-            return
 
         with transaction.atomic():
             super().save(*args, **kwargs)
