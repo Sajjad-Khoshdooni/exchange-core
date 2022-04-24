@@ -161,11 +161,7 @@ class Order(models.Model):
         self.lock = lock_wallet.lock_balance(lock_amount)
         self.save()
 
-    def release_lock(self, release_amount=None):
-        if release_amount is None:
-            self.lock.release()
-            return
-
+    def release_lock(self, release_amount):
         from ledger.models import BalanceLock
         release_amount = Order.get_lock_amount(release_amount, self.price, self.side)
         BalanceLock.objects.filter(id=self.lock.id).update(amount=F('amount') - release_amount)
