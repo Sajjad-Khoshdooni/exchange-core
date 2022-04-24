@@ -368,5 +368,17 @@ class Order(models.Model):
             logger.info(f'maker {side} cancels with price: {price}')
 
     @classmethod
+    def cancel_waste_maker_orders(cls, symbol: PairSymbol, open_orders_count):
+        for side in (Order.BUY, Order.SELL):
+            wasted_orders = cls.open_objects.select_for_update().filter(symbol=symbol, side=side).exclude(
+                type=Order.ORDINARY
+            )
+            wasted_orders = wasted_orders.order_by('price') if side == Order.BUY else wasted_orders.order_by('-price')
+            cancel_count = open_orders_count[side] - Order.MAKER_ORDERS_COUNT
+            if not cancel_count > 0:
+                cls.cancel_orders(symbol, to_cancel_orders=wasted_orders[:cancel_count])
+                logger.info(f'maker {side} cancel wastes')
+
+    @classmethod
     def update_filled_amount(cls, order_ids, match_amount):
         Order.objects.filter(id__in=order_ids).update(filled_amount=F('filled_amount') + match_amount)

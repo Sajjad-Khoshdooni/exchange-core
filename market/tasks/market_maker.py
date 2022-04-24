@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='market')
-def update_maker_orders(symbol_id=None, market_top_prices=None):
+def update_maker_orders(symbol_id=None, market_top_prices=None, open_depth_orders_count=None):
     if market_top_prices is None:
         market_top_prices = defaultdict(lambda: Decimal())
 
@@ -25,13 +25,24 @@ def update_maker_orders(symbol_id=None, market_top_prices=None):
                 (depth['symbol'], depth['side'])
             ] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) or Decimal()
 
+    if open_depth_orders_count is None:
+        open_depth_orders_count = defaultdict(int)
+        for depth in Order.open_objects.filter(type=Order.DEPTH).values('symbol', 'side').annotate(count=Count('*')):
+            open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
+
     if symbol_id is None:
         for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True):
             symbol_top_prices = {
                 Order.BUY: market_top_prices[symbol.id, Order.BUY],
                 Order.SELL: market_top_prices[symbol.id, Order.SELL],
             }
-            update_maker_orders.apply_async(args=(symbol.id, symbol_top_prices), queue='market')
+            symbol_open_depth_orders_count = {
+                Order.BUY: open_depth_orders_count[symbol.id, Order.BUY],
+                Order.SELL: open_depth_orders_count[symbol.id, Order.SELL],
+            }
+            update_maker_orders.apply_async(
+                args=(symbol.id, symbol_top_prices, symbol_open_depth_orders_count), queue='market'
+            )
     else:
         symbol = PairSymbol.objects.get(id=symbol_id)
         try:
@@ -39,6 +50,9 @@ def update_maker_orders(symbol_id=None, market_top_prices=None):
                 Order.cancel_invalid_maker_orders(symbol)
 
             for side in (Order.BUY, Order.SELL):
+                if open_depth_orders_count[side] > Order.MAKER_ORDERS_COUNT:
+                    with transaction.atomic():
+                        Order.cancel_waste_maker_orders(symbol, open_depth_orders_count)
                 price = Order.get_maker_price(symbol, side)
                 order = Order.init_top_maker_order(
                     symbol, side, price,
