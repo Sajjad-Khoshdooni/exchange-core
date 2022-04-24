@@ -375,6 +375,7 @@ class Order(models.Model):
             )
             wasted_orders = wasted_orders.order_by('price') if side == Order.BUY else wasted_orders.order_by('-price')
             cancel_count = open_orders_count[side] - Order.MAKER_ORDERS_COUNT
+
             logger.info(f'maker {symbol} {side}: wasted={len(wasted_orders)} cancels={cancel_count}')
 
             if cancel_count > 0:

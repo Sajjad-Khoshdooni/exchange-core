@@ -12,7 +12,7 @@ if settings.DEBUG_OR_TESTING:
         return user
 
     def new_bank_card(user: User) -> BankCard:
-        bank_card = BankCard.objects.create(user=user, card_pan='6104337574599260', verified=True)
+        bank_card = BankCard.live_objects.create(user=user, card_pan='6104337574599260', verified=True)
         return bank_card
 
     def new_bank_account(user: User) -> BankAccount:

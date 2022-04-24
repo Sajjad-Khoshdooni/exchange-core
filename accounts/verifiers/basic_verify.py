@@ -143,7 +143,7 @@ def verify_user_primary_info(user: User) -> bool:
 
 
 def verify_bank_card(bank_card: BankCard) -> bool:
-    if BankCard.objects.filter(card_pan=bank_card.card_pan, verified=True).exclude(id=bank_card.id).exists():
+    if BankCard.live_objects.filter(card_pan=bank_card.card_pan, verified=True).exclude(id=bank_card.id).exists():
         logger.info('rejecting bank card because of duplication')
         bank_card.verified = False
         bank_card.save()
@@ -178,7 +178,7 @@ DEPOSIT_STATUS_MAP = {
 
 
 def verify_bank_account(bank_account: BankAccount) -> bool:
-    if BankAccount.objects.filter(iban=bank_account.iban, verified=True).exclude(id=bank_account.id).exists():
+    if BankAccount.live_objects.filter(iban=bank_account.iban, verified=True).exclude(id=bank_account.id).exists():
         logger.info('rejecting bank account because of duplication')
         bank_account.verified = False
         bank_account.save()
