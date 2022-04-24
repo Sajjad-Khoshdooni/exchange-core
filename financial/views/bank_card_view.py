@@ -11,7 +11,7 @@ class BankCardView(ModelViewSet):
     filterset_fields = ['verified']
 
     def get_queryset(self):
-        return BankCard.objects.filter(user=self.request.user)
+        return BankCard.objects.filter(user=self.request.user, deleted=False)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -23,4 +23,5 @@ class BankCardView(ModelViewSet):
         if bank_card.verified and BankCard.objects.filter(user=bank_card.user, verified=True).count() == 1:
             raise ValidationError('شما باید حداقل یک شماره کارت تایید شده داشته باشید.')
 
-        return super().perform_destroy(bank_card)
+        bank_card.deleted = True
+        bank_card.save()

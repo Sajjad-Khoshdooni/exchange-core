@@ -20,6 +20,7 @@ class BankCard(models.Model):
     )
 
     verified = models.BooleanField(null=True, blank=True)
+    deleted = models.BooleanField(default=False)
 
     history = HistoricalRecords()
 
@@ -39,7 +40,7 @@ class BankCard(models.Model):
             UniqueConstraint(
                 fields=["card_pan"],
                 name="unique_bank_card_card_pan",
-                condition=Q(verified=True),
+                condition=Q(verified=True, deleted=False),
             )
         ]
 
@@ -74,6 +75,7 @@ class BankAccount(models.Model):
     owners = models.JSONField(blank=True, null=True)
 
     verified = models.BooleanField(null=True, blank=True)
+    deleted = models.BooleanField(default=False)
 
     history = HistoricalRecords()
 
@@ -90,7 +92,7 @@ class BankAccount(models.Model):
             UniqueConstraint(
                 fields=["iban"],
                 name="unique_bank_account_iban",
-                condition=Q(verified=True),
+                condition=Q(verified=True, deleted=False),
             )
         ]
 

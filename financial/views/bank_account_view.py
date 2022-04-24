@@ -12,7 +12,7 @@ class BankAccountView(ModelViewSet):
     filterset_fields = ['verified']
 
     def get_queryset(self):
-        return BankAccount.objects.filter(user=self.request.user)
+        return BankAccount.objects.filter(user=self.request.user, deleted=False)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -24,4 +24,5 @@ class BankAccountView(ModelViewSet):
         if bank_account.verified and BankAccount.objects.filter(user=bank_account.user, verified=True).count() == 1:
             raise ValidationError('شما باید حداقل یک شماره شبا تایید شده داشته باشید.')
 
-        return super().perform_destroy(bank_account)
+        bank_account.deleted = True
+        bank_account.save()
