@@ -2,7 +2,6 @@ import logging
 from datetime import timedelta, datetime
 from decimal import Decimal
 
-import pytz
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
@@ -61,6 +60,30 @@ class OHLCVSerializer:
 class OHLCVAPIView(APIView):
     permission_classes = ()
 
+    @classmethod
+    def append_empty_candles(cls, candles, interval):
+        if not candles:
+            return candles
+
+        first_candle = candles[0]
+        last_candle = candles[-1]
+        candle_datetime = first_candle['timestamp']
+        included_timestamps = {candle['timestamp'] for candle in candles}
+        position = 0
+        zero = Decimal(0)
+        while candle_datetime < last_candle['timestamp']:
+            candle_datetime += interval
+            position += 1
+            if candle_datetime in included_timestamps:
+                continue
+            candles.insert(
+                position, {
+                    'timestamp': candle_datetime, 'open': zero, 'high': zero, 'low': zero, 'close': zero, 'volume': zero
+                }
+            )
+            position += 1
+        return candles
+
     def get(self, request):
         symbol = request.query_params.get('symbol')
         if not symbol:
@@ -70,11 +93,13 @@ class OHLCVAPIView(APIView):
             raise ValidationError(f'{symbol} is not enable')
         start = request.query_params.get('from', (timezone.now() - timedelta(hours=24)).timestamp())
         end = request.query_params.get('to', timezone.now().timestamp())
+        interval = request.query_params.get('resolution', 3600)
         candles = FillOrder.get_grouped_by_interval(
             symbol_id=symbol.id,
-            interval_in_secs=request.query_params.get('resolution', 3600),
+            interval_in_secs=interval,
             start=datetime.fromtimestamp(int(start)).astimezone(),
             end=datetime.fromtimestamp(int(end)).astimezone()
         )
+        candles = self.append_empty_candles(candles, timedelta(seconds=int(interval)))
         results = OHLCVSerializer(candles=candles, symbol=symbol).format_data()
         return Response(results, status=status.HTTP_200_OK)

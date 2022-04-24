@@ -18,9 +18,6 @@ class SymbolFilter(django_filters.FilterSet):
 
 
 class SymbolListAPIView(ListAPIView):
-    authentication_classes = (SessionAuthentication,)
-    permission_classes = (IsAuthenticated,)
-
     filter_backends = [DjangoFilterBackend]
     filter_class = SymbolFilter
     queryset = PairSymbol.objects.all()
