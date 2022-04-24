@@ -42,8 +42,6 @@ class BankCard(models.Model):
         verbose_name = 'کارت بانکی'
         verbose_name_plural = 'کارت‌های بانکی'
 
-        unique_together = [('card_pan', 'user')]
-
         constraints = [
             UniqueConstraint(
                 fields=["card_pan"],
@@ -96,8 +94,6 @@ class BankAccount(models.Model):
     class Meta:
         verbose_name = 'حساب بانکی'
         verbose_name_plural = 'حساب‌های بانکی'
-
-        unique_together = [('iban', 'user')]
 
         constraints = [
             UniqueConstraint(
