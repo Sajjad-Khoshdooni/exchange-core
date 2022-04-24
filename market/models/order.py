@@ -9,7 +9,7 @@ from django.db.models import Sum, F, Q
 from django.utils import timezone
 
 from accounts.models import Account
-from ledger.models import Trx, Wallet
+from ledger.models import Trx, Wallet, BalanceLock
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
 from ledger.utils.precision import floor_precision
@@ -121,7 +121,12 @@ class Order(models.Model):
             to_cancel_orders = to_cancel_orders.exclude(status=cls.FILLED)
 
         now = timezone.now()
-        cancels = to_cancel_orders.update(status=Order.CANCELED, lock__freed=True, lock__release_date=now)
+
+        lock_ids = list(to_cancel_orders.values_list('lock_id', flat=True))
+        cancels = to_cancel_orders.update(status=Order.CANCELED)
+
+        BalanceLock.objects.filter(id__in=lock_ids).update(freed=True, release_date=now)
+
         logger.info(f'cancels: {cancels}')
 
     @staticmethod
