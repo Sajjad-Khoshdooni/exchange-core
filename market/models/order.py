@@ -6,6 +6,7 @@ from random import randrange
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Sum, F, Q
+from django.utils import timezone
 
 from accounts.models import Account
 from ledger.models import Trx, Wallet
@@ -119,7 +120,8 @@ class Order(models.Model):
         else:
             to_cancel_orders = to_cancel_orders.exclude(status=cls.FILLED)
 
-        cancels = to_cancel_orders.update(status=Order.CANCELED, lock__freed=True)
+        now = timezone.now()
+        cancels = to_cancel_orders.update(status=Order.CANCELED, lock__freed=True, lock__release_date=now)
         logger.info(f'cancels: {cancels}')
 
     @staticmethod
@@ -158,11 +160,7 @@ class Order(models.Model):
         self.lock = lock_wallet.lock_balance(lock_amount)
         self.save()
 
-    def release_lock(self, release_amount=None):
-        if release_amount is None:
-            self.lock.release()
-            return
-
+    def release_lock(self, release_amount):
         from ledger.models import BalanceLock
         release_amount = Order.get_lock_amount(release_amount, self.price, self.side)
         BalanceLock.objects.filter(id=self.lock.id).update(amount=F('amount') - release_amount)
