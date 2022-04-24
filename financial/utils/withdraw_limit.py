@@ -105,7 +105,7 @@ def rial_estimate_receive_time(fiat_withdraw_request: FiatWithdrawRequest):
         else:
             receive_time += timedelta(days=1)
 
-            if is_holiday(fiat_withdraw_request_date + timedelta(days=1)):
+            if is_holiday(receive_time):
                 receive_time = receive_time.replace(hour=14, minute=00, second=00)
             else:
                 receive_time = receive_time.replace(hour=4, minute=30, second=00)
