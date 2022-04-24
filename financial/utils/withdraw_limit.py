@@ -85,36 +85,47 @@ def time_in_range(start, end, time):
     return start <= time <= end
 
 
-def rial_estimate_receive_time(fiat_withdraw_request: FiatWithdrawRequest):
-    fiat_withdraw_request_day = fiat_withdraw_request.created.weekday()
-    receive_time = fiat_withdraw_request.created.astimezone()
-    fiat_withdraw_request_time = fiat_withdraw_request.created.astimezone().time()
+def is_holiday(date):
+    if date.weekday() == 4:
+        return True
+    return False
 
-    if fiat_withdraw_request_day == 4:
+
+def rial_estimate_receive_time(fiat_withdraw_request: FiatWithdrawRequest):
+
+    fiat_withdraw_request_date = fiat_withdraw_request.created.astimezone()
+    fiat_withdraw_request_time = fiat_withdraw_request_date.time()
+    receive_time = fiat_withdraw_request_date
+
+    if is_holiday(fiat_withdraw_request_date):
 
         if time_in_range('00:00', '10:00', fiat_withdraw_request_time):
             receive_time = receive_time.replace(hour=14, minute=00, second=00)
 
         else:
             receive_time += timedelta(days=1)
-            receive_time = receive_time.replace(hour=14, minute=00, second=00)
+
+            if is_holiday(fiat_withdraw_request_date + timedelta(days=1)):
+                receive_time = receive_time.replace(hour=14, minute=00, second=00)
+            else:
+                receive_time = receive_time.replace(hour=4, minute=30, second=00)
 
     else:
 
-        if time_in_range('0:31', '10:30', fiat_withdraw_request_time):
+        if time_in_range('0:30', '10:30', fiat_withdraw_request_time):
             receive_time = receive_time.replace(hour=11, minute=30, second=00)
 
-        elif time_in_range('10:31', '13:23', fiat_withdraw_request_time):
+        elif time_in_range('10:30', '13:23', fiat_withdraw_request_time):
             receive_time = receive_time.replace(hour=14, minute=30, second=00)
 
-        elif time_in_range('13:24', '18:30', fiat_withdraw_request_time):
+        elif time_in_range('13:23', '18:30', fiat_withdraw_request_time):
             receive_time = receive_time.replace(hour=19, minute=30, second=00)
 
         else:
 
             receive_time += timedelta(days=1)
 
-            if fiat_withdraw_request_day == 3:
+            if is_holiday(fiat_withdraw_request_date + timedelta(days=1)):
                 receive_time.replace(hour=14, minute=0, second=00)
 
             else:
