@@ -84,7 +84,8 @@ class OHLCVAPIView(APIView):
                 continue
             candles.insert(
                 position, {
-                    'timestamp': candle_datetime, 'open': close, 'high': close, 'low': close, 'close': close, 'volume': None
+                    'timestamp': candle_datetime, 'open': close, 'high': close, 'low': close, 'close': close,
+                    'volume': Decimal(0)
                 }
             )
             position += 1
