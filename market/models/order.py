@@ -119,11 +119,8 @@ class Order(models.Model):
         else:
             to_cancel_orders = to_cancel_orders.exclude(status=cls.FILLED)
 
-        cancels = to_cancel_orders.update(status=Order.CANCELED)
+        cancels = to_cancel_orders.update(status=Order.CANCELED, lock__freed=True)
         logger.info(f'cancels: {cancels}')
-
-        for order in to_cancel_orders:
-            order.release_lock()
 
     @staticmethod
     def get_price_filter(price, side):
