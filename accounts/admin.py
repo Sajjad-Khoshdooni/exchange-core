@@ -116,6 +116,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'national_code': M.superuser & ~M('national_code_verified'),
         'birth_date': M.superuser & ~M('birth_date_verified'),
         'selfie_image_verified': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
+        'selfie_image_discard_text': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
     }
 
     fieldsets = (

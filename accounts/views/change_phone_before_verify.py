@@ -28,7 +28,7 @@ class ChangePhoneSerializer(serializers.ModelSerializer):
             raise ValidationError({'code': 'کد نامعتبر است.'})
 
         if User.objects.filter(phone=new_phone):
-            raise ValidationError('کاربری با این شماره موبایل قبلا ثبت نام کرده است.')
+            raise ValidationError('شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.')
 
         instance.phone = new_phone
         instance.username = new_phone
