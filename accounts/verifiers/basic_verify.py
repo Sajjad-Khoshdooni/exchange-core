@@ -80,7 +80,10 @@ def verify_national_code(user: User) -> bool:
 
     requester = FinotechRequester(user)
 
-    verified = requester.verify_phone_number_national_code(user.phone, user.national_code)
+    try:
+        verified = requester.verify_phone_number_national_code(user.phone, user.national_code)
+    except TimeoutError:
+        return
 
     user.national_code_verified = verified
     user.save()
