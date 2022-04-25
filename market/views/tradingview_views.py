@@ -62,6 +62,7 @@ class OHLCVSerializer:
 
 
 class OHLCVAPIView(APIView):
+    authentication_classes = ()
     permission_classes = ()
 
     @classmethod
