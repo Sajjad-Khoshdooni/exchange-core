@@ -113,10 +113,14 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'password': None,
         'first_name': ~M('first_name_verified'),
         'last_name': ~M('last_name_verified'),
-        'national_code': M.superuser & ~M('national_code_verified'),
-        'birth_date': M.superuser & ~M('birth_date_verified'),
+        'national_code': M.superuser | ~M('national_code_verified'),
+        'birth_date': M.superuser | ~M('birth_date_verified'),
         'selfie_image_verified': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
         'selfie_image_discard_text': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
+        'first_name_verified': M.is_none('first_name_verified'),
+        'last_name_verified': M.is_none('last_name_verified'),
+        'national_code_verified': M.is_none('national_code_verified'),
+        'birth_date_verified': M.is_none('birth_date_verified'),
     }
 
     fieldsets = (

@@ -155,17 +155,47 @@ class User(AbstractUser):
         return self.first_name and self.first_name_verified and self.last_name and self.last_name_verified \
                and self.birth_date and self.birth_date_verified
 
-    def is_level2_verifiable(self) -> bool:
+    def get_level2_verify_fields(self):
         from financial.models import BankCard, BankAccount
 
-        return self.national_code and self.national_code_verified and self.primary_data_verified and \
-               BankCard.live_objects.filter(user=self, verified=True) and \
-               BankAccount.live_objects.filter(user=self, verified=True)
+        bank_card_verified = None
+
+        if BankCard.live_objects.filter(user=self, verified=True):
+            bank_card_verified = True
+        elif BankCard.live_objects.filter(user=self):
+            bank_card_verified = False
+
+        bank_account_verified = None
+
+        if BankAccount.live_objects.filter(user=self, verified=True):
+            bank_account_verified = True
+        elif BankAccount.live_objects.filter(user=self):
+            bank_account_verified = False
+
+        return [
+            bool(self.national_code), self.national_code_verified,
+            bool(self.birth_date), self.birth_date_verified,
+            bool(self.first_name), self.first_name_verified,
+            bool(self.last_name), self.last_name_verified,
+            bank_card_verified, bank_account_verified
+        ]
 
     def verify_level2_if_not(self) -> bool:
-        if self.level == User.LEVEL1 and self.is_level2_verifiable():
+        if self.level == User.LEVEL1 and all(self.get_level2_verify_fields()):
             self.change_status(User.VERIFIED)
             return True
+
+        return False
+
+    def reject_level2_if_should(self) -> bool:
+
+        if self.level == User.LEVEL1 and self.verify_status == self.PENDING:
+            level2_fields = self.get_level2_verify_fields()
+            any_none = list(filter(lambda f: f is None, level2_fields))
+
+            if not all(level2_fields) and not any_none:
+                self.change_status(User.REJECTED)
+                return True
 
         return False
 
@@ -196,6 +226,10 @@ class User(AbstractUser):
                     self.change_status(self.REJECTED)
 
             alert_user_verify_status(self)
+
+        elif self.level == self.LEVEL1 and self.verify_status == self.PENDING:
+            self.verify_level2_if_not()
+            self.reject_level2_if_should()
 
         if old and old.selfie_image_verified is None and self.selfie_image_verified is False:
             Notification.send(

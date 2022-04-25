@@ -135,7 +135,7 @@ class BankCardUserFilter(SimpleListFilter):
 class BankCardAdmin(AdvancedAdmin):
     default_edit_condition = M.superuser
 
-    list_display = ('created', 'card_pan', 'user', 'verified')
+    list_display = ('created', 'card_pan', 'user', 'verified', 'deleted')
     list_filter = (BankCardUserFilter,)
 
     actions = ['verify_bank_cards', 'verify_bank_cards_manual', 'reject_bank_cards_manual']
@@ -188,7 +188,7 @@ class BankUserFilter(SimpleListFilter):
 class BankAccountAdmin(AdvancedAdmin):
     default_edit_condition = M.superuser
 
-    list_display = ('created', 'iban', 'user', 'verified')
+    list_display = ('created', 'iban', 'user', 'verified', 'deleted')
     list_filter = (BankUserFilter, )
 
     actions = ['verify_bank_accounts_manual', 'verify_bank_accounts_auto', 'reject_bank_accounts_manual']
