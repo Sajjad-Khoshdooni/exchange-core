@@ -62,6 +62,7 @@ class OHLCVSerializer:
 
 
 class OHLCVAPIView(APIView):
+    authentication_classes = ()
     permission_classes = ()
 
     @classmethod
@@ -88,7 +89,6 @@ class OHLCVAPIView(APIView):
                     'volume': Decimal(0)
                 }
             )
-            position += 1
         return candles
 
     def get(self, request):

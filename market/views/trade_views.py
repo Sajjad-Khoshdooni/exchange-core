@@ -50,6 +50,8 @@ class AccountTradeHistoryView(ListAPIView):
 
 
 class TradeHistoryView(ListAPIView):
+    authentication_classes = ()
+    permission_classes = ()
     pagination_class = LimitOffsetPagination
     queryset = FillOrder.objects.exclude(trade_source=FillOrder.OTC).order_by('-created')
     serializer_class = TradeSerializer
