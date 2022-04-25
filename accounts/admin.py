@@ -155,7 +155,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)})
     )
 
-    list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason', 'get_source_medium')
+    list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
+                    'get_source_medium', 'get_referrer_user')
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter,
@@ -247,6 +248,16 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
             return mark_safe("<a href='%s'>%s</a>" % (link, text))
     get_source_medium.short_description = 'source/medium'
+
+    def get_referrer_user(self, user: User):
+        account = getattr(user, 'account', None)
+        referrer = account and account.referred_by and account.referred_by.owner
+
+        if referrer:
+            link = url_to_edit_object(referrer)
+            return mark_safe("<a href='%s'>%s</a>" % (link, referrer.id))
+
+    get_referrer_user.short_description = 'referrer'
 
     def get_user_reject_reason(self, user: User):
         if user.national_code_duplicated_alert:
