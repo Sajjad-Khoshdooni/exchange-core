@@ -101,7 +101,7 @@ class FinotechRequester:
             else:
                 method_prop = getattr(requests, method.lower())
                 resp = method_prop(data=data, **request_kwargs)
-        except (requests.exceptions.ConnectionError, ReadTimeoutError):
+        except (requests.exceptions.ConnectionError, ReadTimeoutError, requests.exceptions.Timeout):
             req_object.response = 'timeout'
             req_object.status_code = 100
             req_object.save()
