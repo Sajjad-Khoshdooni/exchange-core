@@ -162,7 +162,7 @@ class User(AbstractUser):
 
         if BankCard.live_objects.filter(user=self, verified=True):
             bank_card_verified = True
-        elif BankCard.live_objects.filter(user=self, verified__isnull=True):
+        elif not BankCard.live_objects.filter(user=self, verified__isnull=True):
             bank_card_verified = False
 
         bank_account_verified = None
