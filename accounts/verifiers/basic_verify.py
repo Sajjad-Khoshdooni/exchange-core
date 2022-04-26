@@ -87,6 +87,7 @@ def verify_national_code(user: User, retry: int = 5) -> bool:
             logger.error('Finotech timeout verify_national_code')
             return
         else:
+            logger.info('Retrying verify_national_code...')
             return verify_national_code(user, retry - 1)
 
     user.national_code_verified = verified
@@ -127,6 +128,7 @@ def verify_user_primary_info(user: User, retry: int = 5) -> bool:
             logger.error('Finotech timeout user_primary_info')
             return
         else:
+            logger.info('Retrying verify_national_code...')
             return verify_user_primary_info(user, retry - 1)
 
     user.birth_date_verified = bool(data)
@@ -172,6 +174,7 @@ def verify_bank_card(bank_card: BankCard, retry: int = 5) -> bool:
             logger.error('Finotech timeout bank_card')
             return
         else:
+            logger.info('Retrying verify_national_code...')
             return verify_bank_card(bank_card, retry - 1)
 
     bank_card.verified = verified
@@ -214,6 +217,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
             logger.error('Finotech timeout bank_account')
             return
         else:
+            logger.info('Retrying verify_national_code...')
             return verify_bank_account(bank_account, retry - 1)
 
     bank_account.bank_name = data['bankName']
