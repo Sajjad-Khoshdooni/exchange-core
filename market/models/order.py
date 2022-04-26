@@ -355,9 +355,13 @@ class Order(models.Model):
             return cls.init_maker_order(symbol, side, maker_price, system, market)
 
     @classmethod
-    def cancel_invalid_maker_orders(cls, symbol: PairSymbol):
+    def cancel_invalid_maker_orders(cls, symbol: PairSymbol, top_prices):
         for side in (Order.BUY, Order.SELL):
             price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.001'))
+            if (side == Order.BUY and Decimal(top_prices[side]) <= price) or (
+                    side == Order.SELL and Decimal(top_prices[side]) >= price):
+                logger.info(f'maker {side} ignore cancels with price: {price} top: {top_prices[side]}')
+                continue
 
             invalid_orders = Order.open_objects.select_for_update().filter(symbol=symbol, side=side).exclude(
                 type=Order.ORDINARY
@@ -374,7 +378,7 @@ class Order(models.Model):
                 type=Order.ORDINARY
             )
             wasted_orders = wasted_orders.order_by('price') if side == Order.BUY else wasted_orders.order_by('-price')
-            cancel_count = open_orders_count[side] - Order.MAKER_ORDERS_COUNT
+            cancel_count = int(open_orders_count[side]) - Order.MAKER_ORDERS_COUNT
 
             logger.info(f'maker {symbol} {side}: wasted={len(wasted_orders)} cancels={cancel_count}')
 
