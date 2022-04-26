@@ -74,7 +74,7 @@ def basic_verify(user: User):
     user.verify_level2_if_not()
 
 
-def verify_national_code(user: User) -> bool:
+def verify_national_code(user: User, retry: int = 5) -> bool:
     if not user.national_code:
         return False
 
@@ -83,7 +83,11 @@ def verify_national_code(user: User) -> bool:
     try:
         verified = requester.verify_phone_number_national_code(user.phone, user.national_code)
     except TimeoutError:
-        return
+        if retry == 0:
+            logger.error('Finotech timeout verify_national_code')
+            return
+        else:
+            return verify_national_code(user, retry - 1)
 
     user.national_code_verified = verified
     user.save()
@@ -102,7 +106,7 @@ def verify_national_code(user: User) -> bool:
     return verified
 
 
-def verify_user_primary_info(user: User) -> bool:
+def verify_user_primary_info(user: User, retry: int = 5) -> bool:
     if not user.national_code_verified:
         return False
 
@@ -111,12 +115,19 @@ def verify_user_primary_info(user: User) -> bool:
 
     requester = FinotechRequester(user)
 
-    data = requester.verify_basic_info(
-        national_code=user.national_code,
-        birth_date=user.birth_date,
-        first_name=user.first_name,
-        last_name=user.last_name,
-    )
+    try:
+        data = requester.verify_basic_info(
+            national_code=user.national_code,
+            birth_date=user.birth_date,
+            first_name=user.first_name,
+            last_name=user.last_name,
+        )
+    except TimeoutError:
+        if retry == 0:
+            logger.error('Finotech timeout user_primary_info')
+            return
+        else:
+            return verify_user_primary_info(user, retry - 1)
 
     user.birth_date_verified = bool(data)
     user.save()
@@ -145,7 +156,7 @@ def verify_user_primary_info(user: User) -> bool:
     return True
 
 
-def verify_bank_card(bank_card: BankCard) -> bool:
+def verify_bank_card(bank_card: BankCard, retry: int = 5) -> bool:
     if BankCard.live_objects.filter(card_pan=bank_card.card_pan, verified=True).exclude(id=bank_card.id).exists():
         logger.info('rejecting bank card because of duplication')
         bank_card.verified = False
@@ -157,12 +168,11 @@ def verify_bank_card(bank_card: BankCard) -> bool:
     try:
         verified = requester.verify_card_pan_phone_number(bank_card.user.phone, bank_card.card_pan)
     except TimeoutError:
-        link = url_to_edit_object(bank_card)
-        send_support_message(
-            message='تایید شماره کارت کاربر با مشکل مواجه شد. لطفا دستی بررسی شود.',
-            link=link
-        )
-        return
+        if retry == 0:
+            logger.error('Finotech timeout bank_card')
+            return
+        else:
+            return verify_bank_card(bank_card, retry - 1)
 
     bank_card.verified = verified
     bank_card.save()
@@ -180,7 +190,7 @@ DEPOSIT_STATUS_MAP = {
 }
 
 
-def verify_bank_account(bank_account: BankAccount) -> bool:
+def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
     if BankAccount.live_objects.filter(iban=bank_account.iban, verified=True).exclude(id=bank_account.id).exists():
         logger.info('rejecting bank account because of duplication')
         bank_account.verified = False
@@ -191,17 +201,20 @@ def verify_bank_account(bank_account: BankAccount) -> bool:
 
     try:
         data = requester.get_iban_info(bank_account.iban)
+
         if not data:
-            raise TimeoutError
+            link = url_to_edit_object(bank_account)
+            send_support_message(
+                message='تایید شماره شبای کاربر با مشکل مواجه شد. لطفا دستی بررسی شود.',
+                link=link
+            )
 
     except TimeoutError:
-        link = url_to_edit_object(bank_account)
-        send_support_message(
-            message='تایید شماره شبای کاربر با مشکل مواجه شد. لطفا دستی بررسی شود.',
-            link=link
-        )
-
-        return
+        if retry == 0:
+            logger.error('Finotech timeout bank_account')
+            return
+        else:
+            return verify_bank_account(bank_account, retry - 1)
 
     bank_account.bank_name = data['bankName']
     bank_account.deposit_address = data['deposit']

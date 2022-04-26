@@ -87,7 +87,7 @@ class FinotechRequester:
 
         request_kwargs = {
             'url': url,
-            'timeout': 60,
+            'timeout': 10,
             'headers': {'Authorization': 'Bearer ' + token},
             'proxies': {
                 'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
