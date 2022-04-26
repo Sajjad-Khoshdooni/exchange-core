@@ -20,6 +20,10 @@ from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
 from ledger.utils.precision import humanize_number
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 MIN_WITHDRAW = 100_000
 
@@ -37,15 +41,19 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         assert user.account.is_ordinary_user()
 
         if not is_48h_rule_passed(user):
+            logger.info('FiatRequest rejected due to 48h rule. user=%s' % user.id)
             raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
 
         if not bank_account.verified:
+            logger.info('FiatRequest rejected due to unverified bank account. user=%s' % user.id)
             raise ValidationError({'iban': 'شماره حساب تایید نشده است.'})
 
         if amount < MIN_WITHDRAW:
+            logger.info('FiatRequest rejected due to small amount. user=%s' % user.id)
             raise ValidationError({'iban': 'مقدار وارد شده کمتر از حد مجاز است.'})
 
         if user_reached_fiat_withdraw_limit(user, amount):
+            logger.info('FiatRequest rejected due to max withdraw limit reached. user=%s' % user.id)
             raise ValidationError({'amount': 'شما به سقف برداشت ریالی خورده اید.'})
 
         asset = Asset.get(Asset.IRT)
