@@ -252,7 +252,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     def get_referrer_user(self, user: User):
         account = getattr(user, 'account', None)
-        referrer = account and account.referred_by and account.referred_by.owner
+        referrer = account and account.referred_by and account.referred_by.owner.user
 
         if referrer:
             link = url_to_edit_object(referrer)
