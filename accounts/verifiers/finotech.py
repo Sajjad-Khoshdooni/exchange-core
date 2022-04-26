@@ -4,6 +4,7 @@ import logging
 import requests
 from django.core.cache import caches
 from django.utils import timezone
+from urllib3.exceptions import ReadTimeoutError
 from yekta_config import secret
 from yekta_config.config import config
 
@@ -100,7 +101,7 @@ class FinotechRequester:
             else:
                 method_prop = getattr(requests, method.lower())
                 resp = method_prop(data=data, **request_kwargs)
-        except requests.exceptions.ConnectionError:
+        except (requests.exceptions.ConnectionError, ReadTimeoutError):
             req_object.response = 'timeout'
             req_object.status_code = 100
             req_object.save()
