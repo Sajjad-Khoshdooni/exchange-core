@@ -21,9 +21,21 @@ class AssetSerializerBuilder(AssetSerializerMini):
     change_24h = serializers.SerializerMethodField()
     volume_24h = serializers.SerializerMethodField()
 
+    change_7d = serializers.SerializerMethodField()
+    high_24h = serializers.SerializerMethodField()
+    low_24h = serializers.SerializerMethodField()
+    change_1h = serializers.SerializerMethodField()
+
+    cmc_rank = serializers.SerializerMethodField()
+    market_cap = serializers.SerializerMethodField()
+    circulating_supply = serializers.SerializerMethodField()
+
     class Meta:
         model = Asset
         fields = ()
+
+    def get_cap(self, asset) -> CoinMarketCap:
+        return self.context['cap_info'].get(asset.symbol)
 
     def get_price_usdt(self, asset: Asset):
         prices = self.context['prices']
@@ -56,16 +68,62 @@ class AssetSerializerBuilder(AssetSerializerMini):
         if cap:
             return int(cap.volume_24h)
 
-    def get_cap(self, asset) -> CoinMarketCap:
-        return self.context['cap_info'].get(asset.symbol)
+    def get_change_7d(self, asset: Asset):
+        cap = self.get_cap(asset)
+
+        if cap:
+            return cap.change_7d
+
+    def get_high_24h(self, asset: Asset):
+        cap = self.get_cap(asset)
+
+        if cap:
+            return cap.high_24h
+
+    def get_low_24h(self, asset: Asset):
+        cap = self.get_cap(asset)
+
+        if cap:
+            return cap.low_24h
+
+    def get_change_1h(self, asset: Asset):
+        cap = self.get_cap(asset)
+
+        if cap:
+            return cap.change_1h
+
+    def get_cmc_rank(self, asset: Asset):
+        cap = self.get_cap(asset)
+
+        if cap:
+            return int(cap.cmc_rank)
+
+    def get_market_cap(self, asset: Asset):
+        cap = self.get_cap(asset)
+
+        if cap:
+            return cap.market_cap
+
+    def get_circulating_supply(self, asset: Asset):
+        cap = self.get_cap(asset)
+
+        if cap:
+            return int(cap.circulating_supply)
 
     @classmethod
-    def create_serializer(cls,  prices: bool = True):
+    def create_serializer(cls,  prices: bool = True, extra_info: bool = True):
         fields = AssetSerializerMini.Meta.fields
         new_fields = []
 
         if prices:
             new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h']
+
+        if extra_info:
+            new_fields = [
+                'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
+                'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
+                'low_24h',
+            ]
 
         class Serializer(cls):
             pass
@@ -97,6 +155,7 @@ class AssetsViewSet(ModelViewSet):
         options = {
             'prices': self.request.query_params.get('prices') == '1',
             'trend': self.request.query_params.get('trend') == '1',
+            'extra_info': self.request.query_params.get('extra_info') == '1',
             'market': self.request.query_params.get('market')
         }
 
@@ -105,6 +164,7 @@ class AssetsViewSet(ModelViewSet):
     def get_serializer_class(self):
         return AssetSerializerBuilder.create_serializer(
             prices=self.get_options('prices'),
+            extra_info=self.get_options('extra_info')
         )
 
     def get_queryset(self):
