@@ -1,8 +1,13 @@
+from datetime import timedelta
+
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import serializers
+from rest_framework.response import Response
+from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView, get_object_or_404, ListAPIView
+from rest_framework.generics import CreateAPIView, get_object_or_404, ListAPIView, DestroyAPIView
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.viewsets import ModelViewSet
 
 from accounts.permissions import IsBasicVerified
 from accounts.utils.admin import url_to_edit_object
@@ -76,9 +81,23 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         fields = ('iban', 'amount')
 
 
-class WithdrawRequestView(CreateAPIView):
+class WithdrawRequestView(ModelViewSet):
     permission_classes = (IsBasicVerified, )
     serializer_class = WithdrawRequestSerializer
+
+    def get_queryset(self):
+        return FiatWithdrawRequest.objects.all()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if timezone.now() - timedelta(minutes=3) > instance.created:
+            raise ValidationError('زمان مجاز برای حذف درخواست برداشت گذشته است.')
+
+        instance.deleted = True
+        instance.save()
+
+        return Response({'msg': 'FiatWithdrawRequest Deleted'}, status=status.HTTP_204_NO_CONTENT)
 
 
 class WithdrawHistorySerializer(serializers.ModelSerializer):

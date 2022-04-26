@@ -9,7 +9,15 @@ from accounts.tasks.send_sms import send_message_by_kavenegar
 from ledger.utils.precision import humanize_number
 
 
+class LiveManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(deleted=False)
+
+
 class FiatWithdrawRequest(models.Model):
+
+    objects = LiveManager()
+
     created = models.DateTimeField(auto_now_add=True)
     group_id = get_group_id_field()
 
@@ -23,6 +31,8 @@ class FiatWithdrawRequest(models.Model):
 
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
     ref_doc = models.FileField(verbose_name='رسید انتقال', null=True, blank=True)
+
+    deleted = models.BooleanField(default=False)
 
     comment = models.TextField(verbose_name='نظر', blank=True)
 
