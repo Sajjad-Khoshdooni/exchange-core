@@ -5,7 +5,7 @@ import requests
 
 
 full_data_url = 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?start=1&limit=10000&sortBy=rank&sortType=desc&convert=USD,BTC,ETH&cryptoType=all&tagType=all&audited=false&aux=ath,atl,high24h,low24h,num_market_pairs,cmc_rank,date_added,max_supply,circulating_supply,total_supply,volume_7d,volume_30d,self_reported_circulating_supply,self_reported_market_cap'
-data_url = 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?start=1&limit=10000&sortBy=rank&convert=USD&sortType=desc&cryptoType=all&tagType=all&audited=false'
+data_url = 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?start=1&limit=10000&sortBy=rank&convert=USD&sortType=desc&cryptoType=all&tagType=all&audited=false&aux=high24h,low24h,cmc_rank,circulating_supply'
 
 
 class CoinMarketCap(models.Model):
@@ -15,9 +15,15 @@ class CoinMarketCap(models.Model):
     internal_id = models.PositiveIntegerField()
     price = models.FloatField()
     market_cap = models.FloatField()
+    change_1h = models.FloatField()
     change_24h = models.FloatField()
     volume_24h = models.FloatField()
     change_7d = models.FloatField()
+    high_24h = models.FloatField()
+    low_24h = models.FloatField()
+    cmc_rank = models.IntegerField()
+    circulating_supply = models.FloatField()
+
 
     @classmethod
     def request(cls):
@@ -56,9 +62,14 @@ class CoinMarketCap(models.Model):
                     internal_id=coin['id'],
                     price=price_info['price'],
                     market_cap=price_info['marketCap'],
+                    change_1h=price_info['"percentChange1h'],
                     change_24h=price_info['percentChange24h'],
                     volume_24h=price_info['volume24h'],
                     change_7d=price_info['percentChange7d'],
+                    high_24h=price_info['high24h'],
+                    low_24h=price_info['low24h'],
+                    cmc_rank=price_info['cmcRank'],
+                    circulating_supply=price_info['circulatingSupply'],
                 )
             )
 
