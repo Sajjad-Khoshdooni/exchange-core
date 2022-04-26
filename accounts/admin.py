@@ -26,6 +26,7 @@ from .models import User, Account, Notification, FinotechRequest
 from .tasks import basic_verify_user
 from .tasks.verify_user import alert_user_verify_status
 from .utils.validation import gregorian_to_jalali_date, gregorian_to_jalali_date_str, gregorian_to_jalali_datetime_str
+from .verifiers.legal import is_48h_rule_passed
 
 MANUAL_VERIFY_CONDITION = Q(
     Q(first_name_verified=None) | Q(last_name_verified=None),
@@ -367,7 +368,13 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     get_level_3_verify_datetime_jalali.short_description = 'تاریخ تایید سطح ۳'
 
     def get_first_fiat_deposit_date_jalali(self, user: User):
-        return gregorian_to_jalali_datetime_str(user.first_fiat_deposit_date)
+        date = gregorian_to_jalali_datetime_str(user.first_fiat_deposit_date)
+        if is_48h_rule_passed(user):
+            color = 'green'
+        else:
+            color = 'red'
+
+        return mark_safe("<span style='color: %s'>%s</span>" % (color, date))
 
     get_first_fiat_deposit_date_jalali.short_description = 'تاریخ اولین واریز ریالی'
 

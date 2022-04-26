@@ -16,10 +16,10 @@ def get_working_hour_delta_days(start: datetime, end: datetime) -> float:
 
     count = 0
 
-    if not is_weekday(start) and start.hour <= 11:
+    if not is_weekday(start) and start.hour <= 16:
         count += 1
 
-    if not is_weekday(end) and end.hour >= 16:
+    if not is_weekday(end) and end.hour >= 14:
         count += 1
 
     _start = start.date() + timedelta(days=1)
@@ -45,7 +45,7 @@ def is_48h_rule_passed(user: User) -> bool:
     if delta_days >= 4:
         return True
 
-    if delta_days < 2:
+    if delta_days < 1:
         return False
 
     working_days = get_working_hour_delta_days(
