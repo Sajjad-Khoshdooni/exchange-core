@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db import transaction
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
@@ -62,20 +63,21 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         # fee_amount = min(4000, int(amount * 0.01))
         fee_amount = 5000
-
-        try:
-            lock = wallet.lock_balance(amount)
-        except InsufficientBalance:
-            raise ValidationError({'amount': 'موجودی کافی نیست'})
-
         withdraw_amount = amount - fee_amount
 
-        withdraw_request = FiatWithdrawRequest.objects.create(
-            amount=withdraw_amount,
-            fee_amount=fee_amount,
-            lock=lock,
-            bank_account=bank_account
-        )
+        try:
+            with transaction.atomic():
+                lock = wallet.lock_balance(amount)
+
+                withdraw_request = FiatWithdrawRequest.objects.create(
+                    amount=withdraw_amount,
+                    fee_amount=fee_amount,
+                    lock=lock,
+                    bank_account=bank_account
+                )
+
+        except InsufficientBalance:
+            raise ValidationError({'amount': 'موجودی کافی نیست'})
 
         link = url_to_edit_object(withdraw_request)
         send_support_message(
