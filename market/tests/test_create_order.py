@@ -8,6 +8,8 @@ from market.models import PairSymbol, FillOrder, Order
 from market.utils import new_order, cancel_order
 
 
+# todo: check referral for USDTIRT
+
 class CreateOrderTestCase(TestCase):
     def setUp(self):
         PairSymbol.objects.filter(name='BTCIRT').update(enable=True)
