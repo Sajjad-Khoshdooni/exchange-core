@@ -58,8 +58,8 @@ class User(AbstractUser):
     birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد',)
     birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد',)
 
-    level_2_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تاپید سطح ۲')
-    level_3_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تاپید سطح 3')
+    level_2_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تایید سطح ۲')
+    level_3_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تایید سطح 3')
 
     level = models.PositiveSmallIntegerField(
         default=LEVEL1,
