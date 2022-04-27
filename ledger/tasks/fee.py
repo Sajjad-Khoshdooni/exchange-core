@@ -1,8 +1,10 @@
+import math
 from decimal import Decimal
 
 from celery import shared_task
 
 from ledger.models import NetworkAsset
+from ledger.utils.price import get_trading_price_usdt, BUY
 from provider.exchanges import BinanceSpotHandler
 
 
@@ -20,8 +22,12 @@ def update_network_fees():
                 info['withdrawFee'] = Decimal(info['withdrawFee']) * 2
                 info['withdrawMin'] = Decimal(info['withdrawMin']) * 2
 
-            if symbol_pair == ('BSC', 'SHIB'):
-                info['withdrawMin'] = Decimal(info['withdrawMin']) * 5  # to prevent prize withdrawing
+            price = get_trading_price_usdt(ns.asset.symbol, BUY, raw_price=True)
+
+            withdraw_min = Decimal(info['withdrawMin'])
+            multiplier = max(math.ceil(5 / (price * withdraw_min)), 1)
+
+            info['withdrawMin'] = withdraw_min * multiplier  # to prevent prize withdrawing
 
             ns.withdraw_fee = info['withdrawFee']
             ns.withdraw_min = info['withdrawMin']
