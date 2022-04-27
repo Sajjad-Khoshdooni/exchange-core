@@ -68,7 +68,7 @@ class ReferralTrx(models.Model):
             self.trx_dict[receiver_type] = Trx(
                 sender=system_wallet,
                 receiver=self.get_receiver(irt_asset, fee_trx, receiver_type),
-                amount=floor_precision(amount * self.get_share_factor(referral, receiver_type)),
+                amount=amount * self.get_share_factor(referral, receiver_type),
                 group_id=fee_trx.group_id,
                 scope=Trx.COMMISSION
             )
