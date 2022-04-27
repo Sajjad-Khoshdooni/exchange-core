@@ -117,7 +117,7 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
         fields = ('id', 'created', 'status', 'fee_amount', 'amount', 'bank_account', 'ref_id', 'rial_estimate_receive_time', )
 
     def get_rial_estimate_receive_time(self, fiat_withdraw_request: FiatWithdrawRequest):
-        return get_fiat_estimate_receive_time(fiat_withdraw_request)
+        return get_fiat_estimate_receive_time(fiat_withdraw_request.created)
 
 
 class WithdrawHistoryView(ListAPIView):
