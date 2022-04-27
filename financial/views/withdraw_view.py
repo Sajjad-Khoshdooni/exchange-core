@@ -15,7 +15,7 @@ from accounts.utils.telegram import send_support_message
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
-from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit, rial_estimate_receive_time
+from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit, get_fiat_estimate_receive_time
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
 from ledger.utils.precision import humanize_number
@@ -117,8 +117,7 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
         fields = ('id', 'created', 'status', 'fee_amount', 'amount', 'bank_account', 'ref_id', 'rial_estimate_receive_time', )
 
     def get_rial_estimate_receive_time(self, fiat_withdraw_request: FiatWithdrawRequest):
-
-        return rial_estimate_receive_time(fiat_withdraw_request)
+        return get_fiat_estimate_receive_time(fiat_withdraw_request)
 
 
 class WithdrawHistoryView(ListAPIView):
