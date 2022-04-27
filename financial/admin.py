@@ -1,7 +1,8 @@
 from django.contrib import admin
+from django.utils import timezone
 from django.contrib.admin import SimpleListFilter
 from django.utils.safestring import mark_safe
-
+from datetime import timedelta
 from accounts.models import User
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
@@ -61,6 +62,9 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
                        )
 
     list_display = ('bank_account', 'status', 'amount', 'ref_id')
+
+    def get_queryset(self, request):
+        return FiatWithdrawRequest.objects.filter(created__lte=timezone.now() - timedelta(minutes=3))
 
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.user.get_full_name()

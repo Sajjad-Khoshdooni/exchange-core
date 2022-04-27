@@ -213,6 +213,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
                 message='تایید شماره شبای کاربر با مشکل مواجه شد. لطفا دستی بررسی شود.',
                 link=link
             )
+            return
 
     except TimeoutError:
         if retry == 0:
