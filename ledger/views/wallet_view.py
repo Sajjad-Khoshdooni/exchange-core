@@ -234,7 +234,7 @@ class WalletBalanceView(APIView):
 
         return Response({
             'symbol': asset.symbol,
-            'balance': wallet.asset.get_presentation_amount(wallet.get_balance()),
+            'balance': wallet.asset.get_presentation_amount(wallet.get_free()),
         })
 
 
