@@ -105,7 +105,8 @@ class FillOrder(models.Model):
             trade_trx_list['maker_fee'],
             trade_trx_list['taker_fee'],
             self.price,
-            tether_irt
+            tether_irt,
+            is_buyer_maker=self.is_buyer_maker,
         )
         ReferralTrxTuple = namedtuple("ReferralTrx", "referral trx")
         return ReferralTrxTuple(referrals, ReferralTrx.get_trx_list(referrals))

@@ -39,14 +39,19 @@ class ReferralTrx(models.Model):
         self.trx_dict = None
 
     @staticmethod
-    def get_trade_referrals(maker_fee, taker_fee, trade_price, tether_irt):
+    def get_trade_referrals(maker_fee, taker_fee, trade_price, tether_irt, is_buyer_maker: bool):
         irt_asset = Asset.get(symbol=Asset.IRT)
-        maker_referral = ReferralTrx().init_trx(maker_fee, trade_price, tether_irt, irt_asset=irt_asset)
-        taker_referral = ReferralTrx().init_trx(taker_fee, trade_price, tether_irt, irt_asset=irt_asset)
+        maker_referral = ReferralTrx().init_trx(
+            maker_fee, trade_price, tether_irt, irt_asset=irt_asset, sell=not is_buyer_maker
+        )
+        taker_referral = ReferralTrx().init_trx(
+            taker_fee, trade_price, tether_irt, irt_asset=irt_asset, sell=is_buyer_maker
+        )
+
         TradeReferral = namedtuple("TradeReferral", "maker taker")
         return TradeReferral(maker_referral, taker_referral)
 
-    def init_trx(self, fee_trx, trade_price: Decimal, tether_factor: Decimal, irt_asset=None):
+    def init_trx(self, fee_trx, trade_price: Decimal, tether_factor: Decimal, sell: bool, irt_asset=None):
         if not fee_trx or not fee_trx.amount:
             return
 
@@ -58,7 +63,7 @@ class ReferralTrx(models.Model):
             irt_asset = Asset.get(symbol=Asset.IRT)
         system_wallet = irt_asset.get_wallet(fee_trx.receiver.account, Wallet.SPOT)
 
-        if fee_trx.sender.asset.symbol in (Asset.IRT, Asset.USDT):
+        if sell:
             amount = fee_trx.amount * tether_factor
         else:
             amount = fee_trx.amount * trade_price * tether_factor
