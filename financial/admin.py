@@ -3,6 +3,9 @@ from django.utils import timezone
 from django.contrib.admin import SimpleListFilter
 from django.utils.safestring import mark_safe
 from datetime import timedelta
+
+from simple_history.admin import SimpleHistoryAdmin
+
 from accounts.models import User
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
@@ -149,7 +152,7 @@ class BankCardUserFilter(SimpleListFilter):
 
 
 @admin.register(BankCard)
-class BankCardAdmin(AdvancedAdmin):
+class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     default_edit_condition = M.superuser
 
     list_display = ('created', 'card_pan', 'user', 'verified', 'deleted')
@@ -203,7 +206,7 @@ class BankUserFilter(SimpleListFilter):
 
 
 @admin.register(BankAccount)
-class BankAccountAdmin(AdvancedAdmin):
+class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     default_edit_condition = M.superuser
 
     list_display = ('created', 'iban', 'user', 'verified', 'deleted')

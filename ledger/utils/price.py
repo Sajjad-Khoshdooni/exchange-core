@@ -203,7 +203,7 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Dec
 
     price = get_price(coin, side)
 
-    return price * multiplier
+    return price and price * multiplier
 
 
 def get_trading_price_irt(coin: str, side: str, raw_price: bool = False) -> Decimal:
