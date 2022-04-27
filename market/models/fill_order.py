@@ -238,9 +238,9 @@ class FillOrder(models.Model):
             Trx.objects.bulk_create(list(filter(lambda trx: trx and trx.amount, referral_trx.trx)))
             fill_order.save()
 
-            for key in ('taker_fee', 'maker_fee'):
-                if fill_order.trade_trx_list[key]:
-                    fill_order.trade_trx_list[key].save()
+            # for key in ('taker_fee', 'maker_fee'):
+            #     if fill_order.trade_trx_list[key]:
+            #         fill_order.trade_trx_list[key].save()
 
         except PairSymbol.DoesNotExist:
             logger.exception(f'Could not found market {market_symbol}')
