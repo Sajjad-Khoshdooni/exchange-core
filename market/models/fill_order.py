@@ -45,10 +45,6 @@ class FillOrder(models.Model):
         default=MARKET
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.trade_trx_list = None
-
     def save(self, **kwargs):
         assert self.taker_order.symbol == self.maker_order.symbol == self.symbol
         return super(FillOrder, self).save(**kwargs)
@@ -238,9 +234,9 @@ class FillOrder(models.Model):
             Trx.objects.bulk_create(list(filter(lambda trx: trx and trx.amount, referral_trx.trx)))
             fill_order.save()
 
-            # for key in ('taker_fee', 'maker_fee'):
-            #     if fill_order.trade_trx_list[key]:
-            #         fill_order.trade_trx_list[key].save()
+            for key in ('taker_fee', 'maker_fee'):
+                if trade_trx_list[key]:
+                    trade_trx_list[key].save()
 
         except PairSymbol.DoesNotExist:
             logger.exception(f'Could not found market {market_symbol}')
