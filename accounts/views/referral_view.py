@@ -110,9 +110,9 @@ class ReferralOverviewAPIView(APIView):
 
         return Response({
             'members': members,
-            'referred_revenue': referred_revenue,
-            'referral_revenue': referral_revenue,
-            'total_revenue': referred_revenue + referral_revenue
+            'referred_revenue': int(referred_revenue),
+            'referral_revenue': int(referral_revenue),
+            'total_revenue': int(referred_revenue + referral_revenue)
         })
 
 
