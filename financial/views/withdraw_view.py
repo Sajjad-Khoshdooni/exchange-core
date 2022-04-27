@@ -18,6 +18,7 @@ from financial.models.bank_card import BankAccount, BankAccountSerializer
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit, get_fiat_estimate_receive_time
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
+from ledger.utils.fields import CANCELED
 from ledger.utils.precision import humanize_number
 
 import logging
@@ -102,7 +103,7 @@ class WithdrawRequestView(ModelViewSet):
         if timezone.now() - timedelta(minutes=3) > instance.created:
             raise ValidationError('زمان مجاز برای حذف درخواست برداشت گذشته است.')
 
-        instance.deleted = True
+        instance.status = CANCELED
         instance.save()
 
         return Response({'msg': 'FiatWithdrawRequest Deleted'}, status=status.HTTP_204_NO_CONTENT)
@@ -117,7 +118,7 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
         fields = ('id', 'created', 'status', 'fee_amount', 'amount', 'bank_account', 'ref_id', 'rial_estimate_receive_time', )
 
     def get_rial_estimate_receive_time(self, fiat_withdraw_request: FiatWithdrawRequest):
-        return get_fiat_estimate_receive_time(fiat_withdraw_request.created)
+        return fiat_withdraw_request.done_datetime and get_fiat_estimate_receive_time(fiat_withdraw_request.done_datetime)
 
 
 class WithdrawHistoryView(ListAPIView):

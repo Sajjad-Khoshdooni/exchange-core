@@ -1,5 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.utils import timezone
+
 from accounts.models import Notification
 from accounts.models import Account
 from financial.models import BankAccount
@@ -9,14 +11,7 @@ from accounts.tasks.send_sms import send_message_by_kavenegar
 from ledger.utils.precision import humanize_number
 
 
-class LiveManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(deleted=False)
-
-
 class FiatWithdrawRequest(models.Model):
-
-    objects = LiveManager()
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = get_group_id_field()
@@ -32,9 +27,9 @@ class FiatWithdrawRequest(models.Model):
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
     ref_doc = models.FileField(verbose_name='رسید انتقال', null=True, blank=True)
 
-    deleted = models.BooleanField(default=False)
-
     comment = models.TextField(verbose_name='نظر', blank=True)
+
+    done_datetime = models.DateTimeField(null=True, blank=True)
 
     @property
     def total_amount(self):
@@ -112,6 +107,11 @@ class FiatWithdrawRequest(models.Model):
 
             if self.status != PENDING:
                 self.lock.release()
+
+            if self.status == DONE:
+                self.done_datetime = timezone.now()
+
+            super().save(*args, **kwargs)
 
         self.alert_withdraw_verify_status(old)
 
