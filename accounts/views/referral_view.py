@@ -27,7 +27,7 @@ class ReferralSerializer(serializers.ModelSerializer):
 
     def get_revenue(self, referral: Referral):
         revenue = ReferralTrx.objects.filter(referral=referral).aggregate(total=Sum('referrer_amount'))
-        return revenue['total'] or Decimal(0)
+        return int(revenue['total'])
 
     def get_members(self, referral: Referral):
         return Account.objects.filter(referred_by=referral).count()
