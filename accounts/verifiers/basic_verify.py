@@ -5,12 +5,14 @@ from django.utils import timezone
 
 from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.similarity import str_similar_rate, clean_persian_name
+from accounts.utils.similarity import str_similar_rate, clean_persian_name, rotate_words
 from accounts.utils.telegram import send_support_message
 from accounts.verifiers.finotech import FinotechRequester
 from financial.models import BankCard, BankAccount
 
 logger = logging.getLogger(__name__)
+
+IBAN_NAME_SIMILARITY_THRESHOLD = 0.7
 
 
 def basic_verify(user: User):
@@ -237,8 +239,14 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
         owner = owners[0]
         owner_full_name = owner['firstName'] + ' ' + owner['lastName']
 
-        verified = str_similar_rate(
-            clean_persian_name(owner_full_name), clean_persian_name(user.get_full_name())) >= 0.7
+        name1, name2 = clean_persian_name(owner_full_name), clean_persian_name(user.get_full_name())
+
+        verified = str_similar_rate(name1, name2) >= IBAN_NAME_SIMILARITY_THRESHOLD
+
+        if not verified:
+            name1_rotate = rotate_words(name1)
+
+            verified = str_similar_rate(name1_rotate, name2) >= IBAN_NAME_SIMILARITY_THRESHOLD
 
     bank_account.verified = verified
     bank_account.save()
