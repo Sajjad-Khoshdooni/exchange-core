@@ -230,15 +230,17 @@ class FillOrder(models.Model):
                 irt_value=base_irt_price * price * amount,
                 trade_source=FillOrder.OTC
             )
-            trade_trx_list = fill_order.init_trade_trxs(ignore_fee=True)
+            trade_trx_list = fill_order.init_trade_trxs()
             fill_order.calculate_amounts_from_trx(trade_trx_list)
             from market.models import ReferralTrx
             referral_trx = fill_order.init_referrals(trade_trx_list)
             ReferralTrx.objects.bulk_create(list(filter(bool, referral_trx.referral)))
             Trx.objects.bulk_create(list(filter(lambda trx: trx and trx.amount, referral_trx.trx)))
             fill_order.save()
-            # for key in ('taker_fee', 'maker_fee'):
-            #     if fill_order.trade_trx_list[key]:
-            #         fill_order.trade_trx_list[key].save()
+
+            for key in ('taker_fee', 'maker_fee'):
+                if fill_order.trade_trx_list[key]:
+                    fill_order.trade_trx_list[key].save()
+
         except PairSymbol.DoesNotExist:
             logger.exception(f'Could not found market {market_symbol}')
