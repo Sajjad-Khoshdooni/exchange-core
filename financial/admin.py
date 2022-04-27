@@ -154,6 +154,7 @@ class BankCardAdmin(AdvancedAdmin):
 
     list_display = ('created', 'card_pan', 'user', 'verified', 'deleted')
     list_filter = (BankCardUserFilter,)
+    search_fields = ('card_pan', )
 
     actions = ['verify_bank_cards', 'verify_bank_cards_manual', 'reject_bank_cards_manual']
 
@@ -207,6 +208,7 @@ class BankAccountAdmin(AdvancedAdmin):
 
     list_display = ('created', 'iban', 'user', 'verified', 'deleted')
     list_filter = (BankUserFilter, )
+    search_fields = ('iban', )
 
     actions = ['verify_bank_accounts_manual', 'verify_bank_accounts_auto', 'reject_bank_accounts_manual']
 
