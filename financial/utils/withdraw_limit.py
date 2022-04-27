@@ -91,17 +91,16 @@ def is_holiday(date):
     return False
 
 
-def rial_estimate_receive_time(fiat_withdraw_request: FiatWithdrawRequest):
+def get_fiat_estimate_receive_time(created: datetime):
 
-    fiat_withdraw_request_date = fiat_withdraw_request.created.astimezone()
-    fiat_withdraw_request_time = fiat_withdraw_request_date.time()
-    receive_time = fiat_withdraw_request_date
+    request_date = created.astimezone()
+    request_time = request_date.time()
+    receive_time = request_date.replace(microsecond=0)
 
-    if is_holiday(fiat_withdraw_request_date):
+    if is_holiday(request_date):
 
-        if time_in_range('00:00', '10:00', fiat_withdraw_request_time):
+        if time_in_range('00:00', '10:00', request_time):
             receive_time = receive_time.replace(hour=14, minute=00, second=00)
-
         else:
             receive_time += timedelta(days=1)
 
@@ -111,24 +110,21 @@ def rial_estimate_receive_time(fiat_withdraw_request: FiatWithdrawRequest):
                 receive_time = receive_time.replace(hour=4, minute=30, second=00)
 
     else:
-
-        if time_in_range('0:30', '10:30', fiat_withdraw_request_time):
+        if time_in_range('0:30', '10:30', request_time):
             receive_time = receive_time.replace(hour=11, minute=30, second=00)
 
-        elif time_in_range('10:30', '13:23', fiat_withdraw_request_time):
+        elif time_in_range('10:30', '13:23', request_time):
             receive_time = receive_time.replace(hour=14, minute=30, second=00)
 
-        elif time_in_range('13:23', '18:30', fiat_withdraw_request_time):
+        elif time_in_range('13:23', '18:30', request_time):
             receive_time = receive_time.replace(hour=19, minute=30, second=00)
 
         else:
-
             receive_time += timedelta(days=1)
 
-            if is_holiday(fiat_withdraw_request_date + timedelta(days=1)):
-                receive_time.replace(hour=14, minute=0, second=00)
-
+            if is_holiday(request_date + timedelta(days=1)):
+                receive_time = receive_time.replace(hour=14, minute=0, second=00)
             else:
-                receive_time.replace(hour=4, minute=30, second=00)
+                receive_time = receive_time.replace(hour=4, minute=30, second=00)
 
     return receive_time

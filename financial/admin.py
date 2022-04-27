@@ -16,7 +16,7 @@ from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAcc
     FiatWithdrawRequest
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from ledger.utils.precision import humanize_number
-from financial.utils.withdraw_limit import rial_estimate_receive_time
+from financial.utils.withdraw_limit import get_fiat_estimate_receive_time
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
@@ -82,8 +82,8 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
         return withdraw_request.bank_account.iban
     get_withdraw_request_iban.short_description = 'شماره شبا'
 
-    def get_withdraw_request_receive_time(self, with_draw: FiatWithdrawRequest):
-        data_time =rial_estimate_receive_time(with_draw)
+    def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
+        data_time =get_fiat_estimate_receive_time(withdraw.created)
 
         return ('زمان : %s تاریخ %s' % (
             data_time.time().strftime("%H:%M"),
