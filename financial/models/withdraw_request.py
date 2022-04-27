@@ -100,6 +100,9 @@ class FiatWithdrawRequest(models.Model):
         old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
 
         with transaction.atomic():
+            if self.status == DONE:
+                self.done_datetime = timezone.now()
+
             super().save(*args, **kwargs)
 
             if (not old or old.status != DONE) and self.status == DONE:
@@ -107,11 +110,6 @@ class FiatWithdrawRequest(models.Model):
 
             if self.status != PENDING:
                 self.lock.release()
-
-            if self.status == DONE:
-                self.done_datetime = timezone.now()
-
-            super().save(*args, **kwargs)
 
         self.alert_withdraw_verify_status(old)
 

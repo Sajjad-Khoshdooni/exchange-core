@@ -1,13 +1,14 @@
+import logging
 from datetime import timedelta
 
 from django.db import transaction
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.response import Response
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView, get_object_or_404, ListAPIView, DestroyAPIView
+from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from accounts.permissions import IsBasicVerified
@@ -21,8 +22,6 @@ from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
 from ledger.utils.fields import CANCELED
 from ledger.utils.precision import humanize_number
-
-import logging
 
 logger = logging.getLogger(__name__)
 
