@@ -22,10 +22,13 @@ def update_network_fees():
                 info['withdrawFee'] = Decimal(info['withdrawFee']) * 2
                 info['withdrawMin'] = Decimal(info['withdrawMin']) * 2
 
-            price = get_trading_price_usdt(ns.asset.symbol, BUY, raw_price=True)
-
             withdraw_min = Decimal(info['withdrawMin'])
-            multiplier = max(math.ceil(5 / (price * withdraw_min)), 1)
+
+            price = get_trading_price_usdt(ns.asset.symbol, BUY, raw_price=True)
+            if price:
+                multiplier = max(math.ceil(5 / (price * withdraw_min)), 1)
+            else:
+                multiplier = 1
 
             info['withdrawMin'] = withdraw_min * multiplier  # to prevent prize withdrawing
 
