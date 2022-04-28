@@ -83,12 +83,13 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     get_withdraw_request_iban.short_description = 'شماره شبا'
 
     def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
-        data_time =get_fiat_estimate_receive_time(withdraw.created)
+        if withdraw.done_datetime:
+            data_time = get_fiat_estimate_receive_time(withdraw.done_datetime)
 
-        return ('زمان : %s تاریخ %s' % (
-            data_time.time().strftime("%H:%M"),
-            gregorian_to_jalali_date_str(data_time.date())
-        ))
+            return ('زمان : %s تاریخ %s' % (
+                data_time.time().strftime("%H:%M"),
+                gregorian_to_jalali_date_str(data_time.date())
+            ))
 
     get_withdraw_request_receive_time.short_description = 'زمان تقریبی واریز'
 
