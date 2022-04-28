@@ -96,8 +96,16 @@ class User(AbstractUser):
         db_index=True,
     )
 
-    selfie_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس سلفی')
     telephone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه شماره تلفن')
+
+    selfie_image_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه عکس سلفی')
+    selfie_image_verifier = models.ForeignKey(
+        to='accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='تایید کننده عکس سلفی'
+    )
 
     archived = models.BooleanField(default=False, verbose_name='بایگانی')
 

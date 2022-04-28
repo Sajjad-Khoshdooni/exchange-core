@@ -7,7 +7,7 @@ from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.similarity import str_similar_rate, clean_persian_name, rotate_words
 from accounts.utils.telegram import send_support_message
-from accounts.verifiers.finotech import FinotechRequester
+from accounts.verifiers.finotech import FinotechRequester, ServerError
 from financial.models import BankCard, BankAccount
 
 logger = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ def verify_national_code(user: User, retry: int = 5) -> bool:
 
     try:
         verified = requester.verify_phone_number_national_code(user.phone, user.national_code)
-    except TimeoutError:
+    except (TimeoutError, ServerError):
         if retry == 0:
             logger.error('Finotech timeout verify_national_code')
             return
@@ -125,7 +125,7 @@ def verify_user_primary_info(user: User, retry: int = 5) -> bool:
             first_name=user.first_name,
             last_name=user.last_name,
         )
-    except TimeoutError:
+    except (TimeoutError, ServerError):
         if retry == 0:
             logger.error('Finotech timeout user_primary_info')
             return
@@ -173,7 +173,7 @@ def verify_bank_card(bank_card: BankCard, retry: int = 5) -> bool:
 
     try:
         verified = requester.verify_card_pan_phone_number(bank_card.user.phone, bank_card.card_pan)
-    except TimeoutError:
+    except (TimeoutError, ServerError):
         if retry == 0:
             logger.error('Finotech timeout bank_card')
             return
@@ -217,7 +217,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
             )
             return
 
-    except TimeoutError:
+    except (TimeoutError, ServerError):
         if retry == 0:
             logger.error('Finotech timeout bank_account')
             return

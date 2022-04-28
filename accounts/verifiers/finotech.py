@@ -19,6 +19,10 @@ token_cache = caches['token']
 FINOTECH_TOKEN_KEY = 'finotech-token'
 
 
+class ServerError(Exception):
+    pass
+
+
 class FinotechRequester:
     def __init__(self, user):
         self._user = user
@@ -151,6 +155,9 @@ class FinotechRequester:
             search_key='shahkar-%s-%s' % (national_code, phone_number)
         )
 
+        if not resp:
+            raise ServerError
+
         return resp['isValid']
 
     def get_iban_info(self, iban: str) -> dict:
@@ -174,6 +181,9 @@ class FinotechRequester:
             },
             search_key='mobcard-%s-%s' % (phone_number, card_pan)
         )
+
+        if not resp:
+            raise ServerError
 
         return resp['isValid']
 

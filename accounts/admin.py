@@ -132,8 +132,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
                                          )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
-                                          'telephone_verified', 'selfie_image_verified', 'national_code_duplicated_alert',
-                                          'selfie_image_discard_text',
+                                          'telephone_verified', 'selfie_image_verified', 'selfie_image_verifier',
+                                          'national_code_duplicated_alert', 'selfie_image_discard_text',
                                           )}),
         (_('Permissions'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'show_margin'),
@@ -174,7 +174,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
         'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium',
-        'get_fill_order_address',
+        'get_fill_order_address', 'selfie_image_verifier'
     )
     preserve_filters = ('archived', )
 
@@ -215,10 +215,14 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         queryset.update(archived=False)
 
     def save_model(self, request, user: User, form, change):
+        old_user = User.objects.get(id=user.id)
+
         if not request.user.is_superuser:
-            old_user = User.objects.get(id=user.id)
             if not old_user.is_superuser and user.is_superuser:
                 raise Exception('Dangerous action happened!')
+
+        if not old_user.selfie_image_verified and user.selfie_image_verified:
+            user.selfie_image_verifier = request.user
 
         return super(CustomUserAdmin, self).save_model(request, user, form, change)
 
@@ -410,7 +414,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
             prize_list.append(prize.scope)
         return prize_list
 
-    get_user_prizes.short_description = ('جایزه‌های دریافتی کاربر')
+    get_user_prizes.short_description = 'جایزه‌های دریافتی کاربر'
 
 
 @admin.register(Account)
