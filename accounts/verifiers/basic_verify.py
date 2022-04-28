@@ -16,7 +16,9 @@ IBAN_NAME_SIMILARITY_THRESHOLD = 0.7
 
 
 def basic_verify(user: User):
-    assert user.level == User.LEVEL1
+    if user.level != User.LEVEL1:
+        logger.info('ignoring double verifying user_d = %d' % user.id)
+        return
 
     if not user.national_code_verified:
         logger.info('verifying national_code for user_d = %d' % user.id)
