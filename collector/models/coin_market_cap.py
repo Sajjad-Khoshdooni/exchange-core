@@ -65,10 +65,10 @@ class CoinMarketCap(models.Model):
                     change_24h=price_info.get('percentChange24h', 0),
                     volume_24h=price_info.get('volume24h', 0),
                     change_7d=price_info.get('percentChange7d', 0),
-                    high_24h=price_info.get('high24h'),
-                    low_24h=price_info.get('low24h'),
-                    cmc_rank=price_info.get('cmcRank'),
-                    circulating_supply=price_info.get('circulatingSupply'),
+                    high_24h=price_info.get('high24h', 0),
+                    low_24h=price_info.get('low24h', 0),
+                    cmc_rank=price_info.get('cmcRank', 0),
+                    circulating_supply=price_info.get('circulatingSupply', 0),
                 )
             )
 
