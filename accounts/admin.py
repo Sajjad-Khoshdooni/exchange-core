@@ -419,7 +419,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
     list_display = ('user', 'type', 'name',)
-    search_fields = ('user__phone', )
+    search_fields = ('user__phone', 'national_code')
     list_filter = ('type', 'primary')
 
     fieldsets = (
