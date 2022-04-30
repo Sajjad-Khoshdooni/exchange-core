@@ -318,7 +318,7 @@ class Order(models.Model):
                                  symbol_instance.step_size)
         wallet = symbol_instance.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
         power = int(log10(maker_price))
-        precision = min(3, power / 3) if power > 3 else min(symbol_instance.tick_size, 2 - power)
+        precision = min(3, power / 3) if power > 1 else min(symbol_instance.tick_size, 3 - power)
         return Order(
             type=Order.DEPTH,
             wallet=wallet,
