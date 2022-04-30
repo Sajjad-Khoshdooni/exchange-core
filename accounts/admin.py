@@ -178,6 +178,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     )
     preserve_filters = ('archived', )
 
+    search_fields = (*UserAdmin.search_fields, 'national_code')
+
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
         to_verify_users = queryset.filter(MANUAL_VERIFY_CONDITION).distinct()
@@ -419,7 +421,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
     list_display = ('user', 'type', 'name',)
-    search_fields = ('user__phone', 'national_code')
+    search_fields = ('user__phone', )
     list_filter = ('type', 'primary')
 
     fieldsets = (
