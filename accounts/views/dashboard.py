@@ -18,8 +18,8 @@ def dashboard(request):
             archived=False
         ).count()
 
-        pending_or_reject_level_3_users = users.filter(
-            Q(verify_status=User.PENDING) | Q(verify_status=User.REJECTED),
+        pending_level_3_users = users.filter(
+            verify_status=User.PENDING,
             level=User.LEVEL2,
             archived=False
         ).count()
@@ -31,7 +31,7 @@ def dashboard(request):
         context = {
             'user_count':user_count,
             'pending_or_reject_level_2_users': pending_or_reject_level_2_users,
-            'pending_or_reject_level_3_users': pending_or_reject_level_3_users,
+            'pending_level_3_users': pending_level_3_users,
             'pending_or_reject_withdraw_requests': pending_or_reject_withdraw_requests,
             'archived_users': users.filter(archived=True).count(),
         }
