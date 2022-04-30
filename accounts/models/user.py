@@ -181,6 +181,9 @@ class User(AbstractUser):
 
             alert_user_verify_status(self)
 
+        else:
+            self.save()
+
     @property
     def primary_data_verified(self) -> bool:
         return self.first_name and self.first_name_verified and self.last_name and self.last_name_verified \
