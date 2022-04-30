@@ -93,6 +93,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             user.birth_date = validated_data['birth_date']
             user.birth_date_verified = None
 
+        user.save()
         user.change_status(User.PENDING)
 
         from accounts.tasks import basic_verify_user
