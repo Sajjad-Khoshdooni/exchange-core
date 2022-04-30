@@ -13,6 +13,11 @@ def iban_validator(value: str):
     if int(value) % 97 != 1:
         raise ValidationError('شماره شبا نامعتبر است.')
 
+    bank_code = value[4:8]
+
+    if bank_code in ('0630', '0520', '0650', '0790', '0730'):
+        raise ValidationError('شماره شبا مربوط به بانک‌های ادغام شده است. لطفا شماره شبای دیگری وارد کنید.')
+
 
 def bank_card_pan_validator(value: str):
     if not re.match(r'^[0-9]{16}$', value):
