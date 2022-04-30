@@ -1,6 +1,7 @@
 import logging
 from decimal import Decimal
 from itertools import groupby
+from math import log10
 from random import randrange
 
 from django.conf import settings
@@ -64,7 +65,7 @@ class Order(models.Model):
     fill_type = models.CharField(max_length=8, choices=FILL_TYPE_CHOICES)
     status = models.CharField(default=NEW, max_length=8, choices=STATUS_CHOICES)
 
-    lock = get_lock_field(null=True, related_name='market_order')
+    lock = get_lock_field(related_name='market_order')
 
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
@@ -316,7 +317,8 @@ class Order(models.Model):
         amount = floor_precision(symbol_instance.maker_amount * Decimal(randrange(1, 40) / 20.0),
                                  symbol_instance.step_size)
         wallet = symbol_instance.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
-        precision = symbol_instance.tick_size - 2 if symbol_instance.tick_size < 3 else symbol_instance.tick_size
+        power = int(log10(maker_price))
+        precision = min(3, power / 3) if power > 3 else min(symbol_instance.tick_size, 2 - power)
         return Order(
             type=Order.DEPTH,
             wallet=wallet,

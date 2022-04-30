@@ -10,7 +10,7 @@ from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
 from ledger.models.crypto_balance import CryptoBalance
-from ledger.utils.fields import get_amount_field, get_address_field
+from ledger.utils.fields import get_amount_field, get_address_field, get_lock_field
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class Transfer(models.Model):
         db_index=True
     )
 
-    lock = models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE, null=True, blank=True)
+    lock = get_lock_field()
 
     trx_hash = models.CharField(max_length=128, db_index=True, null=True, blank=True)
     block_hash = models.CharField(max_length=128, db_index=True, blank=True)
