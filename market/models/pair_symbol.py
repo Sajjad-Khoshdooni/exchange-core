@@ -1,3 +1,4 @@
+from collections import namedtuple
 from decimal import Decimal
 
 from django.db import models
@@ -10,6 +11,8 @@ DEFAULT_TAKER_FEE = 0.002
 
 
 class PairSymbol(models.Model):
+    IdName = namedtuple("PairSymbol", "id name")
+
     name = models.CharField(max_length=32, blank=True, unique=True)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='pair')
     base_asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='trading_pair')
@@ -42,4 +45,3 @@ class PairSymbol(models.Model):
 
     class Meta:
         unique_together = ('asset', 'base_asset')
-
