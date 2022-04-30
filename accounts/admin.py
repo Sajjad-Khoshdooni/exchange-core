@@ -19,7 +19,7 @@ from ledger.models import OTCRequest, OTCTrade
 from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import humanize_number
-from market.models import FillOrder
+from market.models import FillOrder, ReferralTrx
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
@@ -27,6 +27,7 @@ from .tasks import basic_verify_user
 from .tasks.verify_user import alert_user_verify_status
 from .utils.validation import gregorian_to_jalali_date, gregorian_to_jalali_date_str, gregorian_to_jalali_datetime_str
 from .verifiers.legal import is_48h_rule_passed
+from .views.referral_view import ReferralSerializer
 
 MANUAL_VERIFY_CONDITION = Q(
     Q(first_name_verified=None) | Q(last_name_verified=None),
@@ -122,6 +123,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'last_name_verified': M.is_none('last_name_verified'),
         'national_code_verified': M.is_none('national_code_verified'),
         'birth_date_verified': M.is_none('birth_date_verified'),
+        'telephone_verified': M.superuser | M('telephone'),
+
     }
 
     fieldsets = (
@@ -153,7 +156,9 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         (_('اطلاعات مالی کاربر'), {'fields': (
             'get_sum_of_value_buy_sell', 'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit'
         )}),
-        (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)})
+        (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)}),
+        (_("کدهای دعوت کاربر"), {'fields': (
+            'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred')})
     )
 
     list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
@@ -174,7 +179,8 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
         'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium',
-        'get_fill_order_address', 'selfie_image_verifier'
+        'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
+        'get_revenue_of_referred',
     )
     preserve_filters = ('archived', )
 
@@ -416,6 +422,32 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     get_user_prizes.short_description = 'جایزه‌های دریافتی کاربر'
 
+    def get_referred_count(self, user: User):
+        referrals = Referral.objects.filter(owner=user.account)
+        referred_count = 0
+        for referral in referrals:
+            referred_count += Account.objects.filter(referred_by=referral).count()
+        return referred_count
+    get_referred_count.short_description = ' تعداد دوستان دعوت شده'
+
+    def get_revenue_of_referral(self, user: User):
+        referrals = Referral.objects.filter(owner=user.account)
+        revenues = 0
+        for referral in referrals:
+            revenue = ReferralTrx.objects.filter(referral=referral).aggregate(total=Sum('referrer_amount'))
+            revenues += int(revenue['total'] or 0)
+        return revenues
+
+    get_revenue_of_referral.short_description = 'درآمد حاصل از کدهای دعوت ارسال شده به دوستان '
+
+    def get_revenue_of_referred(self, user: User):
+        referral = user.account.referred_by
+
+        revenue = ReferralTrx.objects.filter(referral=referral).aggregate(total=Sum('trader_amount'))
+        return int(revenue['total'] or 0)
+
+    get_revenue_of_referred.short_description = 'درآمد حاصل از کد دعوت استفاده شده'
+
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
@@ -447,6 +479,8 @@ class AccountAdmin(admin.ModelAdmin):
         return humanize_number(get_presentation_amount((total_blance_usdt)))
 
     get_total_balance_usdt_admin.short_description = 'دارایی به تتر'
+
+
 
 
 @admin.register(Referral)
