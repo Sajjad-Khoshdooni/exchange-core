@@ -149,17 +149,17 @@ class User(AbstractUser):
                 if self.level == User.LEVEL2:
                     self.level_2_verify_datetime = timezone.now()
 
-                    prize, created = Prize.objects.get_or_create(
-                        account=self.account,
-                        scope=Prize.LEVEL2_PRIZE,
-                        defaults={
-                            'amount': Prize.LEVEL2_PRIZE_AMOUNT,
-                            'asset': Asset.objects.get(symbol=Asset.SHIB)
-                        }
-                    )
-                    if created:
-                        prize.build_trx()
-                        alert_user_prize(self, Prize.LEVEL2_PRIZE)
+                    # prize, created = Prize.objects.get_or_create(
+                    #     account=self.account,
+                    #     scope=Prize.LEVEL2_PRIZE,
+                    #     defaults={
+                    #         'amount': Prize.LEVEL2_PRIZE_AMOUNT,
+                    #         'asset': Asset.objects.get(symbol=Asset.SHIB)
+                    #     }
+                    # )
+                    # if created:
+                    #     prize.build_trx()
+                    #     alert_user_prize(self, Prize.LEVEL2_PRIZE)
 
                 elif self.level == User.LEVEL3:
                     self.level_3_verify_datetime = timezone.now()
