@@ -316,12 +316,13 @@ class Order(models.Model):
         amount = floor_precision(symbol_instance.maker_amount * Decimal(randrange(1, 40) / 20.0),
                                  symbol_instance.step_size)
         wallet = symbol_instance.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
+        precision = symbol_instance.tick_size - 2 if symbol_instance.tick_size < 3 else symbol_instance.tick_size
         return Order(
             type=Order.DEPTH,
             wallet=wallet,
             symbol=symbol_instance,
             amount=amount,
-            price=round_down_to_exponent(maker_price, symbol_instance.tick_size - 2),
+            price=round_down_to_exponent(maker_price, precision),
             side=side,
             fill_type=Order.LIMIT
         )
