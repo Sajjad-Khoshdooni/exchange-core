@@ -52,8 +52,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
     def get_min_withdraw_amount(self, asset: Asset):
         network_assets = NetworkAsset.objects.filter(asset=asset)
-        min_withdraw = network_assets.aggregate(Min('withdraw_min'))
-        return min_withdraw
+        min_withdraw = network_assets.aggregate(min=Min('withdraw_min'))
+        return min_withdraw['min'] or Decimal(0)
 
     def get_trend_url(self, asset: Asset):
         cap = CoinMarketCap.objects.filter(symbol=asset.symbol).first()
