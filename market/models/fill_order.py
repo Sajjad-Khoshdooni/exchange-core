@@ -3,6 +3,7 @@ from collections import namedtuple
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 
+from django.conf import settings
 from django.db import models
 
 from accounts.models import Account
@@ -83,17 +84,12 @@ class FillOrder(models.Model):
                f'({self.taker_order_id}-{self.maker_order_id}) ' \
                f'[p:{self.price:.2f}] (a:{self.amount:.5f})'
 
-    def init_trade_trxs(self, system: 'Account' = None, ignore_fee=False):
-        if not system:
-            system = Account.system()
-
+    def init_trade_trxs(self, ignore_fee=False):
         return {
             'amount': self.__init_trade_trx(),
             'base': self.__init_base_trx(),
-            'taker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.taker_order, is_taker=True,
-                                                                           system=system),
-            'maker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.maker_order, is_taker=False,
-                                                                           system=system),
+            'taker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.taker_order, is_taker=True),
+            'maker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.maker_order, is_taker=False),
         }
 
     def init_referrals(self, trade_trx_list):
@@ -129,10 +125,7 @@ class FillOrder(models.Model):
             scope=Trx.TRADE
         )
 
-    def __init_fee_trx(self, order, is_taker, system: 'Account' = None):
-        if not system:
-            system = Account.system()
-
+    def __init_fee_trx(self, order, is_taker):
         fee = order.symbol.taker_fee if is_taker else order.symbol.maker_fee
 
         fee_wallet = order.wallet if order.side == Order.BUY else order.base_wallet
@@ -141,7 +134,7 @@ class FillOrder(models.Model):
         if trx_amount:
             return Trx(
                 sender=fee_wallet,
-                receiver=fee_wallet.asset.get_wallet(system, market=fee_wallet.market),
+                receiver=fee_wallet.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=fee_wallet.market),
                 amount=trx_amount,
                 group_id=self.group_id,
                 scope=Trx.COMMISSION
@@ -187,7 +180,7 @@ class FillOrder(models.Model):
             amount = floor_precision(config.coin_amount, symbol.step_size)
             price = (config.cash_amount / config.coin_amount).quantize(
                 precision_to_step(symbol.tick_size), rounding=ROUND_HALF_UP)
-            system_wallet = symbol.asset.get_wallet(Account.system(), market=otc_trade.otc_request.market)
+            system_wallet = symbol.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=otc_trade.otc_request.market)
             maker_order = Order.objects.create(
                 wallet=system_wallet,
                 symbol=symbol,

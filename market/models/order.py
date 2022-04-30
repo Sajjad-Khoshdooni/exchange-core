@@ -186,8 +186,6 @@ class Order(models.Model):
 
             logger.info(f'open orders: {matching_orders}')
 
-            system = Account.system()
-
             unfilled_amount = self.unfilled_amount
 
             fill_orders = []
@@ -224,7 +222,7 @@ class Order(models.Model):
                     irt_value=base_irt_price * trade_price * match_amount,
                     trade_source=FillOrder.SYSTEM if is_system_trade else FillOrder.MARKET
                 )
-                trade_trx_list = fill_order.init_trade_trxs(system)
+                trade_trx_list = fill_order.init_trade_trxs()
                 trx_list.extend(trade_trx_list.values())
                 fill_order.calculate_amounts_from_trx(trade_trx_list)
                 referral_trx = fill_order.init_referrals(trade_trx_list)
@@ -314,12 +312,9 @@ class Order(models.Model):
 
     # Market Maker related methods
     @staticmethod
-    def init_maker_order(symbol: PairSymbol, side, maker_price: Decimal, system=None, market=Wallet.SPOT):
-        if system is None:
-            system = Account.system()
-
+    def init_maker_order(symbol: PairSymbol, side, maker_price: Decimal, market=Wallet.SPOT):
         amount = floor_precision(symbol.maker_amount * Decimal(randrange(1, 40) / 20.0), symbol.step_size)
-        wallet = symbol.asset.get_wallet(system, market=market)
+        wallet = symbol.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
         return Order(
             type=Order.DEPTH,
             wallet=wallet,
@@ -331,11 +326,7 @@ class Order(models.Model):
         )
 
     @classmethod
-    def init_top_maker_order(cls, symbol, side, price, best_order, best_opp_order, market=Wallet.SPOT,
-                             system=None):
-        if system is None:
-            system = Account.system()
-
+    def init_top_maker_order(cls, symbol, side, price, best_order, best_opp_order, market=Wallet.SPOT):
         maker_price = None
         if not best_opp_order:
             maker_price = price
@@ -352,7 +343,7 @@ class Order(models.Model):
         if not best_order or \
                 (side == Order.BUY and maker_price > best_order * loose_factor) or \
                 (side == Order.SELL and maker_price < best_order * loose_factor):
-            return cls.init_maker_order(symbol, side, maker_price, system, market)
+            return cls.init_maker_order(symbol, side, maker_price, market)
 
     @classmethod
     def cancel_invalid_maker_orders(cls, symbol: PairSymbol, top_prices):

@@ -88,7 +88,7 @@ def update_symbol_maker_orders(symbol_id):
         for depth in depth_orders:
             open_depth_orders_count[depth['side']] = depth['count'] or 0
 
-    symbol = PairSymbol.objects.get(id=symbol_id)
+    symbol = PairSymbol.objects.filter(id=symbol_id).prefetch_related('asset', 'base_asset').first()
     try:
         with transaction.atomic():
             Order.cancel_invalid_maker_orders(symbol, top_depth_prices)
@@ -133,14 +133,13 @@ def create_depth_orders(symbol_id=None, open_depth_orders_count=None):
             }
             create_depth_orders.apply_async(args=(symbol.id, symbol_open_depth_orders_count), queue='market')
     else:
-        symbol = PairSymbol.objects.get(id=symbol_id)
-        system = Account.system()
+        symbol = PairSymbol.objects.filter(id=symbol_id).prefetch_related('asset', 'base_asset').first()
         present_prices = set(Order.open_objects.filter(symbol=symbol, type=Order.DEPTH).values_list('price', flat=True))
         try:
             for side in (Order.BUY, Order.SELL):
                 price = Order.get_maker_price(symbol, side)
                 for i in range(Order.MAKER_ORDERS_COUNT - open_depth_orders_count[side]):
-                    order = Order.init_maker_order(symbol, side, price * get_price_factor(side, i), system)
+                    order = Order.init_maker_order(symbol, side, price * get_price_factor(side, i))
                     if order and order.price not in present_prices:
                         with transaction.atomic():
                             order.save()
