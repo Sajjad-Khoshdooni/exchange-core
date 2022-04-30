@@ -1,12 +1,13 @@
 import time
 from decimal import Decimal
 
+from django.db.models import Min
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 
 from collector.models import CoinMarketCap
-from ledger.models import Asset, Wallet
+from ledger.models import Asset, Wallet, NetworkAsset
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
 from ledger.utils.price_manager import PriceManager
@@ -29,6 +30,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
     cmc_rank = serializers.SerializerMethodField()
     market_cap = serializers.SerializerMethodField()
     circulating_supply = serializers.SerializerMethodField()
+    min_withdraw_amount = serializers.SerializerMethodField()
 
     class Meta:
         model = Asset
@@ -47,6 +49,11 @@ class AssetSerializerBuilder(AssetSerializerMini):
         tether_irt = self.context['tether_irt']
         price = prices[asset.symbol] * tether_irt
         return asset.get_presentation_price_irt(price)
+
+    def get_min_withdraw_amount(self, asset: Asset):
+        network_assets = NetworkAsset.objects.filter(asset=asset)
+        min_withdraw = network_assets.aggregate(Min('withdraw_min'))
+        return min_withdraw
 
     def get_trend_url(self, asset: Asset):
         cap = CoinMarketCap.objects.filter(symbol=asset.symbol).first()
@@ -122,7 +129,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
             new_fields = [
                 'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
                 'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
-                'low_24h', 'trend_url',
+                'low_24h', 'trend_url', 'min_withdraw_amount',
             ]
 
         class Serializer(cls):
