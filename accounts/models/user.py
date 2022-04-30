@@ -1,8 +1,10 @@
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
-from django.db.models import Q
-from simple_history.models import HistoricalRecords
+from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from simple_history.models import HistoricalRecords
+
 from accounts.models import Notification
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
@@ -122,6 +124,18 @@ class User(AbstractUser):
         blank=True,
         default=''
     )
+
+    class Meta:
+        verbose_name = _('user')
+        verbose_name_plural = _('users')
+
+        constraints = [
+            UniqueConstraint(
+                fields=["national_code"],
+                name="unique_verified_national_code",
+                condition=Q(level__gt=1),
+            )
+        ]
 
     def change_status(self, status: str):
         from ledger.models import Prize, Asset
