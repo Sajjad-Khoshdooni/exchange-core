@@ -108,12 +108,10 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         fields = (
             'verify_status', 'level', 'first_name', 'last_name', 'birth_date', 'national_code', 'card_pan', 'iban',
             'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified',
-            'national_code_duplicated_alert'
         )
         read_only_fields = (
             'verify_status', 'level',
             'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified',
-            'national_code_duplicated_alert'
         )
         extra_kwargs = {
             'first_name': {'required': True},
