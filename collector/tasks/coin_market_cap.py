@@ -26,4 +26,6 @@ def update_coin_market_cap():
             obj.cmc_rank = data['cmcRank']
             obj.circulating_supply = data['circulatingSupply']
 
-    CoinMarketCap.objects.bulk_update(objects, fields=['change_24h', 'volume_24h'])
+    CoinMarketCap.objects.bulk_update(objects, fields=['change_24h', 'volume_24h', 'market_cap', 'change_1h',
+                                                       'change_7d', 'high_24h', 'low_24h', 'cmc_rank',
+                                                       'circulating_supply'])
