@@ -85,13 +85,13 @@ class AssetSerializerBuilder(AssetSerializerMini):
         cap = self.get_cap(asset)
 
         if cap:
-            return cap.high_24h
+            return asset.get_presentation_price_usdt(Decimal(cap.high_24h))
 
     def get_low_24h(self, asset: Asset):
         cap = self.get_cap(asset)
 
         if cap:
-            return cap.low_24h
+            return asset.get_presentation_price_usdt(Decimal(cap.low_24h))
 
     def get_change_1h(self, asset: Asset):
         cap = self.get_cap(asset)
