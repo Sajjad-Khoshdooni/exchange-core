@@ -204,7 +204,6 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
         for user in to_reject_users:
             user.change_status(User.REJECTED)
-            alert_user_verify_status(user)
 
     @admin.action(description='بایگانی کاربر', permissions=['view'])
     def archive_users(self, request, queryset):

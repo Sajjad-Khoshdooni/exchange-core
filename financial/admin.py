@@ -188,7 +188,6 @@ class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
             if user.level == User.LEVEL1 and user.verify_status == User.PENDING:
                 user.change_status(User.REJECTED)
-                alert_user_verify_status(user)
 
 
 class BankUserFilter(SimpleListFilter):
@@ -242,4 +241,3 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
             if user.level == User.LEVEL1 and user.verify_status == User.PENDING:
                 user.change_status(User.REJECTED)
-                alert_user_verify_status(user)

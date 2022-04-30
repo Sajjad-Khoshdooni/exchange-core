@@ -126,6 +126,8 @@ class User(AbstractUser):
     def change_status(self, status: str):
         from ledger.models import Prize, Asset
         from ledger.models.prize import alert_user_prize
+        from accounts.tasks.verify_user import alert_user_verify_status
+
         if self.verify_status != self.VERIFIED and status == self.VERIFIED:
             self.verify_status = self.INIT
             self.level += 1
@@ -147,9 +149,13 @@ class User(AbstractUser):
 
                 elif self.level == User.LEVEL3:
                     self.level_3_verify_datetime = timezone.now()
+
                 self.save()
-        else:
-            if self.level == self.LEVEL1 and self.verify_status != self.REJECTED and status == self.REJECTED:
+
+            alert_user_verify_status(self)
+
+        elif self.verify_status != self.REJECTED and status == self.REJECTED:
+            if self.level == self.LEVEL1:
                 link = url_to_edit_object(self)
                 send_support_message(
                     message='اطلاعات سطح %d کاربر مورد تایید قرار نگرفت. لطفا دستی بررسی شود.' % (self.level + 1),
@@ -159,6 +165,7 @@ class User(AbstractUser):
             self.verify_status = status
             self.save()
 
+            alert_user_verify_status(self)
 
     @property
     def primary_data_verified(self) -> bool:
@@ -215,7 +222,6 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         old = self.id and User.objects.get(id=self.id)
-        from accounts.tasks.verify_user import alert_user_verify_status
         creating = not self.id
         super(User, self).save(*args, **kwargs)
 
@@ -234,8 +240,6 @@ class User(AbstractUser):
 
                 if not any_none and any_false:
                     self.change_status(self.REJECTED)
-
-            alert_user_verify_status(self)
 
         elif self.level == self.LEVEL1 and self.verify_status == self.PENDING:
             self.verify_level2_if_not()
