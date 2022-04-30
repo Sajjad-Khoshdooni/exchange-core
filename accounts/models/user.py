@@ -182,6 +182,7 @@ class User(AbstractUser):
             alert_user_verify_status(self)
 
         else:
+            self.verify_status = status
             self.save()
 
     @property
