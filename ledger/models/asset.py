@@ -71,10 +71,13 @@ class Asset(models.Model):
     def get_wallet(self, account: Account, market: str = Wallet.SPOT):
         assert market in Wallet.MARKETS
 
+        account_filter = {'account': account}
+        if type(account) == int:
+            account_filter = {'account_id': account}
         wallet, _ = Wallet.objects.get_or_create(
             asset=self,
-            account=account,
             market=market,
+            **account_filter
         )
 
         return wallet
