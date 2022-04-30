@@ -65,9 +65,9 @@ def get_status_field():
     )
 
 
-def get_lock_field(null: bool = False, **kwargs):
+def get_lock_field(null: bool = True, **kwargs):
     return models.OneToOneField(
-        'ledger.BalanceLock', on_delete=models.CASCADE, null=null, blank=null, editable=False, **kwargs)
+        'ledger.BalanceLock', on_delete=models.SET_NULL, null=null, blank=null, editable=False, **kwargs)
 
 
 def get_group_id_field(db_index: bool = False):
