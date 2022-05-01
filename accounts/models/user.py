@@ -143,8 +143,8 @@ class User(AbstractUser):
         ]
 
     def change_status(self, status: str):
-        from ledger.models import Prize, Asset
-        from ledger.models.prize import alert_user_prize
+        # from ledger.models import Prize, Asset
+        # from ledger.models.prize import alert_user_prize
         from accounts.tasks.verify_user import alert_user_verify_status
 
         if self.verify_status != self.VERIFIED and status == self.VERIFIED:
