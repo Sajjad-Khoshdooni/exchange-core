@@ -18,7 +18,7 @@ from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
-from market.models import FillOrder, ReferralTrx
+from market.models import FillOrder, ReferralTrx, Order
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
@@ -146,7 +146,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
 
-                                         'get_birth_date_jalali', 'telephone', 'get_selfie_image', 'archived',
+                                         'telephone', 'get_selfie_image', 'archived',
                                          'get_user_reject_reason', 'get_source_medium'
                                          )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
@@ -170,7 +170,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                 'get_payment_address', 'get_withdraw_address',
                 'get_otctrade_address', 'get_wallet_address', 'get_bank_card_link',
                 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
-                'get_user_with_same_national_code', 'get_fill_order_address'
+                'get_user_with_same_national_code', 'get_fill_order_address',
+                'get_open_order_address',
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
@@ -193,14 +194,14 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify')
     readonly_fields = (
         'get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet_address',
-        'get_sum_of_value_buy_sell', 'get_birth_date_jalali',
+        'get_sum_of_value_buy_sell',
         'get_selfie_image', 'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
         'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
         'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium',
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
-        'get_revenue_of_referred',
+        'get_revenue_of_referred', 'get_open_order_address',
     )
     preserve_filters = ('archived', )
 
@@ -262,6 +263,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         link = url_to_admin_list(FillOrder) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_fill_order_address.short_description = 'معاملات'
+
+    def get_open_order_address(self, user: User):
+        link = url_to_admin_list(Order) +'?status=new&user={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+    get_open_order_address.short_description = 'سفارشات باز'
 
     def get_withdraw_address(self, user: User):
         link = url_to_admin_list(FiatWithdrawRequest)+'?user={}'.format(user.id)
@@ -384,11 +390,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         )
 
     get_user_with_same_national_code.short_description = 'کاربرانی با این کد ملی'
-
-    def get_birth_date_jalali(self, user: User):
-        return gregorian_to_jalali_date_str(user.birth_date)
-
-    get_birth_date_jalali.short_description = 'تاریخ تولد شمسی'
 
     def get_level_2_verify_datetime_jalali(self, user: User):
         return gregorian_to_jalali_datetime_str(user.level_2_verify_datetime)
