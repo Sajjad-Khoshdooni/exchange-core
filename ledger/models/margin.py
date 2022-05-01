@@ -27,7 +27,7 @@ class MarginTransfer(models.Model):
         choices=((SPOT_TO_MARGIN, 'spot to margin'), (MARGIN_TO_SPOT, 'margin to spot')),
     )
 
-    lock = models.OneToOneField('ledger.BalanceLock', on_delete=models.CASCADE)
+    lock = get_lock_field()
 
     group_id = models.UUIDField(default=uuid4)
 
@@ -77,7 +77,7 @@ class MarginLoan(models.Model):
     )
 
     status = get_status_field()
-    lock = get_lock_field(null=True)
+    lock = get_lock_field()
     group_id = get_group_id_field()
 
     @property

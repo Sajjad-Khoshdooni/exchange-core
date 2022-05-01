@@ -1,6 +1,7 @@
 import logging
 from decimal import Decimal
 from itertools import groupby
+from math import floor, log10
 from random import randrange
 
 from django.conf import settings
@@ -64,7 +65,7 @@ class Order(models.Model):
     fill_type = models.CharField(max_length=8, choices=FILL_TYPE_CHOICES)
     status = models.CharField(default=NEW, max_length=8, choices=STATUS_CHOICES)
 
-    lock = get_lock_field(null=True, related_name='market_order')
+    lock = get_lock_field(related_name='market_order')
 
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
@@ -311,12 +312,18 @@ class Order(models.Model):
 
     # Market Maker related methods
     @staticmethod
+    def get_maker_precision(symbol, price):
+        power = floor(log10(price))
+        precision = min(3, -power / 3) if power > 2 else (3 - power)
+        return int(min(symbol.tick_size, precision))
+
+    @staticmethod
     def init_maker_order(symbol: PairSymbol.IdName, side, maker_price: Decimal, market=Wallet.SPOT):
         symbol_instance = PairSymbol.objects.get(id=symbol.id)
         amount = floor_precision(symbol_instance.maker_amount * Decimal(randrange(1, 40) / 20.0),
                                  symbol_instance.step_size)
         wallet = symbol_instance.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
-        precision = symbol_instance.tick_size - 2 if symbol_instance.tick_size < 3 else symbol_instance.tick_size
+        precision = Order.get_maker_precision(symbol_instance, maker_price)
         return Order(
             type=Order.DEPTH,
             wallet=wallet,
@@ -340,6 +347,9 @@ class Order(models.Model):
         if not maker_price:
             logger.warning(f'cannot calculate maker price for {symbol.name} {side}')
             return
+        symbol_instance = PairSymbol.objects.get(id=symbol.id)
+        precision = Order.get_maker_precision(symbol_instance, maker_price)
+        maker_price = round_down_to_exponent(maker_price, precision)
 
         loose_factor = Decimal('1.001') if side == Order.BUY else 1 / Decimal('1.001')
         if not best_order or \
