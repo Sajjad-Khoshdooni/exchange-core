@@ -26,7 +26,7 @@ class EmailVerifyView(APIView):
 
         EmailVerificationCode.send_otp_code(email, EmailVerificationCode.SCOPE_VERIFY_EMAIL, user)
 
-        return Response({'msg': 'top send', 'code': 0})
+        return Response({'msg': 'otp send', 'code': 0})
 
 
 class EmailOTPVerifySerializer(serializers.ModelSerializer):
