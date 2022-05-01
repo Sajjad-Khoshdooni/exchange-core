@@ -123,7 +123,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'national_code_verified': M.is_none('national_code_verified'),
         'birth_date_verified': M.is_none('birth_date_verified'),
         'telephone_verified': M.superuser | M('telephone'),
-        'withdraw_before_48_h_option': M
+        'withdraw_before_48_h_option': True
 
     }
 

@@ -35,7 +35,7 @@ def get_working_hour_delta_days(start: datetime, end: datetime) -> float:
 
 
 def is_48h_rule_passed(user: User) -> bool:
-    if not user.first_fiat_deposit_date or user.withdraw_before_48_h_option:
+    if not user.first_fiat_deposit_date or user.withdraw_before_48h_option:
         return True
 
     now = timezone.now()
