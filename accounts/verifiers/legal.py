@@ -49,7 +49,7 @@ def is_48h_rule_passed(user: User) -> bool:
         return False
 
 
-def possible_time_for_wthdraw(user: User):
+def possible_time_for_withdraw(user: User):
     if is_48h_rule_passed(user):
         return None
     else:

@@ -24,7 +24,7 @@ from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
 from .tasks import basic_verify_user
-from .utils.validation import  gregorian_to_jalali_date_str, gregorian_to_jalali_datetime_str
+from .utils.validation import gregorian_to_jalali_date_str, gregorian_to_jalali_datetime_str
 from .verifiers.legal import is_48h_rule_passed
 
 MANUAL_VERIFY_CONDITION = Q(
