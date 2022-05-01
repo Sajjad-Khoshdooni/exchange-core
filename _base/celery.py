@@ -108,15 +108,15 @@ app.conf.beat_schedule = {
     # market tasks
     'create depth orders': {
         'task': 'market.tasks.market_maker.create_depth_orders',
-        'schedule': 5,
+        'schedule': 30,
         'options': {
             'queue': 'market',
-            'expire': 5
+            'expire': 30
         },
     },
     'update maker orders': {
         'task': 'market.tasks.market_maker.update_maker_orders',
-        'schedule': 1,
+        'schedule': 2,
         'options': {
             'queue': 'market',
             'expire': 2
@@ -164,14 +164,14 @@ app.conf.beat_schedule = {
             'expire': 5
         },
     },
-    'send_level_2_prize_sms': {
-        'task': 'accounts.tasks.send_sms.send_level_2_prize_notifs',
-        'schedule': crontab(hour=4, minute=30),
-        'options': {
-            'queue': 'celery',
-            'expire': 3600
-        }
-    },
+    # 'send_level_2_prize_sms': {
+    #     'task': 'accounts.tasks.send_sms.send_level_2_prize_notifs',
+    #     'schedule': crontab(hour=4, minute=30),
+    #     'options': {
+    #         'queue': 'celery',
+    #         'expire': 3600
+    #     }
+    # },
     'send_first_fiat_deposit_sms': {
         'task': 'accounts.tasks.send_first_fiat_deposit_notifs',
         'schedule': crontab(hour=4, minute=30),

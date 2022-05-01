@@ -1,19 +1,21 @@
 import logging
 from decimal import Decimal
 from itertools import groupby
+from math import floor, log10
 from random import randrange
 
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Sum, F, Q
+from django.utils import timezone
 
-from accounts.models import Account
-from ledger.models import Trx, Wallet
+from ledger.models import Trx, Wallet, BalanceLock
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
-from ledger.utils.precision import floor_precision
+from ledger.utils.precision import floor_precision, round_down_to_exponent
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
 from market.models import PairSymbol
+from market.models.referral_trx import ReferralTrx
 from provider.models import ProviderOrder
 
 logger = logging.getLogger(__name__)
@@ -63,7 +65,7 @@ class Order(models.Model):
     fill_type = models.CharField(max_length=8, choices=FILL_TYPE_CHOICES)
     status = models.CharField(default=NEW, max_length=8, choices=STATUS_CHOICES)
 
-    lock = get_lock_field(null=True, related_name='market_order')
+    lock = get_lock_field(related_name='market_order')
 
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
@@ -110,35 +112,35 @@ class Order(models.Model):
         return ('-price', '-created') if side == Order.BUY else ('price', '-created')
 
     @classmethod
-    def cancel_orders(cls, symbol: PairSymbol, to_cancel_orders=None):
-        if to_cancel_orders is None:
-            to_cancel_orders = Order.open_objects.filter(
-                symbol=symbol, cancel_request__isnull=False
-            )
-        else:
-            to_cancel_orders = to_cancel_orders.exclude(status=cls.FILLED)
+    def cancel_orders(cls, to_cancel_orders):
+        to_cancel_orders = to_cancel_orders.exclude(status=cls.FILLED)
 
+        now = timezone.now()
+
+        lock_ids = list(to_cancel_orders.values_list('lock_id', flat=True))
         cancels = to_cancel_orders.update(status=Order.CANCELED)
-        logger.info(f'cancels: {cancels}')
 
-        for order in to_cancel_orders:
-            order.release_lock()
+        BalanceLock.objects.filter(id__in=lock_ids).update(freed=True, release_date=now)
+
+        logger.info(f'cancels: {cancels}')
 
     @staticmethod
     def get_price_filter(price, side):
         return {'price__lte': price} if side == Order.BUY else {'price__gte': price}
 
     @staticmethod
-    def get_maker_price(symbol: PairSymbol, side: str, loose_factor=Decimal(1)):
-        coin = symbol.asset.symbol
-        base_symbol = symbol.base_asset.symbol
-
-        if base_symbol == IRT:
-            boundary_price = get_trading_price_irt(coin, side)
-        elif base_symbol == USDT:
-            boundary_price = get_trading_price_usdt(coin, side)
+    def get_maker_price(symbol: PairSymbol.IdName, side: str, loose_factor=Decimal(1)):
+        if symbol.name.endswith(IRT):
+            base_symbol = IRT
+            get_trading_price = get_trading_price_irt
+        elif symbol.name.endswith(USDT):
+            base_symbol = USDT
+            get_trading_price = get_trading_price_usdt
         else:
             raise NotImplementedError('Invalid trading symbol')
+
+        coin = symbol.name.split(base_symbol)[0]
+        boundary_price = get_trading_price(coin, side)
 
         return boundary_price * loose_factor if side == Order.BUY else boundary_price / loose_factor
 
@@ -160,11 +162,7 @@ class Order(models.Model):
         self.lock = lock_wallet.lock_balance(lock_amount)
         self.save()
 
-    def release_lock(self, release_amount=None):
-        if release_amount is None:
-            self.lock.release()
-            return
-
+    def release_lock(self, release_amount):
         from ledger.models import BalanceLock
         release_amount = Order.get_lock_amount(release_amount, self.price, self.side)
         BalanceLock.objects.filter(id=self.lock.id).update(amount=F('amount') - release_amount)
@@ -175,7 +173,10 @@ class Order(models.Model):
             # lock current order
             Order.objects.select_for_update().filter(id=self.id).first()
 
-            self.cancel_orders(self.symbol)
+            to_cancel_orders = Order.open_objects.filter(
+                symbol=self.symbol, cancel_request__isnull=False
+            )
+            self.cancel_orders(to_cancel_orders)
 
             opp_side = self.get_opposite_side(self.side)
 
@@ -185,13 +186,12 @@ class Order(models.Model):
 
             logger.info(f'open orders: {matching_orders}')
 
-            system = Account.system()
-
             unfilled_amount = self.unfilled_amount
 
             fill_orders = []
             trx_list = []
 
+            referral_list = []
             for matching_order in matching_orders:
                 trade_price = matching_order.price
                 if (self.side == Order.BUY and self.price < trade_price) or (
@@ -222,9 +222,12 @@ class Order(models.Model):
                     irt_value=base_irt_price * trade_price * match_amount,
                     trade_source=FillOrder.SYSTEM if is_system_trade else FillOrder.MARKET
                 )
-                trade_trx_list = fill_order.init_trade_trxs(system)
+                trade_trx_list = fill_order.init_trade_trxs()
                 trx_list.extend(trade_trx_list.values())
                 fill_order.calculate_amounts_from_trx(trade_trx_list)
+                referral_trx = fill_order.init_referrals(trade_trx_list)
+                trx_list.extend(referral_trx.trx)
+                referral_list.extend(referral_trx.referral)
 
                 fill_orders.append(fill_order)
 
@@ -266,7 +269,8 @@ class Order(models.Model):
                         })
                     break
 
-            Trx.objects.bulk_create(filter(bool, trx_list))
+            Trx.objects.bulk_create(filter(lambda trx: trx and trx.amount, trx_list))
+            ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referral_list))
             FillOrder.objects.bulk_create(fill_orders)
 
     # OrderBook related methods
@@ -294,9 +298,9 @@ class Order(models.Model):
     @staticmethod
     def get_depth_value(amount, price, base_asset: str):
         if base_asset == Asset.IRT:
-            return str(floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_IRT * 100, 0))
+            return str(min(100, floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_IRT * 100, 0)))
         if base_asset == Asset.USDT:
-            return str(floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_USDT * 100, 0))
+            return str(min(100, floor_precision((amount * price) / Order.MAX_ORDER_DEPTH_SIZE_USDT * 100, 0)))
 
     @staticmethod
     def quantize_values(symbol: PairSymbol, open_orders):
@@ -308,28 +312,30 @@ class Order(models.Model):
 
     # Market Maker related methods
     @staticmethod
-    def init_maker_order(symbol: PairSymbol, side, maker_price: Decimal, system=None, market=Wallet.SPOT):
-        if system is None:
-            system = Account.system()
+    def get_maker_precision(symbol, price):
+        power = floor(log10(price))
+        precision = min(3, -power / 3) if power > 2 else (3 - power)
+        return int(min(symbol.tick_size, precision))
 
-        amount = floor_precision(symbol.maker_amount * Decimal(randrange(1, 40) / 20.0), symbol.step_size)
-        wallet = symbol.asset.get_wallet(system, market=market)
+    @staticmethod
+    def init_maker_order(symbol: PairSymbol.IdName, side, maker_price: Decimal, market=Wallet.SPOT):
+        symbol_instance = PairSymbol.objects.get(id=symbol.id)
+        amount = floor_precision(symbol_instance.maker_amount * Decimal(randrange(1, 40) / 20.0),
+                                 symbol_instance.step_size)
+        wallet = symbol_instance.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
+        precision = Order.get_maker_precision(symbol_instance, maker_price)
         return Order(
             type=Order.DEPTH,
             wallet=wallet,
-            symbol=symbol,
+            symbol=symbol_instance,
             amount=amount,
-            price=floor_precision(maker_price, symbol.tick_size),
+            price=round_down_to_exponent(maker_price, precision),
             side=side,
             fill_type=Order.LIMIT
         )
 
     @classmethod
-    def init_top_maker_order(cls, symbol, side, price, best_order, best_opp_order, market=Wallet.SPOT,
-                             system=None):
-        if system is None:
-            system = Account.system()
-
+    def init_top_maker_order(cls, symbol, side, price, best_order, best_opp_order, market=Wallet.SPOT):
         maker_price = None
         if not best_opp_order:
             maker_price = price
@@ -339,27 +345,51 @@ class Order(models.Model):
             maker_price = max(price, best_opp_order * Decimal(1 + 0.01))
 
         if not maker_price:
-            logger.warning(f'cannot calculate maker price for {symbol} {side}')
+            logger.warning(f'cannot calculate maker price for {symbol.name} {side}')
             return
+        symbol_instance = PairSymbol.objects.get(id=symbol.id)
+        precision = Order.get_maker_precision(symbol_instance, maker_price)
+        maker_price = round_down_to_exponent(maker_price, precision)
 
-        loose_factor = Decimal('1.0005') if side == Order.BUY else 1 / Decimal('1.0005')
+        loose_factor = Decimal('1.001') if side == Order.BUY else 1 / Decimal('1.001')
         if not best_order or \
                 (side == Order.BUY and maker_price > best_order * loose_factor) or \
                 (side == Order.SELL and maker_price < best_order * loose_factor):
-            return cls.init_maker_order(symbol, side, maker_price, system, market)
+            return cls.init_maker_order(symbol, side, maker_price, market)
 
     @classmethod
-    def cancel_invalid_maker_orders(cls, symbol: PairSymbol):
+    def cancel_invalid_maker_orders(cls, symbol: PairSymbol.IdName, top_prices):
         for side in (Order.BUY, Order.SELL):
-            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.0005'))
+            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.001'))
+            if (side == Order.BUY and Decimal(top_prices[side]) <= price) or (
+                    side == Order.SELL and Decimal(top_prices[side]) >= price):
+                logger.info(f'maker {side} ignore cancels with price: {price} top: {top_prices[side]}')
+                continue
 
-            invalid_orders = cls.open_objects.select_for_update().filter(symbol=symbol, side=side).exclude(
+            invalid_orders = Order.open_objects.select_for_update().filter(symbol_id=symbol.id, side=side).exclude(
                 type=Order.ORDINARY
             ).exclude(**cls.get_price_filter(price, side))
 
-            cls.cancel_orders(symbol, to_cancel_orders=invalid_orders)
+            cls.cancel_orders(invalid_orders)
 
             logger.info(f'maker {side} cancels with price: {price}')
+
+    @classmethod
+    def cancel_waste_maker_orders(cls, symbol: PairSymbol.IdName, open_orders_count):
+        for side in (Order.BUY, Order.SELL):
+            wasted_orders = Order.open_objects.filter(symbol_id=symbol.id, side=side).exclude(
+                type=Order.ORDINARY
+            )
+            wasted_orders = wasted_orders.order_by('price') if side == Order.BUY else wasted_orders.order_by('-price')
+            cancel_count = int(open_orders_count[side]) - Order.MAKER_ORDERS_COUNT
+
+            logger.info(f'maker {symbol.name} {side}: wasted={len(wasted_orders)} cancels={cancel_count}')
+
+            if cancel_count > 0:
+                cls.cancel_orders(
+                    Order.objects.filter(id__in=wasted_orders.values_list('id', flat=True)[:cancel_count])
+                )
+                logger.info(f'maker {side} cancel wastes')
 
     @classmethod
     def update_filled_amount(cls, order_ids, match_amount):

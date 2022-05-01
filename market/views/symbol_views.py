@@ -18,12 +18,11 @@ class SymbolFilter(django_filters.FilterSet):
 
 
 class SymbolListAPIView(ListAPIView):
-    authentication_classes = (SessionAuthentication,)
-    permission_classes = (IsAuthenticated,)
-
+    authentication_classes = ()
+    permission_classes = ()
     filter_backends = [DjangoFilterBackend]
     filter_class = SymbolFilter
-    queryset = PairSymbol.objects.all()
+    queryset = PairSymbol.objects.all().order_by('-asset__trend', 'asset__order')
 
     def get_serializer_class(self):
         if self.request.query_params.get('stats') == '1':
@@ -33,8 +32,8 @@ class SymbolListAPIView(ListAPIView):
 
 
 class SymbolDetailedStatsAPIView(RetrieveAPIView):
-    authentication_classes = (SessionAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    authentication_classes = ()
+    permission_classes = ()
 
     serializer_class = SymbolStatsSerializer
     queryset = PairSymbol.objects.all()

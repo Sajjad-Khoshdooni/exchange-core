@@ -1,7 +1,11 @@
+import logging
+
 import requests
 from django.conf import settings
 from yekta_config import secret
 from yekta_config.config import config
+
+logger = logging.getLogger(__name__)
 
 
 def send_support_message(message: str, link: str):
@@ -19,7 +23,10 @@ def send_support_message(message: str, link: str):
         text=text,
     )
 
-    return requests.get(url, timeout=5)
+    try:
+        return requests.get(url, timeout=5)
+    except:
+        logger.warning('Failed to send telegram support')
 
 
 def send_system_message(message: str, link: str):
@@ -36,4 +43,7 @@ def send_system_message(message: str, link: str):
         text=text
     )
 
-    return requests.get(url, timeout=5)
+    try:
+        return requests.get(url, timeout=5)
+    except:
+        logger.warning('Failed to send telegram system')

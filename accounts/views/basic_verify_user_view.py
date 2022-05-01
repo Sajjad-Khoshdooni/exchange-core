@@ -15,7 +15,7 @@ class CardPanField(serializers.CharField):
             return BankCardSerializer(instance=value).data
 
     def get_attribute(self, user: User):
-        return BankCard.objects.filter(user=user).order_by('verified', 'id').first()
+        return BankCard.live_objects.filter(user=user).order_by('verified', 'id').first()
 
 
 class IbanField(serializers.CharField):
@@ -24,7 +24,7 @@ class IbanField(serializers.CharField):
             return BankAccountSerializer(instance=value).data
 
     def get_attribute(self, user: User):
-        return BankAccount.objects.filter(user=user).order_by('verified', 'id').first()
+        return BankAccount.live_objects.filter(user=user).order_by('verified', 'id').first()
 
 
 class BasicInfoSerializer(serializers.ModelSerializer):
@@ -52,18 +52,18 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         card_pan = validated_data.pop('card_pan')
         iban = validated_data.pop('iban')
 
-        if BankCard.objects.filter(card_pan=card_pan, verified=True).exclude(user=user).exists():
+        if BankCard.live_objects.filter(card_pan=card_pan, verified=True).exclude(user=user).exists():
             raise ValidationError('این شماره کارت قبلا ثبت شده است.')
 
-        if BankAccount.objects.filter(iban=iban, verified=True).exclude(user=user).exists():
+        if BankAccount.live_objects.filter(iban=iban, verified=True).exclude(user=user).exists():
             raise ValidationError('این شماره شبا قبلا ثبت شده است.')
 
-        bank_card = BankCard.objects.filter(user=user, card_pan=card_pan).first()
-        bank_account = BankAccount.objects.filter(user=user, iban=iban).first()
+        bank_card = BankCard.live_objects.filter(user=user, card_pan=card_pan).first()
+        bank_account = BankAccount.live_objects.filter(user=user, iban=iban).first()
 
         if not bank_card:
             # new bank_card
-            if BankCard.objects.filter(user=user, verified=True).exists():
+            if BankCard.live_objects.filter(user=user, verified=True).exists():
                 raise ValidationError('امکان تغییر شماره کارت تایید شده وجود ندارد.')
 
             # BankCard.objects.filter(user=user).delete()
@@ -71,7 +71,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
         if not bank_account:
             # new bank_card
-            if BankAccount.objects.filter(user=user, verified=True).exists():
+            if BankAccount.live_objects.filter(user=user, verified=True).exists():
                 raise ValidationError('امکان تغییر شماره شبای تایید شده وجود ندارد.')
 
             # BankAccount.objects.filter(user=user).delete()
@@ -93,6 +93,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             user.birth_date = validated_data['birth_date']
             user.birth_date_verified = None
 
+        user.save()
         user.change_status(User.PENDING)
 
         from accounts.tasks import basic_verify_user
@@ -107,11 +108,11 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'verify_status', 'level', 'first_name', 'last_name', 'birth_date', 'national_code', 'card_pan', 'iban',
-            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified'
+            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified',
         )
         read_only_fields = (
             'verify_status', 'level',
-            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified'
+            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified',
         )
         extra_kwargs = {
             'first_name': {'required': True},

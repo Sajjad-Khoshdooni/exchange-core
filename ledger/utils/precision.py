@@ -1,6 +1,13 @@
 from decimal import Decimal, ROUND_DOWN
 
 
+def round_down_to_exponent(amount: Decimal, precision: int = 0):
+    if precision < 0:
+        power = Decimal(f'1e{-precision}')
+        return amount // power * power
+    return floor_precision(amount, precision)
+
+
 def floor_precision(amount: Decimal, precision: int = 0):
     step = precision_to_step(precision)
     return amount.quantize(step, rounding=ROUND_DOWN)

@@ -33,6 +33,13 @@ class Account(models.Model):
     def is_ordinary_user(self) -> bool:
         return not bool(self.type)
 
+    referred_by = models.ForeignKey(
+        to='accounts.Referral',
+        on_delete=models.SET_NULL,
+        related_name='referred_accounts',
+        null=True, blank=True
+    )
+
     def is_system(self) -> bool:
         return self.type == self.SYSTEM
 

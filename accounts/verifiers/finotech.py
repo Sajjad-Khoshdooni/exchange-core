@@ -4,6 +4,7 @@ import logging
 import requests
 from django.core.cache import caches
 from django.utils import timezone
+from urllib3.exceptions import ReadTimeoutError
 from yekta_config import secret
 from yekta_config.config import config
 
@@ -16,6 +17,10 @@ token_cache = caches['token']
 
 
 FINOTECH_TOKEN_KEY = 'finotech-token'
+
+
+class ServerError(Exception):
+    pass
 
 
 class FinotechRequester:
@@ -87,10 +92,12 @@ class FinotechRequester:
 
         request_kwargs = {
             'url': url,
-            'timeout': 60,
+            'timeout': 10,
             'headers': {'Authorization': 'Bearer ' + token},
             'proxies': {
+                'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
                 'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+                'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
             }
         }
 
@@ -100,7 +107,7 @@ class FinotechRequester:
             else:
                 method_prop = getattr(requests, method.lower())
                 resp = method_prop(data=data, **request_kwargs)
-        except requests.exceptions.ConnectionError:
+        except (requests.exceptions.ConnectionError, ReadTimeoutError, requests.exceptions.Timeout):
             req_object.response = 'timeout'
             req_object.status_code = 100
             req_object.save()
@@ -148,6 +155,9 @@ class FinotechRequester:
             search_key='shahkar-%s-%s' % (national_code, phone_number)
         )
 
+        if not resp:
+            raise ServerError
+
         return resp['isValid']
 
     def get_iban_info(self, iban: str) -> dict:
@@ -171,6 +181,9 @@ class FinotechRequester:
             },
             search_key='mobcard-%s-%s' % (phone_number, card_pan)
         )
+
+        if not resp:
+            raise ServerError
 
         return resp['isValid']
 

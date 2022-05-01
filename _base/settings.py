@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'collector',
     'market',
     'trader',
+    'jalali_date',
 ]
 
 MIDDLEWARE = [
@@ -152,6 +153,7 @@ CACHES = {
 PROVIDER_CACHE_LOCATION = secret('PROVIDER_CACHE_LOCATION', default='redis://127.0.0.1:6379/2')
 METRICS_CACHE_LOCATION = secret('METRICS_CACHE_LOCATION', default='redis://127.0.0.1:6379/0')
 TRADER_CACHE_LOCATION = secret('TRADER_CACHE_LOCATION', default='redis://127.0.0.1:6379/1')
+MARKET_CACHE_LOCATION = secret('MARKET_CACHE_LOCATION', default='redis://127.0.0.1:6379/3')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -285,3 +287,22 @@ EMAIL_HOST = config('EMAIL_HOST', default='smtp.elasticemail.com')
 EMAIL_PORT = config('EMAIL_PORT', default=2525)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = secret('EMAIL_HOST_PASSWORD')
+
+JALALI_DATE_DEFAULTS = {
+   'Strftime': {
+        'date': '%y/%m/%d',
+        'datetime': '%H:%M:%S _ %y/%m/%d',
+    },
+    'Static': {
+        'js': [
+            'admin/js/django_jalali.min.js',
+        ],
+        'css': {
+            'all': [
+                'admin/jquery.ui.datepicker.jalali/themes/base/jquery-ui.min.css',
+            ]
+        }
+    },
+}
+
+SYSTEM_ACCOUNT_ID = config('SYSTEM_ACCOUNT_ID', default=1)

@@ -5,16 +5,20 @@ from django.utils import timezone
 
 from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.similarity import str_similar_rate, clean_persian_name
+from accounts.utils.similarity import str_similar_rate, clean_persian_name, rotate_words
 from accounts.utils.telegram import send_support_message
-from accounts.verifiers.finotech import FinotechRequester
+from accounts.verifiers.finotech import FinotechRequester, ServerError
 from financial.models import BankCard, BankAccount
 
 logger = logging.getLogger(__name__)
 
+IBAN_NAME_SIMILARITY_THRESHOLD = 0.75
+
 
 def basic_verify(user: User):
-    assert user.level == User.LEVEL1
+    if user.level != User.LEVEL1:
+        logger.info('ignoring double verifying user_d = %d' % user.id)
+        return
 
     if not user.national_code_verified:
         logger.info('verifying national_code for user_d = %d' % user.id)
@@ -74,13 +78,21 @@ def basic_verify(user: User):
     user.verify_level2_if_not()
 
 
-def verify_national_code(user: User) -> bool:
+def verify_national_code(user: User, retry: int = 5) -> bool:
     if not user.national_code:
         return False
 
     requester = FinotechRequester(user)
 
-    verified = requester.verify_phone_number_national_code(user.phone, user.national_code)
+    try:
+        verified = requester.verify_phone_number_national_code(user.phone, user.national_code)
+    except (TimeoutError, ServerError):
+        if retry == 0:
+            logger.error('Finotech timeout verify_national_code')
+            return
+        else:
+            logger.info('Retrying verify_national_code...')
+            return verify_national_code(user, retry - 1)
 
     user.national_code_verified = verified
     user.save()
@@ -99,7 +111,7 @@ def verify_national_code(user: User) -> bool:
     return verified
 
 
-def verify_user_primary_info(user: User) -> bool:
+def verify_user_primary_info(user: User, retry: int = 5) -> bool:
     if not user.national_code_verified:
         return False
 
@@ -108,12 +120,20 @@ def verify_user_primary_info(user: User) -> bool:
 
     requester = FinotechRequester(user)
 
-    data = requester.verify_basic_info(
-        national_code=user.national_code,
-        birth_date=user.birth_date,
-        first_name=user.first_name,
-        last_name=user.last_name,
-    )
+    try:
+        data = requester.verify_basic_info(
+            national_code=user.national_code,
+            birth_date=user.birth_date,
+            first_name=user.first_name,
+            last_name=user.last_name,
+        )
+    except (TimeoutError, ServerError):
+        if retry == 0:
+            logger.error('Finotech timeout user_primary_info')
+            return
+        else:
+            logger.info('Retrying verify_national_code...')
+            return verify_user_primary_info(user, retry - 1)
 
     user.birth_date_verified = bool(data)
     user.save()
@@ -122,8 +142,10 @@ def verify_user_primary_info(user: User) -> bool:
         user.change_status(User.REJECTED)
         return False
 
-    user.first_name_verified = data['firstNameSimilarity'] >= 70 or None
-    user.last_name_verified = data['lastNameSimilarity'] >= 70 or None
+    similarity_sum = data['firstNameSimilarity'] + data['lastNameSimilarity']
+
+    user.first_name_verified = data['firstNameSimilarity'] >= 70 or similarity_sum >= 150 or None
+    user.last_name_verified = data['lastNameSimilarity'] >= 70 or similarity_sum >= 150 or None
     user.save()
 
     if not user.first_name_verified or not user.last_name_verified:
@@ -142,8 +164,8 @@ def verify_user_primary_info(user: User) -> bool:
     return True
 
 
-def verify_bank_card(bank_card: BankCard) -> bool:
-    if BankCard.objects.filter(card_pan=bank_card.card_pan, verified=True).exclude(id=bank_card.id).exists():
+def verify_bank_card(bank_card: BankCard, retry: int = 5) -> bool:
+    if BankCard.live_objects.filter(card_pan=bank_card.card_pan, verified=True).exclude(id=bank_card.id).exists():
         logger.info('rejecting bank card because of duplication')
         bank_card.verified = False
         bank_card.save()
@@ -153,13 +175,13 @@ def verify_bank_card(bank_card: BankCard) -> bool:
 
     try:
         verified = requester.verify_card_pan_phone_number(bank_card.user.phone, bank_card.card_pan)
-    except TimeoutError:
-        link = url_to_edit_object(bank_card)
-        send_support_message(
-            message='تایید شماره کارت کاربر با مشکل مواجه شد. لطفا دستی بررسی شود.',
-            link=link
-        )
-        return
+    except (TimeoutError, ServerError):
+        if retry == 0:
+            logger.error('Finotech timeout bank_card')
+            return
+        else:
+            logger.info('Retrying verify_national_code...')
+            return verify_bank_card(bank_card, retry - 1)
 
     bank_card.verified = verified
     bank_card.save()
@@ -177,8 +199,8 @@ DEPOSIT_STATUS_MAP = {
 }
 
 
-def verify_bank_account(bank_account: BankAccount) -> bool:
-    if BankAccount.objects.filter(iban=bank_account.iban, verified=True).exclude(id=bank_account.id).exists():
+def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
+    if BankAccount.live_objects.filter(iban=bank_account.iban, verified=True).exclude(id=bank_account.id).exists():
         logger.info('rejecting bank account because of duplication')
         bank_account.verified = False
         bank_account.save()
@@ -188,17 +210,22 @@ def verify_bank_account(bank_account: BankAccount) -> bool:
 
     try:
         data = requester.get_iban_info(bank_account.iban)
+
         if not data:
-            raise TimeoutError
+            link = url_to_edit_object(bank_account)
+            send_support_message(
+                message='تایید شماره شبای کاربر با مشکل مواجه شد. لطفا دستی بررسی شود.',
+                link=link
+            )
+            return
 
-    except TimeoutError:
-        link = url_to_edit_object(bank_account)
-        send_support_message(
-            message='تایید شماره شبای کاربر با مشکل مواجه شد. لطفا دستی بررسی شود.',
-            link=link
-        )
-
-        return
+    except (TimeoutError, ServerError):
+        if retry == 0:
+            logger.error('Finotech timeout bank_account')
+            return
+        else:
+            logger.info('Retrying verify_national_code...')
+            return verify_bank_account(bank_account, retry - 1)
 
     bank_account.bank_name = data['bankName']
     bank_account.deposit_address = data['deposit']
@@ -214,8 +241,14 @@ def verify_bank_account(bank_account: BankAccount) -> bool:
         owner = owners[0]
         owner_full_name = owner['firstName'] + ' ' + owner['lastName']
 
-        verified = str_similar_rate(
-            clean_persian_name(owner_full_name), clean_persian_name(user.get_full_name())) >= 0.7
+        name1, name2 = clean_persian_name(owner_full_name), clean_persian_name(user.get_full_name())
+
+        verified = str_similar_rate(name1, name2) >= IBAN_NAME_SIMILARITY_THRESHOLD
+
+        if not verified:
+            name1_rotate = rotate_words(name1)
+
+            verified = str_similar_rate(name1_rotate, name2) >= IBAN_NAME_SIMILARITY_THRESHOLD
 
     bank_account.verified = verified
     bank_account.save()

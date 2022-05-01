@@ -16,10 +16,14 @@ class AssetListSerializer(serializers.ModelSerializer):
     balance = serializers.SerializerMethodField()
     balance_irt = serializers.SerializerMethodField()
     balance_usdt = serializers.SerializerMethodField()
+
     sell_price_irt = serializers.SerializerMethodField()
     buy_price_irt = serializers.SerializerMethodField()
     can_deposit = serializers.SerializerMethodField()
     can_withdraw = serializers.SerializerMethodField()
+
+    free = serializers.SerializerMethodField()
+    free_irt = serializers.SerializerMethodField()
 
     def get_wallet(self, asset: Asset):
         return self.context['asset_to_wallet'].get(asset.id)
@@ -32,6 +36,15 @@ class AssetListSerializer(serializers.ModelSerializer):
 
         return asset.get_presentation_amount(wallet.get_balance())
 
+    def get_balance_irt(self, asset: Asset):
+        wallet = self.get_wallet(asset)
+
+        if not wallet:
+            return '0'
+
+        amount = wallet.get_balance_irt()
+        return asset.get_presentation_price_irt(amount)
+
     def get_balance_usdt(self, asset: Asset):
         wallet = self.get_wallet(asset)
 
@@ -41,13 +54,21 @@ class AssetListSerializer(serializers.ModelSerializer):
         amount = wallet.get_balance_usdt()
         return asset.get_presentation_price_usdt(amount)
 
-    def get_balance_irt(self, asset: Asset):
+    def get_free(self, asset: Asset):
         wallet = self.get_wallet(asset)
 
         if not wallet:
             return '0'
 
-        amount = wallet.get_balance_irt()
+        return asset.get_presentation_amount(wallet.get_free())
+
+    def get_free_irt(self, asset: Asset):
+        wallet = self.get_wallet(asset)
+
+        if not wallet:
+            return '0'
+
+        amount = wallet.get_free_irt()
         return asset.get_presentation_price_irt(amount)
 
     def get_sell_price_irt(self, asset: Asset):
@@ -76,8 +97,8 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'precision', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt', 'buy_price_irt',
-                  'can_deposit', 'can_withdraw')
+        fields = ('symbol', 'precision', 'free', 'free_irt', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt',
+                  'buy_price_irt', 'can_deposit', 'can_withdraw')
         ref_name = 'ledger asset'
 
 
@@ -234,7 +255,7 @@ class WalletBalanceView(APIView):
 
         return Response({
             'symbol': asset.symbol,
-            'balance': wallet.asset.get_presentation_amount(wallet.get_balance()),
+            'balance': wallet.asset.get_presentation_amount(wallet.get_free()),
         })
 
 

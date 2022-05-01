@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class OrderBookAPIView(APIView):
+    authentication_classes = ()
     permission_classes = ()
 
     def get(self, request, symbol):

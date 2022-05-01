@@ -24,6 +24,11 @@ urlpatterns = [
         'get': 'retrieve',
         'delete': 'destroy'
     })),
-    path('withdraw/request/', WithdrawRequestView.as_view()),
+    path('withdraw/request/', WithdrawRequestView.as_view({
+        'post': 'create',
+    })),
+    path('withdraw/request/<int:pk>', WithdrawRequestView.as_view({
+        'delete': 'destroy'
+    })),
     path('withdraw/list/', WithdrawHistoryView.as_view()),
 ]
