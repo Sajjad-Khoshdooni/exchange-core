@@ -155,7 +155,7 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         }),
         (_('Important dates'), {'fields': (
             'get_last_login_jalali', 'get_date_joined_jalali', 'get_first_fiat_deposit_date_jalali',
-            'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
+            'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali', 'first_fiat_deposit_date'
         )}),
         (_('لینک های مهم'), {
             'fields': (

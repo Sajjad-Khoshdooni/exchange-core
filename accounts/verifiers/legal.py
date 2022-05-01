@@ -54,3 +54,8 @@ def is_48h_rule_passed(user: User) -> bool:
     )
 
     return working_days >= 2
+
+def possible_time_for_wthdraw(user: User):
+    if is_48h_rule_passed(user):
+        pass
+
