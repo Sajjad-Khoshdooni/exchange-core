@@ -319,7 +319,7 @@ class Order(models.Model):
         wallet = symbol_instance.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
         power = floor(log10(maker_price))
         precision = min(3, -power / 3) if power > 2 else (3 - power)
-        precision = min(symbol_instance.tick_size, precision)
+        precision = int(min(symbol_instance.tick_size, precision))
         return Order(
             type=Order.DEPTH,
             wallet=wallet,
