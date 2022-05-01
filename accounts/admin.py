@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
@@ -9,7 +7,7 @@ from django.db.models import Sum
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from simple_history.admin import SimpleHistoryAdmin
-from ledger.utils.precision import get_presentation_amount,humanize_number
+from ledger.utils.precision import get_presentation_amount
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -17,7 +15,7 @@ from financial.models.payment import Payment
 from financial.models.withdraw_request import FiatWithdrawRequest
 from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdraw_irt_value, CRYPTO_WITHDRAW_LIMIT, \
     get_crypto_withdraw_irt_value
-from ledger.models import OTCRequest, OTCTrade
+from ledger.models import OTCTrade
 from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import humanize_number
@@ -26,9 +24,8 @@ from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
 from .tasks import basic_verify_user
-from .tasks.verify_user import alert_user_verify_status
-from .utils.validation import gregorian_to_jalali_date, gregorian_to_jalali_date_str, gregorian_to_jalali_datetime_str
-from .verifiers.legal import is_48h_rule_passed, is_weekday
+from .utils.validation import  gregorian_to_jalali_date_str, gregorian_to_jalali_datetime_str
+from .verifiers.legal import is_48h_rule_passed
 
 MANUAL_VERIFY_CONDITION = Q(
     Q(first_name_verified=None) | Q(last_name_verified=None),
