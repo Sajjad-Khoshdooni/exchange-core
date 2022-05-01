@@ -29,6 +29,7 @@ class ReferralTestCase(TestCase):
         self.usdt = Asset.get('USDT')
         self.btcitr = PairSymbol.objects.get(name='BTCIRT')
         self.btcusdt = PairSymbol.objects.get(name='BTCUSDT')
+        self.usdtirt = PairSymbol.objects.get(name='USDTIRT')
 
         Trx.transaction(
             group_id=uuid4(),
@@ -121,4 +122,63 @@ class ReferralTestCase(TestCase):
             trx_referred.amount,
             ((ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - self.account_1_referral.owner_share_percent) / Decimal('100')) *
             self.btcitr.taker_fee * fill_order.amount * fill_order.price
+        )
+
+    def test_referral_usdt_irt(self):
+        order_5 = new_order(self.usdtirt, Account.system(), 20, 20000, Order.BUY)
+        order_6 = new_order(self.usdtirt, self.account_3, 20, 20000, Order.SELL)
+
+        order_7 = new_order(self.usdtirt, Account.system(), 10, 20000, Order.SELL)
+        order_8 = new_order(self.usdtirt, self.account_3, 10, 20000, Order.BUY)
+
+        order_5.refresh_from_db(), order_6.refresh_from_db(), order_7.refresh_from_db(), order_8.refresh_from_db()
+
+        fill_order = FillOrder.objects.get(maker_order=order_5)
+        fill_order_2 = FillOrder.objects.get(maker_order=order_7)
+
+        trx_referral = Trx.objects.get(
+            group_id=fill_order.group_id,
+            sender=self.irt.get_wallet(Account.system()),
+            receiver=self.irt.get_wallet(self.account_1),
+            scope=Trx.COMMISSION
+        )
+        trx_referred = Trx.objects.get(
+            group_id=fill_order.group_id,
+            sender=self.irt.get_wallet(Account.system()),
+            receiver=self.irt.get_wallet(self.account_3),
+            scope=Trx.COMMISSION
+        )
+
+        trx_referral_2 = Trx.objects.get(
+            group_id=fill_order_2.group_id,
+            sender=self.irt.get_wallet(Account.system()),
+            receiver=self.irt.get_wallet(self.account_1),
+            scope=Trx.COMMISSION
+        )
+        trx_referred_2 = Trx.objects.get(
+            group_id=fill_order_2.group_id,
+            sender=self.irt.get_wallet(Account.system()),
+            receiver=self.irt.get_wallet(self.account_3),
+            scope=Trx.COMMISSION
+        )
+        self.assertEqual(
+            trx_referral.amount,
+            self.account_1_referral.owner_share_percent / Decimal('100') *
+            self.usdtirt.taker_fee * fill_order.amount * fill_order.price
+        )
+        self.assertEqual(
+            trx_referred.amount,
+            ((ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - self.account_1_referral.owner_share_percent) / Decimal('100')) *
+            self.usdtirt.taker_fee * fill_order.amount * fill_order.price
+        )
+
+        self.assertEqual(
+            trx_referral_2.amount,
+            self.account_1_referral.owner_share_percent / Decimal('100') *
+            self.usdtirt.taker_fee * fill_order_2.amount * fill_order_2.price
+        )
+        self.assertEqual(
+            trx_referred_2.amount,
+            ((ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - self.account_1_referral.owner_share_percent) / Decimal('100')) *
+            self.usdtirt.taker_fee * fill_order_2.amount * fill_order_2.price
         )
