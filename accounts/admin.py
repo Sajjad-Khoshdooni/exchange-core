@@ -38,7 +38,7 @@ MANUAL_VERIFY_CONDITION = Q(
 
 
 class UserStatusFilter(SimpleListFilter):
-    title = 'تایید سطح دو یا سه'
+    title = 'تایید سطح دو '
     parameter_name = 'status_is_pending_or_rejected'
 
     def lookups(self, request, model_admin):
@@ -48,6 +48,21 @@ class UserStatusFilter(SimpleListFilter):
         user = request.GET.get('status_is_pending_or_rejected')
         if user is not None:
             return queryset.filter((Q(verify_status='pending') | Q(verify_status='rejected')))
+        else:
+            return queryset
+
+
+class UserPendingStatusFilter(SimpleListFilter):
+    title = 'تایید سطح  سه'
+    parameter_name = 'status_is_pending'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('status_is_pending')
+        if user is not None:
+            return queryset.filter(verify_status='pending')
         else:
             return queryset
 
@@ -170,7 +185,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                     'verify_status', 'get_source_medium', 'get_referrer_user')
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
-        'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter,
+        'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
         'is_staff', 'is_superuser', 'is_active', 'groups',
     )
     inlines = [UserCommentInLine]
@@ -188,6 +203,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_revenue_of_referred',
     )
     preserve_filters = ('archived', )
+
+    search_fields = (*UserAdmin.search_fields, 'national_code')
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
@@ -215,7 +232,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
         for user in to_reject_users:
             user.change_status(User.REJECTED)
-            alert_user_verify_status(user)
 
     @admin.action(description='بایگانی کاربر', permissions=['view'])
     def archive_users(self, request, queryset):

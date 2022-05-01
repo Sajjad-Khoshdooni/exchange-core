@@ -93,6 +93,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             user.birth_date = validated_data['birth_date']
             user.birth_date_verified = None
 
+        user.save()
         user.change_status(User.PENDING)
 
         from accounts.tasks import basic_verify_user
@@ -107,11 +108,11 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'verify_status', 'level', 'first_name', 'last_name', 'birth_date', 'national_code', 'card_pan', 'iban',
-            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified'
+            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified',
         )
         read_only_fields = (
             'verify_status', 'level',
-            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified'
+            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified',
         )
         extra_kwargs = {
             'first_name': {'required': True},

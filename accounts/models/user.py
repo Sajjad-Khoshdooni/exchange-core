@@ -1,8 +1,10 @@
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
-from django.db.models import Q
-from simple_history.models import HistoricalRecords
+from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from simple_history.models import HistoricalRecords
+
 from accounts.models import Notification
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
@@ -58,8 +60,8 @@ class User(AbstractUser):
     birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد',)
     birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد',)
 
-    level_2_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تاپید سطح ۲')
-    level_3_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تاپید سطح 3')
+    level_2_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تایید سطح ۲')
+    level_3_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تایید سطح 3')
 
     level = models.PositiveSmallIntegerField(
         default=LEVEL1,
@@ -128,9 +130,23 @@ class User(AbstractUser):
         default=''
     )
 
+    class Meta:
+        verbose_name = _('user')
+        verbose_name_plural = _('users')
+
+        constraints = [
+            UniqueConstraint(
+                fields=["national_code"],
+                name="unique_verified_national_code",
+                condition=Q(level__gt=1),
+            )
+        ]
+
     def change_status(self, status: str):
         from ledger.models import Prize, Asset
         from ledger.models.prize import alert_user_prize
+        from accounts.tasks.verify_user import alert_user_verify_status
+
         if self.verify_status != self.VERIFIED and status == self.VERIFIED:
             self.verify_status = self.INIT
             self.level += 1
@@ -138,23 +154,27 @@ class User(AbstractUser):
                 if self.level == User.LEVEL2:
                     self.level_2_verify_datetime = timezone.now()
 
-                    prize, created = Prize.objects.get_or_create(
-                        account=self.account,
-                        scope=Prize.LEVEL2_PRIZE,
-                        defaults={
-                            'amount': Prize.LEVEL2_PRIZE_AMOUNT,
-                            'asset': Asset.objects.get(symbol=Asset.SHIB)
-                        }
-                    )
-                    if created:
-                        prize.build_trx()
-                        alert_user_prize(self, Prize.LEVEL2_PRIZE)
+                    # prize, created = Prize.objects.get_or_create(
+                    #     account=self.account,
+                    #     scope=Prize.LEVEL2_PRIZE,
+                    #     defaults={
+                    #         'amount': Prize.LEVEL2_PRIZE_AMOUNT,
+                    #         'asset': Asset.objects.get(symbol=Asset.SHIB)
+                    #     }
+                    # )
+                    # if created:
+                    #     prize.build_trx()
+                    #     alert_user_prize(self, Prize.LEVEL2_PRIZE)
 
                 elif self.level == User.LEVEL3:
                     self.level_3_verify_datetime = timezone.now()
+
                 self.save()
-        else:
-            if self.level == self.LEVEL1 and self.verify_status != self.REJECTED and status == self.REJECTED:
+
+            alert_user_verify_status(self)
+
+        elif self.verify_status != self.REJECTED and status == self.REJECTED:
+            if self.level == self.LEVEL1:
                 link = url_to_edit_object(self)
                 send_support_message(
                     message='اطلاعات سطح %d کاربر مورد تایید قرار نگرفت. لطفا دستی بررسی شود.' % (self.level + 1),
@@ -164,6 +184,11 @@ class User(AbstractUser):
             self.verify_status = status
             self.save()
 
+            alert_user_verify_status(self)
+
+        else:
+            self.verify_status = status
+            self.save()
 
     @property
     def primary_data_verified(self) -> bool:
@@ -220,7 +245,6 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         old = self.id and User.objects.get(id=self.id)
-        from accounts.tasks.verify_user import alert_user_verify_status
         creating = not self.id
         super(User, self).save(*args, **kwargs)
 
@@ -239,8 +263,6 @@ class User(AbstractUser):
 
                 if not any_none and any_false:
                     self.change_status(self.REJECTED)
-
-            alert_user_verify_status(self)
 
         elif self.level == self.LEVEL1 and self.verify_status == self.PENDING:
             self.verify_level2_if_not()

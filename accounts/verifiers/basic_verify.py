@@ -12,7 +12,7 @@ from financial.models import BankCard, BankAccount
 
 logger = logging.getLogger(__name__)
 
-IBAN_NAME_SIMILARITY_THRESHOLD = 0.7
+IBAN_NAME_SIMILARITY_THRESHOLD = 0.75
 
 
 def basic_verify(user: User):

@@ -164,14 +164,14 @@ app.conf.beat_schedule = {
             'expire': 5
         },
     },
-    'send_level_2_prize_sms': {
-        'task': 'accounts.tasks.send_sms.send_level_2_prize_notifs',
-        'schedule': crontab(hour=4, minute=30),
-        'options': {
-            'queue': 'celery',
-            'expire': 3600
-        }
-    },
+    # 'send_level_2_prize_sms': {
+    #     'task': 'accounts.tasks.send_sms.send_level_2_prize_notifs',
+    #     'schedule': crontab(hour=4, minute=30),
+    #     'options': {
+    #         'queue': 'celery',
+    #         'expire': 3600
+    #     }
+    # },
     'send_first_fiat_deposit_sms': {
         'task': 'accounts.tasks.send_first_fiat_deposit_notifs',
         'schedule': crontab(hour=4, minute=30),

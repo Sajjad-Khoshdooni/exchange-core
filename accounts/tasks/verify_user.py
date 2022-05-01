@@ -14,7 +14,6 @@ def basic_verify_user(user_id: int):
     user = User.objects.get(id=user_id)  # type: User
 
     basic_verify(user)
-    alert_user_verify_status(user)
 
 
 def alert_user_verify_status(user: User):
