@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'collector',
     'market',
     'trader',
+    'jalali_date',
 ]
 
 MIDDLEWARE = [
@@ -280,3 +281,20 @@ SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', cast=bool, default=True)
 CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN', default='.raastin.com')
 CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='None')
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', cast=bool, default=True)
+
+JALALI_DATE_DEFAULTS = {
+   'Strftime': {
+        'date': '%y/%m/%d',
+        'datetime': '%H:%M:%S _ %y/%m/%d',
+    },
+    'Static': {
+        'js': [
+            'admin/js/django_jalali.min.js',
+        ],
+        'css': {
+            'all': [
+                'admin/jquery.ui.datepicker.jalali/themes/base/jquery-ui.min.css',
+            ]
+        }
+    },
+}
