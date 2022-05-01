@@ -40,22 +40,19 @@ def is_48h_rule_passed(user: User) -> bool:
 
     now = timezone.now()
 
-    delta_days = (now - user.first_fiat_deposit_date).days
+    delta_time = (now - user.first_fiat_deposit_date).total_seconds()
 
-    if delta_days >= 4:
+    if delta_time >= 48 * 60 * 60:
         return True
 
-    if delta_days < 1:
+    else:
         return False
 
-    working_days = get_working_hour_delta_days(
-        start=user.first_fiat_deposit_date.astimezone(),
-        end=now.astimezone()
-    )
-
-    return working_days >= 2
 
 def possible_time_for_wthdraw(user: User):
     if is_48h_rule_passed(user):
-        pass
-
+        return None
+    else:
+        start = user.first_fiat_deposit_date.astimezone()
+        possible_time = start + timedelta(hours=48)
+        return possible_time
