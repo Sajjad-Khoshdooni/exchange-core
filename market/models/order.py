@@ -1,7 +1,7 @@
 import logging
 from decimal import Decimal
 from itertools import groupby
-from math import log10
+from math import floor, log10
 from random import randrange
 
 from django.conf import settings
@@ -317,8 +317,8 @@ class Order(models.Model):
         amount = floor_precision(symbol_instance.maker_amount * Decimal(randrange(1, 40) / 20.0),
                                  symbol_instance.step_size)
         wallet = symbol_instance.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
-        power = int(log10(maker_price))
-        precision = min(3, power / 3) if power > 1 else min(symbol_instance.tick_size, 3 - power)
+        power = floor(log10(maker_price))
+        precision = min(3, power / 3) if power > 2 else min(symbol_instance.tick_size, 3 - power)
         return Order(
             type=Order.DEPTH,
             wallet=wallet,
