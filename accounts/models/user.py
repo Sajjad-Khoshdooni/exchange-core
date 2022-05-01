@@ -258,10 +258,10 @@ class User(AbstractUser):
 
             else:
                 fields = [self.telephone_verified, self.selfie_image_verified]
-                any_none = any(map(lambda f: f is None, fields))
+                # any_none = any(map(lambda f: f is None, fields))
                 any_false = any(map(lambda f: f is False, fields))
 
-                if not any_none and any_false:
+                if any_false:
                     self.change_status(self.REJECTED)
 
         elif self.level == self.LEVEL1 and self.verify_status == self.PENDING:
