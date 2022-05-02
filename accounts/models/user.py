@@ -42,8 +42,6 @@ class User(AbstractUser):
         }
     )
 
-    email_verified = models.BooleanField(default=False, verbose_name='تاییدیه ایمیل',)
-    email_verification_date = models.DateTimeField(null=True, blank=True)
 
     first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام',)
     last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی',)
@@ -118,6 +116,11 @@ class User(AbstractUser):
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
 
+    withdraw_before_48h_option = models.BooleanField(
+        default=False,
+        verbose_name='امکان برداشت وجه پیش از سپری شدن ۴۸ ساعت از اولین واریز',
+    )
+
     on_boarding_flow = models.CharField(
         max_length=10,
         choices=((FIAT, FIAT), (CRYPTO, CRYPTO),),
@@ -138,8 +141,8 @@ class User(AbstractUser):
         ]
 
     def change_status(self, status: str):
-        from ledger.models import Prize, Asset
-        from ledger.models.prize import alert_user_prize
+        # from ledger.models import Prize, Asset
+        # from ledger.models.prize import alert_user_prize
         from accounts.tasks.verify_user import alert_user_verify_status
 
         if self.verify_status != self.VERIFIED and status == self.VERIFIED:
@@ -253,10 +256,10 @@ class User(AbstractUser):
 
             else:
                 fields = [self.telephone_verified, self.selfie_image_verified]
-                any_none = any(map(lambda f: f is None, fields))
+                # any_none = any(map(lambda f: f is None, fields))
                 any_false = any(map(lambda f: f is False, fields))
 
-                if not any_none and any_false:
+                if any_false:
                     self.change_status(self.REJECTED)
 
         elif self.level == self.LEVEL1 and self.verify_status == self.PENDING:

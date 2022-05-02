@@ -246,11 +246,11 @@ class WalletAdmin(admin.ModelAdmin):
     get_locked.short_description = 'locked'
 
     def get_free_irt(self, wallet: models.Wallet):
-        return wallet.asset.get_presentation_price_irt(wallet.get_free_irt())
+        return wallet.asset.get_presentation_price_irt(wallet.get_balance_irt())
     get_free_irt.short_description = 'ارزش ریالی'
 
     def get_free_usdt(self, wallet: models.Wallet):
-        return wallet.asset.get_presentation_price_usdt(wallet.get_free_usdt())
+        return wallet.asset.get_presentation_price_usdt(wallet.get_balance_usdt())
     get_free_usdt.short_description = 'ارزش دلاری'
 
 
