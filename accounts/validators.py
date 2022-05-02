@@ -25,8 +25,13 @@ def telephone_number_validator(value):
         raise ValidationError('شماره تلفن معتبر نیست.')
 
 
+def email_validator(value):
+    if not re.match(r'^\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b$', value):
+        raise ValidationError('ایمیل معتبر نیست.')
+
+
 def iran_mobile_number_validator(value):
-    if not re.match(r'(09)(\d){9}', value):
+    if not re.match(r'^(09)(\d){9}$', value):
         raise ValidationError('شماره موبایل برای ایران معتبر نیست.')
 
 
