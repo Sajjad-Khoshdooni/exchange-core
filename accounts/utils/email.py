@@ -1,8 +1,12 @@
+import logging
+
 import requests
 from django.conf import settings
 from django.template.loader import render_to_string
-from yekta_config import secret
 from yekta_config.config import config
+
+logger = logging.getLogger(__name__)
+
 
 api_key = config('ELASTICMAIL_API_KEY')
 email_sender = config('EMAIL_SENDER')
@@ -55,4 +59,13 @@ def send_email(subject: str, body_html: str, body_text: str, to: list, transacti
         }
     )
 
-    return resp.json()
+    data = resp.json()
+
+    if not resp.ok:
+        logger.error("Error sending email to elastic", extra={
+            'subject': subject,
+            'status': resp.status_code,
+            'data': data
+        })
+
+    return data
