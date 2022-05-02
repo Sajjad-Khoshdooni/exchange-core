@@ -68,4 +68,6 @@ def send_email(subject: str, body_html: str, body_text: str, to: list, transacti
             'data': data
         })
 
+        print('elasticmail error', data)
+
     return data
