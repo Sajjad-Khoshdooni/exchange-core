@@ -61,7 +61,7 @@ def send_email(subject: str, body_html: str, body_text: str, to: list, transacti
 
     data = resp.json()
 
-    if not resp.ok:
+    if not resp.ok or not data['success']:
         logger.error("Error sending email to elastic", extra={
             'subject': subject,
             'status': resp.status_code,
