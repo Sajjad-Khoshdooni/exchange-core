@@ -4,7 +4,7 @@ from django.template.loader import render_to_string
 from yekta_config import secret
 from yekta_config.config import config
 
-api_key = secret('ELASTICMAIL_API_KEY')
+api_key = config('ELASTICMAIL_API_KEY')
 email_sender = config('EMAIL_SENDER')
 brand = config('BRAND')
 
@@ -12,7 +12,7 @@ brand = config('BRAND')
 TEMPLATES = {
     'verify_email': {
         'subject': 'راستین | کد تایید ایمیل',
-        'html': 'accounts/email/verify_email.html',
+        'html': 'accounts/email/verify_email.min.html',
         'text': 'accounts/text/verify_email.txt',
     }
 }
@@ -37,7 +37,7 @@ def send_email_by_template(recipient: str, template: str, context: dict = None):
 def send_email(subject: str, body_html: str, body_text: str, to: list, transactional: bool = True, purpose: str = 'Email'):
 
     resp = requests.post(
-        'https://api.elasticemail.com/email/send',
+        'https://api.elasticemail.com/v2/email/send',
         params={
             'apikey': api_key,
             'subject': subject,
