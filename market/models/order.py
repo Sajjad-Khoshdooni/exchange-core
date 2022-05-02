@@ -312,18 +312,19 @@ class Order(models.Model):
 
     # Market Maker related methods
     @staticmethod
-    def get_maker_precision(symbol, price):
-        power = floor(log10(price))
-        precision = min(3, -power / 3) if power > 2 else (3 - power)
-        return int(min(symbol.tick_size, precision))
+    def get_rounding_precision(number, max_precision):
+        power = floor(log10(number))
+        precision = min(3, -power / 3) if power > 2 else (2 - power)
+        return int(min(precision, max_precision))
 
     @staticmethod
     def init_maker_order(symbol: PairSymbol.IdName, side, maker_price: Decimal, market=Wallet.SPOT):
         symbol_instance = PairSymbol.objects.get(id=symbol.id)
-        amount = floor_precision(symbol_instance.maker_amount * Decimal(randrange(1, 40) / 20.0),
-                                 symbol_instance.step_size)
+        maker_amount = symbol_instance.maker_amount * Decimal(randrange(1, 40) / 20.0)
+        precision = Order.get_rounding_precision(maker_amount, symbol_instance.step_size)
+        amount = round_down_to_exponent(maker_amount, precision)
         wallet = symbol_instance.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
-        precision = Order.get_maker_precision(symbol_instance, maker_price)
+        precision = Order.get_rounding_precision(maker_price, symbol_instance.tick_size)
         return Order(
             type=Order.DEPTH,
             wallet=wallet,
@@ -348,7 +349,7 @@ class Order(models.Model):
             logger.warning(f'cannot calculate maker price for {symbol.name} {side}')
             return
         symbol_instance = PairSymbol.objects.get(id=symbol.id)
-        precision = Order.get_maker_precision(symbol_instance, maker_price)
+        precision = Order.get_rounding_precision(maker_price, symbol_instance.tick_size)
         maker_price = round_down_to_exponent(maker_price, precision)
 
         loose_factor = Decimal('1.001') if side == Order.BUY else 1 / Decimal('1.001')
