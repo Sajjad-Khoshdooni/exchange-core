@@ -282,7 +282,6 @@ CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN', default='.raastin.com')
 CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='None')
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', cast=bool, default=True)
 
-ELASTICMAIL_API_KEY = secret('ELASTIC_API_KEY')
 DEFAULT_FROM_EMAIL = 'راستین <%s>' % config('EMAIL_SENDER', default='')
 
 JALALI_DATE_DEFAULTS = {

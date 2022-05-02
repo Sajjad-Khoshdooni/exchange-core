@@ -6,7 +6,7 @@ from yekta_config.config import config
 
 api_key = secret('ELASTICMAIL_API_KEY')
 email_sender = config('EMAIL_SENDER')
-email_sender_name = config('EMAIL_SENDER_NAME')
+brand = config('BRAND')
 
 
 TEMPLATES = {
@@ -45,7 +45,7 @@ def send_email(subject: str, body_html: str, body_text: str, to: list, transacti
             'bodyText': body_text,
             'charset': 'utf-8',
             'from': email_sender,
-            'fromName': email_sender_name,
+            'fromName': brand,
             'isTransactional': transactional,
             'msgTo': ','.join(to),
             'utmSource': 'ElasticEmail',
