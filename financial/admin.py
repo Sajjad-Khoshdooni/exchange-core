@@ -163,7 +163,7 @@ class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     actions = ['verify_bank_cards', 'verify_bank_cards_manual', 'reject_bank_cards_manual']
 
     fields_edit_conditions = {
-        'verified': M('verified')
+        'verified': M.superuser | M('verified')
     }
 
     @admin.action(description='تایید خودکار شماره کارت')
@@ -216,7 +216,7 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     actions = ['verify_bank_accounts_manual', 'verify_bank_accounts_auto', 'reject_bank_accounts_manual']
 
     fields_edit_conditions = {
-        'verified': M('verified')
+        'verified': M.superuser | M('verified')
     }
 
     @admin.action(description='درخواست تایید خودکار شماره شبا')

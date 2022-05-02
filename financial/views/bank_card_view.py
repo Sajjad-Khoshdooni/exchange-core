@@ -20,6 +20,9 @@ class BankCardView(ModelViewSet):
         if bank_card.verified is None:
             raise ValidationError('شماره کارت در حال اعتبارسنجی است.')
 
+        if BankCard.live_objects.filter(user=bank_card.user).exclude(id=bank_card.id).count() == 0:
+            raise ValidationError('برای حذف این شماره کارت، ابتدا یک شماره کارت جدید وارد کنید.')
+
         if bank_card.verified and BankCard.live_objects.filter(user=bank_card.user, verified=True).count() == 1:
             raise ValidationError('شما باید حداقل یک شماره کارت تایید شده داشته باشید.')
 
