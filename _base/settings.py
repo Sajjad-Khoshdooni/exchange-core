@@ -235,6 +235,7 @@ REST_FRAMEWORK = {
 
     'DEFAULT_THROTTLE_RATES': {
         'burst': '5/min',
+        'sustained': '50/day',
     }
 }
 

@@ -1,13 +1,16 @@
+import logging
+from datetime import timedelta
+
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
-from accounts.models import User
 from django.utils import timezone
 
+from accounts.models import User
 from accounts.utils.email import send_email_by_template
 from accounts.utils.validation import generate_random_code, fifteen_minutes_later_datetime, MINUTES
-from django.template.loader import get_template, render_to_string
-from django.core.mail import EmailMessage, send_mail
+
+logger = logging.getLogger(__name__)
 
 
 class EmailVerificationCode(models.Model):
@@ -69,6 +72,15 @@ class EmailVerificationCode(models.Model):
     def send_otp_code(cls, email: str, scope: str, user):
 
         if not email:
+            return
+
+        any_recent_code = EmailVerificationCode.objects.filter(
+            phone=email,
+            created__gte=timezone.now() - timedelta(minutes=2),
+        ).exists()
+
+        if any_recent_code:
+            logger.info('Ignored sending email otp because of recent')
             return
 
         code_length = 6
