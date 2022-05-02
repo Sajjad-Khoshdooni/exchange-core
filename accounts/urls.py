@@ -34,8 +34,8 @@ urlpatterns = [
     path('verify/tel/init/', views.InitiateTelephoneVerifyView.as_view()),
     path('verify/tel/otp/', views.TelephoneOTPVerifyView.as_view()),
 
-    path('verify/email/init/', views.EmailVerifyView.as_view()),
-    path('verify/email/otp/', views.EmailOTPVerifyView.as_view()),
+    path('verify/email/otp/', views.EmailVerifyView.as_view()),
+    path('verify/email/verify/', views.EmailOTPVerifyView.as_view()),
 
     path('notifs/', views.NotificationViewSet.as_view({
         'get': 'list',

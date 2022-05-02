@@ -24,7 +24,7 @@ class EmailVerifyView(APIView):
         email = serializer.validated_data['email']
         user = self.request.user
         if User.objects.filter(email=email).exists():
-            raise ValidationError('ایمیل وارد شده در سیستم وجود دارد')
+            raise ValidationError('ایمیل وارد شده در سیستم وجود دارد.')
 
         EmailVerificationCode.send_otp_code(email, EmailVerificationCode.SCOPE_VERIFY_EMAIL, user)
 
