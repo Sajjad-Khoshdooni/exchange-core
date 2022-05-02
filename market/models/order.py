@@ -349,7 +349,7 @@ class Order(models.Model):
             logger.warning(f'cannot calculate maker price for {symbol.name} {side}')
             return
         symbol_instance = PairSymbol.objects.get(id=symbol.id)
-        precision = Order.get_maker_precision(symbol_instance, maker_price)
+        precision = Order.get_rounding_precision(maker_price, symbol_instance.tick_size)
         maker_price = round_down_to_exponent(maker_price, precision)
 
         loose_factor = Decimal('1.001') if side == Order.BUY else 1 / Decimal('1.001')
