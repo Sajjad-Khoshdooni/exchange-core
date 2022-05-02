@@ -149,7 +149,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                                          'get_birth_date_jalali', 'telephone', 'get_selfie_image', 'archived',
                                          'get_user_reject_reason', 'get_source_medium'
                                          )}),
-        (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
+        (_('Authentication'), {'fields': ('level', 'verify_status', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
                                           'telephone_verified', 'selfie_image_verified', 'selfie_image_verifier',
                                           'national_code_duplicated_alert', 'selfie_image_discard_text',
