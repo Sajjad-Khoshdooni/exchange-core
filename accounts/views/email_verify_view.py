@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from accounts.throttle import BurstRateThrottle
 from accounts.validators import email_validator
 from rest_framework.views import APIView
 from rest_framework.generics import UpdateAPIView
@@ -9,11 +11,11 @@ from rest_framework.response import Response
 
 
 class EmailSerializer(serializers.Serializer):
-
     email = serializers.EmailField(required=True, validators=[email_validator], trim_whitespace=True)
 
 
 class EmailVerifyView(APIView):
+    throttle_classes = [BurstRateThrottle]
 
     def post(self, request):
         serializer = EmailSerializer(data=request.data)
@@ -59,6 +61,7 @@ class EmailOTPVerifySerializer(serializers.ModelSerializer):
 
 class EmailOTPVerifyView(UpdateAPIView):
     serializer_class = EmailOTPVerifySerializer
+    throttle_classes = [BurstRateThrottle]
 
     def get_object(self):
         return self.request.user

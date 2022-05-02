@@ -3,9 +3,11 @@ from django.core.validators import RegexValidator
 from django.db import models
 from accounts.models import User
 from django.utils import timezone
+
+from accounts.utils.email import send_email_by_template
 from accounts.utils.validation import generate_random_code, fifteen_minutes_later_datetime, MINUTES
-from django.template.loader import get_template
-from django.core.mail import EmailMessage
+from django.template.loader import get_template, render_to_string
+from django.core.mail import EmailMessage, send_mail
 
 
 class EmailVerificationCode(models.Model):
@@ -17,6 +19,11 @@ class EmailVerificationCode(models.Model):
     SCOPE_CHOICES = [
         (SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_EMAIL, SCOPE_VERIFY_EMAIL),
     ]
+
+    TEMPLATES = {
+        # SCOPE_FORGET_PASSWORD: 'accounts/email/forget_password',
+        SCOPE_VERIFY_EMAIL: 'verify_email',
+    }
 
     created = models.DateTimeField(auto_now_add=True)
     expiration = models.DateTimeField(default=fifteen_minutes_later_datetime)
@@ -59,8 +66,10 @@ class EmailVerificationCode(models.Model):
         return otp_codes.order_by('created').last()
 
     @classmethod
-    def send_otp_code(cls, email: str, scope: str, user) -> 'EmailVerificationCode':
-        # todo: handle throttling (don't allow to send more than twice in minute per email / scope)
+    def send_otp_code(cls, email: str, scope: str, user):
+
+        if not email:
+            return
 
         code_length = 6
 
@@ -73,26 +82,16 @@ class EmailVerificationCode(models.Model):
 
         if settings.DEBUG:
             print('[OTP] code for %s is: %s' % (otp_code.email, otp_code.code))
-        else:
-            if otp_code.scope == EmailVerificationCode.SCOPE_VERIFY_EMAIL:
-                message = get_template("accounts/email_verify_content.html").render(
-                    {'context': otp_code.code}
-                )
-            elif otp_code.scope == EmailVerificationCode.SCOPE_FORGET_PASSWORD:
-                message = get_template("accounts/email_forgot_content.html").render(
-                    {'context': otp_code.code}
-                )
-            mail = EmailMessage(
-                subject='Subject here',
-                body=message,
-                to=[email],
-            )
-            mail.content_subtype = "html"
-            mail.send()
+            return
 
-        return otp_code
+        template = EmailVerificationCode.TEMPLATES[scope]
+
+        send_email_by_template(
+            recipient=email,
+            template=template,
+            context={'otp_code': otp_code.code}
+        )
 
     def set_code_used(self):
         self.code_used = True
         self.save()
-
