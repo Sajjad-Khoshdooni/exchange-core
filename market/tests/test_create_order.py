@@ -8,6 +8,8 @@ from market.models import PairSymbol, FillOrder, Order
 from market.utils import new_order, cancel_order
 
 
+# todo: check referral for USDTIRT
+
 class CreateOrderTestCase(TestCase):
     def setUp(self):
         PairSymbol.objects.filter(name='BTCIRT').update(enable=True)
@@ -66,7 +68,7 @@ class CreateOrderTestCase(TestCase):
     def test_fill_order_with_different_price(self):
         order_3 = new_order(self.btcirt, Account.system(), 2, 200000, Order.SELL)
         order_4 = new_order(self.btcirt, self.account, 2, 200010, Order.BUY)
-        order_3.refresh_from_db()
+        order_3.refresh_from_db(), order_4.refresh_from_db()
 
         fill_order = FillOrder.objects.get(maker_order=order_3)
 

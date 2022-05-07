@@ -3,6 +3,7 @@ from collections import namedtuple
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 
+from django.conf import settings
 from django.db import models
 
 from accounts.models import Account
@@ -45,10 +46,6 @@ class FillOrder(models.Model):
         default=MARKET
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.trade_trx_list = None
-
     def save(self, **kwargs):
         assert self.taker_order.symbol == self.maker_order.symbol == self.symbol
         return super(FillOrder, self).save(**kwargs)
@@ -87,17 +84,12 @@ class FillOrder(models.Model):
                f'({self.taker_order_id}-{self.maker_order_id}) ' \
                f'[p:{self.price:.2f}] (a:{self.amount:.5f})'
 
-    def init_trade_trxs(self, system: 'Account' = None, ignore_fee=False):
-        if not system:
-            system = Account.system()
-
+    def init_trade_trxs(self, ignore_fee=False):
         return {
             'amount': self.__init_trade_trx(),
             'base': self.__init_base_trx(),
-            'taker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.taker_order, is_taker=True,
-                                                                           system=system),
-            'maker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.maker_order, is_taker=False,
-                                                                           system=system),
+            'taker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.taker_order, is_taker=True),
+            'maker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.maker_order, is_taker=False),
         }
 
     def init_referrals(self, trade_trx_list):
@@ -109,7 +101,8 @@ class FillOrder(models.Model):
             trade_trx_list['maker_fee'],
             trade_trx_list['taker_fee'],
             self.price,
-            tether_irt
+            tether_irt,
+            is_buyer_maker=self.is_buyer_maker,
         )
         ReferralTrxTuple = namedtuple("ReferralTrx", "referral trx")
         return ReferralTrxTuple(referrals, ReferralTrx.get_trx_list(referrals))
@@ -132,10 +125,7 @@ class FillOrder(models.Model):
             scope=Trx.TRADE
         )
 
-    def __init_fee_trx(self, order, is_taker, system: 'Account' = None):
-        if not system:
-            system = Account.system()
-
+    def __init_fee_trx(self, order, is_taker):
         fee = order.symbol.taker_fee if is_taker else order.symbol.maker_fee
 
         fee_wallet = order.wallet if order.side == Order.BUY else order.base_wallet
@@ -144,7 +134,7 @@ class FillOrder(models.Model):
         if trx_amount:
             return Trx(
                 sender=fee_wallet,
-                receiver=fee_wallet.asset.get_wallet(system, market=fee_wallet.market),
+                receiver=fee_wallet.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=fee_wallet.market),
                 amount=trx_amount,
                 group_id=self.group_id,
                 scope=Trx.COMMISSION
@@ -190,7 +180,7 @@ class FillOrder(models.Model):
             amount = floor_precision(config.coin_amount, symbol.step_size)
             price = (config.cash_amount / config.coin_amount).quantize(
                 precision_to_step(symbol.tick_size), rounding=ROUND_HALF_UP)
-            system_wallet = symbol.asset.get_wallet(Account.system(), market=otc_trade.otc_request.market)
+            system_wallet = symbol.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=otc_trade.otc_request.market)
             maker_order = Order.objects.create(
                 wallet=system_wallet,
                 symbol=symbol,
@@ -230,15 +220,17 @@ class FillOrder(models.Model):
                 irt_value=base_irt_price * price * amount,
                 trade_source=FillOrder.OTC
             )
-            trade_trx_list = fill_order.init_trade_trxs(ignore_fee=True)
+            trade_trx_list = fill_order.init_trade_trxs()
             fill_order.calculate_amounts_from_trx(trade_trx_list)
             from market.models import ReferralTrx
             referral_trx = fill_order.init_referrals(trade_trx_list)
             ReferralTrx.objects.bulk_create(list(filter(bool, referral_trx.referral)))
             Trx.objects.bulk_create(list(filter(lambda trx: trx and trx.amount, referral_trx.trx)))
             fill_order.save()
-            # for key in ('taker_fee', 'maker_fee'):
-            #     if fill_order.trade_trx_list[key]:
-            #         fill_order.trade_trx_list[key].save()
+
+            for key in ('taker_fee', 'maker_fee'):
+                if trade_trx_list[key]:
+                    trade_trx_list[key].save()
+
         except PairSymbol.DoesNotExist:
             logger.exception(f'Could not found market {market_symbol}')

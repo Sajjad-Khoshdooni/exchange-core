@@ -1,5 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.utils import timezone
+
 from accounts.models import Notification
 from accounts.models import Account
 from financial.models import BankAccount
@@ -10,6 +12,7 @@ from ledger.utils.precision import humanize_number
 
 
 class FiatWithdrawRequest(models.Model):
+
     created = models.DateTimeField(auto_now_add=True)
     group_id = get_group_id_field()
 
@@ -25,6 +28,8 @@ class FiatWithdrawRequest(models.Model):
     ref_doc = models.FileField(verbose_name='رسید انتقال', null=True, blank=True)
 
     comment = models.TextField(verbose_name='نظر', blank=True)
+
+    done_datetime = models.DateTimeField(null=True, blank=True)
 
     @property
     def total_amount(self):
@@ -95,6 +100,9 @@ class FiatWithdrawRequest(models.Model):
         old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
 
         with transaction.atomic():
+            if self.status == DONE:
+                self.done_datetime = timezone.now()
+
             super().save(*args, **kwargs)
 
             if (not old or old.status != DONE) and self.status == DONE:

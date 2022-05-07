@@ -146,12 +146,16 @@ class MovingAverage:
         cache.set(key, prices)
 
     def get_current_price(self, side) -> Decimal:
-        if self.symbol.base_asset.symbol == Asset.IRT:
-            return get_trading_price_irt(self.symbol.asset.symbol, side)
-        elif self.symbol.base_asset.symbol == Asset.USDT:
-            return get_trading_price_usdt(self.symbol.asset.symbol, side)
+        if self.symbol.name.endswith(Asset.IRT):
+            base_symbol = Asset.IRT
+            get_trading_price = get_trading_price_irt
+        elif self.symbol.name.endswith(Asset.USDT):
+            base_symbol = Asset.USDT
+            get_trading_price = get_trading_price_irt
         else:
             raise NotImplementedError
+        coin = self.symbol.name.split(base_symbol)[0]
+        return get_trading_price(coin, side)
 
     def get_cache_history_key(self):
         return 'ma-9-60:' + str(self.symbol.name)

@@ -1,18 +1,21 @@
-from decimal import Decimal
 import logging
+from decimal import Decimal
 
 from django.db.models import Q, DateField, Case, When, F, Sum
 from django.db.models.functions import Cast
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import mixins
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import mixins
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
-from accounts.models import Referral, User
+
+from accounts.models import Referral, User, Account
 from market.models import ReferralTrx
 
 logger = logging.getLogger(__name__)
@@ -20,14 +23,14 @@ logger = logging.getLogger(__name__)
 
 class ReferralSerializer(serializers.ModelSerializer):
     revenue = serializers.SerializerMethodField()
+    members = serializers.SerializerMethodField()
 
     def get_revenue(self, referral: Referral):
-        account = self.context['account']
-        if referral.owner == account:
-            revenue = ReferralTrx.objects.filter(referral=referral).aggregate(total=Sum('referrer_amount'))
-        else:
-            revenue = ReferralTrx.objects.filter(trader=account).aggregate(total=Sum('trader_amount'))
-        return revenue['total'] or Decimal(0)
+        revenue = ReferralTrx.objects.filter(referral=referral).aggregate(total=Sum('referrer_amount'))
+        return int(revenue['total'] or 0)
+
+    def get_members(self, referral: Referral):
+        return Account.objects.filter(referred_by=referral).count()
 
     def to_internal_value(self, data):
         try:
@@ -49,8 +52,8 @@ class ReferralSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Referral
-        fields = ('id', 'owner', 'created', 'code', 'owner_share_percent', 'revenue')
-        read_only_fields = ('id', 'created', 'code', 'revenue')
+        fields = ('id', 'owner', 'created', 'code', 'owner_share_percent', 'revenue', 'members')
+        read_only_fields = ('id', 'created', 'code')
         extra_kwargs = {
             'owner': {'write_only': True},
         }
@@ -71,16 +74,10 @@ class ReferralViewSet(
         mixins.CreateModelMixin,
         mixins.ListModelMixin,
         GenericViewSet):
-    authentication_classes = (SessionAuthentication,)
-    permission_classes = (IsAuthenticated,)
 
     serializer_class = ReferralSerializer
 
     def get_queryset(self):
-        # if self.action == 'list':
-        #     return Referral.objects.filter(owner=self.request.user.account).union(
-        #         Referral.objects.filter(id=self.request.user.account.referred_by_id)
-        #     )
         return Referral.objects.filter(owner=self.request.user.account)
 
     def get_serializer_context(self):
@@ -96,10 +93,30 @@ class ReferralViewSet(
         serializer.save()
 
 
-class ReferralReportAPIView(ListAPIView):
-    authentication_classes = (SessionAuthentication,)
-    permission_classes = (IsAuthenticated,)
+class ReferralOverviewAPIView(APIView):
 
+    def get(self, request):
+
+        account = request.user.account
+
+        members = Account.objects.filter(referred_by__owner=account).count()
+        referred_revenue = ReferralTrx.objects.filter(
+            trader=account
+        ).aggregate(total=Sum('trader_amount'))['total'] or 0
+
+        referral_revenue = ReferralTrx.objects.filter(
+            referral__owner=account
+        ).aggregate(total=Sum('referrer_amount'))['total'] or 0
+
+        return Response({
+            'members': members,
+            'referred_revenue': int(referred_revenue),
+            'referral_revenue': int(referral_revenue),
+            'total_revenue': int(referred_revenue + referral_revenue)
+        })
+
+
+class ReferralReportAPIView(ListAPIView):
     serializer_class = ReferralTrxSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['referral']

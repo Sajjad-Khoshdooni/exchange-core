@@ -10,6 +10,7 @@ from accounts.models import User, CustomToken
 from accounts.views.authentication import CustomTokenAuthentication
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 from ledger.models import OTCRequest, Transfer
+from market.models import Order
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -23,10 +24,13 @@ class UserSerializer(serializers.ModelSerializer):
         )
 
     def get_on_boarding_status(self, user: User):
-        otc_request = OTCRequest.objects.filter(account=user.account)
+        has_trade = Order.objects.filter(wallet__account=user.account).count() >= 3
 
-        if otc_request:
+        if has_trade:
             resp = 'trade_is_done'
+
+            if user.level < User.LEVEL3:
+                resp = 'waiting_for_level3'
         else:
             if user.on_boarding_flow == 'crypto':
                 transfer = Transfer.objects.filter(wallet__account=user.account, deposit=True)

@@ -56,6 +56,8 @@ urlpatterns = [
     path('user/onboarding/', views.OnBoardingFlowStatus.as_view()),
     path('api-token-auth/', CreateAuthToken.as_view()),
 
+    path('referrals/overview/', views.ReferralOverviewAPIView.as_view()),
     path('referrals/report/', views.ReferralReportAPIView.as_view()),
+
     path('', include(router.urls)),
 ]

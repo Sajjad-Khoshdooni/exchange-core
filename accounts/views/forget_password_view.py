@@ -10,6 +10,7 @@ from accounts.models.phone_verification import VerificationCode
 from accounts.validators import password_validator
 from django.contrib.auth.password_validation import validate_password
 
+
 class InitiateForgotPasswordSerializer(serializers.Serializer):
     login = serializers.CharField(required=True)
 
@@ -68,4 +69,5 @@ class ForgotPasswordSerializer(serializers.Serializer):
 class ForgetPasswordView(CreateAPIView):
     authentication_classes = []
     permission_classes = []
+    throttle_classes = [BurstRateThrottle]
     serializer_class = ForgotPasswordSerializer
