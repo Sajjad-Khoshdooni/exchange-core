@@ -42,8 +42,6 @@ class User(AbstractUser):
         }
     )
 
-    email_verified = models.BooleanField(default=False, verbose_name='تاییدیه ایمیل',)
-    email_verification_date = models.DateTimeField(null=True, blank=True)
 
     first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام',)
     last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی',)
@@ -143,8 +141,8 @@ class User(AbstractUser):
         ]
 
     def change_status(self, status: str):
-        from ledger.models import Prize, Asset
-        from ledger.models.prize import alert_user_prize
+        # from ledger.models import Prize, Asset
+        # from ledger.models.prize import alert_user_prize
         from accounts.tasks.verify_user import alert_user_verify_status
 
         if self.verify_status != self.VERIFIED and status == self.VERIFIED:

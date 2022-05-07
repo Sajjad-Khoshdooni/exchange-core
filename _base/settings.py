@@ -236,6 +236,7 @@ REST_FRAMEWORK = {
 
     'DEFAULT_THROTTLE_RATES': {
         'burst': '5/min',
+        'sustained': '50/day',
     }
 }
 
@@ -283,6 +284,8 @@ CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN', default='.raastin.com')
 CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='None')
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', cast=bool, default=True)
 
+DEFAULT_FROM_EMAIL = 'راستین <%s>' % config('EMAIL_SENDER', default='')
+
 JALALI_DATE_DEFAULTS = {
    'Strftime': {
         'date': '%y/%m/%d',
@@ -301,3 +304,5 @@ JALALI_DATE_DEFAULTS = {
 }
 
 SYSTEM_ACCOUNT_ID = config('SYSTEM_ACCOUNT_ID', default=1)
+
+BRAND_EN = config('BRAND_EN')

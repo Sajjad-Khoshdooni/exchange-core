@@ -63,10 +63,25 @@ class TypeFilter(SimpleListFilter):
         return queryset
 
 
+class UserFilter(SimpleListFilter):
+    title = 'کاربر'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        return (1, 1),
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(wallet__account__user__id=user)
+        else:
+            return queryset
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount', 'wallet')
-    list_filter = (TypeFilter, 'side', 'fill_type', 'status', 'symbol',)
+    list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
 
 
 @admin.register(FillOrder)

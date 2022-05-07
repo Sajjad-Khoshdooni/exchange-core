@@ -21,6 +21,9 @@ class BankAccountView(ModelViewSet):
         if bank_account.verified is None:
             raise ValidationError('شماره شبا در حال اعتبارسنجی است.')
 
+        if BankAccount.live_objects.filter(user=bank_account.user).exclude(id=bank_account.id).count() == 0:
+            raise ValidationError('برای حذف این شماره شبا، ابتدا یک شماره شبای جدید وارد کنید.')
+
         if bank_account.verified and BankAccount.live_objects.filter(user=bank_account.user, verified=True).count() == 1:
             raise ValidationError('شما باید حداقل یک شماره شبا تایید شده داشته باشید.')
 

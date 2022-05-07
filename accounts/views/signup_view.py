@@ -10,7 +10,8 @@ from rest_framework.views import APIView
 
 from accounts.models import User, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode
-from accounts.throttle import BurstRateThrottle
+from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
+from accounts.utils.ip import get_client_ip
 from accounts.validators import mobile_number_validator, password_validator
 from ledger.models import Prize, Asset
 from ledger.models.prize import alert_user_prize
@@ -22,9 +23,10 @@ class InitiateSignupSerializer(serializers.Serializer):
 
 class InitiateSignupView(APIView):
     permission_classes = []
-    throttle_classes = [BurstRateThrottle]
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def post(self, request):
+        print('signup/init app ip: %s' % get_client_ip(request))
 
         if request.user.is_authenticated:
             return Response({'msg': 'already logged in', 'code': 1})
@@ -112,7 +114,7 @@ class SignupSerializer(serializers.Serializer):
 
 class SignupView(CreateAPIView):
     permission_classes = []
-    throttle_classes = [BurstRateThrottle]
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
     serializer_class = SignupSerializer
 
     def perform_create(self, serializer):

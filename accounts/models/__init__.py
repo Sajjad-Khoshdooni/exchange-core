@@ -6,6 +6,6 @@ from .account import Account
 from .user_comment import UserComment
 from .traffic_source import TrafficSource
 from .external_notif import ExternalNotification
+from .email_verification import EmailVerificationCode
 from .referral import Referral
 from .custom_token import CustomToken
-
