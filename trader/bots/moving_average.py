@@ -22,7 +22,7 @@ ORDER_VALUE_IRT = 150_000
 ORDER_VALUE_USDT = 7
 
 MA_INTERVAL = 60
-MA_LENGTH = 9
+MA_LENGTH = 3
 
 cache = caches['trader']
 
