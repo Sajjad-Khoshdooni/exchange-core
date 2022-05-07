@@ -80,7 +80,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         wallet = asset.get_wallet(account)
 
         if not check_withdraw_laundering(wallet=wallet, amount=amount):
-            raise ValidationError('در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید.')
+            raise ValidationError('در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید. لطفا احراز هویت سطح ۳ را انجام دهید.')
 
         irt_value = get_trading_price_irt(asset.symbol, BUY, raw_price=False) * amount
 

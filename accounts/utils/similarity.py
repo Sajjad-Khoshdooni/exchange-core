@@ -11,3 +11,9 @@ def clean_persian_name(name: str):
 
 def str_similar_rate(a: str, b: str) -> float:
     return SequenceMatcher(None, a, b).ratio()
+
+
+def rotate_words(s: str) -> str:
+    parts = s.split(' ')
+    rotated = parts[-1:] + parts[:-1]
+    return ' '.join(rotated)

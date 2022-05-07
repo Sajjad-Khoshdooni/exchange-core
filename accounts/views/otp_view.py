@@ -43,28 +43,45 @@ class VerifyOTPView(CreateAPIView):
 
 class OTPSerializer(serializers.ModelSerializer):
 
+    new_phone = serializers.CharField(required=False)
+
     def create(self, validated_data):
         scope = validated_data['scope']
         user = validated_data['user']
 
         if scope == VerificationCode.SCOPE_TELEPHONE:
             phone = user.telephone
+
+        elif scope == VerificationCode.SCOPE_CHANGE_PHONE:
+            if 'new_phone' in validated_data:
+                phone = validated_data['new_phone']
+            else:
+                raise ValidationError('شماره همراه وارد نشده است.')
+
         else:
             phone = user.phone
 
         if not phone:
             raise ValidationError('امکان ارسال کد وجود ندارد.')
 
-        return VerificationCode.send_otp_code(phone=phone, scope=scope, user=user)
+        VerificationCode.send_otp_code(phone=phone, scope=scope, user=user)
+
+        return {}
+
+    @property
+    def data(self):
+        return {
+            'msg': 'sent'
+        }
 
     class Meta:
         model = VerificationCode
-        fields = ('scope', )
+        fields = ('scope', 'new_phone')
 
 
 class SendOTPView(CreateAPIView):
     serializer_class = OTPSerializer
-    throttle_classes = [SustainedRateThrottle, BurstRateThrottle]
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

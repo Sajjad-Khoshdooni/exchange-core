@@ -8,11 +8,12 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.models import Asset
+from ledger.models import Asset, Prize
 from ledger.utils.overview import AssetOverview
 from ledger.utils.price import get_trading_price_usdt, BUY
 from provider.exchanges import BinanceFuturesHandler
 from ledger.utils.precision import humanize_number
+from provider.models import ProviderOrder
 
 
 @admin.register(models.Asset)
@@ -27,10 +28,9 @@ class AssetAdmin(AdvancedAdmin):
     }
 
     list_display = (
-        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount',
-        'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance', 'get_ledger_balance_users',
-
-        'get_hedge_threshold', 'get_future_value',
+        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calculated_hedge_amount',
+        'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
+        'get_ledger_balance_users', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
         'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'hedge_method', 'bid_diff', 'ask_diff'
     )
     list_filter = ('enable', 'trend')
@@ -79,6 +79,11 @@ class AssetAdmin(AdvancedAdmin):
 
     get_ledger_balance_out.short_description = 'out'
 
+    def get_total_asset(self, asset: Asset):
+        return self.overview and asset.get_presentation_amount(self.overview.get_total_assets(asset))
+
+    get_total_asset.short_description = 'total assets'
+
     def get_future_amount(self, asset: Asset):
         return self.overview and asset.get_presentation_amount(self.overview.get_future_position_amount(asset))
 
@@ -103,6 +108,11 @@ class AssetAdmin(AdvancedAdmin):
         return self.overview and asset.get_presentation_amount(self.overview.get_hedge_amount(asset))
 
     get_hedge_amount.short_description = 'hedge amount'
+
+    def get_calculated_hedge_amount(self, asset: Asset):
+        return asset.get_presentation_amount(ProviderOrder.get_hedge(asset))
+
+    get_calculated_hedge_amount.short_description = 'calc hedge amount'
 
     def get_hedge_value(self, asset: Asset):
         hedge_value = self.overview and self.overview.get_hedge_value(asset)
@@ -177,7 +187,7 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request', 'status','get_otc_trade_to_price_absolute_irt', )
+    list_display = ('created', 'otc_request', 'status', 'get_otc_trade_to_price_absolute_irt', )
     list_filter = (OTCUserFilter, 'status')
     search_fields = ('group_id', )
     readonly_fields = ('otc_request', )
@@ -236,11 +246,11 @@ class WalletAdmin(admin.ModelAdmin):
     get_locked.short_description = 'locked'
 
     def get_free_irt(self, wallet: models.Wallet):
-        return wallet.asset.get_presentation_price_irt(wallet.get_free_irt())
+        return wallet.asset.get_presentation_price_irt(wallet.get_balance_irt())
     get_free_irt.short_description = 'ارزش ریالی'
 
     def get_free_usdt(self, wallet: models.Wallet):
-        return wallet.asset.get_presentation_price_usdt(wallet.get_free_usdt())
+        return wallet.asset.get_presentation_price_usdt(wallet.get_balance_usdt())
     get_free_usdt.short_description = 'ارزش دلاری'
 
 
@@ -264,6 +274,7 @@ class TransferAdmin(admin.ModelAdmin):
     list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount', 'deposit', 'status', 'is_fee', 'source')
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
+    readonly_fields = ('deposit_address', 'network', 'wallet', 'lock', 'provider_transfer')
 
 
 @admin.register(models.BalanceLock)
@@ -344,6 +355,16 @@ class MarginLiquidationAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.AddressBook)
-class AdressBookAdmin(admin.ModelAdmin):
+class AddressBookAdmin(admin.ModelAdmin):
     list_display = ('name', 'account', 'network', 'address', 'asset',)
     search_fields = ('address', 'name')
+
+
+@admin.register(models.Prize)
+class PrizeAdmin(admin.ModelAdmin):
+    list_display = ('created', 'scope', 'account', 'get_asset_amount')
+
+    def get_asset_amount(self, prize: Prize):
+        return str(get_presentation_amount(prize.amount)) + str(prize.asset)
+
+    get_asset_amount.short_description = 'مقدار'

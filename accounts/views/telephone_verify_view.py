@@ -14,7 +14,7 @@ class InitiateTelephoneSerializer(serializers.Serializer):
 
 
 class InitiateTelephoneVerifyView(APIView):
-    throttle_classes = [SustainedRateThrottle, BurstRateThrottle]
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def post(self, request):
         serializer = InitiateTelephoneSerializer(data=request.data)

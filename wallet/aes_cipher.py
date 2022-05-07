@@ -4,6 +4,7 @@ import os
 
 from Crypto import Random
 from Crypto.Cipher import AES
+from django.conf import settings
 
 
 class AESCipher:
@@ -33,4 +34,10 @@ class AESCipher:
 
 
 def get_aes_cipher():
-    return AESCipher(os.environ['AES_SECRET_SECRET'])
+
+    if settings.DEBUG_OR_TESTING:
+        aes_secret = ''
+    else:
+        aes_secret = os.environ['AES_SECRET_SECRET']
+
+    return AESCipher(aes_secret)

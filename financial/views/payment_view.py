@@ -22,7 +22,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
         card_pan = validated_data['card_pan']
 
         user = self.context['request'].user
-        bank_card = get_object_or_404(BankCard, card_pan=card_pan, user=user)
+        bank_card = get_object_or_404(BankCard, card_pan=card_pan, user=user, deleted=False)
 
         if not bank_card.verified:
             raise ValidationError({'card_pan': 'شماره کارت تایید نشده است.'})
@@ -41,6 +41,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
 
 
 class PaymentRequestView(CreateAPIView):
+    queryset = PaymentRequest.objects.all()
     permission_classes = (IsBasicVerified, )
     serializer_class = PaymentRequestSerializer
 

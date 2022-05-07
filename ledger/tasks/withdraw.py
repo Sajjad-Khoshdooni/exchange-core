@@ -61,5 +61,5 @@ def update_binance_withdraw():
             Notification.send(
                 recipient=transfer.wallet.account.user,
                 title='ارسال شد: %s %s' % (humanize_number(sent_amount), transfer.wallet.asset.symbol),
-                message='به آدرس %s' % transfer.out_address
+                message='به ادرس %s...%s ' % (transfer.out_address[-8:], transfer.out_address[:9])
             )

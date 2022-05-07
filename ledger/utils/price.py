@@ -8,6 +8,7 @@ from django.conf import settings
 
 from collector.price.grpc_client import gRPCClient
 from collector.utils.price import price_redis
+from ledger.utils.cache import cache_for
 from ledger.utils.price_manager import PriceManager
 
 BINANCE = 'binance'
@@ -153,7 +154,6 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
 @ttl_cache(maxsize=1000, ttl=0.5)
 def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
               now: datetime = None) -> Decimal:
-
     if PriceManager.active():
         price = PriceManager.get_price(coin, side, exchange, market_symbol, now)
         if price is not None:
@@ -167,6 +167,7 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
         return Decimal(0)
 
 
+@cache_for(time=5)
 def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
     price = price_redis.hget('nob:usdtirt', SIDE_MAP[side])
     if price:
@@ -177,20 +178,24 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
 
 
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Decimal:
-    from ledger.models.asset import Asset
+    # from ledger.models.asset import Asset
 
     if coin == IRT:
         return 1 / get_tether_irt_price(get_other_side(side))
 
-    asset = Asset.get(coin)
+    # note: commented to decrease performance issues
+    # asset = Asset.get(coin)
+    #
+    # bid_diff = asset.bid_diff
+    # if bid_diff is None:
+    #     bid_diff = Decimal('0.005')
+    #
+    # ask_diff = asset.ask_diff
+    # if ask_diff is None:
+    #     ask_diff = Decimal('0.005')
 
-    bid_diff = asset.bid_diff
-    if bid_diff is None:
-        bid_diff = Decimal('0.005')
-
-    ask_diff = asset.ask_diff
-    if ask_diff is None:
-        ask_diff = Decimal('0.005')
+    bid_diff = Decimal('0.005')
+    ask_diff = Decimal('0.005')
 
     if raw_price:
         multiplier = 1
@@ -202,7 +207,7 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Dec
 
     price = get_price(coin, side)
 
-    return price * multiplier
+    return price and price * multiplier
 
 
 def get_trading_price_irt(coin: str, side: str, raw_price: bool = False) -> Decimal:

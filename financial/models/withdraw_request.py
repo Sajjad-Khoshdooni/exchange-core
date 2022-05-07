@@ -1,5 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.utils import timezone
+
 from yekta_config import secret
 
 from accounts.models import Notification
@@ -18,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class FiatWithdrawRequest(models.Model):
+
     INIT, SENT, DONE, CANCELED = 'init', 'sent', 'done', 'canceled'
 
     BASE_URL = 'https://pay.ir'
@@ -25,10 +28,10 @@ class FiatWithdrawRequest(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     group_id = get_group_id_field()
 
-    bank_account = models.ForeignKey(to=BankAccount, on_delete=models.PROTECT)
+    bank_account = models.ForeignKey(to=BankAccount, on_delete=models.PROTECT, verbose_name='حساب بانکی')
 
-    amount = models.PositiveIntegerField()
-    fee_amount = models.PositiveIntegerField()
+    amount = models.PositiveIntegerField(verbose_name='میزان برداشت')
+    fee_amount = models.PositiveIntegerField(verbose_name='کارمزد')
 
     status = get_status_field()
     provider_request_status = models.CharField(
@@ -40,6 +43,10 @@ class FiatWithdrawRequest(models.Model):
 
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
     ref_doc = models.FileField(verbose_name='رسید انتقال', null=True, blank=True)
+
+    comment = models.TextField(verbose_name='نظر', blank=True)
+
+    done_datetime = models.DateTimeField(null=True, blank=True)
 
     @property
     def total_amount(self):
@@ -173,12 +180,11 @@ class FiatWithdrawRequest(models.Model):
 
     def save(self, *args, **kwargs):
         old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
-        old_status = old and old.status
-
-        if old and old_status != PENDING:
-            return
 
         with transaction.atomic():
+            if self.status == DONE:
+                self.done_datetime = timezone.now()
+
             super().save(*args, **kwargs)
 
             if (not old or old.status != DONE) and self.status == DONE:

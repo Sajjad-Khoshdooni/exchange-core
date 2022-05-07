@@ -57,6 +57,9 @@ class Gateway(models.Model):
     def verify(self, payment: Payment):
         raise NotImplementedError
 
+    def __str__(self):
+        return self.name
+
 
 class ZarinpalGateway(Gateway):
     BASE_URL = 'https://api.zarinpal.com'
