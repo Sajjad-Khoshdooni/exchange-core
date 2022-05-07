@@ -1,12 +1,13 @@
 from rest_framework import serializers
-from rest_framework.authentication import SessionAuthentication
+from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.models import User
+from accounts.models import User, CustomToken
+from accounts.views.authentication import CustomTokenAuthentication
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 from ledger.models import OTCRequest, Transfer
 
@@ -83,13 +84,13 @@ class UserDetailView(RetrieveAPIView):
 
 
 class CreateAuthToken(ObtainAuthToken):
-    authentication_classes = (SessionAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
+    permission_classes = (IsAuthenticated, )
     serializer_class = None
 
     def post(self, request, *args, **kwargs):
         user = request.user
-        token, created = Token.objects.get_or_create(user=user)
+        token, created = CustomToken.objects.get_or_create(user=user)
         if created:
             return Response({
                 'token': token.key,
