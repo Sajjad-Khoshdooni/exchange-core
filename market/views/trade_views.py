@@ -6,6 +6,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 
+from ledger.models import Wallet
 from market.models import FillOrder
 from market.serializers.trade_serializer import FillOrderSerializer, TradeSerializer
 
@@ -24,8 +25,15 @@ class AccountTradeHistoryView(ListAPIView):
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
-        return FillOrder.objects.filter(maker_order__wallet__account=self.request.user.account).union(
-            FillOrder.objects.filter(taker_order__wallet__account=self.request.user.account), all=True
+        market = self.request.query_params.get('market', Wallet.SPOT)
+        return FillOrder.objects.filter(
+            maker_order__wallet__account=self.request.user.account,
+            maker_order__wallet__market=market
+        ).union(
+            FillOrder.objects.filter(
+                taker_order__wallet__account=self.request.user.account,
+                taker_order__wallet__market=market
+            ), all=True
         ).order_by('-created')
 
     def get_serializer_context(self):
