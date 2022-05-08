@@ -62,7 +62,7 @@ class Payir:
 
     @classmethod
     def get_wallet_data(cls, wallet_id: int) -> Wallet:
-        data = cls.collect_api(f'/api/v2/wallets/{wallet_id}' % wallet_id)['wallet']
+        data = cls.collect_api(f'/api/v2/wallets/{wallet_id}')['wallet']
 
         return Wallet(
             id=data['id'],
