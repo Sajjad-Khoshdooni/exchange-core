@@ -196,15 +196,7 @@ app.conf.beat_schedule = {
             'queue': 'finance',
             'expire': 300
         },
-    },
-    'create_withdraw_request_paydotir': {
-        'task': 'financial.tasks.withdraw.create_withdraw_request_paydotir_task',
-        'schedule': 100,
-        'options': {
-            'queue': 'celery',
-            'expire': 100
-        },
-    },
+    }
 }
 
 if settings.DEBUG:
