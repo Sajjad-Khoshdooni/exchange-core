@@ -44,7 +44,7 @@ class HistoryBuilder:
         self.confirmer.confirm(block)
 
     def forward_fulfill(self, block: BlockDTO):
-        system_latest_block = self.block_tracker.get_latest_block()
+        system_latest_block = self.block_tracker.atest_block()
 
         _from = system_latest_block.number + 1
         _to = block.number - self.network.min_confirm
