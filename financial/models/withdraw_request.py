@@ -95,6 +95,8 @@ class FiatWithdrawRequest(models.Model):
         wallet = Payir.get_wallet_data(wallet_id)
 
         if wallet.free < self.amount:
+            logger.info(f'Not enough wallet balance to full fill bank acc')
+
             link = url_to_edit_object(self)
             send_support_message(
                 message='موجودی هیچ یک از کیف پول‌ها برای انجام این تراکنش کافی نیست.',
@@ -111,6 +113,8 @@ class FiatWithdrawRequest(models.Model):
             return
 
         status = Payir.get_withdraw_status(self.id)
+
+        logger.info(f'FiatRequest {self.id} status: {status}')
 
         if status == 4:
             self.status = DONE

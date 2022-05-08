@@ -33,6 +33,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
     iban = serializers.CharField(write_only=True)
 
     def create(self, validated_data):
+        raise Exception
+
         amount = validated_data['amount']
         iban = validated_data['iban']
 
