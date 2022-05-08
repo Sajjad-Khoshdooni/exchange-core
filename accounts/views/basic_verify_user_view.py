@@ -100,7 +100,6 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
         if not settings.DEBUG_OR_TESTING:
             basic_verify_user.s(user.id).apply_async(countdown=60)
-        # basic_verify_user(user.id)
 
         return user
 
