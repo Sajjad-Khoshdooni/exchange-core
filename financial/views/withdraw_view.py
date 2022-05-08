@@ -78,11 +78,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست'})
 
-        link = url_to_edit_object(withdraw_request)
-        send_support_message(
-            message='درخواست برداشت ریالی به ارزش %s تومان ایجاد شد.' % humanize_number(withdraw_amount),
-            link=link
-        )
+        from financial.tasks import process_withdraw
+        process_withdraw.s(withdraw_request.id).apply_async(countdown=FiatWithdrawRequest.FREEZE_TIME)
 
         return withdraw_request
 
@@ -101,8 +98,11 @@ class WithdrawRequestView(ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
 
-        if timezone.now() - timedelta(minutes=3) > instance.created:
-            raise ValidationError('زمان مجاز برای حذف درخواست برداشت گذشته است.')
+        if timezone.now() - timedelta(seconds=FiatWithdrawRequest.FREEZE_TIME) > instance.created:
+            raise ValidationError('زمان مجاز برای لغو درخواست برداشت گذشته است.')
+
+        if instance.status in (FiatWithdrawRequest.PENDING, FiatWithdrawRequest.DONE):
+            raise ValidationError('امکان لغو درخواست برداشت وجود ندارد.')
 
         instance.status = CANCELED
         instance.save()
@@ -116,7 +116,8 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FiatWithdrawRequest
-        fields = ('id', 'created', 'status', 'fee_amount', 'amount', 'bank_account', 'ref_id', 'rial_estimate_receive_time', )
+        fields = ('id', 'created', 'status', 'fee_amount', 'amount', 'bank_account', 'ref_id',
+                  'rial_estimate_receive_time', )
 
     def get_rial_estimate_receive_time(self, fiat_withdraw_request: FiatWithdrawRequest):
         return fiat_withdraw_request.done_datetime and get_fiat_estimate_receive_time(fiat_withdraw_request.done_datetime)

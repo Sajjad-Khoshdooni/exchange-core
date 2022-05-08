@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class Transfer(models.Model):
-    PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done',
+    PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
     SELF, BINANCE = 'self', 'binance'
 
     created = models.DateTimeField(auto_now_add=True)

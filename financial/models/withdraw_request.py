@@ -1,17 +1,28 @@
+import logging
+
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
+from yekta_config.config import config
 
-from accounts.models import Notification
 from accounts.models import Account
-from financial.models import BankAccount
-from ledger.models import Trx, Asset
-from ledger.utils.fields import get_status_field, DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
+from accounts.models import Notification
 from accounts.tasks.send_sms import send_message_by_kavenegar
+from accounts.utils.admin import url_to_edit_object
+from accounts.utils.telegram import send_support_message
+from financial.models import BankAccount
+from financial.utils.pay_ir import Payir
+from ledger.models import Trx, Asset
+from ledger.utils.fields import DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
 from ledger.utils.precision import humanize_number
+
+logger = logging.getLogger(__name__)
 
 
 class FiatWithdrawRequest(models.Model):
+    PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
+
+    FREEZE_TIME = 3 * 60
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = get_group_id_field()
@@ -21,7 +32,11 @@ class FiatWithdrawRequest(models.Model):
     amount = models.PositiveIntegerField(verbose_name='میزان برداشت')
     fee_amount = models.PositiveIntegerField(verbose_name='کارمزد')
 
-    status = get_status_field()
+    status = models.CharField(
+        default=PROCESSING,
+        max_length=10,
+        choices=[(PROCESSING, 'در حال پردازش'), (PENDING, 'در انتظار'), (DONE, 'انجام شده'), (CANCELED, 'لغو شده')]
+    )
     lock = get_lock_field()
 
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
@@ -30,6 +45,8 @@ class FiatWithdrawRequest(models.Model):
     comment = models.TextField(verbose_name='نظر', blank=True)
 
     done_datetime = models.DateTimeField(null=True, blank=True)
+
+    provider_withdraw_id = models.CharField(blank=True, max_length=32)
 
     @property
     def total_amount(self):
@@ -73,11 +90,46 @@ class FiatWithdrawRequest(models.Model):
         if self.status == DONE and not self.ref_id:
             raise ValidationError('رسید انتقال خالی است.')
 
+    def create_withdraw_request_paydotir(self):
+        assert not self.provider_withdraw_id
+        assert self.status == self.PROCESSING
+
+        wallet_id = config('PAY_IR_WALLET_ID', cast=int)
+        wallet = Payir.get_wallet_data(wallet_id)
+
+        if wallet.free < self.amount:
+            link = url_to_edit_object(self)
+            send_support_message(
+                message='موجودی هیچ یک از کیف پول‌ها برای انجام این تراکنش کافی نیست.',
+                link=link
+            )
+            return
+
+        withdraw_id = Payir.withdraw(wallet_id, self.bank_account, self.amount, self.id)
+        self.provider_withdraw_id = withdraw_id
+        self.status = FiatWithdrawRequest.PENDING
+        self.save()
+
+    def update_status(self):
+        if self.status != self.PENDING:
+            return
+
+        status = Payir.get_withdraw_status(self.provider_withdraw_id)
+
+        if status == 4:
+            self.status = DONE
+            self.save()
+
+        elif status in (5, 3):
+            self.status = CANCELED
+            self.save()
+
     def alert_withdraw_verify_status(self, old):
         if (not old or old.status != DONE) and self.status == DONE:
             title = 'درخواست برداشت شما با موفقیت انجام شد.'
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
+
         elif (not old or old.status != CANCELED) and self.status == CANCELED:
             title = 'درخواست برداشت شما انجام نشد.'
             level = Notification.ERROR
