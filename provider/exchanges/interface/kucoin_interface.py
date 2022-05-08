@@ -96,19 +96,31 @@ class KucoinSpotHandler(ExchangeHandler):
         return self.collect_api('/api/v1/currencies', method='GET', cache_timeout=HOUR)
 
     def get_coin_data(self, coin: str):
-        return self.collect_api('/api/v2/currencies/{}'.format(coin), method='GET', cache_timeout=HOUR)
+        resp = self.collect_api('/api/v2/currencies/{}'.format(coin), method='GET', cache_timeout=HOUR)
+
+        network_list = resp.get('chains')
+
+        data = {'networkList': []}
+        for chain in network_list:
+            data['networkList'].append({
+                'name': chain['chainName'],
+                'address_regex': chain.get('address_regex'),
+                'min_confirm': chain.get('min_confirm'),
+                'unlock_confirm': chain.get('confirms'),
+                'withdrawFee': chain.get('withdrawalMinFee'),
+                'withdrawMin': chain.get('withdrawalMinSize'),
+                'withdrawMax': chain.get('withdrawMax', '10000000000'),
+                'withdrawIntegerMultiple': Decimal('1e-{}'.format(resp.get('precision'), 9)),
+                'withdrawEnable': chain.get('isWithdrawEnabled')
+
+            })
+        return data
 
     def get_network_info(self, coin: str, network: str):
-        chains = self.get_coin_data(coin=coin).get('chains')
-        info = list(filter(lambda d: d['chainName'] == network, chains))
+        chains = self.get_coin_data(coin=coin).get('networkList')
+        info = list(filter(lambda d: d['name'] == network, chains))
         if info:
-            response = {
-                'withdrawMin': info[0].get('withdrawalMinSize'),
-                'withdrawFee': info[0].get('withdrawalMinFee'),
-                'withdrawEnable': info[0].get('isWithdrawEnabled'),
-                'withdrawMax': info[0].get('isWithdrawEnabled', '1000000000')
-            }
-            return response
+            return info
         return
 
     def get_withdraw_fee(self, coin: str, network: str):
@@ -133,15 +145,33 @@ class KucoinSpotHandler(ExchangeHandler):
         coin_data = list(filter(lambda d: d['symbol'] == symbol, data))
         if not coin_data:
             return
-        return coin_data
+
+        resp = {'filters': [
+            {
+                'filterType': 'LOT_SIZE',
+                'stepSize': coin_data[0].get('baseIncrement'),
+                'minQty': coin_data[0].get('baseMinSize'),
+                'maxQty': coin_data[0].get('baseMaxSize')
+            },
+            {
+                'filterType': 'PRICE_FILTER',
+                'tickSize': coin_data[0].get('priceIncrement')
+            }
+        ]}
+        if coin_data[0].get('enableTrading'):
+            resp['filters'][0]['status'] = 'TRADING'
+
+        return resp
 
     def get_step_size(self, symbol: str) -> Decimal:
         data = self.get_symbol_data(symbol=symbol)
-        return Decimal(data[0].get('baseIncrement'))
+        lot_size = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['filters']))[0]
+        return Decimal(lot_size['minQty'])
 
     def get_lot_min_quantity(self, symbol: str) ->Decimal:
         data = self.get_symbol_data(symbol=symbol)
-        return data[0].get('baseMinSize')
+        lot_size = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['filters']))[0]
+        return data.get('minQty')
 
     def get_withdraw_status(self, withdraw_id: str) -> dict:
         from ledger.models import Transfer
