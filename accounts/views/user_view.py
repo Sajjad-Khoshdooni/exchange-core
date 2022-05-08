@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
+# from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.models import Token
+
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -109,6 +111,6 @@ class CreateAuthToken(ObtainAuthToken):
             })
 
     def delete(self, request, *args, **kwargs):
-        token = get_object_or_404(Token, user=request.user)
+        token = get_object_or_404(CustomToken, user=request.user)
         token.delete()
         return Response({'success': True})

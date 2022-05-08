@@ -7,6 +7,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
+from accounts.views.authentication import CustomTokenAuthentication
 from market.models import Order, CancelRequest
 from market.serializers.cancel_request_serializer import CancelRequestSerializer
 from market.serializers.order_serializer import OrderSerializer
@@ -24,7 +25,7 @@ class OrderViewSet(mixins.CreateModelMixin,
                    mixins.RetrieveModelMixin,
                    mixins.ListModelMixin,
                    GenericViewSet):
-    authentication_classes = (SessionAuthentication,)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
     permission_classes = (IsAuthenticated,)
     pagination_class = LimitOffsetPagination
 
@@ -45,7 +46,7 @@ class OrderViewSet(mixins.CreateModelMixin,
 
 
 class CancelOrderAPIView(CreateAPIView):
-    authentication_classes = (SessionAuthentication,)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
     permission_classes = (IsAuthenticated,)
 
     serializer_class = CancelRequestSerializer

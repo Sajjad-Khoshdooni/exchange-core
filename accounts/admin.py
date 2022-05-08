@@ -5,8 +5,9 @@ from django.db.models import Q
 from django.db.models import Sum
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
+from rest_framework.authtoken.models import Token
 from simple_history.admin import SimpleHistoryAdmin
-from accounts.models import UserComment, TrafficSource, Referral
+from accounts.models import UserComment, TrafficSource, Referral, CustomToken
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
 from financial.models.payment import Payment
@@ -487,8 +488,8 @@ class AccountAdmin(admin.ModelAdmin):
     )
     readonly_fields = ('get_wallet_address', 'get_total_balance_irt_admin', 'get_total_balance_usdt_admin')
 
-    def get_wallet_address(self, user: User):
-        link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
+    def get_wallet_address(self, account: Account):
+        link = url_to_admin_list(Wallet) + '?account={}'.format(account.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_wallet_address.short_description = 'لیست کیف‌ها'
 
@@ -549,3 +550,10 @@ class UserCommentAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ['user', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
     search_fields = ['user__phone']
+
+
+@admin.register(CustomToken)
+class CustomTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    pass
+
+

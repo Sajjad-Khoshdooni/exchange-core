@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_yasg',
     'simple_history',
-    'rest_framework.authtoken',
+    # 'rest_framework.authtoken',
 
     'financial',
     'multimedia',
