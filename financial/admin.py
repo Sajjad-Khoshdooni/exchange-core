@@ -66,10 +66,10 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 
     list_display = ('bank_account', 'status', 'amount', 'ref_id')
 
-    def get_queryset(self, request):
-        return FiatWithdrawRequest.objects.filter(
-            created__lte=timezone.now() - timedelta(seconds=FiatWithdrawRequest.FREEZE_TIME)
-        )
+    # def get_queryset(self, request):
+    #     return FiatWithdrawRequest.objects.filter(
+    #         created__lte=timezone.now() - timedelta(seconds=FiatWithdrawRequest.FREEZE_TIME)
+    #     )
 
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.user.get_full_name()
