@@ -44,7 +44,7 @@ class Payir:
                 resp = requests.get(params=data, **request_kwargs)
             else:
                 method_prop = getattr(requests, method.lower())
-                resp = method_prop(data=data, **request_kwargs)
+                resp = method_prop(json=data, **request_kwargs)
         except requests.exceptions.ConnectionError:
             logger.error('pay.ir connection error', extra={
                 'url': url,
