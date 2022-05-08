@@ -17,7 +17,12 @@ class Payir:
         request_kwargs = {
             'url': url,
             'timeout': 60,
-            'headers': {'Authorization': 'Bearer ' + secret('PAY_IR_TOKEN')}
+            'headers': {'Authorization': 'Bearer ' + secret('PAY_IR_TOKEN')},
+            'proxies': {
+                'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+                'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+                'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            }
         }
 
         try:
