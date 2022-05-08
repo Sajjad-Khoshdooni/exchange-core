@@ -46,6 +46,8 @@ class FiatWithdrawRequest(models.Model):
 
     done_datetime = models.DateTimeField(null=True, blank=True)
 
+    provider_withdraw_id = models.CharField(max_length=64, blank=True)
+
     @property
     def total_amount(self):
         return self.amount + self.fee_amount
@@ -89,6 +91,7 @@ class FiatWithdrawRequest(models.Model):
             raise ValidationError('رسید انتقال خالی است.')
 
     def create_withdraw_request_paydotir(self):
+        assert not self.provider_withdraw_id
         assert self.status == self.PROCESSING
 
         wallet_id = config('PAY_IR_WALLET_ID', cast=int)
@@ -104,7 +107,7 @@ class FiatWithdrawRequest(models.Model):
             )
             return
 
-        Payir.withdraw(wallet_id, self.bank_account, self.amount, self.id)
+        self.provider_withdraw_id = Payir.withdraw(wallet_id, self.bank_account, self.amount, self.id)
         self.status = FiatWithdrawRequest.PENDING
         self.save()
 

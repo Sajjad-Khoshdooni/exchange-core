@@ -58,8 +58,6 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             logger.info('FiatRequest rejected due to max withdraw limit reached. user=%s' % user.id)
             raise ValidationError({'amount': 'شما به سقف برداشت ریالی خورده اید.'})
 
-        raise Exception
-
         asset = Asset.get(Asset.IRT)
         wallet = asset.get_wallet(user.account)
 
