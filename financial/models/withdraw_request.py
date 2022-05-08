@@ -1,22 +1,20 @@
+import logging
+
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
-
-from yekta_config import secret
 from yekta_config.config import config
 
-from accounts.models import Notification
 from accounts.models import Account
+from accounts.models import Notification
+from accounts.tasks.send_sms import send_message_by_kavenegar
+from accounts.utils.admin import url_to_edit_object
+from accounts.utils.telegram import send_support_message
 from financial.models import BankAccount
 from financial.utils.pay_ir import Payir
 from ledger.models import Trx, Asset
-from ledger.utils.fields import get_status_field, DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
-from accounts.tasks.send_sms import send_message_by_kavenegar
+from ledger.utils.fields import DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
 from ledger.utils.precision import humanize_number
-import requests
-import logging
-from accounts.utils.admin import url_to_edit_object
-from accounts.utils.telegram import send_support_message
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +23,6 @@ class FiatWithdrawRequest(models.Model):
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
 
     FREEZE_TIME = 3 * 60
-
-    BASE_URL = 'https://pay.ir'
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = get_group_id_field()
@@ -95,6 +91,8 @@ class FiatWithdrawRequest(models.Model):
             raise ValidationError('رسید انتقال خالی است.')
 
     def create_withdraw_request_paydotir(self):
+        assert not self.provider_withdraw_id
+        assert self.status == self.PROCESSING
 
         wallet_id = config('PAY_IR_WALLET_ID', cast=int)
         wallet = Payir.get_wallet_data(wallet_id)
@@ -109,7 +107,7 @@ class FiatWithdrawRequest(models.Model):
 
         withdraw_id = Payir.withdraw(wallet_id, self.bank_account, self.amount, self.id)
         self.provider_withdraw_id = withdraw_id
-        self.provider_request_status = FiatWithdrawRequest.PENDING
+        self.status = FiatWithdrawRequest.PENDING
         self.save()
 
     def update_status(self):

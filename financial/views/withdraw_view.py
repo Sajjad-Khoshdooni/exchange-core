@@ -101,7 +101,7 @@ class WithdrawRequestView(ModelViewSet):
         if timezone.now() - timedelta(seconds=FiatWithdrawRequest.FREEZE_TIME) > instance.created:
             raise ValidationError('زمان مجاز برای لغو درخواست برداشت گذشته است.')
 
-        if instance.status == (FiatWithdrawRequest.PENDING, FiatWithdrawRequest.DONE):
+        if instance.status in (FiatWithdrawRequest.PENDING, FiatWithdrawRequest.DONE):
             raise ValidationError('امکان لغو درخواست برداشت وجود ندارد.')
 
         instance.status = CANCELED
