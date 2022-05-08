@@ -81,9 +81,9 @@ class Payir:
             'uid': request_id,
         })
 
-        return data['id']
+        return data['cashout']['id']
 
     @classmethod
-    def get_withdraw_status(cls, withdraw_id: int) -> int:
-        data = cls.collect_api(f'/api/v2/cashouts/{withdraw_id}')
-        return data['status']
+    def get_withdraw_status(cls, request_id: int) -> int:
+        data = cls.collect_api(f'/api/v2/cashouts/track/{request_id}')
+        return data['cashout']['status']
