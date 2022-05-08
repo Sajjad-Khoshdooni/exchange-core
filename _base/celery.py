@@ -189,11 +189,11 @@ app.conf.beat_schedule = {
             'expire': 4
         }
     },
-    'withdraw_update_provider_request_status': {
-        'task': 'financial.tasks.withdraw.withdraw_update_provider_request_status',
+    'update_withdraw_status': {
+        'task': 'financial.tasks.withdraw.update_withdraw_status',
         'schedule': 300,
         'options': {
-            'queue': 'celery',
+            'queue': 'finance',
             'expire': 300
         },
     },

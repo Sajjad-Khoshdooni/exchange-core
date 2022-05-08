@@ -3,10 +3,12 @@ from django.db import models, transaction
 from django.utils import timezone
 
 from yekta_config import secret
+from yekta_config.config import config
 
 from accounts.models import Notification
 from accounts.models import Account
 from financial.models import BankAccount
+from financial.utils.pay_ir import Payir
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_status_field, DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
 from accounts.tasks.send_sms import send_message_by_kavenegar
@@ -20,8 +22,9 @@ logger = logging.getLogger(__name__)
 
 
 class FiatWithdrawRequest(models.Model):
+    PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
 
-    INIT, SENT, DONE, CANCELED = 'init', 'sent', 'done', 'canceled'
+    FREEZE_TIME = 3 * 60
 
     BASE_URL = 'https://pay.ir'
 
@@ -33,11 +36,10 @@ class FiatWithdrawRequest(models.Model):
     amount = models.PositiveIntegerField(verbose_name='میزان برداشت')
     fee_amount = models.PositiveIntegerField(verbose_name='کارمزد')
 
-    status = get_status_field()
-    provider_request_status = models.CharField(
-        default=INIT,
+    status = models.CharField(
+        default=PROCESSING,
         max_length=10,
-        choices=[(INIT, 'مرحله اولیه'), (SENT, 'ارسال شده'), (DONE, 'انجام شده'), (CANCELED, 'لغو شده')]
+        choices=[(PROCESSING, 'در حال پردازش'), (PENDING, 'در انتظار'), (DONE, 'انجام شده'), (CANCELED, 'لغو شده')]
     )
     lock = get_lock_field()
 
@@ -47,6 +49,8 @@ class FiatWithdrawRequest(models.Model):
     comment = models.TextField(verbose_name='نظر', blank=True)
 
     done_datetime = models.DateTimeField(null=True, blank=True)
+
+    provider_withdraw_id = models.CharField(blank=True, max_length=32)
 
     @property
     def total_amount(self):
@@ -90,69 +94,36 @@ class FiatWithdrawRequest(models.Model):
         if self.status == DONE and not self.ref_id:
             raise ValidationError('رسید انتقال خالی است.')
 
-    def get_available_wallet_id(self):
-
-        resp = requests.get(
-            self.BASE_URL + '/api/v2/wallets',
-            headers={'Authorization': '%s' % secret('PAYDOTIR_WITHDRAW_KEY')}
-        )
-        resp = resp.json()
-        if resp['success']:
-            wallet_id = None
-            for wallet in resp['data']['wallet']:
-                if wallet['cashoutableAmount'] >= self.amount * 10:
-                    wallet_id = wallet['id']
-            return wallet_id
-        else:
-            raise Exception('fail in get wallet')
-
     def create_withdraw_request_paydotir(self):
 
-        wallet_id = self.get_available_wallet_id()
+        wallet_id = config('PAY_IR_WALLET_ID', cast=int)
+        wallet = Payir.get_wallet_data(wallet_id)
 
-        if wallet_id is None:
-            self.status = CANCELED
-            self.save()
+        if wallet.free < self.amount:
             link = url_to_edit_object(self)
             send_support_message(
                 message='موجودی هیچ یک از کیف پول‌ها برای انجام این تراکنش کافی نیست.',
                 link=link
             )
+            return
 
-        else:
-            second_resp = requests.post(
-                self.BASE_URL + '/api/v2/cashouts',
-                headers={'Authorization': '%s' % secret('PAYDOTIR_WITHDRAW_KEY')},
-                json={
-                    'walletid': wallet_id,
-                    'amount': self.amount * 10,
-                    'name': self.bank_account.user.get_full_name(),
-                    'iban': self.bank_account.iban,
-                    'uid': self.pk,
-                }
-            )
-            if second_resp.json()['success']:
-                self.provider_request_status = FiatWithdrawRequest.SENT
-                self.save()
-            else:
-                logger.error(
-                    'Bank transfer registration failed'
-                )
-                return
+        withdraw_id = Payir.withdraw(wallet_id, self.bank_account, self.amount, self.id)
+        self.provider_withdraw_id = withdraw_id
+        self.provider_request_status = FiatWithdrawRequest.PENDING
+        self.save()
 
-    def update_provider_request_status(self):
-        resp = requests.get(
-            self.BASE_URL + '/api/v2/cashouts/%s' % self.pk,
-            headers={'Authorization': '%s' % secret('PAYDOTIR_WITHDRAW_KEY')},
-        )
-        resp_json = resp.json()
-        if resp_json['success']:
-            if resp_json['data']['id'] == 4:
-                self.provider_request_status = DONE
-                self.status = DONE
-            if resp_json['data']['id'] == (5 or 3):
-                self.provider_request_status = CANCELED
-                self.status = CANCELED
+    def update_status(self):
+        if self.status != self.PENDING:
+            return
+
+        status = Payir.get_withdraw_status(self.provider_withdraw_id)
+
+        if status == 4:
+            self.status = DONE
+            self.save()
+
+        elif status in (5, 3):
+            self.status = CANCELED
             self.save()
 
     def alert_withdraw_verify_status(self, old):
@@ -160,6 +131,7 @@ class FiatWithdrawRequest(models.Model):
             title = 'درخواست برداشت شما با موفقیت انجام شد.'
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
+
         elif (not old or old.status != CANCELED) and self.status == CANCELED:
             title = 'درخواست برداشت شما انجام نشد.'
             level = Notification.ERROR
