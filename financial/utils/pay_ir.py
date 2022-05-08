@@ -77,7 +77,7 @@ class Payir:
             'walletId': wallet_id,
             'amount': amount * 10,
             'name': receiver.user.get_full_name(),
-            'iban': receiver.iban,
+            'iban': receiver.iban[2:],
             'uid': request_id,
         })
 
