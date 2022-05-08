@@ -160,7 +160,7 @@ class FiatWithdrawRequest(models.Model):
             if (not old or old.status != DONE) and self.status == DONE:
                 self.build_trx()
 
-            if self.status != PENDING:
+            if self.status in (self.CANCELED, self.DONE):
                 self.lock.release()
 
         self.alert_withdraw_verify_status(old)

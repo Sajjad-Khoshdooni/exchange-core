@@ -33,7 +33,6 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
     iban = serializers.CharField(write_only=True)
 
     def create(self, validated_data):
-        raise Exception
 
         amount = validated_data['amount']
         iban = validated_data['iban']
@@ -58,6 +57,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         if user_reached_fiat_withdraw_limit(user, amount):
             logger.info('FiatRequest rejected due to max withdraw limit reached. user=%s' % user.id)
             raise ValidationError({'amount': 'شما به سقف برداشت ریالی خورده اید.'})
+
+        raise Exception
 
         asset = Asset.get(Asset.IRT)
         wallet = asset.get_wallet(user.account)
