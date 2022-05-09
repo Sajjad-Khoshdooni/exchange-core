@@ -32,8 +32,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
     market_cap = serializers.SerializerMethodField()
     circulating_supply = serializers.SerializerMethodField()
     min_withdraw_amount = serializers.SerializerMethodField()
-
-    networks = serializers.SerializerMethodField()
+    min_withdraw_fee = serializers.SerializerMethodField()
 
     class Meta:
         model = Asset
@@ -56,11 +55,12 @@ class AssetSerializerBuilder(AssetSerializerMini):
     def get_min_withdraw_amount(self, asset: Asset):
         network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True)
         min_withdraw = network_assets.aggregate(min=Min('withdraw_min'))
-        return min_withdraw['min'] or Decimal(0)
+        return min_withdraw['min']
 
-    def get_networks(self, asset: Asset):
+    def get_min_withdraw_fee(self, asset: Asset):
         network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True)
-        return NetworkAssetSerializer(instance=network_assets, many=True).data
+        min_withdraw = network_assets.aggregate(min=Min('withdraw_fee'))
+        return min_withdraw['min']
 
     def get_trend_url(self, asset: Asset):
         cap = CoinMarketCap.objects.filter(symbol=asset.symbol).first()
@@ -136,7 +136,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
             new_fields = [
                 'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
                 'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
-                'low_24h', 'trend_url', 'min_withdraw_amount', 'networks'
+                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee'
             ]
 
         class Serializer(cls):
