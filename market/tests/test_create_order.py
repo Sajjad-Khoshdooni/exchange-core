@@ -1,11 +1,12 @@
 from decimal import Decimal
+from uuid import uuid4
 
 from django.test import TestCase, Client
-from ledger.utils.precision import get_presentation_amount
+from django.utils import timezone
+
 from accounts.models import Account
+from ledger.models import Asset, Trx, Wallet
 from ledger.utils.test import new_account
-from ledger.models import Asset, Trx
-from uuid import uuid4
 from market.models import PairSymbol, FillOrder, Order
 from market.utils import new_order, cancel_order
 
@@ -15,39 +16,58 @@ from market.utils import new_order, cancel_order
 class CreateOrderTestCase(TestCase):
     def setUp(self):
         PairSymbol.objects.filter(name='BTCIRT').update(enable=True)
+        PairSymbol.objects.filter(name='BTCUSDT').update(enable=True)
 
         self.account = new_account()
+
         self.account_2 = new_account()
         self.client = Client()
 
         self.irt = Asset.get(Asset.IRT)
+        self.usdt = Asset.get(Asset.USDT)
         self.btc = Asset.get('BTC')
 
         self.btcirt = PairSymbol.objects.get(name='BTCIRT')
+        self.btcusdt = PairSymbol.objects.get(name='BTCUSDT')
 
-        self .fill = FillOrder.objects.all()
+        self.fill = FillOrder.objects.all()
 
-        Trx.transaction(
-            group_id=uuid4(),
-            sender=self.irt.get_wallet(Account.system()),
-            receiver=self.irt.get_wallet(self.account),
-            amount=1000 * 1000 * 10000,
-            scope=Trx.TRANSFER
-        )
-        Trx.transaction(
-            group_id=uuid4(),
-            sender=self.btc.get_wallet(Account.system()),
-            receiver=self.btc.get_wallet(self.account),
-            amount=1000 * 1000 * 10000,
-            scope=Trx.TRANSFER
-        )
+        for market in (Wallet.SPOT, Wallet.MARGIN):
+            Trx.transaction(
+                group_id=uuid4(),
+                sender=self.usdt.get_wallet(Account.system()),
+                receiver=self.usdt.get_wallet(self.account, market=market),
+                amount=1000 * 1000 * 10000,
+                scope=Trx.TRANSFER
+            )
+            Trx.transaction(
+                group_id=uuid4(),
+                sender=self.irt.get_wallet(Account.system()),
+                receiver=self.irt.get_wallet(self.account, market=market),
+                amount=1000 * 1000 * 10000,
+                scope=Trx.TRANSFER
+            )
+            Trx.transaction(
+                group_id=uuid4(),
+                sender=self.btc.get_wallet(Account.system()),
+                receiver=self.btc.get_wallet(self.account, market=market),
+                amount=1000 * 1000 * 10000,
+                scope=Trx.TRANSFER
+            )
+
+        self.account.user.margin_quiz_pass_date = timezone.now()
+        self.account.user.show_margin = True
+        self.account.user.save()
+
+        self.account_2.user.margin_quiz_pass_date = timezone.now()
+        self.account_2.user.show_margin = True
+        self.account_2.user.save()
 
     def test_create_order(self):
 
         self.client.force_login(self.account.user)
-        wallets = self.irt.get_wallet(self.account)
+        # wallets = self.irt.get_wallet(self.account)
         resp = self.client.post('/api/v1/market/orders/', {
-            'wallet': wallets.id,
             'symbol': 'BTCIRT',
             'amount': '1.5',
             'price': '200000',
@@ -212,9 +232,8 @@ class CreateOrderTestCase(TestCase):
 
     def test_not_enough_for_sell(self):
         self.client.force_login(self.account_2.user)
-        wallet = self.btc.get_wallet(self.account_2)
+        # wallet = self.btc.get_wallet(self.account_2)
         resp = self.client.post('/api/v1/market/orders/', {
-            'wallet': wallet.id,
             'symbol': 'BTCIRT',
             'amount': '10',
             'price': '300000',
@@ -283,3 +302,52 @@ class CreateOrderTestCase(TestCase):
         for fill_order in fill_orders:
             self.assertEqual(fill_order.price, fill_order.maker_order.price)
             self.assertEqual(fill_order.amount, Decimal('0.5'))
+
+    def test_margin_create_order(self):
+        self.client.force_login(self.account.user)
+        # wallets = self.irt.get_wallet(self.account)
+        resp = self.client.post('/api/v1/market/orders/', {
+            'symbol': 'BTCUSDT',
+            'amount': '1.5',
+            'price': '200000',
+            'side': 'buy',
+            'fill_type': 'limit',
+            'market': 'margin'
+        })
+        self.assertEqual(resp.status_code, 201)
+
+    def test_margin_match_order(self):
+        self.client.force_login(self.account.user)
+        # wallets = self.irt.get_wallet(self.account)
+        order = new_order(self.btcusdt, Account.system(), 2, 20000, Order.SELL)
+        resp = self.client.post('/api/v1/market/orders/', {
+            'symbol': 'BTCUSDT',
+            'amount': '1.5',
+            'price': '20000',
+            'side': 'buy',
+            'fill_type': 'limit',
+            'market': 'margin'
+        })
+
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(Decimal(resp.json()['amount']), Decimal('1.5'))
+
+        fill_order = FillOrder.objects.last()
+        order.refresh_from_db()
+        self.assertEqual(fill_order.price, 20000)
+        self.assertEqual(fill_order.amount, Decimal('1.5'))
+        self.assertEqual(fill_order.taker_order.wallet.market, Wallet.MARGIN)
+        self.assertEqual(fill_order.taker_order.base_wallet.market, Wallet.MARGIN)
+
+    def test_not_enough_for_sell_margin(self):
+        self.client.force_login(self.account_2.user)
+        # wallet = self.btc.get_wallet(self.account_2)
+        resp = self.client.post('/api/v1/market/orders/', {
+            'symbol': 'BTCUSDT',
+            'amount': '10',
+            'price': '300000',
+            'side': 'sell',
+            'fill_type': 'limit',
+            'market': 'margin'
+        })
+        self.assertEqual(resp.status_code, 400)
