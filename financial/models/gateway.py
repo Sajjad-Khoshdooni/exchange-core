@@ -3,7 +3,6 @@ import logging
 import requests
 from django.conf import settings
 from django.db import models, transaction
-from django.shortcuts import redirect
 from django.urls import reverse
 
 from financial.models import BankCard
