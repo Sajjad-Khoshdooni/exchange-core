@@ -1,21 +1,19 @@
 import logging
 from uuid import uuid4
 
-from django.db import models
+from django.db import models, transaction
+from django.db.models import Q, Sum
 
-from accounts.models import Account, User, Notification
+from accounts.models import Account, Notification
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_amount_field
+from ledger.utils.precision import humanize_number
 
 logger = logging.getLogger(__name__)
 
 
 class Prize(models.Model):
-    SIGN_UP_PRIZE_ACTIVATE = False
-
-    SIGN_UP_PRIZE, SIGN_UP_PRIZE_AMOUNT = 'signup', 0
-    LEVEL2_PRIZE, LEVEL2_PRIZE_AMOUNT = 'level2_verify', 50_000
-    FIRST_TRADE_PRIZE, FIRST_TRADE_PRIZE_AMOUNT = 'first_trade', 0
+    TRADE_2M_PRIZE, TRADE_2M_AMOUNT = 'trade_2m', 50_000
 
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE, verbose_name='کاربر')
@@ -23,7 +21,7 @@ class Prize(models.Model):
     scope = models.CharField(
         max_length=25,
         choices=(
-            (LEVEL2_PRIZE, LEVEL2_PRIZE), (SIGN_UP_PRIZE, SIGN_UP_PRIZE), (FIRST_TRADE_PRIZE, FIRST_TRADE_PRIZE)
+            (TRADE_2M_PRIZE, TRADE_2M_PRIZE),
         ),
         verbose_name='نوع'
     )
@@ -43,27 +41,31 @@ class Prize(models.Model):
             scope=Trx.PRIZE
         )
 
+        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(self.amount))
+
+        Notification.send(
+            recipient=self.account.user,
+            title=title,
+            level=Notification.SUCCESS
+        )
+
     def __str__(self):
         return '%s %s %s' % (self.account, self.amount, self.asset)
 
 
-def alert_user_prize(user: User, scope: str):
-    from ledger.models import Prize
-    from ledger.utils.precision import humanize_number
-    level = Notification.SUCCESS
+def check_trade_prize(fill_order):
+    from market.models import FillOrder
 
-    if scope == Prize.SIGN_UP_PRIZE:
-        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(Prize.SIGN_UP_PRIZE_AMOUNT))
-    elif scope == Prize.LEVEL2_PRIZE:
-        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(Prize.LEVEL2_PRIZE_AMOUNT))
-    elif scope == Prize.FIRST_TRADE_PRIZE:
-        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(Prize.FIRST_TRADE_PRIZE_AMOUNT))
-    else:
-        logger.warning('unhandled scope received', extra={'scope': scope})
-        return
+    accounts = [fill_order.taker_order.wallet.account, fill_order.maker_order.wallet.account]
 
-    Notification.send(
-        recipient=user,
-        title=title,
-        level=level
-    )
+    for account in accounts:
+        if not account.is_system() and not Prize.objects.filter(account=account, scope=Prize.TRADE_2M_PRIZE).exists():
+            if account.get_trade_volume_irt() >= 2_000_000:
+                with transaction.atomic():
+                    prize = Prize.objects.create(
+                        account=account,
+                        amount=Prize.TRADE_2M_AMOUNT,
+                        scope=Prize.TRADE_2M_PRIZE,
+                        asset=Asset.get(Asset.SHIB)
+                    )
+                    prize.build_trx()

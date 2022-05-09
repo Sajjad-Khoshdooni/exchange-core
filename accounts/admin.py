@@ -340,19 +340,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_wallet_address.short_description = 'لیست کیف‌ها'
 
     def get_sum_of_value_buy_sell(self, user: User):
-        from market.models import FillOrder
-
         if not hasattr(user, 'account'):
             return 0
 
-        account_id = user.account.id
+        return user.account.get_trade_volume_irt()
 
-        value = FillOrder.objects.filter(
-            Q(maker_order__wallet__account_id=account_id) | Q(taker_order__wallet__account_id=account_id),
-        ).aggregate(
-            amount=Sum('irt_value')
-        )
-        return humanize_number(int(value['amount'] or 0))
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
 
     def get_bank_card_link(self, user: User):
