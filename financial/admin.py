@@ -51,7 +51,7 @@ class UserRialWithdrawRequestFilter(SimpleListFilter):
 class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     fieldsets = (
         ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'ref_doc',
-                                        'get_withdraw_request_receive_time')}),
+                                        'get_withdraw_request_receive_time', 'provider_withdraw_id')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
                                       'get_withdraw_request_user_mobile')}),
         ('نظر', {'fields': ('comment',)})
@@ -80,8 +80,8 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     get_withdraw_request_iban.short_description = 'شماره شبا'
 
     def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
-        if withdraw.done_datetime:
-            data_time = get_fiat_estimate_receive_time(withdraw.done_datetime)
+        if withdraw.withdraw_datetime:
+            data_time = get_fiat_estimate_receive_time(withdraw.withdraw_datetime)
 
             return ('زمان : %s تاریخ %s' % (
                 data_time.time().strftime("%H:%M"),

@@ -105,8 +105,7 @@ class WithdrawRequestView(ModelViewSet):
         if instance.status in (FiatWithdrawRequest.PENDING, FiatWithdrawRequest.DONE):
             raise ValidationError('امکان لغو درخواست برداشت وجود ندارد.')
 
-        instance.status = CANCELED
-        instance.save()
+        instance.change_status(FiatWithdrawRequest.CANCELED)
 
         return Response({'msg': 'FiatWithdrawRequest Deleted'}, status=status.HTTP_204_NO_CONTENT)
 
@@ -114,6 +113,7 @@ class WithdrawRequestView(ModelViewSet):
 class WithdrawHistorySerializer(serializers.ModelSerializer):
     bank_account = BankAccountSerializer()
     rial_estimate_receive_time = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
 
     class Meta:
         model = FiatWithdrawRequest
@@ -121,7 +121,14 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
                   'rial_estimate_receive_time', )
 
     def get_rial_estimate_receive_time(self, fiat_withdraw_request: FiatWithdrawRequest):
-        return fiat_withdraw_request.done_datetime and get_fiat_estimate_receive_time(fiat_withdraw_request.done_datetime)
+        return fiat_withdraw_request.withdraw_datetime and \
+               get_fiat_estimate_receive_time(fiat_withdraw_request.withdraw_datetime)
+
+    def get_status(self, withdraw: FiatWithdrawRequest):
+        if withdraw.status == FiatWithdrawRequest.PENDING:
+            return FiatWithdrawRequest.DONE
+        else:
+            return withdraw.status
 
 
 class WithdrawHistoryView(ListAPIView):
