@@ -100,7 +100,7 @@ def update_symbol_maker_orders(symbol):
             price = Order.get_maker_price(symbol, side)
             order = Order.init_top_maker_order(
                 symbol, side, price,
-                Decimal(market_top_prices[side]), Decimal(market_top_prices[Order.get_opposite_side(side)])
+                Decimal(market_top_prices[side]), Decimal(top_depth_prices[Order.get_opposite_side(side)])
             )
             logger.info(f'{symbol.name} {side} maker order created: {bool(order)}')
             if order:
