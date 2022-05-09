@@ -6,7 +6,7 @@ from random import randrange
 
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import Sum, F, Q
+from django.db.models import Sum, F, Q, Max, Min
 from django.utils import timezone
 
 from ledger.models import Trx, Wallet, BalanceLock
@@ -27,9 +27,10 @@ class OpenOrderManager(models.Manager):
 
 
 class Order(models.Model):
-    MIN_IRT_ORDER_SIZE = Decimal(1e5)
+    MARKET_BORDER = Decimal('1e-2')
+    MIN_IRT_ORDER_SIZE = Decimal('1e5')
     MIN_USDT_ORDER_SIZE = Decimal(5)
-    MAX_ORDER_DEPTH_SIZE_IRT = Decimal(5e7)
+    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('5e7')
     MAX_ORDER_DEPTH_SIZE_USDT = Decimal(2000)
     MAKER_ORDERS_COUNT = 10 if settings.DEBUG else 50
 
@@ -269,6 +270,9 @@ class Order(models.Model):
                         })
                     break
 
+            if self.fill_type == Order.MARKET and self.status == Order.NEW:
+                self.status = Order.CANCELED
+                self.save(update_fields=['status'])
             Trx.objects.bulk_create(filter(lambda trx: trx and trx.amount, trx_list))
             ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referral_list))
             FillOrder.objects.bulk_create(fill_orders)
@@ -395,3 +399,14 @@ class Order(models.Model):
     @classmethod
     def update_filled_amount(cls, order_ids, match_amount):
         Order.objects.filter(id__in=order_ids).update(filled_amount=F('filled_amount') + match_amount)
+
+    @classmethod
+    def get_market_price(cls, symbol, side):
+        open_orders = Order.open_objects.filter(symbol_id=symbol.id, side=side, fill_type=Order.LIMIT)
+        top_order = open_orders.aggregate(top_price=Max('price')) if side == Order.BUY else \
+            open_orders.aggregate(top_price=Min('price'))
+        if not top_order['top_price']:
+            return
+        market_price = top_order['top_price'] * (Decimal(1) - cls.MARKET_BORDER) if side == Order.BUY else \
+            top_order['top_price'] * (Decimal(1) + cls.MARKET_BORDER)
+        return market_price

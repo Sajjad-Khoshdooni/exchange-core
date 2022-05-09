@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.test import TestCase, Client
 from ledger.utils.precision import get_presentation_amount
 from accounts.models import Account
@@ -220,3 +222,64 @@ class CreateOrderTestCase(TestCase):
             'fill_type': 'limit',
         })
         self.assertEqual(resp.status_code, 400)
+
+    def test_market_sell_order(self):
+        limit_order = new_order(self.btcirt, Account.system(), 2, 2000000, Order.BUY)
+        order = new_order(self.btcirt, Account.system(), Decimal('0.1'), None, Order.SELL, fill_type=Order.MARKET)
+        order.refresh_from_db()
+
+        fill_order = FillOrder.objects.last()
+
+        self.assertEqual(order.status, Order.FILLED)
+        self.assertEqual(fill_order.price, 2000000)
+        self.assertEqual(fill_order.amount, Decimal('0.1'))
+
+    def test_market_sell_order(self):
+        limit_order = new_order(self.btcirt, Account.system(), 2, 2000000, Order.SELL)
+        order = new_order(self.btcirt, Account.system(), Decimal('0.1'), None, Order.BUY, fill_type=Order.MARKET)
+        order.refresh_from_db()
+
+        fill_order = FillOrder.objects.last()
+
+        self.assertEqual(order.status, Order.FILLED)
+        self.assertEqual(fill_order.price, 2000000)
+        self.assertEqual(fill_order.amount, Decimal('0.1'))
+
+    def test_market_order_large_amount(self):
+        new_order(self.btcirt, Account.system(), 1, 2000000, Order.BUY)
+        order = new_order(self.btcirt, Account.system(), 2, None, Order.SELL, fill_type=Order.MARKET)
+        order.refresh_from_db()
+
+        fill_order = FillOrder.objects.last()
+
+        self.assertEqual(order.status, Order.CANCELED)
+        self.assertEqual(fill_order.price, 2000000)
+        self.assertEqual(fill_order.amount, 1)
+
+    def test_market_order_multi_match_price(self):
+        new_order(self.btcirt, Account.system(), Decimal('0.5'), 2000000, Order.BUY)
+        new_order(self.btcirt, Account.system(), Decimal('0.5'), 1980000, Order.BUY)
+        order = new_order(self.btcirt, Account.system(), 2, None, Order.SELL, fill_type=Order.MARKET)
+        order.refresh_from_db()
+
+        self.assertEqual(order.status, Order.CANCELED)
+
+        fill_orders = FillOrder.objects.all().order_by('-id')[:2]
+        for fill_order in fill_orders:
+            self.assertEqual(fill_order.price, fill_order.maker_order.price)
+            self.assertEqual(fill_order.amount, Decimal('0.5'))
+
+    def test_market_order_multi_match_price_unmatched_orders(self):
+        new_order(self.btcirt, Account.system(), Decimal('0.5'), 2000000, Order.BUY)
+        new_order(self.btcirt, Account.system(), Decimal('0.5'), 1980000, Order.BUY)
+        new_order(self.btcirt, Account.system(), Decimal('0.5'), 1900000, Order.BUY)
+        order = new_order(self.btcirt, Account.system(), 2, None, Order.SELL, fill_type=Order.MARKET)
+        order.refresh_from_db()
+
+        self.assertEqual(order.status, Order.CANCELED)
+        self.assertEqual(order.filled_amount, 1)
+
+        fill_orders = FillOrder.objects.all().order_by('-id')[:2]
+        for fill_order in fill_orders:
+            self.assertEqual(fill_order.price, fill_order.maker_order.price)
+            self.assertEqual(fill_order.amount, Decimal('0.5'))
