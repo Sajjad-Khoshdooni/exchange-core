@@ -93,6 +93,13 @@ class OrderSerializer(serializers.ModelSerializer):
             )
         return price
 
+    def validate(self, attrs):
+        if attrs['fill_type'] == Order.LIMIT and not attrs.get('price'):
+            raise ValidationError(
+                {'price': _('price is mandatory in limit order.')}
+            )
+        return attrs
+
     def get_filled_amount(self, order: Order):
         return str(floor_precision(order.filled_amount, order.symbol.step_size))
 
