@@ -11,6 +11,7 @@ from ledger.models import Asset, Wallet, NetworkAsset
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
 from ledger.utils.price_manager import PriceManager
+from ledger.views.network_asset_info_view import NetworkAssetSerializer
 
 
 class AssetSerializerBuilder(AssetSerializerMini):
@@ -54,6 +55,10 @@ class AssetSerializerBuilder(AssetSerializerMini):
         network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True)
         min_withdraw = network_assets.aggregate(min=Min('withdraw_min'))
         return min_withdraw['min'] or Decimal(0)
+
+    def get_networks(self, asset: Asset):
+        network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True)
+        return NetworkAssetSerializer(instance=network_assets, many=True).data
 
     def get_trend_url(self, asset: Asset):
         cap = CoinMarketCap.objects.filter(symbol=asset.symbol).first()
@@ -129,7 +134,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
             new_fields = [
                 'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
                 'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
-                'low_24h', 'trend_url', 'min_withdraw_amount',
+                'low_24h', 'trend_url', 'min_withdraw_amount', 'networks'
             ]
 
         class Serializer(cls):
