@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -79,7 +80,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             raise ValidationError({'amount': 'موجودی کافی نیست'})
 
         from financial.tasks import process_withdraw
-        process_withdraw.s(withdraw_request.id).apply_async(countdown=FiatWithdrawRequest.FREEZE_TIME)
+
+        if not settings.DEBUG_OR_TESTING:
+            process_withdraw.s(withdraw_request.id).apply_async(countdown=FiatWithdrawRequest.FREEZE_TIME)
 
         return withdraw_request
 
