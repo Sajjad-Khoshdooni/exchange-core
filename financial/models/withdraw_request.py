@@ -1,6 +1,5 @@
 import logging
 
-from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
 from yekta_config.config import config

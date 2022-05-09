@@ -48,7 +48,11 @@ class FillOrder(models.Model):
 
     def save(self, **kwargs):
         assert self.taker_order.symbol == self.maker_order.symbol == self.symbol
-        return super(FillOrder, self).save(**kwargs)
+        super(FillOrder, self).save(**kwargs)
+
+        from ledger.models.prize import check_trade_prize
+        check_trade_prize(self)
+
 
     class Meta:
         indexes = [

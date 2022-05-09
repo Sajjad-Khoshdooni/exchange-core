@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.db import models
-from django.db.models import UniqueConstraint, Q
+from django.db.models import UniqueConstraint, Q, Sum
 
 from accounts.models import User
 from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt
@@ -92,6 +92,16 @@ class Account(models.Model):
                 total += balance * get_trading_price_irt(wallet.asset.symbol, side, raw_price=True)
 
         return total
+
+    def get_trade_volume_irt(self):
+        from market.models import FillOrder
+
+        value = FillOrder.objects.filter(
+            Q(maker_order__wallet__account_id=self.id) | Q(taker_order__wallet__account_id=self.id),
+        ).aggregate(
+            amount=Sum('irt_value')
+        )
+        return int(value['amount'] or 0)
 
     def save(self, *args, **kwargs):
         super(Account, self).save(*args, **kwargs)
