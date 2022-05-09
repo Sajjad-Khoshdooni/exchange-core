@@ -13,16 +13,12 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from accounts.permissions import IsBasicVerified
-from accounts.utils.admin import url_to_edit_object
-from accounts.utils.telegram import send_support_message
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit, get_fiat_estimate_receive_time
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
-from ledger.utils.fields import CANCELED
-from ledger.utils.precision import humanize_number
 
 logger = logging.getLogger(__name__)
 
