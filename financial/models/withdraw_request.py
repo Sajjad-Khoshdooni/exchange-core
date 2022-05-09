@@ -114,13 +114,15 @@ class FiatWithdrawRequest(models.Model):
             self.change_status(FiatWithdrawRequest.CANCELED)
 
     def alert_withdraw_verify_status(self):
-        if self.status == DONE:
-            title = 'درخواست برداشت شما با موفقیت انجام شد.'
+        if self.status == PENDING:
+            title = 'درخواست برداشت شما به بانک ارسال گردید.'
+            description = 'درخواست برداشت شما پس از طی چرخه پرداخت بانک مرکزی (پایا) به حساب شما واریز خواهد شد.'
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
 
         elif self.status == CANCELED:
-            title = 'درخواست برداشت شما انجام نشد.'
+            title = 'درخواست برداشت شما لغو شد.'
+            description = None
             level = Notification.ERROR
             template = 'withdraw-rejected'
         else:
@@ -129,7 +131,8 @@ class FiatWithdrawRequest(models.Model):
         Notification.send(
             recipient=self.bank_account.user,
             title=title,
-            level=level
+            message=description,
+            level=level,
         )
         send_message_by_kavenegar(
             phone=self.bank_account.user.phone,
