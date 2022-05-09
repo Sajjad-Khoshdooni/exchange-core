@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from ledger.models import Trx, Wallet, BalanceLock
 from ledger.models.asset import Asset
+from ledger.models.prize import check_trade_prize
 from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
 from ledger.utils.precision import floor_precision, round_down_to_exponent
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
@@ -273,9 +274,21 @@ class Order(models.Model):
             if self.fill_type == Order.MARKET and self.status == Order.NEW:
                 self.status = Order.CANCELED
                 self.save(update_fields=['status'])
+
             Trx.objects.bulk_create(filter(lambda trx: trx and trx.amount, trx_list))
             ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referral_list))
             FillOrder.objects.bulk_create(fill_orders)
+
+            # updating trade_volume_irt of accounts
+            for fill_order in fill_orders:
+                accounts = [fill_order.maker_order.wallet.account, fill_order.taker_order.wallet.account]
+
+                for account in accounts:
+                    if not account.is_system():
+                        account.trade_volume_irt = F('trade_volume_irt') + fill_order.irt_value
+                        account.save(update_fields=['trade_volume_irt'])
+
+                        check_trade_prize(account)
 
     # OrderBook related methods
     @classmethod

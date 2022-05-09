@@ -53,19 +53,17 @@ class Prize(models.Model):
         return '%s %s %s' % (self.account, self.amount, self.asset)
 
 
-def check_trade_prize(fill_order):
-    from market.models import FillOrder
+def check_trade_prize(account: Account):
+    account.refresh_from_db()
 
-    accounts = [fill_order.taker_order.wallet.account, fill_order.maker_order.wallet.account]
+    if account.trade_volume_irt >= 2_000_000 and \
+            not Prize.objects.filter(account=account, scope=Prize.TRADE_2M_PRIZE).exists():
 
-    for account in accounts:
-        if not account.is_system() and not Prize.objects.filter(account=account, scope=Prize.TRADE_2M_PRIZE).exists():
-            if account.get_trade_volume_irt() >= 2_000_000:
-                with transaction.atomic():
-                    prize = Prize.objects.create(
-                        account=account,
-                        amount=Prize.TRADE_2M_AMOUNT,
-                        scope=Prize.TRADE_2M_PRIZE,
-                        asset=Asset.get(Asset.SHIB)
-                    )
-                    prize.build_trx()
+        with transaction.atomic():
+            prize = Prize.objects.create(
+                account=account,
+                amount=Prize.TRADE_2M_AMOUNT,
+                scope=Prize.TRADE_2M_PRIZE,
+                asset=Asset.get(Asset.SHIB)
+            )
+            prize.build_trx()

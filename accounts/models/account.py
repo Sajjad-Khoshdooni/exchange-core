@@ -30,9 +30,6 @@ class Account(models.Model):
 
     last_margin_warn = models.DateTimeField(null=True, blank=True)
 
-    def is_ordinary_user(self) -> bool:
-        return not bool(self.type)
-
     referred_by = models.ForeignKey(
         to='accounts.Referral',
         on_delete=models.SET_NULL,
@@ -40,8 +37,13 @@ class Account(models.Model):
         null=True, blank=True
     )
 
+    trade_volume_irt = models.PositiveBigIntegerField(default=0)
+
     def is_system(self) -> bool:
         return self.type == self.SYSTEM
+
+    def is_ordinary_user(self) -> bool:
+        return not bool(self.type)
 
     @classmethod
     def system(cls) -> 'Account':
@@ -92,16 +94,6 @@ class Account(models.Model):
                 total += balance * get_trading_price_irt(wallet.asset.symbol, side, raw_price=True)
 
         return total
-
-    def get_trade_volume_irt(self):
-        from market.models import FillOrder
-
-        value = FillOrder.objects.filter(
-            Q(maker_order__wallet__account_id=self.id) | Q(taker_order__wallet__account_id=self.id),
-        ).aggregate(
-            amount=Sum('irt_value')
-        )
-        return int(value['amount'] or 0)
 
     def save(self, *args, **kwargs):
         super(Account, self).save(*args, **kwargs)

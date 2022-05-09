@@ -343,7 +343,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         if not hasattr(user, 'account'):
             return 0
 
-        return user.account.get_trade_volume_irt()
+        return user.account.trade_volume_irt
 
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
 
