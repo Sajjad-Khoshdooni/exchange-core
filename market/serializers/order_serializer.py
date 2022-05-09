@@ -35,7 +35,12 @@ class OrderSerializer(serializers.ModelSerializer):
             raise ValidationError(f'{symbol} is not enable')
 
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
-        validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
+        if validated_data['fill_type'] == Order.LIMIT:
+            validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
+        elif validated_data['fill_type'] == Order.MARKET:
+            validated_data['price'] = Order.get_market_price(symbol, Order.get_opposite_side(validated_data['side']))
+            if not validated_data['price']:
+                raise Exception('Empty order book')
 
         wallet = symbol.asset.get_wallet(self.context['account'], market=self.context.get('market', Wallet.SPOT))
         min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
@@ -47,6 +52,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     {**validated_data, 'wallet': wallet, 'symbol': symbol}
                 )
                 created_order.submit()
+                created_order.refresh_from_db()
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
         except Exception as e:
@@ -87,6 +93,13 @@ class OrderSerializer(serializers.ModelSerializer):
             )
         return price
 
+    def validate(self, attrs):
+        if attrs['fill_type'] == Order.LIMIT and not attrs.get('price'):
+            raise ValidationError(
+                {'price': _('price is mandatory in limit order.')}
+            )
+        return attrs
+
     def get_filled_amount(self, order: Order):
         return str(floor_precision(order.filled_amount, order.symbol.step_size))
 
@@ -102,5 +115,6 @@ class OrderSerializer(serializers.ModelSerializer):
                   'fill_type', 'status')
         read_only_fields = ('id', 'created', 'status',)
         extra_kwargs = {
-            'wallet': {'write_only': True, 'required': False}
+            'wallet': {'write_only': True, 'required': False},
+            'price': {'required': False},
         }
