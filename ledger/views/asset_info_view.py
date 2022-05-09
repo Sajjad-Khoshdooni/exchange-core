@@ -33,6 +33,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
     circulating_supply = serializers.SerializerMethodField()
     min_withdraw_amount = serializers.SerializerMethodField()
 
+    networks = serializers.SerializerMethodField()
+
     class Meta:
         model = Asset
         fields = ()
