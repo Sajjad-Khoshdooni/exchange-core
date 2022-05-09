@@ -122,7 +122,7 @@ class FiatWithdrawRequest(models.Model):
 
         elif self.status == CANCELED:
             title = 'درخواست برداشت شما لغو شد.'
-            description = None
+            description = ''
             level = Notification.ERROR
             template = 'withdraw-rejected'
         else:
