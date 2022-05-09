@@ -48,8 +48,6 @@ class FillOrder(models.Model):
 
     def save(self, **kwargs):
         assert self.taker_order.symbol == self.maker_order.symbol == self.symbol
-        if self.maker_order.wallet.market == Wallet.MARGIN:
-            assert self.maker_order.symbol.base_asset.symbol != Asset.IRT
         return super(FillOrder, self).save(**kwargs)
 
     class Meta:
@@ -89,8 +87,11 @@ class FillOrder(models.Model):
     def init_trade_trxs(self, ignore_fee=False):
         trade_trx = self.__init_trade_trx()
         base_trx = self.__init_base_trx()
+
+        # make sure sender and receiver wallets have same market
         assert trade_trx.sender.market == base_trx.receiver.market
         assert trade_trx.receiver.market == base_trx.sender.market
+
         return {
             'trade': trade_trx,
             'base': base_trx,
