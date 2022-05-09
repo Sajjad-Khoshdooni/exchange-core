@@ -24,8 +24,8 @@ class UserSerializer(serializers.ModelSerializer):
         if has_trade:
             resp = 'trade_is_done'
 
-            if user.level < User.LEVEL3:
-                resp = 'waiting_for_level3'
+            if user.account.get_trade_volume_irt() < 2_000_000:
+                resp = 'waiting_for_trade'
         else:
             if user.on_boarding_flow == 'crypto':
                 transfer = Transfer.objects.filter(wallet__account=user.account, deposit=True)
