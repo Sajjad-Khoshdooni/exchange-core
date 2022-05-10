@@ -467,7 +467,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('user', 'type', 'name',)
+    list_display = ('user', 'type', 'name', 'trade_volume_irt')
     search_fields = ('user__phone', )
     list_filter = ('type', 'primary')
 
