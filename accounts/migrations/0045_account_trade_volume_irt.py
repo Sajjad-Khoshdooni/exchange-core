@@ -12,13 +12,13 @@ def populate_trade_volume_irt(apps, schema_editor):
 
     asset = Asset.objects.get(symbol='SHIB')
 
-    maker_values = dict(FillOrder.objects.values('maker_order__wallet__account_id').annotate(
+    maker_values = dict(FillOrder.objects.filter(maker_order__wallet__account__type=None).values('maker_order__wallet__account_id').annotate(
         amount=Sum('irt_value')
     ).values_list('maker_order__wallet__account_id', 'amount'))
 
-    taker_values = dict(FillOrder.objects.values('taker_order__wallet__account_id').annotate(
+    taker_values = dict(FillOrder.objects.filter(taker_order__wallet__account__type=None).values('taker_order__wallet__account_id').annotate(
         amount=Sum('irt_value')
-    ).values_list('maker_order__wallet__account_id', 'amount'))
+    ).values_list('taker_order__wallet__account_id', 'amount'))
 
     accounts = Account.objects.filter(id__in=set(maker_values) | set(taker_values))
     for account in accounts:
