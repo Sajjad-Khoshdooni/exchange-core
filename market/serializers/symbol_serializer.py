@@ -108,7 +108,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             created__lte=timezone.now(),
         ).aggregate(total_amount=Sum('base_amount'))['total_amount']
         if total_amount:
-            return str(floor_precision(total_amount, symbol.step_size))
+            return str(floor_precision(total_amount))
 
     class Meta:
         model = PairSymbol

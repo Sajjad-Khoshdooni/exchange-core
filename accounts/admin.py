@@ -152,7 +152,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         (_('Authentication'), {'fields': ('level', 'verify_status', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
                                           'telephone_verified', 'selfie_image_verified', 'selfie_image_verifier',
-                                          'national_code_duplicated_alert', 'selfie_image_discard_text',
+                                          'selfie_image_uploaded', 'selfie_image_discard_text',
+                                          'national_code_duplicated_alert',
                                           )}),
         (_('Permissions'), {
             'fields': (
@@ -340,19 +341,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_wallet_address.short_description = 'لیست کیف‌ها'
 
     def get_sum_of_value_buy_sell(self, user: User):
-        from market.models import FillOrder
-
         if not hasattr(user, 'account'):
             return 0
 
-        account_id = user.account.id
+        return user.account.trade_volume_irt
 
-        value = FillOrder.objects.filter(
-            Q(maker_order__wallet__account_id=account_id) | Q(taker_order__wallet__account_id=account_id),
-        ).aggregate(
-            amount=Sum('irt_value')
-        )
-        return humanize_number(int(value['amount'] or 0))
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
 
     def get_bank_card_link(self, user: User):
@@ -475,17 +468,18 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('user', 'type', 'name',)
+    list_display = ('user', 'type', 'name', 'trade_volume_irt')
     search_fields = ('user__phone', )
     list_filter = ('type', 'primary')
 
     fieldsets = (
         ('اطلاعات', {'fields': (
-            'name', 'user', 'type', 'get_wallet_address',
+            'name', 'user', 'type', 'trade_volume_irt', 'get_wallet_address',
             'get_total_balance_irt_admin', 'get_total_balance_usdt_admin'
         )}),
     )
-    readonly_fields = ('get_wallet_address', 'get_total_balance_irt_admin', 'get_total_balance_usdt_admin')
+    readonly_fields = ('get_wallet_address', 'get_total_balance_irt_admin', 'get_total_balance_usdt_admin',
+                       'trade_volume_irt')
 
     def get_wallet_address(self, user: User):
         link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
