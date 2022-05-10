@@ -30,7 +30,11 @@ class Referral(models.Model):
 
     def save(self, **kwargs):
         if not self.id:
-            self.code = generate_random_code(6)
+            existing_codes = list(Referral.objects.all().values_list('code', flat=True))
+            code = generate_random_code(6)
+            while code in existing_codes:
+                code = generate_random_code(6)
+            self.code = code
         return super(Referral, self).save(**kwargs)
 
     def __str__(self):

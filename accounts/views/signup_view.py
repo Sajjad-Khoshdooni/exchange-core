@@ -13,8 +13,6 @@ from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
 from accounts.validators import mobile_number_validator, password_validator
-from ledger.models import Prize, Asset
-from ledger.models.prize import alert_user_prize
 
 
 class InitiateSignupSerializer(serializers.Serializer):
@@ -97,17 +95,6 @@ class SignupSerializer(serializers.Serializer):
                     utm_content=utm.get('utm_content', ''),
                     utm_term=utm.get('utm_term', ''),
                 )
-
-        if Prize.SIGN_UP_PRIZE_ACTIVATE:
-            with transaction.atomic():
-                prize = Prize.objects.create(
-                    account=user.account,
-                    amount=Prize.SIGN_UP_PRIZE_AMOUNT,
-                    scope=Prize.SIGN_UP_PRIZE,
-                    asset=Asset.objects.get(symbol=Asset.SHIB),
-                )
-                prize.build_trx()
-                alert_user_prize(user, prize.scope)
 
         return user
 

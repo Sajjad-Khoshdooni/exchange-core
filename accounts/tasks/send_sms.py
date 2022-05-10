@@ -22,6 +22,9 @@ SMS_IR_TOKEN_KEY = 'sms-ir-token'
 
 @shared_task(queue='sms')
 def send_message_by_kavenegar(phone: str, template: str, token: str, send_type: str = 'sms'):
+    if settings.DEBUG_OR_TESTING:
+        return
+
     api_key = settings.KAVENEGAR_KEY
 
     try:

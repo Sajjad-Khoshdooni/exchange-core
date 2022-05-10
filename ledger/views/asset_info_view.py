@@ -11,6 +11,7 @@ from ledger.models import Asset, Wallet, NetworkAsset
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
 from ledger.utils.price_manager import PriceManager
+from ledger.views.network_asset_info_view import NetworkAssetSerializer
 
 
 class AssetSerializerBuilder(AssetSerializerMini):

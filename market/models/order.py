@@ -6,11 +6,12 @@ from random import randrange
 
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import Sum, F, Q
+from django.db.models import Sum, F, Q, Max, Min
 from django.utils import timezone
 
 from ledger.models import Trx, Wallet, BalanceLock
 from ledger.models.asset import Asset
+from ledger.models.prize import check_trade_prize
 from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
 from ledger.utils.precision import floor_precision, round_down_to_exponent
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
@@ -27,9 +28,10 @@ class OpenOrderManager(models.Manager):
 
 
 class Order(models.Model):
-    MIN_IRT_ORDER_SIZE = Decimal(1e5)
+    MARKET_BORDER = Decimal('1e-2')
+    MIN_IRT_ORDER_SIZE = Decimal('1e5')
     MIN_USDT_ORDER_SIZE = Decimal(5)
-    MAX_ORDER_DEPTH_SIZE_IRT = Decimal(5e7)
+    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('5e7')
     MAX_ORDER_DEPTH_SIZE_USDT = Decimal(2000)
     MAKER_ORDERS_COUNT = 10 if settings.DEBUG else 50
 
@@ -269,9 +271,24 @@ class Order(models.Model):
                         })
                     break
 
+            if self.fill_type == Order.MARKET and self.status == Order.NEW:
+                self.status = Order.CANCELED
+                self.save(update_fields=['status'])
+
             Trx.objects.bulk_create(filter(lambda trx: trx and trx.amount, trx_list))
             ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referral_list))
             FillOrder.objects.bulk_create(fill_orders)
+
+            # updating trade_volume_irt of accounts
+            for fill_order in fill_orders:
+                accounts = [fill_order.maker_order.wallet.account, fill_order.taker_order.wallet.account]
+
+                for account in accounts:
+                    if not account.is_system():
+                        account.trade_volume_irt = F('trade_volume_irt') + fill_order.irt_value
+                        account.save(update_fields=['trade_volume_irt'])
+
+                        check_trade_prize(account)
 
     # OrderBook related methods
     @classmethod
@@ -336,15 +353,7 @@ class Order(models.Model):
         )
 
     @classmethod
-    def init_top_maker_order(cls, symbol, side, price, best_order, best_opp_order, market=Wallet.SPOT):
-        maker_price = None
-        if not best_opp_order:
-            maker_price = price
-        elif side == Order.BUY:
-            maker_price = min(price, best_opp_order * Decimal(1 - 0.01))
-        elif side == Order.SELL:
-            maker_price = max(price, best_opp_order * Decimal(1 + 0.01))
-
+    def init_top_maker_order(cls, symbol, side, maker_price, best_order, market=Wallet.SPOT):
         if not maker_price:
             logger.warning(f'cannot calculate maker price for {symbol.name} {side}')
             return
@@ -395,3 +404,14 @@ class Order(models.Model):
     @classmethod
     def update_filled_amount(cls, order_ids, match_amount):
         Order.objects.filter(id__in=order_ids).update(filled_amount=F('filled_amount') + match_amount)
+
+    @classmethod
+    def get_market_price(cls, symbol, side):
+        open_orders = Order.open_objects.filter(symbol_id=symbol.id, side=side, fill_type=Order.LIMIT)
+        top_order = open_orders.aggregate(top_price=Max('price')) if side == Order.BUY else \
+            open_orders.aggregate(top_price=Min('price'))
+        if not top_order['top_price']:
+            return
+        market_price = top_order['top_price'] * (Decimal(1) - cls.MARKET_BORDER) if side == Order.BUY else \
+            top_order['top_price'] * (Decimal(1) + cls.MARKET_BORDER)
+        return market_price
