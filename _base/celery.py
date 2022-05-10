@@ -189,6 +189,14 @@ app.conf.beat_schedule = {
             'expire': 4
         }
     },
+    'update_withdraw_status': {
+        'task': 'financial.tasks.withdraw.update_withdraw_status',
+        'schedule': 300,
+        'options': {
+            'queue': 'finance',
+            'expire': 300
+        },
+    }
 }
 
 if settings.DEBUG:

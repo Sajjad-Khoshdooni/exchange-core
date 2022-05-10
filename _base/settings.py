@@ -76,6 +76,7 @@ MIDDLEWARE = [
     'simple_history.middleware.HistoryRequestMiddleware',
 ]
 
+# todo: fix csrf check
 MIDDLEWARE.insert(0, 'accounts.middleware.DisableCsrfCheck')
 MIDDLEWARE.remove('django.middleware.csrf.CsrfViewMiddleware')
 
