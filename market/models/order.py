@@ -353,15 +353,7 @@ class Order(models.Model):
         )
 
     @classmethod
-    def init_top_maker_order(cls, symbol, side, price, best_order, best_opp_order, market=Wallet.SPOT):
-        maker_price = None
-        if not best_opp_order:
-            maker_price = price
-        elif side == Order.BUY:
-            maker_price = min(price, best_opp_order * Decimal(1 - 0.01))
-        elif side == Order.SELL:
-            maker_price = max(price, best_opp_order * Decimal(1 + 0.01))
-
+    def init_top_maker_order(cls, symbol, side, maker_price, best_order, market=Wallet.SPOT):
         if not maker_price:
             logger.warning(f'cannot calculate maker price for {symbol.name} {side}')
             return

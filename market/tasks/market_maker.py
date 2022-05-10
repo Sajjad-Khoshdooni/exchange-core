@@ -98,10 +98,7 @@ def update_symbol_maker_orders(symbol):
         for side in (Order.BUY, Order.SELL):
             logger.info(f'{symbol.name} {side} open count: {open_depth_orders_count[side]}')
             price = Order.get_maker_price(symbol, side)
-            order = Order.init_top_maker_order(
-                symbol, side, price,
-                Decimal(market_top_prices[side]), Decimal(market_top_prices[Order.get_opposite_side(side)])
-            )
+            order = Order.init_top_maker_order(symbol, side, price, Decimal(market_top_prices[side]))
             logger.info(f'{symbol.name} {side} maker order created: {bool(order)}')
             if order:
                 if int(open_depth_orders_count[side]) > Order.MAKER_ORDERS_COUNT:
