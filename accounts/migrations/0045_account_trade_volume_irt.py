@@ -8,6 +8,9 @@ def populate_trade_volume_irt(apps, schema_editor):
     Account = apps.get_model('accounts', 'Account')
     FillOrder = apps.get_model('market', 'FillOrder')
     Prize = apps.get_model('ledger', 'Prize')
+    Asset = apps.get_model('ledger', 'Asset')
+
+    asset = Asset.objects.get(symbol='SHIB')
 
     maker_values = dict(FillOrder.objects.values('maker_order__wallet__account_id').annotate(
         amount=Sum('irt_value')
@@ -23,7 +26,7 @@ def populate_trade_volume_irt(apps, schema_editor):
         account.save(update_fields=['trade_volume_irt'])
 
     for account in Account.objects.filter(trade_volume_irt__gte=2_000_000):
-        Prize.objects.create(account=account, scope='trade_2m')
+        Prize.objects.create(account=account, scope='trade_2m', amount=0, asset=asset)
 
 
 class Migration(migrations.Migration):
