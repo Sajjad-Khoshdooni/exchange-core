@@ -8,10 +8,12 @@ class ExternalNotification(models.Model):
 
     SCOPE_LEVEL_2_PRIZE = 'level_2_prize'
     SCOPE_FIRST_FIAT_DEPOSIT_PRIZE = 'first_deposit_prize'
+    SCOPE_TRADE_PRIZE = 'trade_prize'
 
     SCOPE_CHOICES = (
         (SCOPE_LEVEL_2_PRIZE, SCOPE_LEVEL_2_PRIZE),
-        (SCOPE_FIRST_FIAT_DEPOSIT_PRIZE, SCOPE_FIRST_FIAT_DEPOSIT_PRIZE)
+        (SCOPE_FIRST_FIAT_DEPOSIT_PRIZE, SCOPE_FIRST_FIAT_DEPOSIT_PRIZE),
+        (SCOPE_TRADE_PRIZE, SCOPE_TRADE_PRIZE)
     )
 
     created = models.DateTimeField(auto_now_add=True)
@@ -42,7 +44,11 @@ class ExternalNotification(models.Model):
 
         elif scope == cls.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE:
             template = '64695'
-            params = {'brand': 'راستین'}
+            params = {'brand': 'و دریافت هدیه پنجاه هزار شیبا به راستین'}
+
+        elif scope == cls.SCOPE_TRADE_PRIZE:
+            template = '65788'
+            params = {'token': 'پنجاه هزار شیبا هدیه راستین'}
 
         else:
             raise NotImplementedError
@@ -59,5 +65,4 @@ class ExternalNotification(models.Model):
 
     @staticmethod
     def get_users_sent_sms_notif(scope: str):
-        users_id = ExternalNotification.objects.filter(scope=scope).values_list('user_id')
-        return users_id
+        return ExternalNotification.objects.filter(scope=scope).values_list('user_id')

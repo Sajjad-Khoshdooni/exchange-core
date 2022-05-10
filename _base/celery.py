@@ -181,6 +181,15 @@ app.conf.beat_schedule = {
         }
     },
 
+    'send_trade_notifs': {
+        'task': 'accounts.tasks.send_trade_notifs',
+        'schedule': crontab(hour=4, minute=30),
+        'options': {
+            'queue': 'celery',
+            'expire': 3600
+        }
+    },
+
     'moving_average_trader': {
         'task': 'trader.tasks.moving_average.update_all_moving_averages',
         'schedule': 2,

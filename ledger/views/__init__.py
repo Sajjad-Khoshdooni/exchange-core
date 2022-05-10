@@ -7,3 +7,4 @@ from .withdraw_view import WithdrawView
 from .transactions_history_view import WithdrawHistoryView, DepositHistoryView
 from .network_asset_info_view import NetworkAssetView
 from .address_book_view import AddressBookView
+

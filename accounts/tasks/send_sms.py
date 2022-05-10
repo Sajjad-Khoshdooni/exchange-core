@@ -120,11 +120,29 @@ def send_first_fiat_deposit_notifs():
     to_exclude_user_ids = ExternalNotification.get_users_sent_sms_notif(ExternalNotification.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE)
 
     users = User.objects.filter(
-        level=User.LEVEL2, first_fiat_deposit_date=None,
+        level__gte=User.LEVEL2,
+        first_fiat_deposit_date=None,
         level_2_verify_datetime__lte=timezone.now() - timedelta(days=2),
     ).exclude(id__in=to_exclude_user_ids)
 
     for user in users:
         logger.info('Sending first_fiat_deposit_notif to user_id=%s' % user.id)
         ExternalNotification.send_sms(user, ExternalNotification.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE)
+        time.sleep(1)
+
+
+@shared_task(queue='celery')
+def send_trade_notifs():
+    to_exclude_user_ids = ExternalNotification.get_users_sent_sms_notif(ExternalNotification.SCOPE_TRADE_PRIZE)
+
+    users = User.objects.filter(
+        level__gte=User.LEVEL2,
+        first_fiat_deposit_date__isnull=False,
+        first_fiat_deposit_date__lte=timezone.now() - timedelta(days=7),
+        account__trade_volume_irt__lte=2_000_000,
+    ).exclude(id__in=to_exclude_user_ids)
+
+    for user in users:
+        logger.info('Sending trade_notifs to user_id=%s' % user.id)
+        ExternalNotification.send_sms(user, ExternalNotification.SCOPE_TRADE_PRIZE)
         time.sleep(1)
