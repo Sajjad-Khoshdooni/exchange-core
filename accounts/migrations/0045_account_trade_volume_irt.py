@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('accounts', '0044_merge_20220502_1155'),
         ('market', '0017_alter_order_lock'),
-        ('ledger', '0079_alter_prize_scope'),
+        ('ledger', '0079_prize_fake'),
     ]
 
     operations = [
