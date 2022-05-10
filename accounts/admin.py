@@ -464,9 +464,12 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_revenue_of_referred.short_description = 'درآمد حاصل از کد دعوت استفاده شده'
 
     def get_selfie_image_uploaded(self, user: User):
-        history = user.history.filter(selfie_image__isnull=False).order_by('history_date').last()
-        if history:
-            return gregorian_to_jalali_datetime_str(history.history_date)
+        latest_null = user.history.filter(selfie_image__isnull=True).order_by('history_date').last()
+
+        if latest_null:
+            history = user.history.filter(id__gt=latest_null.id, selfie_image__isnull=False).order_by('history_date').first()
+            if history:
+                return gregorian_to_jalali_datetime_str(history.history_date)
 
     get_selfie_image_uploaded.short_description = 'زمان آپلود عکس سلفی'
 
