@@ -152,8 +152,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         (_('Authentication'), {'fields': ('level', 'verify_status', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
                                           'telephone_verified', 'selfie_image_verified', 'selfie_image_verifier',
-                                          'selfie_image_uploaded', 'selfie_image_discard_text',
-                                          'national_code_duplicated_alert',
+                                          'national_code_duplicated_alert', 'selfie_image_discard_text',
                                           )}),
         (_('Permissions'), {
             'fields': (

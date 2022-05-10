@@ -1,4 +1,3 @@
-from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import ModelViewSet
@@ -23,7 +22,6 @@ class FullVerificationSerializer(serializers.ModelSerializer):
         if not user.selfie_image_verified:
             user.selfie_image = validated_data['selfie_image']
             user.selfie_image_verified = None
-            user.selfie_image_uploaded = timezone.now()
 
             need_manual = True
 
