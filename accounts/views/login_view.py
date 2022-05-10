@@ -7,6 +7,8 @@ from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
 from accounts.utils.ip import get_client_ip
 from accounts.models.login_activity import LoginActivity
+import logging
+logger = logging.getLogger(__name__)
 
 
 class LoginSerializer(serializers.Serializer):
@@ -45,7 +47,7 @@ class LoginView(APIView):
                     browser=request.user_agent.browser,
                 )
             except:
-                raise Exception('User login activity dos not saved ')
+                logger.exception('User login activity dos not saved ')
 
             return Response({'msg': 'success', 'code': 0, 'user_id': user.id})
 
