@@ -42,5 +42,5 @@ class NetworkAssetView(ListAPIView):
     queryset = NetworkAsset.objects.filter(
         Q(network__can_deposit=True) | Q(network__can_withdraw=True),
         asset__enable=True,
-    ).distinct()
+    ).order_by('-asset__pin_to_top', '-asset__trend', 'asset__order', 'withdraw_fee').distinct()
 
