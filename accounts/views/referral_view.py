@@ -137,7 +137,8 @@ class ReferralReportAPIView(ListAPIView):
 class TradingFeeView(APIView):
 
     def get(self, request):
-        taker_fee = Decimal('0.2')
+        # taker_fee = Decimal('0.2')
+        taker_fee = Decimal('0')
         maker_fee = Decimal('0')
 
         referral_code = request.user.account.referred_by
@@ -146,7 +147,7 @@ class TradingFeeView(APIView):
             taker_fee = taker_fee * (Decimal('1') - referral_code.owner_share_percent/Decimal('100'))
 
         return Response({
-            'taker_fee': taker_fee,
-            'maker_fee': maker_fee,
+            'taker_fee': str(taker_fee),
+            'maker_fee': str(maker_fee),
         })
 
