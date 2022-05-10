@@ -67,11 +67,17 @@ class LoginActivitySerializer(serializers.ModelSerializer):
 
     def get_os(self, instance):
         user_agent = self.context['user_agent']
-        return user_agent.os.family + ' ' + user_agent.os.version_string
+        response = user_agent.os.family
+        if user_agent.os.version_string:
+            response += ' ' + user_agent.os.version_string
+        return response
 
     def get_browser(self, instance):
         user_agent = self.context['user_agent']
-        return user_agent.browser.family + ' ' + user_agent.browser.version_string
+        response = user_agent.browser.family
+        if response:
+            response += ' ' + user_agent.browser.version_string
+        return response
 
     class Meta:
         model = LoginActivity
