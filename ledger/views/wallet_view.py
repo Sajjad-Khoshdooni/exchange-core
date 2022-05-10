@@ -299,3 +299,19 @@ class BriefNetworkAssetsView(ListAPIView):
             query_set = query_set.distinct('network__symbol')
 
         return query_set.filter(network__can_withdraw=True, network__is_universal=True)
+
+
+class WalletSerializer(serializers.ModelSerializer):
+
+    asset = serializers.SerializerMethodField()
+    free = serializers.SerializerMethodField()
+
+    def get_asset(self, wallet: Wallet):
+        return wallet.asset.symbol
+
+    def get_free(self, wallet: Wallet):
+        return wallet.asset.get_presentation_amount(wallet.get_free())
+
+    class Meta:
+        model = Wallet
+        fields = ('asset', 'free',)
