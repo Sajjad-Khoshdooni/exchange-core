@@ -26,7 +26,7 @@ def populate_trade_volume_irt(apps, schema_editor):
         account.save(update_fields=['trade_volume_irt'])
 
     for account in Account.objects.filter(trade_volume_irt__gte=2_000_000):
-        Prize.objects.get_or_create(account=account, scope='trade_2m', defaults={'amount': 0, 'asset': asset})
+        Prize.objects.get_or_create(account=account, scope='trade_2m', defaults={'amount': 0, 'asset': asset, 'fake': True})
 
 
 class Migration(migrations.Migration):
@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('accounts', '0044_merge_20220502_1155'),
         ('market', '0017_alter_order_lock'),
-        ('ledger', '0078_alter_prize_scope'),
+        ('ledger', '0079_alter_prize_scope'),
     ]
 
     operations = [

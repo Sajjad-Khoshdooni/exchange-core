@@ -27,6 +27,7 @@ class Prize(models.Model):
     )
     asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE)
     group_id = models.UUIDField(default=uuid4, db_index=True)
+    fake = models.BooleanField(default=False)
 
     class Meta:
         unique_together = [('account', 'scope')]
