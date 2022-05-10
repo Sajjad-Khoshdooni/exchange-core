@@ -473,7 +473,7 @@ class AccountAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('اطلاعات', {'fields': (
-            'name', 'user', 'type', 'get_wallet_address',
+            'name', 'user', 'type', 'trade_volume_irt', 'get_wallet_address',
             'get_total_balance_irt_admin', 'get_total_balance_usdt_admin'
         )}),
     )
