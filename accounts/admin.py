@@ -139,7 +139,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'birth_date_verified': M.is_none('birth_date_verified'),
         'telephone_verified': M.superuser | M('telephone'),
         'withdraw_before_48h_option': True
-
     }
 
     fieldsets = (
@@ -163,7 +162,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         }),
         (_('Important dates'), {'fields': (
             'get_last_login_jalali', 'get_date_joined_jalali', 'get_first_fiat_deposit_date_jalali',
-            'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
+            'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali', 'get_selfie_image_uploaded'
         )}),
         (_('لینک های مهم'), {
             'fields': (
@@ -201,7 +200,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
         'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium',
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
-        'get_revenue_of_referred', 'get_open_order_address',
+        'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded'
     )
     preserve_filters = ('archived', )
 
@@ -463,6 +462,13 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         return int(revenue['total'] or 0)
 
     get_revenue_of_referred.short_description = 'درآمد حاصل از کد دعوت استفاده شده'
+
+    def get_selfie_image_uploaded(self, user: User):
+        history = user.history.filter(selfie_image__isnull=False).order_by('history_date').last()
+        if history:
+            return history.history_date
+
+    get_selfie_image_uploaded.short_description = 'زمان آپلود عکس سلفی'
 
 
 @admin.register(Account)
