@@ -467,7 +467,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         latest_null = user.history.filter(selfie_image__isnull=True).order_by('history_date').last()
 
         if latest_null:
-            history = user.history.filter(id__gt=latest_null.id, selfie_image__isnull=False).order_by('history_date').first()
+            history = user.history.filter(
+                history_id__gt=latest_null.history_id,
+                selfie_image__isnull=False
+            ).order_by('history_date').first()
+
             if history:
                 return gregorian_to_jalali_datetime_str(history.history_date)
 
