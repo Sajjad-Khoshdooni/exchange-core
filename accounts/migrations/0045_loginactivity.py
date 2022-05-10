@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
                 ('location', models.CharField(blank=True, max_length=200)),
                 ('os', models.CharField(blank=True, max_length=200)),
                 ('browser', models.CharField(blank=True, max_length=200)),
-                ('session', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='sessions.session')),
+                ('session', models.ForeignKey(null=True, blank=True, on_delete=django.db.models.deletion.SET_NULL, to='sessions.session')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='accounts.user')),
             ],
         ),

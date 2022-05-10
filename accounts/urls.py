@@ -54,7 +54,6 @@ urlpatterns = [
     path('user/onboarding/', views.OnBoardingFlowStatus.as_view()),
 
     path('phone/change/', views.ChangePhoneView.as_view()),
-    path('user/onboarding/', views.OnBoardingFlowStatus.as_view()),
 
     path('referrals/overview/', views.ReferralOverviewAPIView.as_view()),
     path('referrals/report/', views.ReferralReportAPIView.as_view()),

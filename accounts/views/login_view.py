@@ -34,15 +34,19 @@ class LoginView(APIView):
 
         if user:
             login(request, user)
-            LoginActivity.objects.create(
-                user=user,
-                ip=get_client_ip(request),
-                user_agent=request.META['HTTP_USER_AGENT'],
-                session=Session.objects.get(session_key=request.session.session_key),
-                device=request.user_agent.device,
-                os=request.user_agent.os,
-                browser=request.user_agent.browser,
-            )
+            try:
+                LoginActivity.objects.create(
+                    user=user,
+                    ip=get_client_ip(request),
+                    user_agent=request.META['HTTP_USER_AGENT'],
+                    session=Session.objects.get(session_key=request.session.session_key),
+                    device=request.user_agent.device,
+                    os=request.user_agent.os,
+                    browser=request.user_agent.browser,
+                )
+            except:
+                raise Exception('User login activity dos not saved ')
+
             return Response({'msg': 'success', 'code': 0, 'user_id': user.id})
 
         else:

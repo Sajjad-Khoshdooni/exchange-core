@@ -13,4 +13,4 @@ class LoginActivity(models.Model):
     location = models.CharField(blank=True, max_length=200)
     os = models.CharField(blank=True, max_length=200)
     browser = models.CharField(blank=True, max_length=200)
-    session = models.ForeignKey(Session, null=True, on_delete=models.SET_NULL)
+    session = models.ForeignKey(Session, null=True, blank=True, on_delete=models.SET_NULL)

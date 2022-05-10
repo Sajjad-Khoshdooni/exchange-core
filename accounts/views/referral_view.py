@@ -140,12 +140,10 @@ class TradingFeeView(APIView):
         taker_fee = Decimal('0.2')
         maker_fee = Decimal('0')
 
-        try:
-            referral_code = request.user.account.referred_by
-            taker_fee = taker_fee * (Decimal('1') - referral_code.owner_share_percent/Decimal('100'))
+        referral_code = request.user.account.referred_by
 
-        except:
-            taker_fee = taker_fee
+        if referral_code:
+            taker_fee = taker_fee * (Decimal('1') - referral_code.owner_share_percent/Decimal('100'))
 
         return Response({
             'taker_fee': taker_fee,
