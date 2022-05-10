@@ -23,7 +23,7 @@ def populate_trade_volume_irt(apps, schema_editor):
         account.save(update_fields=['trade_volume_irt'])
 
     for account in Account.objects.filter(trade_volume_irt__gte=2_000_000):
-        Prize.objects.create(account=account, scope=Prize.TRADE_2M_PRIZE)
+        Prize.objects.create(account=account, scope='trade_2m')
 
 
 class Migration(migrations.Migration):
