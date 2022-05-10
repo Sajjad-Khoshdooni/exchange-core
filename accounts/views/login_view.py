@@ -6,7 +6,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
 from accounts.utils.ip import get_client_ip
-from django.contrib.gis.geoip2 import GeoIP2
 from accounts.models.login_activity import LoginActivity
 
 

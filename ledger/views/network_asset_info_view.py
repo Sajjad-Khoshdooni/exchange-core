@@ -1,11 +1,6 @@
-from decimal import Decimal
-
 from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
 from ledger.models import NetworkAsset
 from ledger.utils.precision import get_presentation_amount
 
