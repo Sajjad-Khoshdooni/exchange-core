@@ -63,4 +63,6 @@ urlpatterns = [
     path('referrals/report/', views.ReferralReportAPIView.as_view()),
 
     path('', include(router.urls)),
+
+    path('information/balance/', views.GetBalanceInformation.as_view())
 ]
