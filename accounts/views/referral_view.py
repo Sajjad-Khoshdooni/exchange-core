@@ -132,3 +132,23 @@ class ReferralReportAPIView(ListAPIView):
             )
         ).values('date').annotate(amount=Sum('received_amount'))
         return qs
+
+
+class TradingFeeView(APIView):
+
+    def get(self, request):
+        taker_fee = Decimal('0.2')
+        maker_fee = Decimal('0')
+
+        try:
+            referral_code = request.user.account.referred_by
+            taker_fee = taker_fee * (Decimal('1') - referral_code.owner_share_percent/Decimal('100'))
+
+        except:
+            taker_fee = taker_fee
+
+        return Response({
+            'taker_fee': taker_fee,
+            'maker_fee': maker_fee,
+        })
+
