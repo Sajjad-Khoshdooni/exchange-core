@@ -2,7 +2,6 @@ import logging
 from uuid import uuid4
 
 from django.db import models, transaction
-from django.db.models import Q, Sum
 
 from accounts.models import Account, Notification
 from ledger.models import Trx, Asset
@@ -13,7 +12,8 @@ logger = logging.getLogger(__name__)
 
 
 class Prize(models.Model):
-    TRADE_2M_PRIZE, TRADE_2M_AMOUNT = 'trade_2m', 50_000
+    TRADE_2M_PRIZE, TRADE_2M_AMOUNT, TRADE_THRESHOLD_2M = 'trade_2m', 50_000, 2_000_000
+    REFERRAL_TRADE_2M_PRIZE, REFERRAL_TRADE_2M_AMOUNT = 'referral_trade_2m', 50_000
 
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE, verbose_name='کاربر')
@@ -22,6 +22,7 @@ class Prize(models.Model):
         max_length=25,
         choices=(
             (TRADE_2M_PRIZE, TRADE_2M_PRIZE),
+            (REFERRAL_TRADE_2M_PRIZE, REFERRAL_TRADE_2M_PRIZE)
         ),
         verbose_name='نوع'
     )
@@ -29,8 +30,10 @@ class Prize(models.Model):
     group_id = models.UUIDField(default=uuid4, db_index=True)
     fake = models.BooleanField(default=False)
 
+    variant = models.CharField(null=True, blank=True, max_length=16)
+
     class Meta:
-        unique_together = [('account', 'scope')]
+        unique_together = [('account', 'scope', 'variant')]
 
     def build_trx(self):
         system = Account.system()
@@ -57,14 +60,32 @@ class Prize(models.Model):
 def check_trade_prize(account: Account):
     account.refresh_from_db()
 
-    if account.trade_volume_irt >= 2_000_000 and \
+    if account.trade_volume_irt >= Prize.TRADE_THRESHOLD_2M and \
             not Prize.objects.filter(account=account, scope=Prize.TRADE_2M_PRIZE).exists():
 
         with transaction.atomic():
-            prize = Prize.objects.create(
+            prize, created = Prize.objects.get_or_create(
                 account=account,
-                amount=Prize.TRADE_2M_AMOUNT,
                 scope=Prize.TRADE_2M_PRIZE,
-                asset=Asset.get(Asset.SHIB)
+                defaults={
+                    'amount': Prize.TRADE_2M_AMOUNT,
+                    'asset': Asset.get(Asset.SHIB),
+                }
             )
-            prize.build_trx()
+
+            if created:
+                prize.build_trx()
+
+                if account.referred_by:
+                    prize, created = Prize.objects.get_or_create(
+                        account=account.referred_by.owner,
+                        scope=Prize.REFERRAL_TRADE_2M_PRIZE,
+                        variant=str(account.id),
+                        defaults={
+                            'amount': Prize.TRADE_2M_AMOUNT,
+                            'asset': Asset.get(Asset.SHIB),
+                        }
+                    )
+
+                    if created:
+                        prize.build_trx()

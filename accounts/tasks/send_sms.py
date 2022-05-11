@@ -133,13 +133,15 @@ def send_first_fiat_deposit_notifs():
 
 @shared_task(queue='celery')
 def send_trade_notifs():
+    from ledger.models import Prize
+
     to_exclude_user_ids = ExternalNotification.get_users_sent_sms_notif(ExternalNotification.SCOPE_TRADE_PRIZE)
 
     users = User.objects.filter(
         level__gte=User.LEVEL2,
         first_fiat_deposit_date__isnull=False,
         first_fiat_deposit_date__lte=timezone.now() - timedelta(days=7),
-        account__trade_volume_irt__lte=2_000_000,
+        account__trade_volume_irt__lte=Prize.TRADE_THRESHOLD_2M,
     ).exclude(id__in=to_exclude_user_ids)
 
     for user in users:
