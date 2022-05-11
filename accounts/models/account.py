@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.db import models
-from django.db.models import UniqueConstraint, Q
+from django.db.models import UniqueConstraint, Q, Sum
 
 from accounts.models import User
 from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt
@@ -30,9 +30,6 @@ class Account(models.Model):
 
     last_margin_warn = models.DateTimeField(null=True, blank=True)
 
-    def is_ordinary_user(self) -> bool:
-        return not bool(self.type)
-
     referred_by = models.ForeignKey(
         to='accounts.Referral',
         on_delete=models.SET_NULL,
@@ -40,8 +37,13 @@ class Account(models.Model):
         null=True, blank=True
     )
 
+    trade_volume_irt = models.PositiveBigIntegerField(default=0)
+
     def is_system(self) -> bool:
         return self.type == self.SYSTEM
+
+    def is_ordinary_user(self) -> bool:
+        return not bool(self.type)
 
     @classmethod
     def system(cls) -> 'Account':

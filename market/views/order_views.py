@@ -15,10 +15,11 @@ from market.serializers.order_serializer import OrderSerializer
 
 class OrderFilter(django_filters.FilterSet):
     symbol = django_filters.CharFilter(field_name='symbol__name')
+    market = django_filters.CharFilter(field_name='wallet__market')
 
     class Meta:
         model = Order
-        fields = ('symbol', 'status',)
+        fields = ('symbol', 'status', 'market')
 
 
 class OrderViewSet(mixins.CreateModelMixin,

@@ -13,9 +13,16 @@ class FillOrderSerializer(serializers.ModelSerializer):
     pair_amount = serializers.CharField(source='base_amount')
     side = serializers.SerializerMethodField()
     fee_amount = serializers.SerializerMethodField()
+    market = serializers.SerializerMethodField()
 
     def get_side(self, instance: FillOrder):
         return instance.get_side(self.context['account'], self.context['index'])
+
+    def get_market(self, instance: FillOrder):
+        if instance.maker_order.wallet.account == self.context['account']:
+            return instance.maker_order.wallet.market
+        elif instance.taker_order.wallet.account:
+            return instance.taker_order.wallet.market
 
     def get_fee_amount(self, instance: FillOrder):
         return instance.get_fee(self.context['account'], self.context['index'])
@@ -40,7 +47,7 @@ class FillOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FillOrder
-        fields = ('created', 'coin', 'pair', 'side', 'amount', 'price', 'pair_amount', 'fee_amount',)
+        fields = ('created', 'coin', 'pair', 'side', 'amount', 'price', 'pair_amount', 'fee_amount', 'market')
 
 
 class TradeSerializer(FillOrderSerializer):

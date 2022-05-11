@@ -44,9 +44,11 @@ class MinNotionalError(Exception):
 
 
 def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Decimal, side: str,
-              raise_exception: bool = True) -> Union[Order, None]:
+              fill_type: str = Order.LIMIT, raise_exception: bool = True) -> Union[Order, None]:
 
     wallet = symbol.asset.get_wallet(account)
+    if fill_type == Order.MARKET:
+        price = Order.get_market_price(symbol, Order.get_opposite_side(side))
 
     if amount < symbol.min_trade_quantity:
         if raise_exception:
@@ -82,7 +84,7 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
             amount=amount,
             price=price,
             side=side,
-            fill_type=Order.LIMIT
+            fill_type=fill_type
         )
 
         order.submit()

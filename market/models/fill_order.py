@@ -5,9 +5,11 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
 from django.db import models
+from django.db.models import F
 
 from accounts.models import Account
-from ledger.models import Trx, OTCTrade, Asset
+from ledger.models import Trx, OTCTrade, Asset, Wallet
+from ledger.models.prize import check_trade_prize
 from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_field
 from ledger.utils.precision import floor_precision, precision_to_step
 from ledger.utils.price import get_tether_irt_price, BUY
@@ -48,7 +50,7 @@ class FillOrder(models.Model):
 
     def save(self, **kwargs):
         assert self.taker_order.symbol == self.maker_order.symbol == self.symbol
-        return super(FillOrder, self).save(**kwargs)
+        super(FillOrder, self).save(**kwargs)
 
     class Meta:
         indexes = [
@@ -85,9 +87,16 @@ class FillOrder(models.Model):
                f'[p:{self.price:.2f}] (a:{self.amount:.5f})'
 
     def init_trade_trxs(self, ignore_fee=False):
+        trade_trx = self.__init_trade_trx()
+        base_trx = self.__init_base_trx()
+
+        # make sure sender and receiver wallets have same market
+        assert trade_trx.sender.market == base_trx.receiver.market
+        assert trade_trx.receiver.market == base_trx.sender.market
+
         return {
-            'amount': self.__init_trade_trx(),
-            'base': self.__init_base_trx(),
+            'trade': trade_trx,
+            'base': base_trx,
             'taker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.taker_order, is_taker=True),
             'maker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.maker_order, is_taker=False),
         }
@@ -227,6 +236,16 @@ class FillOrder(models.Model):
             ReferralTrx.objects.bulk_create(list(filter(bool, referral_trx.referral)))
             Trx.objects.bulk_create(list(filter(lambda trx: trx and trx.amount, referral_trx.trx)))
             fill_order.save()
+
+            # updating trade_volume_irt of accounts
+            accounts = [fill_order.maker_order.wallet.account, fill_order.taker_order.wallet.account]
+
+            for account in accounts:
+                if not account.is_system():
+                    account.trade_volume_irt = F('trade_volume_irt') + fill_order.irt_value
+                    account.save(update_fields=['trade_volume_irt'])
+
+                    check_trade_prize(account)
 
             for key in ('taker_fee', 'maker_fee'):
                 if trade_trx_list[key]:

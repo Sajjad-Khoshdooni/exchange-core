@@ -9,7 +9,7 @@ from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.generics import get_object_or_404
 
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Wallet
+from ledger.models import Wallet, Asset
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount
 from ledger.utils.price import IRT
 from market.models import Order, PairSymbol
@@ -21,6 +21,7 @@ class OrderSerializer(serializers.ModelSerializer):
     symbol = serializers.CharField(source='symbol.name')
     filled_amount = serializers.SerializerMethodField()
     filled_price = serializers.SerializerMethodField()
+    market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
@@ -32,12 +33,27 @@ class OrderSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
         if not symbol.enable:
-            raise ValidationError(f'{symbol} is not enable')
+            raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
+
+        market = validated_data.pop('wallet')['market']
+        if market == Wallet.MARGIN:
+            if not self.context['account'].user.show_margin:
+                raise ValidationError(_('margin trading is not enable'))
+            if not self.context['account'].user.margin_quiz_pass_date:
+                raise ValidationError(_('You need to pass margin quiz'))
+            if symbol.base_asset.symbol == Asset.IRT:
+                raise ValidationError(_('{symbol} is not enable in margin trading').format(symbol=symbol))
 
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
-        validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
+        if validated_data['fill_type'] == Order.LIMIT:
+            validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
+        elif validated_data['fill_type'] == Order.MARKET:
+            validated_data['price'] = Order.get_market_price(symbol, Order.get_opposite_side(validated_data['side']))
+            if not validated_data['price']:
+                raise Exception('Empty order book')
 
-        wallet = symbol.asset.get_wallet(self.context['account'], market=self.context.get('market', Wallet.SPOT))
+        wallet = symbol.asset.get_wallet(self.context['account'], market=market)
+
         min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
         self.validate_order_size(validated_data['amount'], validated_data['price'], min_order_size)
 
@@ -47,6 +63,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     {**validated_data, 'wallet': wallet, 'symbol': symbol}
                 )
                 created_order.submit()
+                created_order.refresh_from_db()
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
         except Exception as e:
@@ -87,6 +104,13 @@ class OrderSerializer(serializers.ModelSerializer):
             )
         return price
 
+    def validate(self, attrs):
+        if attrs['fill_type'] == Order.LIMIT and not attrs.get('price'):
+            raise ValidationError(
+                {'price': _('price is mandatory in limit order.')}
+            )
+        return attrs
+
     def get_filled_amount(self, order: Order):
         return str(floor_precision(order.filled_amount, order.symbol.step_size))
 
@@ -99,8 +123,9 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'price', 'filled_price', 'side',
-                  'fill_type', 'status')
+                  'fill_type', 'status', 'market')
         read_only_fields = ('id', 'created', 'status',)
         extra_kwargs = {
-            'wallet': {'write_only': True, 'required': False}
+            'wallet': {'write_only': True, 'required': False},
+            'price': {'required': False},
         }
