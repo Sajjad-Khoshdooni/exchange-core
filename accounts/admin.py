@@ -479,7 +479,7 @@ class AccountAdmin(admin.ModelAdmin):
         )}),
     )
     readonly_fields = ('get_wallet_address', 'get_total_balance_irt_admin', 'get_total_balance_usdt_admin',
-                       'trade_volume_irt')
+                       'trade_volume_irt', 'referred_by')
 
     def get_wallet_address(self, user: User):
         link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
