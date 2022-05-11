@@ -96,8 +96,7 @@ class LoginActivityView(ListAPIView):
     serializer_class = LoginActivitySerializer
 
     def get_queryset(self):
-        query_set = LoginActivity.objects.filter(user=self.request.user)
-        return query_set
+        return LoginActivity.objects.filter(user=self.request.user).order_by('-id')
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
