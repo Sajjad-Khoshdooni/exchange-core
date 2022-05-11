@@ -9,6 +9,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from market.models import PairSymbol, Order, FillOrder
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 class OrderBookAPIView(APIView):
     authentication_classes = ()
     permission_classes = ()
+    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
     def get(self, request, symbol):
         symbol = get_object_or_404(PairSymbol, name=symbol.upper())

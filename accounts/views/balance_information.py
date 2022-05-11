@@ -17,7 +17,13 @@ class BalanceInformationSerializer(serializers.ModelSerializer):
     wallet = serializers.SerializerMethodField()
 
     def get_wallet(self, user: User):
-        user = WalletSerializer(instance=user.account.wallet_set.all(), many=True).data
+        pos_wallet = []
+        wallets = user.account.wallet_set.all()
+        for wallet in wallets:
+            if wallet.get_free() > 0:
+                pos_wallet.append(wallet)
+
+        user = WalletSerializer(instance=pos_wallet, many=True).data
         return user
 
     class Meta:
