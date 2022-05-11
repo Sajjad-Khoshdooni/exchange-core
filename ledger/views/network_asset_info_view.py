@@ -1,7 +1,6 @@
 from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView
-
 from ledger.models import NetworkAsset
 from ledger.utils.precision import get_presentation_amount
 
@@ -44,3 +43,4 @@ class NetworkAssetView(ListAPIView):
         Q(network__can_deposit=True) | Q(network__can_withdraw=True),
         asset__enable=True,
     ).order_by('-asset__pin_to_top', '-asset__trend', 'asset__order', 'withdraw_fee').distinct()
+

@@ -60,7 +60,7 @@ def humanize_number(num):
     if isinstance(num, str):
         num = Decimal(num)
 
-    return '{:,}'.format(num)
+    return '{:,f}'.format(num)
 
 
 def normalize_fraction(d: Decimal):

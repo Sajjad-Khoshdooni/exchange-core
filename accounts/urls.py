@@ -2,10 +2,10 @@ from django.urls import path, include
 from rest_framework import routers
 
 from accounts import views
-
 router = routers.DefaultRouter()
 
 router.register(r'^referrals', views.ReferralViewSet, basename='referral')
+
 urlpatterns = [
     path('login/', views.LoginView.as_view()),
     path('logout/', views.LogoutView.as_view()),
@@ -57,6 +57,8 @@ urlpatterns = [
 
     path('referrals/overview/', views.ReferralOverviewAPIView.as_view()),
     path('referrals/report/', views.ReferralReportAPIView.as_view()),
+    path('login/activity/', views.LoginActivityView.as_view()),
+    path('fee/', views.TradingFeeView.as_view()),
 
     path('', include(router.urls)),
 ]
