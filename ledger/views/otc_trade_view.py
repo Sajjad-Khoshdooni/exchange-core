@@ -49,10 +49,13 @@ class OTCRequestSerializer(serializers.ModelSerializer):
             raise ValidationError('در بازار معاملات تعهدی نمی‌توان به تومان معامله کرد.')
 
         try:
-            attrs['from_asset'] = Asset.get(from_symbol)
-            attrs['to_asset'] = Asset.get(to_symbol)
+            from_asset = attrs['from_asset'] = Asset.get(from_symbol)
+            to_asset = attrs['to_asset'] = Asset.get(to_symbol)
         except:
             raise ValidationError('دارایی نامعتبر است.')
+
+        if not from_asset.trade_enable or not to_asset.trade_enable:
+            raise ValidationError('در حال حاضر امکان معامله این دارایی وجود ندارد.')
 
         from_amount = attrs.get('from_amount')
         to_amount = attrs.get('to_amount')
