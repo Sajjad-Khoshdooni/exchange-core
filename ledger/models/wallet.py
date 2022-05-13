@@ -60,7 +60,10 @@ class Wallet(models.Model):
             tether_irt = get_tether_irt_price(SELL)
             return self.get_free() / tether_irt
 
-        return self.get_free() * get_trading_price_usdt(self.asset.symbol, BUY, raw_price=True)
+        price = get_trading_price_usdt(self.asset.symbol, BUY, raw_price=True)
+
+        if price:
+            return self.get_free() * price
 
     def get_free_irt(self):
         if self.asset.symbol == self.asset.IRT:
@@ -74,7 +77,10 @@ class Wallet(models.Model):
             tether_irt = get_tether_irt_price(SELL)
             return self.get_balance() / tether_irt
 
-        return self.get_balance() * get_trading_price_usdt(self.asset.symbol, BUY, raw_price=True)
+        price = get_trading_price_usdt(self.asset.symbol, BUY, raw_price=True)
+
+        if price:
+            return self.get_balance() * price
 
     def get_balance_irt(self):
         if self.asset.symbol == self.asset.IRT:
