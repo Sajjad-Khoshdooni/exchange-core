@@ -70,7 +70,11 @@ class Wallet(models.Model):
             return self.get_free()
 
         tether_irt = get_tether_irt_price(SELL)
-        return self.get_free_usdt() * tether_irt
+
+        free_usdt = self.get_free_usdt()
+
+        if free_usdt:
+            return free_usdt * tether_irt
 
     def get_balance_usdt(self) -> Decimal:
         if self.asset.symbol == self.asset.IRT:
@@ -87,7 +91,10 @@ class Wallet(models.Model):
             return self.get_balance()
 
         tether_irt = get_tether_irt_price(SELL)
-        return self.get_balance_usdt() * tether_irt
+        balance_usdt = self.get_balance_usdt()
+
+        if balance_usdt:
+            return balance_usdt * tether_irt
 
     def has_balance(self, amount: Decimal, raise_exception: bool = False) -> bool:
         if amount < 0:
