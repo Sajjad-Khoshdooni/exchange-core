@@ -44,12 +44,19 @@ class AssetSerializerBuilder(AssetSerializerMini):
     def get_price_usdt(self, asset: Asset):
         prices = self.context['prices']
         price = prices[asset.symbol]
+        if not price:
+            return
+
         return asset.get_presentation_price_usdt(price)
 
     def get_price_irt(self, asset: Asset):
         prices = self.context['prices']
+        price = prices[asset.symbol]
+        if not price:
+            return
+
         tether_irt = self.context['tether_irt']
-        price = prices[asset.symbol] * tether_irt
+        price = price * tether_irt
         return asset.get_presentation_price_irt(price)
 
     def get_min_withdraw_amount(self, asset: Asset):
