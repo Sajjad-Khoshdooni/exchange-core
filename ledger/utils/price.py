@@ -158,8 +158,6 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
         price = PriceManager.get_price(coin, side, exchange, market_symbol, now)
         if price is not None:
             return price
-        else:
-            return Decimal(0)
 
     prices = get_prices_dict([coin], side, exchange, market_symbol, now)
 
