@@ -158,8 +158,6 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
         price = PriceManager.get_price(coin, side, exchange, market_symbol, now)
         if price is not None:
             return price
-        else:
-            return Decimal(0)
 
     prices = get_prices_dict([coin], side, exchange, market_symbol, now)
 
@@ -216,4 +214,7 @@ def get_trading_price_irt(coin: str, side: str, raw_price: bool = False) -> Deci
     if coin == IRT:
         return Decimal(1)
 
-    return get_trading_price_usdt(coin, side, raw_price) * get_tether_irt_price(side)
+    price = get_trading_price_usdt(coin, side, raw_price)
+
+    if price:
+        return price * get_tether_irt_price(side)

@@ -42,6 +42,9 @@ def precision_to_step(precision: int) -> Decimal:
 
 
 def get_presentation_amount(amount: Decimal, precision: int = None) -> str:
+    if amount is None:
+        return
+
     if not isinstance(amount, Decimal):
         amount = Decimal(amount)
 

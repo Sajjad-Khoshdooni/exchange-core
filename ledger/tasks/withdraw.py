@@ -57,9 +57,4 @@ def update_binance_withdraw():
                 transfer.lock.release()
                 transfer.build_trx()
 
-            sent_amount = transfer.asset.get_presentation_amount(transfer.amount)
-            Notification.send(
-                recipient=transfer.wallet.account.user,
-                title='ارسال شد: %s %s' % (humanize_number(sent_amount), transfer.wallet.asset.symbol),
-                message='به ادرس %s...%s ' % (transfer.out_address[-8:], transfer.out_address[:9])
-            )
+            transfer.alert_user()
