@@ -563,26 +563,10 @@ class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     search_fields = ['user__phone']
 
 
-class LoginActivityUserFilter(SimpleListFilter):
-    title = 'کاربر'
-    parameter_name = 'user'
-
-    def lookups(self, request, model_admin):
-        return [(1,1)]
-
-    def queryset(self, request, queryset):
-        user = request.GET.get('user')
-        if user is not None:
-            return queryset.filter(user=user)
-        else:
-            return queryset
-
-
 @admin.register(LoginActivity)
 class LoginActivityAdmin(admin.ModelAdmin):
-    list_display = ['user', 'ip' , 'device' , 'os', 'browser',]
+    list_display = ['user', 'ip', 'device', 'os', 'browser']
     search_fields = ['user__phone', 'ip']
-    list_filter = (LoginActivityUserFilter,)
 
 
 
