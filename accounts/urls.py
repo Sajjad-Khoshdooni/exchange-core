@@ -62,5 +62,6 @@ urlpatterns = [
 
     path('', include(router.urls)),
 
-    path('gamifications/', views.GamificationAPIView.as_view()),
+    path('goals/', views.GamificationAPIView.as_view()),
+    path('banner/', views.BannerAlertAPIView.as_view()),
 ]

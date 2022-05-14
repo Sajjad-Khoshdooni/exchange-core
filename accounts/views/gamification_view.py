@@ -1,23 +1,16 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.gamification.gamify import condition_groups
+from accounts.gamification.gamify import get_groups_data
+from accounts.models import User, Notification
+from ledger.models import Prize, Transfer
 
 
 class GamificationAPIView(APIView):
 
     def get(self, request):
+        active = request.query_params.get('active') == '1'
 
         account = request.user.account
-
-        groups = []
-
-        for group in condition_groups:
-            groups.append(
-                group.as_dict(account)
-            )
-
-        return Response(groups)
-
-
+        return Response(get_groups_data(account, only_active=active))
 
