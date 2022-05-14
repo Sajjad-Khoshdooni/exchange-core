@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.response import Response
 
+from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from ledger.models import Network
 from ledger.utils.encoding import base58_from_hex
 
@@ -12,6 +13,8 @@ class InputAddressSerializer(serializers.Serializer):
 
 
 class DepositAddressView(RetrieveAPIView):
+
+    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
     def retrieve(self, request, *args, **kwargs):
         serializer = InputAddressSerializer(data=request.query_params)
