@@ -61,4 +61,7 @@ urlpatterns = [
     path('fee/', views.TradingFeeView.as_view()),
 
     path('', include(router.urls)),
+
+    path('goals/', views.GamificationAPIView.as_view()),
+    path('banner/', views.BannerAlertAPIView.as_view()),
 ]

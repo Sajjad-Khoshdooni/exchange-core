@@ -136,6 +136,9 @@ class LiquidationEngine:
 
             value = margin_wallet_values[wallet]
 
+            if value < Decimal('0.1'):
+                continue
+
             max_value = min(to_provide_tether * Decimal('1.05'), value)
             amount = max_value / value * self.margin_wallets[wallet]
             amount = round_with_step_size(amount, wallet.asset.trade_quantity_step)

@@ -24,7 +24,7 @@ class UserSerializer(serializers.ModelSerializer):
         if has_trade:
             resp = 'trade_is_done'
 
-            if user.account.trade_volume_irt < Prize.TRADE_THRESHOLD_2M:
+            if user.account.trade_volume_irt < Prize.TRADE_THRESHOLD_STEP1:
                 resp = 'waiting_for_trade'
         else:
             if user.on_boarding_flow == 'crypto':
