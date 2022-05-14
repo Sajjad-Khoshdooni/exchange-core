@@ -2,8 +2,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.gamification.gamify import get_groups_data
-from accounts.models import User, Notification
-from ledger.models import Prize, Transfer
 
 
 class GamificationAPIView(APIView):

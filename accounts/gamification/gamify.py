@@ -63,7 +63,7 @@ class PrizeAchievement(Achievement):
         return {
             'type': 'prize',
             'scope': self.scope,
-            'amount': Prize.TRADE_2M_AMOUNT,
+            'amount': Prize.PRIZE_AMOUNTS[self.scope],
             'asset': 'SHIB',
         }
 
@@ -116,10 +116,10 @@ class DepositCondition(Condition):
                self.account.user.first_fiat_deposit_date
 
 
-class Trade2MCondition(Condition):
+class TradeStep1Condition(Condition):
     type = Condition.NUMBER
-    max = 2_000_000
-    name = 'trade_2m'
+    max = Prize.TRADE_THRESHOLD_STEP1
+    name = Prize.TRADE_PRIZE_STEP1
     title = 'معامله'
     link = 'به ارزش ۲ میلیون تومان معامله کنید و ۵۰,۰۰۰ شیبا جایزه بگیرید.'
     description = '/trade/classic/BTCUSDT'
@@ -128,13 +128,45 @@ class Trade2MCondition(Condition):
         return self.account.trade_volume_irt
 
 
+class TradeStep2Condition(Condition):
+    type = Condition.NUMBER
+    max = Prize.TRADE_THRESHOLD_STEP2
+    name = Prize.TRADE_PRIZE_STEP2
+    title = 'معامله'
+    link = 'به ارزش ۲۰ میلیون تومان معامله کنید و ۱۰۰,۰۰۰ شیبا جایزه بگیرید.'
+    description = '/trade/classic/BTCUSDT'
+
+    def get_progress(self):
+        return self.account.trade_volume_irt
+
+
+class InviteCondition(Condition):
+    type = Condition.NUMBER
+    max = 5
+    name = 'invite'
+    title = 'دعوت از دوستان'
+    link = 'دوستان خود را به راستین دعوت کنید و از معامله‌آن‌ها درآمدزایی کنید.'
+    description = '/account/referral'
+
+    def get_progress(self):
+        return self.account.get_invited_count()
+
+
 condition_groups = [
     ConditionGroup(
         conditions=[
-            VerifyLevel2Condition, DepositCondition, Trade2MCondition
+            VerifyLevel2Condition, DepositCondition, TradeStep1Condition
         ],
         achievements=[
-            PrizeAchievement(Prize.TRADE_2M_PRIZE)
+            PrizeAchievement(Prize.TRADE_PRIZE_STEP1)
+        ]
+    ),
+    ConditionGroup(
+        conditions=[
+            TradeStep2Condition, InviteCondition
+        ],
+        achievements=[
+            PrizeAchievement(Prize.TRADE_PRIZE_STEP2)
         ]
     )
 ]

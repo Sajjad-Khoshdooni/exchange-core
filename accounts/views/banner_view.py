@@ -5,7 +5,7 @@ from accounts.models import User, Notification
 from ledger.models import Prize, Transfer
 
 
-AUTH, DEPOSIT, TRADE = 'auth', 'deposit', 'trade'
+AUTH, DEPOSIT, TRADE, REFERRAL = 'auth', 'deposit', 'trade', 'referral'
 
 
 ALERTS = {
@@ -27,6 +27,13 @@ ALERTS = {
         'btn_title': "شروع معامله",
         'level': Notification.INFO
     },
+    REFERRAL: {
+        'text': "دوستان خود را به راستین دعوت کنید و از معامله‌آن‌ها درآمدزایی کنید.",
+        'btn_link': "/account/referral",
+        'btn_title': "دعوت از دوستان",
+        'level': Notification.INFO
+    },
+
 }
 
 
@@ -42,7 +49,7 @@ class BannerAlertAPIView(APIView):
     def get_alert_condition(self):
         user = self.request.user
 
-        if 0 < user.account.trade_volume_irt < Prize.TRADE_THRESHOLD_2M:
+        if 0 < user.account.trade_volume_irt < Prize.TRADE_THRESHOLD_STEP1:
             return TRADE
 
         elif user.account.trade_volume_irt == 0:
@@ -56,3 +63,7 @@ class BannerAlertAPIView(APIView):
                 return AUTH
             else:
                 return DEPOSIT
+
+        else:
+            if user.account.get_invited_count() == 0:
+                return REFERRAL
