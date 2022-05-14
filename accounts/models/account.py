@@ -77,7 +77,8 @@ class Account(models.Model):
         with PriceManager(fetch_all=True):
             for wallet in wallets:
                 balance = wallet.get_free()
-                total += balance * get_trading_price_usdt(wallet.asset.symbol, side, raw_price=True)
+                price = get_trading_price_usdt(wallet.asset.symbol, side, raw_price=True) or Decimal(0)
+                total += balance * price
 
         return total
 
@@ -91,7 +92,8 @@ class Account(models.Model):
         with PriceManager(fetch_all=True):
             for wallet in wallets:
                 balance = wallet.get_free()
-                total += balance * get_trading_price_irt(wallet.asset.symbol, side, raw_price=True)
+                price = get_trading_price_irt(wallet.asset.symbol, side, raw_price=True) or Decimal(0)
+                total += balance * price
 
         return total
 

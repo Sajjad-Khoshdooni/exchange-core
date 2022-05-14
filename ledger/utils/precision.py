@@ -42,6 +42,9 @@ def precision_to_step(precision: int) -> Decimal:
 
 
 def get_presentation_amount(amount: Decimal, precision: int = None) -> str:
+    if amount is None:
+        return
+
     if not isinstance(amount, Decimal):
         amount = Decimal(amount)
 
@@ -60,7 +63,7 @@ def humanize_number(num):
     if isinstance(num, str):
         num = Decimal(num)
 
-    return '{:,}'.format(num)
+    return '{:,f}'.format(num)
 
 
 def normalize_fraction(d: Decimal):

@@ -489,11 +489,11 @@ class AccountAdmin(admin.ModelAdmin):
     fieldsets = (
         ('اطلاعات', {'fields': (
             'name', 'user', 'type', 'trade_volume_irt', 'get_wallet_address',
-            'get_total_balance_irt_admin', 'get_total_balance_usdt_admin'
+            'get_total_balance_irt_admin', 'get_total_balance_usdt_admin', 'referred_by'
         )}),
     )
     readonly_fields = ('get_wallet_address', 'get_total_balance_irt_admin', 'get_total_balance_usdt_admin',
-                       'trade_volume_irt')
+                       'trade_volume_irt', 'referred_by')
 
     def get_wallet_address(self, account: Account):
         link = url_to_admin_list(Wallet) + '?account={}'.format(account.id)

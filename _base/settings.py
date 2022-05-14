@@ -47,8 +47,7 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_yasg',
     'simple_history',
-    # 'rest_framework.authtoken',
-
+    'django_user_agents',
     'financial',
     'multimedia',
     'accounts',
@@ -74,6 +73,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'hijack.middleware.HijackUserMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
+    'django_user_agents.middleware.UserAgentMiddleware',
 ]
 
 # todo: fix csrf check
