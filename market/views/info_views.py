@@ -25,7 +25,7 @@ class AssetListSerializer(serializers.ModelSerializer):
 
 
 class MarketInfoView(ListAPIView):
-    queryset = Asset.live_objects.all().exclude(symbol=Asset.IRT)
+    queryset = Asset.live_objects.all().exclude(symbol=Asset.IRT, trade_enable=True)
     serializer_class = AssetListSerializer
     authentication_classes = []
     permission_classes = []
