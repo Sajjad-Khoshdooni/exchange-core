@@ -57,7 +57,7 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
         if raise_exception:
             raise MinTradeError
         else:
-            logger.info('new order failed: min_trade_quantity (%s < %s)' % (amount, symbol.min_trade_quantity))
+            logger.info('new order failed: min_trade_quantity %s (%s < %s)' % (symbol, amount, symbol.min_trade_quantity))
             return
 
     if amount > symbol.max_trade_quantity:
