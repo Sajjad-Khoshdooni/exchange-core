@@ -245,7 +245,7 @@ class WalletViewSet(ModelViewSet):
 
             with_balance_wallets = list(filter(lambda w: w['balance'] != '0', data))
             without_balance_wallets = list(filter(lambda w: w['balance'] == '0', data))
-            wallets = sorted(with_balance_wallets, key=lambda w: Decimal(w['balance_irt']), reverse=True) + without_balance_wallets
+            wallets = sorted(with_balance_wallets, key=lambda w: Decimal(w['balance_irt'] or 0), reverse=True) + without_balance_wallets
 
         return Response(wallets)
 
