@@ -48,6 +48,8 @@ class Asset(models.Model):
     trend = models.BooleanField(default=False)
     pin_to_top = models.BooleanField(default=False)
 
+    trade_enable = models.BooleanField(default=True)
+
     hedge_method = models.CharField(max_length=16, default=HEDGE_BINANCE_FUTURE, choices=[
         (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE), (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
     ])

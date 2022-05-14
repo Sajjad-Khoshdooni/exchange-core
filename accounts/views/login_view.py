@@ -2,6 +2,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.sessions.models import Session
 
 from rest_framework import serializers, status
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
@@ -91,6 +92,7 @@ class LoginActivitySerializer(serializers.ModelSerializer):
 
 class LoginActivityView(ListAPIView):
 
+    pagination_class = LimitOffsetPagination
     serializer_class = LoginActivitySerializer
 
     def get_queryset(self):

@@ -10,7 +10,7 @@ from ledger.utils.precision import normalize_fraction
 
 PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 
-COMMISSION_MAX_DIGITS = 25
+COMMISSION_MAX_DIGITS = 32
 
 AMOUNT_DECIMAL_PLACES = 18
 AMOUNT_MAX_DIGITS = 40

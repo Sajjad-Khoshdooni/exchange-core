@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease
 from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
-from ledger.models.otc_trade import TokenExpired
+from ledger.models.otc_trade import TokenExpired, ProcessingError
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.price import SELL
 
@@ -49,10 +49,13 @@ class OTCRequestSerializer(serializers.ModelSerializer):
             raise ValidationError('در بازار معاملات تعهدی نمی‌توان به تومان معامله کرد.')
 
         try:
-            attrs['from_asset'] = Asset.get(from_symbol)
-            attrs['to_asset'] = Asset.get(to_symbol)
+            from_asset = attrs['from_asset'] = Asset.get(from_symbol)
+            to_asset = attrs['to_asset'] = Asset.get(to_symbol)
         except:
             raise ValidationError('دارایی نامعتبر است.')
+
+        if not from_asset.trade_enable or not to_asset.trade_enable:
+            raise ValidationError('در حال حاضر امکان معامله این رمزارز وجود ندارد.')
 
         from_amount = attrs.get('from_amount')
         to_amount = attrs.get('to_amount')
@@ -163,6 +166,8 @@ class OTCTradeSerializer(serializers.ModelSerializer):
             raise ValidationError(str(e))
         except AbruptDecrease as e:
             raise ValidationError('مشکلی در ثبت سفارش رخ داد. لطفا دوباره تلاش کنید.')
+        except ProcessingError as e:
+            raise ValidationError('مشکلی در پردازش سفارش رخ داد.')
 
 
 class OTCTradeView(CreateAPIView):

@@ -107,8 +107,6 @@ class User(AbstractUser):
         verbose_name='تایید کننده عکس سلفی'
     )
 
-    selfie_image_uploaded = models.DateTimeField(null=True, blank=True, verbose_name='زمان آپلود عکس سلفی')
-
     archived = models.BooleanField(default=False, verbose_name='بایگانی')
 
     margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)

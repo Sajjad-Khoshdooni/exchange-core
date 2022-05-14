@@ -7,7 +7,7 @@ from ledger.utils.price import SELL, BUY, get_trading_price_usdt
 
 TRANSFER_OUT_BLOCK_ML = Decimal('2')
 BORROW_BLOCK_ML = Decimal('1.5')  # leverage = 3
-MARGIN_CALL_ML_THRESHOLD = Decimal('1.35')
+MARGIN_CALL_ML_THRESHOLD = Decimal('1.25')
 LIQUIDATION_ML_THRESHOLD = Decimal('1.15')
 
 
