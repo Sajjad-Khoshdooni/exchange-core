@@ -7,8 +7,7 @@ from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
 
 DEFAULT_MAKER_FEE = 0
-DEFAULT_TAKER_FEE = 0
-# DEFAULT_TAKER_FEE = Decimal('0.002')
+DEFAULT_TAKER_FEE = Decimal('0.002')
 
 
 class PairSymbol(models.Model):

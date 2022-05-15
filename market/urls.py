@@ -5,6 +5,7 @@ from market.views import *
 
 router = routers.DefaultRouter()
 router.register(r'^orders', OrderViewSet, basename='order')
+router.register(r'^stop-loss-orders', StopLossViewSet, basename='stop_loss')
 
 urlpatterns = [
     path('irt/info/', MarketInfoView.as_view()),
