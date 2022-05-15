@@ -112,7 +112,7 @@ class AuthTokenSerializer(serializers.ModelSerializer):
 
 
 class CreateAuthToken(APIView):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
+    authentication_classes = (SessionAuthentication,)
     permission_classes = (IsAuthenticated, )
     serializer_class = AuthTokenSerializer
 
@@ -139,15 +139,17 @@ class CreateAuthToken(APIView):
                 context={'request': self.request})
             auth_token_serializer.is_valid(raise_exception='data is invalid')
             auth_token_serializer.save()
-
+            token = CustomToken.objects.get(user=request.user)
             return Response({
-                'msg': 'success'
+                'token': token.key,
+                'user_id': request.user.pk,
+                'ip_white_list': token.ip_list,
             })
 
     def delete(self, request, *args, **kwargs):
         token = get_object_or_404(CustomToken, user=request.user)
         token.delete()
-        return Response({'success': True})
+        return Response({'msg': 'Token deleted successfully'})
 
     def put(self, request):
         tokent = get_object_or_404(CustomToken, user=request.user)

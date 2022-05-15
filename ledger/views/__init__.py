@@ -3,7 +3,7 @@ from .wallet_view import WalletViewSet, WalletBalanceView, BriefNetworkAssetsVie
 from .deposit_address_view import DepositAddressView
 from .otc_trade_view import OTCTradeRequestView, OTCTradeView, OTCHistoryView
 from .margin_view import MarginInfoView, AssetMarginInfoView, MarginTransferViewSet, MarginLoanViewSet
-from .withdraw_view import WithdrawView
+from .withdraw_view import WithdrawView, WithdrawApiView
 from .transactions_history_view import WithdrawHistoryView, DepositHistoryView
 from .network_asset_info_view import NetworkAssetView
 from .address_book_view import AddressBookView
