@@ -206,14 +206,14 @@ app.conf.beat_schedule = {
             'expire': 300
         },
     },
-    'random_trader': {
-        'task': 'trader.tasks.random_trader.random_trader',
-        'schedule': 60,
-        'options': {
-            'queue': 'trader-ma',
-            'expire': 60
-        }
-    },
+    # 'random_trader': {
+    #     'task': 'trader.tasks.random_trader.random_trader',
+    #     'schedule': 60,
+    #     'options': {
+    #         'queue': 'trader-ma',
+    #         'expire': 60
+    #     }
+    # },
 }
 
 if settings.DEBUG:
@@ -248,13 +248,13 @@ if settings.DEBUG:
                 'expire': 60
             }
         },
-        'random_trader': {
-            'task': 'trader.tasks.random_trader.random_trader',
-            'schedule': 60,
-            'options': {
-                'queue': 'trader-ma',
-                'expire': 60
-            }
-        },
+        # 'random_trader': {
+        #     'task': 'trader.tasks.random_trader.random_trader',
+        #     'schedule': 60,
+        #     'options': {
+        #         'queue': 'trader-ma',
+        #         'expire': 60
+        #     }
+        # },
     }
 

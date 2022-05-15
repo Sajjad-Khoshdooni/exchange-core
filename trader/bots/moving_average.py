@@ -86,7 +86,8 @@ class MovingAverage:
             cancel_orders(open_orders)
             self.log('%s orders canceled.' % len(open_orders))
 
-    def get_account(self) -> Account:
+    @classmethod
+    def get_account(cls) -> Account:
         account_id = config('BOT_MOVING_AVERAGE_ACCOUNT_ID')
         return Account.objects.get(id=account_id)
 
