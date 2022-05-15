@@ -134,6 +134,7 @@ class OTCRequest(models.Model):
 
         if to_amount:
             self.from_amount = to_price * to_amount
+            self.to_amount = to_amount
 
             # recalc with price diff_multipliers
             to_price = self.get_to_price()
@@ -146,6 +147,7 @@ class OTCRequest(models.Model):
                 to_amount = from_amount / to_price  # re calc cash
 
         else:
+            self.from_amount = from_amount
             self.to_amount = from_amount / to_price
 
             # recalc with price diff_multipliers
