@@ -50,7 +50,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             if 'address' not in attrs:
                 raise ValidationError('آدرس وارد نشده است.')
 
-            if not api and 'code ' not in attrs:
+            if not api and 'code' not in attrs:
                 raise ValidationError('کد وارد نشده است.')
             asset = get_object_or_404(Asset, symbol=attrs['coin'])
             network = get_object_or_404(Network, symbol=attrs['network'])
@@ -124,17 +124,19 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
 
 class WithdrawView(CreateAPIView):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
     serializer_class = WithdrawSerializer
     queryset = Transfer.objects.all()
 
-
     def get_serializer_context(self):
-        ctx = super().get_serializer_context()
-        ctx['api'] = 1
-        return ctx
+            ctx = super().get_serializer_context()
+            if self.request.auth:
+                ctx['api'] = 1
+            return ctx
+
+
 
 
 
