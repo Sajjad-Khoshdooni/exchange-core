@@ -8,7 +8,6 @@ from ledger.utils.precision import floor_precision
 from ledger.utils.price import get_trading_price_irt, get_trading_price_usdt, SELL, BUY
 from market.models import PairSymbol, Order
 from market.utils import new_order
-from provider.exchanges.binance.interface import MARKET
 
 logger = logging.getLogger(__name__)
 
@@ -96,4 +95,4 @@ def balance_tether(account: Account):
         pair = PairSymbol.objects.get(name='USDTIRT')
         amount = floor_precision(to_buy_usdt, pair.step_size)
 
-        return new_order(pair, account, amount, None, side=BUY, fill_type=MARKET, raise_exception=False)
+        return new_order(pair, account, amount, None, side=BUY, fill_type=Order.MARKET, raise_exception=False)
