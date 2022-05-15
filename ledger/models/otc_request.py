@@ -102,15 +102,13 @@ class OTCRequest(models.Model):
             raise NotImplementedError
 
     def get_to_price(self):
-        from ledger.utils.price import get_trading_price_irt
-
         conf = self.get_trade_config()
         other_side = get_other_side(conf.side)
 
         if conf.cash.symbol == Asset.IRT:
-            trading_price = get_trading_price_irt(conf.coin.symbol, other_side)
+            trading_price = get_trading_price_irt(conf.coin.symbol, other_side, amount=conf.cash_amount)
         elif conf.cash.symbol == Asset.USDT:
-            trading_price = get_trading_price_usdt(conf.coin.symbol, other_side)
+            trading_price = get_trading_price_usdt(conf.coin.symbol, other_side, amount=conf.cash_amount)
         else:
             raise NotImplementedError
 
@@ -122,7 +120,7 @@ class OTCRequest(models.Model):
     def _get_to_price_absolute_irt(self):
         conf = self.get_trade_config()
         other_side = get_other_side(conf.side)
-        return get_trading_price_irt(self.to_asset.symbol, other_side)
+        return get_trading_price_irt(self.to_asset.symbol, other_side, amount=conf.cash_amount)
 
     def _get_to_price_absolute_usdt(self):
         conf = self.get_trade_config()
