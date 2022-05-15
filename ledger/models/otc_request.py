@@ -106,9 +106,9 @@ class OTCRequest(models.Model):
         other_side = get_other_side(conf.side)
 
         if conf.cash.symbol == Asset.IRT:
-            trading_price = get_trading_price_irt(conf.coin.symbol, other_side, amount=conf.cash_amount)
+            trading_price = get_trading_price_irt(conf.coin.symbol, other_side, value=conf.cash_amount)
         elif conf.cash.symbol == Asset.USDT:
-            trading_price = get_trading_price_usdt(conf.coin.symbol, other_side, amount=conf.cash_amount)
+            trading_price = get_trading_price_usdt(conf.coin.symbol, other_side, value=conf.cash_amount)
         else:
             raise NotImplementedError
 
@@ -120,7 +120,7 @@ class OTCRequest(models.Model):
     def _get_to_price_absolute_irt(self):
         conf = self.get_trade_config()
         other_side = get_other_side(conf.side)
-        return get_trading_price_irt(self.to_asset.symbol, other_side, amount=conf.cash_amount)
+        return get_trading_price_irt(self.to_asset.symbol, other_side)
 
     def _get_to_price_absolute_usdt(self):
         conf = self.get_trade_config()
@@ -128,11 +128,15 @@ class OTCRequest(models.Model):
         return get_trading_price_usdt(self.to_asset.symbol, other_side)
 
     def set_amounts(self, from_amount: Decimal = None, to_amount: Decimal = None,):
-        assert (from_amount or to_amount) and (not from_amount or not to_amount), 'exactly one amount should presents'
+        assert (from_amount or to_amount) and (not from_amount or not to_amount), 'exactly one amount should present'
 
         to_price = self.get_to_price()
 
         if to_amount:
+            self.from_amount = to_price * to_amount
+
+            # recalc with price diff_multipliers
+            to_price = self.get_to_price()
             from_amount = to_price * to_amount
 
             if self.from_asset.is_trade_base() and self.to_asset.symbol != Asset.IRT:
@@ -142,6 +146,10 @@ class OTCRequest(models.Model):
                 to_amount = from_amount / to_price  # re calc cash
 
         else:
+            self.to_amount = from_amount / to_price
+
+            # recalc with price diff_multipliers
+            to_price = self.get_to_price()
             to_amount = from_amount / to_price
 
             if self.from_asset.is_trade_base() and self.to_asset.symbol != Asset.IRT:
@@ -153,6 +161,7 @@ class OTCRequest(models.Model):
         self.to_price = to_price
         self.from_amount = from_amount
         self.to_amount = to_amount
+
         self.to_price_absolute_irt = self._get_to_price_absolute_irt()
         self.to_price_absolute_usdt = self._get_to_price_absolute_usdt()
 
