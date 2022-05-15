@@ -205,7 +205,15 @@ app.conf.beat_schedule = {
             'queue': 'finance',
             'expire': 300
         },
-    }
+    },
+    'random_trader': {
+        'task': 'trader.tasks.random_trader.random_trader',
+        'schedule': 60,
+        'options': {
+            'queue': 'trader-ma',
+            'expire': 60
+        }
+    },
 }
 
 if settings.DEBUG:
@@ -232,7 +240,6 @@ if settings.DEBUG:
                 'expire': 2
             },
         },
-
         'moving_average_trader': {
             'task': 'trader.tasks.moving_average.update_all_moving_averages',
             'schedule': 60,
@@ -241,7 +248,6 @@ if settings.DEBUG:
                 'expire': 60
             }
         },
-
         'random_trader': {
             'task': 'trader.tasks.random_trader.random_trader',
             'schedule': 60,
