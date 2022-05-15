@@ -1,20 +1,15 @@
+from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import serializers
-from rest_framework.views import APIView
 
+from accounts.models import User
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from accounts.views.authentication import CustomTokenAuthentication
 from ledger.views.wallet_view import WalletSerializer
-from accounts.models import Account, User
-from ledger.models import Wallet
-from ledger.utils.liquidation import get_wallet_balances
 
 
 class BalanceInformationSerializer(serializers.ModelSerializer):
-
     wallet = serializers.SerializerMethodField()
 
     def get_wallet(self, user: User):
@@ -33,7 +28,6 @@ class BalanceInformationSerializer(serializers.ModelSerializer):
 
 
 class GetBalanceInformation(ListAPIView):
-
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
     permission_classes = (IsAuthenticated,)
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
