@@ -1,18 +1,13 @@
 from rest_framework import serializers
-from rest_framework.authentication import SessionAuthentication, TokenAuthentication
-# from rest_framework.authtoken.models import Token
-from rest_framework.authtoken.models import Token
-
-from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User, CustomToken
-from accounts.views.authentication import CustomTokenAuthentication
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
-from ledger.models import OTCRequest, Transfer, Prize
+from ledger.models import Transfer, Prize
 from market.models import Order
 
 
@@ -104,7 +99,6 @@ class AuthTokenSerializer(serializers.ModelSerializer):
         return customtoken
 
     def update(self, instance, validated_data):
-
         instance.ip_list = validated_data['ip_list']
 
         instance.save()
@@ -113,7 +107,7 @@ class AuthTokenSerializer(serializers.ModelSerializer):
 
 class CreateAuthToken(APIView):
     authentication_classes = (SessionAuthentication,)
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsAuthenticated,)
     serializer_class = AuthTokenSerializer
 
     def get(self, request):
