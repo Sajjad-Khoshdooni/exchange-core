@@ -15,7 +15,7 @@ class EmailSerializer(serializers.Serializer):
 
 
 class EmailVerifyView(APIView):
-    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
+    # throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def post(self, request):
         user = self.request.user
@@ -29,38 +29,37 @@ class EmailVerifyView(APIView):
             raise ValidationError('ایمیل وارد شده در سیستم وجود دارد.')
 
         EmailVerificationCode.send_otp_code(email, EmailVerificationCode.SCOPE_VERIFY_EMAIL, user)
-        VerificationCode.send_otp_code(user.phone, VerificationCode.SCOPE_VERIFY_EMAIL, user)
 
         return Response({'msg': 'otp send', 'code': 0})
 
 
 class EmailOTPVerifySerializer(serializers.ModelSerializer):
 
-    email_code = serializers.CharField(write_only=True, required=True)
+    code = serializers.CharField(write_only=True, required=True)
     sms_code = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
-        fields = ('email_code', 'email', 'sms_code',)
+        fields = ('code', 'email', 'sms_code',)
         read_only_fields = ('email', )
         extra_kwargs = {
             'email': {'required': True},
         }
 
     def update(self, user, validated_data):
-        email_code = validated_data.get('email_code')
+        code = validated_data.get('code')
         sms_code = validated_data.get('sms_code')
 
-        email_code = EmailVerificationCode.get_by_code(email_code, user, EmailVerificationCode.SCOPE_VERIFY_EMAIL)
+        code = EmailVerificationCode.get_by_code(code, user, EmailVerificationCode.SCOPE_VERIFY_EMAIL)
         sms_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_VERIFY_EMAIL)
 
-        if not (email_code or sms_code):
+        if not code:
             raise ValidationError({'code': 'کد نامعتبر است'})
 
-        email_code.set_code_used()
-        sms_code.set_code_used()
+        code.set_code_used()
+        # sms_code.set_code_used()
 
-        user.email = email_code.email
+        user.email = code.email
         user.save()
 
         return user
@@ -68,7 +67,7 @@ class EmailOTPVerifySerializer(serializers.ModelSerializer):
 
 class EmailOTPVerifyView(UpdateAPIView):
     serializer_class = EmailOTPVerifySerializer
-    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
+    # throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def get_object(self):
         return self.request.user
