@@ -50,7 +50,7 @@ def random_buy(symbol: PairSymbol, account: Account):
 
     amount = floor_precision(Decimal(max_value / ask), symbol.step_size)
 
-    if amount < min_order_value(symbol.base_asset.symbol):
+    if amount * price < min_order_value(symbol.base_asset.symbol):
         logger.info('buy ignored due to small amount')
         return
 
