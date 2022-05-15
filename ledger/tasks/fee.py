@@ -39,4 +39,5 @@ def update_network_fees():
         else:
             ns.binance_withdraw_enable = False
 
-    NetworkAsset.objects.bulk_update(network_assets, fields=['withdraw_fee', 'withdraw_min', 'withdraw_max', 'binance_withdraw_enable'])
+    NetworkAsset.objects.bulk_update(network_assets, fields=['withdraw_fee', 'withdraw_min', 'withdraw_max',
+                                                             'binance_withdraw_enable'])

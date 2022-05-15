@@ -36,7 +36,7 @@ def min_order_value(base_symbol: str):
 
 def random_min_order_value(base_symbol: str):
     min_order = min_order_value(base_symbol)
-    return random.randint(1.2 * min_order, 5 * min_order)
+    return random.randint(Decimal('1.2') * min_order, 5 * min_order)
 
 
 def random_buy(symbol: PairSymbol, account: Account):
@@ -90,8 +90,8 @@ def balance_tether(account: Account):
         logger.warning('Small free balance in account=%s' % account)
         return
 
-    if usdt / total_usdt < 0.2:
-        to_buy_usdt = total_usdt * 0.45 - usdt
+    if usdt / total_usdt < Decimal('0.2'):
+        to_buy_usdt = total_usdt * Decimal('0.45') - usdt
 
         pair = PairSymbol.objects.get('USDTIRT')
         amount = floor_precision(to_buy_usdt, pair.step_size)
