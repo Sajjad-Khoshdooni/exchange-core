@@ -32,7 +32,6 @@ class OrderViewSet(mixins.CreateModelMixin,
     pagination_class = LimitOffsetPagination
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
     serializer_class = OrderSerializer
-    lookup_field = 'client_order_id'
 
     filter_backends = [DjangoFilterBackend]
     filter_class = OrderFilter
