@@ -24,7 +24,6 @@ class CoinMarketCap(models.Model):
     cmc_rank = models.IntegerField()
     circulating_supply = models.FloatField()
 
-
     @classmethod
     def request(cls):
         return requests.get(data_url).json()['data']['cryptoCurrencyList']
@@ -62,14 +61,14 @@ class CoinMarketCap(models.Model):
                     internal_id=coin['id'],
                     price=price_info['price'],
                     market_cap=price_info['marketCap'],
-                    change_1h=price_info['"percentChange1h'],
-                    change_24h=price_info['percentChange24h'],
-                    volume_24h=price_info['volume24h'],
-                    change_7d=price_info['percentChange7d'],
-                    high_24h=price_info['high24h'],
-                    low_24h=price_info['low24h'],
-                    cmc_rank=price_info['cmcRank'],
-                    circulating_supply=price_info['circulatingSupply'],
+                    change_1h=price_info.get('"percentChange1h', 0),
+                    change_24h=price_info.get('percentChange24h', 0),
+                    volume_24h=price_info.get('volume24h', 0),
+                    change_7d=price_info.get('percentChange7d', 0),
+                    high_24h=price_info.get('high24h', 0),
+                    low_24h=price_info.get('low24h', 0),
+                    cmc_rank=price_info.get('cmcRank', 0),
+                    circulating_supply=price_info.get('circulatingSupply', 0),
                 )
             )
 

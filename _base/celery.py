@@ -181,14 +181,31 @@ app.conf.beat_schedule = {
         }
     },
 
-    'moving_average_trader': {
-        'task': 'trader.tasks.moving_average.update_all_moving_averages',
-        'schedule': 2,
+    'send_trade_notifs': {
+        'task': 'accounts.tasks.send_trade_notifs',
+        'schedule': crontab(hour=4, minute=30),
         'options': {
-            'queue': 'trader-ma',
-            'expire': 4
+            'queue': 'celery',
+            'expire': 3600
         }
     },
+
+    'moving_average_trader': {
+        'task': 'trader.tasks.moving_average.update_all_moving_averages',
+        'schedule': 60,
+        'options': {
+            'queue': 'trader-ma',
+            'expire': 60
+        }
+    },
+    'update_withdraw_status': {
+        'task': 'financial.tasks.withdraw.update_withdraw_status',
+        'schedule': 300,
+        'options': {
+            'queue': 'finance',
+            'expire': 300
+        },
+    }
 }
 
 if settings.DEBUG:
@@ -218,10 +235,10 @@ if settings.DEBUG:
 
         'moving_average_trader': {
             'task': 'trader.tasks.moving_average.update_all_moving_averages',
-            'schedule': 2,
+            'schedule': 60,
             'options': {
                 'queue': 'trader-ma',
-                'expire': 4
+                'expire': 60
             }
         },
     }

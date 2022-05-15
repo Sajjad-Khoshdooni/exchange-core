@@ -31,10 +31,10 @@ class AssetAdmin(AdvancedAdmin):
         'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calculated_hedge_amount',
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
         'get_ledger_balance_users', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
-        'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'hedge_method', 'bid_diff', 'ask_diff'
+        'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'trade_enable', 'hedge_method', 'bid_diff', 'ask_diff'
     )
     list_filter = ('enable', 'trend')
-    list_editable = ('enable', 'order', 'trend')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable')
     search_fields = ('symbol', )
 
     def changelist_view(self, request, extra_context=None):
@@ -246,11 +246,11 @@ class WalletAdmin(admin.ModelAdmin):
     get_locked.short_description = 'locked'
 
     def get_free_irt(self, wallet: models.Wallet):
-        return wallet.asset.get_presentation_price_irt(wallet.get_free_irt())
+        return wallet.asset.get_presentation_price_irt(wallet.get_balance_irt())
     get_free_irt.short_description = 'ارزش ریالی'
 
     def get_free_usdt(self, wallet: models.Wallet):
-        return wallet.asset.get_presentation_price_usdt(wallet.get_free_usdt())
+        return wallet.asset.get_presentation_price_usdt(wallet.get_balance_usdt())
     get_free_usdt.short_description = 'ارزش دلاری'
 
 

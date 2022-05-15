@@ -9,7 +9,7 @@ from .send_sms import send_message_by_kavenegar
 logger = logging.getLogger(__name__)
 
 
-@shared_task(queue='celery')
+@shared_task(queue='kyc')
 def basic_verify_user(user_id: int):
     user = User.objects.get(id=user_id)  # type: User
 

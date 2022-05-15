@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_yasg',
     'simple_history',
-
+    'django_user_agents',
     'financial',
     'multimedia',
     'accounts',
@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'collector',
     'market',
     'trader',
+    'jalali_date',
 ]
 
 MIDDLEWARE = [
@@ -72,8 +73,10 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'hijack.middleware.HijackUserMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
+    'django_user_agents.middleware.UserAgentMiddleware',
 ]
 
+# todo: fix csrf check
 MIDDLEWARE.insert(0, 'accounts.middleware.DisableCsrfCheck')
 MIDDLEWARE.remove('django.middleware.csrf.CsrfViewMiddleware')
 
@@ -234,6 +237,7 @@ REST_FRAMEWORK = {
 
     'DEFAULT_THROTTLE_RATES': {
         'burst': '5/min',
+        'sustained': '50/day',
     }
 }
 
@@ -281,4 +285,25 @@ CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN', default='.raastin.com')
 CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='None')
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', cast=bool, default=True)
 
+DEFAULT_FROM_EMAIL = 'راستین <%s>' % config('EMAIL_SENDER', default='')
+
+JALALI_DATE_DEFAULTS = {
+   'Strftime': {
+        'date': '%y/%m/%d',
+        'datetime': '%H:%M:%S _ %y/%m/%d',
+    },
+    'Static': {
+        'js': [
+            'admin/js/django_jalali.min.js',
+        ],
+        'css': {
+            'all': [
+                'admin/jquery.ui.datepicker.jalali/themes/base/jquery-ui.min.css',
+            ]
+        }
+    },
+}
+
 SYSTEM_ACCOUNT_ID = config('SYSTEM_ACCOUNT_ID', default=1)
+
+BRAND_EN = config('BRAND_EN')

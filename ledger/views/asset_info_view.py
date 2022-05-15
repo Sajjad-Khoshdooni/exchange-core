@@ -11,6 +11,7 @@ from ledger.models import Asset, Wallet, NetworkAsset
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
 from ledger.utils.price_manager import PriceManager
+from ledger.views.network_asset_info_view import NetworkAssetSerializer
 
 
 class AssetSerializerBuilder(AssetSerializerMini):
@@ -31,6 +32,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
     market_cap = serializers.SerializerMethodField()
     circulating_supply = serializers.SerializerMethodField()
     min_withdraw_amount = serializers.SerializerMethodField()
+    min_withdraw_fee = serializers.SerializerMethodField()
 
     class Meta:
         model = Asset
@@ -42,18 +44,30 @@ class AssetSerializerBuilder(AssetSerializerMini):
     def get_price_usdt(self, asset: Asset):
         prices = self.context['prices']
         price = prices[asset.symbol]
+        if not price:
+            return
+
         return asset.get_presentation_price_usdt(price)
 
     def get_price_irt(self, asset: Asset):
         prices = self.context['prices']
+        price = prices[asset.symbol]
+        if not price:
+            return
+
         tether_irt = self.context['tether_irt']
-        price = prices[asset.symbol] * tether_irt
+        price = price * tether_irt
         return asset.get_presentation_price_irt(price)
 
     def get_min_withdraw_amount(self, asset: Asset):
-        network_assets = NetworkAsset.objects.filter(asset=asset)
+        network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True)
         min_withdraw = network_assets.aggregate(min=Min('withdraw_min'))
-        return min_withdraw['min'] or Decimal(0)
+        return min_withdraw['min']
+
+    def get_min_withdraw_fee(self, asset: Asset):
+        network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True)
+        min_withdraw = network_assets.aggregate(min=Min('withdraw_fee'))
+        return min_withdraw['min']
 
     def get_trend_url(self, asset: Asset):
         cap = CoinMarketCap.objects.filter(symbol=asset.symbol).first()
@@ -129,7 +143,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
             new_fields = [
                 'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
                 'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
-                'low_24h', 'trend_url', 'min_withdraw_amount',
+                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee'
             ]
 
         class Serializer(cls):
@@ -175,7 +189,7 @@ class AssetsViewSet(ModelViewSet):
         )
 
     def get_queryset(self):
-        queryset = Asset.live_objects.all()
+        queryset = Asset.live_objects.all().filter(trade_enable=True)
 
         if self.get_options('trend'):
             queryset = queryset.filter(trend=True)

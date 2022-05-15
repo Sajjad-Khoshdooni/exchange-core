@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from accounts.models import User
 from accounts.verifiers.legal import possible_time_for_withdraw
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
-from ledger.models import OTCRequest, Transfer
+from ledger.models import OTCRequest, Transfer, Prize
 from market.models import Order
 
 
@@ -29,8 +29,8 @@ class UserSerializer(serializers.ModelSerializer):
         if has_trade:
             resp = 'trade_is_done'
 
-            if user.level < User.LEVEL3:
-                resp = 'waiting_for_level3'
+            if user.account.trade_volume_irt < Prize.TRADE_THRESHOLD_2M:
+                resp = 'waiting_for_trade'
         else:
             if user.on_boarding_flow == 'crypto':
                 transfer = Transfer.objects.filter(wallet__account=user.account, deposit=True)

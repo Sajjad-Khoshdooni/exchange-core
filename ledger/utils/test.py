@@ -2,7 +2,7 @@ import time
 
 from django.conf import settings
 
-if settings.TESTING:
+if settings.DEBUG_OR_TESTING:
     from accounts.models import Account, User, VerificationCode
     import random
 

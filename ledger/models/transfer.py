@@ -5,18 +5,19 @@ from uuid import uuid4
 from django.db import models
 from django.db.models import UniqueConstraint, Q
 
-from accounts.models import Account
+from accounts.models import Account, Notification
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
 from ledger.models.crypto_balance import CryptoBalance
 from ledger.utils.fields import get_amount_field, get_address_field, get_lock_field
+from ledger.utils.precision import humanize_number
 
 logger = logging.getLogger(__name__)
 
 
 class Transfer(models.Model):
-    PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done',
+    PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
     SELF, BINANCE = 'self', 'binance'
 
     created = models.DateTimeField(auto_now_add=True)
@@ -160,6 +161,23 @@ class Transfer(models.Model):
 
         except Exception:
             logger.exception('failed to update crypto balance')
+
+    def alert_user(self):
+        if self.status == Transfer.DONE and not self.hidden:
+            sent_amount = self.asset.get_presentation_amount(self.amount)
+
+            if self.deposit:
+                Notification.send(
+                    recipient=self.wallet.account.user,
+                    title='دریافت شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol),
+                    message='از ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
+                )
+            else:
+                Notification.send(
+                    recipient=self.wallet.account.user,
+                    title='ارسال شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol),
+                    message='به ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
+                )
 
     class Meta:
         constraints = [

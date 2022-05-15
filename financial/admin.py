@@ -51,7 +51,7 @@ class UserRialWithdrawRequestFilter(SimpleListFilter):
 class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     fieldsets = (
         ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'ref_doc',
-                                        'get_withdraw_request_receive_time')}),
+                                        'get_withdraw_request_receive_time', 'provider_withdraw_id')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
                                       'get_withdraw_request_user_mobile')}),
         ('نظر', {'fields': ('comment',)})
@@ -64,10 +64,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
                        'get_withdraw_request_receive_time'
                        )
 
-    list_display = ('bank_account', 'status', 'amount', 'ref_id')
-
-    def get_queryset(self, request):
-        return FiatWithdrawRequest.objects.filter(created__lte=timezone.now() - timedelta(minutes=3))
+    list_display = ('bank_account', 'created', 'status', 'amount', 'ref_id')
 
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.user.get_full_name()
@@ -83,8 +80,8 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     get_withdraw_request_iban.short_description = 'شماره شبا'
 
     def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
-        if withdraw.done_datetime:
-            data_time = get_fiat_estimate_receive_time(withdraw.done_datetime)
+        if withdraw.withdraw_datetime:
+            data_time = get_fiat_estimate_receive_time(withdraw.withdraw_datetime)
 
             return ('زمان : %s تاریخ %s' % (
                 data_time.time().strftime("%H:%M"),
@@ -163,7 +160,7 @@ class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     actions = ['verify_bank_cards', 'verify_bank_cards_manual', 'reject_bank_cards_manual']
 
     fields_edit_conditions = {
-        'verified': M('verified')
+        'verified': M.superuser | M('verified')
     }
 
     @admin.action(description='تایید خودکار شماره کارت')
@@ -216,7 +213,7 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     actions = ['verify_bank_accounts_manual', 'verify_bank_accounts_auto', 'reject_bank_accounts_manual']
 
     fields_edit_conditions = {
-        'verified': M('verified')
+        'verified': M.superuser | M('verified')
     }
 
     @admin.action(description='درخواست تایید خودکار شماره شبا')

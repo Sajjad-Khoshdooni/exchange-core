@@ -1,21 +1,19 @@
 import logging
 from uuid import uuid4
 
-from django.db import models
+from django.db import models, transaction
 
-from accounts.models import Account, User, Notification
+from accounts.models import Account, Notification
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_amount_field
+from ledger.utils.precision import humanize_number
 
 logger = logging.getLogger(__name__)
 
 
 class Prize(models.Model):
-    SIGN_UP_PRIZE_ACTIVATE = False
-
-    SIGN_UP_PRIZE, SIGN_UP_PRIZE_AMOUNT = 'signup', 0
-    LEVEL2_PRIZE, LEVEL2_PRIZE_AMOUNT = 'level2_verify', 50_000
-    FIRST_TRADE_PRIZE, FIRST_TRADE_PRIZE_AMOUNT = 'first_trade', 0
+    TRADE_2M_PRIZE, TRADE_2M_AMOUNT, TRADE_THRESHOLD_2M = 'trade_2m', 50_000, 2_000_000
+    REFERRAL_TRADE_2M_PRIZE, REFERRAL_TRADE_2M_AMOUNT = 'referral_trade_2m', 50_000
 
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE, verbose_name='کاربر')
@@ -23,15 +21,19 @@ class Prize(models.Model):
     scope = models.CharField(
         max_length=25,
         choices=(
-            (LEVEL2_PRIZE, LEVEL2_PRIZE), (SIGN_UP_PRIZE, SIGN_UP_PRIZE), (FIRST_TRADE_PRIZE, FIRST_TRADE_PRIZE)
+            (TRADE_2M_PRIZE, TRADE_2M_PRIZE),
+            (REFERRAL_TRADE_2M_PRIZE, REFERRAL_TRADE_2M_PRIZE)
         ),
         verbose_name='نوع'
     )
     asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE)
     group_id = models.UUIDField(default=uuid4, db_index=True)
+    fake = models.BooleanField(default=False)
+
+    variant = models.CharField(null=True, blank=True, max_length=16)
 
     class Meta:
-        unique_together = [('account', 'scope')]
+        unique_together = [('account', 'scope', 'variant')]
 
     def build_trx(self):
         system = Account.system()
@@ -43,27 +45,47 @@ class Prize(models.Model):
             scope=Trx.PRIZE
         )
 
+        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(self.amount))
+
+        Notification.send(
+            recipient=self.account.user,
+            title=title,
+            level=Notification.SUCCESS
+        )
+
     def __str__(self):
         return '%s %s %s' % (self.account, self.amount, self.asset)
 
 
-def alert_user_prize(user: User, scope: str):
-    from ledger.models import Prize
-    from ledger.utils.precision import humanize_number
-    level = Notification.SUCCESS
+def check_trade_prize(account: Account):
+    account.refresh_from_db()
 
-    if scope == Prize.SIGN_UP_PRIZE:
-        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(Prize.SIGN_UP_PRIZE_AMOUNT))
-    elif scope == Prize.LEVEL2_PRIZE:
-        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(Prize.LEVEL2_PRIZE_AMOUNT))
-    elif scope == Prize.FIRST_TRADE_PRIZE:
-        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(Prize.FIRST_TRADE_PRIZE_AMOUNT))
-    else:
-        logger.warning('unhandled scope received', extra={'scope': scope})
-        return
+    if account.trade_volume_irt >= Prize.TRADE_THRESHOLD_2M and \
+            not Prize.objects.filter(account=account, scope=Prize.TRADE_2M_PRIZE).exists():
 
-    Notification.send(
-        recipient=user,
-        title=title,
-        level=level
-    )
+        with transaction.atomic():
+            prize, created = Prize.objects.get_or_create(
+                account=account,
+                scope=Prize.TRADE_2M_PRIZE,
+                defaults={
+                    'amount': Prize.TRADE_2M_AMOUNT,
+                    'asset': Asset.get(Asset.SHIB),
+                }
+            )
+
+            if created:
+                prize.build_trx()
+
+                if account.referred_by:
+                    prize, created = Prize.objects.get_or_create(
+                        account=account.referred_by.owner,
+                        scope=Prize.REFERRAL_TRADE_2M_PRIZE,
+                        variant=str(account.id),
+                        defaults={
+                            'amount': Prize.TRADE_2M_AMOUNT,
+                            'asset': Asset.get(Asset.SHIB),
+                        }
+                    )
+
+                    if created:
+                        prize.build_trx()

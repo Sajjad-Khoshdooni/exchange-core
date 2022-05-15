@@ -20,6 +20,10 @@ class TokenExpired(Exception):
     pass
 
 
+class ProcessingError(Exception):
+    pass
+
+
 class OTCTrade(models.Model):
     PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 
@@ -120,12 +124,22 @@ class OTCTrade(models.Model):
         conf = self.otc_request.get_trade_config()
 
         if self.otc_request.account.is_ordinary_user():
-            hedged = ProviderOrder.try_hedge_for_new_order(
-                asset=conf.coin,
-                side=conf.side,
-                amount=conf.coin_amount,
-                scope=ProviderOrder.TRADE
-            )
+            try:
+                hedged = ProviderOrder.try_hedge_for_new_order(
+                    asset=conf.coin,
+                    side=conf.side,
+                    amount=conf.coin_amount,
+                    scope=ProviderOrder.TRADE
+                )
+            except:
+                logger.exception('Error in hedging otc request')
+
+                with transaction.atomic():
+                    self.change_status(self.CANCELED)
+                    self.lock.release()
+
+                raise ProcessingError
+
         else:
             hedged = True
 

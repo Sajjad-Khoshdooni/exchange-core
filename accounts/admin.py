@@ -1,11 +1,11 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
-from django.db.models import F
 from django.db.models import Q
 from django.db.models import Sum
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
+from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 from ledger.utils.precision import get_presentation_amount
 from accounts.models import UserComment, TrafficSource, Referral
@@ -18,8 +18,9 @@ from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdra
 from ledger.models import OTCTrade
 from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
+from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
-from market.models import FillOrder
+from market.models import FillOrder, ReferralTrx, Order
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
@@ -121,7 +122,7 @@ class UserCommentInLine(admin.TabularInline):
 
 
 @admin.register(User)
-class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
+class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     default_edit_condition = M.superuser
 
     fields_edit_conditions = {
@@ -136,38 +137,48 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         'last_name_verified': M.is_none('last_name_verified'),
         'national_code_verified': M.is_none('national_code_verified'),
         'birth_date_verified': M.is_none('birth_date_verified'),
+        'telephone_verified': M.superuser | M('telephone'),
+        'withdraw_before_48h_option': True
     }
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
-                                         'get_birth_date_jalali', 'telephone', 'get_selfie_image', 'archived',
+
+                                         'telephone', 'get_selfie_image', 'archived',
                                          'get_user_reject_reason', 'get_source_medium'
                                          )}),
-        (_('Authentication'), {'fields': ('level', 'verify_status', 'email_verified', 'first_name_verified',
+        (_('Authentication'), {'fields': ('level', 'verify_status', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'birth_date_verified',
                                           'telephone_verified', 'selfie_image_verified', 'selfie_image_verifier',
                                           'national_code_duplicated_alert', 'selfie_image_discard_text',
                                           )}),
         (_('Permissions'), {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'show_margin'),
+            'fields': (
+                'is_active', 'is_staff', 'is_superuser',
+                'groups', 'user_permissions', 'show_margin',
+                'withdraw_before_48h_option',
+            ),
         }),
         (_('Important dates'), {'fields': (
             'get_last_login_jalali', 'get_date_joined_jalali', 'get_first_fiat_deposit_date_jalali',
-            'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
+            'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali', 'get_selfie_image_uploaded'
         )}),
         (_('لینک های مهم'), {
             'fields': (
                 'get_payment_address', 'get_withdraw_address',
                 'get_otctrade_address', 'get_wallet_address', 'get_bank_card_link',
                 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
-                'get_user_with_same_national_code', 'get_fill_order_address'
+                'get_user_with_same_national_code', 'get_fill_order_address',
+                'get_open_order_address',
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
             'get_sum_of_value_buy_sell', 'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit'
         )}),
-        (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)})
+        (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)}),
+        (_("کدهای دعوت کاربر"), {'fields': (
+            'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred')})
     )
 
     list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
@@ -182,13 +193,14 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify')
     readonly_fields = (
         'get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet_address',
-        'get_sum_of_value_buy_sell', 'get_birth_date_jalali',
+        'get_sum_of_value_buy_sell',
         'get_selfie_image', 'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
         'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
         'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium',
-        'get_fill_order_address', 'selfie_image_verifier',
+        'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
+        'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded'
     )
     preserve_filters = ('archived', )
 
@@ -250,6 +262,11 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         link = url_to_admin_list(FillOrder) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_fill_order_address.short_description = 'معاملات'
+
+    def get_open_order_address(self, user: User):
+        link = url_to_admin_list(Order) +'?status=new&user={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+    get_open_order_address.short_description = 'سفارشات باز'
 
     def get_withdraw_address(self, user: User):
         link = url_to_admin_list(FiatWithdrawRequest)+'?user={}'.format(user.id)
@@ -322,19 +339,11 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     get_wallet_address.short_description = 'لیست کیف‌ها'
 
     def get_sum_of_value_buy_sell(self, user: User):
-        from market.models import FillOrder
-
         if not hasattr(user, 'account'):
             return 0
 
-        account_id = user.account.id
+        return user.account.trade_volume_irt
 
-        value = FillOrder.objects.filter(
-            Q(maker_order__wallet__account_id=account_id) | Q(taker_order__wallet__account_id=account_id),
-        ).aggregate(
-            amount=Sum('irt_value')
-        )
-        return humanize_number(int(value['amount'] or 0))
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
 
     def get_bank_card_link(self, user: User):
@@ -362,7 +371,9 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     get_finotech_request_link.short_description = 'درخواست‌های فینوتک'
 
     def get_user_with_same_national_code(self, user: User):
-        user_count = User.objects.filter(~Q(id=user.id) & Q(national_code=user.national_code) & ~Q(national_code='')).count()
+        user_count = User.objects.filter(
+            ~Q(id=user.id) & Q(national_code=user.national_code) & ~Q(national_code='')
+        ).count()
         return mark_safe(
             "<a href='/admin/accounts/user/?national_code=%s&user_id_exclude=%s'> دیدن (%sکاربر)  </a>" % (
                 user.national_code, user.id, user_count
@@ -370,11 +381,6 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
         )
 
     get_user_with_same_national_code.short_description = 'کاربرانی با این کد ملی'
-
-    def get_birth_date_jalali(self, user: User):
-        return gregorian_to_jalali_date_str(user.birth_date)
-
-    get_birth_date_jalali.short_description = 'تاریخ تولد شمسی'
 
     def get_level_2_verify_datetime_jalali(self, user: User):
         return gregorian_to_jalali_datetime_str(user.level_2_verify_datetime)
@@ -431,20 +437,61 @@ class CustomUserAdmin(SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
 
     get_user_prizes.short_description = 'جایزه‌های دریافتی کاربر'
 
+    def get_referred_count(self, user: User):
+        referrals = Referral.objects.filter(owner=user.account)
+        referred_count = 0
+        for referral in referrals:
+            referred_count += Account.objects.filter(referred_by=referral).count()
+        return referred_count
+    get_referred_count.short_description = ' تعداد دوستان دعوت شده'
+
+    def get_revenue_of_referral(self, user: User):
+        referrals = Referral.objects.filter(owner=user.account)
+        revenues = 0
+        for referral in referrals:
+            revenue = ReferralTrx.objects.filter(referral=referral).aggregate(total=Sum('referrer_amount'))
+            revenues += int(revenue['total'] or 0)
+        return revenues
+
+    get_revenue_of_referral.short_description = 'درآمد حاصل از کدهای دعوت ارسال شده به دوستان '
+
+    def get_revenue_of_referred(self, user: User):
+        referral = user.account.referred_by
+
+        revenue = ReferralTrx.objects.filter(referral=referral).aggregate(total=Sum('trader_amount'))
+        return int(revenue['total'] or 0)
+
+    get_revenue_of_referred.short_description = 'درآمد حاصل از کد دعوت استفاده شده'
+
+    def get_selfie_image_uploaded(self, user: User):
+        latest_null = user.history.filter(selfie_image__isnull=True).order_by('history_date').last()
+
+        if latest_null:
+            history = user.history.filter(
+                history_id__gt=latest_null.history_id,
+                selfie_image__isnull=False
+            ).order_by('history_date').first()
+
+            if history:
+                return gregorian_to_jalali_datetime_str(history.history_date)
+
+    get_selfie_image_uploaded.short_description = 'زمان آپلود عکس سلفی'
+
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('user', 'type', 'name',)
+    list_display = ('user', 'type', 'name', 'trade_volume_irt')
     search_fields = ('user__phone', )
     list_filter = ('type', 'primary')
 
     fieldsets = (
         ('اطلاعات', {'fields': (
-            'name', 'user', 'type', 'get_wallet_address',
-            'get_total_balance_irt_admin', 'get_total_balance_usdt_admin'
+            'name', 'user', 'type', 'trade_volume_irt', 'get_wallet_address',
+            'get_total_balance_irt_admin', 'get_total_balance_usdt_admin', 'referred_by'
         )}),
     )
-    readonly_fields = ('get_wallet_address', 'get_total_balance_irt_admin','get_total_balance_usdt_admin')
+    readonly_fields = ('get_wallet_address', 'get_total_balance_irt_admin', 'get_total_balance_usdt_admin',
+                       'trade_volume_irt', 'referred_by')
 
     def get_wallet_address(self, user: User):
         link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
@@ -453,20 +500,21 @@ class AccountAdmin(admin.ModelAdmin):
 
     def get_total_balance_irt_admin(self, account: Account):
         total_balance_irt = account.get_total_balance_irt(market=Wallet.SPOT, side='buy')
-        return humanize_number(get_presentation_amount((total_balance_irt)))
+        return humanize_number(get_presentation_amount(total_balance_irt))
 
     get_total_balance_irt_admin.short_description = 'دارایی به تومان'
 
     def get_total_balance_usdt_admin(self, account: Account):
         total_blance_usdt = account.get_total_balance_usdt(market=Wallet.SPOT, side='buy')
-        return humanize_number(get_presentation_amount((total_blance_usdt)))
+        return humanize_number(get_presentation_amount(total_blance_usdt))
 
     get_total_balance_usdt_admin.short_description = 'دارایی به تتر'
 
 
 @admin.register(Referral)
 class ReferralAdmin(admin.ModelAdmin):
-    list_display = ('owner', 'owner_share_percent')
+    list_display = ('owner', 'code', 'owner_share_percent')
+    search_fields = ('code',)
 
 
 class FinotechRequestUserFilter(SimpleListFilter):
