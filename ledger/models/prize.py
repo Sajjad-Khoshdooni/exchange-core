@@ -92,7 +92,7 @@ def check_trade_prize(account: Account):
                         scope=Prize.REFERRAL_TRADE_2M_PRIZE,
                         variant=str(account.id),
                         defaults={
-                            'amount': Prize.PRIZE_AMOUNTS[Prize.TRADE_PRIZE_STEP1],
+                            'amount': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE],
                             'asset': Asset.get(Asset.SHIB),
                         }
                     )
