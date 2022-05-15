@@ -235,10 +235,10 @@ if settings.DEBUG:
 
         'moving_average_trader': {
             'task': 'trader.tasks.moving_average.update_all_moving_averages',
-            'schedule': 2,
+            'schedule': 60,
             'options': {
                 'queue': 'trader-ma',
-                'expire': 4
+                'expire': 60
             }
         },
     }
