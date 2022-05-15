@@ -28,7 +28,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         user = self.context['request'].user
         account = user.account
-        api = self.context['api']
+        api = self.context.get('api')
         if attrs['address_book_id'] and (not api):
 
             address_book = get_object_or_404(AddressBook, id=attrs['address_book_id'], account=account)
