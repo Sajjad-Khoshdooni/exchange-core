@@ -43,15 +43,15 @@ class WithdrawSerializer(serializers.ModelSerializer):
                     raise ValidationError('رمزارزی انتخاب نشده است.')
                 asset = get_object_or_404(Asset, symbol=attrs['coin'])
         else:
-            if not 'coin' in attrs:
+            if 'coin' not in attrs:
                 raise ValidationError('رمزارزی انتخاب نشده است.')
-            if not 'network' in attrs:
+            if 'network' not in attrs:
                 raise ValidationError('شبکه‌ای انتخاب نشده است.')
-            if not 'address' in attrs:
+            if 'address' not in attrs:
                 raise ValidationError('آدرس وارد نشده است.')
-            if not api:
-                if not 'code' in attrs:
-                    raise ValidationError('کد وارد نشده است.')
+
+            if not api and 'code ' not in attrs:
+                raise ValidationError('کد وارد نشده است.')
             asset = get_object_or_404(Asset, symbol=attrs['coin'])
             network = get_object_or_404(Network, symbol=attrs['network'])
             address = attrs['address']

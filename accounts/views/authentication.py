@@ -34,14 +34,13 @@ class CustomTokenAuthentication(TokenAuthentication):
         model = self.get_model()
         request_ip = get_client_ip(request=request)
         try:
-            token = model.objects.select_related('user').get(key=key)
+            token = model.objects.select_related('user').get(key=key, ip_list__contains=[request_ip])
 
         except model.DoesNotExist:
             raise exceptions.AuthenticationFailed(_('Invalid token.'))
-        user = CustomToken.objects.filter(user=token.user, ip_list__contains=[request_ip])
-        if not user:
-            raise exceptions.AuthenticationFailed(_('your IP is not in Whitelist.'))
+
         if not token.user.is_active:
             raise exceptions.AuthenticationFailed(_('User inactive or deleted.'))
 
         return (token.user, token)
+

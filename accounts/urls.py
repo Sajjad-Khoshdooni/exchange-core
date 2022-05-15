@@ -55,8 +55,8 @@ urlpatterns = [
     path('user/onboarding/', views.OnBoardingFlowStatus.as_view()),
 
     path('phone/change/', views.ChangePhoneView.as_view()),
-    path('user/onboarding/', views.OnBoardingFlowStatus.as_view()),
-    path('api-token-auth/', CreateAuthToken.as_view()),
+
+    path('api/token/', CreateAuthToken.as_view()),
 
     path('referrals/overview/', views.ReferralOverviewAPIView.as_view()),
     path('referrals/report/', views.ReferralReportAPIView.as_view()),
@@ -64,6 +64,4 @@ urlpatterns = [
     path('fee/', views.TradingFeeView.as_view()),
 
     path('', include(router.urls)),
-
-    path('information/balance/', views.GetBalanceInformation.as_view())
 ]

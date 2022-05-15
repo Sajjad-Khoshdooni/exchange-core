@@ -238,8 +238,8 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'burst': '5/min',
         'sustained': '50/day',
-        'burst_api': '20/min',
-        'sustained_api': '100/day',
+        'burst_api': '10/min',
+        'sustained_api': '20000/day',
     }
 }
 

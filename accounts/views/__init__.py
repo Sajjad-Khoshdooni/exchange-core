@@ -15,5 +15,4 @@ from .email_verify_view import EmailOTPVerifyView, EmailVerifyView
 from .on_boarding_flow import OnBoardingFlowStatus
 from .change_phone_before_verify import ChangePhoneView
 
-from .balance_information import GetBalanceInformation
 from .referral_view import ReferralReportAPIView, ReferralViewSet, ReferralOverviewAPIView, TradingFeeView
