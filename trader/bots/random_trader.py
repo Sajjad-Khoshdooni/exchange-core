@@ -1,4 +1,5 @@
 import logging
+import random
 from decimal import Decimal
 from typing import Union
 
@@ -8,30 +9,20 @@ from yekta_config.config import config
 
 from accounts.models import Account
 from ledger.models import Asset
-from ledger.utils.price import BUY, SELL
-from market.models import PairSymbol
-from market.utils import get_open_orders, cancel_orders
-from trader.bots.utils import get_current_price, random_buy, random_sell
+from ledger.utils.precision import floor_precision
+from ledger.utils.price import BUY, SELL, get_trading_price_irt, get_trading_price_usdt
+from market.models import PairSymbol, Order
+from market.utils import new_order, get_open_orders, cancel_orders
 
 logger = logging.getLogger(__name__)
 
-ASK, BID = SELL, BUY
 
-ORDER_VALUE_IRT = 150_000
-ORDER_VALUE_USDT = 7
-
-MA_INTERVAL = 60
-MA_LENGTH = 15
-
-cache = caches['trader']
-
-
-class MovingAverage:
+class RandomTrader:
     def __init__(self, symbol: PairSymbol):
         self.symbol = symbol
 
     def log(self, msg: str):
-        logger.info("MA %s: %s" % (self.symbol, msg))
+        logger.info("RT %s: %s" % (self.symbol, msg))
 
     @property
     def order_value_step(self):
@@ -41,7 +32,7 @@ class MovingAverage:
             return ORDER_VALUE_USDT
 
     def update(self, dry_run: bool = False):
-        ask, bid = (get_current_price(self.symbol, ASK), get_current_price(self.symbol, BID))
+        ask, bid = (self.get_current_price(ASK), self.get_current_price(BID))
         median_price = (ask + bid) / 2
 
         self.push_prices(ask, bid)
@@ -62,20 +53,46 @@ class MovingAverage:
             # buy
             self.log('below avg crossing => buying')
 
+            wallet = self.symbol.base_asset.get_wallet(self.get_account())
+
+            price = floor_precision(ask * Decimal('1.03'), self.symbol.tick_size)
+
+            balance = wallet.get_free()
+
+            max_value = min(balance, random.randint(self.order_value_step, self.order_value_step * 5))
+            amount = floor_precision(Decimal(max_value / ask), self.symbol.step_size)
+
             self.cancel_open_orders()
 
-            if random_buy(self.symbol, self.get_account()):
-                self.log('bought %s' % self.symbol)
+            if new_order(self.symbol, self.get_account(), amount, price, side=BUY, raise_exception=False):
+                self.log('buying %s with price=%s' % (amount, price))
                 self.set_below(False)
 
         elif not below and ask < avg_ask and bid < avg_bid:
             # sell!
             self.log('above avg crossing => selling')
 
+            price = floor_precision(bid * Decimal('0.97'), self.symbol.tick_size)
+
+            wallet = self.symbol.asset.get_wallet(self.get_account())
+
+            balance = wallet.get_free()
+
+            if self.symbol.name == 'USDTIRT':
+                last_buy = Order.objects.filter(
+                    wallet=wallet,
+                    side=Order.BUY
+                ).order_by('-created').first()
+
+                if last_buy:
+                    balance = min(balance, last_buy.filled_amount)
+
+            amount = floor_precision(balance, self.symbol.step_size)
+
             self.cancel_open_orders()
 
-            if random_sell(self.symbol, self.get_account()):
-                self.log('sold %s' % self.symbol)
+            if new_order(self.symbol, self.get_account(), amount, price, side=SELL, raise_exception=False):
+                self.log('selling %s with price=%s' % (amount, price))
                 self.set_below(True)
 
     def cancel_open_orders(self):
@@ -117,6 +134,18 @@ class MovingAverage:
         prices = dict(list(prices.items())[-MA_LENGTH:])
 
         cache.set(key, prices)
+
+    def get_current_price(self, side) -> Decimal:
+        if self.symbol.name.endswith(Asset.IRT):
+            base_symbol = Asset.IRT
+            get_trading_price = get_trading_price_irt
+        elif self.symbol.name.endswith(Asset.USDT):
+            base_symbol = Asset.USDT
+            get_trading_price = get_trading_price_irt
+        else:
+            raise NotImplementedError
+        coin = self.symbol.name.split(base_symbol)[0]
+        return get_trading_price(coin, side)
 
     def get_cache_history_key(self):
         return 'ma-9-60:' + str(self.symbol.name)
