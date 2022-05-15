@@ -93,7 +93,7 @@ def balance_tether(account: Account):
     if usdt / total_usdt < Decimal('0.2'):
         to_buy_usdt = total_usdt * Decimal('0.45') - usdt
 
-        pair = PairSymbol.objects.get('USDTIRT')
+        pair = PairSymbol.objects.get(name='USDTIRT')
         amount = floor_precision(to_buy_usdt, pair.step_size)
 
         return new_order(pair, account, amount, None, side=BUY, fill_type=MARKET, raise_exception=False)
