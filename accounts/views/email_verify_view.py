@@ -15,7 +15,7 @@ class EmailSerializer(serializers.Serializer):
 
 
 class EmailVerifyView(APIView):
-    # throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def post(self, request):
         user = self.request.user
@@ -67,7 +67,7 @@ class EmailOTPVerifySerializer(serializers.ModelSerializer):
 
 class EmailOTPVerifyView(UpdateAPIView):
     serializer_class = EmailOTPVerifySerializer
-    # throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def get_object(self):
         return self.request.user
