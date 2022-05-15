@@ -124,19 +124,18 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
 
 class WithdrawView(CreateAPIView):
-    serializer_class = WithdrawSerializer
-    queryset = Transfer.objects.all()
-
-
-class WithdrawApiView(CreateAPIView):
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
     permission_classes = (IsAuthenticated,)
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
     serializer_class = WithdrawSerializer
     queryset = Transfer.objects.all()
 
+
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
         ctx['api'] = 1
         return ctx
+
+
+
 

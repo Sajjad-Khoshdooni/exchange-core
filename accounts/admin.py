@@ -336,7 +336,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_user_reject_reason.short_description = 'وضعیت احراز'
 
     def get_wallet_address(self, user: User):
-        link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
+        link = url_to_admin_list(Wallet) + '?account={}'.format(user.account.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_wallet_address.short_description = 'لیست کیف‌ها'
 

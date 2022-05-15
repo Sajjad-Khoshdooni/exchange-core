@@ -214,15 +214,15 @@ class TrxAdmin(admin.ModelAdmin):
 
 class WalletUserFilter(SimpleListFilter):
     title = 'کاربر'
-    parameter_name = 'user'
+    parameter_name = 'account'
 
     def lookups(self, request, model_admin):
         return [(1, 1)]
 
     def queryset(self, request, queryset):
-        user = request.GET.get('user')
-        if user is not None:
-            return queryset.filter(account=user)
+        account = request.GET.get('account')
+        if account is not None:
+            return queryset.filter(account=account)
         else:
             return queryset
 

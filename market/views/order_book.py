@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class OrderBookAPIView(APIView):
     authentication_classes = ()
     permission_classes = ()
-    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
+    throttle_classes = [BursApiRateThrottle]
 
     def get(self, request, symbol):
         symbol = get_object_or_404(PairSymbol, name=symbol.upper())

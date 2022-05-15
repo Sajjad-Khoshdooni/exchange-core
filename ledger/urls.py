@@ -16,7 +16,7 @@ urlpatterns = [
     path('v1/deposit/address/', views.DepositAddressView.as_view()),
 
     path('v1/withdraw/', views.WithdrawView.as_view()),
-    path('v1/apiwithdraw/', views.WithdrawApiView.as_view()),
+
 
 
     path('v1/withdraw/list/', views.WithdrawHistoryView.as_view()),
