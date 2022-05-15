@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 from typing import Union
 
@@ -6,6 +7,8 @@ from django.db import transaction
 from accounts.models import Account
 from ledger.models import Wallet, Asset
 from market.models import Order, CancelRequest, PairSymbol
+
+logger = logging.getLogger(__name__)
 
 
 def cancel_order(order: Order) -> CancelRequest:
@@ -54,12 +57,14 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
         if raise_exception:
             raise MinTradeError
         else:
+            logger.info('new order failed: min_trade_quantity %s (%s < %s)' % (symbol, amount, symbol.min_trade_quantity))
             return
 
     if amount > symbol.max_trade_quantity:
         if raise_exception:
             raise MinTradeError
         else:
+            logger.info('new order failed: max_trade_quantity')
             return
 
     base_asset_symbol = symbol.base_asset.symbol
@@ -75,6 +80,7 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
         if raise_exception:
             raise MinNotionalError
         else:
+            logger.info('new order failed: min_notional')
             return
 
     with transaction.atomic():

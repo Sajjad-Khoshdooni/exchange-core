@@ -192,10 +192,10 @@ app.conf.beat_schedule = {
 
     'moving_average_trader': {
         'task': 'trader.tasks.moving_average.update_all_moving_averages',
-        'schedule': 2,
+        'schedule': 60,
         'options': {
             'queue': 'trader-ma',
-            'expire': 4
+            'expire': 60
         }
     },
     'update_withdraw_status': {
@@ -205,7 +205,15 @@ app.conf.beat_schedule = {
             'queue': 'finance',
             'expire': 300
         },
-    }
+    },
+    'random_trader': {
+        'task': 'trader.tasks.random_trader.random_trader',
+        'schedule': 60,
+        'options': {
+            'queue': 'trader-ma',
+            'expire': 60
+        }
+    },
 }
 
 if settings.DEBUG:
@@ -232,13 +240,20 @@ if settings.DEBUG:
                 'expire': 2
             },
         },
-
         'moving_average_trader': {
             'task': 'trader.tasks.moving_average.update_all_moving_averages',
-            'schedule': 2,
+            'schedule': 60,
             'options': {
                 'queue': 'trader-ma',
-                'expire': 4
+                'expire': 60
+            }
+        },
+        'random_trader': {
+            'task': 'trader.tasks.random_trader.random_trader',
+            'schedule': 60,
+            'options': {
+                'queue': 'trader-ma',
+                'expire': 60
             }
         },
     }
