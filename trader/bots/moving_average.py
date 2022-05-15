@@ -151,7 +151,7 @@ class MovingAverage:
             get_trading_price = get_trading_price_irt
         elif self.symbol.name.endswith(Asset.USDT):
             base_symbol = Asset.USDT
-            get_trading_price = get_trading_price_irt
+            get_trading_price = get_trading_price_usdt
         else:
             raise NotImplementedError
         coin = self.symbol.name.split(base_symbol)[0]
