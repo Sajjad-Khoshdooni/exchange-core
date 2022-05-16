@@ -186,8 +186,6 @@ class Order(models.Model):
                 symbol=self.symbol, side=opp_side, **Order.get_price_filter(self.price, self.side)
             ).order_by(*self.get_order_by(opp_side))
 
-            logger.info(f'open orders: {matching_orders}')
-
             unfilled_amount = self.unfilled_amount
 
             fill_orders = []

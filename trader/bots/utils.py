@@ -58,13 +58,13 @@ def random_buy(symbol: PairSymbol, account: Account):
 
 
 def random_sell(symbol: PairSymbol, account: Account):
-    wallet = symbol.base_asset.get_wallet(account)
+    wallet = symbol.asset.get_wallet(account)
     balance = wallet.get_free()
 
     bid = get_current_price(symbol, BUY)
     price = floor_precision(bid * Decimal('0.97'), symbol.tick_size)
 
-    balance = min(balance, random_min_order_value(symbol.base_asset.symbol))
+    balance = min(balance, random_min_order_value(symbol.base_asset.symbol) / bid)
 
     amount = floor_precision(balance, symbol.step_size)
 
