@@ -31,7 +31,7 @@ class BinanceConsumer:
 
     def get_streams(self):
         assets = list(Asset.objects.values_list('symbol', flat=True))
-        return list(map(lambda asset: asset.lower() + get_binance_price_stream(asset.symbol) + '@depth5', assets))
+        return list(map(lambda asset: asset.lower() + get_binance_price_stream(asset) + '@depth5', assets))
 
     def consume(self):
         signal.signal(signal.SIGINT, self.exit_gracefully)
