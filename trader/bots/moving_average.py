@@ -1,4 +1,5 @@
 import logging
+import random
 from decimal import Decimal
 from typing import Union
 
@@ -45,6 +46,9 @@ class MovingAverage:
         median_price = (ask + bid) / 2
 
         self.push_prices(ask, bid)
+
+        if random.randint(0, 2) != 0:  # throttle order
+            return
 
         avg_prices = self.get_average_prices()
 
