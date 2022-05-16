@@ -1,4 +1,5 @@
 import logging
+import random
 from decimal import Decimal
 from typing import Union
 
@@ -45,6 +46,9 @@ class MovingAverage:
         median_price = (ask + bid) / 2
 
         self.push_prices(ask, bid)
+
+        if random.randint(0, 2) != 0:  # throttle order
+            return
 
         avg_prices = self.get_average_prices()
 
@@ -117,7 +121,7 @@ class MovingAverage:
         prices[timestamp] = {'a': ask, 'b': bid}
         prices = dict(list(prices.items())[-MA_LENGTH:])
 
-        cache.set(key, prices)
+        cache.set(key, prices, 1000)
 
     def get_cache_history_key(self):
         return 'ma-9-60:' + str(self.symbol.name)
@@ -133,4 +137,4 @@ class MovingAverage:
             return b
 
     def set_below(self, value):
-        cache.set(self.get_cache_below_key(), value)
+        cache.set(self.get_cache_below_key(), value, None)

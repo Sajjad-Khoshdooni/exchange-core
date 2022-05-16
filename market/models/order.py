@@ -186,8 +186,6 @@ class Order(models.Model):
                 symbol=self.symbol, side=opp_side, **Order.get_price_filter(self.price, self.side)
             ).order_by(*self.get_order_by(opp_side))
 
-            logger.info(f'open orders: {matching_orders}')
-
             unfilled_amount = self.unfilled_amount
 
             fill_orders = []
@@ -273,6 +271,7 @@ class Order(models.Model):
 
             if self.fill_type == Order.MARKET and self.status == Order.NEW:
                 self.status = Order.CANCELED
+                self.lock.release()
                 self.save(update_fields=['status'])
 
             Trx.objects.bulk_create(filter(lambda trx: trx and trx.amount, trx_list))
