@@ -39,6 +39,13 @@ SIDE_MAP = {
 }
 
 
+def get_binance_price_stream(coin: str):
+    if coin == 'LUNA':
+        return 'busd'
+    else:
+        return 'usdt'
+
+
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
                   now: datetime = None) -> List[Price]:
     results = []
@@ -71,7 +78,7 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
 
         pipe = price_redis.pipeline(transaction=False)
         for c in coins:
-            name = 'bin:' + c.lower() + 'usdt'
+            name = 'bin:' + c.lower() + get_binance_price_stream(c)
             pipe.hgetall(name)
 
         prices = pipe.execute()
