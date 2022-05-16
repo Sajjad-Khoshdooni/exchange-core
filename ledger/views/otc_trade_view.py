@@ -121,7 +121,10 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         if conf.side == SELL:
             price = 1 / price
 
-        return conf.coin.get_presentation_price_irt(price)
+        if conf.cash.symbol == Asset.IRT:
+            return conf.coin.get_presentation_price_irt(price)
+        else:
+            return conf.coin.get_presentation_price_usdt(price)
 
     class Meta:
         model = OTCRequest
