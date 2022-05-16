@@ -48,7 +48,7 @@ def get_binance_price_stream(coin: str):
 
 def get_asset_diff_multiplier(coin: str):
     if coin == 'LUNA':
-        return 4
+        return 6
     else:
         return 1
 
