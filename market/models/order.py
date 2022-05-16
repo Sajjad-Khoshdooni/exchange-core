@@ -273,6 +273,7 @@ class Order(models.Model):
 
             if self.fill_type == Order.MARKET and self.status == Order.NEW:
                 self.status = Order.CANCELED
+                self.lock.release()
                 self.save(update_fields=['status'])
 
             Trx.objects.bulk_create(filter(lambda trx: trx and trx.amount, trx_list))
