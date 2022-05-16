@@ -72,7 +72,7 @@ def random_sell(symbol: PairSymbol, account: Account):
         logger.info('sell ignored due to small amount')
         return
 
-    return new_order(symbol, account, amount, price, side=BUY, raise_exception=False)
+    return new_order(symbol, account, amount, price, side=SELL, raise_exception=False)
 
 
 def balance_tether(account: Account):
