@@ -141,7 +141,7 @@ def send_trade_notifs():
         level__gte=User.LEVEL2,
         first_fiat_deposit_date__isnull=False,
         first_fiat_deposit_date__lte=timezone.now() - timedelta(days=7),
-        account__trade_volume_irt__lte=Prize.TRADE_THRESHOLD_2M,
+        account__trade_volume_irt__lte=Prize.TRADE_THRESHOLD_STEP1,
     ).exclude(id__in=to_exclude_user_ids)
 
     for user in users:
