@@ -24,6 +24,7 @@ from market.models import FillOrder, ReferralTrx, Order
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
+from .models.login_activity import LoginActivity
 from .tasks import basic_verify_user
 from .utils.validation import gregorian_to_jalali_date_str, gregorian_to_jalali_datetime_str
 from .verifiers.legal import is_48h_rule_passed
@@ -170,7 +171,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                 'get_otctrade_address', 'get_wallet_address', 'get_bank_card_link',
                 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
                 'get_user_with_same_national_code', 'get_fill_order_address',
-                'get_open_order_address',
+                'get_open_order_address', 'get_login_activity_link',
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
@@ -200,7 +201,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
         'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium',
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
-        'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded'
+        'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_login_activity_link',
     )
     preserve_filters = ('archived', )
 
@@ -334,7 +335,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_user_reject_reason.short_description = 'وضعیت احراز'
 
     def get_wallet_address(self, user: User):
-        link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
+        link = url_to_admin_list(Wallet) + '?account={}'.format(user.account.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_wallet_address.short_description = 'لیست کیف‌ها'
 
@@ -369,6 +370,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
     get_finotech_request_link.short_description = 'درخواست‌های فینوتک'
+
+    def get_login_activity_link(self, user: User):
+        link = url_to_admin_list(LoginActivity) + '?user={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+    get_login_activity_link.short_description = 'تاریخه ورود به حساب'
 
     def get_user_with_same_national_code(self, user: User):
         user_count = User.objects.filter(
@@ -486,7 +492,7 @@ class AccountAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('اطلاعات', {'fields': (
-            'name', 'user', 'type', 'trade_volume_irt', 'get_wallet_address',
+            'name', 'user', 'type', 'primary', 'trade_volume_irt', 'get_wallet_address',
             'get_total_balance_irt_admin', 'get_total_balance_usdt_admin', 'referred_by'
         )}),
     )
@@ -555,3 +561,12 @@ class UserCommentAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ['user', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
     search_fields = ['user__phone']
+
+
+@admin.register(LoginActivity)
+class LoginActivityAdmin(admin.ModelAdmin):
+    list_display = ['user', 'ip', 'device', 'os', 'browser']
+    search_fields = ['user__phone', 'ip']
+
+
+

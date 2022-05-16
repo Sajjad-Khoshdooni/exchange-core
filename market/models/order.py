@@ -107,7 +107,7 @@ class Order(models.Model):
 
     @staticmethod
     def get_opposite_side(side):
-        return Order.SELL if side == Order.BUY else Order.BUY
+        return Order.SELL if side.lower() == Order.BUY else Order.BUY
 
     @staticmethod
     def get_order_by(side):

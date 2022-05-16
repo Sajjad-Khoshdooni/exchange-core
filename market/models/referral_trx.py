@@ -7,7 +7,6 @@ from django.db import models
 
 from ledger.models import Trx, Asset, Wallet
 from ledger.utils.fields import get_amount_field
-from ledger.utils.precision import floor_precision
 
 logger = logging.getLogger(__name__)
 
@@ -63,10 +62,12 @@ class ReferralTrx(models.Model):
             irt_asset = Asset.get(symbol=Asset.IRT)
         system_wallet = irt_asset.get_wallet(fee_trx.receiver.account, Wallet.SPOT)
 
+        real_fee_amount = fee_trx.amount * (Decimal(100) / (Decimal(100) - (
+                    Decimal(ReferralTrx.REFERRAL_MAX_RETURN_PERCENT) - Decimal(referral.owner_share_percent))))
         if sell:
-            amount = fee_trx.amount * tether_factor
+            amount = real_fee_amount * tether_factor
         else:
-            amount = fee_trx.amount * trade_price * tether_factor
+            amount = real_fee_amount * trade_price * tether_factor
 
         self.trx_dict = {}
         for receiver_type in [self.TRADER, self.REFERRER]:
@@ -99,7 +100,7 @@ class ReferralTrx(models.Model):
         assert 0 <= referral.owner_share_percent <= cls.REFERRAL_MAX_RETURN_PERCENT
 
         if receiver_type == ReferralTrx.TRADER:
-            return Decimal(cls.REFERRAL_MAX_RETURN_PERCENT) / 100 - Decimal(referral.owner_share_percent) / 100
+            return Decimal(0)
         else:
             return Decimal(referral.owner_share_percent) / 100
 
