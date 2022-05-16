@@ -101,7 +101,7 @@ class AssetOverview:
 
         for symbol, amount in self._binance_spot_balance_map.items():
             if amount > 0:
-                value += Decimal(amount) * self._prices.get(symbol)
+                value += Decimal(amount) * (self._prices.get(symbol) or 0)
 
         return value
 
@@ -122,7 +122,7 @@ class AssetOverview:
         total = 0
 
         for symbol, amount in self._internal_deposits.items():
-            total += amount * self._prices.get(symbol, 0)
+            total += amount * (self._prices.get(symbol) or 0)
 
         return total
 
