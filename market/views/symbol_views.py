@@ -2,6 +2,7 @@ import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 
+from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from market.models import PairSymbol
 from market.serializers.symbol_serializer import SymbolSerializer, SymbolBreifStatsSerializer, SymbolStatsSerializer
 
@@ -32,6 +33,7 @@ class SymbolListAPIView(ListAPIView):
 class SymbolDetailedStatsAPIView(RetrieveAPIView):
     authentication_classes = ()
     permission_classes = ()
+    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
     serializer_class = SymbolStatsSerializer
     queryset = PairSymbol.objects.all()
