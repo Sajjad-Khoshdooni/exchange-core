@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User, CustomToken
+from accounts.verifiers.legal import possible_time_for_withdraw
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 from ledger.models import Transfer, Prize
 from market.models import Order
@@ -13,13 +14,17 @@ from market.models import Order
 
 class UserSerializer(serializers.ModelSerializer):
     on_boarding_status = serializers.SerializerMethodField()
+    possible_time_for_withdraw = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'on_boarding_flow', 'on_boarding_status',
+            'show_margin', 'on_boarding_flow', 'on_boarding_status', 'possible_time_for_withdraw',
         )
+
+    def get_possible_time_for_withdraw(self, user: User):
+        return possible_time_for_withdraw(user)
 
     def get_on_boarding_status(self, user: User):
         has_trade = Order.objects.filter(wallet__account=user.account).count() >= 3
@@ -27,7 +32,7 @@ class UserSerializer(serializers.ModelSerializer):
         if has_trade:
             resp = 'trade_is_done'
 
-            if user.account.trade_volume_irt < Prize.TRADE_THRESHOLD_2M:
+            if user.account.trade_volume_irt < Prize.TRADE_THRESHOLD_STEP1:
                 resp = 'waiting_for_trade'
         else:
             if user.on_boarding_flow == 'crypto':

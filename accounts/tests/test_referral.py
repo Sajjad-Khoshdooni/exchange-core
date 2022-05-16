@@ -1,15 +1,15 @@
-from uuid import uuid4
 from decimal import Decimal
-from django.test import TestCase
 from unittest import mock
+from uuid import uuid4
 
-import ledger.utils.price
+from django.test import TestCase
+
 from accounts.models import Account
-from ledger.models import Trx, Asset
-from market.models import PairSymbol, Order, FillOrder,ReferralTrx
-from ledger.utils.test import new_account
-from market.utils import new_order
 from accounts.utils.test import create_referral, set_referred_by
+from ledger.models import Trx, Asset
+from ledger.utils.test import new_account
+from market.models import PairSymbol, Order, FillOrder, ReferralTrx
+from market.utils import new_order
 
 
 class ReferralTestCase(TestCase):
@@ -69,10 +69,10 @@ class ReferralTestCase(TestCase):
             receiver=self.irt.get_wallet(self.account_1),
             scope=Trx.COMMISSION
         )
-        trx_referred = Trx.objects.get(
+        fee_trx_referred = Trx.objects.get(
             group_id=fill_order.group_id,
-            sender=self.irt.get_wallet(Account.system()),
-            receiver=self.irt.get_wallet(self.account_3),
+            sender=self.btc.get_wallet(self.account_3),
+            receiver=self.btc.get_wallet(Account.system()),
             scope=Trx.COMMISSION
         )
         self.assertEqual(
@@ -81,15 +81,15 @@ class ReferralTestCase(TestCase):
             self.btcitr.taker_fee * fill_order.amount * fill_order.price
         )
         self.assertEqual(
-            trx_referred.amount,
-            ((ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - self.account_1_referral.owner_share_percent) / Decimal('100')) *
-            self.btcitr.taker_fee * fill_order.amount * fill_order.price
+            fee_trx_referred.amount,
+            (1 - ((ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - self.account_1_referral.owner_share_percent) / Decimal(
+                '100'))) *
+            self.btcitr.taker_fee * fill_order.amount
         )
 
     @mock.patch('market.models.order.get_tether_irt_price')
     @mock.patch('market.models.fill_order.get_tether_irt_price')
     def test_referral_btc_usdt(self, get_tether_irt_price, get_tether_irt_price_2):
-
         get_tether_irt_price.return_value = 1
         get_tether_irt_price_2.return_value = 1
         print(get_tether_irt_price())
@@ -107,10 +107,11 @@ class ReferralTestCase(TestCase):
             receiver=self.irt.get_wallet(self.account_1),
             scope=Trx.COMMISSION
         )
-        trx_referred = Trx.objects.get(
+
+        fee_trx_referred = Trx.objects.get(
             group_id=fill_order.group_id,
-            sender=self.irt.get_wallet(Account.system()),
-            receiver=self.irt.get_wallet(self.account_3),
+            sender=self.btc.get_wallet(self.account_3),
+            receiver=self.btc.get_wallet(Account.system()),
             scope=Trx.COMMISSION
         )
         self.assertEqual(
@@ -119,9 +120,10 @@ class ReferralTestCase(TestCase):
             self.btcitr.taker_fee * fill_order.amount * fill_order.price
         )
         self.assertEqual(
-            trx_referred.amount,
-            ((ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - self.account_1_referral.owner_share_percent) / Decimal('100')) *
-            self.btcitr.taker_fee * fill_order.amount * fill_order.price
+            fee_trx_referred.amount,
+            (1 - ((ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - self.account_1_referral.owner_share_percent) / Decimal(
+                '100'))) *
+            self.btcitr.taker_fee * fill_order.amount
         )
 
     def test_referral_usdt_irt(self):
@@ -142,10 +144,10 @@ class ReferralTestCase(TestCase):
             receiver=self.irt.get_wallet(self.account_1),
             scope=Trx.COMMISSION
         )
-        trx_referred = Trx.objects.get(
+        fee_trx_referred = Trx.objects.get(
             group_id=fill_order.group_id,
-            sender=self.irt.get_wallet(Account.system()),
-            receiver=self.irt.get_wallet(self.account_3),
+            sender=self.irt.get_wallet(self.account_3),
+            receiver=self.irt.get_wallet(Account.system()),
             scope=Trx.COMMISSION
         )
 
@@ -155,10 +157,10 @@ class ReferralTestCase(TestCase):
             receiver=self.irt.get_wallet(self.account_1),
             scope=Trx.COMMISSION
         )
-        trx_referred_2 = Trx.objects.get(
+        fee_trx_referred_2 = Trx.objects.get(
             group_id=fill_order_2.group_id,
-            sender=self.irt.get_wallet(Account.system()),
-            receiver=self.irt.get_wallet(self.account_3),
+            sender=self.usdt.get_wallet(self.account_3),
+            receiver=self.usdt.get_wallet(Account.system()),
             scope=Trx.COMMISSION
         )
         self.assertEqual(
@@ -166,9 +168,11 @@ class ReferralTestCase(TestCase):
             self.account_1_referral.owner_share_percent / Decimal('100') *
             self.usdtirt.taker_fee * fill_order.amount * fill_order.price
         )
+
         self.assertEqual(
-            trx_referred.amount,
-            ((ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - self.account_1_referral.owner_share_percent) / Decimal('100')) *
+            fee_trx_referred.amount,
+            (1 - ((ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - self.account_1_referral.owner_share_percent) / Decimal(
+                '100'))) *
             self.usdtirt.taker_fee * fill_order.amount * fill_order.price
         )
 
@@ -177,8 +181,10 @@ class ReferralTestCase(TestCase):
             self.account_1_referral.owner_share_percent / Decimal('100') *
             self.usdtirt.taker_fee * fill_order_2.amount * fill_order_2.price
         )
+
         self.assertEqual(
-            trx_referred_2.amount,
-            ((ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - self.account_1_referral.owner_share_percent) / Decimal('100')) *
-            self.usdtirt.taker_fee * fill_order_2.amount * fill_order_2.price
+            fee_trx_referred_2.amount,
+            (1 - ((ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - self.account_1_referral.owner_share_percent) / Decimal(
+                '100'))) *
+            self.usdtirt.taker_fee * fill_order_2.amount
         )
