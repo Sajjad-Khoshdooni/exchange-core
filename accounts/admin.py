@@ -7,7 +7,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
-from ledger.utils.precision import get_presentation_amount
+
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -499,8 +499,8 @@ class AccountAdmin(admin.ModelAdmin):
     readonly_fields = ('get_wallet_address', 'get_total_balance_irt_admin', 'get_total_balance_usdt_admin',
                        'trade_volume_irt', 'referred_by')
 
-    def get_wallet_address(self, user: User):
-        link = url_to_admin_list(Wallet) + '?user={}'.format(user.id)
+    def get_wallet_address(self, account: Account):
+        link = url_to_admin_list(Wallet) + '?account={}'.format(account.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_wallet_address.short_description = 'لیست کیف‌ها'
 
