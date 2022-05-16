@@ -17,6 +17,8 @@ urlpatterns = [
 
     path('v1/withdraw/', views.WithdrawView.as_view()),
 
+
+
     path('v1/withdraw/list/', views.WithdrawHistoryView.as_view()),
     path('v1/deposit/list/', views.DepositHistoryView.as_view()),
 
@@ -43,4 +45,6 @@ urlpatterns = [
         'post': 'create',
         'get': 'list',
     })),
+
+    path('v1/wallet/balance/', views.GetBalanceInformation.as_view())
 ]
