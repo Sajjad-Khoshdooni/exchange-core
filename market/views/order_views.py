@@ -28,7 +28,6 @@ class OrderViewSet(mixins.CreateModelMixin,
                    mixins.ListModelMixin,
                    GenericViewSet):
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
-    permission_classes = (IsAuthenticated,)
     pagination_class = LimitOffsetPagination
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
     serializer_class = OrderSerializer
@@ -48,7 +47,6 @@ class OrderViewSet(mixins.CreateModelMixin,
 
 class CancelOrderAPIView(CreateAPIView):
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
-    permission_classes = (IsAuthenticated,)
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
     serializer_class = CancelRequestSerializer

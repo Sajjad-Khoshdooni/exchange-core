@@ -29,7 +29,6 @@ class BalanceInformationSerializer(serializers.ModelSerializer):
 
 class GetBalanceInformation(ListAPIView):
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
-    permission_classes = (IsAuthenticated,)
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
     serializer_class = BalanceInformationSerializer

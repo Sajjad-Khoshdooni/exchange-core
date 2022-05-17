@@ -1,4 +1,5 @@
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
@@ -11,8 +12,7 @@ from ledger.views.wallet_view import TransferSerializer
 
 class WithdrawHistoryView(ListAPIView):
 
-    authentication_classes = (CustomTokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication,)
 
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 

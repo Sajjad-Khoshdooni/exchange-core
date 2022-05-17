@@ -112,7 +112,6 @@ class AuthTokenSerializer(serializers.ModelSerializer):
 
 class CreateAuthToken(APIView):
     authentication_classes = (SessionAuthentication,)
-    permission_classes = (IsAuthenticated,)
     serializer_class = AuthTokenSerializer
 
     def get(self, request):
