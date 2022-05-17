@@ -76,3 +76,4 @@ class WithdrawTestCase(TestCase):
             'address_book_id': self.address_book.id
         })
         self.assertEqual(resp.status_code, 201)
+
