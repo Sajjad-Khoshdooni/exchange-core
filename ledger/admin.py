@@ -27,8 +27,10 @@ class AssetAdmin(AdvancedAdmin):
         'ask_diff': True
     }
 
+    readonly_fields = ('get_calculated_hedge_amount', 'get_hedge_value', 'get_hedge_amount')
+
     list_display = (
-        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calculated_hedge_amount',
+        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount',
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
         'get_ledger_balance_users', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
         'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'trade_enable', 'hedge_method', 'bid_diff', 'ask_diff'
