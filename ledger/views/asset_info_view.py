@@ -189,7 +189,7 @@ class AssetsViewSet(ModelViewSet):
         )
 
     def get_queryset(self):
-        queryset = Asset.live_objects.all().filter(trade_enable=True)
+        queryset = Asset.live_objects.all()
 
         if self.get_options('trend'):
             queryset = queryset.filter(trend=True)
