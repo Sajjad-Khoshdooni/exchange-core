@@ -24,3 +24,12 @@ if settings.DEBUG_OR_TESTING:
         type = Gateway.PAYDOTIR
         gateway = Gateway.objects.create(name=name, type=type, merchant_id='test', active=True)
         return gateway
+
+    def new_fiat_withdraw_request(amount, wallet, bank_account, datetime, fee_amount=0) ->FiatWithdrawRequest:
+        return FiatWithdrawRequest.objects.create(
+            amount=amount,
+            fee_amount=fee_amount,
+            lock=wallet.lock_balance(amount),
+            bank_account=bank_account,
+            withdraw_datetime=datetime,
+        )
