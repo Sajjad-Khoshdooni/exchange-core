@@ -39,6 +39,20 @@ SIDE_MAP = {
 }
 
 
+def get_binance_price_stream(coin: str):
+    if coin == 'LUNA':
+        return 'busd'
+    else:
+        return 'usdt'
+
+
+def get_asset_diff_multiplier(coin: str):
+    if coin == 'LUNA':
+        return 6
+    else:
+        return 1
+
+
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
                   now: datetime = None) -> List[Price]:
     results = []
@@ -71,7 +85,7 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
 
         pipe = price_redis.pipeline(transaction=False)
         for c in coins:
-            name = 'bin:' + c.lower() + 'usdt'
+            name = 'bin:' + c.lower() + get_binance_price_stream(c)
             pipe.hgetall(name)
 
         prices = pipe.execute()
@@ -194,8 +208,8 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
     # if ask_diff is None:
     #     ask_diff = Decimal('0.005')
 
-    bid_diff = Decimal('0.005')
-    ask_diff = Decimal('0.005')
+    bid_diff = Decimal('0.005') * get_asset_diff_multiplier(coin)
+    ask_diff = Decimal('0.005') * get_asset_diff_multiplier(coin)
 
     diff_multiplier = 1
 

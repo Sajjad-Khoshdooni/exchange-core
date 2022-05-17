@@ -7,6 +7,8 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
+from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
+from accounts.views.authentication import CustomTokenAuthentication
 from market.models import Order, CancelRequest
 from market.serializers.cancel_request_serializer import CancelRequestSerializer
 from market.serializers.order_serializer import OrderSerializer
@@ -25,12 +27,10 @@ class OrderViewSet(mixins.CreateModelMixin,
                    mixins.RetrieveModelMixin,
                    mixins.ListModelMixin,
                    GenericViewSet):
-    authentication_classes = (SessionAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
     pagination_class = LimitOffsetPagination
-
+    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
     serializer_class = OrderSerializer
-    lookup_field = 'client_order_id'
 
     filter_backends = [DjangoFilterBackend]
     filter_class = OrderFilter
@@ -46,8 +46,8 @@ class OrderViewSet(mixins.CreateModelMixin,
 
 
 class CancelOrderAPIView(CreateAPIView):
-    authentication_classes = (SessionAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
+    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
     serializer_class = CancelRequestSerializer
     queryset = CancelRequest.objects.all()

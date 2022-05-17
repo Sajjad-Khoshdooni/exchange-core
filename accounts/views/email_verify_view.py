@@ -4,7 +4,7 @@ from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.validators import email_validator
 from rest_framework.views import APIView
 from rest_framework.generics import UpdateAPIView
-from accounts.models import User
+from accounts.models import User, VerificationCode
 from rest_framework.exceptions import ValidationError
 from accounts.models import EmailVerificationCode
 from rest_framework.response import Response
@@ -18,11 +18,13 @@ class EmailVerifyView(APIView):
     throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def post(self, request):
+        user = self.request.user
+
         serializer = EmailSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         email = serializer.validated_data['email']
-        user = self.request.user
+
         if User.objects.filter(email=email).exists():
             raise ValidationError('ایمیل وارد شده در سیستم وجود دارد.')
 
@@ -34,10 +36,11 @@ class EmailVerifyView(APIView):
 class EmailOTPVerifySerializer(serializers.ModelSerializer):
 
     code = serializers.CharField(write_only=True, required=True)
+    sms_code = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
-        fields = ('code', 'email')
+        fields = ('code', 'email', 'sms_code',)
         read_only_fields = ('email', )
         extra_kwargs = {
             'email': {'required': True},
@@ -45,15 +48,18 @@ class EmailOTPVerifySerializer(serializers.ModelSerializer):
 
     def update(self, user, validated_data):
         code = validated_data.get('code')
+        sms_code = validated_data.get('sms_code')
 
-        otp_code = EmailVerificationCode.get_by_code(code, user, EmailVerificationCode.SCOPE_VERIFY_EMAIL)
+        code = EmailVerificationCode.get_by_code(code, user, EmailVerificationCode.SCOPE_VERIFY_EMAIL)
+        sms_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_VERIFY_EMAIL)
 
-        if not otp_code:
+        if not code:
             raise ValidationError({'code': 'کد نامعتبر است'})
 
-        otp_code.set_code_used()
+        code.set_code_used()
+        # sms_code.set_code_used()
 
-        user.email = otp_code.email
+        user.email = code.email
         user.save()
 
         return user

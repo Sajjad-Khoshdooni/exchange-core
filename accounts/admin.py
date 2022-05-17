@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
+from accounts.models import CustomToken
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -569,4 +570,6 @@ class LoginActivityAdmin(admin.ModelAdmin):
     search_fields = ['user__phone', 'ip']
 
 
-
+@admin.register(CustomToken)
+class CustomTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    pass
