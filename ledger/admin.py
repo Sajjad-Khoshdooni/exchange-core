@@ -368,3 +368,5 @@ class PrizeAdmin(admin.ModelAdmin):
         return str(get_presentation_amount(prize.amount)) + str(prize.asset)
 
     get_asset_amount.short_description = 'مقدار'
+
+
