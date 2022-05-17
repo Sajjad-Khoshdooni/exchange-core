@@ -8,7 +8,7 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.models import Asset, Prize
+from ledger.models import Asset, Prize, CoinCategory
 from ledger.utils.overview import AssetOverview
 from ledger.utils.price import get_trading_price_usdt, BUY
 from provider.exchanges import BinanceFuturesHandler
@@ -370,3 +370,10 @@ class PrizeAdmin(admin.ModelAdmin):
     get_asset_amount.short_description = 'مقدار'
 
 
+@admin.register(models.CoinCategory)
+class CoinCategory(admin.ModelAdmin):
+    list_display = ['name_fa', 'name', 'get_coin_count']
+
+    def get_coin_count(self, coincaterogy:CoinCategory):
+        return coincaterogy.coin.count()
+    get_coin_count.short_description = 'تعداد رمزارز'
