@@ -25,7 +25,7 @@ if settings.DEBUG_OR_TESTING:
         gateway = Gateway.objects.create(name=name, type=type, merchant_id='test', active=True)
         return gateway
 
-    def new_fiat_withdraw_request(amount, wallet, bank_account, datetime, fee_amount=0) ->FiatWithdrawRequest:
+    def new_fiat_withdraw_request(amount, wallet, bank_account, datetime, fee_amount=0) -> FiatWithdrawRequest:
         return FiatWithdrawRequest.objects.create(
             amount=amount,
             fee_amount=fee_amount,
