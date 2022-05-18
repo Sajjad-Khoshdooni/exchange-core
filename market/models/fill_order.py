@@ -8,7 +8,7 @@ from django.db import models
 from django.db.models import F
 
 from accounts.models import Account
-from ledger.models import Trx, OTCTrade, Asset, Wallet
+from ledger.models import Trx, OTCTrade, Asset
 from ledger.models.prize import check_trade_prize
 from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_field
 from ledger.utils.precision import floor_precision, precision_to_step
@@ -139,6 +139,13 @@ class FillOrder(models.Model):
 
         fee_wallet = order.wallet if order.side == Order.BUY else order.base_wallet
         trx_amount = fee * (self.amount if order.side == Order.BUY else self.amount * self.price)
+        if trx_amount:
+            referral = self.taker_order.wallet.account.referred_by if is_taker else \
+                self.maker_order.wallet.account.referred_by
+            if referral:
+                from market.models import ReferralTrx
+                trx_amount *= Decimal(1) - (Decimal(ReferralTrx.REFERRAL_MAX_RETURN_PERCENT) / 100 - Decimal(
+                    referral.owner_share_percent) / 100)
 
         if trx_amount:
             return Trx(

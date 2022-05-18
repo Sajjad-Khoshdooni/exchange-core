@@ -11,6 +11,7 @@ from django.utils import timezone
 from collector.metrics import set_metric
 from collector.utils.price import price_redis
 from ledger.models import Asset
+from ledger.utils.price import get_binance_price_stream
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class BinanceConsumer:
 
     def get_streams(self):
         assets = list(Asset.objects.values_list('symbol', flat=True))
-        return list(map(lambda asset: asset.lower() + 'usdt@depth5', assets))
+        return list(map(lambda asset: asset.lower() + get_binance_price_stream(asset) + '@depth5', assets))
 
     def consume(self):
         signal.signal(signal.SIGINT, self.exit_gracefully)

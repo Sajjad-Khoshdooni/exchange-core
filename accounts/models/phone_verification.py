@@ -19,6 +19,7 @@ class VerificationCode(models.Model):
 
     SCOPE_FORGET_PASSWORD = 'forget'
     SCOPE_VERIFY_PHONE = 'verify'
+    SCOPE_VERIFY_EMAIL = 'email_verify'
     SCOPE_WITHDRAW = 'withdraw'
     SCOPE_TELEPHONE = 'tel'
     SCOPE_CHANGE_PASSWORD = 'change_pass'
@@ -28,6 +29,7 @@ class VerificationCode(models.Model):
         (SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_PHONE, SCOPE_VERIFY_PHONE),
         (SCOPE_WITHDRAW, SCOPE_WITHDRAW), (SCOPE_TELEPHONE, SCOPE_TELEPHONE),
         (SCOPE_CHANGE_PASSWORD, SCOPE_CHANGE_PASSWORD), (SCOPE_CHANGE_PHONE, SCOPE_CHANGE_PHONE),
+        (SCOPE_VERIFY_EMAIL, SCOPE_VERIFY_EMAIL)
     ]
 
     created = models.DateTimeField(auto_now_add=True)

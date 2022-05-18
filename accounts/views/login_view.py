@@ -38,15 +38,27 @@ class LoginView(APIView):
         if user:
             login(request, user)
             try:
+                os = request.user_agent.os.family
+                if request.user_agent.os.version_string:
+                    os += ' ' + request.user_agent.os.version_string
+
+                device = request.user_agent.device.family
+
+                browser = request.user_agent.browser.family
+
+                if request.user_agent.browser.version_string:
+                    browser += ' ' + request.user_agent.os.version_string
+
                 LoginActivity.objects.create(
                     user=user,
                     ip=get_client_ip(request),
                     user_agent=request.META['HTTP_USER_AGENT'],
                     session=Session.objects.get(session_key=request.session.session_key),
-                    device=request.user_agent.device,
-                    os=request.user_agent.os,
-                    browser=request.user_agent.browser,
+                    device=device,
+                    os=os,
+                    browser=browser,
                 )
+
             except:
                 logger.exception('User login activity dos not saved ')
 
@@ -63,27 +75,6 @@ class LogoutView(APIView):
 
 
 class LoginActivitySerializer(serializers.ModelSerializer):
-    device = serializers.SerializerMethodField()
-    os = serializers.SerializerMethodField()
-    browser = serializers.SerializerMethodField()
-
-    def get_device(self, instance):
-        user_agent = self.context['user_agent']
-        return user_agent.device.family
-
-    def get_os(self, instance):
-        user_agent = self.context['user_agent']
-        response = user_agent.os.family
-        if user_agent.os.version_string:
-            response += ' ' + user_agent.os.version_string
-        return response
-
-    def get_browser(self, instance):
-        user_agent = self.context['user_agent']
-        response = user_agent.browser.family
-        if response:
-            response += ' ' + user_agent.browser.version_string
-        return response
 
     class Meta:
         model = LoginActivity
@@ -96,8 +87,7 @@ class LoginActivityView(ListAPIView):
     serializer_class = LoginActivitySerializer
 
     def get_queryset(self):
-        query_set = LoginActivity.objects.filter(user=self.request.user)
-        return query_set
+        return LoginActivity.objects.filter(user=self.request.user).order_by('-id')
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()

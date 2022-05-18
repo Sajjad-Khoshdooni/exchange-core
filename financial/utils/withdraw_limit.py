@@ -82,7 +82,7 @@ def time_in_range(start, end, time):
     start = datetime.strptime(start, '%H:%M').time()
     end = datetime.strptime(end, '%H:%M').time()
 
-    return start <= time <= end
+    return start <= time < end
 
 
 def is_holiday(date):
@@ -100,31 +100,35 @@ def get_fiat_estimate_receive_time(created: datetime):
     if is_holiday(request_date):
 
         if time_in_range('00:00', '10:00', request_time):
-            receive_time = receive_time.replace(hour=14, minute=00, second=00)
+            receive_time = receive_time.replace(hour=15, minute=00, second=00)
         else:
             receive_time += timedelta(days=1)
 
             if is_holiday(receive_time):
-                receive_time = receive_time.replace(hour=14, minute=00, second=00)
+                receive_time = receive_time.replace(hour=15, minute=00, second=00)
             else:
-                receive_time = receive_time.replace(hour=4, minute=30, second=00)
+                receive_time = receive_time.replace(hour=10, minute=30, second=00)
 
     else:
-        if time_in_range('0:30', '10:30', request_time):
-            receive_time = receive_time.replace(hour=11, minute=30, second=00)
+        if time_in_range('0:0', '0:30', request_time):
+            receive_time = receive_time.replace(hour=10, minute=30, second=00)
 
-        elif time_in_range('10:30', '13:23', request_time):
+        elif time_in_range('0:30', '10:30', request_time):
             receive_time = receive_time.replace(hour=14, minute=30, second=00)
 
-        elif time_in_range('13:23', '18:30', request_time):
+        elif time_in_range('10:30', '13:23', request_time):
             receive_time = receive_time.replace(hour=19, minute=30, second=00)
+
+        elif time_in_range('13:23', '18:30', request_time):
+            receive_time += timedelta(days=1)
+            receive_time = receive_time.replace(hour=4, minute=30, second=00)
 
         else:
             receive_time += timedelta(days=1)
 
-            if is_holiday(request_date + timedelta(days=1)):
-                receive_time = receive_time.replace(hour=14, minute=0, second=00)
+            if is_holiday(receive_time):
+                receive_time = receive_time.replace(hour=14, minute=30, second=00)
             else:
-                receive_time = receive_time.replace(hour=4, minute=30, second=00)
+                receive_time = receive_time.replace(hour=10, minute=30, second=00)
 
     return receive_time

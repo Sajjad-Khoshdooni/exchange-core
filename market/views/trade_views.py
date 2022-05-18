@@ -6,7 +6,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 
-from ledger.models import Wallet
+from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from market.models import FillOrder
 from market.serializers.trade_serializer import FillOrderSerializer, TradeSerializer
 
@@ -21,7 +21,6 @@ class TradeFilter(django_filters.FilterSet):
 
 class AccountTradeHistoryView(ListAPIView):
     authentication_classes = (SessionAuthentication,)
-    permission_classes = (IsAuthenticated,)
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
@@ -29,19 +28,26 @@ class AccountTradeHistoryView(ListAPIView):
         if not market:
             return FillOrder.objects.filter(
                 maker_order__wallet__account=self.request.user.account
+            ).select_related(
+                'maker_order__wallet__account', 'taker_order__wallet__account', 'symbol__asset', 'symbol__base_asset'
             ).union(
                 FillOrder.objects.filter(
                     taker_order__wallet__account=self.request.user.account
-                ), all=True
+                ).select_related('maker_order__wallet__account', 'taker_order__wallet__account', 'symbol__asset',
+                                 'symbol__base_asset'), all=True
             ).order_by('-created')
 
         return FillOrder.objects.filter(
             maker_order__wallet__account=self.request.user.account,
             maker_order__wallet__market=market
+        ).select_related(
+            'maker_order__wallet__account', 'taker_order__wallet__account', 'symbol__asset', 'symbol__base_asset'
         ).union(
             FillOrder.objects.filter(
                 taker_order__wallet__account=self.request.user.account,
                 taker_order__wallet__market=market
+            ).select_related(
+                'maker_order__wallet__account', 'taker_order__wallet__account', 'symbol__asset', 'symbol__base_asset'
             ), all=True
         ).order_by('-created')
 
@@ -70,6 +76,7 @@ class TradeHistoryView(ListAPIView):
     authentication_classes = ()
     permission_classes = ()
     pagination_class = LimitOffsetPagination
+    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
     queryset = FillOrder.objects.exclude(trade_source=FillOrder.OTC).order_by('-created')
     serializer_class = TradeSerializer
 

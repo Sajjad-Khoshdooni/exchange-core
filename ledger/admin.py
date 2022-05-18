@@ -8,7 +8,7 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.models import Asset, Prize
+from ledger.models import Asset, Prize, CoinCategory
 from ledger.utils.overview import AssetOverview
 from ledger.utils.price import get_trading_price_usdt, BUY
 from provider.exchanges import BinanceFuturesHandler
@@ -27,8 +27,10 @@ class AssetAdmin(AdvancedAdmin):
         'ask_diff': True
     }
 
+    readonly_fields = ('get_calculated_hedge_amount', 'get_hedge_value', 'get_hedge_amount')
+
     list_display = (
-        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calculated_hedge_amount',
+        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount',
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
         'get_ledger_balance_users', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
         'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'trade_enable', 'hedge_method', 'bid_diff', 'ask_diff'
@@ -214,15 +216,15 @@ class TrxAdmin(admin.ModelAdmin):
 
 class WalletUserFilter(SimpleListFilter):
     title = 'کاربر'
-    parameter_name = 'user'
+    parameter_name = 'account'
 
     def lookups(self, request, model_admin):
         return [(1, 1)]
 
     def queryset(self, request, queryset):
-        user = request.GET.get('user')
-        if user is not None:
-            return queryset.filter(account__user_id=user)
+        account = request.GET.get('account')
+        if account is not None:
+            return queryset.filter(account=account)
         else:
             return queryset
 
@@ -368,3 +370,12 @@ class PrizeAdmin(admin.ModelAdmin):
         return str(get_presentation_amount(prize.amount)) + str(prize.asset)
 
     get_asset_amount.short_description = 'مقدار'
+
+
+@admin.register(models.CoinCategory)
+class CoinCategory(admin.ModelAdmin):
+    list_display = ['name_fa', 'name', 'get_coin_count']
+
+    def get_coin_count(self, coincaterogy:CoinCategory):
+        return coincaterogy.coin.count()
+    get_coin_count.short_description = 'تعداد رمزارز'

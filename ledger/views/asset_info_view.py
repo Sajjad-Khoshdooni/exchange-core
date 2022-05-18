@@ -177,7 +177,8 @@ class AssetsViewSet(ModelViewSet):
             'prices': self.request.query_params.get('prices') == '1',
             'trend': self.request.query_params.get('trend') == '1',
             'extra_info': self.request.query_params.get('extra_info') == '1',
-            'market': self.request.query_params.get('market')
+            'market': self.request.query_params.get('market'),
+            'category': self.request.query_params.get('category')
         }
 
         return options[key]
@@ -189,7 +190,10 @@ class AssetsViewSet(ModelViewSet):
         )
 
     def get_queryset(self):
-        queryset = Asset.live_objects.all().filter(trade_enable=True)
+        queryset = Asset.live_objects.all()
+
+        if self.get_options('category'):
+            queryset = queryset.filter(coincategory__name=self.get_options('category'))
 
         if self.get_options('trend'):
             queryset = queryset.filter(trend=True)

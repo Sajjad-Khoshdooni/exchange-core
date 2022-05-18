@@ -7,3 +7,11 @@ class BurstRateThrottle(UserRateThrottle):
 
 class SustainedRateThrottle(UserRateThrottle):
     scope = 'sustained'
+
+
+class BursApiRateThrottle(UserRateThrottle):
+    scope = 'burst_api'
+
+
+class SustaineApiRatethrottle(UserRateThrottle):
+    scope = 'sustained_api'

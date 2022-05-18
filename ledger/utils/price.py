@@ -39,6 +39,20 @@ SIDE_MAP = {
 }
 
 
+def get_binance_price_stream(coin: str):
+    if coin == 'LUNA':
+        return 'busd'
+    else:
+        return 'usdt'
+
+
+def get_asset_diff_multiplier(coin: str):
+    if coin == 'LUNA':
+        return 6
+    else:
+        return 1
+
+
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
                   now: datetime = None) -> List[Price]:
     results = []
@@ -71,7 +85,7 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
 
         pipe = price_redis.pipeline(transaction=False)
         for c in coins:
-            name = 'bin:' + c.lower() + 'usdt'
+            name = 'bin:' + c.lower() + get_binance_price_stream(c)
             pipe.hgetall(name)
 
         prices = pipe.execute()
@@ -177,7 +191,7 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
     return Decimal(tether_rial / 10)
 
 
-def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Decimal:
+def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0) -> Decimal:
     # from ledger.models.asset import Asset
 
     if coin == IRT:
@@ -194,27 +208,36 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False) -> Dec
     # if ask_diff is None:
     #     ask_diff = Decimal('0.005')
 
-    bid_diff = Decimal('0.005')
-    ask_diff = Decimal('0.005')
+    bid_diff = Decimal('0.005') * get_asset_diff_multiplier(coin)
+    ask_diff = Decimal('0.005') * get_asset_diff_multiplier(coin)
+
+    diff_multiplier = 1
+
+    if value:
+        if value > 160:
+            diff_multiplier = 4
+        elif value > 10:
+            diff_multiplier = 2
 
     if raw_price:
         multiplier = 1
     else:
         if side == BUY:
-            multiplier = 1 - bid_diff
+            multiplier = 1 - bid_diff * diff_multiplier
         else:
-            multiplier = 1 + ask_diff
+            multiplier = 1 + ask_diff * diff_multiplier
 
     price = get_price(coin, side)
 
     return price and price * multiplier
 
 
-def get_trading_price_irt(coin: str, side: str, raw_price: bool = False) -> Decimal:
+def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0) -> Decimal:
     if coin == IRT:
         return Decimal(1)
 
-    price = get_trading_price_usdt(coin, side, raw_price)
+    tether = get_tether_irt_price(side)
+    price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether)
 
     if price:
-        return price * get_tether_irt_price(side)
+        return price * tether

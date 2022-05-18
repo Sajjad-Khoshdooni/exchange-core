@@ -111,7 +111,7 @@ class Order(models.Model):
 
     @staticmethod
     def get_opposite_side(side):
-        return Order.SELL if side == Order.BUY else Order.BUY
+        return Order.SELL if side.lower() == Order.BUY else Order.BUY
 
     @staticmethod
     def get_order_by(side):
@@ -189,8 +189,6 @@ class Order(models.Model):
             matching_orders = Order.open_objects.select_for_update().filter(
                 symbol=self.symbol, side=opp_side, **Order.get_price_filter(self.price, self.side)
             ).order_by(*self.get_order_by(opp_side))
-
-            logger.info(f'open orders: {matching_orders}')
 
             unfilled_amount = self.unfilled_amount
 
@@ -277,6 +275,7 @@ class Order(models.Model):
 
             if self.fill_type == Order.MARKET and self.status == Order.NEW:
                 self.status = Order.CANCELED
+                self.lock.release()
                 self.save(update_fields=['status'])
 
             Trx.objects.bulk_create(filter(lambda trx: trx and trx.amount, trx_list))
