@@ -5,6 +5,7 @@ from django.db.models import Max, Min, Sum
 from django.utils import timezone
 from rest_framework import serializers
 
+from accounts.models import Account
 from ledger.utils.precision import get_presentation_amount, floor_precision
 from market.models import PairSymbol, FillOrder
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 class SymbolSerializer(serializers.ModelSerializer):
     asset = serializers.CharField(source='asset.symbol', read_only=True)
     base_asset = serializers.CharField(source='base_asset.symbol', read_only=True)
+    bookmark = serializers.SerializerMethodField()
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -22,10 +24,17 @@ class SymbolSerializer(serializers.ModelSerializer):
             representation[field] = get_presentation_amount(representation[field])
         return representation
 
+    def get_bookmark(self, pair_symbol: PairSymbol):
+        user = self.context.get('request').user
+        if pair_symbol in user.account.bookmark_market.all():
+            return True
+        else:
+            return False
+
     class Meta:
         model = PairSymbol
         fields = ('name', 'asset', 'base_asset', 'taker_fee', 'maker_fee', 'tick_size', 'step_size',
-                  'min_trade_quantity', 'max_trade_quantity', 'enable',)
+                  'min_trade_quantity', 'max_trade_quantity', 'enable', 'bookmark',)
 
 
 class SymbolBreifStatsSerializer(serializers.ModelSerializer):
@@ -114,3 +123,22 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
         model = PairSymbol
         fields = ('name', 'asset', 'base_asset', 'enable', 'price', 'change', 'change_percent',
                   'high', 'low', 'volume', 'base_volume')
+
+
+class BookMarkPairSymbolSerializer(serializers.ModelSerializer):
+    pair_symbol = serializers.CharField()
+    action = serializers.CharField()
+
+    def update(self, instance, validated_data):
+        pair_symbol = PairSymbol.objects.get(name=validated_data.get('pair_symbol'))
+        action = validated_data['action']
+        if action == 'add':
+            instance.account.bookmark_market.add(pair_symbol)
+        elif action == 'remove':
+            instance.account.bookmark_market.remove(pair_symbol)
+        instance.save()
+        return instance
+
+    class Meta:
+        model = Account
+        fields = ['pair_symbol', 'action', ]

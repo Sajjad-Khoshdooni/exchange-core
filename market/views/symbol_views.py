@@ -1,11 +1,17 @@
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.generics import ListAPIView, RetrieveAPIView, UpdateAPIView
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from accounts.models import User
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
+from accounts.views.authentication import CustomTokenAuthentication
 from market.models import PairSymbol
 from market.serializers.symbol_serializer import SymbolSerializer, SymbolBreifStatsSerializer, SymbolStatsSerializer
 
+from market.serializers import BookMarkPairSymbolSerializer
 
 class SymbolFilter(django_filters.FilterSet):
     asset = django_filters.CharFilter(field_name='asset__symbol')
@@ -17,7 +23,7 @@ class SymbolFilter(django_filters.FilterSet):
 
 
 class SymbolListAPIView(ListAPIView):
-    authentication_classes = ()
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication,)
     permission_classes = ()
     filter_backends = [DjangoFilterBackend]
     filter_class = SymbolFilter
@@ -38,3 +44,24 @@ class SymbolDetailedStatsAPIView(RetrieveAPIView):
     serializer_class = SymbolStatsSerializer
     queryset = PairSymbol.objects.all()
     lookup_field = 'name'
+
+
+class BookMarkSymbolAPIView(APIView):
+    def patch(self, request):
+        user = self.request.user
+        book_mark_serializer = BookMarkPairSymbolSerializer(
+            instance=user,
+            data=request.data,
+            partial=True
+        )
+        book_mark_serializer.is_valid(raise_exception=True)
+        book_mark_serializer.save()
+        return Response({'msg': 'ok'})
+
+    def get_queryset(self):
+        return User.objects.filter(user=self.request.user)
+
+
+
+
+
