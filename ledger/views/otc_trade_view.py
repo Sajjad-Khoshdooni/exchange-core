@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404, ListAPIView
@@ -52,7 +50,6 @@ class OTCInfoView(APIView):
             return conf.coin.get_presentation_price_irt(to_price)
         else:
             return conf.coin.get_presentation_price_usdt(to_price)
-
 
 
 class OTCRequestSerializer(serializers.ModelSerializer):
