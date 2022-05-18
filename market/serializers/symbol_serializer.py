@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class SymbolSerializer(serializers.ModelSerializer):
     asset = serializers.CharField(source='asset.symbol', read_only=True)
     base_asset = serializers.CharField(source='base_asset.symbol', read_only=True)
-    bookmark = serializers.SerializerMethodField()
+    bookmarks = serializers.SerializerMethodField()
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -24,17 +24,14 @@ class SymbolSerializer(serializers.ModelSerializer):
             representation[field] = get_presentation_amount(representation[field])
         return representation
 
-    def get_bookmark(self, pair_symbol: PairSymbol):
-        user = self.context.get('request').user
-        if pair_symbol in user.account.bookmark_market.all():
-            return True
-        else:
-            return False
+    def get_bookmarks(self, pair_symbol: PairSymbol):
+
+        return pair_symbol in self.context.get('bookmarks')
 
     class Meta:
         model = PairSymbol
         fields = ('name', 'asset', 'base_asset', 'taker_fee', 'maker_fee', 'tick_size', 'step_size',
-                  'min_trade_quantity', 'max_trade_quantity', 'enable', 'bookmark',)
+                  'min_trade_quantity', 'max_trade_quantity', 'enable', 'bookmarks',)
 
 
 class SymbolBreifStatsSerializer(serializers.ModelSerializer):

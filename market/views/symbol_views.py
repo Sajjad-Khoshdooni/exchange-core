@@ -35,6 +35,16 @@ class SymbolListAPIView(ListAPIView):
         else:
             return SymbolSerializer
 
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        user = self.request.user
+        if user.id:
+            ctx['bookmarks'] = user.account.bookmark_market.all()
+        else:
+            ctx['bookmarks'] = []
+
+        return ctx
+
 
 class SymbolDetailedStatsAPIView(RetrieveAPIView):
     authentication_classes = ()
