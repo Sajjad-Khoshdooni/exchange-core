@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.db.models import Max, Min, Sum
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework.generics import get_object_or_404
 
 from accounts.models import Account
 from ledger.utils.precision import get_presentation_amount, floor_precision
@@ -127,7 +128,7 @@ class BookMarkPairSymbolSerializer(serializers.ModelSerializer):
     action = serializers.CharField()
 
     def update(self, instance, validated_data):
-        pair_symbol = PairSymbol.objects.get(name=validated_data.get('pair_symbol'))
+        pair_symbol = get_object_or_404(PairSymbol, name=validated_data.get('pair_symbol'))
         action = validated_data['action']
         if action == 'add':
             instance.account.bookmark_market.add(pair_symbol)
