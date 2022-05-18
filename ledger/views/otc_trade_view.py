@@ -16,6 +16,45 @@ from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.price import SELL
 
 
+class OTCInfoView(APIView):
+
+    def get(self, request: Request):
+        from_symbol = request.query_params.get('from')
+        to_symbol = request.query_params.get('to')
+
+        from_asset = get_object_or_404(Asset, symbol=from_symbol)
+        to_asset = get_object_or_404(Asset, symbol=to_symbol)
+
+        otc = OTCRequest(
+            from_asset=from_asset,
+            to_asset=to_asset
+        )
+
+        to_price = otc.get_to_price()
+        config = otc.get_trade_config()
+
+        return Response({
+            'from': from_symbol,
+            'to': to_symbol,
+            'cash': config.cash.symbol,
+            'coin': config.coin.symbol,
+            'side': config.side,
+            'to_price': to_price,
+            'coin_price': self.get_coin_price(config, to_price)
+        })
+
+    def get_coin_price(self, conf, to_price):
+
+        if conf.side == SELL:
+            to_price = 1 / to_price
+
+        if conf.cash.symbol == Asset.IRT:
+            return conf.coin.get_presentation_price_irt(to_price)
+        else:
+            return conf.coin.get_presentation_price_usdt(to_price)
+
+
+
 class OTCRequestSerializer(serializers.ModelSerializer):
     from_asset = serializers.CharField(source='from_asset.symbol')
     to_asset = serializers.CharField(source='to_asset.symbol')
