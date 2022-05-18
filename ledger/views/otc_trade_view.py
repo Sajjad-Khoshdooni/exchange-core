@@ -46,7 +46,7 @@ class OTCInfoView(APIView):
     def get_coin_price(self, conf, to_price):
 
         if conf.side == SELL:
-            price = 1 / to_price
+            to_price = 1 / to_price
 
         if conf.cash.symbol == Asset.IRT:
             return conf.coin.get_presentation_price_irt(to_price)
