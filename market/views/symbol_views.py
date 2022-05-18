@@ -13,6 +13,7 @@ from market.serializers.symbol_serializer import SymbolSerializer, SymbolBreifSt
 
 from market.serializers import BookMarkPairSymbolSerializer
 
+
 class SymbolFilter(django_filters.FilterSet):
     asset = django_filters.CharFilter(field_name='asset__symbol')
     base_asset = django_filters.CharFilter(field_name='base_asset__symbol')
