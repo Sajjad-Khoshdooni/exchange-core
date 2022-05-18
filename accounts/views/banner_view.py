@@ -10,7 +10,7 @@ AUTH, DEPOSIT, TRADE, REFERRAL = 'auth', 'deposit', 'trade', 'referral'
 
 ALERTS = {
     AUTH: {
-        'text': "با تکمیل احراز هویت، بدون محدودیت در راستین خرید و فروش کنید.",
+        'text': "با تکمیل احراز هویت، بدون محدودیت خرید و فروش کنید.",
         'btn_link': "/account/verification/basic",
         'btn_title': "احراز هویت",
         'level': Notification.ERROR
