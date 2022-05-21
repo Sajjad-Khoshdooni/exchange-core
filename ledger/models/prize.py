@@ -64,13 +64,5 @@ class Prize(models.Model):
             scope=Trx.PRIZE
         )
 
-        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(self.amount))
-
-        Notification.send(
-            recipient=self.account.user,
-            title=title,
-            level=Notification.SUCCESS
-        )
-
     def __str__(self):
         return '%s %s %s' % (self.account, self.amount, self.asset)

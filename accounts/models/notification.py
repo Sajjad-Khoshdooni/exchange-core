@@ -15,6 +15,7 @@ class Notification(models.Model):
     recipient = models.ForeignKey(to='accounts.User', on_delete=models.CASCADE)
 
     title = models.CharField(max_length=128)
+    link = models.CharField(blank=True, max_length=128)
     message = models.CharField(max_length=512)
 
     level = models.CharField(
@@ -29,7 +30,7 @@ class Notification(models.Model):
         ordering = ('-created', )
 
     @classmethod
-    def send(cls, recipient, title: str, message: str = '', level: str = INFO):
+    def send(cls, recipient, title: str, link: str = '', message: str = '', level: str = INFO):
         if not recipient:
             logger.info('failed to send notif')
             return
@@ -37,6 +38,7 @@ class Notification(models.Model):
         Notification.objects.create(
             recipient=recipient,
             title=title,
+            link=link,
             message=message,
             level=level
         )

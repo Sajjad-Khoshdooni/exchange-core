@@ -1,7 +1,8 @@
 from django.db import transaction
 
-from accounts.models import Account
+from accounts.models import Account, Notification
 from ledger.models import Prize, Asset
+from ledger.utils.precision import humanize_number
 
 
 class Achievement:
@@ -42,13 +43,24 @@ class TradePrizeAchievementStep1(PrizeAchievement):
 
     def achieve_prize(self):
         with transaction.atomic():
-            Prize.objects.get_or_create(
+            prize, _ = Prize.objects.get_or_create(
                 account=self.account,
                 scope=Prize.TRADE_PRIZE_STEP1,
                 defaults={
                     'amount': Prize.PRIZE_AMOUNTS[Prize.TRADE_PRIZE_STEP1],
                     'asset': Asset.get(Asset.SHIB),
                 }
+            )
+
+            title = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه روی لینک زیر کلیک کنید.'.format(
+                humanize_number(prize.amount)
+            )
+
+            Notification.send(
+                recipient=self.account.user,
+                title=title,
+                level=Notification.SUCCESS,
+                link='/account/tasks'
             )
 
             if self.account.referred_by:
@@ -71,7 +83,7 @@ class TradePrizeAchievementStep2(PrizeAchievement):
 
     def achieve_prize(self):
         with transaction.atomic():
-            Prize.objects.get_or_create(
+            prize, _ = Prize.objects.get_or_create(
                 account=self.account,
                 scope=Prize.TRADE_PRIZE_STEP2,
                 defaults={
@@ -79,3 +91,15 @@ class TradePrizeAchievementStep2(PrizeAchievement):
                     'asset': Asset.get(Asset.SHIB),
                 }
             )
+
+            title = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه روی لینک زیر کلیک کنید.'.format(
+                humanize_number(prize.amount)
+            )
+
+            Notification.send(
+                recipient=self.account.user,
+                title=title,
+                level=Notification.SUCCESS,
+                link='/account/tasks'
+            )
+
