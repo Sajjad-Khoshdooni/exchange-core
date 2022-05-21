@@ -54,8 +54,8 @@ def check_prize_achievements(account: Account):
     try:
         for group in goal_groups:
             if group.achievable(account):
-                for achievement in group.achievements:
-                    achievement.achieve_prize()
+                for achievement_cls in group.achievements:
+                    achievement_cls(account).achieve_prize()
 
     except Exception as e:
         logger.exception('Failed to check prize achievements', extra={
