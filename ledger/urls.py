@@ -46,12 +46,4 @@ urlpatterns = [
     })),
 
     path('v1/wallet/balance/', views.GetBalanceInformation.as_view()),
-
-    path('v1/prize/', views.PrizeView.as_view({
-        'get': 'list'
-    })),
-
-    path('v1/prize/', views.PrizeView.as_view({
-        'patch': 'partial_update'
-    })),
 ]

@@ -5,7 +5,6 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
 
-from accounts.gamification.gamify import check_prize_achievements
 from accounts.models import Notification
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
@@ -222,7 +221,10 @@ class User(AbstractUser):
     def verify_level2_if_not(self) -> bool:
         if self.level == User.LEVEL1 and all(self.get_level2_verify_fields()):
             self.change_status(User.VERIFIED)
+
+            from accounts.gamification.gamify import check_prize_achievements
             check_prize_achievements(self.account)
+
             return True
 
         return False
