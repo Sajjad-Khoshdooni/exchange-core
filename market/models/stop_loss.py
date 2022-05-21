@@ -56,7 +56,7 @@ class StopLoss(models.Model):
         self.lock = lock_wallet.lock_balance(lock_amount)
         self.save()
 
-    all2_objects = models.Manager()
+    all_objects = models.Manager()
     objects = StopLossManager()
     open_objects = StopLossManager(open_only=True)
 
