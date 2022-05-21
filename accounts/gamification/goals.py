@@ -72,7 +72,7 @@ class GoalGroup:
             'finished': all(map(lambda i: i['finished'], items))
         }
 
-    def get_goals(self, account: Account) -> List[Goal]:
+    def get_goals(self, account: Account) -> List:
         return [
             c(account).as_dict() for c in self.conditions
         ]
