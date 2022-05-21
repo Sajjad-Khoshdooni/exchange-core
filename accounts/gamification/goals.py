@@ -82,7 +82,7 @@ class GoalGroup:
         if not prize.achieved():
             goals = self.get_goals(account)
 
-            return all([g.finished() for g in goals])
+            return all([g['finished'] for g in goals])
 
 
 class VerifyLevel2Goal(Goal):
