@@ -141,7 +141,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
     @classmethod
     def create_serializer(cls,  prices: bool = True, extra_info: bool = True):
         fields = AssetSerializerMini.Meta.fields
-        new_fields = ['book_mark_asset']
+        new_fields = []
 
         if prices:
             new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h', 'book_mark_asset']

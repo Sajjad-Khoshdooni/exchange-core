@@ -26,10 +26,7 @@ class BookmarkAssetSerializer(serializers.ModelSerializer):
         fields = ['bookmark_asset', 'symbol', 'action']
 
 
-
 class BookmarkAssetAPIView(APIView):
-
-    serializer = BookmarkAssetSerializer
 
     def patch(self, request):
         user = self.request.user

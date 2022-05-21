@@ -296,7 +296,7 @@ class BriefNetworkAssetsView(ListAPIView):
                                     network__can_withdraw=True,
                                     binance_withdraw_enable=True)
         else:
-            query_set = query_set.distinct('networctx = super().get_serializer_context()k__symbol')
+            query_set = query_set.distinct('network__symbol')
 
         return query_set.filter(network__can_withdraw=True, network__is_universal=True)
 
