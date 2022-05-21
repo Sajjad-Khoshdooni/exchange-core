@@ -28,7 +28,7 @@ ALERTS = {
         'level': Notification.INFO
     },
     REFERRAL: {
-        'text': "دوستان خود را به راستین دعوت کنید و از معامله‌آن‌ها درآمدزایی کنید.",
+        'text': "دوستان خود را به راستین دعوت کنید و از معامله آن‌ها درآمدزایی کنید.",
         'btn_link': "/account/referral",
         'btn_title': "دعوت از دوستان",
         'level': Notification.INFO

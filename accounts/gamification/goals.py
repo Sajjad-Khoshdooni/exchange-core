@@ -79,7 +79,7 @@ class GoalGroup:
 
     def achievable(self, account: Account):
         prize = self.achievements[0]
-        if not prize.achieved():
+        if not prize.achieved(account):
             goals = self.get_goals(account)
 
             return all([g.finished() for g in goals])
