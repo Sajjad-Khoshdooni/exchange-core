@@ -7,8 +7,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
-order_views.py
-from market.models import Order, CancelRequest, StopLoss
+from market.models import StopLoss
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from accounts.views.authentication import CustomTokenAuthentication
 from market.models import Order, CancelRequest
@@ -82,7 +81,7 @@ class StopLossViewSet(ModelViewSet):
     filter_class = StopLossFilter
 
     def get_queryset(self):
-        return StopLoss.objects.filter(wallet__account=self.request.user.account).order_by('-created')
+        return StopLoss.all_objects.filter(wallet__account=self.request.user.account).order_by('-created')
 
     def get_serializer_context(self):
         return {

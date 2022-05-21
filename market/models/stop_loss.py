@@ -18,8 +18,8 @@ class StopLossManager(models.Manager):
 
     def get_queryset(self):
         if self.open_only:
-            return super().get_queryset().filter(deleted_at__isnull=True, completed=False)
-        return super().get_queryset().filter(deleted_at__isnull=True)
+            return super().get_queryset().filter(canceled_at__isnull=True, completed=False)
+        return super().get_queryset().filter(canceled_at__isnull=True)
 
 
 class StopLoss(models.Model):
@@ -38,7 +38,7 @@ class StopLoss(models.Model):
 
     lock = get_lock_field(related_name='market_stop_loss')
 
-    deleted_at = models.DateTimeField(blank=True, null=True)
+    canceled_at = models.DateTimeField(blank=True, null=True)
 
     @property
     def unfilled_amount(self):
@@ -66,8 +66,8 @@ class StopLoss(models.Model):
         return super(StopLoss, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        self.deleted_at = timezone.now()
-        self.save(update_fields=['deleted_at'])
+        self.canceled_at = timezone.now()
+        self.save(update_fields=['canceled_at'])
 
     def hard_delete(self):
         super(StopLoss, self).delete()

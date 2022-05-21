@@ -46,8 +46,8 @@ class StopLossSerializer(OrderSerializer):
     class Meta:
         model = StopLoss
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'price', 'side', 'completed',
-                  'market')
-        read_only_fields = ('id', 'created', 'completed',)
+                  'market', 'canceled_at')
+        read_only_fields = ('id', 'created', 'completed', 'canceled_at')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},
         }
