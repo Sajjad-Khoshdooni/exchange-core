@@ -251,6 +251,7 @@ class FillOrder(models.Model):
                 if not account.is_system():
                     account.trade_volume_irt = F('trade_volume_irt') + fill_order.irt_value
                     account.save(update_fields=['trade_volume_irt'])
+                    account.refresh_from_db()
 
                     check_prize_achievements(account)
 
