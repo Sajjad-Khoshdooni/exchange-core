@@ -3,9 +3,11 @@ from decimal import Decimal
 
 from django.db.models import Min
 from rest_framework import serializers
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 
+from accounts.views.authentication import CustomTokenAuthentication
 from collector.models import CoinMarketCap
 from ledger.models import Asset, Wallet, NetworkAsset
 from ledger.models.asset import AssetSerializerMini
@@ -34,9 +36,14 @@ class AssetSerializerBuilder(AssetSerializerMini):
     min_withdraw_amount = serializers.SerializerMethodField()
     min_withdraw_fee = serializers.SerializerMethodField()
 
+    book_mark_asset = serializers.SerializerMethodField()
+
     class Meta:
         model = Asset
         fields = ()
+
+    def get_book_mark_asset(self, asset: Asset):
+        return asset in self.context['book_mark_asset']
 
     def get_cap(self, asset) -> CoinMarketCap:
         return self.context['cap_info'].get(asset.symbol)
@@ -134,16 +141,16 @@ class AssetSerializerBuilder(AssetSerializerMini):
     @classmethod
     def create_serializer(cls,  prices: bool = True, extra_info: bool = True):
         fields = AssetSerializerMini.Meta.fields
-        new_fields = []
+        new_fields = ['book_mark_asset']
 
         if prices:
-            new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h']
+            new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h', 'book_mark_asset']
 
         if extra_info:
             new_fields = [
                 'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
                 'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
-                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee'
+                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee', 'book_mark_asset',
             ]
 
         class Serializer(cls):
@@ -156,12 +163,12 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
 class AssetsViewSet(ModelViewSet):
 
-    authentication_classes = []
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication,)
     permission_classes = []
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-
+        ctx['book_mark_asset'] = self.request.user.account.bookmark_asset.all()
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
             caps = CoinMarketCap.objects.filter(symbol__in=symbols)

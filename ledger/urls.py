@@ -44,5 +44,6 @@ urlpatterns = [
         'get': 'list',
     })),
 
-    path('v1/wallet/balance/', views.GetBalanceInformation.as_view())
+    path('v1/wallet/balance/', views.GetBalanceInformation.as_view()),
+    path('v1/bookmark/asset/', views.BookmarkAssetAPIView.as_view())
 ]

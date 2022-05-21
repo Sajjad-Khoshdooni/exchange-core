@@ -494,7 +494,7 @@ class AccountAdmin(admin.ModelAdmin):
     fieldsets = (
         ('اطلاعات', {'fields': (
             'name', 'user', 'type', 'primary', 'trade_volume_irt', 'get_wallet_address',
-            'get_total_balance_irt_admin', 'get_total_balance_usdt_admin', 'referred_by'
+            'get_total_balance_irt_admin', 'get_total_balance_usdt_admin', 'referred_by', 'bookmark_asset',
         )}),
     )
     readonly_fields = ('user', 'get_wallet_address', 'get_total_balance_irt_admin', 'get_total_balance_usdt_admin',
