@@ -53,7 +53,7 @@ class Prize(models.Model):
             return
 
         self.redeemed = True
-        self.save(update_fields=['redeem'])
+        self.save(update_fields=['redeemed'])
 
         system = Account.system()
         Trx.transaction(
