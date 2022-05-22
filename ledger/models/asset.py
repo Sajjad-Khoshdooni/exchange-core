@@ -64,8 +64,6 @@ class Asset(models.Model):
         MaxValueValidator(Decimal('0.1')),
     ], help_text='our ask (taker buy price) = (1 + ask_diff) * binance_ask')
 
-    has_description = models.BooleanField(default=False)
-
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
 
@@ -142,7 +140,7 @@ class AssetSerializerMini(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'trade_precision', 'has_description')
+        fields = ('symbol', 'trade_precision')
 
 
 class CoinField(serializers.CharField):
