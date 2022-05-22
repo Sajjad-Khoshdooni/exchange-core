@@ -40,9 +40,9 @@ TEMPLATES = {
         'html': 'accounts/email/verify_email.min.html',
         'text': 'accounts/text/cansel_fiat_withdraw_email.txt',
     },
-    'deposit': {
+    'deposit_email': {
         'subject': 'راستین | اطلاع رسانی واریز رمزارزی ',
-        'html': 'accounts/email/verify_email.min.html',
+        'html': 'accounts/email/deposit_email.min.html',
         'text': 'accounts/text/deposit_email.txt',
     },
     'payment': {

@@ -10,6 +10,7 @@ from accounts.tasks.send_sms import send_message_by_kavenegar
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
+from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import BankAccount
 from financial.utils.pay_ir import Payir
 
@@ -116,12 +117,16 @@ class FiatWithdrawRequest(models.Model):
 
     def alert_withdraw_verify_status(self):
         from financial.utils.withdraw_limit import get_fiat_estimate_receive_time
-        estimate_receive_time = get_fiat_estimate_receive_time(self.withdraw_datetime)
+        estimate_receive_time = gregorian_to_jalali_datetime_str(
+            get_fiat_estimate_receive_time(
+                self.withdraw_datetime
+            )
+        )
         user = self.bank_account.user
         if self.status == PENDING:
             title = 'درخواست برداشت شما به بانک ارسال گردید.'
             description = 'درخواست برداشت در ساعت {time} تاریخ {date}به حساب شما واریز خواهد شد'\
-                .format(time=estimate_receive_time.time, date=estimate_receive_time.date)
+                .format(time=estimate_receive_time, date=estimate_receive_time)
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
             email_template = email.SCOPE_SUCCESSFUL_FIAT_WITHDRAW
@@ -150,8 +155,7 @@ class FiatWithdrawRequest(models.Model):
             recipient=user.email,
             template=email_template,
             context={
-                'estimated_receive_time': estimate_receive_time.time,
-                'estimated_receive_date': estimate_receive_time.date,
+                'estimated_receive_time': estimate_receive_time,
             }
         )
 
