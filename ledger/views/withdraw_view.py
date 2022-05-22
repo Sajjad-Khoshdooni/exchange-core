@@ -114,7 +114,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         amount = validated_data['amount']
         address = validated_data['out_address']
         try:
-            transfer = Transfer.new_withdraw(
+            return Transfer.new_withdraw(
                 wallet=wallet,
                 network=network,
                 amount=amount,
@@ -122,13 +122,6 @@ class WithdrawSerializer(serializers.ModelSerializer):
             )
         except InsufficientBalance:
             raise ValidationError('موجودی کافی نیست.')
-
-        send_email_by_template(
-            recipient=wallet.account.user.email,
-            template=email.SCOPE_WITHDRAW_EMAIL,
-            context={'amount': amount, 'wallet_asset': wallet.asset}
-        )
-        return transfer
 
     class Meta:
         model = Transfer

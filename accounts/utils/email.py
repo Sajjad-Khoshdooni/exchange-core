@@ -14,6 +14,10 @@ email_sender = config('EMAIL_SENDER')
 brand = config('BRAND')
 
 SCOPE_WITHDRAW_EMAIL = 'withdraw_email'
+SCOPE_DEPOSIT_EMAIL = 'payment_email'
+SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw'
+SCOPE_CANSEL_FIAT_WITHDRAW = 'cansel_fiat_withdraw'
+SCOPE_PAYMENT = 'payment'
 
 TEMPLATES = {
     'verify_email': {
@@ -25,6 +29,22 @@ TEMPLATES = {
         'subject': 'راستین | اطلاع رسانی برداشت رمز ارزی',
         'html': 'accounts/email/verify_email.min.html',
         'text': 'accounts/text/withdraw_email_notif',
+    },
+    'successful_fiat_withdraw': {
+        'subject': 'راستین | اطلاع رسانی برداشت ریالی',
+        'html': 'accounts/email/verify_email.min.html',
+        'text': 'accounts/text/successful_fiat_withdraw_email.txt',
+
+    },
+    'cansel_fiat_withdraw': {
+        'subject': 'راستین | اطلاع رسانی برداشت ریالی ',
+        'html': 'accounts/email/verify_email.min.html',
+        'text': 'accounts/text/cansel_fiat_withdraw_email.txt',
+    },
+    'payment': {
+        'subject': 'راستین | اطلاع رسانی واریز ریالی ',
+        'html': 'accounts/email/verify_email.min.html',
+        'text': 'accounts/text/payment_email.txt',
     }
 }
 
@@ -46,6 +66,8 @@ def send_email_by_template(recipient: str, template: str, context: dict = None):
 
 
 def send_email(subject: str, body_html: str, body_text: str, to: list, transactional: bool = True, purpose: str = 'Email'):
+    if settings.DEBUG_OR_TESTING:
+        return print(subject, body_html, body_text, purpose, to)
 
     resp = requests.post(
         'https://api.elasticemail.com/v2/email/send',
