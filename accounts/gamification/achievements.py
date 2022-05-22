@@ -54,7 +54,7 @@ class TradePrizeAchievementStep1(PrizeAchievement):
             )
 
             title = 'جایزه به شما تعلق گرفت.'
-            description = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه روی لینک زیر کلیک کنید.'.format(
+            description = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
                 humanize_number(prize.amount)
             )
 
@@ -96,7 +96,7 @@ class TradePrizeAchievementStep2(PrizeAchievement):
             )
 
             title = 'جایزه به شما تعلق گرفت.'
-            description = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه روی لینک زیر کلیک کنید.'.format(
+            description = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
                 humanize_number(prize.amount)
             )
 
