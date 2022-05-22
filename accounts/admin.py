@@ -566,7 +566,7 @@ class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
 @admin.register(LoginActivity)
 class LoginActivityAdmin(admin.ModelAdmin):
-    list_display = ['user', 'ip', 'device', 'os', 'browser']
+    list_display = ['created', 'user', 'ip', 'device', 'os', 'browser']
     search_fields = ['user__phone', 'ip']
 
 

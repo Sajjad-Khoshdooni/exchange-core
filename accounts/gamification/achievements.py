@@ -53,13 +53,15 @@ class TradePrizeAchievementStep1(PrizeAchievement):
                 }
             )
 
-            title = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه روی لینک زیر کلیک کنید.'.format(
+            title = 'جایزه به شما تعلق گرفت.'
+            description = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه روی لینک زیر کلیک کنید.'.format(
                 humanize_number(prize.amount)
             )
 
             Notification.send(
                 recipient=self.account.user,
                 title=title,
+                message=description,
                 level=Notification.SUCCESS,
                 link='/account/tasks'
             )
@@ -93,13 +95,15 @@ class TradePrizeAchievementStep2(PrizeAchievement):
                 }
             )
 
-            title = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه روی لینک زیر کلیک کنید.'.format(
+            title = 'جایزه به شما تعلق گرفت.'
+            description = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه روی لینک زیر کلیک کنید.'.format(
                 humanize_number(prize.amount)
             )
 
             Notification.send(
                 recipient=self.account.user,
                 title=title,
+                message=description,
                 level=Notification.SUCCESS,
                 link='/account/tasks'
             )
