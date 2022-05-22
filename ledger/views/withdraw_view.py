@@ -18,6 +18,7 @@ from ledger.utils.price import get_trading_price_irt, BUY
 from accounts.utils.email import send_email_by_template
 from accounts.utils import email
 
+
 class WithdrawSerializer(serializers.ModelSerializer):
     address_book_id = serializers.CharField(write_only=True, required=False, default=None)
     coin = serializers.CharField(write_only=True, required=False)
