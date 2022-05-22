@@ -8,7 +8,11 @@ def create_assets(apps, schema_editor):
     Asset = apps.get_model('ledger', 'Asset')
 
     Asset.objects.get_or_create(symbol='IRT')
-    Asset.objects.get_or_create(symbol='USDT', defaults={'order': 1})
+
+    symbols = ['USDT', 'BTC', 'ETH', 'BNB', 'SOL', 'SHIB', 'ADA', 'DOGE']
+
+    for i, symbol in enumerate(symbols):
+        Asset.objects.get_or_create(symbol=symbol, defaults={'order': i + 1})
 
 
 class Migration(migrations.Migration):

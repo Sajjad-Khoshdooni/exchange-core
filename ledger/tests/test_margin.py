@@ -24,7 +24,7 @@ class MarginTestCase(TestCase):
         self.account = new_account()
         self.user = self.account.user
         self.usdt = Asset.get(Asset.USDT)
-        self.xrp = Asset.get('XRP')
+        self.xrp = Asset.get('ADA')
         new_trx(self.account, self.usdt, TO_TRANSFER_USDT)
 
         self.client = Client()
@@ -102,26 +102,26 @@ class MarginTestCase(TestCase):
 
     def test_loan(self):
         self.transfer(TO_TRANSFER_USDT)
-        self.loan('XRP', TO_TRANSFER_USDT / XRP_USDT_PRICE, check_status=400)
+        self.loan('ADA', TO_TRANSFER_USDT / XRP_USDT_PRICE, check_status=400)
 
         self.assert_margin_info(TO_TRANSFER_USDT, 0, TO_TRANSFER_USDT, 999)
 
         self.pass_quiz()
 
-        self.loan('XRP', TO_TRANSFER_USDT / XRP_USDT_PRICE)
+        self.loan('ADA', TO_TRANSFER_USDT / XRP_USDT_PRICE)
 
         self.assert_margin_info(TO_TRANSFER_USDT, TO_TRANSFER_USDT, 2 * TO_TRANSFER_USDT, 2)
 
-        self.loan('XRP', TO_TRANSFER_USDT / XRP_USDT_PRICE)
+        self.loan('ADA', TO_TRANSFER_USDT / XRP_USDT_PRICE)
 
         self.assert_margin_info(TO_TRANSFER_USDT, 2 * TO_TRANSFER_USDT, 3 * TO_TRANSFER_USDT, Decimal('1.5'))
 
-        self.loan('XRP', TO_TRANSFER_USDT / XRP_USDT_PRICE, check_status=400)
+        self.loan('ADA', TO_TRANSFER_USDT / XRP_USDT_PRICE, check_status=400)
 
-        self.loan('XRP', 2 * TO_TRANSFER_USDT / XRP_USDT_PRICE, type='repay')
+        self.loan('ADA', 2 * TO_TRANSFER_USDT / XRP_USDT_PRICE, type='repay')
         self.assert_margin_info(TO_TRANSFER_USDT, 0, TO_TRANSFER_USDT, 999)
 
-        self.loan('XRP', 1, type='repay', check_status=400)
+        self.loan('ADA', 1, type='repay', check_status=400)
         self.assert_margin_info(TO_TRANSFER_USDT, 0, TO_TRANSFER_USDT, 999)
 
     def print_wallets(self, account=None):
@@ -144,7 +144,7 @@ class MarginTestCase(TestCase):
 
         self.assertEqual(check_margin_level(), 0)
 
-        self.loan('XRP', 2 * TO_TRANSFER_USDT / XRP_USDT_PRICE)
+        self.loan('ADA', 2 * TO_TRANSFER_USDT / XRP_USDT_PRICE)
 
         self.assertEqual(check_margin_level(), 0)
 
