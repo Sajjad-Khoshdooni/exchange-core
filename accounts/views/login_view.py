@@ -10,7 +10,7 @@ from rest_framework.generics import ListAPIView
 from accounts.models.login_activity import LoginActivity
 import logging
 
-from accounts.utils.validation import login_activity
+from accounts.utils.validation import set_login_activity
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class LoginView(APIView):
 
         if user:
             login(request, user)
-            login_activity(request, user)
+            set_login_activity(request, user)
             return Response({'msg': 'success', 'code': 0, 'user_id': user.id})
 
         else:
