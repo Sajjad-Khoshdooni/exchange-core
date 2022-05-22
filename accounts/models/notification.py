@@ -16,7 +16,7 @@ class Notification(models.Model):
 
     title = models.CharField(max_length=128)
     link = models.CharField(blank=True, max_length=128)
-    message = models.CharField(max_length=512)
+    message = models.CharField(max_length=512, blank=True)
 
     level = models.CharField(
         max_length=8,
