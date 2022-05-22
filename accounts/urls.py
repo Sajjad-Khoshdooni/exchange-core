@@ -71,6 +71,10 @@ urlpatterns = [
     })),
 
     path('prize/', views.PrizeView.as_view({
+        'get': 'list'
+    })),
+
+    path('prize/<int:pk>/', views.PrizeView.as_view({
         'patch': 'partial_update'
     })),
 
