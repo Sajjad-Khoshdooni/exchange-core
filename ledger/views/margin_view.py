@@ -15,7 +15,7 @@ from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet
 from ledger.models.asset import CoinField
 from ledger.utils.fields import SerializerDecimalField, get_serializer_amount_field
 from ledger.utils.margin import MarginInfo
-from ledger.utils.price import get_trading_price_usdt, BUY
+from ledger.utils.price import get_trading_price_usdt, BUY, SELL
 
 
 class MarginInfoView(APIView):
@@ -41,7 +41,10 @@ class AssetMarginInfoView(APIView):
         margin_wallet = asset.get_wallet(account, Wallet.MARGIN)
         loan_wallet = asset.get_wallet(account, Wallet.LOAN)
 
-        price = get_trading_price_usdt(asset.symbol, BUY)
+        price = get_trading_price_usdt(asset.symbol, SELL, raw_price=True)
+        if asset.symbol != Asset.USDT:
+            price = price * Decimal('1.01')
+
         max_borrow = max(margin_info.get_max_borrowable() / price, Decimal(0))
         max_transfer = max(margin_info.get_max_transferable() / price, Decimal(0))
 

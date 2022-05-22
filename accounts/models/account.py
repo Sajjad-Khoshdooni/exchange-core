@@ -116,7 +116,7 @@ class Account(models.Model):
         print()
 
     def get_invited_count(self):
-        return Account.objects.filter(referred_by__owner=self).count()
+        return int(Account.objects.filter(referred_by__owner=self).count())
 
     class Meta:
         constraints = [
