@@ -68,7 +68,7 @@ def parse_positive_int(inp: str, default: int = None):
     return num
 
 
-def login_activity(request, user):
+def set_login_activity(request, user):
     try:
         os = request.user_agent.os.family
         if request.user_agent.os.version_string:
