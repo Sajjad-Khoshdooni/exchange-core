@@ -1,6 +1,6 @@
 from typing import List
 
-from accounts.models import Account, User
+from accounts.models import Account, User, Notification
 from ledger.models import Transfer, Prize
 
 
@@ -16,6 +16,8 @@ class Goal:
     description = ''
     cta_title = ''
 
+    alert_level = Notification.WARNING
+
     def __init__(self, account: Account):
         self.account = account
 
@@ -23,24 +25,21 @@ class Goal:
         raise NotImplementedError
 
     def finished(self):
-        progress = self.get_progress()
+        return self.get_progress_percent() == 100
 
-        if self.type == self.BOOL:
-            return progress
-        else:
-            return progress >= self.max
-
-    def as_dict(self):
-
+    def get_progress_percent(self) -> int:
         _progress = self.get_progress()
 
         if self.type == self.BOOL:
             if _progress:
-                progress = 100
+                return 100
             else:
-                progress = 0
+                return 0
         else:
-            progress = max(min(int(_progress / self.max * 100), 100), 0)
+            return max(min(int(_progress / self.max * 100), 100), 0)
+
+    def as_dict(self):
+        progress = self.get_progress_percent()
 
         data = {
             'name': self.name,
@@ -54,6 +53,14 @@ class Goal:
         }
 
         return data
+
+    def get_alert_dict(self):
+        return {
+            'text': self.description,
+            'btn_link': self.link,
+            'btn_title': self.title,
+            'level': self.alert_level
+        }
 
 
 class GoalGroup:
@@ -91,6 +98,7 @@ class VerifyLevel2Goal(Goal):
     title = 'احراز هویت'
     link = '/account/verification/basic'
     description = 'با تکمیل احراز هویت، بدون محدودیت در راستین خرید و فروش کنید.'
+    alert_level = Notification.ERROR
 
     def get_progress(self):
         return self.account.user.level > User.LEVEL1
@@ -139,6 +147,7 @@ class InviteGoal(Goal):
     title = 'دعوت از دوستان'
     link = '/account/referral'
     description = 'دوستان خود را به راستین دعوت کنید و از معامله‌آن‌ها درآمدزایی کنید.'
+    alert_level = Notification.INFO
 
     def get_progress(self):
         return self.account.get_invited_count()
