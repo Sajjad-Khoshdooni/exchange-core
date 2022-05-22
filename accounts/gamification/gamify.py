@@ -46,6 +46,9 @@ def get_groups_data(account, only_active=False):
 
         groups.append(data)
 
+    if only_active:
+        return
+
     return groups
 
 
