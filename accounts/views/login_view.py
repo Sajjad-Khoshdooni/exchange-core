@@ -1,14 +1,17 @@
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.sessions.models import Session
+
 
 from rest_framework import serializers, status
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
-from accounts.utils.ip import get_client_ip
+
 from accounts.models.login_activity import LoginActivity
 import logging
+
+from accounts.utils.validation import login_activity
+
 logger = logging.getLogger(__name__)
 
 
@@ -37,31 +40,7 @@ class LoginView(APIView):
 
         if user:
             login(request, user)
-            try:
-                os = request.user_agent.os.family
-                if request.user_agent.os.version_string:
-                    os += ' ' + request.user_agent.os.version_string
-
-                device = request.user_agent.device.family
-
-                browser = request.user_agent.browser.family
-
-                if request.user_agent.browser.version_string:
-                    browser += ' ' + request.user_agent.os.version_string
-
-                LoginActivity.objects.create(
-                    user=user,
-                    ip=get_client_ip(request),
-                    user_agent=request.META['HTTP_USER_AGENT'],
-                    session=Session.objects.get(session_key=request.session.session_key),
-                    device=device,
-                    os=os,
-                    browser=browser,
-                )
-
-            except:
-                logger.exception('User login activity dos not saved ')
-
+            login_activity(request, user)
             return Response({'msg': 'success', 'code': 0, 'user_id': user.id})
 
         else:
