@@ -45,5 +45,5 @@ urlpatterns = [
     })),
 
     path('v1/wallet/balance/', views.GetBalanceInformation.as_view()),
-    path('v1/bookmark/asset/', views.BookmarkAssetAPIView.as_view())
+    path('v1/bookmark/assets/', views.BookmarkAssetsAPIView.as_view())
 ]

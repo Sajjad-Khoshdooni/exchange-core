@@ -40,7 +40,7 @@ class Account(models.Model):
 
     bookmark_market = models.ManyToManyField("market.PairSymbol", null=True, blank=True)
 
-    bookmark_asset = models.ManyToManyField("ledger.Asset", null=True, blank=True)
+    bookmark_assets = models.ManyToManyField("ledger.Asset", null=True, blank=True)
 
     def is_system(self) -> bool:
         return self.type == self.SYSTEM
