@@ -15,7 +15,7 @@ from financial.utils.pay_ir import Payir
 
 from ledger.models import Trx, Asset
 from ledger.utils.fields import DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
-from ledger.utils.precision import humanize_number, get_presentation_amount
+from ledger.utils.precision import humanize_number
 
 logger = logging.getLogger(__name__)
 
@@ -120,8 +120,8 @@ class FiatWithdrawRequest(models.Model):
         user = self.bank_account.user
         if self.status == PENDING:
             title = 'درخواست برداشت شما به بانک ارسال گردید.'
-            description = 'درخواست برداشت در زمان تفریبی {} به حساب شما واریز خواهد شد'\
-                .format(estimate_receive_time)
+            description = 'درخواست برداشت در ساعت {time} تاریخ {date}به حساب شما واریز خواهد شد'\
+                .format(time=estimate_receive_time.time, date=estimate_receive_time.date)
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
             email_template = email.SCOPE_SUCCESSFUL_FIAT_WITHDRAW
@@ -150,7 +150,8 @@ class FiatWithdrawRequest(models.Model):
             recipient=user.email,
             template=email_template,
             context={
-                'estimated_receive_time': estimate_receive_time
+                'estimated_receive_time': estimate_receive_time.time,
+                'estimated_receive_date': estimate_receive_time.date,
             }
         )
 

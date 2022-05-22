@@ -184,11 +184,11 @@ class Transfer(models.Model):
                     }
                 )
             else:
-                Notification.send(
-                    recipient=self.wallet.account.user,
-                    title='ارسال شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol),
-                    message='به ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
-                )
+                # Notification.send(
+                #     recipient=self.wallet.account.user,
+                #     title='ارسال شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol),
+                #     message='به ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
+                # )
                 email.send_email_by_template(
                     recipient=self.wallet.account.user.email,
                     template=email.SCOPE_WITHDRAW_EMAIL,

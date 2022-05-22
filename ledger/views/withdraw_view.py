@@ -15,8 +15,6 @@ from ledger.models import Asset, Network, Transfer, NetworkAsset, AddressBook
 from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
 from ledger.utils.price import get_trading_price_irt, BUY
-from accounts.utils.email import send_email_by_template
-from accounts.utils import email
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
