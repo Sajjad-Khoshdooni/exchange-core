@@ -1,7 +1,6 @@
 import logging
 
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.sessions.models import Session
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
@@ -9,10 +8,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models.login_activity import LoginActivity
-from accounts.utils.ip import get_client_ip
-
-import logging
-
 from accounts.utils.validation import set_login_activity
 
 logger = logging.getLogger(__name__)

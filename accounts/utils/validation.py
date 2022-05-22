@@ -1,13 +1,15 @@
 import datetime
+import logging
 from datetime import timedelta
 from secrets import randbelow
 
 import jdatetime
-from django.utils import timezone
-from accounts.utils.ip import get_client_ip
-from accounts.models.login_activity import LoginActivity
 from django.contrib.sessions.models import Session
-import logging
+from django.utils import timezone
+
+from accounts.models.login_activity import LoginActivity
+from accounts.utils.ip import get_client_ip
+
 logger = logging.getLogger(__name__)
 
 MINUTES = 60
