@@ -1,4 +1,4 @@
-from accounts.models import Account, User
+from accounts.models import Account, User, Notification
 from ledger.models import Transfer, Prize
 
 
@@ -14,6 +14,7 @@ class Condition:
     link = ''
     description = ''
     cta_title = ''
+    alert_level = Notification.WARNING
 
     def __init__(self, account: Account):
         self.account = account
@@ -21,17 +22,22 @@ class Condition:
     def get_progress(self):
         raise NotImplementedError
 
-    def as_dict(self):
+    def finished(self):
+        return self.get_progress_percent() == 100
 
+    def get_progress_percent(self) -> int:
         _progress = self.get_progress()
 
         if self.type == self.BOOL:
             if _progress:
-                progress = 100
+                return 100
             else:
-                progress = 0
+                return 0
         else:
-            progress = max(min(int(_progress / self.max * 100), 100), 0)
+            return max(min(int(_progress / self.max * 100), 100), 0)
+
+    def as_dict(self):
+        progress = self.get_progress_percent()
 
         data = {
             'name': self.name,
@@ -45,6 +51,14 @@ class Condition:
         }
 
         return data
+
+    def get_alert_dict(self):
+        return {
+            'text': self.description,
+            'btn_link': self.link,
+            'btn_title': self.title,
+            'level': self.alert_level
+        }
 
 
 class Achievement:
@@ -108,7 +122,7 @@ class VerifyLevel2Condition(Condition):
 class DepositCondition(Condition):
     type = Condition.BOOL
     name = 'deposit'
-    title = 'واریز وجه'
+    title = 'واریز'
     link = '/wallet/spot/money-deposit'
     description = 'با واریز وجه، تنها چند ثانیه با خرید و فروش رمزارز فاصله دارید.'
 
@@ -121,7 +135,7 @@ class TradeStep1Condition(Condition):
     type = Condition.NUMBER
     max = Prize.TRADE_THRESHOLD_STEP1
     name = Prize.TRADE_PRIZE_STEP1
-    title = 'معامله به ارزش ۲ میلیون تومان'
+    title = 'معامله'
     link = '/trade/classic/BTCUSDT'
     description = 'به ارزش ۲ میلیون تومان معامله کنید و ۵۰,۰۰۰ شیبا جایزه بگیرید.'
 
@@ -133,7 +147,7 @@ class TradeStep2Condition(Condition):
     type = Condition.NUMBER
     max = Prize.TRADE_THRESHOLD_STEP2
     name = Prize.TRADE_PRIZE_STEP2
-    title = 'معامله به ارزش ۲۰ میلیون تومان'
+    title = 'معامله'
     link = '/trade/classic/BTCUSDT'
     description = 'به ارزش ۲۰ میلیون تومان معامله کنید و ۱۰۰,۰۰۰ شیبا جایزه بگیرید.'
 
