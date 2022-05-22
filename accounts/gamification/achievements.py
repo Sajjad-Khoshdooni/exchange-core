@@ -27,6 +27,7 @@ class PrizeAchievement(Achievement):
 
         return {
             'type': 'prize',
+            'id': prize.id,
             'scope': self.scope,
             'amount': Prize.PRIZE_AMOUNTS[self.scope],
             'asset': 'SHIB',
