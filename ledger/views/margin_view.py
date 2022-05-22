@@ -41,7 +41,7 @@ class AssetMarginInfoView(APIView):
         margin_wallet = asset.get_wallet(account, Wallet.MARGIN)
         loan_wallet = asset.get_wallet(account, Wallet.LOAN)
 
-        price = get_trading_price_usdt(asset.symbol, SELL, raw_price=True) * Decimal('0.99')
+        price = get_trading_price_usdt(asset.symbol, SELL, raw_price=True) * Decimal('1.01')
         max_borrow = max(margin_info.get_max_borrowable() / price, Decimal(0))
         max_transfer = max(margin_info.get_max_transferable() / price, Decimal(0))
 
