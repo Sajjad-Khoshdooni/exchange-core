@@ -374,7 +374,7 @@ class PrizeAdmin(admin.ModelAdmin):
 
 @admin.register(models.CoinCategory)
 class CoinCategoryAdmin(admin.ModelAdmin):
-    list_display = ['name_fa', 'name', 'get_coin_count']
+    list_display = ['name', 'get_coin_count']
 
     def get_coin_count(self, coincaterogy:CoinCategory):
         return coincaterogy.coin.count()

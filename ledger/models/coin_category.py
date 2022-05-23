@@ -5,7 +5,6 @@ from ledger.models import Asset
 
 class CoinCategory(models.Model):
     name = models.CharField(max_length=30, db_index=True)
-    name_fa = models.CharField(max_length=30, blank=True, null=True)
     coins = models.ManyToManyField(Asset, null=True, blank=True)
 
     class Meta:
