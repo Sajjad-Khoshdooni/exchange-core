@@ -107,7 +107,7 @@ class VerifyLevel2Goal(Goal):
 class DepositGoal(Goal):
     type = Goal.BOOL
     name = 'deposit'
-    title = 'واریز وجه'
+    title = 'واریز'
     link = '/wallet/spot/money-deposit'
     description = 'با واریز وجه، تنها چند ثانیه با خرید و فروش رمزارز فاصله دارید.'
 
@@ -120,7 +120,7 @@ class TradeStep1Goal(Goal):
     type = Goal.NUMBER
     max = Prize.TRADE_THRESHOLD_STEP1
     name = Prize.TRADE_PRIZE_STEP1
-    title = 'معامله به ارزش ۲ میلیون تومان'
+    title = 'معامله'
     link = '/trade/classic/BTCUSDT'
     description = 'به ارزش ۲ میلیون تومان معامله کنید و ۵۰,۰۰۰ شیبا جایزه بگیرید.'
 
@@ -132,7 +132,7 @@ class TradeStep2Goal(Goal):
     type = Goal.NUMBER
     max = Prize.TRADE_THRESHOLD_STEP2
     name = Prize.TRADE_PRIZE_STEP2
-    title = 'معامله به ارزش ۲۰ میلیون تومان'
+    title = 'معامله'
     link = '/trade/classic/BTCUSDT'
     description = 'به ارزش ۲۰ میلیون تومان معامله کنید و ۱۰۰,۰۰۰ شیبا جایزه بگیرید.'
 
