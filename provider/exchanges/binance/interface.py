@@ -150,6 +150,12 @@ class BinanceFuturesHandler(BinanceSpotHandler):
     @classmethod
     @cache_for(time=120)
     def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
+        symbol_changed = False
+
+        if symbol == 'SHIBUSDT':
+            symbol = '1000' + symbol
+            symbol_changed = True
+
         data = cls.collect_api('/fapi/v1/exchangeInfo', signed=False)
         data = data['symbols']
         coin_data = list(filter(lambda f: f['symbol'] == symbol, data))
@@ -162,7 +168,13 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', coin_data['filters']))
 
         if filters:
-            return filters[0]
+            lot_size = filters[0]
+
+            if symbol_changed:
+                lot_size['stepSize'] = Decimal(lot_size['stepSize']) * 1000
+                lot_size['minQty'] = Decimal(lot_size['minQty']) * 1000
+
+            return lot_size
 
     @classmethod
     def get_incomes(cls, start_date: datetime, end_date: datetime) -> list:
