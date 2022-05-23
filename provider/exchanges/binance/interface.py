@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Union
 
 from django.conf import settings
 
@@ -105,20 +106,20 @@ class BinanceSpotHandler:
 
     @classmethod
     @cache_for(time=120)
-    def get_lot_size_data(cls, symbol: str) -> dict:
+    def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
         data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False)
         filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['symbols'][0]['filters']))
-        return filters[0]
+        return filters and filters[0]
 
     @classmethod
     def get_step_size(cls, symbol: str) -> Decimal:
         lot_size = cls.get_lot_size_data(symbol)
-        return Decimal(lot_size['stepSize'])
+        return lot_size and Decimal(lot_size['stepSize'])
 
     @classmethod
     def get_lot_min_quantity(cls, symbol: str) -> Decimal:
         lot_size = cls.get_lot_size_data(symbol)
-        return Decimal(lot_size['minQty'])
+        return lot_size and Decimal(lot_size['minQty'])
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):
@@ -148,12 +149,20 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
     @classmethod
     @cache_for(time=120)
-    def get_lot_size_data(cls, symbol: str) -> dict:
+    def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
         data = cls.collect_api('/fapi/v1/exchangeInfo', data={'symbol': symbol}, signed=False)
         data = data['symbols']
-        coin_data = list(filter(lambda f: f['symbol'] == symbol, data))[0]
+        coin_data = list(filter(lambda f: f['symbol'] == symbol, data))
+
+        if not coin_data:
+            return
+
+        coin_data = coin_data[0]
+
         filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', coin_data['filters']))
-        return filters[0]
+
+        if filters:
+            return filters[0]
 
     @classmethod
     def get_incomes(cls, start_date: datetime, end_date: datetime) -> list:

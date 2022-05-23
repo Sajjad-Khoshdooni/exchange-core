@@ -222,7 +222,7 @@ class MarginTestCase(TestCase):
         self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('1.4'))
 
         set_price(self.xrp, XRP_USDT_PRICE / 2)
-        #
+
         self.assertEqual(check_margin_level(), 0)
         self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
 
