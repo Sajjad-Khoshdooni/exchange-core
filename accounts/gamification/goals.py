@@ -146,7 +146,7 @@ class InviteGoal(Goal):
     name = 'invite'
     title = 'دعوت از دوستان'
     link = '/account/referral'
-    description = 'دوستان خود را به راستین دعوت کنید و از معامله‌آن‌ها درآمدزایی کنید.'
+    description = 'دوستان خود را به راستین دعوت کنید و جایزه بگیرید.'
     alert_level = Notification.INFO
 
     def get_progress(self):
