@@ -150,7 +150,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
     @classmethod
     @cache_for(time=120)
     def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
-        data = cls.collect_api('/fapi/v1/exchangeInfo', data={'symbol': symbol}, signed=False)
+        data = cls.collect_api('/fapi/v1/exchangeInfo', signed=False)
         data = data['symbols']
         coin_data = list(filter(lambda f: f['symbol'] == symbol, data))
 

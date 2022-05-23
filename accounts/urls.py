@@ -66,9 +66,6 @@ urlpatterns = [
     path('', include(router.urls)),
 
     path('goals/', views.GamificationAPIView.as_view()),
-    path('prize/', views.PrizeView.as_view({
-        'get': 'list'
-    })),
 
     path('prize/', views.PrizeView.as_view({
         'get': 'list'
