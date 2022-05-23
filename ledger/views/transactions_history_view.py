@@ -47,7 +47,6 @@ class DepositHistoryView(WithdrawHistoryView):
             wallet__account=self.request.user.account,
             deposit=True,
             hidden=False,
-            status=Transfer.DONE
         ).order_by('-created')
 
         if 'coin' in query_params:
