@@ -97,7 +97,7 @@ class VerifyLevel2Goal(Goal):
     name = 'verify_level2'
     title = 'احراز هویت'
     link = '/account/verification/basic'
-    description = 'با تکمیل احراز هویت، بدون محدودیت در راستین خرید و فروش کنید.'
+    description = 'با تکمیل احراز هویت، بدون محدودیت در راستین معامله کنید.'
     alert_level = Notification.ERROR
 
     def get_progress(self):
