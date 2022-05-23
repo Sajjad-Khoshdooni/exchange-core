@@ -36,12 +36,11 @@ class EmailVerifyView(APIView):
 class EmailOTPVerifySerializer(serializers.ModelSerializer):
 
     code = serializers.CharField(write_only=True, required=True)
-    # sms_code = serializers.CharField(write_only=True, required=True)
+    sms_code = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
-        # fields = ('code', 'email', 'sms_code',)
-        fields = ('code', 'email',)
+        fields = ('code', 'email', 'sms_code',)
         read_only_fields = ('email', )
         extra_kwargs = {
             'email': {'required': True},
@@ -52,13 +51,16 @@ class EmailOTPVerifySerializer(serializers.ModelSerializer):
         sms_code = validated_data.get('sms_code')
 
         code = EmailVerificationCode.get_by_code(code, user, EmailVerificationCode.SCOPE_VERIFY_EMAIL)
-        # sms_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_VERIFY_EMAIL)
+        sms_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_VERIFY_EMAIL)
 
         if not code:
-            raise ValidationError({'code': 'کد نامعتبر است'})
+            raise ValidationError({'code': 'کد ایمیل نامعتبر است'})
+
+        if not sms_code:
+            raise ValidationError({'code': 'کد موبایل نامعتبر است'})
 
         code.set_code_used()
-        # sms_code.set_code_used()
+        sms_code.set_code_used()
 
         user.email = code.email
         user.save()
