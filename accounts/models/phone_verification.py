@@ -103,7 +103,7 @@ class VerificationCode(models.Model):
         # todo: use user devices / ip , ...
 
         if phone == '09120889956':
-            logger.info('Ignored sending otp to kavenegar due to blacklist')
+            logger.info('[OTP] Ignored sending otp to kavenegar due to blacklist')
             return
 
         any_recent_code = VerificationCode.objects.filter(
@@ -112,7 +112,7 @@ class VerificationCode(models.Model):
         ).exists()
 
         if any_recent_code:
-            logger.info('Ignored sending otp to kavenegar because of recent')
+            logger.info('[OTP] Ignored sending otp to kavenegar because of recent')
             return
 
         prev_codes = VerificationCode.objects.filter(
@@ -121,7 +121,7 @@ class VerificationCode(models.Model):
         ).count()
 
         if prev_codes >= 3:
-            logger.info('Ignored sending otp to kavenegar because of multiple prev')
+            logger.info('[OTP] Ignored sending otp to kavenegar because of multiple prev')
             return
 
         if scope == cls.SCOPE_TELEPHONE:

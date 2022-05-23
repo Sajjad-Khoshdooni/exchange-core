@@ -1,7 +1,7 @@
 import logging
 from uuid import uuid4
 
-from django.db import models, transaction
+from django.db import models
 
 from accounts.models import Account, Notification
 from ledger.models import Trx, Asset
@@ -40,12 +40,21 @@ class Prize(models.Model):
     group_id = models.UUIDField(default=uuid4, db_index=True)
     fake = models.BooleanField(default=False)
 
+    redeemed = models.BooleanField(default=False)
+
     variant = models.CharField(null=True, blank=True, max_length=16)
 
     class Meta:
         unique_together = [('account', 'scope', 'variant')]
 
     def build_trx(self):
+        if self.redeemed:
+            logger.info('Ignored redeem prize because it is redeemed before.')
+            return
+
+        self.redeemed = True
+        self.save(update_fields=['redeemed'])
+
         system = Account.system()
         Trx.transaction(
             group_id=self.group_id,
@@ -55,47 +64,5 @@ class Prize(models.Model):
             scope=Trx.PRIZE
         )
 
-        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(self.amount))
-
-        Notification.send(
-            recipient=self.account.user,
-            title=title,
-            level=Notification.SUCCESS
-        )
-
     def __str__(self):
         return '%s %s %s' % (self.account, self.amount, self.asset)
-
-
-def check_trade_prize(account: Account):
-    account.refresh_from_db()
-
-    if account.trade_volume_irt >= Prize.TRADE_THRESHOLD_STEP1 and \
-            not Prize.objects.filter(account=account, scope=Prize.TRADE_PRIZE_STEP1).exists():
-
-        with transaction.atomic():
-            prize, created = Prize.objects.get_or_create(
-                account=account,
-                scope=Prize.TRADE_PRIZE_STEP1,
-                defaults={
-                    'amount': Prize.PRIZE_AMOUNTS[Prize.TRADE_PRIZE_STEP1],
-                    'asset': Asset.get(Asset.SHIB),
-                }
-            )
-
-            if created:
-                prize.build_trx()
-
-                if account.referred_by:
-                    prize, created = Prize.objects.get_or_create(
-                        account=account.referred_by.owner,
-                        scope=Prize.REFERRAL_TRADE_2M_PRIZE,
-                        variant=str(account.id),
-                        defaults={
-                            'amount': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE],
-                            'asset': Asset.get(Asset.SHIB),
-                        }
-                    )
-
-                    if created:
-                        prize.build_trx()

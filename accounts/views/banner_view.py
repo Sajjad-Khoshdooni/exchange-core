@@ -1,7 +1,8 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.gamification.gamify import condition_groups, ConditionGroup, Condition
+from accounts.gamification.gamify import goal_groups
+from accounts.gamification.goals import GoalGroup, Goal
 
 
 class BannerAlertAPIView(APIView):
@@ -14,9 +15,9 @@ class BannerAlertAPIView(APIView):
     def get_alert_condition(self):
         account = self.request.user.account
 
-        for group in condition_groups:  # type: ConditionGroup
+        for group in goal_groups:  # type: GoalGroup
             for condition_cls in group.conditions:
-                goal = condition_cls(account)  # type: Condition
+                goal = condition_cls(account)  # type: Goal
 
                 if not goal.finished():
                     return goal.get_alert_dict()
