@@ -18,7 +18,12 @@ logger = logging.getLogger(__name__)
 class StopLossSerializer(OrderSerializer):
     symbol = serializers.CharField(source='symbol.name')
     filled_amount = serializers.SerializerMethodField()
+    completed = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
+
+
+    def get_completed(self, stop_loss: StopLoss):
+        return stop_loss.filled_amount == stop_loss.amount
 
     def to_representation(self, stop_loss: StopLoss):
         data = super(OrderSerializer, self).to_representation(stop_loss)
@@ -47,7 +52,7 @@ class StopLossSerializer(OrderSerializer):
         model = StopLoss
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'price', 'side', 'completed',
                   'market', 'canceled_at')
-        read_only_fields = ('id', 'created', 'completed', 'canceled_at')
+        read_only_fields = ('id', 'created', 'canceled_at')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},
         }

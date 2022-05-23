@@ -31,7 +31,7 @@ class StopLossFilter(django_filters.FilterSet):
 
     class Meta:
         model = StopLoss
-        fields = ('symbol', 'completed', 'market')
+        fields = ('symbol', 'market')
 
 
 class OrderViewSet(mixins.CreateModelMixin,
@@ -81,7 +81,7 @@ class StopLossViewSet(ModelViewSet):
     filter_class = StopLossFilter
 
     def get_queryset(self):
-        return StopLoss.all_objects.filter(wallet__account=self.request.user.account).order_by('-created')
+        return StopLoss.objects.filter(wallet__account=self.request.user.account).order_by('-created')
 
     def get_serializer_context(self):
         return {

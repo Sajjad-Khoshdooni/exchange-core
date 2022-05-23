@@ -13,9 +13,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task(queue='stop_loss')
 def handle_stop_loss():
-    stop_loss_symbols = list(PairSymbol.objects.filter(
-        stoploss__isnull=False, stoploss__completed=False
-    ).distinct('id').values_list('id', flat=True))
+    stop_loss_symbols = list(StopLoss.open_objects.values_list('symbol__id').distinct())
     market_top_prices = get_market_top_prices(stop_loss_symbols)
 
     for symbol_id in stop_loss_symbols:
@@ -51,7 +49,6 @@ def create_needed_stop_loss_orders(symbol_id, side):
         order.stop_loss = stop_loss
         order.save(update_fields=['stop_loss_id'])
         stop_loss.filled_amount += order.filled_amount
-        stop_loss.save(update_fields=['filled_amount', 'completed'])
+        stop_loss.save(update_fields=['filled_amount'])
         logger.info(f'filled order with amount: {order.filled_amount}, price: {order.price} for '
-                    f'stop loss({stop_loss.id}) {stop_loss.filled_amount} {stop_loss.price} {stop_loss.side} '
-                    f'completed={stop_loss.completed}')
+                    f'stop loss({stop_loss.id}) {stop_loss.filled_amount} {stop_loss.price} {stop_loss.side} ')

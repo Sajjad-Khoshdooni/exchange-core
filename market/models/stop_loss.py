@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 
 from django.db import models
+from django.db.models import F
 from django.utils import timezone
 
 from ledger.models import Wallet
@@ -18,7 +19,7 @@ class StopLossManager(models.Manager):
 
     def get_queryset(self):
         if self.open_only:
-            return super().get_queryset().filter(canceled_at__isnull=True, completed=False)
+            return super().get_queryset().filter(canceled_at__isnull=True, filled_amount__lt=F('amount'))
         return super().get_queryset().filter(canceled_at__isnull=True)
 
 
@@ -34,10 +35,7 @@ class StopLoss(models.Model):
     price = get_price_field()
     side = models.CharField(max_length=8, choices=ORDER_CHOICES)
 
-    completed = models.BooleanField(default=False)
-
     lock = get_lock_field(related_name='market_stop_loss')
-
     canceled_at = models.DateTimeField(blank=True, null=True)
 
     @property
@@ -56,14 +54,9 @@ class StopLoss(models.Model):
         self.lock = lock_wallet.lock_balance(lock_amount)
         self.save()
 
-    all_objects = models.Manager()
-    objects = StopLossManager()
+    objects = models.Manager()
+    live_objects = StopLossManager()
     open_objects = StopLossManager(open_only=True)
-
-    def save(self, *args, **kwargs):
-        if self.filled_amount == self.amount:
-            self.completed = True
-        return super(StopLoss, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         self.canceled_at = timezone.now()
