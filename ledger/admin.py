@@ -377,5 +377,5 @@ class CoinCategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'get_coin_count']
 
     def get_coin_count(self, coincaterogy:CoinCategory):
-        return coincaterogy.coin.count()
+        return coincaterogy.coins.count()
     get_coin_count.short_description = 'تعداد رمزارز'
