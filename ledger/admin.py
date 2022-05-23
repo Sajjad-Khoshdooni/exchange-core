@@ -38,6 +38,7 @@ class AssetAdmin(AdvancedAdmin):
     list_filter = ('enable', 'trend')
     list_editable = ('enable', 'order', 'trend', 'trade_enable')
     search_fields = ('symbol', )
+    ordering = ('-enable', '-pin_to_top', '-trend', 'order')
 
     def changelist_view(self, request, extra_context=None):
 
