@@ -127,7 +127,7 @@ class AssetAdmin(AdvancedAdmin):
     get_hedge_value.short_description = 'hedge value'
 
     def get_hedge_threshold(self, asset: Asset):
-        return BinanceFuturesHandler.get_step_size(asset.symbol + 'USDT')
+        return asset.get_hedger().get_step_size(asset.symbol + 'USDT')
 
     get_hedge_threshold.short_description = 'future hedge threshold'
 
