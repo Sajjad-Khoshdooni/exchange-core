@@ -42,9 +42,6 @@ class EmailOTPVerifySerializer(serializers.ModelSerializer):
         model = User
         fields = ('code', 'email', 'sms_code',)
         read_only_fields = ('email', )
-        extra_kwargs = {
-            'email': {'required': True},
-        }
 
     def update(self, user, validated_data):
         code = validated_data.get('code')
