@@ -129,7 +129,7 @@ class AssetAdmin(AdvancedAdmin):
     def get_hedge_threshold(self, asset: Asset):
         return asset.get_hedger().get_step_size(asset.symbol + 'USDT')
 
-    get_hedge_threshold.short_description = 'future hedge threshold'
+    get_hedge_threshold.short_description = 'hedge threshold'
 
 
 @admin.register(models.Network)
