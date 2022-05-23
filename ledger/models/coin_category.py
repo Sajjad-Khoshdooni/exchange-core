@@ -12,4 +12,4 @@ class CoinCategory(models.Model):
         verbose_name_plural = verbose_name = 'دسته بندی رمزارزها'
 
     def __str__(self):
-        return self.name_fa
+        return self.name
