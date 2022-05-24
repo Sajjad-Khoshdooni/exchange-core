@@ -127,6 +127,10 @@ class BinanceSpotHandler:
     @classmethod
     def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
         data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False, cache_timeout=HOUR)
+
+        if not data:
+            return
+
         filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['symbols'][0]['filters']))
         return filters and filters[0]
 
@@ -175,6 +179,10 @@ class BinanceFuturesHandler(BinanceSpotHandler):
             symbol_changed = True
 
         data = cls.collect_api('/fapi/v1/exchangeInfo', signed=False, cache_timeout=HOUR)
+
+        if not data:
+            return
+
         data = data['symbols']
         coin_data = list(filter(lambda f: f['symbol'] == symbol, data))
 
