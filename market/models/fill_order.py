@@ -7,9 +7,9 @@ from django.conf import settings
 from django.db import models
 from django.db.models import F
 
+from accounts.gamification.gamify import check_prize_achievements
 from accounts.models import Account
 from ledger.models import Trx, OTCTrade, Asset
-from ledger.models.prize import check_trade_prize
 from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_field
 from ledger.utils.precision import floor_precision, precision_to_step
 from ledger.utils.price import get_tether_irt_price, BUY
@@ -251,8 +251,9 @@ class FillOrder(models.Model):
                 if not account.is_system():
                     account.trade_volume_irt = F('trade_volume_irt') + fill_order.irt_value
                     account.save(update_fields=['trade_volume_irt'])
+                    account.refresh_from_db()
 
-                    check_trade_prize(account)
+                    check_prize_achievements(account)
 
             for key in ('taker_fee', 'maker_fee'):
                 if trade_trx_list[key]:

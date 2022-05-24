@@ -1,11 +1,10 @@
-import time
-
 from django.conf import settings
 
 if settings.DEBUG_OR_TESTING:
-    from accounts.models import Account, User, VerificationCode
     import random
+    import time
 
+    from accounts.models import Account, User, VerificationCode
     from collector.utils.price import price_redis
     from ledger.models import Asset, Trx, AddressBook, Network, NetworkAsset
     from uuid import uuid4

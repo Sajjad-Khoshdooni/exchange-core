@@ -39,7 +39,7 @@ class VerifyOTPView(CreateAPIView):
     authentication_classes = []
     permission_classes = []
     serializer_class = VerifyOTPSerializer
-
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
 class OTPSerializer(serializers.ModelSerializer):
 

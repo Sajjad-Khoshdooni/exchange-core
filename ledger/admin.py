@@ -8,7 +8,7 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.models import Asset, Prize
+from ledger.models import Asset, Prize, CoinCategory
 from ledger.utils.overview import AssetOverview
 from ledger.utils.price import get_trading_price_usdt, BUY
 from provider.exchanges import BinanceFuturesHandler
@@ -38,6 +38,7 @@ class AssetAdmin(AdvancedAdmin):
     list_filter = ('enable', 'trend')
     list_editable = ('enable', 'order', 'trend', 'trade_enable')
     search_fields = ('symbol', )
+    ordering = ('-enable', '-pin_to_top', '-trend', 'order')
 
     def changelist_view(self, request, extra_context=None):
 
@@ -127,9 +128,10 @@ class AssetAdmin(AdvancedAdmin):
     get_hedge_value.short_description = 'hedge value'
 
     def get_hedge_threshold(self, asset: Asset):
-        return BinanceFuturesHandler.get_step_size(asset.symbol + 'USDT')
+        if asset.enable:
+            return asset.get_hedger().get_step_size(asset.symbol + 'USDT')
 
-    get_hedge_threshold.short_description = 'future hedge threshold'
+    get_hedge_threshold.short_description = 'hedge threshold'
 
 
 @admin.register(models.Network)
@@ -370,3 +372,12 @@ class PrizeAdmin(admin.ModelAdmin):
         return str(get_presentation_amount(prize.amount)) + str(prize.asset)
 
     get_asset_amount.short_description = 'مقدار'
+
+
+@admin.register(models.CoinCategory)
+class CoinCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'get_coin_count']
+
+    def get_coin_count(self, coincaterogy:CoinCategory):
+        return coincaterogy.coins.count()
+    get_coin_count.short_description = 'تعداد رمزارز'
