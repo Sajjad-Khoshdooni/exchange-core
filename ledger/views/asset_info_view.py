@@ -156,7 +156,6 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
 class AssetsViewSet(ModelViewSet):
 
-    authentication_classes = []
     permission_classes = []
 
     def get_serializer_context(self):

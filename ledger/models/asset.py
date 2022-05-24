@@ -22,7 +22,7 @@ class LiveAssetManager(models.Manager):
 
 class CandidAssetManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().exclude(enable=False).exclude(candidate=False)
+        return super().get_queryset().exclude(enable=False, candidate=False)
 
 
 class Asset(models.Model):
