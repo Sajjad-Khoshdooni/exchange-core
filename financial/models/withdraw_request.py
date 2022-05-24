@@ -11,6 +11,7 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from financial.models import BankAccount
 from financial.utils.pay_ir import Payir
+from financial.utils.zibal import Zibal
 from ledger.models import Trx, Asset
 from ledger.utils.fields import DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
 from ledger.utils.precision import humanize_number
@@ -93,6 +94,29 @@ class FiatWithdrawRequest(models.Model):
             return
 
         self.ref_id = self.provider_withdraw_id = Payir.withdraw(wallet_id, self.bank_account, self.amount, self.id)
+        self.change_status(FiatWithdrawRequest.PENDING)
+        self.withdraw_datetime = timezone.now()
+
+        self.save()
+
+    def create_withdraw_request_zibal(self):
+        assert not self.provider_withdraw_id
+        assert self.status == self.PROCESSING
+
+        wallet_id = config('ZIBAL_WALLET_ID', cast=int)
+        wallet = Zibal.get_wallet_data(wallet_id)
+
+        if wallet.free < self.amount:
+            logger.info(f'Not enough wallet balance to full fill bank acc')
+
+            link = url_to_edit_object(self)
+            send_support_message(
+                message='موجودی هیچ یک از کیف پول‌ها برای انجام این تراکنش کافی نیست.',
+                link=link
+            )
+            return
+
+        self.ref_id = self.provider_withdraw_id = Zibal.withdraw(wallet_id, self.bank_account, self.amount, self.id)
         self.change_status(FiatWithdrawRequest.PENDING)
         self.withdraw_datetime = timezone.now()
 
