@@ -35,8 +35,13 @@ class CoinMarketCap(models.Model):
 
         coins_per_symbol = defaultdict(list)
 
+        existing_symbols = set(CoinMarketCap.objects.values_list('symbol', flat=True))
+
         for c in coins:
-            coins_per_symbol[c['symbol']].append(c)
+            symbol = c['symbol']
+
+            if symbol not in existing_symbols:
+                coins_per_symbol[symbol].append(c)
 
         objects = []
 
