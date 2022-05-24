@@ -15,9 +15,9 @@ brand = config('BRAND')
 
 SCOPE_WITHDRAW_EMAIL = 'withdraw_email'
 SCOPE_DEPOSIT_EMAIL = 'deposit_email'
-SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw'
-SCOPE_CANSEL_FIAT_WITHDRAW = 'cansel_fiat_withdraw'
-SCOPE_PAYMENT = 'payment'
+SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw_email'
+SCOPE_CANSEL_FIAT_WITHDRAW = 'cansel_fiat_withdraw_email'
+SCOPE_PAYMENT = 'payment_email'
 
 TEMPLATES = {
     'verify_email': {
@@ -30,12 +30,12 @@ TEMPLATES = {
         'html': 'accounts/email/withdraw_email.min.html',
         'text': 'accounts/text/withdraw_email.txt',
     },
-    'successful_fiat_withdraw': {
+    'successful_fiat_withdraw_email': {
         'subject': 'راستین | اطلاع رسانی برداشت ریالی',
         'html': 'accounts/email/successful_fiat_withdraw_email.min.html',
         'text': 'accounts/text/successful_fiat_withdraw_email.txt',
     },
-    'cansel_fiat_withdraw': {
+    'cansel_fiat_withdraw_email': {
         'subject': 'راستین | اطلاع رسانی برداشت ریالی ',
         'html': 'accounts/email/verify_email.min.html',
         'text': 'accounts/text/cansel_fiat_withdraw_email.txt',
@@ -45,9 +45,9 @@ TEMPLATES = {
         'html': 'accounts/email/deposit_email.min.html',
         'text': 'accounts/text/deposit_email.txt',
     },
-    'payment': {
-        'subject': 'راستین | اطلاع رسانی واریز ریالی ',
-        'html': 'accounts/email/verify_email.min.html',
+    'payment_email': {
+        'subject': 'راستین | اطلاع رسانی واریز ریالی',
+        'html': 'accounts/email/payment_email.min.html',
         'text': 'accounts/text/payment_email.txt',
     }
 }
