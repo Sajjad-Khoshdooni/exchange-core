@@ -13,7 +13,7 @@ from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Trx, Wallet, BalanceLock
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
-from ledger.utils.precision import floor_precision, round_down_to_exponent
+from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
 from market.models import PairSymbol
 from market.models.referral_trx import ReferralTrx
@@ -144,7 +144,11 @@ class Order(models.Model):
         coin = symbol.name.split(base_symbol)[0]
         boundary_price = get_trading_price(coin, side)
 
-        return boundary_price * loose_factor if side == Order.BUY else boundary_price / loose_factor
+        precision = Order.get_rounding_precision(boundary_price, symbol.tick_size)
+        rounded_price = round_up_to_exponent(boundary_price * loose_factor, precision) if side == Order.BUY else \
+            round_down_to_exponent(boundary_price / loose_factor, precision)
+
+        return rounded_price
 
     @classmethod
     def get_lock_wallet(cls, wallet, base_wallet, side):
