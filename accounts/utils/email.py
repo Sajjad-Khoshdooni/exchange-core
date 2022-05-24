@@ -36,8 +36,8 @@ TEMPLATES = {
         'text': 'accounts/text/successful_fiat_withdraw_email.txt',
     },
     'cansel_fiat_withdraw_email': {
-        'subject': 'راستین | اطلاع رسانی برداشت ریالی ',
-        'html': 'accounts/email/verify_email.min.html',
+        'subject': 'راستین | اطلاع رسانی لغو برداشت ریالی ',
+        'html': 'accounts/email/cansel_fiat_withdraw_email.min.html',
         'text': 'accounts/text/cansel_fiat_withdraw_email.txt',
     },
     'deposit_email': {
