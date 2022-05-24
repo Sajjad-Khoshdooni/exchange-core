@@ -48,7 +48,7 @@ urlpatterns = [
     })),
 
     path('notifs/all/', views.UnreadAllNotificationView.as_view()),
-    path('password', views.ChangePasswordView.as_view()),
+    path('password/', views.ChangePasswordView.as_view()),
 
     path('quiz/passed/', views.QuizPassedView.as_view()),
 
@@ -66,5 +66,14 @@ urlpatterns = [
     path('', include(router.urls)),
 
     path('goals/', views.GamificationAPIView.as_view()),
+
+    path('prize/', views.PrizeView.as_view({
+        'get': 'list'
+    })),
+
+    path('prize/<int:pk>/', views.PrizeView.as_view({
+        'patch': 'partial_update'
+    })),
+
     path('banner/', views.BannerAlertAPIView.as_view()),
 ]

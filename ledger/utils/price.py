@@ -214,7 +214,7 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
     diff_multiplier = 1
 
     if value:
-        if value > 160:
+        if value > 1000:
             diff_multiplier = 4
         elif value > 10:
             diff_multiplier = 2

@@ -1,13 +1,13 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Union
 
 from django.conf import settings
 
 from ledger.utils.cache import cache_for
 from ledger.utils.precision import decimal_to_str
 from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request, \
-    spot_send_public_request
-from provider.exchanges.binance_rules import futures_rules
+    spot_send_public_request, futures_send_public_request
 
 BINANCE = 'binance'
 
@@ -105,23 +105,37 @@ class BinanceSpotHandler:
         })
 
     @classmethod
-    def get_step_size(cls, symbol: str) -> Decimal:
+    @cache_for(time=120)
+    def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
         data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False)
         filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['symbols'][0]['filters']))
-        lot_size = filters[0]
+        return filters and filters[0]
 
-        return Decimal(lot_size['stepSize'])
+    @classmethod
+    def get_step_size(cls, symbol: str) -> Decimal:
+        lot_size = cls.get_lot_size_data(symbol)
+        return lot_size and Decimal(lot_size['stepSize'])
+
+    @classmethod
+    def get_lot_min_quantity(cls, symbol: str) -> Decimal:
+        lot_size = cls.get_lot_size_data(symbol)
+        return lot_size and Decimal(lot_size['minQty'])
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):
     order_url = '/fapi/v1/order'
 
     @classmethod
-    def collect_api(cls, url: str, method: str = 'POST', data: dict = None):
+    def collect_api(cls, url: str, method: str = 'POST', data: dict = None, signed: bool = True):
         if settings.DEBUG_OR_TESTING:
             return {}
 
-        return futures_send_signed_request(method, url, data or {})
+        data = data or {}
+
+        if signed:
+            return futures_send_signed_request(method, url, data)
+        else:
+            return futures_send_public_request(url, data)
 
     @classmethod
     def get_account_details(cls):
@@ -134,10 +148,33 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         )
 
     @classmethod
-    def get_step_size(cls, symbol: str):
-        return float(futures_rules.get(
-            symbol, {'filters': {'LOT_SIZE': {'stepSize': 0.0001}}}
-        )['filters']['LOT_SIZE']['stepSize'])
+    @cache_for(time=120)
+    def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
+        symbol_changed = False
+
+        if symbol == 'SHIBUSDT':
+            symbol = '1000' + symbol
+            symbol_changed = True
+
+        data = cls.collect_api('/fapi/v1/exchangeInfo', signed=False)
+        data = data['symbols']
+        coin_data = list(filter(lambda f: f['symbol'] == symbol, data))
+
+        if not coin_data:
+            return
+
+        coin_data = coin_data[0]
+
+        filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', coin_data['filters']))
+
+        if filters:
+            lot_size = filters[0]
+
+            if symbol_changed:
+                lot_size['stepSize'] = Decimal(lot_size['stepSize']) * 1000
+                lot_size['minQty'] = Decimal(lot_size['minQty']) * 1000
+
+            return lot_size
 
     @classmethod
     def get_incomes(cls, start_date: datetime, end_date: datetime) -> list:

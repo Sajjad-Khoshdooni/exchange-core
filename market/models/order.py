@@ -9,9 +9,9 @@ from django.db import models, transaction
 from django.db.models import Sum, F, Q, Max, Min
 from django.utils import timezone
 
+from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Trx, Wallet, BalanceLock
 from ledger.models.asset import Asset
-from ledger.models.prize import check_trade_prize
 from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
 from ledger.utils.precision import floor_precision, round_down_to_exponent
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
@@ -286,10 +286,9 @@ class Order(models.Model):
                     if not account.is_system():
                         account.trade_volume_irt = F('trade_volume_irt') + fill_order.irt_value
                         account.save(update_fields=['trade_volume_irt'])
+                        account.refresh_from_db()
+                        check_prize_achievements(account)
 
-                        check_trade_prize(account)
-
-    # OrderBook related methods
     @classmethod
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):
         filtered_orders = list(filter(lambda o: o['side'] == order_type, open_orders))

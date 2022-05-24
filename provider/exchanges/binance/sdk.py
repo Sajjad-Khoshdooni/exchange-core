@@ -51,9 +51,9 @@ def dispatch_request(http_method):
 def spot_send_signed_request(http_method, url_path, payload: dict):
     query_string = urlencode(payload, True)
     if query_string:
-        query_string = "{}&timestamp={}".format(query_string, get_timestamp())
+        query_string = "{}&recvWindow=60000&timestamp={}".format(query_string, get_timestamp())
     else:
-        query_string = "timestamp={}".format(get_timestamp())
+        query_string = "recvWindow=60000&timestamp={}".format(get_timestamp())
     url = (
         SPOT_BASE_URL + url_path + "?" + query_string + "&signature=" + hashing(query_string)
     )
@@ -97,9 +97,9 @@ def futures_send_signed_request(http_method: str, url_path: str, payload: dict):
     query_string = query_string.replace("%27", "%22")
 
     if query_string:
-        query_string = "{}&timestamp={}".format(query_string, get_timestamp())
+        query_string = "{}&recvWindow=60000&timestamp={}".format(query_string, get_timestamp())
     else:
-        query_string = "timestamp={}".format(get_timestamp())
+        query_string = "recvWindow=60000&timestamp={}".format(get_timestamp())
 
     url = (
         FUTURES_BASE_URL + url_path + "?" + query_string + "&signature=" + hashing(query_string)
