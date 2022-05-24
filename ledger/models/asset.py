@@ -20,6 +20,11 @@ class LiveAssetManager(models.Manager):
         return super().get_queryset().filter(enable=True)
 
 
+class CandidAssetManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().exclude(enable=False).exclude(candidate=False)
+
+
 class Asset(models.Model):
     IRT = 'IRT'
     USDT = 'USDT'
@@ -30,6 +35,7 @@ class Asset(models.Model):
 
     objects = models.Manager()
     live_objects = LiveAssetManager()
+    candid_objects = CandidAssetManager()
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -65,6 +71,8 @@ class Asset(models.Model):
         MinValueValidator(0),
         MaxValueValidator(Decimal('0.1')),
     ], help_text='our ask (taker buy price) = (1 + ask_diff) * binance_ask')
+
+    candidate = models.BooleanField(default=False)
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
