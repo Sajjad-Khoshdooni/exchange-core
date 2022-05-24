@@ -1,5 +1,6 @@
 import hashlib
 import logging
+
 from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
@@ -37,4 +38,3 @@ def cache_for(time: float = 600):
         return wrapper
 
     return decorator
-
