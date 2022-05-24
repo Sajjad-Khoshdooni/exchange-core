@@ -30,7 +30,7 @@ class BinanceConsumer:
         logger.info('Starting Binance Socket...')
 
     def get_streams(self):
-        assets = list(Asset.live_objects.values_list('symbol', flat=True))
+        assets = list(Asset.candid_objects.values_list('symbol', flat=True))
         return list(map(lambda asset: asset.lower() + get_binance_price_stream(asset) + '@depth5', assets))
 
     def consume(self):
