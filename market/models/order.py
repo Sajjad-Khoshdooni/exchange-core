@@ -337,9 +337,14 @@ class Order(models.Model):
         return int(min(precision, max_precision))
 
     @staticmethod
-    def init_maker_order(symbol: PairSymbol.IdName, side, maker_price: Decimal, market=Wallet.SPOT):
+    def init_maker_order(symbol: PairSymbol.IdName, side, maker_price: Decimal, order_rank: int = 0,
+                         market=Wallet.SPOT):
         symbol_instance = PairSymbol.objects.get(id=symbol.id)
-        maker_amount = symbol_instance.maker_amount * Decimal(randrange(1, 40) / 20.0)
+        if order_rank < Order.MAKER_ORDERS_COUNT * 0.5:
+            amount_factor = Decimal(randrange(2, 15) / Decimal(100))
+        else:
+            amount_factor = Decimal(randrange(10, 20) / Decimal(10))
+        maker_amount = symbol_instance.maker_amount * amount_factor * Decimal(randrange(80, 120) / Decimal(100))
         precision = Order.get_rounding_precision(maker_amount, symbol_instance.step_size)
         amount = round_down_to_exponent(maker_amount, precision)
         wallet = symbol_instance.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
