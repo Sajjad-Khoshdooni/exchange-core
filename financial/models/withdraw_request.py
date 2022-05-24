@@ -117,7 +117,7 @@ class FiatWithdrawRequest(models.Model):
 
     def alert_withdraw_verify_status(self):
         from financial.utils.withdraw_limit import get_fiat_estimate_receive_time
-        estimate_receive_time = gregorian_to_jalali_datetime_str(
+        estimated_receive_time = gregorian_to_jalali_datetime_str(
             get_fiat_estimate_receive_time(
                 self.withdraw_datetime
             )
@@ -155,7 +155,7 @@ class FiatWithdrawRequest(models.Model):
             recipient=user.email,
             template=email_template,
             context={
-                'estimated_receive_time': estimate_receive_time,
+                'estimated_receive_time': estimated_receive_time,
             }
         )
 

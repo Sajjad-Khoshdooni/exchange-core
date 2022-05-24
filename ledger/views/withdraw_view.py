@@ -107,16 +107,12 @@ class WithdrawSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        wallet = validated_data['wallet']
-        network = validated_data['network']
-        amount = validated_data['amount']
-        address = validated_data['out_address']
         try:
             return Transfer.new_withdraw(
-                wallet=wallet,
-                network=network,
-                amount=amount,
-                address=address
+                wallet=validated_data['wallet'],
+                network=validated_data['network'],
+                amount=validated_data['amount'],
+                address=validated_data['out_address']
             )
         except InsufficientBalance:
             raise ValidationError('موجودی کافی نیست.')

@@ -56,7 +56,7 @@ class Payment(models.Model):
         user = self.payment_request.bank_card.user
         title = 'واریز وجه با موفقیت انجام شد'
         payment_amont = humanize_number(get_presentation_amount(Decimal(self.payment_request.amount)))
-        description = 'مبلغ {} تومان با موفقیت به حساب شما واریز شد'.format(payment_amont)
+        description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amont)
 
         Notification.send(
             recipient=user,
