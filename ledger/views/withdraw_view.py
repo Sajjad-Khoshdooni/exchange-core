@@ -4,6 +4,7 @@ from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
+from rest_framework.permissions import IsAuthenticated
 from accounts.models import VerificationCode
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from accounts.verifiers.legal import is_48h_rule_passed
@@ -115,7 +116,6 @@ class WithdrawSerializer(serializers.ModelSerializer):
             )
         except InsufficientBalance:
             raise ValidationError('موجودی کافی نیست.')
-
     class Meta:
         model = Transfer
         fields = ('amount', 'address', 'coin', 'network', 'code', 'address_book_id')
