@@ -4,7 +4,6 @@ from decimal import Decimal
 from celery import shared_task
 
 from accounts.models import Account, Notification
-from accounts.tasks import send_message_by_kavenegar
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet

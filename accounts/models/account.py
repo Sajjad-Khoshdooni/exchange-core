@@ -2,7 +2,6 @@ from decimal import Decimal
 
 from django.db import models
 from django.db.models import UniqueConstraint, Q, Sum
-
 from accounts.models import User
 from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt
 from ledger.utils.price_manager import PriceManager
@@ -38,6 +37,8 @@ class Account(models.Model):
     )
 
     trade_volume_irt = models.PositiveBigIntegerField(default=0)
+
+    bookmark_market = models.ManyToManyField("market.PairSymbol", null=True, blank=True)
 
     def is_system(self) -> bool:
         return self.type == self.SYSTEM
@@ -115,7 +116,7 @@ class Account(models.Model):
         print()
 
     def get_invited_count(self):
-        return Account.objects.filter(referred_by__owner=self).count()
+        return int(Account.objects.filter(referred_by__owner=self).count())
 
     class Meta:
         constraints = [

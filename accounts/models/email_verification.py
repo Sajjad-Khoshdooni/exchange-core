@@ -80,7 +80,7 @@ class EmailVerificationCode(models.Model):
         ).exists()
 
         if any_recent_code:
-            logger.info('Ignored sending email otp because of recent')
+            logger.info('[OTP] Ignored sending email otp because of recent')
             return
 
         code_length = 6

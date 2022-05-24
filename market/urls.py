@@ -16,4 +16,5 @@ urlpatterns = [
     path('trades/', TradeHistoryView.as_view()),
     path('tradingview/ohlcv/', OHLCVAPIView.as_view()),
     path('', include(router.urls)),
+    path('bookmark/', BookMarkSymbolAPIView.as_view())
 ]

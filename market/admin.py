@@ -42,6 +42,7 @@ class PairSymbolAdmin(admin.ModelAdmin):
     list_filter = ('enable', BaseAssetFilter, 'market_maker_enabled',)
     readonly_fields = ('name',)
     search_fields = ('name', )
+    ordering = ('-enable', 'asset__order', 'base_asset__order')
 
 
 class TypeFilter(SimpleListFilter):

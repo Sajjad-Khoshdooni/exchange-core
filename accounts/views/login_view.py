@@ -1,14 +1,16 @@
+import logging
+
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.sessions.models import Session
-
 from rest_framework import serializers, status
+from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.generics import ListAPIView
-from accounts.utils.ip import get_client_ip
+
 from accounts.models.login_activity import LoginActivity
-import logging
+from accounts.utils.ip import get_client_ip
+
 logger = logging.getLogger(__name__)
 
 
@@ -75,27 +77,6 @@ class LogoutView(APIView):
 
 
 class LoginActivitySerializer(serializers.ModelSerializer):
-    device = serializers.SerializerMethodField()
-    os = serializers.SerializerMethodField()
-    browser = serializers.SerializerMethodField()
-
-    def get_device(self, instance):
-        user_agent = self.context['user_agent']
-        return user_agent.device.family
-
-    def get_os(self, instance):
-        user_agent = self.context['user_agent']
-        response = user_agent.os.family
-        if user_agent.os.version_string:
-            response += ' ' + user_agent.os.version_string
-        return response
-
-    def get_browser(self, instance):
-        user_agent = self.context['user_agent']
-        response = user_agent.browser.family
-        if response:
-            response += ' ' + user_agent.browser.version_string
-        return response
 
     class Meta:
         model = LoginActivity

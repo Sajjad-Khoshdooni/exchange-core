@@ -111,12 +111,9 @@ def get_fiat_estimate_receive_time(created: datetime):
 
     else:
         if time_in_range('0:0', '0:30', request_time):
-            if is_holiday(request_date):
-                receive_time = receive_time.replace(hour=14, minute=30, second=00)
-            else:
-                receive_time = receive_time.replace(hour=10, minute=30, second=00)
+            receive_time = receive_time.replace(hour=10, minute=30, second=00)
 
-        if time_in_range('0:30', '10:30', request_time):
+        elif time_in_range('0:30', '10:30', request_time):
             receive_time = receive_time.replace(hour=14, minute=30, second=00)
 
         elif time_in_range('10:30', '13:23', request_time):
