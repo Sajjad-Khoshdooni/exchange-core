@@ -156,7 +156,6 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
 class AssetsViewSet(ModelViewSet):
 
-    authentication_classes = []
     permission_classes = []
 
     def get_serializer_context(self):
@@ -190,7 +189,10 @@ class AssetsViewSet(ModelViewSet):
         )
 
     def get_queryset(self):
-        queryset = Asset.live_objects.all()
+        if self.request.user.is_staff:
+            queryset = Asset.candid_objects.all()
+        else:
+            queryset = Asset.live_objects.all()
 
         if self.get_options('category'):
             queryset = queryset.filter(coincategory__name=self.get_options('category'))

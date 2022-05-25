@@ -204,7 +204,6 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
 
 class WalletViewSet(ModelViewSet):
-    queryset = Asset.live_objects.all()
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -225,7 +224,10 @@ class WalletViewSet(ModelViewSet):
         return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper())
 
     def get_queryset(self):
-        queryset = super(WalletViewSet, self).get_queryset()
+        if self.request.user.is_staff:
+            queryset = Asset.candid_objects.all()
+        else:
+            queryset = Asset.live_objects.all()
 
         if self.get_market() == Wallet.MARGIN:
             return queryset.exclude(symbol=Asset.IRT)
