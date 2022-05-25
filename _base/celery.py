@@ -122,6 +122,14 @@ app.conf.beat_schedule = {
             'expire': 2
         },
     },
+    'handle open stop loss': {
+        'task': 'market.tasks.stop_loss.handle_stop_loss',
+        'schedule': 1,
+        'options': {
+            'queue': 'stop_loss',
+            'expire': 1
+        },
+    },
     'monitor_blockchain_delays': {
         'task': 'tracker.tasks.monitor_blockchain_delays',
         'schedule': 30,
