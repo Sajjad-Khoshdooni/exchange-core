@@ -140,7 +140,7 @@ def create_depth_orders(symbol=None, open_depth_orders_count=None):
             for side in (Order.BUY, Order.SELL):
                 price = Order.get_maker_price(symbol, side)
                 for rank in range(open_depth_orders_count[side], Order.MAKER_ORDERS_COUNT):
-                    order = Order.init_maker_order(symbol, side, price * get_price_factor(side, rank), rank)
+                    order = Order.init_maker_order(symbol, side, price * get_price_factor(side, rank))
                     if order and order.price not in present_prices:
                         with transaction.atomic():
                             order.save()

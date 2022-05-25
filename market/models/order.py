@@ -2,7 +2,7 @@ import logging
 from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
-from random import randrange
+from random import randrange, random
 
 from django.conf import settings
 from django.db import models, transaction
@@ -145,10 +145,11 @@ class Order(models.Model):
         boundary_price = get_trading_price(coin, side)
 
         precision = Order.get_rounding_precision(boundary_price, symbol.tick_size)
-        rounded_price = round_up_to_exponent(boundary_price * loose_factor, precision) if side == Order.BUY else \
-            round_down_to_exponent(boundary_price / loose_factor, precision)
-
-        return rounded_price
+        # use bi-direction in roundness to avoid risky bid ask spread
+        if side == Order.BUY:
+            return round_down_to_exponent(boundary_price * loose_factor, precision)
+        else:
+            return round_up_to_exponent(boundary_price / loose_factor, precision)
 
     @classmethod
     def get_lock_wallet(cls, wallet, base_wallet, side):
@@ -337,10 +338,9 @@ class Order(models.Model):
         return int(min(precision, max_precision))
 
     @staticmethod
-    def init_maker_order(symbol: PairSymbol.IdName, side, maker_price: Decimal, order_rank: int = 0,
-                         market=Wallet.SPOT):
+    def init_maker_order(symbol: PairSymbol.IdName, side, maker_price: Decimal, market=Wallet.SPOT):
         symbol_instance = PairSymbol.objects.get(id=symbol.id)
-        if order_rank < Order.MAKER_ORDERS_COUNT * 0.5:
+        if random() < 0.6:
             amount_factor = Decimal(randrange(2, 15) / Decimal(100))
         else:
             amount_factor = Decimal(randrange(10, 20) / Decimal(10))
