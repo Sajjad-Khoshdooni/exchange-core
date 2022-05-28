@@ -60,6 +60,9 @@ def get_presentation_amount(amount: Decimal, precision: int = None) -> str:
 
 
 def humanize_number(num):
+    if isinstance(num, int):
+        num = str(num)
+
     if isinstance(num, str):
         num = Decimal(num)
 
