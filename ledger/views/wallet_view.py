@@ -100,7 +100,7 @@ class AssetListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = ('symbol', 'precision', 'free', 'free_irt', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt',
-                  'buy_price_irt', 'can_deposit', 'can_withdraw')
+                  'buy_price_irt', 'can_deposit', 'can_withdraw', 'trade_enable')
         ref_name = 'ledger asset'
 
 
