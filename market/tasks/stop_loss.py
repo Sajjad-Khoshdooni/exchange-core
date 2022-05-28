@@ -29,8 +29,8 @@ def handle_stop_loss():
 @shared_task(queue='stop_loss')
 def create_needed_stop_loss_orders(symbol_id, side):
     market_top_prices = Order.get_top_prices(symbol_id)
-    symbol_price = market_top_prices[side]
-    stop_loss_qs = StopLoss.open_objects.filter(symbol_id=symbol_id).prefetch_related('wallet__account')
+    symbol_price = market_top_prices[Order.get_opposite_side(side)]
+    stop_loss_qs = StopLoss.open_objects.filter(symbol_id=symbol_id, side=side).prefetch_related('wallet__account')
     if side == StopLoss.BUY:
         stop_loss_qs = stop_loss_qs.filter(price__lte=symbol_price)
     else:
@@ -50,5 +50,5 @@ def create_needed_stop_loss_orders(symbol_id, side):
         order.save(update_fields=['stop_loss_id'])
         stop_loss.filled_amount += order.filled_amount
         stop_loss.save(update_fields=['filled_amount'])
-        logger.info(f'filled order with amount: {order.filled_amount}, price: {order.price} for '
+        logger.info(f'filled order at {symbol_price} with amount: {order.filled_amount}, price: {order.price} for '
                     f'stop loss({stop_loss.id}) {stop_loss.filled_amount} {stop_loss.price} {stop_loss.side} ')
