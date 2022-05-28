@@ -94,8 +94,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if user_reached_crypto_withdraw_limit(user, irt_value):
             raise ValidationError({'amount': 'شما به سقف برداشت رمزارزی خورده اید.'})
 
-        # if not api:
-        #     otp_code.set_code_used()
+        if not api:
+            otp_code.set_code_used()
 
         return {
             'network': network,

@@ -22,7 +22,7 @@ SCOPE_PAYMENT = 'payment_email'
 TEMPLATES = {
     'verify_email': {
         'subject': 'راستین | کد تایید ایمیل',
-        'html': 'accounts/email/verify_email.html',
+        'html': 'accounts/email/verify_email.min.html',
         'text': 'accounts/text/verify_email.txt',
     },
     'withdraw_email': {
