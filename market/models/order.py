@@ -172,8 +172,8 @@ class Order(models.Model):
     def make_match(self):
         with transaction.atomic():
             from market.models import FillOrder
-            # lock current order
-            Order.objects.select_for_update().filter(id=self.id).first()
+            # lock symbol open orders
+            Order.open_objects.select_for_update().filter(symbol=self.symbol)
 
             to_cancel_orders = Order.open_objects.filter(
                 symbol=self.symbol, cancel_request__isnull=False
@@ -182,7 +182,7 @@ class Order(models.Model):
 
             opp_side = self.get_opposite_side(self.side)
 
-            matching_orders = Order.open_objects.select_for_update().filter(
+            matching_orders = Order.open_objects.filter(
                 symbol=self.symbol, side=opp_side, **Order.get_price_filter(self.price, self.side)
             ).order_by(*self.get_order_by(opp_side))
 
