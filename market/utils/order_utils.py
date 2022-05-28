@@ -113,3 +113,4 @@ def get_market_top_prices(symbol_ids=None):
         market_top_prices[
             (depth['symbol'], depth['side'])
         ] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) or Decimal()
+    return market_top_prices
