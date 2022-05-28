@@ -67,14 +67,14 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
     else:
         sides = [BUY, SELL]
 
-    if exchange == BINANCE and USDT in coins:
+    if exchange == BINANCE and USDT in coins:  # todo: check if market_symbol = USDT
         for s in sides:
             results.append(
                 Price(coin=USDT, price=Decimal(1), side=s)
             )
         coins.remove(USDT)
 
-    if IRT in coins:
+    if IRT in coins:  # todo: check if market_symbol = IRT
         for s in sides:
             results.append(
                 Price(coin=IRT, price=Decimal(0), side=s)
