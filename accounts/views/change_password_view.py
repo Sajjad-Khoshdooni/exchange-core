@@ -49,7 +49,9 @@ class ChangePasswordView(APIView):
             instance=user,
             data=request.data,
             partial=True,
-
+            context={
+                'request': request
+            }
         )
         change_password_serializer.is_valid(raise_exception=True)
 
