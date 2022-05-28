@@ -9,22 +9,16 @@ from django.db import transaction
 from django.db.models import Max, Min, Count
 
 from market.models import Order, PairSymbol
-from market.utils.redis import set_top_prices, set_open_orders_count, get_open_orders_count, get_top_prices, \
-    set_top_depth_prices, get_top_depth_prices
+from market.utils.order_utils import get_market_top_prices
+from market.utils.redis import set_top_prices, set_open_orders_count, get_open_orders_count, set_top_depth_prices, \
+    get_top_depth_prices
 
 logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='market')
 def update_maker_orders():
-    market_top_prices = defaultdict(lambda: Decimal())
-
-    for depth in Order.open_objects.values('symbol', 'side').annotate(
-            max_price=Max('price'), min_price=Min('price')):
-        market_top_prices[
-            (depth['symbol'], depth['side'])
-        ] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) or Decimal()
-
+    market_top_prices = get_market_top_prices()
     top_depth_prices = defaultdict(lambda: Decimal())
 
     depth_orders = Order.open_objects.filter(type=Order.DEPTH).values('symbol', 'side').annotate(max_price=Max('price'),
@@ -64,16 +58,9 @@ def update_maker_orders():
 @shared_task(queue='market')
 def update_symbol_maker_orders(symbol):
     symbol = PairSymbol.IdName(*symbol)
-    market_top_prices = get_top_prices(symbol.id)
+    market_top_prices = Order.get_top_prices(symbol.id)
     top_depth_prices = get_top_depth_prices(symbol.id)
     open_depth_orders_count = get_open_orders_count(symbol.id)
-
-    if not market_top_prices:
-        market_top_prices = defaultdict(lambda: Decimal())
-        for depth in Order.open_objects.filter(symbol_id=symbol.id).values('side').annotate(max_price=Max('price'),
-                                                                                            min_price=Min('price')):
-            market_top_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth[
-                'min_price']) or Decimal()
 
     depth_orders = Order.open_objects.filter(symbol_id=symbol.id, type=Order.DEPTH).values('side').annotate(
         max_price=Max('price'),
@@ -135,7 +122,8 @@ def create_depth_orders(symbol=None, open_depth_orders_count=None):
             )
     else:
         symbol = PairSymbol.IdName(*symbol)
-        present_prices = set(Order.open_objects.filter(symbol_id=symbol.id, type=Order.DEPTH).values_list('price', flat=True))
+        present_prices = set(
+            Order.open_objects.filter(symbol_id=symbol.id, type=Order.DEPTH).values_list('price', flat=True))
         try:
             for side in (Order.BUY, Order.SELL):
                 price = Order.get_maker_price(symbol, side)
