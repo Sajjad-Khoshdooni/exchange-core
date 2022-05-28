@@ -256,6 +256,14 @@ if settings.DEBUG:
                 'expire': 67
             }
         },
+        'handle open stop loss': {
+            'task': 'market.tasks.stop_loss.handle_stop_loss',
+            'schedule': 1,
+            'options': {
+                'queue': 'stop_loss',
+                'expire': 1
+            },
+        }
         # 'random_trader': {
         #     'task': 'trader.tasks.random_trader.random_trader',
         #     'schedule': 60,
@@ -265,4 +273,3 @@ if settings.DEBUG:
         #     }
         # },
     }
-

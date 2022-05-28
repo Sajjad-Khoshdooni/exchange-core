@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task(queue='stop_loss')
 def handle_stop_loss():
-    stop_loss_symbols = list(StopLoss.open_objects.values_list('symbol__id').distinct())
+    stop_loss_symbols = list(StopLoss.open_objects.values_list('symbol__id', flat=True).distinct())
     market_top_prices = get_market_top_prices(stop_loss_symbols)
 
     for symbol_id in stop_loss_symbols:
