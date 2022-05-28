@@ -15,10 +15,11 @@ class ZibalCallbackView(TemplateView):
     authentication_classes = permission_classes = ()
 
     def get(self, request, *args, **kwargs):
+
         status = request.GET.get('success')
         authority = request.GET.get('trackId')
 
-        if status not in ['1', '2']:
+        if status not in ['1', '0']:
             return HttpResponseBadRequest('Invalid data')
 
         payment_request = get_object_or_404(PaymentRequest, authority=authority)
@@ -30,7 +31,7 @@ class ZibalCallbackView(TemplateView):
             )
 
         if payment.status == Payment.PENDING:
-            if status == '2':
+            if status == '0':
                 payment.status = CANCELED
                 payment.save()
             else:

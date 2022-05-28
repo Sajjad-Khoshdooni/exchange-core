@@ -227,13 +227,13 @@ class ZibalGateway(Gateway):
             self.BASE_URL + '/v1/verify',
             data={
                 'merchant': payment_request.gateway.merchant_id,
-                'trackId': payment_request.authority
+                'trackId': int(payment_request.authority)
             }
         )
 
         data = resp.json()
 
-        if data['status'] == 100:
+        if data['result'] == 100:
             with transaction.atomic():
                 payment.status = DONE
                 payment.ref_id = data.get('transId')
