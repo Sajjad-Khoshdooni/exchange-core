@@ -161,6 +161,11 @@ class AssetsViewSet(ModelViewSet):
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
 
+        if self.request.user.is_authenticated:
+            ctx['bookmark_assets'] = set(self.request.user.account.bookmark_assets.values_list('id', flat=True))
+        else:
+            ctx['bookmark_assets'] = set()
+
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
             caps = CoinMarketCap.objects.filter(symbol__in=symbols)
