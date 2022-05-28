@@ -40,7 +40,7 @@ class SymbolListAPIView(ListAPIView):
         ctx = super().get_serializer_context()
         user = self.request.user
         if user.id:
-            ctx['bookmarks'] = user.account.bookmark_market.all()
+            ctx['bookmarks'] = set(user.account.bookmark_market.values_list('id', flat=True))
         else:
             ctx['bookmarks'] = []
 
