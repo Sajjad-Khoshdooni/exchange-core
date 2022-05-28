@@ -4,7 +4,6 @@ from decimal import Decimal
 from typing import Dict, List
 
 from cachetools.func import ttl_cache
-from django.conf import settings
 
 from collector.price.grpc_client import gRPCClient
 from collector.utils.price import price_redis
