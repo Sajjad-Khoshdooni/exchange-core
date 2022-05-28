@@ -26,27 +26,27 @@ TEMPLATES = {
         'text': 'accounts/text/verify_email.txt',
     },
     'withdraw_email': {
-        'subject': 'راستین | اطلاع رسانی برداشت رمز ارزی',
+        'subject': 'راستین | اطلاع‌رسانی برداشت رمز ارزی',
         'html': 'accounts/email/withdraw_email.min.html',
         'text': 'accounts/text/withdraw_email.txt',
     },
     'successful_fiat_withdraw_email': {
-        'subject': 'راستین | اطلاع رسانی برداشت ریالی',
+        'subject': 'راستین | اطلاع‌رسانی برداشت ریالی',
         'html': 'accounts/email/successful_fiat_withdraw_email.min.html',
         'text': 'accounts/text/successful_fiat_withdraw_email.txt',
     },
     'cansel_fiat_withdraw_email': {
-        'subject': 'راستین | اطلاع رسانی لغو برداشت ریالی ',
+        'subject': 'راستین | اطلاع‌رسانی لغو برداشت ریالی ',
         'html': 'accounts/email/cansel_fiat_withdraw_email.min.html',
         'text': 'accounts/text/cansel_fiat_withdraw_email.txt',
     },
     'deposit_email': {
-        'subject': 'راستین | اطلاع رسانی واریز رمزارزی ',
+        'subject': 'راستین | اطلاع‌رسانی واریز رمزارزی ',
         'html': 'accounts/email/deposit_email.min.html',
         'text': 'accounts/text/deposit_email.txt',
     },
     'payment_email': {
-        'subject': 'راستین | اطلاع رسانی واریز ریالی',
+        'subject': 'راستین | اطلاع‌رسانی واریز ریالی',
         'html': 'accounts/email/payment_email.min.html',
         'text': 'accounts/text/payment_email.txt',
     }
