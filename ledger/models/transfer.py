@@ -12,6 +12,7 @@ from ledger.models import Wallet, Network
 from ledger.models.crypto_balance import CryptoBalance
 from ledger.utils.fields import get_amount_field, get_address_field, get_lock_field
 from ledger.utils.precision import humanize_number
+from accounts.utils import email
 
 logger = logging.getLogger(__name__)
 
@@ -172,11 +173,31 @@ class Transfer(models.Model):
                     title='دریافت شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol),
                     message='از ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
                 )
+                email.send_email_by_template(
+                    recipient=self.wallet.account.user.email,
+                    template=email.SCOPE_DEPOSIT_EMAIL,
+                    context={
+                        'amount': humanize_number(sent_amount),
+                        'wallet_asset': self.wallet.asset.symbol,
+                        'withdraw_address': self.deposit_address,
+                        'trx_hash': self.trx_hash
+                    }
+                )
             else:
                 Notification.send(
                     recipient=self.wallet.account.user,
                     title='ارسال شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol),
                     message='به ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
+                )
+                email.send_email_by_template(
+                    recipient=self.wallet.account.user.email,
+                    template=email.SCOPE_WITHDRAW_EMAIL,
+                    context={
+                        'amount': humanize_number(sent_amount),
+                        'wallet_asset': self.wallet.asset.symbol,
+                        'withdraw_address': self.out_address,
+                        'trx_hash': self.trx_hash
+                    }
                 )
 
     class Meta:

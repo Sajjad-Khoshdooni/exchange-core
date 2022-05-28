@@ -116,6 +116,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             )
         except InsufficientBalance:
             raise ValidationError('موجودی کافی نیست.')
+
     class Meta:
         model = Transfer
         fields = ('amount', 'address', 'coin', 'network', 'code', 'address_book_id')
