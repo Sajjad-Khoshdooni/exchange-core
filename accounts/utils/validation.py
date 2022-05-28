@@ -1,9 +1,16 @@
 import datetime
+import logging
 from datetime import timedelta
 from secrets import randbelow
 
 import jdatetime
+from django.contrib.sessions.models import Session
 from django.utils import timezone
+
+from accounts.models.login_activity import LoginActivity
+from accounts.utils.ip import get_client_ip
+
+logger = logging.getLogger(__name__)
 
 MINUTES = 60
 HOUR = 60 * MINUTES
@@ -61,3 +68,30 @@ def parse_positive_int(inp: str, default: int = None):
         num = default
 
     return num
+
+
+def set_login_activity(request, user):
+    try:
+        os = request.user_agent.os.family
+        if request.user_agent.os.version_string:
+            os += ' ' + request.user_agent.os.version_string
+
+        device = request.user_agent.device.family
+
+        browser = request.user_agent.browser.family
+
+        if request.user_agent.browser.version_string:
+            browser += ' ' + request.user_agent.os.version_string
+
+        LoginActivity.objects.create(
+            user=user,
+            ip=get_client_ip(request),
+            user_agent=request.META['HTTP_USER_AGENT'],
+            session=Session.objects.get(session_key=request.session.session_key),
+            device=device,
+            os=os,
+            browser=browser,
+        )
+    except:
+        logger.exception('User login activity dos not saved ')
+    return
