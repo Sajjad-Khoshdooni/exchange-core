@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from yekta_config.config import config
 
 from accounts.models import Account
 from ledger.models import Trx, Asset
@@ -28,9 +29,9 @@ class PaymentRequest(models.Model):
 
 
 class Payment(models.Model):
-
-    SUCCESS_URL = 'https://raastin.com/checkout/success'
-    FAIL_URL = 'https://raastin.com/checkout/fail'
+    PANEL_URL = config('PANEL_URL')
+    SUCCESS_URL = PANEL_URL + '/checkout/success'
+    FAIL_URL = PANEL_URL + '/checkout/fail'
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
