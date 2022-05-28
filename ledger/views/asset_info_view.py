@@ -194,6 +194,8 @@ class AssetsViewSet(ModelViewSet):
         else:
             queryset = Asset.live_objects.all()
 
+        queryset = queryset.filter(trade_enable=True)
+
         if self.get_options('category'):
             queryset = queryset.filter(coincategory__name=self.get_options('category'))
 
