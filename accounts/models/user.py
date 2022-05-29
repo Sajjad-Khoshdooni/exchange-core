@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
 from django.db.models import Q, UniqueConstraint
@@ -30,6 +32,8 @@ class User(AbstractUser):
 
     objects = CustomUserManager()
     history = HistoricalRecords()
+
+    chat_uuid = models.UUIDField(default=uuid4)
 
     phone = models.CharField(
         max_length=PHONE_MAX_LENGTH,
