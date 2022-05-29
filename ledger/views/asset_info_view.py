@@ -76,7 +76,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return min_withdraw['min']
 
     def get_trend_url(self, asset: Asset):
-        cap = CoinMarketCap.objects.filter(symbol=asset.symbol).first()
+        symbol = CoinMarketCap.SYMBOL_TRANSLATION.get(asset.symbol, asset.symbol)
+        cap = CoinMarketCap.objects.filter(symbol=symbol).first()
         if cap:
             return 'https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/%d.svg?v=%s' % \
                    (cap.internal_id, str(int(time.time()) // 3600))

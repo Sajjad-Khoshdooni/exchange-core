@@ -86,7 +86,7 @@ class BinanceConsumer:
 
         for (name, data) in self.queue.items():
             pipe.hset(name=name, mapping=data)
-            pipe.expire(name, 10)
+            pipe.expire(name, 20)
 
         pipe.execute()
 
