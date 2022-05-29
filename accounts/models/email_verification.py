@@ -102,7 +102,11 @@ class EmailVerificationCode(models.Model):
         send_email_by_template(
             recipient=email,
             template=template,
-            context={'otp_code': otp_code.code, 'brand': config('BRAND')}
+            context={'otp_code': otp_code.code,
+                     'brand': config('BRAND'),
+                     'panel_url': config('PANEL_URL'),
+                     'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+                     }
         )
 
     def set_code_used(self):

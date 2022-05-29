@@ -71,7 +71,12 @@ class Payment(models.Model):
             email.send_email_by_template(
                 recipient=user_email,
                 template=email.SCOPE_PAYMENT,
-                context={'payment_amount': payment_amont}
+                context={
+                    'payment_amount': payment_amont,
+                    'brand': config('BRAND'),
+                    'panel_url': config('PANEL_URL'),
+                    'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+                         }
             )
 
     def accept(self):

@@ -19,34 +19,36 @@ SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw_email'
 SCOPE_CANSEL_FIAT_WITHDRAW = 'cansel_fiat_withdraw_email'
 SCOPE_PAYMENT = 'payment_email'
 
+BRAND = config('BRAND')
+
 TEMPLATES = {
     'verify_email': {
-        'subject': 'راستین | کد تایید ایمیل',
+        'subject':  '{} | کد تایید ایمیل'.format(BRAND),
         'html': 'accounts/email/verify_email.min.html',
         'text': 'accounts/text/verify_email.txt',
     },
     'withdraw_email': {
-        'subject': 'راستین | اطلاع‌رسانی برداشت رمز ارزی',
+        'subject': '{} | اطلاع‌رسانی برداشت رمز ارزی'.format(BRAND),
         'html': 'accounts/email/withdraw_email.min.html',
         'text': 'accounts/text/withdraw_email.txt',
     },
     'successful_fiat_withdraw_email': {
-        'subject': 'راستین | اطلاع‌رسانی برداشت ریالی',
+        'subject': '{} | اطلاع‌رسانی برداشت ریالی'.format(BRAND),
         'html': 'accounts/email/successful_fiat_withdraw_email.min.html',
         'text': 'accounts/text/successful_fiat_withdraw_email.txt',
     },
     'cansel_fiat_withdraw_email': {
-        'subject': 'راستین | اطلاع‌رسانی لغو برداشت ریالی ',
+        'subject': '{} | اطلاع‌رسانی لغو برداشت ریالی '.format(BRAND),
         'html': 'accounts/email/cansel_fiat_withdraw_email.html',
         'text': 'accounts/text/cansel_fiat_withdraw_email.txt',
     },
     'deposit_email': {
-        'subject': 'راستین | اطلاع‌رسانی واریز رمزارزی ',
+        'subject': '{} | اطلاع‌رسانی واریز رمزارزی '.format(BRAND),
         'html': 'accounts/email/deposit_email.min.html',
         'text': 'accounts/text/deposit_email.txt',
     },
     'payment_email': {
-        'subject': 'راستین | اطلاع‌رسانی واریز ریالی',
+        'subject': '{} | اطلاع‌رسانی واریز ریالی'.format(BRAND),
         'html': 'accounts/email/payment_email.min.html',
         'text': 'accounts/text/payment_email.txt',
     }
