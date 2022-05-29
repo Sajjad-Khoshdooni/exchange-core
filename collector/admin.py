@@ -5,8 +5,9 @@ from collector.models import CoinMarketCap, BinanceIncome
 
 @admin.register(CoinMarketCap)
 class CoinMarketCapAdmin(admin.ModelAdmin):
-    list_display = ('symbol', 'internal_id', 'name', 'slug', 'price', 'market_cap')
+    list_display = ('symbol', 'cmc_rank', 'internal_id', 'name', 'slug', 'price', 'market_cap')
     search_fields = ('symbol', )
+    ordering = ('cmc_rank', )
 
 
 @admin.register(BinanceIncome)

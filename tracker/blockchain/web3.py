@@ -55,7 +55,7 @@ class Web3ERC20BasedCoinHandler(CoinHandler):
         self.symbol_contract_mapper = symbol_contract_mapper
         self.amount_normalizer = amount_normalizer
         self.abi_getter = abi_getter
-        self.all_asset_symbols = Asset.objects.all().values_list('symbol', flat=True)
+        self.all_asset_symbols = Asset.live_objects.values_list('symbol', flat=True)
 
     def is_valid_transaction(self, t: RawTransactionDTO):
         t = t.raw_transaction

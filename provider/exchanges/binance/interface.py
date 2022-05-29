@@ -4,7 +4,7 @@ from typing import Union
 
 from django.conf import settings
 
-from ledger.utils.cache import cache_for
+from ledger.utils.cache import get_cache_func_key, cache
 from ledger.utils.precision import decimal_to_str
 from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request, \
     spot_send_public_request, futures_send_public_request
@@ -15,12 +15,33 @@ MARKET, LIMIT = 'MARKET', 'LIMIT'
 SELL, BUY = 'SELL', 'BUY'
 GET, POST = 'GET', 'POST'
 
+HOUR = 3600
+
 
 class BinanceSpotHandler:
     order_url = '/api/v3/order'
 
     @classmethod
-    def collect_api(cls, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
+    def collect_api(cls, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
+                    cache_timeout: int = None):
+        cache_key = None
+
+        if cache_timeout:
+            cache_key = get_cache_func_key(cls, url, method, data, signed)
+            result = cache.get(cache_key)
+
+            if result is not None:
+                return result
+
+        result = cls._collect_api(url=url, method=method, data=data, signed=signed)
+
+        if cache_timeout:
+            cache.set(cache_key, result, cache_timeout)
+
+        return result
+
+    @classmethod
+    def _collect_api(cls, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
         if settings.DEBUG_OR_TESTING:
             return {}
 
@@ -76,9 +97,8 @@ class BinanceSpotHandler:
         return {b['asset']: Decimal(b['free']) for b in balances_list}
 
     @classmethod
-    @cache_for(time=120)
     def get_all_coins(cls):
-        return cls.collect_api('/sapi/v1/capital/config/getall', method='GET')
+        return cls.collect_api('/sapi/v1/capital/config/getall', method='GET', cache_timeout=HOUR)
 
     @classmethod
     def get_network_info(cls, coin: str, network: str) -> dict:
@@ -105,9 +125,12 @@ class BinanceSpotHandler:
         })
 
     @classmethod
-    @cache_for(time=120)
     def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
-        data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False)
+        data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False, cache_timeout=HOUR)
+
+        if not data:
+            return
+
         filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['symbols'][0]['filters']))
         return filters and filters[0]
 
@@ -126,7 +149,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
     order_url = '/fapi/v1/order'
 
     @classmethod
-    def collect_api(cls, url: str, method: str = 'POST', data: dict = None, signed: bool = True):
+    def _collect_api(cls, url: str, method: str = 'POST', data: dict = None, signed: bool = True):
         if settings.DEBUG_OR_TESTING:
             return {}
 
@@ -148,7 +171,6 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         )
 
     @classmethod
-    @cache_for(time=120)
     def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
         symbol_changed = False
 
@@ -156,7 +178,11 @@ class BinanceFuturesHandler(BinanceSpotHandler):
             symbol = '1000' + symbol
             symbol_changed = True
 
-        data = cls.collect_api('/fapi/v1/exchangeInfo', signed=False)
+        data = cls.collect_api('/fapi/v1/exchangeInfo', signed=False, cache_timeout=HOUR)
+
+        if not data:
+            return
+
         data = data['symbols']
         coin_data = list(filter(lambda f: f['symbol'] == symbol, data))
 

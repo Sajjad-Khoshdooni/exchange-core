@@ -49,7 +49,7 @@ class AssetOverview:
             self._user_type_balances[key[0]] += amount
 
         self._prices = get_prices_dict(
-            coins=list(Asset.objects.all().values_list('symbol', flat=True)),
+            coins=list(Asset.candid_objects.values_list('symbol', flat=True)),
             side=SELL
         )
 

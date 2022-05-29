@@ -1,4 +1,12 @@
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal, ROUND_DOWN, ROUND_UP
+from math import ceil
+
+
+def round_up_to_exponent(amount: Decimal, precision: int = 0):
+    if precision < 0:
+        power = Decimal(f'1e{-precision}')
+        return ceil(amount / power) * power
+    return ceil_precision(amount, precision)
 
 
 def round_down_to_exponent(amount: Decimal, precision: int = 0):
@@ -6,6 +14,11 @@ def round_down_to_exponent(amount: Decimal, precision: int = 0):
         power = Decimal(f'1e{-precision}')
         return amount // power * power
     return floor_precision(amount, precision)
+
+
+def ceil_precision(amount: Decimal, precision: int = 0):
+    step = precision_to_step(precision)
+    return amount.quantize(step, rounding=ROUND_UP)
 
 
 def floor_precision(amount: Decimal, precision: int = 0):

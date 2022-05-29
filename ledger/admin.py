@@ -38,6 +38,7 @@ class AssetAdmin(AdvancedAdmin):
     list_filter = ('enable', 'trend')
     list_editable = ('enable', 'order', 'trend', 'trade_enable')
     search_fields = ('symbol', )
+    ordering = ('-enable', '-pin_to_top', '-trend', 'order')
 
     def changelist_view(self, request, extra_context=None):
 
@@ -127,7 +128,8 @@ class AssetAdmin(AdvancedAdmin):
     get_hedge_value.short_description = 'hedge value'
 
     def get_hedge_threshold(self, asset: Asset):
-        return asset.get_hedger().get_step_size(asset.symbol + 'USDT')
+        if asset.enable:
+            return asset.get_hedger().get_step_size(asset.symbol + 'USDT')
 
     get_hedge_threshold.short_description = 'hedge threshold'
 
@@ -374,8 +376,8 @@ class PrizeAdmin(admin.ModelAdmin):
 
 @admin.register(models.CoinCategory)
 class CoinCategoryAdmin(admin.ModelAdmin):
-    list_display = ['name_fa', 'name', 'get_coin_count']
+    list_display = ['name', 'get_coin_count']
 
     def get_coin_count(self, coincaterogy:CoinCategory):
-        return coincaterogy.coin.count()
+        return coincaterogy.coins.count()
     get_coin_count.short_description = 'تعداد رمزارز'
