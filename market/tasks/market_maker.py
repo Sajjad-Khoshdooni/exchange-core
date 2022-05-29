@@ -33,7 +33,7 @@ def update_maker_orders():
     for depth in depth_orders:
         open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
 
-    for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True):
+    for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True, asset__enable=True):
         symbol_top_prices = {
             Order.BUY: market_top_prices[symbol.id, Order.BUY],
             Order.SELL: market_top_prices[symbol.id, Order.SELL],
@@ -112,7 +112,7 @@ def create_depth_orders(symbol=None, open_depth_orders_count=None):
             open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
 
     if symbol is None:
-        for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True):
+        for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True, asset__enable=True):
             symbol_open_depth_orders_count = {
                 Order.BUY: open_depth_orders_count[symbol.id, Order.BUY],
                 Order.SELL: open_depth_orders_count[symbol.id, Order.SELL],
