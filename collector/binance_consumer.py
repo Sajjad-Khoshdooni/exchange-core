@@ -86,7 +86,7 @@ class BinanceConsumer:
 
         for (name, data) in self.queue.items():
             pipe.hset(name=name, mapping=data)
-            pipe.expire(name, 60)  # todo: reduce this to 10 for volatile coins
+            pipe.expire(name, 30)  # todo: reduce this to 10 for volatile coins
 
         pipe.execute()
 
