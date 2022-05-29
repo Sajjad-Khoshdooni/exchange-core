@@ -88,7 +88,23 @@ def spot_send_public_request(url_path: str, payload: dict):
         url = url + "?" + query_string
     print("{}".format(url))
     response = dispatch_request("GET")(url=url, timeout=TIMEOUT)
-    return response.json()
+    resp_data = response.json()
+
+    if not response.ok:
+        logger.warning(
+            'binance request failed',
+            extra={
+                'url': url_path,
+                'method': 'GET',
+                'payload': payload,
+                'status': response.status_code,
+                'resp': resp_data
+            }
+        )
+
+        return
+
+    return resp_data
 
 
 # used for sending request requires the signature
@@ -134,6 +150,24 @@ def futures_send_public_request(url_path, payload: dict):
     url = FUTURES_BASE_URL + url_path
     if query_string:
         url = url + "?" + query_string
+
     print("{}".format(url))
+
     response = dispatch_request("GET")(url=url, timeout=TIMEOUT)
-    return response.json()
+    resp_data = response.json()
+
+    if not response.ok:
+        logger.warning(
+            'binance request failed',
+            extra={
+                'url': url_path,
+                'method': 'GET',
+                'payload': payload,
+                'status': response.status_code,
+                'resp': resp_data
+            }
+        )
+
+        return
+
+    return resp_data

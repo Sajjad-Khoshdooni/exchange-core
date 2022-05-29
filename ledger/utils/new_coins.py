@@ -33,7 +33,7 @@ def add_candidate_coins(coins: list):
 
         data = spot
 
-        if futures and futures['status'] != 'TRADING':
+        if futures and futures['status'] == 'TRADING':
             asset.hedge_method = Asset.HEDGE_BINANCE_FUTURE
             data = futures
 
@@ -46,7 +46,7 @@ def add_candidate_coins(coins: list):
 
         asset.precision = -int(math.log10(Decimal(lot_size['stepSize'])))
         asset.price_precision_usdt = -int(math.log10(Decimal(price_filter['tickSize'])))
-        asset.price_precision_irt = min(asset.price_precision_usdt - 3, 0)
+        asset.price_precision_irt = max(asset.price_precision_usdt - 3, 0)
 
         if created:
             coin_data = BinanceSpotHandler.get_coin_data(coin)
@@ -68,6 +68,7 @@ def add_candidate_coins(coins: list):
                         'withdraw_fee': n['withdrawFee'],
                         'withdraw_min': n['withdrawMin'],
                         'withdraw_max': n['withdrawMax'],
+                        'withdraw_precision': -int(math.log10(Decimal(n['withdrawIntegerMultiple'])))
                     }
                 )
 

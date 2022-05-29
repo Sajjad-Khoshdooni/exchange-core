@@ -133,7 +133,12 @@ class BinanceSpotHandler:
 
     @classmethod
     def get_symbol_data(cls, symbol: str) -> Union[dict, None]:
-        return cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False, cache_timeout=HOUR)
+        data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False, cache_timeout=HOUR)
+
+        if not data:
+            return
+
+        return data['symbols'][0]
 
     @classmethod
     def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
@@ -142,7 +147,7 @@ class BinanceSpotHandler:
         if not data:
             return
 
-        filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['symbols'][0]['filters']))
+        filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['filters']))
         return filters and filters[0]
 
     @classmethod
