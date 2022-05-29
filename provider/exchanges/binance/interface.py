@@ -101,13 +101,20 @@ class BinanceSpotHandler:
         return cls.collect_api('/sapi/v1/capital/config/getall', method='GET', cache_timeout=HOUR)
 
     @classmethod
-    def get_network_info(cls, coin: str, network: str) -> dict:
+    def get_coin_data(cls, coin: str) -> Union[dict, None]:
         info = list(filter(lambda d: d['coin'] == coin, cls.get_all_coins()))
 
         if not info:
             return
 
-        coin = info[0]
+        return info[0]
+
+    @classmethod
+    def get_network_info(cls, coin: str, network: str) -> Union[dict, None]:
+        coin = cls.get_coin_data(coin)
+        if not coin:
+            return
+
         networks = list(filter(lambda d: d['network'] == network, coin['networkList']))
 
         if networks:
@@ -125,8 +132,12 @@ class BinanceSpotHandler:
         })
 
     @classmethod
+    def get_symbol_data(cls, symbol: str) -> Union[dict, None]:
+        return cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False, cache_timeout=HOUR)
+
+    @classmethod
     def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
-        data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False, cache_timeout=HOUR)
+        data = cls.get_symbol_data(symbol)
 
         if not data:
             return
@@ -147,6 +158,10 @@ class BinanceSpotHandler:
 
 class BinanceFuturesHandler(BinanceSpotHandler):
     order_url = '/fapi/v1/order'
+
+    renamed_symbols = {
+        'SHIBUSDT': '1000SHIBUSDT'
+    }
 
     @classmethod
     def _collect_api(cls, url: str, method: str = 'POST', data: dict = None, signed: bool = True):
@@ -171,12 +186,9 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         )
 
     @classmethod
-    def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
-        symbol_changed = False
-
-        if symbol == 'SHIBUSDT':
-            symbol = '1000' + symbol
-            symbol_changed = True
+    def get_symbol_data(cls, symbol: str) -> Union[dict, None]:
+        if symbol in cls.renamed_symbols:
+            symbol = cls.renamed_symbols[symbol]
 
         data = cls.collect_api('/fapi/v1/exchangeInfo', signed=False, cache_timeout=HOUR)
 
@@ -189,14 +201,20 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         if not coin_data:
             return
 
-        coin_data = coin_data[0]
+        return coin_data[0]
+
+    @classmethod
+    def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
+        coin_data = cls.get_symbol_data(symbol)
+        if not coin_data:
+            return
 
         filters = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', coin_data['filters']))
 
         if filters:
             lot_size = filters[0]
 
-            if symbol_changed:
+            if symbol in cls.renamed_symbols:
                 lot_size['stepSize'] = Decimal(lot_size['stepSize']) * 1000
                 lot_size['minQty'] = Decimal(lot_size['minQty']) * 1000
 

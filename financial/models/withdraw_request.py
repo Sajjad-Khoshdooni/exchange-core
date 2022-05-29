@@ -117,12 +117,17 @@ class FiatWithdrawRequest(models.Model):
 
     def alert_withdraw_verify_status(self):
         from financial.utils.withdraw_limit import get_fiat_estimate_receive_time
-        estimated_receive_time = gregorian_to_jalali_datetime_str(
-            get_fiat_estimate_receive_time(
-                self.withdraw_datetime
+        if self.withdraw_datetime:
+            estimated_receive_time = gregorian_to_jalali_datetime_str(
+                get_fiat_estimate_receive_time(
+                    self.withdraw_datetime
+                )
             )
-        )
+        else:
+            estimated_receive_time = None
         user = self.bank_account.user
+        user_email = user.email
+
         if self.status == PENDING:
             title = 'درخواست برداشت شما به بانک ارسال گردید.'
             description ='وجه درخواستی شما در سیکل بعدی پایا {} به حساب شما واریز خواهد شد.'.format(estimated_receive_time)
@@ -150,13 +155,15 @@ class FiatWithdrawRequest(models.Model):
             template=template,
             token=humanize_number(self.amount)
         )
-        email.send_email_by_template(
-            recipient=user.email,
-            template=email_template,
-            context={
-                'estimated_receive_time': estimated_receive_time,
-            }
-        )
+
+        if user_email:
+            email.send_email_by_template(
+                recipient=user_email,
+                template=email_template,
+                context={
+                    'estimated_receive_time': estimated_receive_time or None,
+                }
+            )
 
     def change_status(self, new_status: str):
         if self.status == new_status:
