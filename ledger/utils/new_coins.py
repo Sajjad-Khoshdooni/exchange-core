@@ -10,6 +10,8 @@ def add_candidate_coins(coins: list):
     order = Asset.objects.order_by('order').last().order
 
     for coin in coins:
+        coin = coin.upper()
+
         symbol = coin + 'USDT'
         spot = BinanceSpotHandler.get_symbol_data(symbol)
 
