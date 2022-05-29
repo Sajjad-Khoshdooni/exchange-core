@@ -33,7 +33,7 @@ def add_candidate_coins(coins: list):
 
         data = spot
 
-        if futures and futures['status'] != 'TRADING':
+        if futures and futures['status'] == 'TRADING':
             asset.hedge_method = Asset.HEDGE_BINANCE_FUTURE
             data = futures
 
