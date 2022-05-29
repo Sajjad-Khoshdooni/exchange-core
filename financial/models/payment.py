@@ -1,9 +1,15 @@
+from decimal import Decimal
+
 from django.db import models
 from django.utils import timezone
 
 from accounts.models import Account
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_group_id_field, get_status_field
+
+from accounts.models import Notification
+from accounts.utils import email
+from ledger.utils.precision import humanize_number, get_presentation_amount
 
 
 class PaymentRequest(models.Model):
@@ -46,6 +52,24 @@ class Payment(models.Model):
     ref_id = models.PositiveBigIntegerField(null=True, blank=True)
     ref_status = models.SmallIntegerField(null=True, blank=True)
 
+    def alert_payment(self):
+        user = self.payment_request.bank_card.user
+        title = 'واریز وجه با موفقیت انجام شد'
+        payment_amont = humanize_number(get_presentation_amount(Decimal(self.payment_request.amount)))
+        description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amont)
+
+        Notification.send(
+            recipient=user,
+            title=title,
+            message=description,
+            level=Notification.SUCCESS
+        )
+        email.send_email_by_template(
+            recipient=user.email,
+            template=email.SCOPE_PAYMENT,
+            context={'payment_amount': payment_amont}
+        )
+
     def accept(self):
         asset = Asset.get(Asset.IRT)
         user = self.payment_request.bank_card.user
@@ -62,3 +86,5 @@ class Payment(models.Model):
         if not user.first_fiat_deposit_date:
             user.first_fiat_deposit_date = timezone.now()
             user.save()
+
+        self.alert_payment()

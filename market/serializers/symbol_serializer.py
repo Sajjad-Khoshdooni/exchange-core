@@ -26,7 +26,7 @@ class SymbolSerializer(serializers.ModelSerializer):
         return representation
 
     def get_bookmark(self, pair_symbol: PairSymbol):
-        return pair_symbol in self.context.get('bookmarks')
+        return pair_symbol.id in self.context.get('bookmarks')
 
     class Meta:
         model = PairSymbol
@@ -47,7 +47,7 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
             return last_trade.format_values()['price']
 
     def get_bookmark(self, pair_symbol: PairSymbol):
-        return pair_symbol in self.context.get('bookmarks')
+        return pair_symbol.id in self.context.get('bookmarks')
 
     @staticmethod
     def get_change_value_pairs(symbol: PairSymbol):

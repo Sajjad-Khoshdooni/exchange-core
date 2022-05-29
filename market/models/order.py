@@ -1,8 +1,9 @@
 import logging
+from collections import defaultdict
 from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
-from random import randrange
+from random import randrange, random
 
 from django.conf import settings
 from django.db import models, transaction
@@ -13,9 +14,10 @@ from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Trx, Wallet, BalanceLock
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
-from ledger.utils.precision import floor_precision, round_down_to_exponent
+from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
 from market.models import PairSymbol
+from market.models.stop_loss import StopLoss
 from market.models.referral_trx import ReferralTrx
 from provider.models import ProviderOrder
 
@@ -70,6 +72,8 @@ class Order(models.Model):
     lock = get_lock_field(related_name='market_order')
 
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
+
+    stop_loss = models.ForeignKey(to='market.StopLoss', on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f'({self.id}) {self.symbol}-{self.side} [p:{self.price:.2f}] (a:{self.unfilled_amount:.5f}/{self.amount:.5f})'
@@ -144,7 +148,12 @@ class Order(models.Model):
         coin = symbol.name.split(base_symbol)[0]
         boundary_price = get_trading_price(coin, side)
 
-        return boundary_price * loose_factor if side == Order.BUY else boundary_price / loose_factor
+        precision = Order.get_rounding_precision(boundary_price, symbol.tick_size)
+        # use bi-direction in roundness to avoid risky bid ask spread
+        if side == Order.BUY:
+            return round_down_to_exponent(boundary_price * loose_factor, precision)
+        else:
+            return round_up_to_exponent(boundary_price / loose_factor, precision)
 
     @classmethod
     def get_lock_wallet(cls, wallet, base_wallet, side):
@@ -172,8 +181,8 @@ class Order(models.Model):
     def make_match(self):
         with transaction.atomic():
             from market.models import FillOrder
-            # lock current order
-            Order.objects.select_for_update().filter(id=self.id).first()
+            # lock symbol open orders
+            Order.open_objects.select_for_update().filter(symbol=self.symbol)
 
             to_cancel_orders = Order.open_objects.filter(
                 symbol=self.symbol, cancel_request__isnull=False
@@ -182,7 +191,7 @@ class Order(models.Model):
 
             opp_side = self.get_opposite_side(self.side)
 
-            matching_orders = Order.open_objects.select_for_update().filter(
+            matching_orders = Order.open_objects.filter(
                 symbol=self.symbol, side=opp_side, **Order.get_price_filter(self.price, self.side)
             ).order_by(*self.get_order_by(opp_side))
 
@@ -335,7 +344,11 @@ class Order(models.Model):
     @staticmethod
     def init_maker_order(symbol: PairSymbol.IdName, side, maker_price: Decimal, market=Wallet.SPOT):
         symbol_instance = PairSymbol.objects.get(id=symbol.id)
-        maker_amount = symbol_instance.maker_amount * Decimal(randrange(1, 40) / 20.0)
+        if random() < 0.6:
+            amount_factor = Decimal(randrange(2, 15) / Decimal(100))
+        else:
+            amount_factor = Decimal(randrange(10, 20) / Decimal(10))
+        maker_amount = symbol_instance.maker_amount * amount_factor * Decimal(randrange(80, 120) / Decimal(100))
         precision = Order.get_rounding_precision(maker_amount, symbol_instance.step_size)
         amount = round_down_to_exponent(maker_amount, precision)
         wallet = symbol_instance.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
@@ -355,9 +368,6 @@ class Order(models.Model):
         if not maker_price:
             logger.warning(f'cannot calculate maker price for {symbol.name} {side}')
             return
-        symbol_instance = PairSymbol.objects.get(id=symbol.id)
-        precision = Order.get_rounding_precision(maker_price, symbol_instance.tick_size)
-        maker_price = round_down_to_exponent(maker_price, precision)
 
         loose_factor = Decimal('1.001') if side == Order.BUY else 1 / Decimal('1.001')
         if not best_order or \
@@ -413,3 +423,15 @@ class Order(models.Model):
         market_price = top_order['top_price'] * (Decimal(1) - cls.MARKET_BORDER) if side == Order.BUY else \
             top_order['top_price'] * (Decimal(1) + cls.MARKET_BORDER)
         return market_price
+
+    @classmethod
+    def get_top_prices(cls, symbol_id):
+        from market.utils.redis import get_top_prices
+        top_prices = get_top_prices(symbol_id)
+        if not top_prices:
+            top_prices = defaultdict(lambda: Decimal())
+            for depth in Order.open_objects.filter(symbol_id=symbol_id).values('side').annotate(max_price=Max('price'),
+                                                                                                min_price=Min('price')):
+                top_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth[
+                    'min_price']) or Decimal()
+        return top_prices
