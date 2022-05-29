@@ -68,6 +68,7 @@ def add_candidate_coins(coins: list):
                         'withdraw_fee': n['withdrawFee'],
                         'withdraw_min': n['withdrawMin'],
                         'withdraw_max': n['withdrawMax'],
+                        'withdraw_precision': -int(math.log10(Decimal(n['withdrawIntegerMultiple'])))
                     }
                 )
 
