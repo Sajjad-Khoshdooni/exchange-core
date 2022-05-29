@@ -13,7 +13,6 @@ from ledger.models import Asset, Wallet, NetworkAsset
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
 from ledger.utils.price_manager import PriceManager
-from ledger.views.network_asset_info_view import NetworkAssetSerializer
 
 
 class AssetSerializerBuilder(AssetSerializerMini):
@@ -168,6 +167,7 @@ class AssetsViewSet(ModelViewSet):
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
+
         if self.request.user.is_authenticated:
             ctx['bookmark_assets'] = set(self.request.user.account.bookmark_assets.values_list('id', flat=True))
         else:
@@ -201,10 +201,12 @@ class AssetsViewSet(ModelViewSet):
         )
 
     def get_queryset(self):
-        if self.request.user.is_staff:
+        if self.request.user.is_superuser:
             queryset = Asset.candid_objects.all()
         else:
             queryset = Asset.live_objects.all()
+
+        queryset = queryset.filter(trade_enable=True)
 
         if self.get_options('category'):
             queryset = queryset.filter(coincategory__name=self.get_options('category'))
