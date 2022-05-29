@@ -100,7 +100,7 @@ class AssetListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = ('symbol', 'precision', 'free', 'free_irt', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt',
-                  'buy_price_irt', 'can_deposit', 'can_withdraw')
+                  'buy_price_irt', 'can_deposit', 'can_withdraw', 'trade_enable')
         ref_name = 'ledger asset'
 
 
@@ -224,7 +224,7 @@ class WalletViewSet(ModelViewSet):
         return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper())
 
     def get_queryset(self):
-        if self.request.user.is_staff:
+        if self.request.user.is_superuser:
             queryset = Asset.candid_objects.all()
         else:
             queryset = Asset.live_objects.all()
