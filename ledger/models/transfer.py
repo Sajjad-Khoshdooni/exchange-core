@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from django.db import models
 from django.db.models import UniqueConstraint, Q
+from yekta_config.config import config
 
 from accounts.models import Account, Notification
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
@@ -181,7 +182,10 @@ class Transfer(models.Model):
                             'amount': humanize_number(sent_amount),
                             'wallet_asset': self.wallet.asset.symbol,
                             'withdraw_address': self.deposit_address,
-                            'trx_hash': self.trx_hash
+                            'trx_hash': self.trx_hash,
+                            'brand': config('BRAND'),
+                            'panel_url': config('PANEL_URL'),
+                            'logo_elastic_url': config('LOGO_ELASTIC_URL'),
                         }
                     )
             else:
@@ -198,7 +202,10 @@ class Transfer(models.Model):
                             'amount': humanize_number(sent_amount),
                             'wallet_asset': self.wallet.asset.symbol,
                             'withdraw_address': self.out_address,
-                            'trx_hash': self.trx_hash
+                            'trx_hash': self.trx_hash,
+                            'brand': config('BRAND'),
+                            'panel_url': config('PANEL_URL'),
+                            'logo_elastic_url': config('LOGO_ELASTIC_URL'),
                         }
                     )
 

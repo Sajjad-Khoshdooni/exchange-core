@@ -289,11 +289,9 @@ LOGGING = {
 SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='None')
 SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', cast=bool, default=True)
 
-CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN', default='.raastin.com')
+CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN')
 CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='None')
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', cast=bool, default=True)
-
-DEFAULT_FROM_EMAIL = 'راستین <%s>' % config('EMAIL_SENDER', default='')
 
 JALALI_DATE_DEFAULTS = {
    'Strftime': {
