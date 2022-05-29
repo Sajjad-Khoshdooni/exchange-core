@@ -2,6 +2,7 @@ from typing import List
 
 from accounts.models import Account, User, Notification
 from ledger.models import Transfer, Prize
+from yekta_config.config import config
 
 
 class Goal:
@@ -97,7 +98,7 @@ class VerifyLevel2Goal(Goal):
     name = 'verify_level2'
     title = 'احراز هویت'
     link = '/account/verification/basic'
-    description = 'با تکمیل احراز هویت، بدون محدودیت در راستین معامله کنید.'
+    description = 'با تکمیل احراز هویت، بدون محدودیت در {} معامله کنید.'.format(config('BRAND'))
     alert_level = Notification.ERROR
 
     def get_progress(self):
@@ -146,7 +147,7 @@ class InviteGoal(Goal):
     name = 'invite'
     title = 'دعوت از دوستان'
     link = '/account/referral'
-    description = 'دوستان خود را به راستین دعوت کنید و جایزه بگیرید.'
+    description = 'دوستان خود را به {} دعوت کنید و جایزه بگیرید.'.format(config('BRAND'))
     alert_level = Notification.INFO
 
     def get_progress(self):
