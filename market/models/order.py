@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
@@ -16,6 +17,7 @@ from ledger.utils.fields import get_amount_field, get_price_field, get_lock_fiel
 from ledger.utils.precision import floor_precision, round_down_to_exponent
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
 from market.models import PairSymbol
+from market.models.stop_loss import StopLoss
 from market.models.referral_trx import ReferralTrx
 from provider.models import ProviderOrder
 
@@ -70,6 +72,8 @@ class Order(models.Model):
     lock = get_lock_field(related_name='market_order')
 
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
+
+    stop_loss = models.ForeignKey(to='market.StopLoss', on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f'({self.id}) {self.symbol}-{self.side} [p:{self.price:.2f}] (a:{self.unfilled_amount:.5f}/{self.amount:.5f})'
@@ -172,8 +176,8 @@ class Order(models.Model):
     def make_match(self):
         with transaction.atomic():
             from market.models import FillOrder
-            # lock current order
-            Order.objects.select_for_update().filter(id=self.id).first()
+            # lock symbol open orders
+            Order.open_objects.select_for_update().filter(symbol=self.symbol)
 
             to_cancel_orders = Order.open_objects.filter(
                 symbol=self.symbol, cancel_request__isnull=False
@@ -182,7 +186,7 @@ class Order(models.Model):
 
             opp_side = self.get_opposite_side(self.side)
 
-            matching_orders = Order.open_objects.select_for_update().filter(
+            matching_orders = Order.open_objects.filter(
                 symbol=self.symbol, side=opp_side, **Order.get_price_filter(self.price, self.side)
             ).order_by(*self.get_order_by(opp_side))
 
@@ -413,3 +417,15 @@ class Order(models.Model):
         market_price = top_order['top_price'] * (Decimal(1) - cls.MARKET_BORDER) if side == Order.BUY else \
             top_order['top_price'] * (Decimal(1) + cls.MARKET_BORDER)
         return market_price
+
+    @classmethod
+    def get_top_prices(cls, symbol_id):
+        from market.utils.redis import get_top_prices
+        top_prices = get_top_prices(symbol_id)
+        if not top_prices:
+            top_prices = defaultdict(lambda: Decimal())
+            for depth in Order.open_objects.filter(symbol_id=symbol_id).values('side').annotate(max_price=Max('price'),
+                                                                                                min_price=Min('price')):
+                top_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth[
+                    'min_price']) or Decimal()
+        return top_prices

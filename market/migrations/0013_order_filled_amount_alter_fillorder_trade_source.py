@@ -6,12 +6,12 @@ from django.db import migrations, models, transaction
 from django.db.models import Sum
 
 from ledger.utils.precision import floor_precision
-from market.models import Order
 
 
 def populate_filled_amount(apps, schema_editor):
+    Order = apps.get_model('market', 'Order')
     with transaction.atomic():
-        for order in Order.objects.select_for_update().exclude(made_fills__isnull=True, taken_fills__isnull=True):
+        for order in Order.all_objects.select_for_update().exclude(made_fills__isnull=True, taken_fills__isnull=True):
             amount = (order.made_fills.all().aggregate(sum=Sum('amount'))['sum'] or 0) + (
                     order.taken_fills.all().aggregate(sum=Sum('amount'))['sum'] or 0)
             order.filled_amount = floor_precision(Decimal(amount), order.symbol.step_size)

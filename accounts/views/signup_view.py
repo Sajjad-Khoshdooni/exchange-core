@@ -13,6 +13,7 @@ from accounts.models import User, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
+from accounts.utils.validation import set_login_activity
 from accounts.validators import mobile_number_validator, password_validator
 
 
@@ -109,3 +110,4 @@ class SignupView(CreateAPIView):
     def perform_create(self, serializer):
         user = serializer.save()
         login(self.request, user)
+        set_login_activity(self.request, user)
