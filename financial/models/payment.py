@@ -55,6 +55,7 @@ class Payment(models.Model):
 
     def alert_payment(self):
         user = self.payment_request.bank_card.user
+        user_email = user.email
         title = 'واریز وجه با موفقیت انجام شد'
         payment_amont = humanize_number(get_presentation_amount(Decimal(self.payment_request.amount)))
         description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amont)
@@ -65,11 +66,13 @@ class Payment(models.Model):
             message=description,
             level=Notification.SUCCESS
         )
-        email.send_email_by_template(
-            recipient=user.email,
-            template=email.SCOPE_PAYMENT,
-            context={'payment_amount': payment_amont}
-        )
+
+        if user_email:
+            email.send_email_by_template(
+                recipient=user_email,
+                template=email.SCOPE_PAYMENT,
+                context={'payment_amount': payment_amont}
+            )
 
     def accept(self):
         asset = Asset.get(Asset.IRT)
