@@ -220,7 +220,7 @@ class AssetsViewSet(ModelViewSet):
             queryset = queryset.filter(trend=True)
 
         if self.get_options('market') == Wallet.MARGIN:
-            queryset = queryset.exclude(symbol=Asset.IRT)
+            queryset = queryset.filter(margin_enable=True)
 
         return queryset
 

@@ -9,3 +9,4 @@ from .network_asset_info_view import NetworkAssetView
 from .address_book_view import AddressBookView
 from .balance_information import GetBalanceInformation
 from .bookmark_asset import BookmarkAssetsAPIView
+from .margin_wallet_view import MarginWalletViewSet

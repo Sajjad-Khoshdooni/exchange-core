@@ -18,6 +18,7 @@ class SymbolSerializer(serializers.ModelSerializer):
     asset = serializers.CharField(source='asset.symbol', read_only=True)
     base_asset = serializers.CharField(source='base_asset.symbol', read_only=True)
     bookmark = serializers.SerializerMethodField()
+    margin_enable = serializers.BooleanField(source='asset.margin_enable', read_only=True)
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -31,7 +32,7 @@ class SymbolSerializer(serializers.ModelSerializer):
     class Meta:
         model = PairSymbol
         fields = ('name', 'asset', 'base_asset', 'taker_fee', 'maker_fee', 'tick_size', 'step_size',
-                  'min_trade_quantity', 'max_trade_quantity', 'enable', 'bookmark',)
+                  'min_trade_quantity', 'max_trade_quantity', 'enable', 'bookmark', 'margin_enable')
 
 
 class SymbolBreifStatsSerializer(serializers.ModelSerializer):
@@ -40,6 +41,7 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     change_percent = serializers.SerializerMethodField()
     bookmark = serializers.SerializerMethodField()
+    margin_enable = serializers.BooleanField(source='asset.margin_enable', read_only=True)
 
     def get_price(self, symbol: PairSymbol):
         last_trade = FillOrder.get_last(symbol=symbol)
@@ -68,7 +70,7 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = PairSymbol
-        fields = ('name', 'asset', 'base_asset', 'enable', 'price', 'change_percent', 'bookmark')
+        fields = ('name', 'asset', 'base_asset', 'enable', 'price', 'change_percent', 'bookmark', 'margin_enable')
 
 
 class SymbolStatsSerializer(SymbolBreifStatsSerializer):
