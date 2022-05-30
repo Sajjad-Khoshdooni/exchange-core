@@ -64,6 +64,9 @@ def spot_send_signed_request(http_method, url_path, payload: dict):
     resp_data = response.json()
 
     if not response.ok:
+        print('resp_data')
+        print(resp_data)
+
         logger.warning(
             'binance request failed',
             extra={
@@ -91,6 +94,9 @@ def spot_send_public_request(url_path: str, payload: dict):
     resp_data = response.json()
 
     if not response.ok:
+        print('resp_data')
+        print(resp_data)
+
         logger.warning(
             'binance request failed',
             extra={
@@ -128,6 +134,9 @@ def futures_send_signed_request(http_method: str, url_path: str, payload: dict):
     resp_data = response.json()
 
     if not response.ok:
+        print('resp_data')
+        print(resp_data)
+
         logger.warning(
             'binance request failed',
             extra={
@@ -157,6 +166,9 @@ def futures_send_public_request(url_path, payload: dict):
     resp_data = response.json()
 
     if not response.ok:
+        print('resp_data')
+        print(resp_data)
+
         logger.warning(
             'binance request failed',
             extra={
