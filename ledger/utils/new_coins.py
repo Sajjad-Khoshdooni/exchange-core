@@ -61,6 +61,11 @@ def add_candidate_coins(coins: list):
                     'unlock_confirm': n['unLockConfirm'],
                 })
 
+                withdraw_integer_multiple = Decimal(n['withdrawIntegerMultiple'])
+
+                if withdraw_integer_multiple == 0:
+                    withdraw_integer_multiple = Decimal('1e-9')
+
                 NetworkAsset.objects.get_or_create(
                     asset=asset,
                     network=network,
@@ -68,7 +73,7 @@ def add_candidate_coins(coins: list):
                         'withdraw_fee': n['withdrawFee'],
                         'withdraw_min': n['withdrawMin'],
                         'withdraw_max': n['withdrawMax'],
-                        'withdraw_precision': -int(math.log10(Decimal(n['withdrawIntegerMultiple'])))
+                        'withdraw_precision': -int(math.log10(withdraw_integer_multiple))
                     }
                 )
 
