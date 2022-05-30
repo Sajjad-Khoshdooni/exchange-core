@@ -75,7 +75,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         amount = attrs['amount']
 
-        if get_precision(amount) > asset.precision:
+        if get_precision(amount) > network_asset.withdraw_precision:
             raise ValidationError('مقدار وارد شده اشتباه است.')
 
         if amount < network_asset.withdraw_min:
