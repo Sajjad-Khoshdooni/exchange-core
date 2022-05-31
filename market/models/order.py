@@ -183,7 +183,7 @@ class Order(models.Model):
 
     def make_match(self):
         key = 'mm-cc-%s' % self.symbol.name
-        log_prefix = 'MM %s: ' % % self.symbol.name
+        log_prefix = 'MM %s: ' % self.symbol.name
 
         logger.info(log_prefix + 'make match started...')
 
