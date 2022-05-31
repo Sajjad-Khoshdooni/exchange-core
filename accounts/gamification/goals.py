@@ -122,7 +122,7 @@ class TradeStep1Goal(Goal):
     max = Prize.TRADE_THRESHOLD_STEP1
     name = Prize.TRADE_PRIZE_STEP1
     title = 'معامله'
-    link = '/trade/classic/BTCUSDT'
+    link = '/trade/classic/BTCIRT'
     description = 'به ارزش ۲ میلیون تومان معامله کنید و ۵۰,۰۰۰ شیبا جایزه بگیرید.'
 
     def get_progress(self):
@@ -134,7 +134,7 @@ class TradeStep2Goal(Goal):
     max = Prize.TRADE_THRESHOLD_STEP2
     name = Prize.TRADE_PRIZE_STEP2
     title = 'معامله'
-    link = '/trade/classic/BTCUSDT'
+    link = '/trade/classic/BTCIRT'
     description = 'به ارزش ۲۰ میلیون تومان معامله کنید و ۱۰۰,۰۰۰ شیبا جایزه بگیرید.'
 
     def get_progress(self):
