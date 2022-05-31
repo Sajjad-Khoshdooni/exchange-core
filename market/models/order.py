@@ -182,20 +182,21 @@ class Order(models.Model):
         BalanceLock.objects.filter(id=self.lock.id).update(amount=F('amount') - release_amount)
 
     def make_match(self):
-        key = 'make-match-cc'
+        key = 'mm-cc-%s' % self.symbol.name
+        log_prefix = 'MM %s: ' % self.symbol.name
 
-        logger.info('MM: make match started...')
+        logger.info(log_prefix + 'make match started...')
 
         with transaction.atomic():
             from market.models import FillOrder
             # lock symbol open orders
             Order.open_objects.select_for_update().filter(symbol=self.symbol)
 
-            logger.info('MM: make match danger zone...')
+            logger.info(log_prefix + 'make match danger zone')
 
-            # if cache.get(key):
-            #     logger.info('MM: make match danger zone...')
-            #     raise Exception('Concurrent make match!')
+            if cache.get(key):
+                logger.info(log_prefix + 'concurrent detected!')
+                raise Exception('Concurrent make match!')
 
             cache.set(key, 1)
 
@@ -315,7 +316,7 @@ class Order(models.Model):
                         check_prize_achievements(account)
 
             cache.delete(key)
-            logger.info('MM: make match finished.')
+            logger.info(log_prefix + 'make match finished.')
 
     @classmethod
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):
