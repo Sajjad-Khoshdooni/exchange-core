@@ -39,7 +39,7 @@ SIDE_MAP = {
 
 
 def get_binance_price_stream(coin: str):
-    if coin == 'LUNA':
+    if coin == 'LUNC':
         base = 'busd'
     else:
         base = 'usdt'
@@ -51,7 +51,7 @@ def get_binance_price_stream(coin: str):
 
 
 def get_asset_diff_multiplier(coin: str):
-    if coin == 'LUNA':
+    if coin == 'LUNC':
         return 6
     else:
         return 1
