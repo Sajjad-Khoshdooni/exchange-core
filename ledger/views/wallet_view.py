@@ -27,6 +27,11 @@ class AssetListSerializer(serializers.ModelSerializer):
     free = serializers.SerializerMethodField()
     free_irt = serializers.SerializerMethodField()
 
+    pin_to_top = serializers.SerializerMethodField()
+
+    def get_pin_to_top(self, asset: Asset):
+        return asset.pin_to_top
+
     def get_wallet(self, asset: Asset):
         return self.context['asset_to_wallet'].get(asset.id)
 
@@ -101,7 +106,7 @@ class AssetListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = ('symbol', 'precision', 'free', 'free_irt', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt',
-                  'buy_price_irt', 'can_deposit', 'can_withdraw', 'trade_enable')
+                  'buy_price_irt', 'can_deposit', 'can_withdraw', 'trade_enable', 'pin_to_top')
         ref_name = 'ledger asset'
 
 
@@ -246,9 +251,12 @@ class WalletViewSet(ModelViewSet):
             serializer = self.get_serializer(queryset, many=True)
             data = serializer.data
 
-            with_balance_wallets = list(filter(lambda w: w['balance'] != '0', data))
-            without_balance_wallets = list(filter(lambda w: w['balance'] == '0', data))
-            wallets = sorted(with_balance_wallets, key=lambda w: Decimal(w['balance_irt'] or 0), reverse=True) + without_balance_wallets
+            pin_to_top_wallets = list(filter(lambda w: w['pin_to_top'], data))
+            with_balance_wallets = list(filter(lambda w: w['balance'] != '0' and not w['pin_to_top'], data))
+            without_balance_wallets = list(filter(lambda w: w['balance'] == '0' and not w['pin_to_top'], data))
+
+
+            wallets = pin_to_top_wallets + sorted(with_balance_wallets, key=lambda w: Decimal(w['balance_irt'] or 0), reverse=True) + without_balance_wallets
 
         return Response(wallets)
 

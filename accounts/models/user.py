@@ -171,6 +171,7 @@ class User(AbstractUser):
                 elif self.level == User.LEVEL3:
                     self.level_3_verify_datetime = timezone.now()
 
+                self.archived = False
                 self.save()
 
             alert_user_verify_status(self)
@@ -190,6 +191,7 @@ class User(AbstractUser):
 
         else:
             self.verify_status = status
+            self.archived = False
             self.save()
 
     @property
