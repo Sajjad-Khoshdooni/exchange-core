@@ -2,10 +2,13 @@ import logging
 from dataclasses import dataclass
 
 import requests
+from django.utils import timezone
 from yekta_config import secret
 from yekta_config.config import config
 
-from financial.models import BankAccount
+from accounts.utils.admin import url_to_edit_object
+from accounts.utils.telegram import send_support_message
+from financial.models import BankAccount, FiatWithdrawRequest
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +25,37 @@ class Wallet:
     free: int
 
 
-class Payir:
+class FiatWithdraw:
+
+    ZIBAL = 'zibal'
+    PAY_IR = 'pay_ir'
+
+    WITHDRAW_CHANEL = config('WITHDRAW_CHANEL')
+
+    def get_withdraw_chanel(self):
+        maping = {
+            self.PAY_IR: PayirChanel,
+            self.ZIBAL: ZiblaChanel
+        }
+        self.__class__ = maping[self.WITHDRAW_CHANEL]
+        return self
+
+    def get_wallet_id(self):
+        raise NotImplementedError
+
+    def get_wallet_data(self, wallet_id: int):
+        raise NotImplementedError
+
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int):
+        raise NotImplementedError
+
+
+class PayirChanel(FiatWithdraw):
+
+    def get_wallet_id(self):
+        return config('PAY_IR_WALLET_ID', cast=int)
+
+
     @classmethod
     def collect_api(cls, path: str, method: str = 'GET', data: dict = None) -> dict:
 
@@ -60,9 +93,8 @@ class Payir:
 
         return resp_data['data']
 
-    @classmethod
-    def get_wallet_data(cls, wallet_id: int) -> Wallet:
-        data = cls.collect_api(f'/api/v2/wallets/{wallet_id}')['wallet']
+    def get_wallet_data(self, wallet_id: int) -> Wallet:
+        data = self.collect_api(f'/api/v2/wallets/{wallet_id}')['wallet']
 
         return Wallet(
             id=data['id'],
@@ -71,9 +103,8 @@ class Payir:
             free=data['cashoutableAmount'] // 10
         )
 
-    @classmethod
-    def withdraw(cls, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> int:
-        data = cls.collect_api('/api/v2/cashouts', method='POST', data={
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> int:
+        data = self.collect_api('/api/v2/cashouts', method='POST', data={
             'walletId': wallet_id,
             'amount': amount * 10,
             'name': receiver.user.get_full_name(),
@@ -87,3 +118,9 @@ class Payir:
     def get_withdraw_status(cls, request_id: int) -> int:
         data = cls.collect_api(f'/api/v2/cashouts/track/{request_id}')
         return data['cashout']['status']
+
+
+class ZiblaChanel(FiatWithdraw):
+
+    def get_wallet_id(self):
+        return config('ZIBAL_WALLET_ID', cast=int)
