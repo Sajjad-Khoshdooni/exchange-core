@@ -10,8 +10,9 @@ from uuid import uuid4
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models, transaction
-from django.db.models import Sum, F, Q, Max, Min
+from django.db.models import Sum, F, Q, Max, Min, CheckConstraint
 from django.utils import timezone
+from pyparsing import Or
 
 from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Trx, Wallet, BalanceLock
@@ -87,6 +88,7 @@ class Order(models.Model):
             models.Index(fields=['symbol', 'status']),
             models.Index(name='market_new_orders_price_idx', fields=['price'], condition=Q(status='new')),
         ]
+        constraints = [CheckConstraint(check=Q(filled_amount__lte=F('amount')), name='check_filled_amount', ), ]
 
     objects = models.Manager()
     open_objects = OpenOrderManager()
@@ -113,12 +115,18 @@ class Order(models.Model):
         return floor_precision(amount, self.symbol.step_size)
 
     @staticmethod
+    def matching_orders_filter(side, price, op):
+        return(lambda order: order.side == side and order.price >= price) if op == 'gte' else \
+                (lambda order: order.side == side and order.price <= price)
+
+    @staticmethod
     def get_opposite_side(side):
         return Order.SELL if side.lower() == Order.BUY else Order.BUY
 
     @staticmethod
     def get_order_by(side):
-        return ('-price', '-created') if side == Order.BUY else ('price', '-created')
+        return (lambda order: (-order.price, -order.created.timestamp())) if side == Order.BUY else \
+                (lambda order: (order.price, -order.created.timestamp()))
 
     @classmethod
     def cancel_orders(cls, to_cancel_orders):
@@ -186,11 +194,10 @@ class Order(models.Model):
         log_prefix = 'MM %s: ' % self.symbol.name
 
         logger.info(log_prefix + 'make match started...')
-
         with transaction.atomic():
             from market.models import FillOrder
             # lock symbol open orders
-            list(Order.open_objects.select_for_update().filter(symbol=self.symbol))
+            open_orders = list(Order.open_objects.select_for_update().filter(symbol=self.symbol))
 
             logger.info(log_prefix + 'make match danger zone')
 
@@ -207,9 +214,10 @@ class Order(models.Model):
 
             opp_side = self.get_opposite_side(self.side)
 
-            matching_orders = Order.open_objects.filter(
-                symbol=self.symbol, side=opp_side, **Order.get_price_filter(self.price, self.side)
-            ).order_by(*self.get_order_by(opp_side))
+            operator = 'lte' if self.side == Order.BUY else 'gte'
+            matching_orders = list(sorted(filter(
+                self.matching_orders_filter(side=opp_side, price=self.price, op=operator), open_orders
+            ), key=self.get_order_by(opp_side)))
 
             unfilled_amount = self.unfilled_amount
 
@@ -314,7 +322,7 @@ class Order(models.Model):
                         account.save(update_fields=['trade_volume_irt'])
                         account.refresh_from_db()
                         check_prize_achievements(account)
-
+            
             cache.delete(key)
             logger.info(log_prefix + 'make match finished.')
 
