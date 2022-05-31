@@ -88,7 +88,8 @@ class AssetListSerializer(serializers.ModelSerializer):
         return asset.get_presentation_price_irt(price)
 
     def get_can_deposit(self, asset: Asset):
-        return NetworkAsset.objects.filter(asset=asset, network__can_deposit=True).exists()
+        network_asset = NetworkAsset.objects.filter(asset=asset, network__can_deposit=True).first()
+        return network_asset and network_asset.can_deposit()
 
     def get_can_withdraw(self, asset: Asset):
         return NetworkAsset.objects.filter(
@@ -100,7 +101,7 @@ class AssetListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = ('symbol', 'precision', 'free', 'free_irt', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt',
-                  'buy_price_irt', 'can_deposit', 'can_withdraw')
+                  'buy_price_irt', 'can_deposit', 'can_withdraw', 'trade_enable')
         ref_name = 'ledger asset'
 
 
@@ -154,7 +155,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return network_asset.network.address_regex
 
     def get_can_deposit(self, network_asset: NetworkAsset):
-        return network_asset.network.can_deposit
+        return network_asset.can_deposit()
 
     def get_can_withdraw(self, network_asset: NetworkAsset):
         return network_asset.network.can_withdraw and network_asset.binance_withdraw_enable
@@ -204,7 +205,6 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
 
 class WalletViewSet(ModelViewSet):
-    queryset = Asset.live_objects.all()
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -225,7 +225,10 @@ class WalletViewSet(ModelViewSet):
         return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper())
 
     def get_queryset(self):
-        queryset = super(WalletViewSet, self).get_queryset()
+        if self.request.user.is_superuser:
+            queryset = Asset.candid_objects.all()
+        else:
+            queryset = Asset.live_objects.all()
 
         if self.get_market() == Wallet.MARGIN:
             return queryset.exclude(symbol=Asset.IRT)
@@ -299,3 +302,19 @@ class BriefNetworkAssetsView(ListAPIView):
             query_set = query_set.distinct('network__symbol')
 
         return query_set.filter(network__can_withdraw=True, network__is_universal=True)
+
+
+class WalletSerializer(serializers.ModelSerializer):
+
+    asset = serializers.SerializerMethodField()
+    free = serializers.SerializerMethodField()
+
+    def get_asset(self, wallet: Wallet):
+        return wallet.asset.symbol
+
+    def get_free(self, wallet: Wallet):
+        return wallet.asset.get_presentation_amount(wallet.get_free())
+
+    class Meta:
+        model = Wallet
+        fields = ('asset', 'free',)

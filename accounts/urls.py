@@ -2,10 +2,11 @@ from django.urls import path, include
 from rest_framework import routers
 
 from accounts import views
+from accounts.views.user_view import CreateAuthToken
+
 router = routers.DefaultRouter()
 
 router.register(r'^referrals', views.ReferralViewSet, basename='referral')
-
 urlpatterns = [
     path('login/', views.LoginView.as_view()),
     path('logout/', views.LogoutView.as_view()),
@@ -47,13 +48,15 @@ urlpatterns = [
     })),
 
     path('notifs/all/', views.UnreadAllNotificationView.as_view()),
-    path('password', views.ChangePasswordView.as_view()),
+    path('password/', views.ChangePasswordView.as_view()),
 
     path('quiz/passed/', views.QuizPassedView.as_view()),
 
     path('user/onboarding/', views.OnBoardingFlowStatus.as_view()),
 
     path('phone/change/', views.ChangePhoneView.as_view()),
+
+    path('api/token/', CreateAuthToken.as_view()),
 
     path('referrals/overview/', views.ReferralOverviewAPIView.as_view()),
     path('referrals/report/', views.ReferralReportAPIView.as_view()),
@@ -63,5 +66,14 @@ urlpatterns = [
     path('', include(router.urls)),
 
     path('goals/', views.GamificationAPIView.as_view()),
+
+    path('prize/', views.PrizeView.as_view({
+        'get': 'list'
+    })),
+
+    path('prize/<int:pk>/', views.PrizeView.as_view({
+        'patch': 'partial_update'
+    })),
+
     path('banner/', views.BannerAlertAPIView.as_view()),
 ]

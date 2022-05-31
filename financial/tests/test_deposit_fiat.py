@@ -1,5 +1,5 @@
 from django.test import TestCase
-from financial.utils.test import new_user,new_bank_card, new_gate_way
+from financial.utils.test import new_user, new_bank_card, new_gate_way
 from django.test import Client
 
 

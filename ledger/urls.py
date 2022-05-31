@@ -23,6 +23,7 @@ urlpatterns = [
     path('v1/trade/otc/request/', views.OTCTradeRequestView.as_view()),
     path('v1/trade/otc/', views.OTCTradeView.as_view()),
     path('v1/trade/otc/history/', views.OTCHistoryView.as_view()),
+    path('v1/trade/otc/info/', views.OTCInfoView.as_view()),
 
     path('v1/margin/info/', views.MarginInfoView.as_view()),
     path('v1/margin/info/<slug:symbol>/', views.AssetMarginInfoView.as_view()),
@@ -43,4 +44,7 @@ urlpatterns = [
         'post': 'create',
         'get': 'list',
     })),
+
+    path('v1/wallet/balance/', views.GetBalanceInformation.as_view()),
+    path('v1/bookmark/assets/', views.BookmarkAssetsAPIView.as_view())
 ]

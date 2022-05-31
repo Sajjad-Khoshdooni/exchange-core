@@ -1,172 +1,28 @@
-from accounts.models import Account, User
-from ledger.models import Transfer, Prize
+import logging
+
+from accounts.gamification.achievements import TradePrizeAchievementStep1, TradePrizeAchievementStep2
+from accounts.gamification.goals import GoalGroup, VerifyLevel2Goal, DepositGoal, TradeStep1Goal, InviteGoal, \
+    TradeStep2Goal
+from accounts.models import Account
+
+logger = logging.getLogger(__name__)
 
 
-class Condition:
-
-    BOOL, NUMBER = 'bool', 'number'
-
-    type = NUMBER
-
-    name = None
-    max = None
-    title = None
-    link = ''
-    description = ''
-    cta_title = ''
-
-    def __init__(self, account: Account):
-        self.account = account
-
-    def get_progress(self):
-        raise NotImplementedError
-
-    def as_dict(self):
-
-        _progress = self.get_progress()
-
-        if self.type == self.BOOL:
-            if _progress:
-                progress = 100
-            else:
-                progress = 0
-        else:
-            progress = max(min(int(_progress / self.max * 100), 100), 0)
-
-        data = {
-            'name': self.name,
-            'progress': progress,
-            'title': self.title,
-            'type': self.type,
-            'finished': progress == 100,
-            'description': self.description,
-            'link': self.link
-        }
-
-        return data
-
-
-class Achievement:
-
-    def achieved(self, account: Account):
-        raise NotImplementedError
-
-    def as_dict(self):
-        raise NotImplementedError
-
-
-class PrizeAchievement(Achievement):
-    def __init__(self, scope: str):
-        self.scope = scope
-
-    def as_dict(self):
-        return {
-            'type': 'prize',
-            'scope': self.scope,
-            'amount': Prize.PRIZE_AMOUNTS[self.scope],
-            'asset': 'SHIB',
-        }
-
-    def achieved(self, account: Account):
-        return Prize.objects.filter(account=account, scope=self.scope).exists()
-
-
-class ConditionGroup:
-    def __init__(self, conditions: list, achievements: list):
-        self.conditions = conditions
-        self.achievements = achievements
-
-    def as_dict(self, account: Account):
-        items = [
-            c(account).as_dict() for c in self.conditions
-        ]
-
-        return {
-            'goals': items,
-            'achievements': [
-                {
-                    **a.as_dict(),
-                    'achieved': a.achieved(account)
-                } for a in self.achievements
-            ],
-            'finished': all(map(lambda i: i['finished'], items))
-        }
-
-
-class VerifyLevel2Condition(Condition):
-    type = Condition.BOOL
-    name = 'verify_level2'
-    title = 'احراز هویت'
-    link = '/account/verification/basic'
-    description = 'با تکمیل احراز هویت، بدون محدودیت در راستین خرید و فروش کنید.'
-
-    def get_progress(self):
-        return self.account.user.level > User.LEVEL1
-
-
-class DepositCondition(Condition):
-    type = Condition.BOOL
-    name = 'deposit'
-    title = 'واریز'
-    link = '/wallet/spot/money-deposit'
-    description = 'با واریز وجه، تنها چند ثانیه با خرید و فروش رمزارز فاصله دارید.'
-
-    def get_progress(self):
-        return Transfer.objects.filter(wallet__account=self.account, deposit=True) or \
-               self.account.user.first_fiat_deposit_date
-
-
-class TradeStep1Condition(Condition):
-    type = Condition.NUMBER
-    max = Prize.TRADE_THRESHOLD_STEP1
-    name = Prize.TRADE_PRIZE_STEP1
-    title = 'معامله'
-    link = 'به ارزش ۲ میلیون تومان معامله کنید و ۵۰,۰۰۰ شیبا جایزه بگیرید.'
-    description = '/trade/classic/BTCUSDT'
-
-    def get_progress(self):
-        return self.account.trade_volume_irt
-
-
-class TradeStep2Condition(Condition):
-    type = Condition.NUMBER
-    max = Prize.TRADE_THRESHOLD_STEP2
-    name = Prize.TRADE_PRIZE_STEP2
-    title = 'معامله'
-    link = 'به ارزش ۲۰ میلیون تومان معامله کنید و ۱۰۰,۰۰۰ شیبا جایزه بگیرید.'
-    description = '/trade/classic/BTCUSDT'
-
-    def get_progress(self):
-        return self.account.trade_volume_irt
-
-
-class InviteCondition(Condition):
-    type = Condition.NUMBER
-    max = 5
-    name = 'invite'
-    title = 'دعوت از دوستان'
-    link = 'دوستان خود را به راستین دعوت کنید و از معامله‌آن‌ها درآمدزایی کنید.'
-    description = '/account/referral'
-
-    def get_progress(self):
-        return self.account.get_invited_count()
-
-
-condition_groups = [
-    ConditionGroup(
+goal_groups = [
+    GoalGroup(
         conditions=[
-            VerifyLevel2Condition, DepositCondition, TradeStep1Condition
+            VerifyLevel2Goal, DepositGoal, TradeStep1Goal
         ],
         achievements=[
-            PrizeAchievement(Prize.TRADE_PRIZE_STEP1)
+            TradePrizeAchievementStep1
         ]
     ),
-    ConditionGroup(
+    GoalGroup(
         conditions=[
-            TradeStep2Condition, InviteCondition
+            TradeStep2Goal, InviteGoal
         ],
         achievements=[
-            PrizeAchievement(Prize.TRADE_PRIZE_STEP2)
+            TradePrizeAchievementStep2
         ]
     )
 ]
@@ -177,7 +33,7 @@ def get_groups_data(account, only_active=False):
 
     activated = False
 
-    for group in condition_groups:
+    for group in goal_groups:
         data = group.as_dict(account)
 
         data['active'] = not data['finished'] and not activated
@@ -190,4 +46,22 @@ def get_groups_data(account, only_active=False):
 
         groups.append(data)
 
+    if only_active:
+        return
+
     return groups
+
+
+def check_prize_achievements(account: Account):
+
+    try:
+        for group in goal_groups:
+            if group.achievable(account):
+                for achievement_cls in group.achievements:
+                    achievement_cls(account).achieve_prize()
+
+    except Exception as e:
+        logger.exception('Failed to check prize achievements', extra={
+            'account': account.id,
+            'exp': e
+        })

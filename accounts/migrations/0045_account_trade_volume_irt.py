@@ -24,6 +24,7 @@ def populate_trade_volume_irt(apps, schema_editor):
     for account in accounts:
         account.trade_volume_irt = maker_values.get(account.id, 0) + taker_values.get(account.id, 0)
         account.save(update_fields=['trade_volume_irt'])
+        account.refresh_from_db()
 
     for account in Account.objects.filter(trade_volume_irt__gte=2_000_000):
         Prize.objects.get_or_create(account=account, scope='trade_2m', defaults={'amount': 0, 'asset': asset, 'fake': True})

@@ -1,3 +1,4 @@
+from django.contrib.auth import login
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
@@ -20,19 +21,23 @@ class ChangePasswordSerializer(serializers.Serializer):
         old_pass = data.get('old_password')
         otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CHANGE_PASSWORD, user)
 
-        if not user.check_password(old_pass):
-            raise ValidationError({'رمز عبور قبلی بدرستی وارد نشده است'})
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
+        if not user.check_password(old_pass):
+            raise ValidationError({'old_password': 'رمز عبور قبلی بدرستی وارد نشده است'})
 
         validate_password(password=password, user=user)
 
         return data
 
-    def update(self, instance, validated_data):
-        instance.set_password(validated_data['password'])
-        instance.save()
-        return instance
+    def update(self, user, validated_data):
+        user.set_password(validated_data['password'])
+        user.save()
+
+        request = self.context['request']
+        login(request, user)
+
+        return user
 
 
 class ChangePasswordView(APIView):
@@ -44,7 +49,9 @@ class ChangePasswordView(APIView):
             instance=user,
             data=request.data,
             partial=True,
-
+            context={
+                'request': request
+            }
         )
         change_password_serializer.is_valid(raise_exception=True)
 

@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.db import models
+from yekta_config.config import config
+
 from accounts.models import User
 from accounts.utils.validation import PHONE_MAX_LENGTH
 
@@ -40,15 +42,15 @@ class ExternalNotification(models.Model):
 
         if scope == cls.SCOPE_LEVEL_2_PRIZE:
             template = '64694'
-            params = {'token': 'پنجاه هزار شیبا هدیه راستین'}
+            params = {'token': 'پنجاه هزار شیبا هدیه‌ {}'.format(config('BRAND'))}
 
         elif scope == cls.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE:
             template = '64695'
-            params = {'brand': 'و دریافت هدیه پنجاه هزار شیبا به راستین'}
+            params = {'brand': 'و دریافت هدیه پنجاه هزار شیبا به {}'.format(config('BRAND'))}
 
         elif scope == cls.SCOPE_TRADE_PRIZE:
             template = '65788'
-            params = {'token': 'پنجاه هزار شیبا هدیه راستین'}
+            params = {'token': 'پنجاه هزار شیبا هدیه {}'.format(config('BRAND'))}
 
         else:
             raise NotImplementedError

@@ -1,9 +1,16 @@
+from decimal import Decimal
+
 from django.db import models
 from django.utils import timezone
+from yekta_config.config import config
 
 from accounts.models import Account
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_group_id_field, get_status_field
+
+from accounts.models import Notification
+from accounts.utils import email
+from ledger.utils.precision import humanize_number, get_presentation_amount
 
 
 class PaymentRequest(models.Model):
@@ -28,9 +35,9 @@ class PaymentRequest(models.Model):
 
 
 class Payment(models.Model):
-
-    SUCCESS_URL = 'https://raastin.com/checkout/success'
-    FAIL_URL = 'https://raastin.com/checkout/fail'
+    PANEL_URL = config('PANEL_URL')
+    SUCCESS_URL = PANEL_URL + '/checkout/success'
+    FAIL_URL = PANEL_URL + '/checkout/fail'
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -45,6 +52,32 @@ class Payment(models.Model):
 
     ref_id = models.PositiveBigIntegerField(null=True, blank=True)
     ref_status = models.SmallIntegerField(null=True, blank=True)
+
+    def alert_payment(self):
+        user = self.payment_request.bank_card.user
+        user_email = user.email
+        title = 'واریز وجه با موفقیت انجام شد'
+        payment_amont = humanize_number(get_presentation_amount(Decimal(self.payment_request.amount)))
+        description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amont)
+
+        Notification.send(
+            recipient=user,
+            title=title,
+            message=description,
+            level=Notification.SUCCESS
+        )
+
+        if user_email:
+            email.send_email_by_template(
+                recipient=user_email,
+                template=email.SCOPE_PAYMENT,
+                context={
+                    'payment_amount': payment_amont,
+                    'brand': config('BRAND'),
+                    'panel_url': config('PANEL_URL'),
+                    'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+                         }
+            )
 
     def accept(self):
         asset = Asset.get(Asset.IRT)
@@ -62,3 +95,5 @@ class Payment(models.Model):
         if not user.first_fiat_deposit_date:
             user.first_fiat_deposit_date = timezone.now()
             user.save()
+
+        self.alert_payment()

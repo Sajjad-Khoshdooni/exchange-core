@@ -4,7 +4,6 @@ from decimal import Decimal
 from typing import Dict, List
 
 from cachetools.func import ttl_cache
-from django.conf import settings
 
 from collector.price.grpc_client import gRPCClient
 from collector.utils.price import price_redis
@@ -39,6 +38,25 @@ SIDE_MAP = {
 }
 
 
+def get_binance_price_stream(coin: str):
+    if coin == 'LUNA':
+        base = 'busd'
+    else:
+        base = 'usdt'
+
+    if coin == 'BTT':
+        coin = 'BTTC'
+
+    return coin.lower() + base
+
+
+def get_asset_diff_multiplier(coin: str):
+    if coin == 'LUNA':
+        return 6
+    else:
+        return 1
+
+
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
                   now: datetime = None) -> List[Price]:
     results = []
@@ -48,14 +66,14 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
     else:
         sides = [BUY, SELL]
 
-    if exchange == BINANCE and USDT in coins:
+    if exchange == BINANCE and USDT in coins:  # todo: check if market_symbol = USDT
         for s in sides:
             results.append(
                 Price(coin=USDT, price=Decimal(1), side=s)
             )
         coins.remove(USDT)
 
-    if IRT in coins:
+    if IRT in coins:  # todo: check if market_symbol = IRT
         for s in sides:
             results.append(
                 Price(coin=IRT, price=Decimal(0), side=s)
@@ -71,7 +89,7 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
 
         pipe = price_redis.pipeline(transaction=False)
         for c in coins:
-            name = 'bin:' + c.lower() + 'usdt'
+            name = 'bin:' + get_binance_price_stream(c)
             pipe.hgetall(name)
 
         prices = pipe.execute()
@@ -194,13 +212,13 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
     # if ask_diff is None:
     #     ask_diff = Decimal('0.005')
 
-    bid_diff = Decimal('0.005')
-    ask_diff = Decimal('0.005')
+    bid_diff = Decimal('0.005') * get_asset_diff_multiplier(coin)
+    ask_diff = Decimal('0.005') * get_asset_diff_multiplier(coin)
 
     diff_multiplier = 1
 
     if value:
-        if value > 160:
+        if value > 1000:
             diff_multiplier = 4
         elif value > 10:
             diff_multiplier = 2

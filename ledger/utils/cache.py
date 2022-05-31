@@ -1,12 +1,17 @@
 import hashlib
 import logging
+
 from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
 
 def get_cache_func_key(func, *args, **kwargs) -> str:
-    serialise = [func.__module__, func.__name__]
+    if func is not None:
+        serialise = [func.__module__, func.__name__]
+    else:
+        serialise = []
+
     for arg in args:
         serialise.append(str(arg))
 
@@ -33,4 +38,3 @@ def cache_for(time: float = 600):
         return wrapper
 
     return decorator
-

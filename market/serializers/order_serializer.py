@@ -31,31 +31,13 @@ class OrderSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
-        if not symbol.enable:
-            raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
-
-        market = validated_data.pop('wallet')['market']
-        if market == Wallet.MARGIN:
-            if not self.context['account'].user.show_margin:
-                raise ValidationError(_('margin trading is not enable'))
-            if not self.context['account'].user.margin_quiz_pass_date:
-                raise ValidationError(_('You need to pass margin quiz'))
-            if symbol.base_asset.symbol == Asset.IRT:
-                raise ValidationError(_('{symbol} is not enable in margin trading').format(symbol=symbol))
-
-        validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
+        symbol, wallet = self.post_validate(validated_data)
         if validated_data['fill_type'] == Order.LIMIT:
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
         elif validated_data['fill_type'] == Order.MARKET:
             validated_data['price'] = Order.get_market_price(symbol, Order.get_opposite_side(validated_data['side']))
             if not validated_data['price']:
                 raise Exception('Empty order book')
-
-        wallet = symbol.asset.get_wallet(self.context['account'], market=market)
-
-        min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
-        self.validate_order_size(validated_data['amount'], validated_data['price'], min_order_size)
 
         try:
             with transaction.atomic():
@@ -73,6 +55,24 @@ class OrderSerializer(serializers.ModelSerializer):
             raise APIException(_('Could not place order'))
 
         return created_order
+
+    def post_validate(self, validated_data):
+        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
+        if not symbol.enable or not symbol.asset.enable:
+            raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
+        market = validated_data.pop('wallet')['market']
+        if market == Wallet.MARGIN:
+            if not self.context['account'].user.show_margin:
+                raise ValidationError(_('margin trading is not enable'))
+            if not self.context['account'].user.margin_quiz_pass_date:
+                raise ValidationError(_('You need to pass margin quiz'))
+            if symbol.base_asset.symbol == Asset.IRT:
+                raise ValidationError(_('{symbol} is not enable in margin trading').format(symbol=symbol))
+        validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
+        wallet = symbol.asset.get_wallet(self.context['account'], market=market)
+        min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
+        self.validate_order_size(validated_data['amount'], validated_data['price'], min_order_size)
+        return symbol, wallet
 
     @staticmethod
     def post_validate_amount(symbol: PairSymbol, amount: Decimal):

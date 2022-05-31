@@ -19,6 +19,7 @@ class VerificationCode(models.Model):
 
     SCOPE_FORGET_PASSWORD = 'forget'
     SCOPE_VERIFY_PHONE = 'verify'
+    SCOPE_VERIFY_EMAIL = 'email_verify'
     SCOPE_WITHDRAW = 'withdraw'
     SCOPE_TELEPHONE = 'tel'
     SCOPE_CHANGE_PASSWORD = 'change_pass'
@@ -28,6 +29,7 @@ class VerificationCode(models.Model):
         (SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_PHONE, SCOPE_VERIFY_PHONE),
         (SCOPE_WITHDRAW, SCOPE_WITHDRAW), (SCOPE_TELEPHONE, SCOPE_TELEPHONE),
         (SCOPE_CHANGE_PASSWORD, SCOPE_CHANGE_PASSWORD), (SCOPE_CHANGE_PHONE, SCOPE_CHANGE_PHONE),
+        (SCOPE_VERIFY_EMAIL, SCOPE_VERIFY_EMAIL)
     ]
 
     created = models.DateTimeField(auto_now_add=True)
@@ -101,7 +103,7 @@ class VerificationCode(models.Model):
         # todo: use user devices / ip , ...
 
         if phone == '09120889956':
-            logger.info('Ignored sending otp to kavenegar due to blacklist')
+            logger.info('[OTP] Ignored sending otp to kavenegar due to blacklist')
             return
 
         any_recent_code = VerificationCode.objects.filter(
@@ -110,7 +112,7 @@ class VerificationCode(models.Model):
         ).exists()
 
         if any_recent_code:
-            logger.info('Ignored sending otp to kavenegar because of recent')
+            logger.info('[OTP] Ignored sending otp to kavenegar because of recent')
             return
 
         prev_codes = VerificationCode.objects.filter(
@@ -119,7 +121,7 @@ class VerificationCode(models.Model):
         ).count()
 
         if prev_codes >= 3:
-            logger.info('Ignored sending otp to kavenegar because of multiple prev')
+            logger.info('[OTP] Ignored sending otp to kavenegar because of multiple prev')
             return
 
         if scope == cls.SCOPE_TELEPHONE:

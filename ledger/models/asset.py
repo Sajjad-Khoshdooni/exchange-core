@@ -8,6 +8,8 @@ from ledger.models import Wallet
 from ledger.utils.precision import get_precision, get_presentation_amount
 from django.core.validators import MaxValueValidator, MinValueValidator
 
+from provider.exchanges import BinanceSpotHandler, BinanceFuturesHandler
+
 
 class InvalidAmount(Exception):
     pass
@@ -16,6 +18,11 @@ class InvalidAmount(Exception):
 class LiveAssetManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(enable=True)
+
+
+class CandidAssetManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().exclude(enable=False, candidate=False)
 
 
 class Asset(models.Model):
@@ -28,6 +35,7 @@ class Asset(models.Model):
 
     objects = models.Manager()
     live_objects = LiveAssetManager()
+    candid_objects = CandidAssetManager()
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -63,6 +71,8 @@ class Asset(models.Model):
         MinValueValidator(0),
         MaxValueValidator(Decimal('0.1')),
     ], help_text='our ask (taker buy price) = (1 + ask_diff) * binance_ask')
+
+    candidate = models.BooleanField(default=False)
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
@@ -123,6 +133,14 @@ class Asset(models.Model):
             return '1000SHIB'
         else:
             return self.symbol
+
+    def get_hedger(self) -> type(BinanceSpotHandler):
+        if self.hedge_method == self.HEDGE_BINANCE_SPOT:
+            return BinanceSpotHandler
+        elif self.hedge_method == self.HEDGE_BINANCE_FUTURE:
+            return BinanceFuturesHandler
+        else:
+            raise NotImplementedError
 
 
 class AssetSerializer(serializers.ModelSerializer):

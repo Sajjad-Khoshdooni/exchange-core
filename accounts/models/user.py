@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
 from django.db.models import Q, UniqueConstraint
@@ -30,6 +32,8 @@ class User(AbstractUser):
 
     objects = CustomUserManager()
     history = HistoricalRecords()
+
+    chat_uuid = models.UUIDField(default=uuid4)
 
     phone = models.CharField(
         max_length=PHONE_MAX_LENGTH,
@@ -221,6 +225,10 @@ class User(AbstractUser):
     def verify_level2_if_not(self) -> bool:
         if self.level == User.LEVEL1 and all(self.get_level2_verify_fields()):
             self.change_status(User.VERIFIED)
+
+            from accounts.gamification.gamify import check_prize_achievements
+            check_prize_achievements(self.account)
+
             return True
 
         return False

@@ -8,10 +8,12 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.gamification.gamify import check_prize_achievements
 from accounts.models import User, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
+from accounts.utils.validation import set_login_activity
 from accounts.validators import mobile_number_validator, password_validator
 
 
@@ -80,6 +82,7 @@ class SignupSerializer(serializers.Serializer):
             if validated_data.get('referral_code'):
                 user.account.referred_by = Referral.objects.get(code=validated_data['referral_code'])
                 user.account.save()
+                check_prize_achievements(user.account.referred_by.owner)
 
             otp_code.set_token_used()
 
@@ -107,3 +110,4 @@ class SignupView(CreateAPIView):
     def perform_create(self, serializer):
         user = serializer.save()
         login(self.request, user)
+        set_login_activity(self.request, user)

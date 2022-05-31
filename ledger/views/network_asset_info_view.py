@@ -43,4 +43,3 @@ class NetworkAssetView(ListAPIView):
         Q(network__can_deposit=True) | Q(network__can_withdraw=True),
         asset__enable=True,
     ).order_by('-asset__pin_to_top', '-asset__trend', 'asset__order', 'withdraw_fee').distinct()
-

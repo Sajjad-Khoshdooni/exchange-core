@@ -1,11 +1,14 @@
 from rest_framework import serializers
-from rest_framework.generics import RetrieveAPIView
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.generics import RetrieveAPIView, get_object_or_404
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from accounts.models import User
+from accounts.models import User, CustomToken
 from accounts.verifiers.legal import possible_time_for_withdraw
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
-from ledger.models import OTCRequest, Transfer, Prize
+from ledger.models import Transfer, Prize
 from market.models import Order
 
 
@@ -17,7 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'on_boarding_flow', 'on_boarding_status', 'possible_time_for_withdraw',
+            'show_margin', 'on_boarding_flow', 'on_boarding_status', 'possible_time_for_withdraw', 'chat_uuid'
         )
 
     def get_possible_time_for_withdraw(self, user: User):
@@ -85,3 +88,76 @@ class UserDetailView(RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class AuthTokenSerializer(serializers.ModelSerializer):
+    ip_list = serializers.CharField()
+
+    class Meta:
+        model = CustomToken
+        fields = ('ip_list',)
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        customtoken = CustomToken.objects.create(**validated_data)
+
+        return customtoken
+
+    def update(self, instance, validated_data):
+        instance.ip_list = validated_data['ip_list']
+
+        instance.save()
+        return instance
+
+
+class CreateAuthToken(APIView):
+    authentication_classes = (SessionAuthentication,)
+    serializer_class = AuthTokenSerializer
+
+    def get(self, request):
+        custom_token = get_object_or_404(CustomToken, user=request.user)
+        return Response({
+            'token': ('*' * (len(custom_token.key) - 4)) + custom_token.key[-4:],
+            'user_id': request.user.pk,
+            'ip_white_list': custom_token.ip_list
+        })
+
+    def post(self, request):
+        custom_token = CustomToken.objects.filter(user=request.user)
+        if custom_token:
+            custom_token = custom_token.get()
+            return Response({
+                'token': ('*' * (len(custom_token.key) - 4)) + custom_token.key[-4:],
+                'user_id': request.user.pk,
+                'ip_white_list': custom_token.ip_list,
+            })
+        else:
+            auth_token_serializer = AuthTokenSerializer(
+                data=request.data,
+                context={'request': self.request})
+            auth_token_serializer.is_valid(raise_exception='data is invalid')
+            auth_token_serializer.save()
+            token = CustomToken.objects.get(user=request.user)
+            return Response({
+                'token': token.key,
+                'user_id': request.user.pk,
+                'ip_white_list': token.ip_list,
+            })
+
+    def delete(self, request, *args, **kwargs):
+        token = get_object_or_404(CustomToken, user=request.user)
+        token.delete()
+        return Response({'msg': 'Token deleted successfully'})
+
+    def put(self, request):
+        tokent = get_object_or_404(CustomToken, user=request.user)
+        token_serializer = AuthTokenSerializer(
+            instance=tokent,
+            data=request.data,
+            partial=True
+        )
+        if token_serializer.is_valid():
+            token_serializer.save()
+            return Response({'message': 'token updated successfully!'})
+
+        return Response({'message': token_serializer.errors})

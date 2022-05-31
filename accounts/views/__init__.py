@@ -14,6 +14,8 @@ from .quiz_passed_view import QuizPassedView
 from .email_verify_view import EmailOTPVerifyView, EmailVerifyView
 from .on_boarding_flow import OnBoardingFlowStatus
 from .change_phone_before_verify import ChangePhoneView
+
 from .referral_view import ReferralReportAPIView, ReferralViewSet, ReferralOverviewAPIView, TradingFeeView
 from .gamification_view import GamificationAPIView
 from .banner_view import BannerAlertAPIView
+from .prize_view import PrizeView

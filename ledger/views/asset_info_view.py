@@ -3,15 +3,16 @@ from decimal import Decimal
 
 from django.db.models import Min
 from rest_framework import serializers
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 
+from accounts.views.authentication import CustomTokenAuthentication
 from collector.models import CoinMarketCap
 from ledger.models import Asset, Wallet, NetworkAsset
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
 from ledger.utils.price_manager import PriceManager
-from ledger.views.network_asset_info_view import NetworkAssetSerializer
 
 
 class AssetSerializerBuilder(AssetSerializerMini):
@@ -34,9 +35,14 @@ class AssetSerializerBuilder(AssetSerializerMini):
     min_withdraw_amount = serializers.SerializerMethodField()
     min_withdraw_fee = serializers.SerializerMethodField()
 
+    bookmark_assets = serializers.SerializerMethodField()
+
     class Meta:
         model = Asset
         fields = ()
+
+    def get_bookmark_assets(self, asset: Asset):
+        return asset.id in self.context['bookmark_assets']
 
     def get_cap(self, asset) -> CoinMarketCap:
         return self.context['cap_info'].get(asset.symbol)
@@ -70,7 +76,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return min_withdraw['min']
 
     def get_trend_url(self, asset: Asset):
-        cap = CoinMarketCap.objects.filter(symbol=asset.symbol).first()
+        cap = self.get_cap(asset)
+
         if cap:
             return 'https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/%d.svg?v=%s' % \
                    (cap.internal_id, str(int(time.time()) // 3600))
@@ -137,13 +144,13 @@ class AssetSerializerBuilder(AssetSerializerMini):
         new_fields = []
 
         if prices:
-            new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h']
+            new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h', 'bookmark_assets']
 
         if extra_info:
             new_fields = [
                 'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
                 'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
-                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee'
+                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee', 'bookmark_assets',
             ]
 
         class Serializer(cls):
@@ -156,16 +163,25 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
 class AssetsViewSet(ModelViewSet):
 
-    authentication_classes = []
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication,)
     permission_classes = []
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
 
+        if self.request.user.is_authenticated:
+            ctx['bookmark_assets'] = set(self.request.user.account.bookmark_assets.values_list('id', flat=True))
+        else:
+            ctx['bookmark_assets'] = set()
+
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
-            caps = CoinMarketCap.objects.filter(symbol__in=symbols)
-            ctx['cap_info'] = {cap.symbol: cap for cap in caps}
+
+            symbol_translation_reversed = {v: k for (k, v) in CoinMarketCap.SYMBOL_TRANSLATION.items()}
+
+            to_search_symbols = list(map(lambda s: symbol_translation_reversed.get(s, s), symbols))
+            caps = CoinMarketCap.objects.filter(symbol__in=to_search_symbols)
+            ctx['cap_info'] = {CoinMarketCap.SYMBOL_TRANSLATION.get(cap.symbol, cap.symbol): cap for cap in caps}
 
             ctx['prices'] = get_prices_dict(coins=symbols, side=BUY)
             ctx['tether_irt'] = get_tether_irt_price(BUY)
@@ -177,7 +193,8 @@ class AssetsViewSet(ModelViewSet):
             'prices': self.request.query_params.get('prices') == '1',
             'trend': self.request.query_params.get('trend') == '1',
             'extra_info': self.request.query_params.get('extra_info') == '1',
-            'market': self.request.query_params.get('market')
+            'market': self.request.query_params.get('market'),
+            'category': self.request.query_params.get('category')
         }
 
         return options[key]
@@ -189,7 +206,15 @@ class AssetsViewSet(ModelViewSet):
         )
 
     def get_queryset(self):
-        queryset = Asset.live_objects.all().filter(trade_enable=True)
+        if self.request.user.is_superuser:
+            queryset = Asset.candid_objects.all()
+        else:
+            queryset = Asset.live_objects.all()
+
+        queryset = queryset.filter(trade_enable=True)
+
+        if self.get_options('category'):
+            queryset = queryset.filter(coincategory__name=self.get_options('category'))
 
         if self.get_options('trend'):
             queryset = queryset.filter(trend=True)
