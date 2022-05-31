@@ -36,8 +36,8 @@ class Order(models.Model):
     MARKET_BORDER = Decimal('1e-2')
     MIN_IRT_ORDER_SIZE = Decimal('1e5')
     MIN_USDT_ORDER_SIZE = Decimal(5)
-    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('5e7')
-    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(2000)
+    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('2e7')
+    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(1000)
     MAKER_ORDERS_COUNT = 10 if settings.DEBUG else 50
 
     BUY, SELL = 'buy', 'sell'
@@ -190,7 +190,7 @@ class Order(models.Model):
         with transaction.atomic():
             from market.models import FillOrder
             # lock symbol open orders
-            Order.open_objects.select_for_update().filter(symbol=self.symbol)
+            list(Order.open_objects.select_for_update().filter(symbol=self.symbol))
 
             logger.info(log_prefix + 'make match danger zone')
 
