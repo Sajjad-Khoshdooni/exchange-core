@@ -7,6 +7,7 @@ from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
 from accounts.models import Account
+from ledger.models import Asset
 from ledger.utils.precision import get_presentation_amount, floor_precision
 from market.models import PairSymbol, FillOrder
 
@@ -18,7 +19,7 @@ class SymbolSerializer(serializers.ModelSerializer):
     asset = serializers.CharField(source='asset.symbol', read_only=True)
     base_asset = serializers.CharField(source='base_asset.symbol', read_only=True)
     bookmark = serializers.SerializerMethodField()
-    margin_enable = serializers.BooleanField(source='asset.margin_enable', read_only=True)
+    margin_enable = serializers.SerializerMethodField()
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -28,6 +29,9 @@ class SymbolSerializer(serializers.ModelSerializer):
 
     def get_bookmark(self, pair_symbol: PairSymbol):
         return pair_symbol.id in self.context.get('bookmarks')
+
+    def get_margin_enable(self, pair_symbol: PairSymbol):
+        return pair_symbol.base_asset.symbol == Asset.USDT and pair_symbol.asset.margin_enable
 
     class Meta:
         model = PairSymbol
@@ -41,7 +45,7 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     change_percent = serializers.SerializerMethodField()
     bookmark = serializers.SerializerMethodField()
-    margin_enable = serializers.BooleanField(source='asset.margin_enable', read_only=True)
+    margin_enable = serializers.SerializerMethodField()
 
     def get_price(self, symbol: PairSymbol):
         last_trade = FillOrder.get_last(symbol=symbol)
@@ -50,6 +54,9 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
 
     def get_bookmark(self, pair_symbol: PairSymbol):
         return pair_symbol.id in self.context.get('bookmarks')
+
+    def get_margin_enable(self, pair_symbol: PairSymbol):
+        return pair_symbol.base_asset.symbol == Asset.USDT and pair_symbol.asset.margin_enable
 
     @staticmethod
     def get_change_value_pairs(symbol: PairSymbol):
