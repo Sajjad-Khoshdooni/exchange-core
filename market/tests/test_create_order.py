@@ -17,6 +17,7 @@ class CreateOrderTestCase(TestCase):
     def setUp(self):
         PairSymbol.objects.filter(name='BTCIRT').update(enable=True)
         PairSymbol.objects.filter(name='BTCUSDT').update(enable=True)
+        Asset.objects.filter(symbol='BTC').update(enable=True)
 
         self.account = new_account()
 
@@ -328,7 +329,6 @@ class CreateOrderTestCase(TestCase):
             'fill_type': 'limit',
             'market': 'margin'
         })
-
         self.assertEqual(resp.status_code, 201)
         self.assertEqual(Decimal(resp.json()['amount']), Decimal('1.5'))
 
