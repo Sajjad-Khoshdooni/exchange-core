@@ -1,11 +1,14 @@
 import logging
+import time
 from collections import defaultdict
 from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
 from random import randrange, random
+from uuid import uuid4
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import models, transaction
 from django.db.models import Sum, F, Q, Max, Min
 from django.utils import timezone
@@ -179,10 +182,22 @@ class Order(models.Model):
         BalanceLock.objects.filter(id=self.lock.id).update(amount=F('amount') - release_amount)
 
     def make_match(self):
+        key = 'make-match-cc'
+
+        logger.info('MM: make match started...')
+
         with transaction.atomic():
             from market.models import FillOrder
             # lock symbol open orders
             Order.open_objects.select_for_update().filter(symbol=self.symbol)
+
+            logger.info('MM: make match danger zone...')
+
+            if cache.get(key):
+                logger.info('MM: make match danger zone...')
+                raise Exception('Concurrent make match!')
+
+            cache.set(key, 1)
 
             to_cancel_orders = Order.open_objects.filter(
                 symbol=self.symbol, cancel_request__isnull=False
@@ -231,6 +246,7 @@ class Order(models.Model):
                     irt_value=base_irt_price * trade_price * match_amount,
                     trade_source=FillOrder.SYSTEM if is_system_trade else FillOrder.MARKET
                 )
+
                 trade_trx_list = fill_order.init_trade_trxs()
                 trx_list.extend(trade_trx_list.values())
                 fill_order.calculate_amounts_from_trx(trade_trx_list)
@@ -297,6 +313,9 @@ class Order(models.Model):
                         account.save(update_fields=['trade_volume_irt'])
                         account.refresh_from_db()
                         check_prize_achievements(account)
+
+            cache.delete(key)
+            logger.info('MM: make match finished.')
 
     @classmethod
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):
