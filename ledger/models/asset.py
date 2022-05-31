@@ -74,6 +74,8 @@ class Asset(models.Model):
 
     candidate = models.BooleanField(default=False)
 
+    margin_enable = models.BooleanField(default=False)
+
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
 

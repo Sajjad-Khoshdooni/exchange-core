@@ -7,6 +7,7 @@ from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
 from accounts.models import Account
+from ledger.models import Asset
 from ledger.utils.precision import get_presentation_amount, floor_precision
 from market.models import PairSymbol, FillOrder
 
@@ -18,6 +19,7 @@ class SymbolSerializer(serializers.ModelSerializer):
     asset = serializers.CharField(source='asset.symbol', read_only=True)
     base_asset = serializers.CharField(source='base_asset.symbol', read_only=True)
     bookmark = serializers.SerializerMethodField()
+    margin_enable = serializers.SerializerMethodField()
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -28,10 +30,13 @@ class SymbolSerializer(serializers.ModelSerializer):
     def get_bookmark(self, pair_symbol: PairSymbol):
         return pair_symbol.id in self.context.get('bookmarks')
 
+    def get_margin_enable(self, pair_symbol: PairSymbol):
+        return pair_symbol.base_asset.symbol == Asset.USDT and pair_symbol.asset.margin_enable
+
     class Meta:
         model = PairSymbol
         fields = ('name', 'asset', 'base_asset', 'taker_fee', 'maker_fee', 'tick_size', 'step_size',
-                  'min_trade_quantity', 'max_trade_quantity', 'enable', 'bookmark',)
+                  'min_trade_quantity', 'max_trade_quantity', 'enable', 'bookmark', 'margin_enable')
 
 
 class SymbolBreifStatsSerializer(serializers.ModelSerializer):
@@ -40,6 +45,7 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     change_percent = serializers.SerializerMethodField()
     bookmark = serializers.SerializerMethodField()
+    margin_enable = serializers.SerializerMethodField()
 
     def get_price(self, symbol: PairSymbol):
         last_trade = FillOrder.get_last(symbol=symbol)
@@ -48,6 +54,9 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
 
     def get_bookmark(self, pair_symbol: PairSymbol):
         return pair_symbol.id in self.context.get('bookmarks')
+
+    def get_margin_enable(self, pair_symbol: PairSymbol):
+        return pair_symbol.base_asset.symbol == Asset.USDT and pair_symbol.asset.margin_enable
 
     @staticmethod
     def get_change_value_pairs(symbol: PairSymbol):
@@ -68,7 +77,7 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = PairSymbol
-        fields = ('name', 'asset', 'base_asset', 'enable', 'price', 'change_percent', 'bookmark')
+        fields = ('name', 'asset', 'base_asset', 'enable', 'price', 'change_percent', 'bookmark', 'margin_enable')
 
 
 class SymbolStatsSerializer(SymbolBreifStatsSerializer):

@@ -214,8 +214,7 @@ class WalletViewSet(ModelViewSet):
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
 
-        market = self.get_market()
-        wallets = Wallet.objects.filter(account=self.request.user.account, market=market)
+        wallets = Wallet.objects.filter(account=self.request.user.account, market=Wallet.SPOT)
         ctx['asset_to_wallet'] = {wallet.asset_id: wallet for wallet in wallets}
 
         return ctx
@@ -231,17 +230,9 @@ class WalletViewSet(ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.is_superuser:
-            queryset = Asset.candid_objects.all()
+            return Asset.candid_objects.all()
         else:
-            queryset = Asset.live_objects.all()
-
-        if self.get_market() == Wallet.MARGIN:
-            return queryset.exclude(symbol=Asset.IRT)
-        else:
-            return queryset
-
-    def get_market(self) -> str:
-        return self.request.query_params.get('market') or Wallet.SPOT
+            return Asset.live_objects.all()
 
     def list(self, request, *args, **kwargs):
         with PriceManager():
