@@ -77,7 +77,7 @@ class EmailVerificationCode(models.Model):
 
         any_recent_code = EmailVerificationCode.objects.filter(
             email=email,
-            created__gte=timezone.now() - timedelta(minutes=2),
+            created__gte=timezone.now() - timedelta(minutes=0),
         ).exists()
 
         if any_recent_code:
