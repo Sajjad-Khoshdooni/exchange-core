@@ -193,9 +193,9 @@ class Order(models.Model):
 
             logger.info('MM: make match danger zone...')
 
-            if cache.get(key):
-                logger.info('MM: make match danger zone...')
-                raise Exception('Concurrent make match!')
+            # if cache.get(key):
+            #     logger.info('MM: make match danger zone...')
+            #     raise Exception('Concurrent make match!')
 
             cache.set(key, 1)
 
