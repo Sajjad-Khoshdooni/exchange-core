@@ -190,7 +190,7 @@ class Order(models.Model):
         with transaction.atomic():
             from market.models import FillOrder
             # lock symbol open orders
-            Order.open_objects.select_for_update().filter(symbol=self.symbol)
+            list(Order.open_objects.select_for_update().filter(symbol=self.symbol))
 
             logger.info(log_prefix + 'make match danger zone')
 
