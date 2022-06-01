@@ -1,9 +1,9 @@
 import django_filters
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
@@ -27,29 +27,18 @@ class AccountTradeHistoryView(ListAPIView):
         market = self.request.query_params.get('market')
         if not market:
             return FillOrder.objects.filter(
-                maker_order__wallet__account=self.request.user.account
+                Q(maker_order__wallet__account=self.request.user.account) |
+                Q(taker_order__wallet__account=self.request.user.account)
             ).select_related(
                 'maker_order__wallet__account', 'taker_order__wallet__account', 'symbol__asset', 'symbol__base_asset'
-            ).union(
-                FillOrder.objects.filter(
-                    taker_order__wallet__account=self.request.user.account
-                ).select_related('maker_order__wallet__account', 'taker_order__wallet__account', 'symbol__asset',
-                                 'symbol__base_asset'), all=True
             ).order_by('-created')
 
         return FillOrder.objects.filter(
-            maker_order__wallet__account=self.request.user.account,
-            maker_order__wallet__market=market
-        ).select_related(
-            'maker_order__wallet__account', 'taker_order__wallet__account', 'symbol__asset', 'symbol__base_asset'
-        ).union(
-            FillOrder.objects.filter(
-                taker_order__wallet__account=self.request.user.account,
-                taker_order__wallet__market=market
+                Q(maker_order__wallet__account=self.request.user.account, maker_order__wallet__market=market) |
+                Q(taker_order__wallet__account=self.request.user.account, taker_order__wallet__market=market)
             ).select_related(
                 'maker_order__wallet__account', 'taker_order__wallet__account', 'symbol__asset', 'symbol__base_asset'
-            ), all=True
-        ).order_by('-created')
+            ).order_by('-created')
 
     def get_serializer_context(self):
         return {
@@ -66,7 +55,7 @@ class AccountTradeHistoryView(ListAPIView):
         for index, trade in enumerate(page):
             result.append(FillOrderSerializer(
                 instance=trade,
-                context={**self.get_serializer_context(), 'index': index}
+                context={'account': account, 'index': index}
             ).data)
 
         return self.get_paginated_response(result)
