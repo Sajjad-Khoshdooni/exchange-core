@@ -9,14 +9,14 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
+from ledger.utils.precision import floor_precision
+from accounts.throttle import BursApiRateThrottle
 from market.models import PairSymbol, Order, FillOrder
 
 logger = logging.getLogger(__name__)
 
 
 class OrderBookAPIView(APIView):
-    authentication_classes = ()
     permission_classes = ()
     throttle_classes = [BursApiRateThrottle]
 
@@ -28,8 +28,9 @@ class OrderBookAPIView(APIView):
             total_made=Subquery(
                 FillOrder.objects.filter(maker_order_id=OuterRef('pk')).values('maker_order_id').annotate(
                     sum=Sum('amount')).values('sum')[:1]),
-            total_taken=Subquery(FillOrder.objects.filter(taker_order_id=OuterRef('pk')).values('taker_order_id').annotate(
-                sum=Sum('amount')).values('sum')[:1]),
+            total_taken=Subquery(
+                FillOrder.objects.filter(taker_order_id=OuterRef('pk')).values('taker_order_id').annotate(
+                    sum=Sum('amount')).values('sum')[:1]),
         ).annotate(
             unfilled_amount=F('amount') - Coalesce(F('total_made'), Decimal(0)) - Coalesce(F('total_taken'), Decimal(0))
         ).exclude(unfilled_amount=0).values('side', 'price', 'unfilled_amount')
@@ -57,4 +58,17 @@ class OrderBookAPIView(APIView):
             'bids': filtered_bids[:20],
             'asks': asks[:20],
         }
+
+        if not request.auth and request.user and not request.user.is_anonymous:
+            open_orders = {
+                (order['side'], str(floor_precision(order['price'], symbol.tick_size))): True for order in
+                Order.open_objects.filter(
+                    symbol=symbol, wallet__account=self.request.user.account
+                ).values('side', 'price')
+            }
+            for side in (Order.BUY, Order.SELL):
+                key = 'bids' if side == Order.BUY else 'asks'
+                results[key] = [
+                    {**order, 'user_order': open_orders.get((side, order['price']), False)} for order in results[key]
+                ]
         return Response(results, status=status.HTTP_200_OK)

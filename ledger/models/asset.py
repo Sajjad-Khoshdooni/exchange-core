@@ -74,6 +74,8 @@ class Asset(models.Model):
 
     candidate = models.BooleanField(default=False)
 
+    margin_enable = models.BooleanField(default=False)
+
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
 
@@ -158,7 +160,7 @@ class AssetSerializerMini(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'trade_precision')
+        fields = ('symbol', 'trade_precision', 'margin_enable')
 
 
 class CoinField(serializers.CharField):

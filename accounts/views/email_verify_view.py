@@ -59,7 +59,7 @@ class EmailOTPVerifySerializer(serializers.ModelSerializer):
         code.set_code_used()
         sms_code.set_code_used()
 
-        user.email = code.email
+        user.email = code.email.lower()
         user.save()
 
         return user

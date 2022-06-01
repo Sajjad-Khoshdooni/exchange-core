@@ -2,6 +2,7 @@ import time
 from decimal import Decimal
 
 from django.db.models import Min
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import get_object_or_404
@@ -165,6 +166,8 @@ class AssetsViewSet(ModelViewSet):
 
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication,)
     permission_classes = []
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['margin_enable']
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -220,7 +223,7 @@ class AssetsViewSet(ModelViewSet):
             queryset = queryset.filter(trend=True)
 
         if self.get_options('market') == Wallet.MARGIN:
-            queryset = queryset.exclude(symbol=Asset.IRT)
+            queryset = queryset.filter(margin_enable=True)
 
         return queryset
 

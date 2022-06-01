@@ -27,6 +27,8 @@ class MarginTransfer(models.Model):
         choices=((SPOT_TO_MARGIN, 'spot to margin'), (MARGIN_TO_SPOT, 'margin to spot')),
     )
 
+    asset = models.ForeignKey(to=Asset, on_delete=models.PROTECT)
+
     lock = get_lock_field()
 
     group_id = models.UUIDField(default=uuid4)
