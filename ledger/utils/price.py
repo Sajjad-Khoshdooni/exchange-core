@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Dict, List
 
+import requests
 from cachetools.func import ttl_cache
 
 from collector.price.grpc_client import gRPCClient
@@ -192,6 +193,8 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
         return Decimal(price)
 
     tether_rial = get_price('USDT', side=side, exchange=NOBITEX, market_symbol=IRT, now=now)
+
+    resp = requests.post("https://api.nobitex.ir/v2/orderbook/USDTIRT")
     return Decimal(tether_rial / 10)
 
 
