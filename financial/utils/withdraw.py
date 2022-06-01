@@ -28,15 +28,19 @@ class FiatWithdraw:
     ZIBAL = 'zibal'
     PAY_IR = 'pay_ir'
 
-    WITHDRAW_CHANEL = secret('WITHDRAW_CHANEL')
+    WITHDRAW_CHANEL = config('WITHDRAW_CHANEL')
 
-    def get_withdraw_chanel(self):
+    @classmethod
+    def get_withdraw_chanel(cls, chanel=None):
         maping = {
-            self.PAY_IR: PayirChanel,
-            self.ZIBAL: ZiblaChanel
+            cls.PAY_IR: PayirChanel,
+            cls.ZIBAL: ZiblaChanel
         }
-        self.__class__ = maping[self.WITHDRAW_CHANEL]
-        return self
+        if chanel:
+            return maping[chanel]()
+        else:
+            return maping[cls.WITHDRAW_CHANEL]()
+
 
     def get_wallet_id(self):
         raise NotImplementedError

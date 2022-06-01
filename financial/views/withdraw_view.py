@@ -72,7 +72,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
                     fee_amount=fee_amount,
                     lock=lock,
                     bank_account=bank_account,
-                    withdraw_chanel=secret('WITHDRAW_CHANEL')
+                    withdraw_chanel=config('WITHDRAW_CHANEL')
                 )
 
         except InsufficientBalance:

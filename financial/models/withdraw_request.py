@@ -85,8 +85,7 @@ class FiatWithdrawRequest(models.Model):
         assert not self.provider_withdraw_id
         assert self.status == self.PROCESSING
 
-        withdraw = FiatWithdraw()
-        withdraw = withdraw.get_withdraw_chanel()
+        withdraw = FiatWithdraw.get_withdraw_chanel()
 
         wallet_id = withdraw.get_wallet_id()
 
@@ -118,12 +117,8 @@ class FiatWithdrawRequest(models.Model):
         if self.status != self.PENDING:
             return
 
-        if self.withdraw_chanel == 'payir':
-            status = PayirChanel.get_withdraw_status(self.id)
-        elif self.withdraw_chanel == 'zibal':
-            status = ZiblaChanel.get_withdraw_status(self.id)
-        else:
-            raise NotImplementedError
+        withdraw = FiatWithdraw.get_withdraw_chanel(self.withdraw_chanel)
+        status = withdraw.get_withdraw_status(self.id)
 
         logger.info(f'FiatRequest {self.id} status: {status}')
 
