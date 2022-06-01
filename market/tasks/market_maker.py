@@ -33,7 +33,7 @@ def update_maker_orders():
     for depth in depth_orders:
         open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
 
-    for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True):
+    for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True, asset__enable=True):
         symbol_top_prices = {
             Order.BUY: market_top_prices[symbol.id, Order.BUY],
             Order.SELL: market_top_prices[symbol.id, Order.SELL],
@@ -51,7 +51,7 @@ def update_maker_orders():
         set_open_orders_count(symbol.id, symbol_open_depth_orders_count)
 
         update_symbol_maker_orders.apply_async(
-            args=(PairSymbol.IdName(id=symbol.id, name=symbol.name),), queue='market'
+            args=(PairSymbol.IdName(id=symbol.id, name=symbol.name, tick_size=symbol.tick_size),), queue='market'
         )
 
 
@@ -112,14 +112,13 @@ def create_depth_orders(symbol=None, open_depth_orders_count=None):
             open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
 
     if symbol is None:
-        for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True):
+        for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True, asset__enable=True):
             symbol_open_depth_orders_count = {
                 Order.BUY: open_depth_orders_count[symbol.id, Order.BUY],
                 Order.SELL: open_depth_orders_count[symbol.id, Order.SELL],
             }
-            create_depth_orders.apply_async(
-                args=(PairSymbol.IdName(id=symbol.id, name=symbol.name), symbol_open_depth_orders_count), queue='market'
-            )
+            pair_symbol = PairSymbol.IdName(id=symbol.id, name=symbol.name, tick_size=symbol.tick_size)
+            create_depth_orders.apply_async(args=(pair_symbol, symbol_open_depth_orders_count), queue='market')
     else:
         symbol = PairSymbol.IdName(*symbol)
         present_prices = set(

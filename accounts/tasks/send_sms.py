@@ -25,6 +25,9 @@ def send_message_by_kavenegar(phone: str, template: str, token: str, send_type: 
     if settings.DEBUG_OR_TESTING:
         return
 
+    if settings.BRAND_EN != 'Raastin':
+        template = settings.BRAND_EN.lower() + '-' + template
+
     api_key = settings.KAVENEGAR_KEY
 
     try:

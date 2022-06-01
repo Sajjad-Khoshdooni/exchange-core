@@ -12,7 +12,7 @@ DEFAULT_TAKER_FEE = 0
 
 
 class PairSymbol(models.Model):
-    IdName = namedtuple("PairSymbol", "id name")
+    IdName = namedtuple("PairSymbol", "id name tick_size")
 
     name = models.CharField(max_length=32, blank=True, unique=True)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='pair')

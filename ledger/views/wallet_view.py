@@ -88,7 +88,8 @@ class AssetListSerializer(serializers.ModelSerializer):
         return asset.get_presentation_price_irt(price)
 
     def get_can_deposit(self, asset: Asset):
-        return NetworkAsset.objects.filter(asset=asset, network__can_deposit=True).exists()
+        network_asset = NetworkAsset.objects.filter(asset=asset, network__can_deposit=True).first()
+        return network_asset and network_asset.can_deposit()
 
     def get_can_withdraw(self, asset: Asset):
         return NetworkAsset.objects.filter(
@@ -154,7 +155,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return network_asset.network.address_regex
 
     def get_can_deposit(self, network_asset: NetworkAsset):
-        return network_asset.network.can_deposit
+        return network_asset.can_deposit()
 
     def get_can_withdraw(self, network_asset: NetworkAsset):
         return network_asset.network.can_withdraw and network_asset.binance_withdraw_enable

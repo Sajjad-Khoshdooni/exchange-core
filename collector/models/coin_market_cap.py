@@ -9,6 +9,11 @@ data_url = 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?sta
 
 
 class CoinMarketCap(models.Model):
+
+    SYMBOL_TRANSLATION = {
+        'MIOTA': 'IOTA'
+    }
+
     symbol = models.CharField(max_length=64, unique=True)
     name = models.CharField(max_length=64)
     slug = models.CharField(max_length=64)

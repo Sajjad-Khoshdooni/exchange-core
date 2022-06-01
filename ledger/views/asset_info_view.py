@@ -76,7 +76,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return min_withdraw['min']
 
     def get_trend_url(self, asset: Asset):
-        cap = CoinMarketCap.objects.filter(symbol=asset.symbol).first()
+        cap = self.get_cap(asset)
+
         if cap:
             return 'https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/%d.svg?v=%s' % \
                    (cap.internal_id, str(int(time.time()) // 3600))
@@ -175,8 +176,12 @@ class AssetsViewSet(ModelViewSet):
 
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
-            caps = CoinMarketCap.objects.filter(symbol__in=symbols)
-            ctx['cap_info'] = {cap.symbol: cap for cap in caps}
+
+            symbol_translation_reversed = {v: k for (k, v) in CoinMarketCap.SYMBOL_TRANSLATION.items()}
+
+            to_search_symbols = list(map(lambda s: symbol_translation_reversed.get(s, s), symbols))
+            caps = CoinMarketCap.objects.filter(symbol__in=to_search_symbols)
+            ctx['cap_info'] = {CoinMarketCap.SYMBOL_TRANSLATION.get(cap.symbol, cap.symbol): cap for cap in caps}
 
             ctx['prices'] = get_prices_dict(coins=symbols, side=BUY)
             ctx['tether_irt'] = get_tether_irt_price(BUY)

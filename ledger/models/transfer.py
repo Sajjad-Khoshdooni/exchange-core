@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from django.db import models
 from django.db.models import UniqueConstraint, Q
+from yekta_config.config import config
 
 from accounts.models import Account, Notification
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
@@ -166,39 +167,47 @@ class Transfer(models.Model):
     def alert_user(self):
         if self.status == Transfer.DONE and not self.hidden:
             sent_amount = self.asset.get_presentation_amount(self.amount)
-
+            user_email = self.wallet.account.user.email
             if self.deposit:
                 Notification.send(
                     recipient=self.wallet.account.user,
                     title='دریافت شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol),
                     message='از ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
                 )
-                email.send_email_by_template(
-                    recipient=self.wallet.account.user.email,
-                    template=email.SCOPE_DEPOSIT_EMAIL,
-                    context={
-                        'amount': humanize_number(sent_amount),
-                        'wallet_asset': self.wallet.asset.symbol,
-                        'withdraw_address': self.deposit_address,
-                        'trx_hash': self.trx_hash
-                    }
-                )
+                if user_email:
+                    email.send_email_by_template(
+                        recipient=user_email,
+                        template=email.SCOPE_DEPOSIT_EMAIL,
+                        context={
+                            'amount': humanize_number(sent_amount),
+                            'wallet_asset': self.wallet.asset.symbol,
+                            'withdraw_address': self.deposit_address,
+                            'trx_hash': self.trx_hash,
+                            'brand': config('BRAND'),
+                            'panel_url': config('PANEL_URL'),
+                            'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+                        }
+                    )
             else:
                 Notification.send(
                     recipient=self.wallet.account.user,
                     title='ارسال شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol),
                     message='به ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
                 )
-                email.send_email_by_template(
-                    recipient=self.wallet.account.user.email,
-                    template=email.SCOPE_WITHDRAW_EMAIL,
-                    context={
-                        'amount': humanize_number(sent_amount),
-                        'wallet_asset': self.wallet.asset.symbol,
-                        'withdraw_address': self.out_address,
-                        'trx_hash': self.trx_hash
-                    }
-                )
+                if user_email:
+                    email.send_email_by_template(
+                        recipient=user_email,
+                        template=email.SCOPE_WITHDRAW_EMAIL,
+                        context={
+                            'amount': humanize_number(sent_amount),
+                            'wallet_asset': self.wallet.asset.symbol,
+                            'withdraw_address': self.out_address,
+                            'trx_hash': self.trx_hash,
+                            'brand': config('BRAND'),
+                            'panel_url': config('PANEL_URL'),
+                            'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+                        }
+                    )
 
     class Meta:
         constraints = [

@@ -1,6 +1,8 @@
 
 import logging
 from celery import shared_task
+from yekta_config.config import config
+
 from accounts.models import Notification
 from accounts.models import User
 from accounts.verifiers.basic_verify import basic_verify
@@ -26,7 +28,7 @@ def alert_user_verify_status(user: User):
         if user.verify_status == User.REJECTED:
             if user.national_code_duplicated_alert:
                 title = 'کد ملی تکراری است. لطفا به حساب اصلی‌تان وارد شوید.'
-                notif_message = 'شما قبلا در راستین با شماره موبایل دیگری ثبت‌نام کرده‌اید و احراز هویت‌تان انجام شده است. لطفا از آن حساب استفاده کنید.'
+                notif_message = 'شما قبلا در {} با شماره موبایل دیگری ثبت‌نام کرده‌اید و احراز هویت‌تان انجام شده است. لطفا از آن حساب استفاده کنید.'.format(config('BRAND'))
             else:
                 title = 'اطلاعات وارد شده نیاز به بازنگری دارد.'
 

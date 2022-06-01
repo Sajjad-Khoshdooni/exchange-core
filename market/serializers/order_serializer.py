@@ -58,7 +58,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def post_validate(self, validated_data):
         symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
-        if not symbol.enable:
+        if not symbol.enable or not symbol.asset.enable:
             raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
         market = validated_data.pop('wallet')['market']
         if market == Wallet.MARGIN:
