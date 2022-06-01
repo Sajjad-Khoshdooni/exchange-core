@@ -2,6 +2,7 @@ import math
 from decimal import Decimal
 
 from ledger.models import Asset, Network, NetworkAsset
+from market.utils.fix import create_missing_symbols
 from provider.exchanges.binance.interface import BinanceSpotHandler, BinanceFuturesHandler
 
 
@@ -78,3 +79,5 @@ def add_candidate_coins(coins: list):
                 )
 
         asset.save()
+
+    create_missing_symbols()

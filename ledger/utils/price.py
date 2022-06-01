@@ -19,6 +19,12 @@ IRT = 'IRT'
 BUY, SELL = 'buy', 'sell'
 
 
+ASSET_DIFF_MULTIPLIER = {
+    'LUNC': 6,
+    'LUNA': 10,
+}
+
+
 def get_other_side(side: str):
     assert side in (BUY, SELL)
 
@@ -51,10 +57,7 @@ def get_binance_price_stream(coin: str):
 
 
 def get_asset_diff_multiplier(coin: str):
-    if coin == 'LUNC':
-        return 6
-    else:
-        return 1
+    return ASSET_DIFF_MULTIPLIER.get(coin, 1)
 
 
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
