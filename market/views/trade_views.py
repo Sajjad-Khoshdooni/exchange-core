@@ -55,7 +55,7 @@ class AccountTradeHistoryView(ListAPIView):
         for index, trade in enumerate(page):
             result.append(FillOrderSerializer(
                 instance=trade,
-                context={'account': account, 'index': index}
+                context={'account': self.request.user.account, 'index': index}
             ).data)
 
         return self.get_paginated_response(result)
