@@ -1,14 +1,44 @@
+from collections import OrderedDict
+
 import django_filters
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
+from rest_framework.response import Response
 
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from market.models import FillOrder
 from market.serializers.trade_serializer import FillOrderSerializer, TradeSerializer
+
+
+class CustomCountLimitOffsetPagination(LimitOffsetPagination):
+    def paginate_queryset(self, queryset, request, view=None):
+        market = request.query_params.get('market')
+        if not market:
+            makers_count = FillOrder.objects.filter(maker_order__wallet__account=request.user.account).count()
+            takers_count = FillOrder.objects.filter(taker_order__wallet__account=request.user.account).count()
+        else:
+            makers_count = FillOrder.objects.filter(
+                maker_order__wallet__account=request.user.account,
+                maker_order__wallet__market=market
+            ).count()
+            takers_count = FillOrder.objects.filter(
+                taker_order__wallet__account=request.user.account,
+                taker_order__wallet__market=market
+            ).count()
+        self.count_objects = makers_count + takers_count
+        return super(CustomCountLimitOffsetPagination, self).paginate_queryset(queryset, request, view=view)
+
+    def get_paginated_response(self, data):
+        return Response(OrderedDict([
+            ('count', self.count_objects),
+            ('next', self.get_next_link()),
+            ('previous', self.get_previous_link()),
+            ('results', data)
+        ]))
 
 
 class TradeFilter(django_filters.FilterSet):
@@ -21,34 +51,23 @@ class TradeFilter(django_filters.FilterSet):
 
 class AccountTradeHistoryView(ListAPIView):
     authentication_classes = (SessionAuthentication,)
-    pagination_class = LimitOffsetPagination
+    pagination_class = CustomCountLimitOffsetPagination
 
     def get_queryset(self):
         market = self.request.query_params.get('market')
         if not market:
             return FillOrder.objects.filter(
-                maker_order__wallet__account=self.request.user.account
+                Q(maker_order__wallet__account=self.request.user.account) |
+                Q(taker_order__wallet__account=self.request.user.account)
             ).select_related(
                 'maker_order__wallet__account', 'taker_order__wallet__account', 'symbol__asset', 'symbol__base_asset'
-            ).union(
-                FillOrder.objects.filter(
-                    taker_order__wallet__account=self.request.user.account
-                ).select_related('maker_order__wallet__account', 'taker_order__wallet__account', 'symbol__asset',
-                                 'symbol__base_asset'), all=True
             ).order_by('-created')
 
         return FillOrder.objects.filter(
-            maker_order__wallet__account=self.request.user.account,
-            maker_order__wallet__market=market
+            Q(maker_order__wallet__account=self.request.user.account, maker_order__wallet__market=market) |
+            Q(taker_order__wallet__account=self.request.user.account, taker_order__wallet__market=market)
         ).select_related(
             'maker_order__wallet__account', 'taker_order__wallet__account', 'symbol__asset', 'symbol__base_asset'
-        ).union(
-            FillOrder.objects.filter(
-                taker_order__wallet__account=self.request.user.account,
-                taker_order__wallet__market=market
-            ).select_related(
-                'maker_order__wallet__account', 'taker_order__wallet__account', 'symbol__asset', 'symbol__base_asset'
-            ), all=True
         ).order_by('-created')
 
     def get_serializer_context(self):
@@ -66,7 +85,7 @@ class AccountTradeHistoryView(ListAPIView):
         for index, trade in enumerate(page):
             result.append(FillOrderSerializer(
                 instance=trade,
-                context={**self.get_serializer_context(), 'index': index}
+                context={'account': self.request.user.account, 'index': index}
             ).data)
 
         return self.get_paginated_response(result)
