@@ -48,7 +48,7 @@ class FiatWithdrawRequest(models.Model):
     withdraw_datetime = models.DateTimeField(null=True, blank=True)
     provider_withdraw_id = models.CharField(max_length=64, blank=True)
 
-    withdraw_chanel = models.CharField(choices=CHANEL_CHOICES, default=PAYIR)
+    withdraw_chanel = models.CharField(max_length=10, choices=CHANEL_CHOICES, default=PAYIR)
 
     @property
     def total_amount(self):
@@ -118,9 +118,10 @@ class FiatWithdrawRequest(models.Model):
 
         if self.withdraw_chanel == 'payir':
             status = PayirChanel.get_withdraw_status(self.id)
-        if self.withdraw_chanel == 'zibal':
+        elif self.withdraw_chanel == 'zibal':
             status = ZiblaChanel.get_withdraw_status(self.id)
-
+        else:
+            raise NotImplementedError
 
         logger.info(f'FiatRequest {self.id} status: {status}')
 
