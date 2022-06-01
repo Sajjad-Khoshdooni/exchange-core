@@ -64,14 +64,6 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     cash = serializers.SerializerMethodField()
 
     def validate(self, attrs):
-        market = attrs['market']
-
-        if market == Wallet.MARGIN:
-            user = self.context['request'].user
-
-            if not user.margin_quiz_pass_date:
-                raise ValidationError('شما باید ابتدا به سوالات این بخش پاسخ دهید.')
-
         from_symbol = attrs['from_asset']['symbol']
         to_symbol = attrs['to_asset']['symbol']
 
@@ -80,9 +72,6 @@ class OTCRequestSerializer(serializers.ModelSerializer):
 
         if from_symbol == to_symbol:
             raise ValidationError('هر دو دارایی نمی‌تواند یکی باشد.')
-
-        if market == Wallet.MARGIN and Asset.IRT in (from_symbol, to_symbol):
-            raise ValidationError('در بازار معاملات تعهدی نمی‌توان به تومان معامله کرد.')
 
         try:
             from_asset = attrs['from_asset'] = Asset.get(from_symbol)
@@ -121,7 +110,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
                 to_asset=to_asset,
                 from_amount=from_amount,
                 to_amount=to_amount,
-                market=validated_data.get('market'),
+                market=Wallet.SPOT,
             )
         except InvalidAmount as e:
             raise ValidationError(str(e))
@@ -164,7 +153,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OTCRequest
-        fields = ('from_asset', 'to_asset', 'from_amount', 'to_amount', 'token', 'price', 'expire', 'market', 'coin',
+        fields = ('from_asset', 'to_asset', 'from_amount', 'to_amount', 'token', 'price', 'expire', 'coin',
                   'coin_price', 'cash')
         read_only_fields = ('token', 'price')
 
@@ -211,43 +200,3 @@ class OTCTradeSerializer(serializers.ModelSerializer):
 
 class OTCTradeView(CreateAPIView):
     serializer_class = OTCTradeSerializer
-
-
-class OTCTradeHistoryInputSerializer(serializers.Serializer):
-    market = serializers.ChoiceField(choices=((Wallet.SPOT, Wallet.SPOT), (Wallet.MARGIN, Wallet.MARGIN),))
-
-
-class OTCHistoryView(ListAPIView):
-    pagination_class = LimitOffsetPagination
-
-    def get_queryset(self):
-        serializer = OTCTradeHistoryInputSerializer(data=self.request.query_params)
-        serializer.is_valid(raise_exception=True)
-
-        market = serializer.data['market']
-
-        return OTCTrade.objects.filter(
-            otc_request__account=self.request.user.account,
-            otc_request__market=market
-        ).order_by('-created')
-
-    def list(self, request: Request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-
-        page = self.paginate_queryset(queryset)
-
-        result = []
-
-        for trade in page:
-            config = trade.otc_request.get_trade_config()
-
-            result.append({
-                'created': trade.created,
-                'side': config.side,
-                'coin': config.coin.symbol,
-                'amount': config.coin.get_presentation_amount(config.coin_amount),
-                'pair': config.cash.symbol,
-                'pair_amount': config.cash.get_presentation_amount(config.cash_amount)
-            })
-
-        return self.get_paginated_response(result)

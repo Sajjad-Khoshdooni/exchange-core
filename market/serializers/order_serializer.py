@@ -66,7 +66,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 raise ValidationError(_('margin trading is not enable'))
             if not self.context['account'].user.margin_quiz_pass_date:
                 raise ValidationError(_('You need to pass margin quiz'))
-            if symbol.base_asset.symbol == Asset.IRT:
+            if symbol.base_asset.symbol == Asset.IRT or not symbol.asset.margin_enable:
                 raise ValidationError(_('{symbol} is not enable in margin trading').format(symbol=symbol))
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
         wallet = symbol.asset.get_wallet(self.context['account'], market=market)
