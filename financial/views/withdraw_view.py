@@ -11,6 +11,8 @@ from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from yekta_config import secret
+from yekta_config.config import config
 
 from accounts.permissions import IsBasicVerified
 from accounts.verifiers.legal import is_48h_rule_passed
@@ -69,7 +71,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
                     amount=withdraw_amount,
                     fee_amount=fee_amount,
                     lock=lock,
-                    bank_account=bank_account
+                    bank_account=bank_account,
+                    withdraw_chanel=secret('WITHDRAW_CHANEL')
                 )
 
         except InsufficientBalance:

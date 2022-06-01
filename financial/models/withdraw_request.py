@@ -1,9 +1,6 @@
 import logging
-
 from django.db import models, transaction
 from django.utils import timezone
-from yekta_config.config import config
-
 from accounts.models import Account
 from accounts.models import Notification
 from accounts.tasks.send_sms import send_message_by_kavenegar
@@ -12,8 +9,7 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import BankAccount
-from financial.utils.pay_ir import Payir, Withdraw
-from financial.utils.zibal import Zibal
+from financial.utils.withdraw import FiatWithdraw, PayirChanel, ZiblaChanel
 from ledger.models import Trx, Asset
 from ledger.utils.fields import DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
 from ledger.utils.precision import humanize_number
@@ -23,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 class FiatWithdrawRequest(models.Model):
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
+
+    ZIBAL, PAYIR = 'zibal', 'payir'
+    CHANEL_CHOICES = ((ZIBAL, ZIBAL), (PAYIR, PAYIR))
 
     FREEZE_TIME = 3 * 60
 
@@ -48,6 +47,8 @@ class FiatWithdrawRequest(models.Model):
 
     withdraw_datetime = models.DateTimeField(null=True, blank=True)
     provider_withdraw_id = models.CharField(max_length=64, blank=True)
+
+    withdraw_chanel = models.CharField(choices=CHANEL_CHOICES, default=PAYIR)
 
     @property
     def total_amount(self):
@@ -78,11 +79,11 @@ class FiatWithdrawRequest(models.Model):
                 scope=Trx.COMMISSION
             )
 
-    def create_withdraw_request_paydotir(self):
+    def create_withdraw_request(self):
         assert not self.provider_withdraw_id
         assert self.status == self.PROCESSING
 
-        withdraw = Withdraw()
+        withdraw = FiatWithdraw()
         withdraw = withdraw.get_withdraw_chanel()
 
         wallet_id = withdraw.get_wallet_id()
@@ -111,17 +112,22 @@ class FiatWithdrawRequest(models.Model):
         self.save()
 
     def update_status(self):
+
         if self.status != self.PENDING:
             return
 
-        status = Payir.get_withdraw_status(self.id)
+        if self.withdraw_chanel == 'payir':
+            status = PayirChanel.get_withdraw_status(self.id)
+        if self.withdraw_chanel == 'zibal':
+            status = ZiblaChanel.get_withdraw_status(self.id)
+
 
         logger.info(f'FiatRequest {self.id} status: {status}')
 
-        if status == 4:
+        if status == FiatWithdraw.DONE:
             self.change_status(FiatWithdrawRequest.DONE)
 
-        elif status in (5, 3):
+        elif status == FiatWithdraw.CANCELED:
             self.change_status(FiatWithdrawRequest.CANCELED)
 
     def alert_withdraw_verify_status(self):
@@ -134,7 +140,8 @@ class FiatWithdrawRequest(models.Model):
         user = self.bank_account.user
         if self.status == PENDING:
             title = 'درخواست برداشت شما به بانک ارسال گردید.'
-            description ='وجه درخواستی شما در سیکل بعدی پایا {} به حساب شما واریز خواهد شد.'.format(estimated_receive_time)
+            description = 'وجه درخواستی شما در سیکل بعدی پایا {} به حساب شما واریز خواهد شد.'.format(
+                estimated_receive_time)
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
             email_template = email.SCOPE_SUCCESSFUL_FIAT_WITHDRAW
