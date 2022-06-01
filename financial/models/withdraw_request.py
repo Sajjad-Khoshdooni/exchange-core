@@ -1,6 +1,8 @@
 import logging
 from django.db import models, transaction
 from django.utils import timezone
+from yekta_config.config import config
+
 from accounts.models import Account
 from accounts.models import Notification
 from accounts.tasks.send_sms import send_message_by_kavenegar
