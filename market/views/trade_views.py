@@ -15,9 +15,6 @@ from market.serializers.trade_serializer import FillOrderSerializer, TradeSerial
 
 
 class CustomCountLimitOffsetPagination(LimitOffsetPagination):
-    def __init__(self):
-        self.count_objects = 0
-
     def paginate_queryset(self, queryset, request, view=None):
         market = self.request.query_params.get('market')
         if not market:
