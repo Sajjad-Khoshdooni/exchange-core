@@ -44,16 +44,20 @@ SIDE_MAP = {
 }
 
 
-def get_binance_price_stream(coin: str):
+def get_binance_trading_symbol(coin: str):
     if coin == 'LUNC':
-        base = 'busd'
+        base = 'BUSD'
     else:
-        base = 'usdt'
+        base = 'USDT'
 
     if coin == 'BTT':
         coin = 'BTTC'
 
-    return coin.lower() + base
+    return coin + base
+
+
+def get_binance_price_stream(coin: str):
+    return get_binance_trading_symbol(coin).lower()
 
 
 def get_asset_diff_multiplier(coin: str):

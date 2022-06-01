@@ -5,7 +5,7 @@ from django.db import models
 
 from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
-from ledger.utils.price import BUY, SELL, get_price
+from ledger.utils.price import BUY, SELL, get_price, get_binance_trading_symbol
 from provider.exchanges import BinanceSpotHandler
 from provider.models import ProviderOrder
 
@@ -63,7 +63,7 @@ class ProviderHedgedOrder(models.Model):
     def get_min_trade_amount_to_buy(cls, asset: Asset, amount: Decimal):
         price = get_price(asset.symbol, BUY)
 
-        symbol = asset.symbol + 'USDT'
+        symbol = get_binance_trading_symbol(asset.symbol)
 
         min_notional_amount = 10 / price * Decimal('1.002')
 
