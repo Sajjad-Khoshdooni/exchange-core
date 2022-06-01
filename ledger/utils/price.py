@@ -154,7 +154,6 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
             results.append(
                 Price(coin=symbol_to_coins[o.symbol], price=Decimal(o.price), side=side)
             )
-
     return results
 
 
@@ -186,6 +185,14 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
         return Decimal(0)
 
 
+@cache_for(time=2)
+def get_price_tethet_irt_nobitex():
+    resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=2)
+    data = resp.json()
+    price = {'bids': data['asks'][1][0], 'asks': data['bids'][1][0]}
+    return price
+
+
 @cache_for(time=5)
 def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
     price = price_redis.hget('nob:usdtirt', SIDE_MAP[side])
@@ -194,7 +201,10 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
 
     tether_rial = get_price('USDT', side=side, exchange=NOBITEX, market_symbol=IRT, now=now)
 
-    resp = requests.post("https://api.nobitex.ir/v2/orderbook/USDTIRT")
+    if not tether_rial:
+        price = Decimal(get_price_tethet_irt_nobitex()[side])//10
+        return price
+
     return Decimal(tether_rial / 10)
 
 
