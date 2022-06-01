@@ -51,8 +51,9 @@ def get_serializer_amount_field(max_digits: int = None, decimal_places: int = No
 
     return SerializerDecimalField(
         max_digits=max_digits or AMOUNT_MAX_DIGITS,
-        decimal_places=decimal_places or AMOUNT_DECIMAL_PLACES,
-        **kwargs
+        decimal_places=8,
+        min_value=0,
+        **kwargs,
     )
 
 
