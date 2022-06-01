@@ -36,7 +36,7 @@ class CoinMarketCap(models.Model):
     @classmethod
     def fill(cls):
         coins = cls.request()
-        coins = list(filter(lambda x: x['quotes'][0]['marketCap'] > 0, coins))
+        # coins = list(filter(lambda x: x['quotes'][0]['marketCap'] > 0, coins))
 
         coins_per_symbol = defaultdict(list)
 
