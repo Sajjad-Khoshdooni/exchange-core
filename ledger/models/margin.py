@@ -34,18 +34,14 @@ class MarginTransfer(models.Model):
     group_id = models.UUIDField(default=uuid4)
 
     def save(self, *args, **kwargs):
-        asset = Asset.get(Asset.USDT)
-
-        spot_wallet = asset.get_wallet(self.account, Wallet.SPOT)
-        margin_wallet = asset.get_wallet(self.account, Wallet.MARGIN)
+        spot_wallet = self.asset.get_wallet(self.account, Wallet.SPOT)
+        margin_wallet = self.asset.get_wallet(self.account, Wallet.MARGIN)
 
         if self.type == self.SPOT_TO_MARGIN:
-            sender = spot_wallet
-            receiver = margin_wallet
+            sender, receiver = spot_wallet, margin_wallet
 
         elif self.type == self.MARGIN_TO_SPOT:
-            sender = margin_wallet
-            receiver = spot_wallet
+            sender, receiver = margin_wallet, spot_wallet
 
             margin_info = MarginInfo.get(self.account)
 
@@ -56,9 +52,7 @@ class MarginTransfer(models.Model):
 
         with transaction.atomic():
             self.lock = sender.lock_balance(self.amount)
-            super(MarginTransfer, self).save(*args, **kwargs)
-
-        with transaction.atomic():
+            super(MarginTransfer, self).save(*args)
             Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_TRANSFER, self.group_id)
             self.lock.release()
 
