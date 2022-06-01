@@ -24,7 +24,7 @@ class Wallet:
 
 class FiatWithdraw:
 
-    PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
+    PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
     ZIBAL = 'zibal'
     PAY_IR = 'pay_ir'
 
@@ -126,8 +126,10 @@ class PayirChanel(FiatWithdraw):
            3: cls.CANCELED,
            4: cls.DONE,
            5: cls.CANCELED
+
         }
-        return maping_status[int(data['cashout']['status'])]
+        status = data['cashout']['status']
+        return maping_status.get(int(status), default=cls.PENDING)
 
 
 class ZiblaChanel(FiatWithdraw):
@@ -205,4 +207,5 @@ class ZiblaChanel(FiatWithdraw):
             "1": cls.CANCELED,
             "0": cls.DONE,
         }
-        return maping_status[data['checkoutStatus']]
+        status = data['checkoutStatus']
+        return maping_status.get(status, default=cls.PENDING)
