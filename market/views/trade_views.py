@@ -16,17 +16,17 @@ from market.serializers.trade_serializer import FillOrderSerializer, TradeSerial
 
 class CustomCountLimitOffsetPagination(LimitOffsetPagination):
     def paginate_queryset(self, queryset, request, view=None):
-        market = self.request.query_params.get('market')
+        market = request.query_params.get('market')
         if not market:
-            makers_count = FillOrder.objects.filter(maker_order__wallet__account=self.request.user.account).count()
-            takers_count = FillOrder.objects.filter(taker_order__wallet__account=self.request.user.account).count()
+            makers_count = FillOrder.objects.filter(maker_order__wallet__account=request.user.account).count()
+            takers_count = FillOrder.objects.filter(taker_order__wallet__account=request.user.account).count()
         else:
             makers_count = FillOrder.objects.filter(
-                maker_order__wallet__account=self.request.user.account,
+                maker_order__wallet__account=request.user.account,
                 maker_order__wallet__market=market
             ).count()
             takers_count = FillOrder.objects.filter(
-                taker_order__wallet__account=self.request.user.account,
+                taker_order__wallet__account=request.user.account,
                 taker_order__wallet__market=market
             ).count()
         self.count_objects = makers_count + takers_count
