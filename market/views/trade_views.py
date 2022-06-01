@@ -51,7 +51,7 @@ class TradeFilter(django_filters.FilterSet):
 
 class AccountTradeHistoryView(ListAPIView):
     authentication_classes = (SessionAuthentication,)
-    pagination_class = CustomCountLimitOffsetPagination
+    pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
         market = self.request.query_params.get('market')
