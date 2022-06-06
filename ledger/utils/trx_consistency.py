@@ -36,11 +36,13 @@ def check_account_consistency(account: Account):
             balances[trx.sender_id] -= trx.amount
             if not check_wallet_balance_correctness(trx.sender, balances[trx.sender_id]):
                 logger.info('trx_id= %s, created= %s' % (trx.id, trx.created))
+                balances[trx.sender_id] = 0
 
         if trx.receiver.account == account:
             balances[trx.receiver_id] += trx.amount
             if not check_wallet_balance_correctness(trx.receiver, balances[trx.receiver_id]):
                 logger.info('trx_id= %s, created= %s' % (trx.id, trx.created))
+                balances[trx.receiver_id] = 0
 
 
 def check_all_accounts_consistency():
