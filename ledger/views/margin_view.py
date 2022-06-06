@@ -34,7 +34,7 @@ class MarginInfoView(APIView):
 class AssetMarginInfoView(APIView):
     def get(self, request: Request, symbol):
         account = request.user.account
-        asset = get_object_or_404(Asset, symbol=symbol.upper())
+        asset = get_object_or_404(Asset, symbol=symbol.upper(), margin_enable=True)
 
         margin_info = MarginInfo.get(account)
 
@@ -51,6 +51,7 @@ class AssetMarginInfoView(APIView):
         return Response({
             'balance': asset.get_presentation_amount(margin_wallet.get_free()),
             'debt': asset.get_presentation_amount(-loan_wallet.get_free()),
+            'debt2': -loan_wallet.get_free(),
             'max_borrow': asset.get_presentation_amount(max_borrow),
             'max_transfer': asset.get_presentation_amount(max_transfer),
         })
@@ -68,7 +69,7 @@ class MarginTransferSerializer(serializers.ModelSerializer):
             raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
 
         if not user.margin_quiz_pass_date:
-            raise ValidationError('شما باید ابتدا به سوالات این بخش پاسخ دهید.')
+            raise ValidationError('شما باید ابتدا به سوالات معاملات تعهدی پاسخ دهید.')
 
         return super(MarginTransferSerializer, self).create(validated_data)
 
