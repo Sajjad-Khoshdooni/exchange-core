@@ -22,6 +22,7 @@ BUY, SELL = 'buy', 'sell'
 ASSET_DIFF_MULTIPLIER = {
     'LUNC': 6,
     'LUNA': 10,
+    'OP': 10,
 }
 
 
