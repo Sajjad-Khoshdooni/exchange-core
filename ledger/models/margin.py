@@ -84,16 +84,7 @@ class MarginLoan(models.Model):
     def borrow_wallet(self) -> 'Wallet':
         return self.asset.get_wallet(self.account, Wallet.LOAN)
 
-    # def create_ledger(self):
-    #     if self.type == self.REPAY:
-    #         sender
-    #
-    #     with transaction.atomic():
-    #         Trx.transaction(self.margin_wallet, self.borrow_wallet, self.amount, Trx.MARGIN_BORROW)
-    #         self.lock.release()
-
     def finalize(self):
-
         if self.asset.symbol != Asset.USDT:
             hedged = ProviderOrder.try_hedge_for_new_order(
                 asset=self.asset,
@@ -122,30 +113,31 @@ class MarginLoan(models.Model):
         assert amount > 0
         assert asset.symbol != Asset.IRT
 
-        loan = MarginLoan(
-            account=account,
-            asset=asset,
-            amount=amount,
-            type=loan_type
-        )
+        with transaction.atomic():
+            loan = MarginLoan(
+                account=account,
+                asset=asset,
+                amount=amount,
+                type=loan_type
+            )
 
-        if loan_type == cls.REPAY:
-            loan.borrow_wallet.has_debt(-amount, raise_exception=True)
-            loan.lock = loan.margin_wallet.lock_balance(amount)
-            loan.save()
+            if loan_type == cls.REPAY:
+                loan.borrow_wallet.has_debt(-amount, raise_exception=True)
+                loan.lock = loan.margin_wallet.lock_balance(amount)
+                loan.save()
 
-        else:
-            margin_info = MarginInfo.get(account)
-            max_borrowable = margin_info.get_max_borrowable() / get_trading_price_usdt(asset.symbol, SELL, raw_price=True)
+            else:
+                margin_info = MarginInfo.get(account)
+                max_borrowable = margin_info.get_max_borrowable() / get_trading_price_usdt(asset.symbol, SELL, raw_price=True)
 
-            if amount > max_borrowable:
-                raise MaxBorrowableExceeds()
+                if amount > max_borrowable:
+                    raise MaxBorrowableExceeds()
 
-            loan.save()
+                loan.save()
 
-        loan.finalize()
+            loan.finalize()
 
-        return loan
+            return loan
 
 
 class MarginLiquidation(models.Model):

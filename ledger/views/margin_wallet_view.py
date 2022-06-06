@@ -65,12 +65,12 @@ class MarginAssetListSerializer(serializers.ModelSerializer):
         loan = self.get_loan_wallet(asset)
 
         if wallet:
-            wallet_value = wallet.get_balance_usdt()
+            wallet_value = wallet.get_balance()
         else:
             wallet_value = 0
 
         if loan:
-            loan_value = loan.get_balance_usdt()
+            loan_value = loan.get_balance()
         else:
             loan_value = 0
 
