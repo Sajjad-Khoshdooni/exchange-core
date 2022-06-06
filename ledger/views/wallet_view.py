@@ -196,7 +196,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
         deposit_addresses = DepositAddress.objects.filter(account_secret__account=account)
 
         address_mapping = {
-            deposit.network.symbol: deposit.presentation_address for deposit in deposit_addresses
+            deposit.network.symbol: deposit.address for deposit in deposit_addresses
         }
 
         serializer = NetworkAssetSerializer(network_assets, many=True, context={

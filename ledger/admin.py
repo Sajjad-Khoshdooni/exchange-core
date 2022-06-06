@@ -322,12 +322,12 @@ class CryptoBalanceAdmin(admin.ModelAdmin):
     get_network.short_description = 'network'
 
     def get_address(self, crypto_balance: models.CryptoBalance):
-        return crypto_balance.deposit_address.presentation_address
+        return crypto_balance.deposit_address.address
 
     get_address.short_description = 'address'
 
     def get_owner(self, crypto_balance: models.CryptoBalance):
-        return str(crypto_balance.deposit_address.account_secret.account)
+        return str(crypto_balance.deposit_address.account)
 
     get_owner.short_description = 'owner'
 
