@@ -160,7 +160,7 @@ class AssetSerializerMini(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'trade_precision', 'margin_enable')
+        fields = ('symbol', 'trade_precision', 'margin_enable', 'precision')
 
 
 class CoinField(serializers.CharField):
