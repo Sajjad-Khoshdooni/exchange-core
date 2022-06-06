@@ -28,6 +28,6 @@ class DepositAddress(models.Model):
 
     class Meta:
         unique_together = (
-            ('network', 'account'),
+            # ('network', 'account'),
             ('network', 'address'),
         )
