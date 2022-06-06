@@ -51,7 +51,6 @@ class AssetMarginInfoView(APIView):
         return Response({
             'balance': asset.get_presentation_amount(margin_wallet.get_free()),
             'debt': asset.get_presentation_amount(-loan_wallet.get_free()),
-            'debt2': -loan_wallet.get_free(),
             'max_borrow': asset.get_presentation_amount(max_borrow),
             'max_transfer': asset.get_presentation_amount(max_transfer),
         })
