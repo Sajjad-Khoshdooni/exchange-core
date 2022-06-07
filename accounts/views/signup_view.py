@@ -13,6 +13,7 @@ from accounts.models import User, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
+from accounts.utils.validation import set_login_activity
 from accounts.validators import mobile_number_validator, password_validator
 
 
@@ -34,10 +35,6 @@ class InitiateSignupView(APIView):
         serializer.is_valid(raise_exception=True)
 
         phone = serializer.validated_data['phone']
-
-        # todo: privacy error
-        if User.objects.filter(phone=phone).exists():
-            raise ValidationError('شماره موبایل وارد شده در سیستم وجود دارد.')
 
         VerificationCode.send_otp_code(phone, VerificationCode.SCOPE_VERIFY_PHONE)
 
@@ -62,8 +59,11 @@ class SignupSerializer(serializers.Serializer):
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_VERIFY_PHONE)
         password = validated_data.pop('password')
 
-        if not otp_code or User.objects.filter(phone=otp_code.phone).exists():
+        if not otp_code:
             raise ValidationError({'token': 'توکن نامعتبر است.'})
+
+        if User.objects.filter(phone=otp_code.phone).exists():
+            raise ValidationError({'phone': 'شما قبلا در سیستم ثبت‌نام کرده‌اید. لطفا از قسمت ورود، وارد شوید.'})
 
         validate_password(password=password)
 
@@ -109,3 +109,4 @@ class SignupView(CreateAPIView):
     def perform_create(self, serializer):
         user = serializer.save()
         login(self.request, user)
+        set_login_activity(self.request, user)

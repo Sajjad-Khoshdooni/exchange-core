@@ -13,12 +13,44 @@ api_key = secret('ELASTICMAIL_API_KEY')
 email_sender = config('EMAIL_SENDER')
 brand = config('BRAND')
 
+SCOPE_WITHDRAW_EMAIL = 'withdraw_email'
+SCOPE_DEPOSIT_EMAIL = 'deposit_email'
+SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw_email'
+SCOPE_CANSEL_FIAT_WITHDRAW = 'cansel_fiat_withdraw_email'
+SCOPE_PAYMENT = 'payment_email'
+
+BRAND = config('BRAND')
 
 TEMPLATES = {
     'verify_email': {
-        'subject': 'راستین | کد تایید ایمیل',
+        'subject':  '{} | کد تایید ایمیل'.format(BRAND),
         'html': 'accounts/email/verify_email.min.html',
         'text': 'accounts/text/verify_email.txt',
+    },
+    'withdraw_email': {
+        'subject': '{} | اطلاع‌رسانی برداشت رمز ارزی'.format(BRAND),
+        'html': 'accounts/email/withdraw_email.min.html',
+        'text': 'accounts/text/withdraw_email.txt',
+    },
+    'successful_fiat_withdraw_email': {
+        'subject': '{} | اطلاع‌رسانی برداشت ریالی'.format(BRAND),
+        'html': 'accounts/email/successful_fiat_withdraw_email.min.html',
+        'text': 'accounts/text/successful_fiat_withdraw_email.txt',
+    },
+    'cansel_fiat_withdraw_email': {
+        'subject': '{} | اطلاع‌رسانی لغو برداشت ریالی '.format(BRAND),
+        'html': 'accounts/email/cansel_fiat_withdraw_email.min.html',
+        'text': 'accounts/text/cansel_fiat_withdraw_email.txt',
+    },
+    'deposit_email': {
+        'subject': '{} | اطلاع‌رسانی واریز رمزارزی '.format(BRAND),
+        'html': 'accounts/email/deposit_email.min.html',
+        'text': 'accounts/text/deposit_email.txt',
+    },
+    'payment_email': {
+        'subject': '{} | اطلاع‌رسانی واریز ریالی'.format(BRAND),
+        'html': 'accounts/email/payment_email.min.html',
+        'text': 'accounts/text/payment_email.txt',
     }
 }
 
@@ -40,6 +72,8 @@ def send_email_by_template(recipient: str, template: str, context: dict = None):
 
 
 def send_email(subject: str, body_html: str, body_text: str, to: list, transactional: bool = True, purpose: str = 'Email'):
+    if settings.DEBUG_OR_TESTING:
+        return print(subject, body_html, body_text, purpose, to)
 
     resp = requests.post(
         'https://api.elasticemail.com/v2/email/send',

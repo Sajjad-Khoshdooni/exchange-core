@@ -7,10 +7,13 @@ from yekta_config.config import config
 from accounts.models import Account
 from accounts.models import Notification
 from accounts.tasks.send_sms import send_message_by_kavenegar
+from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
+from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import BankAccount
 from financial.utils.pay_ir import Payir
+
 from ledger.models import Trx, Asset
 from ledger.utils.fields import DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
 from ledger.utils.precision import humanize_number
@@ -113,31 +116,57 @@ class FiatWithdrawRequest(models.Model):
             self.change_status(FiatWithdrawRequest.CANCELED)
 
     def alert_withdraw_verify_status(self):
+        from financial.utils.withdraw_limit import get_fiat_estimate_receive_time
+        if self.withdraw_datetime:
+            estimated_receive_time = gregorian_to_jalali_datetime_str(
+                get_fiat_estimate_receive_time(
+                    self.withdraw_datetime
+                )
+            )
+        else:
+            estimated_receive_time = None
+        user = self.bank_account.user
+        user_email = user.email
+
         if self.status == PENDING:
             title = 'درخواست برداشت شما به بانک ارسال گردید.'
-            description = 'درخواست برداشت شما پس از طی چرخه پرداخت بانک مرکزی (پایا) به حساب شما واریز خواهد شد.'
+            description ='وجه درخواستی شما در سیکل بعدی پایا {} به حساب شما واریز خواهد شد.'.format(estimated_receive_time)
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
+            email_template = email.SCOPE_SUCCESSFUL_FIAT_WITHDRAW
 
         elif self.status == CANCELED:
             title = 'درخواست برداشت شما لغو شد.'
             description = ''
             level = Notification.ERROR
             template = 'withdraw-rejected'
+            email_template = email.SCOPE_CANSEL_FIAT_WITHDRAW
         else:
             return
 
         Notification.send(
-            recipient=self.bank_account.user,
+            recipient=user,
             title=title,
             message=description,
             level=level,
         )
         send_message_by_kavenegar(
-            phone=self.bank_account.user.phone,
+            phone=user.phone,
             template=template,
             token=humanize_number(self.amount)
         )
+
+        if user_email:
+            email.send_email_by_template(
+                recipient=user_email,
+                template=email_template,
+                context={
+                    'estimated_receive_time': estimated_receive_time or None,
+                    'brand': config('BRAND'),
+                    'panel_url': config('PANEL_URL'),
+                    'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+                }
+            )
 
     def change_status(self, new_status: str):
         if self.status == new_status:

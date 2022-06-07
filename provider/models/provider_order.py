@@ -9,7 +9,7 @@ from django.db.models import Sum
 from accounts.models import Account
 from ledger.models import Asset, Trx
 from ledger.utils.fields import get_amount_field
-from ledger.utils.price import get_trading_price_usdt, SELL
+from ledger.utils.price import get_trading_price_usdt, SELL, get_binance_trading_symbol
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
 logger = logging.getLogger(__name__)
@@ -127,7 +127,7 @@ class ProviderOrder(models.Model):
 
     @classmethod
     def get_trading_symbol(cls, asset: Asset) -> str:
-        return asset.symbol + 'USDT'
+        return get_binance_trading_symbol(asset.symbol)
 
     @classmethod
     def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '', dry_run: bool = False) -> bool:

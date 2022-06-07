@@ -1,11 +1,10 @@
 from django.db import models
 
-from accounts.models import User
 from django.contrib.sessions.models import Session
 
 
 class LoginActivity(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
     ip = models.GenericIPAddressField()
     user_agent = models.TextField(blank=True)

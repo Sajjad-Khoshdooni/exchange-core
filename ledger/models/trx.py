@@ -1,6 +1,6 @@
 from decimal import Decimal
 from typing import Union
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from django.db import models
 
@@ -17,6 +17,7 @@ class Trx(models.Model):
     LIQUID = 'l'
     COMMISSION = 'c'
     PRIZE = 'p'
+    REVERT = 'r'
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -30,7 +31,7 @@ class Trx(models.Model):
         max_length=2,
         choices=((TRADE, 'trade'), (TRANSFER, 'transfer'), (MARGIN_TRANSFER, 'margin transfer'),
                  (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (LIQUID, 'liquid'),
-                 (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'))
+                 (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'), (REVERT, 'revert'))
     )
 
     class Meta:
@@ -50,7 +51,7 @@ class Trx(models.Model):
             receiver: Wallet,
             amount: Union[Decimal, int],
             scope: str,
-            group_id: str
+            group_id: Union[str, UUID]
     ):
         trx, _ = Trx.objects.get_or_create(
             sender=sender,
@@ -63,3 +64,14 @@ class Trx(models.Model):
         )
 
         return trx
+
+    def revert(self):
+        group_id = uuid4()
+
+        return self.transaction(
+            sender=self.receiver,
+            receiver=self.sender,
+            amount=self.amount,
+            scope=self.REVERT,
+            group_id=group_id
+        )

@@ -9,22 +9,16 @@ from django.db import transaction
 from django.db.models import Max, Min, Count
 
 from market.models import Order, PairSymbol
-from market.utils.redis import set_top_prices, set_open_orders_count, get_open_orders_count, get_top_prices, \
-    set_top_depth_prices, get_top_depth_prices
+from market.utils.order_utils import get_market_top_prices
+from market.utils.redis import set_top_prices, set_open_orders_count, get_open_orders_count, set_top_depth_prices, \
+    get_top_depth_prices
 
 logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='market')
 def update_maker_orders():
-    market_top_prices = defaultdict(lambda: Decimal())
-
-    for depth in Order.open_objects.values('symbol', 'side').annotate(
-            max_price=Max('price'), min_price=Min('price')):
-        market_top_prices[
-            (depth['symbol'], depth['side'])
-        ] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) or Decimal()
-
+    market_top_prices = get_market_top_prices()
     top_depth_prices = defaultdict(lambda: Decimal())
 
     depth_orders = Order.open_objects.filter(type=Order.DEPTH).values('symbol', 'side').annotate(max_price=Max('price'),
@@ -39,7 +33,7 @@ def update_maker_orders():
     for depth in depth_orders:
         open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
 
-    for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True):
+    for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True, asset__enable=True):
         symbol_top_prices = {
             Order.BUY: market_top_prices[symbol.id, Order.BUY],
             Order.SELL: market_top_prices[symbol.id, Order.SELL],
@@ -57,23 +51,16 @@ def update_maker_orders():
         set_open_orders_count(symbol.id, symbol_open_depth_orders_count)
 
         update_symbol_maker_orders.apply_async(
-            args=(PairSymbol.IdName(id=symbol.id, name=symbol.name),), queue='market'
+            args=(PairSymbol.IdName(id=symbol.id, name=symbol.name, tick_size=symbol.tick_size),), queue='market'
         )
 
 
 @shared_task(queue='market')
 def update_symbol_maker_orders(symbol):
     symbol = PairSymbol.IdName(*symbol)
-    market_top_prices = get_top_prices(symbol.id)
+    market_top_prices = Order.get_top_prices(symbol.id)
     top_depth_prices = get_top_depth_prices(symbol.id)
     open_depth_orders_count = get_open_orders_count(symbol.id)
-
-    if not market_top_prices:
-        market_top_prices = defaultdict(lambda: Decimal())
-        for depth in Order.open_objects.filter(symbol_id=symbol.id).values('side').annotate(max_price=Max('price'),
-                                                                                            min_price=Min('price')):
-            market_top_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth[
-                'min_price']) or Decimal()
 
     depth_orders = Order.open_objects.filter(symbol_id=symbol.id, type=Order.DEPTH).values('side').annotate(
         max_price=Max('price'),
@@ -125,22 +112,22 @@ def create_depth_orders(symbol=None, open_depth_orders_count=None):
             open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
 
     if symbol is None:
-        for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True):
+        for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True, asset__enable=True):
             symbol_open_depth_orders_count = {
                 Order.BUY: open_depth_orders_count[symbol.id, Order.BUY],
                 Order.SELL: open_depth_orders_count[symbol.id, Order.SELL],
             }
-            create_depth_orders.apply_async(
-                args=(PairSymbol.IdName(id=symbol.id, name=symbol.name), symbol_open_depth_orders_count), queue='market'
-            )
+            pair_symbol = PairSymbol.IdName(id=symbol.id, name=symbol.name, tick_size=symbol.tick_size)
+            create_depth_orders.apply_async(args=(pair_symbol, symbol_open_depth_orders_count), queue='market')
     else:
         symbol = PairSymbol.IdName(*symbol)
-        present_prices = set(Order.open_objects.filter(symbol_id=symbol.id, type=Order.DEPTH).values_list('price', flat=True))
+        present_prices = set(
+            Order.open_objects.filter(symbol_id=symbol.id, type=Order.DEPTH).values_list('price', flat=True))
         try:
             for side in (Order.BUY, Order.SELL):
                 price = Order.get_maker_price(symbol, side)
                 for rank in range(open_depth_orders_count[side], Order.MAKER_ORDERS_COUNT):
-                    order = Order.init_maker_order(symbol, side, price * get_price_factor(side, rank), rank)
+                    order = Order.init_maker_order(symbol, side, price * get_price_factor(side, rank))
                     if order and order.price not in present_prices:
                         with transaction.atomic():
                             order.save()

@@ -31,6 +31,8 @@ urlpatterns = [
         'get': 'list',
         'post': 'create'
     })),
+
+    path('v1/margin/wallets/', views.MarginWalletViewSet.as_view({'get': 'list'})),
     path('v1/margin/loan/', views.MarginLoanViewSet.as_view({
         'get': 'list',
         'post': 'create'
@@ -46,4 +48,5 @@ urlpatterns = [
     })),
 
     path('v1/wallet/balance/', views.GetBalanceInformation.as_view()),
+    path('v1/bookmark/assets/', views.BookmarkAssetsAPIView.as_view())
 ]

@@ -10,7 +10,7 @@ from accounts.models import Account
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory
 from ledger.utils.overview import AssetOverview
-from ledger.utils.price import get_trading_price_usdt, BUY
+from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol
 from provider.exchanges import BinanceFuturesHandler
 from ledger.utils.precision import humanize_number
 from provider.models import ProviderOrder
@@ -35,10 +35,10 @@ class AssetAdmin(AdvancedAdmin):
         'get_ledger_balance_users', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
         'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'trade_enable', 'hedge_method',
         # 'bid_diff', 'ask_diff'
-        'candidate',
+        'candidate', 'margin_enable'
     )
-    list_filter = ('enable', 'trend', 'candidate')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate')
+    list_filter = ('enable', 'trend', 'candidate', 'margin_enable')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
 
@@ -131,7 +131,8 @@ class AssetAdmin(AdvancedAdmin):
 
     def get_hedge_threshold(self, asset: Asset):
         if asset.enable:
-            return asset.get_hedger().get_step_size(asset.symbol + 'USDT')
+            symbol = get_binance_trading_symbol(asset.symbol)
+            return asset.get_hedger().get_step_size(symbol)
 
     get_hedge_threshold.short_description = 'hedge threshold'
 
@@ -214,8 +215,10 @@ class OTCTradeAdmin(admin.ModelAdmin):
 
 @admin.register(models.Trx)
 class TrxAdmin(admin.ModelAdmin):
-    list_display = ('created', 'sender', 'receiver', 'amount', 'group_id')
+    list_display = ('created', 'sender', 'receiver', 'amount', 'scope', 'group_id')
     search_fields = ('sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone')
+    readonly_fields = ('sender', 'receiver')
+    list_filter = ('scope', )
 
 
 class WalletUserFilter(SimpleListFilter):

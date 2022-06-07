@@ -1,8 +1,10 @@
 import logging
+from collections import defaultdict
 from decimal import Decimal
 from typing import Union
 
 from django.db import transaction
+from django.db.models import Max, Min
 
 from accounts.models import Account
 from ledger.models import Wallet, Asset
@@ -48,10 +50,15 @@ class MinNotionalError(Exception):
 
 def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Decimal, side: str,
               fill_type: str = Order.LIMIT, raise_exception: bool = True) -> Union[Order, None]:
-
     wallet = symbol.asset.get_wallet(account)
     if fill_type == Order.MARKET:
         price = Order.get_market_price(symbol, Order.get_opposite_side(side))
+        if not price:
+            if raise_exception:
+                raise Exception('Empty order book')
+            else:
+                logger.info('new order failed: empty order book %s' % symbol)
+                return
 
     if amount < symbol.min_trade_quantity:
         if raise_exception:
@@ -96,3 +103,14 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
         order.submit()
 
     return order
+
+
+def get_market_top_prices(symbol_ids=None):
+    market_top_prices = defaultdict(lambda: Decimal())
+    symbol_filter = {'symbol_id__in': symbol_ids} if symbol_ids else {}
+    for depth in Order.open_objects.filter(**symbol_filter).values('symbol', 'side').annotate(
+            max_price=Max('price'), min_price=Min('price')):
+        market_top_prices[
+            (depth['symbol'], depth['side'])
+        ] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) or Decimal()
+    return market_top_prices

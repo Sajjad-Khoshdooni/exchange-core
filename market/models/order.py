@@ -1,13 +1,18 @@
 import logging
+import time
+from collections import defaultdict
 from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
-from random import randrange
+from random import randrange, random
+from uuid import uuid4
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import models, transaction
-from django.db.models import Sum, F, Q, Max, Min
+from django.db.models import Sum, F, Q, Max, Min, CheckConstraint
 from django.utils import timezone
+from pyparsing import Or
 
 from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Trx, Wallet, BalanceLock
@@ -16,6 +21,7 @@ from ledger.utils.fields import get_amount_field, get_price_field, get_lock_fiel
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
 from market.models import PairSymbol
+from market.models.stop_loss import StopLoss
 from market.models.referral_trx import ReferralTrx
 from provider.models import ProviderOrder
 
@@ -31,8 +37,8 @@ class Order(models.Model):
     MARKET_BORDER = Decimal('1e-2')
     MIN_IRT_ORDER_SIZE = Decimal('1e5')
     MIN_USDT_ORDER_SIZE = Decimal(5)
-    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('5e7')
-    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(2000)
+    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('2e7')
+    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(1000)
     MAKER_ORDERS_COUNT = 10 if settings.DEBUG else 50
 
     BUY, SELL = 'buy', 'sell'
@@ -71,6 +77,8 @@ class Order(models.Model):
 
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
+    stop_loss = models.ForeignKey(to='market.StopLoss', on_delete=models.SET_NULL, null=True, blank=True)
+
     def __str__(self):
         return f'({self.id}) {self.symbol}-{self.side} [p:{self.price:.2f}] (a:{self.unfilled_amount:.5f}/{self.amount:.5f})'
 
@@ -80,6 +88,7 @@ class Order(models.Model):
             models.Index(fields=['symbol', 'status']),
             models.Index(name='market_new_orders_price_idx', fields=['price'], condition=Q(status='new')),
         ]
+        constraints = [CheckConstraint(check=Q(filled_amount__lte=F('amount')), name='check_filled_amount', ), ]
 
     objects = models.Manager()
     open_objects = OpenOrderManager()
@@ -106,12 +115,18 @@ class Order(models.Model):
         return floor_precision(amount, self.symbol.step_size)
 
     @staticmethod
+    def matching_orders_filter(side, price, op):
+        return(lambda order: order.side == side and order.price >= price) if op == 'gte' else \
+                (lambda order: order.side == side and order.price <= price)
+
+    @staticmethod
     def get_opposite_side(side):
         return Order.SELL if side.lower() == Order.BUY else Order.BUY
 
     @staticmethod
     def get_order_by(side):
-        return ('-price', '-created') if side == Order.BUY else ('price', '-created')
+        return (lambda order: (-order.price, -order.created.timestamp())) if side == Order.BUY else \
+                (lambda order: (order.price, -order.created.timestamp()))
 
     @classmethod
     def cancel_orders(cls, to_cancel_orders):
@@ -145,10 +160,11 @@ class Order(models.Model):
         boundary_price = get_trading_price(coin, side)
 
         precision = Order.get_rounding_precision(boundary_price, symbol.tick_size)
-        rounded_price = round_up_to_exponent(boundary_price * loose_factor, precision) if side == Order.BUY else \
-            round_down_to_exponent(boundary_price / loose_factor, precision)
-
-        return rounded_price
+        # use bi-direction in roundness to avoid risky bid ask spread
+        if side == Order.BUY:
+            return round_down_to_exponent(boundary_price * loose_factor, precision)
+        else:
+            return round_up_to_exponent(boundary_price / loose_factor, precision)
 
     @classmethod
     def get_lock_wallet(cls, wallet, base_wallet, side):
@@ -174,10 +190,22 @@ class Order(models.Model):
         BalanceLock.objects.filter(id=self.lock.id).update(amount=F('amount') - release_amount)
 
     def make_match(self):
+        key = 'mm-cc-%s' % self.symbol.name
+        log_prefix = 'MM %s: ' % self.symbol.name
+
+        logger.info(log_prefix + 'make match started...')
         with transaction.atomic():
             from market.models import FillOrder
-            # lock current order
-            Order.objects.select_for_update().filter(id=self.id).first()
+            # lock symbol open orders
+            open_orders = list(Order.open_objects.select_for_update().filter(symbol=self.symbol))
+
+            logger.info(log_prefix + 'make match danger zone')
+
+            if cache.get(key):
+                logger.info(log_prefix + 'concurrent detected!')
+                raise Exception('Concurrent make match!')
+
+            cache.set(key, 1)
 
             to_cancel_orders = Order.open_objects.filter(
                 symbol=self.symbol, cancel_request__isnull=False
@@ -186,9 +214,10 @@ class Order(models.Model):
 
             opp_side = self.get_opposite_side(self.side)
 
-            matching_orders = Order.open_objects.select_for_update().filter(
-                symbol=self.symbol, side=opp_side, **Order.get_price_filter(self.price, self.side)
-            ).order_by(*self.get_order_by(opp_side))
+            operator = 'lte' if self.side == Order.BUY else 'gte'
+            matching_orders = list(sorted(filter(
+                self.matching_orders_filter(side=opp_side, price=self.price, op=operator), open_orders
+            ), key=self.get_order_by(opp_side)))
 
             unfilled_amount = self.unfilled_amount
 
@@ -226,6 +255,7 @@ class Order(models.Model):
                     irt_value=base_irt_price * trade_price * match_amount,
                     trade_source=FillOrder.SYSTEM if is_system_trade else FillOrder.MARKET
                 )
+
                 trade_trx_list = fill_order.init_trade_trxs()
                 trx_list.extend(trade_trx_list.values())
                 fill_order.calculate_amounts_from_trx(trade_trx_list)
@@ -292,6 +322,9 @@ class Order(models.Model):
                         account.save(update_fields=['trade_volume_irt'])
                         account.refresh_from_db()
                         check_prize_achievements(account)
+            
+            cache.delete(key)
+            logger.info(log_prefix + 'make match finished.')
 
     @classmethod
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):
@@ -337,10 +370,9 @@ class Order(models.Model):
         return int(min(precision, max_precision))
 
     @staticmethod
-    def init_maker_order(symbol: PairSymbol.IdName, side, maker_price: Decimal, order_rank: int = 0,
-                         market=Wallet.SPOT):
+    def init_maker_order(symbol: PairSymbol.IdName, side, maker_price: Decimal, market=Wallet.SPOT):
         symbol_instance = PairSymbol.objects.get(id=symbol.id)
-        if order_rank < Order.MAKER_ORDERS_COUNT * 0.5:
+        if random() < 0.6:
             amount_factor = Decimal(randrange(2, 15) / Decimal(100))
         else:
             amount_factor = Decimal(randrange(10, 20) / Decimal(10))
@@ -419,3 +451,15 @@ class Order(models.Model):
         market_price = top_order['top_price'] * (Decimal(1) - cls.MARKET_BORDER) if side == Order.BUY else \
             top_order['top_price'] * (Decimal(1) + cls.MARKET_BORDER)
         return market_price
+
+    @classmethod
+    def get_top_prices(cls, symbol_id):
+        from market.utils.redis import get_top_prices
+        top_prices = get_top_prices(symbol_id)
+        if not top_prices:
+            top_prices = defaultdict(lambda: Decimal())
+            for depth in Order.open_objects.filter(symbol_id=symbol_id).values('side').annotate(max_price=Max('price'),
+                                                                                                min_price=Min('price')):
+                top_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth[
+                    'min_price']) or Decimal()
+        return top_prices
