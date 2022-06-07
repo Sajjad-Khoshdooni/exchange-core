@@ -66,46 +66,46 @@ def get_asset_diff_multiplier(coin: str):
     return ASSET_DIFF_MULTIPLIER.get(coin, 1)
 
 
-def fetch_price_tether_irt(coin: str, side: str, exchange: str = NOBITEX,
+def fetch_price_tether_irt(side: str, exchange: str = NOBITEX,
                          market_symbol: str = IRT, now: datetime = None):
 
-    assert exchange == NOBITEX
-
-    symbol_to_coins = coin + market_symbol
-
-    if not now:
-        _now = datetime.now()
-    else:
-        _now = now
-
-    delay = 600_000
-
-    grpc_client = gRPCClient()
-    timestamp = int(_now.timestamp() * 1000) - delay
-
-    order_by = ('symbol', '-timestamp')
-    distinct = ('symbol',)
-    values = ('symbol', 'price')
-
-    orders = grpc_client.get_current_orders(
-        exchange=exchange,
-        symbols=tuple(symbol_to_coins.keys()),
-        position=0,
-        type=side,
-        timestamp=timestamp,
-        order_by=order_by,
-        distinct=distinct,
-        values=values,
-    ).orders
-
-    grpc_client.channel.close()
-
-    price = Price(coin=symbol_to_coins, price=Decimal(orders[0].price), side=side)
+    # assert exchange == NOBITEX
+    #
+    # symbol_to_coins = 'USDT' + market_symbol
+    #
+    # if not now:
+    #     _now = datetime.now()
+    # else:
+    #     _now = now
+    #
+    # delay = 600_000
+    #
+    # grpc_client = gRPCClient()
+    # timestamp = int(_now.timestamp() * 1000) - delay
+    #
+    # order_by = ('symbol', '-timestamp')
+    # distinct = ('symbol',)
+    # values = ('symbol', 'price')
+    #
+    # orders = grpc_client.get_current_orders(
+    #     exchange=exchange,
+    #     symbols='USDT',
+    #     position=0,
+    #     type=side,
+    #     timestamp=timestamp,
+    #     order_by=order_by,
+    #     distinct=distinct,
+    #     values=values,
+    # ).orders
+    #
+    # grpc_client.channel.close()
+    # for o in orders:
+    #     price = Price(coin=symbol_to_coins, price=Decimal(o.price), side=side)
 
     return price.price
 
 
-def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
+def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
                   now: datetime = None) -> List[Price]:
     results = []
 
@@ -203,7 +203,7 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
     tether_rial = Decimal(get_price_tether_irt_nobitex()[side])
 
     if not tether_rial:
-        price = fetch_price_tether_irt(coin='USDT', side=side, exchange=NOBITEX, market_symbol=IRT, now=now)
+        price = fetch_price_tether_irt(side=side, exchange=NOBITEX, market_symbol=IRT, now=now)
         return price
 
     return Decimal(tether_rial / 10)
