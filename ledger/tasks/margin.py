@@ -70,4 +70,3 @@ def warn_risky_level(account: Account, margin_level: Decimal):
     #     template='liquidation',
     #     token=str(levelup)
     # )
-

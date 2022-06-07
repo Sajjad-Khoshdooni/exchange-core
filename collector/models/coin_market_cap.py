@@ -4,8 +4,8 @@ from django.db import models
 import requests
 
 
-full_data_url = 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?start=1&limit=2000&sortBy=rank&sortType=desc&convert=USD,BTC,ETH&cryptoType=all&tagType=all&audited=false&aux=ath,atl,high24h,low24h,num_market_pairs,cmc_rank,date_added,max_supply,circulating_supply,total_supply,volume_7d,volume_30d,self_reported_circulating_supply,self_reported_market_cap'
-data_url = 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?start=1&limit=2000&sortBy=rank&convert=USD&sortType=desc&cryptoType=all&tagType=all&audited=false&aux=high24h,low24h,cmc_rank,circulating_supply'
+full_data_url = 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?start=1&limit=4000&sortBy=rank&sortType=desc&convert=USD,BTC,ETH&cryptoType=all&tagType=all&audited=false&aux=ath,atl,high24h,low24h,num_market_pairs,cmc_rank,date_added,max_supply,circulating_supply,total_supply,volume_7d,volume_30d,self_reported_circulating_supply,self_reported_market_cap'
+data_url = 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?start=1&limit=4000&sortBy=rank&convert=USD&sortType=desc&cryptoType=all&tagType=all&audited=false&aux=high24h,low24h,cmc_rank,circulating_supply'
 
 
 class CoinMarketCap(models.Model):
@@ -36,7 +36,7 @@ class CoinMarketCap(models.Model):
     @classmethod
     def fill(cls):
         coins = cls.request()
-        coins = list(filter(lambda x: x['quotes'][0]['marketCap'] > 0, coins))
+        # coins = list(filter(lambda x: x['quotes'][0]['marketCap'] > 0, coins))
 
         coins_per_symbol = defaultdict(list)
 

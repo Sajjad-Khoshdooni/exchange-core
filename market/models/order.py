@@ -1,14 +1,18 @@
 import logging
+import time
 from collections import defaultdict
 from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
 from random import randrange, random
+from uuid import uuid4
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import models, transaction
-from django.db.models import Sum, F, Q, Max, Min
+from django.db.models import Sum, F, Q, Max, Min, CheckConstraint
 from django.utils import timezone
+from pyparsing import Or
 
 from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Trx, Wallet, BalanceLock
@@ -33,8 +37,8 @@ class Order(models.Model):
     MARKET_BORDER = Decimal('1e-2')
     MIN_IRT_ORDER_SIZE = Decimal('1e5')
     MIN_USDT_ORDER_SIZE = Decimal(5)
-    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('5e7')
-    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(2000)
+    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('2e7')
+    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(1000)
     MAKER_ORDERS_COUNT = 10 if settings.DEBUG else 50
 
     BUY, SELL = 'buy', 'sell'
@@ -84,6 +88,7 @@ class Order(models.Model):
             models.Index(fields=['symbol', 'status']),
             models.Index(name='market_new_orders_price_idx', fields=['price'], condition=Q(status='new')),
         ]
+        constraints = [CheckConstraint(check=Q(filled_amount__lte=F('amount')), name='check_filled_amount', ), ]
 
     objects = models.Manager()
     open_objects = OpenOrderManager()
@@ -110,12 +115,18 @@ class Order(models.Model):
         return floor_precision(amount, self.symbol.step_size)
 
     @staticmethod
+    def matching_orders_filter(side, price, op):
+        return(lambda order: order.side == side and order.price >= price) if op == 'gte' else \
+                (lambda order: order.side == side and order.price <= price)
+
+    @staticmethod
     def get_opposite_side(side):
         return Order.SELL if side.lower() == Order.BUY else Order.BUY
 
     @staticmethod
     def get_order_by(side):
-        return ('-price', '-created') if side == Order.BUY else ('price', '-created')
+        return (lambda order: (-order.price, -order.created.timestamp())) if side == Order.BUY else \
+                (lambda order: (order.price, -order.created.timestamp()))
 
     @classmethod
     def cancel_orders(cls, to_cancel_orders):
@@ -179,10 +190,22 @@ class Order(models.Model):
         BalanceLock.objects.filter(id=self.lock.id).update(amount=F('amount') - release_amount)
 
     def make_match(self):
+        key = 'mm-cc-%s' % self.symbol.name
+        log_prefix = 'MM %s: ' % self.symbol.name
+
+        logger.info(log_prefix + 'make match started...')
         with transaction.atomic():
             from market.models import FillOrder
             # lock symbol open orders
-            Order.open_objects.select_for_update().filter(symbol=self.symbol)
+            open_orders = list(Order.open_objects.select_for_update().filter(symbol=self.symbol))
+
+            logger.info(log_prefix + 'make match danger zone')
+
+            if cache.get(key):
+                logger.info(log_prefix + 'concurrent detected!')
+                raise Exception('Concurrent make match!')
+
+            cache.set(key, 1)
 
             to_cancel_orders = Order.open_objects.filter(
                 symbol=self.symbol, cancel_request__isnull=False
@@ -191,9 +214,10 @@ class Order(models.Model):
 
             opp_side = self.get_opposite_side(self.side)
 
-            matching_orders = Order.open_objects.filter(
-                symbol=self.symbol, side=opp_side, **Order.get_price_filter(self.price, self.side)
-            ).order_by(*self.get_order_by(opp_side))
+            operator = 'lte' if self.side == Order.BUY else 'gte'
+            matching_orders = list(sorted(filter(
+                self.matching_orders_filter(side=opp_side, price=self.price, op=operator), open_orders
+            ), key=self.get_order_by(opp_side)))
 
             unfilled_amount = self.unfilled_amount
 
@@ -231,6 +255,7 @@ class Order(models.Model):
                     irt_value=base_irt_price * trade_price * match_amount,
                     trade_source=FillOrder.SYSTEM if is_system_trade else FillOrder.MARKET
                 )
+
                 trade_trx_list = fill_order.init_trade_trxs()
                 trx_list.extend(trade_trx_list.values())
                 fill_order.calculate_amounts_from_trx(trade_trx_list)
@@ -297,6 +322,9 @@ class Order(models.Model):
                         account.save(update_fields=['trade_volume_irt'])
                         account.refresh_from_db()
                         check_prize_achievements(account)
+            
+            cache.delete(key)
+            logger.info(log_prefix + 'make match finished.')
 
     @classmethod
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):

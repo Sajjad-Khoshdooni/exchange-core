@@ -20,6 +20,13 @@ IRT = 'IRT'
 BUY, SELL = 'buy', 'sell'
 
 
+ASSET_DIFF_MULTIPLIER = {
+    'LUNC': 6,
+    'LUNA': 10,
+    'OP': 10,
+}
+
+
 def get_other_side(side: str):
     assert side in (BUY, SELL)
 
@@ -39,23 +46,24 @@ SIDE_MAP = {
 }
 
 
-def get_binance_price_stream(coin: str):
-    if coin == 'LUNA':
-        base = 'busd'
+def get_binance_trading_symbol(coin: str):
+    if coin == 'LUNC':
+        base = 'BUSD'
     else:
-        base = 'usdt'
+        base = 'USDT'
 
     if coin == 'BTT':
         coin = 'BTTC'
 
-    return coin.lower() + base
+    return coin + base
+
+
+def get_binance_price_stream(coin: str):
+    return get_binance_trading_symbol(coin).lower()
 
 
 def get_asset_diff_multiplier(coin: str):
-    if coin == 'LUNA':
-        return 6
-    else:
-        return 1
+    return ASSET_DIFF_MULTIPLIER.get(coin, 1)
 
 
 def get_price_tether_irt(coin: str, side: str, exchange: str = NOBITEX,

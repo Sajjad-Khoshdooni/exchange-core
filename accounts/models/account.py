@@ -38,9 +38,8 @@ class Account(models.Model):
 
     trade_volume_irt = models.PositiveBigIntegerField(default=0)
 
-    bookmark_market = models.ManyToManyField("market.PairSymbol", null=True, blank=True)
-
-    bookmark_assets = models.ManyToManyField("ledger.Asset", null=True, blank=True)
+    bookmark_market = models.ManyToManyField("market.PairSymbol")
+    bookmark_assets = models.ManyToManyField("ledger.Asset")
 
     def is_system(self) -> bool:
         return self.type == self.SYSTEM

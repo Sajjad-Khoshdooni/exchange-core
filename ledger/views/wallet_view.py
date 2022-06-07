@@ -27,6 +27,11 @@ class AssetListSerializer(serializers.ModelSerializer):
     free = serializers.SerializerMethodField()
     free_irt = serializers.SerializerMethodField()
 
+    pin_to_top = serializers.SerializerMethodField()
+
+    def get_pin_to_top(self, asset: Asset):
+        return asset.pin_to_top
+
     def get_wallet(self, asset: Asset):
         return self.context['asset_to_wallet'].get(asset.id)
 
@@ -101,7 +106,7 @@ class AssetListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = ('symbol', 'precision', 'free', 'free_irt', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt',
-                  'buy_price_irt', 'can_deposit', 'can_withdraw', 'trade_enable')
+                  'buy_price_irt', 'can_deposit', 'can_withdraw', 'trade_enable', 'pin_to_top')
         ref_name = 'ledger asset'
 
 
@@ -209,8 +214,7 @@ class WalletViewSet(ModelViewSet):
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
 
-        market = self.get_market()
-        wallets = Wallet.objects.filter(account=self.request.user.account, market=market)
+        wallets = Wallet.objects.filter(account=self.request.user.account, market=Wallet.SPOT)
         ctx['asset_to_wallet'] = {wallet.asset_id: wallet for wallet in wallets}
 
         return ctx
@@ -226,17 +230,9 @@ class WalletViewSet(ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.is_superuser:
-            queryset = Asset.candid_objects.all()
+            return Asset.candid_objects.all()
         else:
-            queryset = Asset.live_objects.all()
-
-        if self.get_market() == Wallet.MARGIN:
-            return queryset.exclude(symbol=Asset.IRT)
-        else:
-            return queryset
-
-    def get_market(self) -> str:
-        return self.request.query_params.get('market') or Wallet.SPOT
+            return Asset.live_objects.all()
 
     def list(self, request, *args, **kwargs):
         with PriceManager():
@@ -246,15 +242,17 @@ class WalletViewSet(ModelViewSet):
             serializer = self.get_serializer(queryset, many=True)
             data = serializer.data
 
-            with_balance_wallets = list(filter(lambda w: w['balance'] != '0', data))
-            without_balance_wallets = list(filter(lambda w: w['balance'] == '0', data))
-            wallets = sorted(with_balance_wallets, key=lambda w: Decimal(w['balance_irt'] or 0), reverse=True) + without_balance_wallets
+            pin_to_top_wallets = list(filter(lambda w: w['pin_to_top'], data))
+            with_balance_wallets = list(filter(lambda w: w['balance'] != '0' and not w['pin_to_top'], data))
+            without_balance_wallets = list(filter(lambda w: w['balance'] == '0' and not w['pin_to_top'], data))
+
+
+            wallets = pin_to_top_wallets + sorted(with_balance_wallets, key=lambda w: Decimal(w['balance_irt'] or 0), reverse=True) + without_balance_wallets
 
         return Response(wallets)
 
 
 class WalletBalanceView(APIView):
-
     def get(self, request, *args, **kwargs):
         market = request.query_params.get('market', Wallet.SPOT)
         asset = get_object_or_404(Asset, symbol=kwargs['symbol'].upper())
