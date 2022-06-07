@@ -58,6 +58,45 @@ def get_asset_diff_multiplier(coin: str):
         return 1
 
 
+def get_price_tether_irt(coin: str, side: str, exchange: str = NOBITEX,
+                         market_symbol: str = IRT, now: datetime = None):
+
+    assert exchange == NOBITEX
+
+    symbol_to_coins = coin + market_symbol
+
+    if not now:
+        _now = datetime.now()
+    else:
+        _now = now
+
+    delay = 600_000
+
+    grpc_client = gRPCClient()
+    timestamp = int(_now.timestamp() * 1000) - delay
+
+    order_by = ('symbol', '-timestamp')
+    distinct = ('symbol',)
+    values = ('symbol', 'price')
+
+    orders = grpc_client.get_current_orders(
+        exchange=exchange,
+        symbols=tuple(symbol_to_coins.keys()),
+        position=0,
+        type=side,
+        timestamp=timestamp,
+        order_by=order_by,
+        distinct=distinct,
+        values=values,
+    ).orders
+
+    grpc_client.channel.close()
+
+    price = Price(coin=symbol_to_coins, price=Decimal(orders[0].price), side=side)
+
+    return price.price
+
+
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
                   now: datetime = None) -> List[Price]:
     results = []
@@ -67,7 +106,9 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
     else:
         sides = [BUY, SELL]
 
-    if exchange == BINANCE and USDT in coins:  # todo: check if market_symbol = USDT
+    assert exchange == BINANCE
+
+    if USDT in coins:  # todo: check if market_symbol = USDT
         for s in sides:
             results.append(
                 Price(coin=USDT, price=Decimal(1), side=s)
@@ -84,77 +125,27 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
     if not coins:
         return results
 
-    if exchange == BINANCE:
-        if now:
-            raise NotImplemented
+    if now:
+        raise NotImplemented
 
-        pipe = price_redis.pipeline(transaction=False)
-        for c in coins:
-            name = 'bin:' + get_binance_price_stream(c)
-            pipe.hgetall(name)
+    pipe = price_redis.pipeline(transaction=False)
+    for c in coins:
+        name = 'bin:' + get_binance_price_stream(c)
+        pipe.hgetall(name)
 
-        prices = pipe.execute()
+    prices = pipe.execute()
 
-        for i, c in enumerate(coins):
-            price_dict = prices[i] or {}
+    for i, c in enumerate(coins):
+        price_dict = prices[i] or {}
 
-            for s in sides:
-                price = price_dict.get(SIDE_MAP[s])
-                if price is not None:
-                    price = Decimal(price)
-
-                results.append(
-                    Price(coin=c, price=price, side=s)
-                )
-
-    else:
-        symbol_to_coins = {
-            c + market_symbol: c for c in coins
-        }
-
-        if not now:
-            _now = datetime.now()
-        else:
-            _now = now
-
-        if exchange == BINANCE:
-            delay = 60_000
-        else:
-            delay = 600_000
-
-        grpc_client = gRPCClient()
-        timestamp = int(_now.timestamp() * 1000) - delay
-
-        if side:
-            order_by = ('symbol', '-timestamp')
-            distinct = ('symbol',)
-            values = ('symbol', 'price')
-        else:
-            order_by = ('symbol', 'type', '-timestamp')
-            distinct = ('symbol', 'type')
-            values = ('symbol', 'type', 'price')
-
-        orders = grpc_client.get_current_orders(
-            exchange=exchange,
-            symbols=tuple(symbol_to_coins.keys()),
-            position=0,
-            type=side,
-            timestamp=timestamp,
-            order_by=order_by,
-            distinct=distinct,
-            values=values,
-        ).orders
-
-        grpc_client.channel.close()
-
-        for o in orders:
-            if not side:
-                side = o.side
+        for s in sides:
+            price = price_dict.get(SIDE_MAP[s])
+            if price is not None:
+                price = Decimal(price)
 
             results.append(
-                Price(coin=symbol_to_coins[o.symbol], price=Decimal(o.price), side=side)
+                Price(coin=c, price=price, side=s)
             )
-    return results
 
 
 def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
@@ -186,10 +177,10 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
 
 
 @cache_for(time=2)
-def get_price_tethet_irt_nobitex():
+def get_price_tether_irt_nobitex():
     resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=2)
     data = resp.json()
-    price = {'bids': data['asks'][1][0], 'asks': data['bids'][1][0]}
+    price = {'buy': data['asks'][1][0], 'sell': data['bids'][1][0]}
     return price
 
 
@@ -199,10 +190,10 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
     if price:
         return Decimal(price)
 
-    tether_rial = get_price('USDT', side=side, exchange=NOBITEX, market_symbol=IRT, now=now)
+    tether_rial = Decimal(get_price_tether_irt_nobitex()[side])
 
     if not tether_rial:
-        price = Decimal(get_price_tethet_irt_nobitex()[side])//10
+        price = get_price_tether_irt(coin='USDT', side=side, exchange=NOBITEX, market_symbol=IRT, now=now)
         return price
 
     return Decimal(tether_rial / 10)
