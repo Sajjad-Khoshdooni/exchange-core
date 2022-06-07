@@ -55,6 +55,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است'})
+        else:
+            otp_code.set_code_used()
 
         if amount < MIN_WITHDRAW:
             logger.info('FiatRequest rejected due to small amount. user=%s' % user.id)
