@@ -155,6 +155,8 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
                 Price(coin=c, price=price, side=s)
             )
 
+    return results
+
 
 def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
                     now: datetime = None) -> Dict[str, Decimal]:
@@ -201,7 +203,7 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
     tether_rial = Decimal(get_price_tether_irt_nobitex()[side])
 
     if not tether_rial:
-        price = get_price_tether_irt(coin='USDT', side=side, exchange=NOBITEX, market_symbol=IRT, now=now)
+        price = fetch_price_tether_irt(coin='USDT', side=side, exchange=NOBITEX, market_symbol=IRT, now=now)
         return price
 
     return Decimal(tether_rial / 10)
