@@ -66,7 +66,7 @@ def get_asset_diff_multiplier(coin: str):
     return ASSET_DIFF_MULTIPLIER.get(coin, 1)
 
 
-def get_price_tether_irt(coin: str, side: str, exchange: str = NOBITEX,
+def fetch_price_tether_irt(coin: str, side: str, exchange: str = NOBITEX,
                          market_symbol: str = IRT, now: datetime = None):
 
     assert exchange == NOBITEX
