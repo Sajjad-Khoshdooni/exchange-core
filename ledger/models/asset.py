@@ -90,16 +90,20 @@ class Asset(models.Model):
         else:
             return Asset.PRECISION
 
-    def get_wallet(self, account: Account, market: str = Wallet.SPOT):
+    def get_wallet(self, account: Account, market: str = Wallet.SPOT, account_type: str = None):
         assert market in Wallet.MARKETS
 
-        account_filter = {'account': account}
         if type(account) == int:
             account_filter = {'account_id': account}
+        else:
+            account_filter = {'account': account}
+            account_type = account.type
+
         wallet, _ = Wallet.objects.get_or_create(
             asset=self,
             market=market,
-            **account_filter
+            **account_filter,
+            positive_balance=account_type == Account.ORDINARY
         )
 
         return wallet

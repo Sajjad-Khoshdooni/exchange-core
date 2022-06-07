@@ -1,11 +1,12 @@
 from decimal import Decimal
 
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Sum, CheckConstraint, Q
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
 from ledger.models import BalanceLock
+from ledger.utils.fields import get_amount_field
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt, get_tether_irt_price
 
 
@@ -25,12 +26,20 @@ class Wallet(models.Model):
         choices=MARKET_CHOICES,
     )
 
+    positive_balance = models.BooleanField(default=True)
+    balance = get_amount_field(max_digits=30, decimal_places=8, default=Decimal(0))
+
+    free = get_amount_field(max_digits=30, decimal_places=8, default=Decimal(0))
+
     def __str__(self):
         market_verbose = dict(self.MARKET_CHOICES)[self.market]
         return '%s Wallet %s [%s]' % (market_verbose, self.asset, self.account)
 
     class Meta:
         unique_together = [('account', 'asset', 'market')]
+        constraints = [
+            CheckConstraint(check=Q(positive_balance=False) | Q(balance__gte=0), name='positive_balance', ),
+        ]
 
     def get_balance(self) -> Decimal:
         from ledger.models import Trx
