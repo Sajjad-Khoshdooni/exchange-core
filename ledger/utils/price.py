@@ -19,7 +19,6 @@ IRT = 'IRT'
 
 BUY, SELL = 'buy', 'sell'
 
-
 ASSET_DIFF_MULTIPLIER = {
     'LUNC': 6,
     'LUNA': 10,
@@ -67,42 +66,44 @@ def get_asset_diff_multiplier(coin: str):
 
 
 def fetch_price_tether_irt(side: str, exchange: str = NOBITEX,
-                         market_symbol: str = IRT, now: datetime = None):
+                           market_symbol: str = IRT, now: datetime = None):
+    results = []
+    coins = 'USDT'
+    symbol_to_coins = {
+        coins + market_symbol: coins
+    }
 
-    # assert exchange == NOBITEX
-    #
-    # symbol_to_coins = 'USDT' + market_symbol
-    #
-    # if not now:
-    #     _now = datetime.now()
-    # else:
-    #     _now = now
-    #
-    # delay = 600_000
-    #
-    # grpc_client = gRPCClient()
-    # timestamp = int(_now.timestamp() * 1000) - delay
-    #
-    # order_by = ('symbol', '-timestamp')
-    # distinct = ('symbol',)
-    # values = ('symbol', 'price')
-    #
-    # orders = grpc_client.get_current_orders(
-    #     exchange=exchange,
-    #     symbols='USDT',
-    #     position=0,
-    #     type=side,
-    #     timestamp=timestamp,
-    #     order_by=order_by,
-    #     distinct=distinct,
-    #     values=values,
-    # ).orders
-    #
-    # grpc_client.channel.close()
-    # for o in orders:
-    #     price = Price(coin=symbol_to_coins, price=Decimal(o.price), side=side)
+    if not now:
+        _now = datetime.now()
+    else:
+        _now = now
 
-    return price.price
+    if exchange == BINANCE:
+        delay = 60_000
+    else:
+        delay = 600_000
+
+    grpc_client = gRPCClient()
+    timestamp = int(_now.timestamp() * 1000) - delay
+
+    order_by = ('symbol', '-timestamp')
+    distinct = ('symbol',)
+    values = ('symbol', 'price')
+
+    orders = grpc_client.get_current_orders(
+        exchange=exchange,
+        symbols=tuple(symbol_to_coins.keys()),
+        position=0,
+        type=side,
+        timestamp=timestamp,
+        order_by=order_by,
+        distinct=distinct,
+        values=values,
+    ).orders
+
+    grpc_client.channel.close()
+
+    return Price(coin='USDT', price=Decimal(orders[0].price), side=side).price
 
 
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
@@ -160,7 +161,6 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
 
 def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
                     now: datetime = None) -> Dict[str, Decimal]:
-
     results = _fetch_prices(coins, side, exchange, market_symbol, now)
 
     if PriceManager.active():
