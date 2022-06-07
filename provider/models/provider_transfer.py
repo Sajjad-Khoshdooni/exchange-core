@@ -6,6 +6,7 @@ from django.db import models
 from ledger.models import Asset, Network
 from ledger.utils.fields import get_amount_field
 from provider.exchanges import BinanceSpotHandler
+from provider.models import BinanceRequests
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,13 @@ class ProviderTransfer(models.Model):
             client_id=transfer.id
         )
 
+        BinanceRequests.objects.create(
+            coin=asset.symbol,
+            network=network.symbol,
+            address=address,
+            amount=amount,
+            id=resp[id]
+        )
         transfer.provider_transfer_id = resp['id']
         transfer.save()
 
