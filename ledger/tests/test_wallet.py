@@ -1,12 +1,11 @@
 from uuid import uuid4
 
 from django.db import IntegrityError
-from django.test import Client
 from django.test import TestCase
+
 from accounts.models import Account
 from ledger.models import Asset, Trx
-from ledger.utils.precision import get_presentation_amount
-from ledger.utils.test import new_account, new_address_book, generate_otp_code, new_network, new_network_asset
+from ledger.utils.test import new_account
 
 
 class WalletTestCase(TestCase):
@@ -72,6 +71,13 @@ class WalletTestCase(TestCase):
 
         self.assertEqual(self.wallet.balance, 10)
         self.assertEqual(self.wallet.locked, 4)
+        self.assertEqual(self.system_wallet.balance, -10)
+
+        lock.decrease_lock(2)
+        self.wallet.refresh_from_db()
+
+        self.assertEqual(self.wallet.balance, 10)
+        self.assertEqual(self.wallet.locked, 2)
         self.assertEqual(self.system_wallet.balance, -10)
 
         lock.release()

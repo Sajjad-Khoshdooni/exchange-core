@@ -158,7 +158,7 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
 
 def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
                     now: datetime = None) -> Dict[str, Decimal]:
-    results = _fetch_prices(coins, side, exchange, market_symbol, now)
+    results = _fetch_prices(coins, side, exchange, now)
 
     if PriceManager.active():
         for r in results:
