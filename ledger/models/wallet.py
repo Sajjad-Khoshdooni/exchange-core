@@ -61,6 +61,8 @@ class Wallet(models.Model):
         if not (self.account.type == Account.SYSTEM and self.account.primary):
             self.has_balance(amount, raise_exception=True)
 
+        self.locked += amount
+
         return BalanceLock.new_lock(wallet=self, amount=amount)
 
     def get_free(self) -> Decimal:
@@ -140,5 +142,5 @@ class Wallet(models.Model):
             receiver=self,
             amount=amount,
             group_id=uuid4(),
-            scope=Trx.TRANSFER
+            scope=Trx.AIRDROP
         )

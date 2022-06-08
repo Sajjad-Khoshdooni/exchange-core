@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 from decimal import Decimal
 
@@ -5,7 +6,6 @@ from django.db.models import Q, Sum
 
 from accounts.models import Account
 from ledger.models import Trx, Wallet, BalanceLock
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ def check_overall_consistency():
         locked = locked_dict.get(key, 0)
         check_balance = w.account.type is None
 
-        if check_balance:
+        if check_balance and w.market != Wallet.LOAN:
             if balance < 0:
                 logger.info("%s (%s): negative balance (%f)" % (w, w.id, balance))
 
