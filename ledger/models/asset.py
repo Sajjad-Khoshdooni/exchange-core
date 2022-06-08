@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.db import models
 from rest_framework import serializers
 
+from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.precision import get_precision, get_presentation_amount
@@ -32,6 +33,8 @@ class Asset(models.Model):
 
     HEDGE_BINANCE_FUTURE = 'binance-future'
     HEDGE_BINANCE_SPOT = 'binance-spot'
+
+    PRECISION = 8
 
     objects = models.Manager()
     live_objects = LiveAssetManager()
@@ -82,16 +85,34 @@ class Asset(models.Model):
     def __str__(self):
         return self.symbol
 
+    def get_precision(self):
+        if self.symbol == Asset.IRT:
+            return 0
+        else:
+            return Asset.PRECISION
+
     def get_wallet(self, account: Account, market: str = Wallet.SPOT):
         assert market in Wallet.MARKETS
 
-        account_filter = {'account': account}
         if type(account) == int:
             account_filter = {'account_id': account}
+
+            if account == SYSTEM_ACCOUNT_ID:
+                account_type = Account.SYSTEM
+            else:
+                account_type = Account.ORDINARY
+
+        else:
+            account_filter = {'account': account}
+            account_type = account.type
+
         wallet, _ = Wallet.objects.get_or_create(
             asset=self,
             market=market,
-            **account_filter
+            **account_filter,
+            defaults={
+                'check_balance': account_type == Account.ORDINARY
+            }
         )
 
         return wallet
@@ -121,7 +142,7 @@ class Asset(models.Model):
                 amount % self.trade_quantity_step == 0
 
     def get_presentation_amount(self, amount: Decimal) -> str:
-        return get_presentation_amount(amount, self.precision)
+        return get_presentation_amount(amount, self.get_precision())
 
     def get_presentation_price_irt(self, price: Decimal) -> str:
         return get_presentation_amount(price, self.price_precision_irt)
@@ -152,15 +173,14 @@ class AssetSerializer(serializers.ModelSerializer):
 
 
 class AssetSerializerMini(serializers.ModelSerializer):
+    precision = serializers.SerializerMethodField()
 
-    trade_precision = serializers.SerializerMethodField()
-
-    def get_trade_precision(self, asset: Asset):
-        return get_precision(asset.trade_quantity_step)
+    def get_precision(self, asset: Asset):
+        return asset.get_precision()
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'trade_precision', 'margin_enable')
+        fields = ('symbol', 'margin_enable', 'precision')
 
 
 class CoinField(serializers.CharField):

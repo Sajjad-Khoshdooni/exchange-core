@@ -39,8 +39,8 @@ def add_candidate_coins(coins: list):
             asset.hedge_method = Asset.HEDGE_BINANCE_FUTURE
             data = futures
 
-        lot_size = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['filters']))[0]
-        price_filter = list(filter(lambda f: f['filterType'] == 'PRICE_FILTER', data['filters']))[0]
+        lot_size = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', spot['filters']))[0]
+        price_filter = list(filter(lambda f: f['filterType'] == 'PRICE_FILTER', spot['filters']))[0]
 
         asset.trade_quantity_step = lot_size['stepSize']
         asset.min_trade_quantity = lot_size['minQty']

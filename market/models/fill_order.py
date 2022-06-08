@@ -1,5 +1,6 @@
 import logging
 from collections import namedtuple
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -10,12 +11,21 @@ from django.db.models import F
 from accounts.gamification.gamify import check_prize_achievements
 from accounts.models import Account
 from ledger.models import Trx, OTCTrade, Asset
+from ledger.models.trx import FakeTrx
 from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_field
 from ledger.utils.precision import floor_precision, precision_to_step
 from ledger.utils.price import get_tether_irt_price, BUY
 from market.models import Order, PairSymbol
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class FillOrderTrxs:
+    base: Trx
+    trade: Trx
+    taker_fee: Trx
+    maker_fee: Trx
 
 
 class FillOrder(models.Model):
@@ -76,39 +86,50 @@ class FillOrder(models.Model):
         else:
             return self.maker_fee_amount if self.get_side(account, list_index) == Order.SELL else self.taker_fee_amount
 
-    def calculate_amounts_from_trx(self, trade_trx_list):
-        self.base_amount = trade_trx_list['base'].amount
-        self.taker_fee_amount = trade_trx_list['taker_fee'].amount if trade_trx_list['taker_fee'] else Decimal(0)
-        self.maker_fee_amount = trade_trx_list['maker_fee'].amount if trade_trx_list['maker_fee'] else Decimal(0)
+    def set_amounts(self, trade_trxs: FillOrderTrxs):
+        self.base_amount = trade_trxs.base.amount
+        self.taker_fee_amount = trade_trxs.taker_fee.amount
+        self.maker_fee_amount = trade_trxs.maker_fee.amount
 
     def __str__(self):
         return f'{self.symbol}-{Order.BUY if self.is_buyer_maker else Order.SELL} ' \
                f'({self.taker_order_id}-{self.maker_order_id}) ' \
                f'[p:{self.price:.2f}] (a:{self.amount:.5f})'
 
-    def init_trade_trxs(self, ignore_fee=False):
-        trade_trx = self.__init_trade_trx()
-        base_trx = self.__init_base_trx()
+    def create_trade_trxs(self, ignore_fee=False, fake_trade: bool = False) -> FillOrderTrxs:
+        trade_trx = self._create_trade_trx()
+        base_trx = self._create_base_trx()
+
+        if fake_trade:
+            trade_trx = FakeTrx.from_trx(trade_trx)
+            base_trx = FakeTrx.from_trx(base_trx)
 
         # make sure sender and receiver wallets have same market
         assert trade_trx.sender.market == base_trx.receiver.market
         assert trade_trx.receiver.market == base_trx.sender.market
 
-        return {
-            'trade': trade_trx,
-            'base': base_trx,
-            'taker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.taker_order, is_taker=True),
-            'maker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.maker_order, is_taker=False),
-        }
+        taker_fee = self._create_fee_trx(self.taker_order, is_taker=True)
+        maker_fee = self._create_fee_trx(self.maker_order, is_taker=False)
 
-    def init_referrals(self, trade_trx_list):
+        if ignore_fee:
+            taker_fee = FakeTrx.from_trx(taker_fee)
+            maker_fee = FakeTrx.from_trx(maker_fee)
+
+        return FillOrderTrxs(
+            trade=trade_trx,
+            base=base_trx,
+            taker_fee=taker_fee,
+            maker_fee=maker_fee
+        )
+
+    def init_referrals(self, trade_trxs: FillOrderTrxs):
         tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
             get_tether_irt_price(BUY)
 
         from market.models import ReferralTrx
         referrals = ReferralTrx.get_trade_referrals(
-            trade_trx_list['maker_fee'],
-            trade_trx_list['taker_fee'],
+            trade_trxs.maker_fee,
+            trade_trxs.taker_fee,
             self.price,
             tether_irt,
             is_buyer_maker=self.is_buyer_maker,
@@ -116,8 +137,8 @@ class FillOrder(models.Model):
         ReferralTrxTuple = namedtuple("ReferralTrx", "referral trx")
         return ReferralTrxTuple(referrals, ReferralTrx.get_trx_list(referrals))
 
-    def __init_trade_trx(self):
-        return Trx(
+    def _create_trade_trx(self) -> Trx:
+        return Trx.transaction(
             sender=self.maker_order.wallet if self.taker_order.side == Order.BUY else self.taker_order.wallet,
             receiver=self.taker_order.wallet if self.taker_order.side == Order.BUY else self.maker_order.wallet,
             amount=self.amount,
@@ -125,8 +146,8 @@ class FillOrder(models.Model):
             scope=Trx.TRADE
         )
 
-    def __init_base_trx(self):
-        return Trx(
+    def _create_base_trx(self) -> Trx:
+        return Trx.transaction(
             sender=self.maker_order.base_wallet if self.taker_order.side == Order.SELL else self.taker_order.base_wallet,
             receiver=self.taker_order.base_wallet if self.taker_order.side == Order.SELL else self.maker_order.base_wallet,
             amount=self.amount * self.price,
@@ -134,11 +155,12 @@ class FillOrder(models.Model):
             scope=Trx.TRADE
         )
 
-    def __init_fee_trx(self, order, is_taker):
+    def _create_fee_trx(self, order: Order, is_taker: bool) -> Trx:
         fee = order.symbol.taker_fee if is_taker else order.symbol.maker_fee
 
         fee_wallet = order.wallet if order.side == Order.BUY else order.base_wallet
         trx_amount = fee * (self.amount if order.side == Order.BUY else self.amount * self.price)
+
         if trx_amount:
             referral = self.taker_order.wallet.account.referred_by if is_taker else \
                 self.maker_order.wallet.account.referred_by
@@ -147,14 +169,13 @@ class FillOrder(models.Model):
                 trx_amount *= Decimal(1) - (Decimal(ReferralTrx.REFERRAL_MAX_RETURN_PERCENT) / 100 - Decimal(
                     referral.owner_share_percent) / 100)
 
-        if trx_amount:
-            return Trx(
-                sender=fee_wallet,
-                receiver=fee_wallet.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=fee_wallet.market),
-                amount=trx_amount,
-                group_id=self.group_id,
-                scope=Trx.COMMISSION
-            )
+        return Trx.transaction(
+            sender=fee_wallet,
+            receiver=fee_wallet.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=fee_wallet.market),
+            amount=trx_amount,
+            group_id=self.group_id,
+            scope=Trx.COMMISSION
+        )
 
     @classmethod
     def get_last(cls, symbol: 'PairSymbol', max_datetime=None):
@@ -195,6 +216,7 @@ class FillOrder(models.Model):
         price = (config.cash_amount / config.coin_amount).quantize(
             precision_to_step(symbol.tick_size), rounding=ROUND_HALF_UP)
         system_wallet = symbol.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=otc_trade.otc_request.market)
+
         maker_order = Order.objects.create(
             wallet=system_wallet,
             symbol=symbol,
@@ -204,6 +226,7 @@ class FillOrder(models.Model):
             fill_type=Order.MARKET,
             status=Order.FILLED,
         )
+
         taker_wallet = symbol.asset.get_wallet(otc_trade.otc_request.account, market=otc_trade.otc_request.market)
         taker_order = Order.objects.create(
             wallet=taker_wallet,
@@ -234,8 +257,8 @@ class FillOrder(models.Model):
             irt_value=base_irt_price * price * amount,
             trade_source=FillOrder.OTC
         )
-        trade_trx_list = fill_order.init_trade_trxs()
-        fill_order.calculate_amounts_from_trx(trade_trx_list)
+        trade_trx_list = fill_order.create_trade_trxs()
+        fill_order.set_amounts(trade_trx_list)
         from market.models import ReferralTrx
         referral_trx = fill_order.init_referrals(trade_trx_list)
         ReferralTrx.objects.bulk_create(list(filter(bool, referral_trx.referral)))
@@ -253,6 +276,5 @@ class FillOrder(models.Model):
 
                 check_prize_achievements(account)
 
-        for key in ('taker_fee', 'maker_fee'):
-            if trade_trx_list[key]:
-                trade_trx_list[key].save()
+        trade_trx_list.taker_fee.save()
+        trade_trx_list.maker_fee.save()

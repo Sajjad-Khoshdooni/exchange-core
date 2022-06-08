@@ -1,11 +1,34 @@
+import logging
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Union
 from uuid import uuid4, UUID
 
-from django.db import models
+from django.db import models, transaction
+from django.db.models import F
 
 from ledger.models import Wallet
 from ledger.utils.fields import get_amount_field
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class FakeTrx:
+    sender: Wallet
+    receiver: Wallet
+    amount: int = 0
+    group_id: str = '00000000-0000-0000-0000-000000000000'
+
+    def save(self):
+        logger.info('ignoring saving null trx')
+
+    @classmethod
+    def from_trx(cls, trx: 'Trx') -> 'FakeTrx':
+        if isinstance(trx, FakeTrx):
+            return trx
+
+        return FakeTrx(sender=trx.sender, receiver=trx.receiver, amount=trx.amount)
 
 
 class Trx(models.Model):
@@ -51,17 +74,33 @@ class Trx(models.Model):
             receiver: Wallet,
             amount: Union[Decimal, int],
             scope: str,
-            group_id: Union[str, UUID]
+            group_id: Union[str, UUID],
     ):
-        trx, _ = Trx.objects.get_or_create(
-            sender=sender,
-            receiver=receiver,
-            scope=scope,
-            group_id=group_id,
-            defaults={
-                'amount': amount
-            }
-        )
+        assert amount >= 0
+
+        if amount == 0 or sender == receiver:
+            return FakeTrx(
+                sender=sender,
+                receiver=receiver
+            )
+
+        with transaction.atomic():
+            trx, created = Trx.objects.get_or_create(
+                sender=sender,
+                receiver=receiver,
+                scope=scope,
+                group_id=group_id,
+                defaults={
+                    'amount': amount
+                }
+            )
+
+            if created:
+                Wallet.objects.filter(id=sender.id).update(balance=F('balance') - amount)
+                Wallet.objects.filter(id=receiver.id).update(balance=F('balance') + amount)
+
+                sender.balance -= amount
+                receiver.balance += amount
 
         return trx
 
