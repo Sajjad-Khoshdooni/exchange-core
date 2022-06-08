@@ -23,8 +23,16 @@ class MarginTestCase(TestCase):
     def setUp(self) -> None:
         self.account = new_account()
         self.user = self.account.user
+        self.user.show_margin = True
+        self.user.save()
         self.usdt = Asset.get(Asset.USDT)
+        self.usdt.margin_enable = True
+        self.usdt.save()
+
         self.xrp = Asset.get('ADA')
+        self.xrp.margin_enable = True
+        self.xrp.save()
+
         new_trx(self.account, self.usdt, TO_TRANSFER_USDT)
 
         self.client = Client()
@@ -57,9 +65,11 @@ class MarginTestCase(TestCase):
     def transfer(self, amount, type: str = 'sm', check_status=201):
         resp = self.client.post('/api/v1/margin/transfer/', {
             'amount': amount,
-            'type': type
+            'type': type,
+            'coin': 'USDT'
         })
-
+        print(resp.data)
+        print(Asset.get('USDT').margin_enable, self.user.show_margin)
         self.assertEqual(resp.status_code, check_status)
 
     def loan(self, coin: str, amount, type: str = 'borrow', check_status=201):
@@ -79,6 +89,8 @@ class MarginTestCase(TestCase):
         self.user.save()
 
     def test_transfer(self):
+        self.pass_quiz()
+
         self.assert_margin_info(0, 0, 0, 999)
 
         self.transfer(TO_TRANSFER_USDT * 2, check_status=400)
@@ -101,12 +113,13 @@ class MarginTestCase(TestCase):
         self.assert_margin_info(0, 0, 0, 999)
 
     def test_loan(self):
-        self.transfer(TO_TRANSFER_USDT)
+        self.pass_quiz()
+
         self.loan('ADA', TO_TRANSFER_USDT / XRP_USDT_PRICE, check_status=400)
 
-        self.assert_margin_info(TO_TRANSFER_USDT, 0, TO_TRANSFER_USDT, 999)
+        self.transfer(TO_TRANSFER_USDT)
 
-        self.pass_quiz()
+        self.assert_margin_info(TO_TRANSFER_USDT, 0, TO_TRANSFER_USDT, 999)
 
         self.loan('ADA', TO_TRANSFER_USDT / XRP_USDT_PRICE)
 

@@ -27,6 +27,7 @@ def update_network_fees():
                 withdraw_min = Decimal(info['withdrawIntegerMultiple'])
 
             price = get_trading_price_usdt(ns.asset.symbol, BUY, raw_price=True)
+
             if price and withdraw_min:
                 multiplier = max(math.ceil(5 / (price * withdraw_min)), 1)
             else:

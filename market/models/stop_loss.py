@@ -49,8 +49,8 @@ class StopLoss(models.Model):
 
     def acquire_lock(self):
         from market.models import Order
-        lock_wallet = Order.get_lock_wallet(self.wallet, self.base_wallet, self.side)
-        lock_amount = Order.get_lock_amount(self.unfilled_amount, self.price, self.side)
+        lock_wallet = Order.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
+        lock_amount = Order.get_to_lock_amount(self.unfilled_amount, self.price, self.side)
         self.lock = lock_wallet.lock_balance(lock_amount)
         self.save()
 

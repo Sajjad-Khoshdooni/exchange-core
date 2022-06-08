@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Union
 
 from django.db import models
 from django.db.models import UniqueConstraint, Q, Sum
@@ -118,6 +119,10 @@ class Account(models.Model):
 
     def get_invited_count(self):
         return int(Account.objects.filter(referred_by__owner=self).count())
+
+    def airdrop(self, asset, amount: Union[Decimal, int]):
+        wallet = asset.get_wallet(self)
+        wallet.airdrop(amount)
 
     class Meta:
         constraints = [

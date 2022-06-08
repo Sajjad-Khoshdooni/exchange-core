@@ -1,11 +1,13 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Sum, CheckConstraint, Q, F
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
 from ledger.models import BalanceLock
+from ledger.utils.fields import get_amount_field
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt, get_tether_irt_price
 
 
@@ -25,24 +27,33 @@ class Wallet(models.Model):
         choices=MARKET_CHOICES,
     )
 
+    check_balance = models.BooleanField(default=True)
+    balance = get_amount_field(max_digits=30, decimal_places=8, default=Decimal(0))
+    locked = get_amount_field(max_digits=30, decimal_places=8, default=Decimal(0))
+
     def __str__(self):
         market_verbose = dict(self.MARKET_CHOICES)[self.market]
         return '%s Wallet %s [%s]' % (market_verbose, self.asset, self.account)
 
     class Meta:
         unique_together = [('account', 'asset', 'market')]
+        constraints = [
+            CheckConstraint(
+                check=Q(check_balance=False) | (~Q(market='loan') & Q(balance__gte=0) & Q(balance__gte=F('locked'))) |
+                      (Q(market='loan') & Q(balance__lte=0) & Q(locked=0)),
+                name='valid_balance_constraint'
+            ),
+            CheckConstraint(
+                check=Q(locked__gte=0),
+                name='valid_locked_constraint'
+            ),
+        ]
 
     def get_balance(self) -> Decimal:
-        from ledger.models import Trx
-
-        received = Trx.objects.filter(receiver=self).aggregate(amount=Sum('amount'))['amount'] or 0
-        sent = Trx.objects.filter(sender=self).aggregate(amount=Sum('amount'))['amount'] or 0
-
-        return received - sent
+        return self.balance
 
     def get_locked(self) -> Decimal:
-        from ledger.models import BalanceLock
-        return BalanceLock.objects.filter(wallet=self, freed=False).aggregate(amount=Sum('amount'))['amount'] or 0
+        return self.locked
 
     def lock_balance(self, amount: Decimal) -> BalanceLock:
         assert amount > 0
@@ -50,7 +61,7 @@ class Wallet(models.Model):
         if not (self.account.type == Account.SYSTEM and self.account.primary):
             self.has_balance(amount, raise_exception=True)
 
-        return BalanceLock.objects.create(wallet=self, amount=amount)
+        return BalanceLock.new_lock(wallet=self, amount=amount)
 
     def get_free(self) -> Decimal:
         return self.get_balance() - self.get_locked()
@@ -117,3 +128,17 @@ class Wallet(models.Model):
             raise InsufficientDebt()
 
         return can
+
+    def airdrop(self, amount: Decimal):
+        assert settings.DEBUG_OR_TESTING
+
+        from ledger.models import Trx
+        from uuid import uuid4
+
+        Trx.transaction(
+            sender=self.asset.get_wallet(Account.out()),
+            receiver=self,
+            amount=amount,
+            group_id=uuid4(),
+            scope=Trx.TRANSFER
+        )
