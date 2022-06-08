@@ -1,8 +1,10 @@
+from _testcapi import raise_exception
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from typing import Dict, List
 
+import requests
 from cachetools.func import ttl_cache
 
 from collector.price.grpc_client import gRPCClient
@@ -17,7 +19,6 @@ USDT = 'USDT'
 IRT = 'IRT'
 
 BUY, SELL = 'buy', 'sell'
-
 
 ASSET_DIFF_MULTIPLIER = {
     'LUNC': 6,
@@ -65,7 +66,44 @@ def get_asset_diff_multiplier(coin: str):
     return ASSET_DIFF_MULTIPLIER.get(coin, 1)
 
 
-def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
+def get_tether_price_irt_grpc(side: str, now: datetime = None):
+
+    coins = 'USDT'
+    symbol_to_coins = {
+        coins + IRT: coins
+    }
+
+    if not now:
+        _now = datetime.now()
+    else:
+        _now = now
+
+    delay = 600_000
+
+    grpc_client = gRPCClient()
+    timestamp = int(_now.timestamp() * 1000) - delay
+
+    order_by = ('symbol', '-timestamp')
+    distinct = ('symbol',)
+    values = ('symbol', 'price')
+
+    orders = grpc_client.get_current_orders(
+        exchange=NOBITEX,
+        symbols=tuple(symbol_to_coins.keys()),
+        position=0,
+        type=side,
+        timestamp=timestamp,
+        order_by=order_by,
+        distinct=distinct,
+        values=values,
+    ).orders
+
+    grpc_client.channel.close()
+
+    return Price(coin='USDT', price=Decimal(orders[0].price), side=side).price
+
+
+def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
                   now: datetime = None) -> List[Price]:
     results = []
 
@@ -74,7 +112,9 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
     else:
         sides = [BUY, SELL]
 
-    if exchange == BINANCE and USDT in coins:  # todo: check if market_symbol = USDT
+    assert exchange == BINANCE
+
+    if USDT in coins:  # todo: check if market_symbol = USDT
         for s in sides:
             results.append(
                 Price(coin=USDT, price=Decimal(1), side=s)
@@ -91,75 +131,26 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
     if not coins:
         return results
 
-    if exchange == BINANCE:
-        if now:
-            raise NotImplemented
+    if now:
+        raise NotImplemented
 
-        pipe = price_redis.pipeline(transaction=False)
-        for c in coins:
-            name = 'bin:' + get_binance_price_stream(c)
-            pipe.hgetall(name)
+    pipe = price_redis.pipeline(transaction=False)
+    for c in coins:
+        name = 'bin:' + get_binance_price_stream(c)
+        pipe.hgetall(name)
 
-        prices = pipe.execute()
+    prices = pipe.execute()
 
-        for i, c in enumerate(coins):
-            price_dict = prices[i] or {}
+    for i, c in enumerate(coins):
+        price_dict = prices[i] or {}
 
-            for s in sides:
-                price = price_dict.get(SIDE_MAP[s])
-                if price is not None:
-                    price = Decimal(price)
-
-                results.append(
-                    Price(coin=c, price=price, side=s)
-                )
-
-    else:
-        symbol_to_coins = {
-            c + market_symbol: c for c in coins
-        }
-
-        if not now:
-            _now = datetime.now()
-        else:
-            _now = now
-
-        if exchange == BINANCE:
-            delay = 60_000
-        else:
-            delay = 600_000
-
-        grpc_client = gRPCClient()
-        timestamp = int(_now.timestamp() * 1000) - delay
-
-        if side:
-            order_by = ('symbol', '-timestamp')
-            distinct = ('symbol',)
-            values = ('symbol', 'price')
-        else:
-            order_by = ('symbol', 'type', '-timestamp')
-            distinct = ('symbol', 'type')
-            values = ('symbol', 'type', 'price')
-
-        orders = grpc_client.get_current_orders(
-            exchange=exchange,
-            symbols=tuple(symbol_to_coins.keys()),
-            position=0,
-            type=side,
-            timestamp=timestamp,
-            order_by=order_by,
-            distinct=distinct,
-            values=values,
-        ).orders
-
-        grpc_client.channel.close()
-
-        for o in orders:
-            if not side:
-                side = o.side
+        for s in sides:
+            price = price_dict.get(SIDE_MAP[s])
+            if price is not None:
+                price = Decimal(price)
 
             results.append(
-                Price(coin=symbol_to_coins[o.symbol], price=Decimal(o.price), side=side)
+                Price(coin=c, price=price, side=s)
             )
 
     return results
@@ -167,7 +158,6 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE, market
 
 def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
                     now: datetime = None) -> Dict[str, Decimal]:
-
     results = _fetch_prices(coins, side, exchange, market_symbol, now)
 
     if PriceManager.active():
@@ -193,13 +183,32 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
         return Decimal(0)
 
 
+@cache_for(time=2)
+def get_price_tether_irt_nobitex():
+    resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=2)
+    data = resp.json()
+    status = data['status']
+    price = {'buy': data['asks'][1][0], 'sell': data['bids'][1][0]}
+    data = {'price': price, 'status': status}
+    return data
+
+
 @cache_for(time=5)
 def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
     price = price_redis.hget('nob:usdtirt', SIDE_MAP[side])
     if price:
         return Decimal(price)
 
-    tether_rial = get_price('USDT', side=side, exchange=NOBITEX, market_symbol=IRT, now=now)
+    try:
+        data = get_price_tether_irt_nobitex()
+        if data['status'] != 'ok':
+            raise TypeError
+        tether_rial = Decimal(data['price'][side])
+
+    except (TimeoutError, TypeError):
+        price = get_tether_price_irt_grpc(side=side, now=now)
+        return price
+
     return Decimal(tether_rial / 10)
 
 

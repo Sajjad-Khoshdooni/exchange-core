@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import transaction
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as _, to_locale, get_language
 from rest_framework import serializers
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.generics import get_object_or_404
@@ -71,7 +71,9 @@ class OrderSerializer(serializers.ModelSerializer):
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
         wallet = symbol.asset.get_wallet(self.context['account'], market=market)
         min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
-        self.validate_order_size(validated_data['amount'], validated_data['price'], min_order_size)
+        self.validate_order_size(
+            validated_data['amount'], validated_data['price'], min_order_size, symbol.base_asset.symbol
+        )
         return symbol, wallet
 
     @staticmethod
@@ -79,22 +81,31 @@ class OrderSerializer(serializers.ModelSerializer):
         quantize_amount = floor_precision(Decimal(amount), symbol.step_size)
         if quantize_amount < symbol.min_trade_quantity:
             raise ValidationError(
-                {'amount': _('amount is less than {min_quantity}').format(
-                    min_quantity=get_presentation_amount(symbol.min_trade_quantity, symbol.step_size))}
+                {'amount': _('amount is less than {min_quantity} {asset}').format(
+                    min_quantity=get_presentation_amount(symbol.min_trade_quantity, symbol.step_size),
+                    asset=symbol.asset.symbol
+                )}
             )
         if quantize_amount > symbol.max_trade_quantity:
             raise ValidationError(
-                {'amount': _('amount is more than {max_quantity}').format(
-                    max_quantity=get_presentation_amount(symbol.max_trade_quantity, symbol.step_size))}
+                {'amount': _('amount is more than {max_quantity} {asset}').format(
+                    max_quantity=get_presentation_amount(symbol.max_trade_quantity, symbol.step_size),
+                    asset=symbol.asset.symbol
+                )}
             )
         return quantize_amount
 
     @staticmethod
-    def validate_order_size(amount: Decimal, price: Decimal, min_order_size: Decimal):
+    def validate_order_size(amount: Decimal, price: Decimal, min_order_size: Decimal, base_asset: str):
         if (amount * price) < min_order_size:
-            raise ValidationError({
-                'amount': _('Small order size {min_order_size}').format(min_order_size=humanize_number(min_order_size))
-            })
+            msg = _('Small order size {min_order_size} {base_asset}').format(
+                min_order_size=humanize_number(min_order_size),
+                base_asset=base_asset
+            )
+            if to_locale(get_language()) == 'fa_IR':
+                msg = msg.replace(Asset.IRT, str(_(Asset.IRT))).replace(Asset.USDT, str(_(Asset.USDT)))
+
+            raise ValidationError({'amount': msg})
 
     @staticmethod
     def post_validate_price(symbol: PairSymbol, price: Decimal):
