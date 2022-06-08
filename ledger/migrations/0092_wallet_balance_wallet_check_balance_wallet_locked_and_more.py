@@ -20,7 +20,7 @@ def populate_wallet_balances(apps, schema_editor):
 
     for w in Wallet.objects.all().prefetch_related('account'):
         w.balance = received.get(w.id, 0) - sent.get(w.id, 0)
-        w.locked = locked.get(w.id)
+        w.locked = locked.get(w.id, 0)
         w.check_balance = w.account.type is None
         w.save()
 
