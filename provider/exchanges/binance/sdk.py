@@ -43,7 +43,8 @@ def create_binance_requset_and_log(response: str, url: str, method: str, data: d
             url=url,
             data=data,
             method=method,
-            response=resp_data
+            response=resp_data,
+            status_code=response.status_code
         )
         return
     else:
@@ -52,7 +53,8 @@ def create_binance_requset_and_log(response: str, url: str, method: str, data: d
                 url=url,
                 data=data,
                 method=method,
-                response=resp_data
+                response=resp_data,
+                status_code=response.status_code
             )
         return resp_data
 
@@ -98,11 +100,12 @@ def spot_send_signed_request(http_method, url_path, payload: dict):
 
     response = dispatch_request(http_method)(**params)
 
-    return create_binance_requset_and_log(response=response,
-                                          url=url_path,
-                                          method=http_method,
-                                          data=payload
-                                          )
+    return create_binance_requset_and_log(
+        response=response,
+        url=url_path,
+        method=http_method,
+        data=payload
+    )
 
 
 # used for sending public data request
@@ -113,11 +116,12 @@ def spot_send_public_request(url_path: str, payload: dict):
         url = url + "?" + query_string
     print("{}".format(url))
     response = dispatch_request("GET")(url=url, timeout=TIMEOUT)
-    return create_binance_requset_and_log(response=response,
-                                          url=url_path,
-                                          method="GET",
-                                          data=payload
-                                          )
+    return create_binance_requset_and_log(
+        response=response,
+        url=url_path,
+        method="GET",
+        data=payload
+    )
 
 
 # used for sending request requires the signature
@@ -138,11 +142,12 @@ def futures_send_signed_request(http_method: str, url_path: str, payload: dict):
 
     response = dispatch_request(http_method)(**params)
 
-    return create_binance_requset_and_log(response=response,
-                                          url=url_path,
-                                          method=http_method,
-                                          data=payload
-                                          )
+    return create_binance_requset_and_log(
+        response=response,
+        url=url_path,
+        method=http_method,
+        data=payload
+    )
 
 
 # used for sending public data request
@@ -155,8 +160,9 @@ def futures_send_public_request(url_path, payload: dict):
     print("{}".format(url))
 
     response = dispatch_request("GET")(url=url, timeout=TIMEOUT)
-    return create_binance_requset_and_log(response=response,
-                                          url=url_path,
-                                          method='GET',
-                                          data=payload
-                                          )
+    return create_binance_requset_and_log(
+        response=response,
+        url=url_path,
+        method='GET',
+        data=payload
+    )
