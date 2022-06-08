@@ -8,19 +8,32 @@ from django.db.models import Sum
 
 
 def populate_wallet_balances(apps, schema_editor):
-    Account = apps.get_model('accounts', 'Account')
     Wallet = apps.get_model('ledger', 'Wallet')
     Trx = apps.get_model('ledger', 'Trx')
     BalanceLock = apps.get_model('ledger', 'BalanceLock')
 
-    received = dict(Trx.objects.values('receiver').annotate(amount=Sum('amount')).values_list('receiver', 'amount'))
-    sent = dict(Trx.objects.values('sender').annotate(amount=Sum('amount')).values_list('receiver', 'amount'))
+    received = Trx.objects.values('receiver', 'receiver__market').annotate(amount=Sum('amount'))
+    sent = Trx.objects.values('sender', 'sender__market').annotate(amount=Sum('amount'))
 
-    locked = dict(BalanceLock.objects.filter(freed=False).values('wallet').annotate(amount=Sum('amount')).values('wallet', 'amount'))
+    received_dict = {}
+    sent_dict = {}
+
+    for r in received:
+        received_dict[(r['receiver'], r['receiver__market'])] = r['amount']
+
+    for s in sent:
+        sent_dict[(s['sender'], s['sender__market'])] = s['amount']
+
+    locked = BalanceLock.objects.filter(freed=False).values('wallet', 'wallet__market').annotate(amount=Sum('amount'))
+    locked_dict = {}
+
+    for l in locked:
+        locked_dict[(l['wallet'], l['wallet__market'])] = l['amount']
 
     for w in Wallet.objects.all().prefetch_related('account'):
-        w.balance = received.get(w.id, 0) - sent.get(w.id, 0)
-        w.locked = locked.get(w.id, 0)
+        key = (w.id, w.market)
+        w.balance = received_dict.get(key, 0) - sent_dict.get(key, 0)
+        w.locked = locked_dict.get(key, 0)
         w.check_balance = w.account.type is None
         w.save()
 
