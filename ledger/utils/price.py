@@ -1,3 +1,4 @@
+from _testcapi import raise_exception
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -65,12 +66,11 @@ def get_asset_diff_multiplier(coin: str):
     return ASSET_DIFF_MULTIPLIER.get(coin, 1)
 
 
-def fetch_price_tether_irt(side: str, exchange: str = NOBITEX,
-                           market_symbol: str = IRT, now: datetime = None):
-    results = []
+def get_tether_price_irt_grpc(side: str, now: datetime = None):
+
     coins = 'USDT'
     symbol_to_coins = {
-        coins + market_symbol: coins
+        coins + IRT: coins
     }
 
     if not now:
@@ -78,10 +78,7 @@ def fetch_price_tether_irt(side: str, exchange: str = NOBITEX,
     else:
         _now = now
 
-    if exchange == BINANCE:
-        delay = 60_000
-    else:
-        delay = 600_000
+    delay = 600_000
 
     grpc_client = gRPCClient()
     timestamp = int(_now.timestamp() * 1000) - delay
@@ -91,7 +88,7 @@ def fetch_price_tether_irt(side: str, exchange: str = NOBITEX,
     values = ('symbol', 'price')
 
     orders = grpc_client.get_current_orders(
-        exchange=exchange,
+        exchange=NOBITEX,
         symbols=tuple(symbol_to_coins.keys()),
         position=0,
         type=side,
@@ -190,8 +187,10 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
 def get_price_tether_irt_nobitex():
     resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=2)
     data = resp.json()
+    status = data['status']
     price = {'buy': data['asks'][1][0], 'sell': data['bids'][1][0]}
-    return price
+    data = {'price': price, 'status': status}
+    return data
 
 
 @cache_for(time=5)
@@ -200,10 +199,14 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
     if price:
         return Decimal(price)
 
-    tether_rial = Decimal(get_price_tether_irt_nobitex()[side])
+    try:
+        data = get_price_tether_irt_nobitex()
+        if data['status'] != 'ok':
+            raise TypeError
+        tether_rial = Decimal(data['price'][side])
 
-    if not tether_rial:
-        price = fetch_price_tether_irt(side=side, exchange=NOBITEX, market_symbol=IRT, now=now)
+    except (TimeoutError, TypeError):
+        price = get_tether_price_irt_grpc(side=side, now=now)
         return price
 
     return Decimal(tether_rial / 10)
