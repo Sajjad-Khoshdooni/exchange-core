@@ -48,7 +48,10 @@ class ProviderHedgedOrder(models.Model):
 
         future_side = BUY if spot_side == SELL else SELL
 
-        hedge = ProviderOrder.try_hedge_for_new_order(asset=asset, side=future_side, scope=ProviderOrder.WITHDRAW)
+        if asset.hedge_method == Asset.HEDGE_BINANCE_FUTURE:
+            hedge = ProviderOrder.try_hedge_for_new_order(asset=asset, side=future_side, scope=ProviderOrder.WITHDRAW)
+        else:
+            hedge = True
 
         if not hedge:
             logger.error('failed to hedge HedgedOrder in future')
