@@ -48,15 +48,10 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             logger.info('FiatRequest rejected due to unverified bank account. user=%s' % user.id)
             raise ValidationError({'iban': 'شماره حساب تایید نشده است.'})
 
-        if 'code' not in validated_data:
-            raise ValidationError('کد وارد نشده است')
-
         otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_FIAT_WITHDRAW)
 
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است'})
-        else:
-            otp_code.set_code_used()
 
         if amount < MIN_WITHDRAW:
             logger.info('FiatRequest rejected due to small amount. user=%s' % user.id)
@@ -86,6 +81,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست'})
+
+        if otp_code:
+            otp_code.set_code_used()
 
         from financial.tasks import process_withdraw
 
