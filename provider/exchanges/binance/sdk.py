@@ -21,7 +21,7 @@ else:
     FUTURES_BASE_URL = "https://testnet.binancefuture.com"
 
 
-def create_binance_requset_and_log(response, url: str, method: str, data: dict):
+def create_binance_requset_and_log(response: str, url: str, method: str, data: dict):
     from provider.models import BinanceRequests
     resp_data = response.json()
     if not response.ok:

@@ -133,7 +133,7 @@ class BinanceSpotHandler:
 
     @classmethod
     def get_symbol_data(cls, symbol: str) -> Union[dict, None]:
-        data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False,)
+        data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False, cache_timeout=HOUR)
 
         if not data:
             return
