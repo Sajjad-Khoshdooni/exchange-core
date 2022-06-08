@@ -1,10 +1,10 @@
 from collections import defaultdict
 from decimal import Decimal
 
-from django.db.models import Q
+from django.db.models import Q, Sum
 
 from accounts.models import Account
-from ledger.models import Trx, Wallet
+from ledger.models import Trx, Wallet, BalanceLock
 import logging
 
 logger = logging.getLogger(__name__)
@@ -48,3 +48,36 @@ def check_account_consistency(account: Account):
 def check_all_accounts_consistency():
     for account in Account.objects.filter(type=Account.ORDINARY):
         check_account_consistency(account)
+
+
+def check_overall_consistency():
+    received = Trx.objects.values('receiver', 'receiver__market').annotate(amount=Sum('amount'))
+    sent = Trx.objects.values('sender', 'sender__market').annotate(amount=Sum('amount'))
+
+    received_dict = {}
+    sent_dict = {}
+
+    for r in received:
+        received_dict[(r['receiver'], r['receiver__market'])] = r['amount']
+
+    for s in sent:
+        sent_dict[(s['sender'], s['sender__market'])] = s['amount']
+
+    locked = BalanceLock.objects.filter(freed=False).values('wallet', 'wallet__market').annotate(amount=Sum('amount'))
+    locked_dict = {}
+
+    for l in locked:
+        locked_dict[(l['wallet'], l['wallet__market'])] = l['amount']
+
+    for w in Wallet.objects.all().prefetch_related('account'):
+        key = (w.id, w.market)
+        balance = received_dict.get(key, 0) - sent_dict.get(key, 0)
+        locked = locked_dict.get(key, 0)
+        check_balance = w.account.type is None
+
+        if check_balance:
+            if balance < 0:
+                logger.info("%s (%s): negative balance (%f)" % (w, w.id, balance))
+
+            if locked > balance:
+                logger.info("%s (%s): locked (%f) > balance (%f)" % (w, w.id, locked, balance))
