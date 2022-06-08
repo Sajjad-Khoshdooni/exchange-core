@@ -205,6 +205,7 @@ class AssetsViewSet(ModelViewSet):
         return options[key]
 
     def get_serializer_class(self):
+        print(self.get_options('extra_info'))
         return AssetSerializerBuilder.create_serializer(
             prices=self.get_options('prices'),
             extra_info=self.get_options('extra_info')
@@ -234,10 +235,12 @@ class AssetsViewSet(ModelViewSet):
         return queryset
 
     def get_object(self):
-        asset = self.get_queryset().filter(symbol=self.kwargs['symbol'].upper(), enable=True)
+        asset = self.get_queryset().filter(symbol=self.kwargs['symbol'].upper(), enable=True).first()
 
         if not asset:
             raise Http404()
+
+        return asset
 
     def get(self, *args, **kwargs):
         with PriceManager():
