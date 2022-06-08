@@ -215,7 +215,7 @@ class OTCTradeAdmin(admin.ModelAdmin):
 
 @admin.register(models.Trx)
 class TrxAdmin(admin.ModelAdmin):
-    list_display = ('created', 'sender', 'receiver', 'amount', 'group_id', 'scope')
+    list_display = ('created', 'sender', 'receiver', 'amount', 'scope', 'group_id', 'scope')
     search_fields = ('sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone')
     readonly_fields = ('sender', 'receiver')
     list_filter = ('scope', )

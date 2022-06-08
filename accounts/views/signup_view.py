@@ -36,10 +36,6 @@ class InitiateSignupView(APIView):
 
         phone = serializer.validated_data['phone']
 
-        # todo: privacy error
-        if User.objects.filter(phone=phone).exists():
-            raise ValidationError('شماره موبایل وارد شده در سیستم وجود دارد.')
-
         VerificationCode.send_otp_code(phone, VerificationCode.SCOPE_VERIFY_PHONE)
 
         return Response({'msg': 'otp sent', 'code': 0})
@@ -63,8 +59,11 @@ class SignupSerializer(serializers.Serializer):
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_VERIFY_PHONE)
         password = validated_data.pop('password')
 
-        if not otp_code or User.objects.filter(phone=otp_code.phone).exists():
+        if not otp_code:
             raise ValidationError({'token': 'توکن نامعتبر است.'})
+
+        if User.objects.filter(phone=otp_code.phone).exists():
+            raise ValidationError({'phone': 'شما قبلا در سیستم ثبت‌نام کرده‌اید. لطفا از قسمت ورود، وارد شوید.'})
 
         validate_password(password=password)
 
