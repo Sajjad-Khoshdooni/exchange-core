@@ -53,22 +53,20 @@ class OTCTrade(models.Model):
         to_asset = self.otc_request.to_asset
 
         with transaction.atomic():
-            Trx.objects.bulk_create([
-                Trx(
-                    sender=from_asset.get_wallet(user, market=self.otc_request.market),
-                    receiver=from_asset.get_wallet(system, market=self.otc_request.market),
-                    amount=self.otc_request.from_amount,
-                    group_id=self.group_id,
-                    scope=Trx.TRADE
-                ),
-                Trx(
-                    sender=to_asset.get_wallet(system, market=self.otc_request.market),
-                    receiver=to_asset.get_wallet(user, market=self.otc_request.market),
-                    amount=self.otc_request.to_amount,
-                    group_id=self.group_id,
-                    scope=Trx.TRADE
-                ),
-            ])
+            Trx.transaction(
+                sender=from_asset.get_wallet(user, market=self.otc_request.market),
+                receiver=from_asset.get_wallet(system, market=self.otc_request.market),
+                amount=self.otc_request.from_amount,
+                group_id=self.group_id,
+                scope=Trx.TRADE
+            )
+            Trx.transaction(
+                sender=to_asset.get_wallet(system, market=self.otc_request.market),
+                receiver=to_asset.get_wallet(user, market=self.otc_request.market),
+                amount=self.otc_request.to_amount,
+                group_id=self.group_id,
+                scope=Trx.TRADE
+            )
 
     @property
     def client_order_id(self):
@@ -147,8 +145,8 @@ class OTCTrade(models.Model):
             with transaction.atomic():
                 from market.models import FillOrder
                 self.change_status(self.DONE)
-                self.create_ledger()
                 self.lock.release()
+                self.create_ledger()
                 FillOrder.create_for_otc_trade(self)
 
     @classmethod

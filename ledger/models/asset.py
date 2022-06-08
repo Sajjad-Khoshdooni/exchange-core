@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.db import models
 from rest_framework import serializers
 
+from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.precision import get_precision, get_presentation_amount
@@ -90,11 +91,17 @@ class Asset(models.Model):
         else:
             return Asset.PRECISION
 
-    def get_wallet(self, account: Account, market: str = Wallet.SPOT, account_type: str = None):
+    def get_wallet(self, account: Account, market: str = Wallet.SPOT):
         assert market in Wallet.MARKETS
 
         if type(account) == int:
             account_filter = {'account_id': account}
+
+            if account == SYSTEM_ACCOUNT_ID:
+                account_type = Account.SYSTEM
+            else:
+                account_type = Account.ORDINARY
+
         else:
             account_filter = {'account': account}
             account_type = account.type
@@ -103,7 +110,9 @@ class Asset(models.Model):
             asset=self,
             market=market,
             **account_filter,
-            positive_balance=account_type == Account.ORDINARY
+            defaults={
+                'check_balance': account_type == Account.ORDINARY
+            }
         )
 
         return wallet

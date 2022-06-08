@@ -29,8 +29,6 @@ class MarginTransfer(models.Model):
 
     asset = models.ForeignKey(to=Asset, on_delete=models.PROTECT)
 
-    lock = get_lock_field()
-
     group_id = models.UUIDField(default=uuid4)
 
     def save(self, *args, **kwargs):
@@ -50,11 +48,11 @@ class MarginTransfer(models.Model):
         else:
             raise NotImplementedError
 
+        sender.has_balance(self.amount, raise_exception=True)
+
         with transaction.atomic():
-            self.lock = sender.lock_balance(self.amount)
             super(MarginTransfer, self).save(*args)
             Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_TRANSFER, self.group_id)
-            self.lock.release()
 
 
 class MarginLoan(models.Model):
@@ -104,9 +102,10 @@ class MarginLoan(models.Model):
             with transaction.atomic():
                 self.status = DONE
                 self.save()
-                Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_BORROW, self.group_id)
                 if self.lock:
                     self.lock.release()
+
+                Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_BORROW, self.group_id)
 
     @classmethod
     def new_loan(cls, account: Account, asset: Asset, amount: Decimal, loan_type: str):

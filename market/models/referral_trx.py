@@ -71,7 +71,7 @@ class ReferralTrx(models.Model):
 
         self.trx_dict = {}
         for receiver_type in [self.TRADER, self.REFERRER]:
-            self.trx_dict[receiver_type] = Trx(
+            self.trx_dict[receiver_type] = Trx.transaction(
                 sender=system_wallet,
                 receiver=self.get_receiver(irt_asset, fee_trx, receiver_type),
                 amount=amount * self.get_share_factor(referral, receiver_type),
