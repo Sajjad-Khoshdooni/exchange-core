@@ -9,16 +9,19 @@ class DepositAddress(models.Model):
     address = models.CharField(max_length=256, blank=True) # in base 16 e vali byd base 58 bashe
 
     def __str__(self):
-        return '%s %s (network= %s)' % (self.account_secret, self.address, self.network)
+        return '%s (network= %s)' % (self.address, self.network)
 
 
     @classmethod
     def new_deposit_address(cls, account, network):
-        address = AddressRequester.create_wallet(account=account)
+        # if DepositAddress.objects.filter(account=account, network=network).exists():
+        #     return DepositAddress.objects.get(account=account, network=network)
+
+        address = AddressRequester().create_wallet(network_symbol=network.symbol)
 
         return DepositAddress.objects.create(
             network=network,
-            account=account,
+            # account=account,
             address=address,
         )
 

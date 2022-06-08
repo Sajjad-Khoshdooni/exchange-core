@@ -59,6 +59,9 @@ INSTALLED_APPS = [
     'market',
     'trader',
     'jalali_date',
+
+    'rest_framework.authtoken',
+
 ]
 
 MIDDLEWARE = [
