@@ -200,10 +200,10 @@ app.conf.beat_schedule = {
 
     'moving_average_trader': {
         'task': 'trader.tasks.moving_average.update_all_moving_averages',
-        'schedule': 67,
+        'schedule': 17,
         'options': {
             'queue': 'trader-ma',
-            'expire': 67
+            'expire': 17
         }
     },
     'update_withdraw_status': {

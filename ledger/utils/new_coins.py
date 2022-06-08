@@ -51,34 +51,38 @@ def add_candidate_coins(coins: list):
         asset.price_precision_irt = max(asset.price_precision_usdt - 3, 0)
 
         if created:
-            coin_data = BinanceSpotHandler.get_coin_data(coin)
-
-            for n in coin_data['networkList']:
-                network, _ = Network.objects.get_or_create(symbol=n['network'], defaults={
-                    'name': n['name'],
-                    'can_withdraw': False,
-                    'can_deposit': False,
-                    'address_regex': n['addressRegex'],
-                    'min_confirm': n['minConfirm'],
-                    'unlock_confirm': n['unLockConfirm'],
-                })
-
-                withdraw_integer_multiple = Decimal(n['withdrawIntegerMultiple'])
-
-                if withdraw_integer_multiple == 0:
-                    withdraw_integer_multiple = Decimal('1e-9')
-
-                NetworkAsset.objects.get_or_create(
-                    asset=asset,
-                    network=network,
-                    defaults={
-                        'withdraw_fee': n['withdrawFee'],
-                        'withdraw_min': n['withdrawMin'],
-                        'withdraw_max': n['withdrawMax'],
-                        'withdraw_precision': -int(math.log10(withdraw_integer_multiple))
-                    }
-                )
+            update_coin_networks(asset)
 
         asset.save()
 
     create_missing_symbols()
+
+
+def update_coin_networks(asset: Asset):
+    coin_data = BinanceSpotHandler.get_coin_data(asset.symbol)
+
+    for n in coin_data['networkList']:
+        network, _ = Network.objects.get_or_create(symbol=n['network'], defaults={
+            'name': n['name'],
+            'can_withdraw': False,
+            'can_deposit': False,
+            'address_regex': n['addressRegex'],
+            'min_confirm': n['minConfirm'],
+            'unlock_confirm': n['unLockConfirm'],
+        })
+
+        withdraw_integer_multiple = Decimal(n['withdrawIntegerMultiple'])
+
+        if withdraw_integer_multiple == 0:
+            withdraw_integer_multiple = Decimal('1e-9')
+
+        NetworkAsset.objects.get_or_create(
+            asset=asset,
+            network=network,
+            defaults={
+                'withdraw_fee': n['withdrawFee'],
+                'withdraw_min': n['withdrawMin'],
+                'withdraw_max': n['withdrawMax'],
+                'withdraw_precision': -int(math.log10(withdraw_integer_multiple))
+            }
+        )
