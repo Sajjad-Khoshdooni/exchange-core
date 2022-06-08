@@ -10,7 +10,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from accounts.views.authentication import CustomTokenAuthentication
 from collector.models import CoinMarketCap
-from ledger.models import Asset, Wallet, NetworkAsset
+from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
 from ledger.utils.price_manager import PriceManager
@@ -218,7 +218,8 @@ class AssetsViewSet(ModelViewSet):
         queryset = queryset.filter(trade_enable=True)
 
         if self.get_options('category'):
-            queryset = queryset.filter(coincategory__name=self.get_options('category'))
+            category = get_object_or_404(CoinCategory, name=self.get_options('category'))
+            queryset = queryset.filter(coincategory=category)
 
         if self.get_options('trend'):
             queryset = queryset.filter(trend=True)
