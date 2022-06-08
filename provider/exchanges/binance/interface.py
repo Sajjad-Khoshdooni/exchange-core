@@ -42,8 +42,8 @@ class BinanceSpotHandler:
 
     @classmethod
     def _collect_api(cls, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        # if settings.DEBUG_OR_TESTING:
-        #     return {}
+        if settings.DEBUG_OR_TESTING:
+            return {}
 
         data = data or {}
 
