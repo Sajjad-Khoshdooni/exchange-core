@@ -34,13 +34,6 @@ class MovingAverage:
     def log(self, msg: str):
         logger.info("MA %s: %s" % (self.symbol, msg))
 
-    @property
-    def order_value_step(self):
-        if self.symbol.base_asset.symbol == Asset.IRT:
-            return ORDER_VALUE_IRT
-        else:
-            return ORDER_VALUE_USDT
-
     def update(self, dry_run: bool = False):
         ask, bid = (get_current_price(self.symbol, ASK), get_current_price(self.symbol, BID))
         median_price = (ask + bid) / 2
