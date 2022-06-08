@@ -2,6 +2,7 @@ import time
 from decimal import Decimal
 
 from django.db.models import Min
+from django.http import Http404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
@@ -233,7 +234,10 @@ class AssetsViewSet(ModelViewSet):
         return queryset
 
     def get_object(self):
-        return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper(), enable=True)
+        asset = self.get_queryset().filter(symbol=self.kwargs['symbol'].upper(), enable=True)
+
+        if not asset:
+            raise Http404()
 
     def get(self, *args, **kwargs):
         with PriceManager():
