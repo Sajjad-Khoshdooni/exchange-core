@@ -20,3 +20,8 @@ class ProviderTransferAdmin(admin.ModelAdmin):
 class ProviderHedgedOrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'asset', 'side', 'amount', 'caller_id', 'hedged')
     search_fields = ('asset__symbol', 'caller_id')
+
+
+@admin.register(models.BinanceRequests)
+class BinanceRequestsAdmin(admin.ModelAdmin):
+    list_display = ('created', 'method',)
