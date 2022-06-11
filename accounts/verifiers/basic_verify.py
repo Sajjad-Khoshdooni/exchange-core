@@ -55,6 +55,11 @@ def basic_verify(user: User):
 
     bank_card = get_first_verify_qs(user.bankcard_set.all())
 
+    if not bank_card:
+        user.change_status(User.REJECTED)
+        logger.info('no bank card or account for user_d = %d' % user.id)
+        return
+
     if not bank_card.verified:
         logger.info('verifying bank_card for user_d = %d' % user.id)
 

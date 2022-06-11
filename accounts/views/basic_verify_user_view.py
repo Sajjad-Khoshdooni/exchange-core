@@ -18,15 +18,6 @@ class CardPanField(serializers.CharField):
         return BankCard.live_objects.filter(user=user).order_by('verified', 'id').first()
 
 
-class IbanField(serializers.CharField):
-    def to_representation(self, value):
-        if value:
-            return BankAccountSerializer(instance=value).data
-
-    def get_attribute(self, user: User):
-        return BankAccount.live_objects.filter(user=user).order_by('verified', 'id').first()
-
-
 class BasicInfoSerializer(serializers.ModelSerializer):
     card_pan = CardPanField(validators=[bank_card_pan_validator])
 
@@ -49,7 +40,6 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             raise ValidationError('تاریخ تولد نامعتبر است.')
 
         card_pan = validated_data.pop('card_pan')
-        # iban = validated_data.pop('iban')
 
         if BankCard.live_objects.filter(card_pan=card_pan, verified=True).exclude(user=user).exists():
             raise ValidationError('این شماره کارت قبلا ثبت شده است.')
