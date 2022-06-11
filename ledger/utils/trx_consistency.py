@@ -36,17 +36,24 @@ def check_account_consistency(account: Account):
             balances[trx.sender_id] -= trx.amount
             if not check_wallet_balance_correctness(trx.sender, balances[trx.sender_id]):
                 logger.info('trx_id= %s, created= %s' % (trx.id, trx.created))
-                balances[trx.sender_id] = 0
 
         if trx.receiver.account == account:
             balances[trx.receiver_id] += trx.amount
             if not check_wallet_balance_correctness(trx.receiver, balances[trx.receiver_id]):
                 logger.info('trx_id= %s, created= %s' % (trx.id, trx.created))
-                balances[trx.receiver_id] = 0
 
-    for wallet in Wallet.objects.all():
+    locked = BalanceLock.objects.filter(wallet__account=account, freed=False).values('wallet').annotate(amount=Sum('amount'))
+    locked_dict = {}
+
+    for l in locked:
+        locked_dict[l['wallet']] = l['amount']
+
+    for wallet in Wallet.objects.filter(account=account):
         if wallet.balance != balances.get(wallet.id, 0):
             logger.info('balance mismatch for wallet %s: %f != %f' % (wallet.id, wallet.balance, balances.get(wallet.id, 0)))
+
+        if wallet.locked != locked_dict.get(wallet.id, 0):
+            logger.info('locked mismatch for wallet %s: %f != %f' % (wallet.id, wallet.locked, locked_dict.get(wallet.id, 0)))
 
 
 def check_all_accounts_consistency():
