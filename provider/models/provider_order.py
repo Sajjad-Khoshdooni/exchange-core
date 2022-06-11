@@ -136,7 +136,7 @@ class ProviderOrder(models.Model):
         if settings.DEBUG_OR_TESTING:
             return True
 
-        if asset.symbol == Asset.USDT:
+        if not asset.hedge_method:
             return True
 
         to_buy = amount if side == cls.BUY else -amount

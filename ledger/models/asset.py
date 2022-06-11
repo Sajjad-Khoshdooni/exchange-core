@@ -30,6 +30,7 @@ class Asset(models.Model):
     USDT = 'USDT'
     SHIB = 'SHIB'
 
+    HEDGE_NONE = ''
     HEDGE_BINANCE_FUTURE = 'binance-future'
     HEDGE_BINANCE_SPOT = 'binance-spot'
 
@@ -58,8 +59,8 @@ class Asset(models.Model):
 
     trade_enable = models.BooleanField(default=True)
 
-    hedge_method = models.CharField(max_length=16, default=HEDGE_BINANCE_FUTURE, choices=[
-        (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE), (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
+    hedge_method = models.CharField(max_length=16, blank=True, default=HEDGE_BINANCE_FUTURE, choices=[
+        (HEDGE_NONE, 'none'), (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE), (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
     ])
 
     bid_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
