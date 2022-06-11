@@ -29,7 +29,6 @@ class IbanField(serializers.CharField):
 
 class BasicInfoSerializer(serializers.ModelSerializer):
     card_pan = CardPanField(validators=[bank_card_pan_validator])
-    iban = IbanField(validators=[iban_validator])
 
     def update(self, user, validated_data):
         if user and user.verify_status in (User.PENDING, User.VERIFIED):
@@ -50,16 +49,12 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             raise ValidationError('تاریخ تولد نامعتبر است.')
 
         card_pan = validated_data.pop('card_pan')
-        iban = validated_data.pop('iban')
+        # iban = validated_data.pop('iban')
 
         if BankCard.live_objects.filter(card_pan=card_pan, verified=True).exclude(user=user).exists():
             raise ValidationError('این شماره کارت قبلا ثبت شده است.')
 
-        if BankAccount.live_objects.filter(iban=iban, verified=True).exclude(user=user).exists():
-            raise ValidationError('این شماره شبا قبلا ثبت شده است.')
-
         bank_card = BankCard.live_objects.filter(user=user, card_pan=card_pan).first()
-        bank_account = BankAccount.live_objects.filter(user=user, iban=iban).first()
 
         if not bank_card:
             # new bank_card
@@ -68,14 +63,6 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
             # BankCard.objects.filter(user=user).delete()
             BankCard.objects.create(user=user, card_pan=card_pan)
-
-        if not bank_account:
-            # new bank_card
-            if BankAccount.live_objects.filter(user=user, verified=True).exists():
-                raise ValidationError('امکان تغییر شماره شبای تایید شده وجود ندارد.')
-
-            # BankAccount.objects.filter(user=user).delete()
-            BankAccount.objects.create(user=user, iban=iban)
 
         if not user.national_code_verified:
             user.national_code = validated_data['national_code']
@@ -106,7 +93,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'verify_status', 'level', 'first_name', 'last_name', 'birth_date', 'national_code', 'card_pan', 'iban',
+            'verify_status', 'level', 'first_name', 'last_name', 'birth_date', 'national_code', 'card_pan',
             'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified',
         )
         read_only_fields = (
