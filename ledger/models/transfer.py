@@ -113,7 +113,6 @@ class Transfer(models.Model):
         assert network_asset.withdraw_max >= amount >= max(network_asset.withdraw_min, network_asset.withdraw_fee)
 
         lock = wallet.lock_balance(amount)
-        deposit_address = network.get_deposit_address(wallet.account)
 
         commission = network_asset.withdraw_fee
 
@@ -124,7 +123,6 @@ class Transfer(models.Model):
             fee_amount=commission,
             lock=lock,
             source=cls.BINANCE,
-            deposit_address=deposit_address,
             out_address=address,
             deposit=False
         )
@@ -181,7 +179,7 @@ class Transfer(models.Model):
                         context={
                             'amount': humanize_number(sent_amount),
                             'wallet_asset': self.wallet.asset.symbol,
-                            'withdraw_address': self.deposit_address,
+                            'withdraw_address': self.out_address,
                             'trx_hash': self.trx_hash,
                             'brand': config('BRAND'),
                             'panel_url': config('PANEL_URL'),
