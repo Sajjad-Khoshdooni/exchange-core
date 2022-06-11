@@ -143,7 +143,7 @@ class Asset(models.Model):
         elif self.hedge_method == self.HEDGE_BINANCE_FUTURE:
             return BinanceFuturesHandler
         else:
-            raise NotImplementedError
+            return
 
 
 class AssetSerializer(serializers.ModelSerializer):
