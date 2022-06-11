@@ -44,6 +44,10 @@ def check_account_consistency(account: Account):
                 logger.info('trx_id= %s, created= %s' % (trx.id, trx.created))
                 balances[trx.receiver_id] = 0
 
+    for wallet in Wallet.objects.all():
+        if wallet.balance != balances.get(wallet.id, 0):
+            logger.info('balance mismatch for wallet %s: %f != %f' % (wallet.id, wallet.balance, balances.get(wallet.id, 0)))
+
 
 def check_all_accounts_consistency():
     for account in Account.objects.filter(type=Account.ORDINARY):
