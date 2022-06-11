@@ -92,3 +92,14 @@ def check_overall_consistency():
 
             if locked > balance:
                 logger.info("%s (%s): locked (%f) > balance (%f)" % (w, w.id, locked, balance))
+
+
+def get_wallet_trx_balance(wallet: Wallet):
+    trx_history = Trx.objects.filter(Q(sender=wallet) | Q(receiver=wallet))
+    balance = 0
+    for trx in trx_history:
+        if trx.sender == wallet:
+            balance -= trx.amount
+        if trx.receiver == wallet:
+            balance += trx.amount
+    return balance

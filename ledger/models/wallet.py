@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Sum, CheckConstraint, Q, F
+from django.db.models import CheckConstraint, Q, F
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
@@ -66,7 +66,7 @@ class Wallet(models.Model):
         return BalanceLock.new_lock(wallet=self, amount=amount)
 
     def get_free(self) -> Decimal:
-        return self.get_balance() - self.get_locked()
+        return self.balance - self.locked
 
     def get_free_usdt(self) -> Decimal:
         if self.asset.symbol == self.asset.IRT:
