@@ -27,7 +27,7 @@ BEP20_SYMBOL_TO_SMART_CONTRACT = {
     '1INCH': '0x111111111117dc0aa78b770fa6a738034120c302', 'ANKR': '0xf307910a4c7bbc79691fd374889b36d8531b08e3',
     'DODO': '0x67ee3cb086f8a16f34bee3ca72fad36f7db929e2', 'ALICE': '0xac51066d7bec65dc4589368da368b212745d63e8',
     'REEF': '0xf21768ccbc73ea5b6fd3c687208a7c2def2d966e', 'CELR': '0x1f9f6a696c6fd109cd3956f45dc709d2b3902163',
-    'GALA': '0x7ddee176f665cd201f93eede625770e2fd911990',
+    'GALA': '0x7ddee176f665cd201f93eede625770e2fd911990', 'BSW': '0x965F527D9159dCe6288a2219DB51fc6Eef120dD1',
 }
 
 # ---------------------------------------------------------------------------------------------------------
