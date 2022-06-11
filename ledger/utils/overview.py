@@ -136,7 +136,7 @@ class AssetOverview:
 
     def get_total_hedge_value(self):
         return sum([
-            abs(self.get_hedge_value(asset) or 0) for asset in Asset.objects.exclude(symbol__in=[Asset.IRT, Asset.USDT])
+            abs(self.get_hedge_value(asset) or 0) for asset in Asset.objects.exclude(hedge_method=Asset.HEDGE_NONE)
         ])
 
     def get_binance_balance(self, asset: Asset) -> Decimal:

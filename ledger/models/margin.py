@@ -83,15 +83,12 @@ class MarginLoan(models.Model):
         return self.asset.get_wallet(self.account, Wallet.LOAN)
 
     def finalize(self):
-        if self.asset.symbol != Asset.USDT:
-            hedged = ProviderOrder.try_hedge_for_new_order(
-                asset=self.asset,
-                side=BUY if self.type == self.BORROW else SELL,
-                amount=self.amount,
-                scope=ProviderOrder.BORROW
-            )
-        else:
-            hedged = True
+        hedged = ProviderOrder.try_hedge_for_new_order(
+            asset=self.asset,
+            side=BUY if self.type == self.BORROW else SELL,
+            amount=self.amount,
+            scope=ProviderOrder.BORROW
+        )
 
         if hedged:
             if self.type == self.BORROW:
