@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 
 from django.db import models
+from yekta_config.config import config
 
 from accounts.models import Account
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
@@ -54,8 +55,8 @@ class CryptoBalance(models.Model):
         from ledger.withdraw.fee_handler import FeeHandler
 
         binance_network_addresses = {
-            'TRX': 'TWnBUM28vwaN2g4NWNf8VVphbXSe537SCv',
-            'BSC': '0x4b6c77358c69ed0a3af7c1a1131560432b824d69'
+            'TRX': config('HOT_WALLET_TRX_ADDRESS'),
+            'BSC': config('HOT_WALLET_BSC_ADDRESS')
         }
 
         network = self.deposit_address.network
