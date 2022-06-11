@@ -49,6 +49,7 @@ class TransferUpdateView(APIView):
                                             block_number=data['block_number'], out_address=out_address,
                                             wallet=wallet,
                                           defaults={
-                                              'status': data['status']
+                                              'status': data['status'],
+                                              'deposit': True,
                                           })
         return Response(201)
