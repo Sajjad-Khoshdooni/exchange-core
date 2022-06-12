@@ -4,6 +4,7 @@ from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
 from random import randrange, random
+from uuid import uuid4
 
 from django.conf import settings
 from django.core.cache import cache
@@ -105,14 +106,12 @@ class Order(models.Model):
 
     @property
     def filled_price(self):
-        made_fills_amount, made_fills_value = self.made_fills.all().annotate(
+        fills_amount, fills_value = self.trades.all().annotate(
             value=F('amount') * F('price')).aggregate(sum_amount=Sum('amount'), sum_value=Sum('value')).values()
-        taken_fills_amount, taken_fills_value = self.taken_fills.all().annotate(
-            value=F('amount') * F('price')).aggregate(sum_amount=Sum('amount'), sum_value=Sum('value')).values()
-        amount = Decimal((made_fills_amount or 0) + (taken_fills_amount or 0))
+        amount = Decimal((fills_amount or 0))
         if not amount:
             return None
-        price = Decimal((made_fills_value or 0) + (taken_fills_value or 0)) / amount
+        price = Decimal((fills_value or 0)) / amount
         return floor_precision(price, self.symbol.tick_size)
 
     @property
@@ -194,7 +193,7 @@ class Order(models.Model):
 
         logger.info(log_prefix + 'make match started...')
         with transaction.atomic():
-            from market.models import FillOrder
+            from market.models import Trade
             # lock symbol open orders
             open_orders = list(Order.open_objects.select_for_update().filter(symbol=self.symbol))
 
@@ -220,7 +219,7 @@ class Order(models.Model):
 
             unfilled_amount = self.unfilled_amount
 
-            fill_orders = []
+            trades = []
 
             referral_list = []
             for matching_order in matching_orders:
@@ -243,27 +242,29 @@ class Order(models.Model):
 
                 is_system_trade = self.wallet.account.is_system() and matching_order.wallet.account.is_system()
 
-                fill_order = FillOrder(
+                trades_pair = Trade.init_pair(
                     symbol=self.symbol,
                     taker_order=self,
                     maker_order=matching_order,
                     amount=match_amount,
                     price=trade_price,
-                    is_buyer_maker=(self.side == Order.SELL),
                     irt_value=base_irt_price * trade_price * match_amount,
-                    trade_source=FillOrder.SYSTEM if is_system_trade else FillOrder.MARKET
+                    trade_source=Trade.SYSTEM if is_system_trade else Trade.MARKET,
+                    group_id=uuid4()
                 )
 
                 self.release_lock(match_amount)
                 matching_order.release_lock(match_amount)
-                self.update_filled_amount((self.id, matching_order.id), match_amount)
 
-                trade_trxs = fill_order.create_trade_trxs()
-                fill_order.set_amounts(trade_trxs)
-                referral_trx = fill_order.init_referrals(trade_trxs)
+                trade_trxs = trades_pair.maker.create_trade_trxs()
+                for trade in trades_pair:
+                    trade.set_amounts(trade_trxs)
+                referral_trx = trades_pair.maker.init_referrals(trade_trxs)
                 referral_list.extend(referral_trx.referral)
 
-                fill_orders.append(fill_order)
+                trades.extend(trades_pair)
+
+                self.update_filled_amount((self.id, matching_order.id), match_amount)
 
                 if self.wallet.account.is_ordinary_user() != matching_order.wallet.account.is_ordinary_user():
                     ordinary_order = self if self.type == Order.ORDINARY else matching_order
@@ -305,18 +306,16 @@ class Order(models.Model):
                 self.save(update_fields=['status'])
 
             ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referral_list))
-            FillOrder.objects.bulk_create(fill_orders)
+            Trade.objects.bulk_create(trades)
 
             # updating trade_volume_irt of accounts
-            for fill_order in fill_orders:
-                accounts = [fill_order.maker_order.wallet.account, fill_order.taker_order.wallet.account]
-
-                for account in accounts:
-                    if not account.is_system():
-                        account.trade_volume_irt = F('trade_volume_irt') + fill_order.irt_value
-                        account.save(update_fields=['trade_volume_irt'])
-                        account.refresh_from_db()
-                        check_prize_achievements(account)
+            for trade in trades:
+                account = trade.account
+                if not account.is_system():
+                    account.trade_volume_irt = F('trade_volume_irt') + trade.irt_value
+                    account.save(update_fields=['trade_volume_irt'])
+                    account.refresh_from_db()
+                    check_prize_achievements(account)
             
             cache.delete(key)
             logger.info(log_prefix + 'make match finished.')

@@ -21,7 +21,7 @@ from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
-from market.models import FillOrder, ReferralTrx, Order
+from market.models import Trade, ReferralTrx, Order
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
@@ -261,7 +261,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_payment_address.short_description = 'واریزهای ریالی'
 
     def get_fill_order_address(self, user: User):
-        link = url_to_admin_list(FillOrder) + '?user={}'.format(user.id)
+        link = url_to_admin_list(Trade) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_fill_order_address.short_description = 'معاملات'
 
