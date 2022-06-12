@@ -58,6 +58,10 @@ class CryptoBalance(models.Model):
         from ledger.withdraw.fee_handler import FeeHandler
         from ledger.models import Transfer
 
+        if self.deposit_address.account.is_system():
+            logger.info('ignoring transfer system accounts')
+            return
+
         binance_network_addresses = {
             'TRX': config('HOT_WALLET_TRX_ADDRESS'),
             'BSC': config('HOT_WALLET_BSC_ADDRESS')
