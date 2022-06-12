@@ -294,6 +294,7 @@ class BalanceLockAdmin(admin.ModelAdmin):
     list_display = ('created', 'release_date', 'wallet', 'amount', 'freed')
     list_filter = ('freed', 'wallet')
     ordering = ('-created', )
+    readonly_fields = ('wallet', )
 
 
 class CryptoAccountTypeFilter(SimpleListFilter):
