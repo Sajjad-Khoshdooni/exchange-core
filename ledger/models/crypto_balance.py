@@ -7,6 +7,7 @@ from yekta_config.config import config
 from accounts.models import Account
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.crypto_account_balance_getter import CryptoAccountBalanceGetterFactory
+from ledger.models import Transfer
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_trading_price_usdt, BUY
 
@@ -31,6 +32,9 @@ class CryptoBalance(models.Model):
         )
         self.amount = balance
         self.save()
+
+    def get_value(self):
+        return self.amount * get_trading_price_usdt(self.asset.symbol, BUY, raw_price=True)
 
     def send_to(self, address: str, amount: Decimal):
         from ledger.models import Transfer
@@ -60,6 +64,16 @@ class CryptoBalance(models.Model):
         }
 
         network = self.deposit_address.network
+
+        if Transfer.objects.filter(
+                status__in=[Transfer.PROCESSING, Transfer.PENDING],
+                deposit=False,
+                source=Transfer.SELF,
+                deposit_address=self.deposit_address
+            ):
+            logger.info('ignoring transfer due to already alive transfer')
+            return
+
         coin = self.asset.symbol
         base_coin = DEFAULT_COIN_OF_NETWORK[network.symbol]
 
