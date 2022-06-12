@@ -7,7 +7,6 @@ from yekta_config.config import config
 from accounts.models import Account
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.crypto_account_balance_getter import CryptoAccountBalanceGetterFactory
-from ledger.models import Transfer
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_trading_price_usdt, BUY
 
@@ -57,6 +56,7 @@ class CryptoBalance(models.Model):
 
     def collect(self):
         from ledger.withdraw.fee_handler import FeeHandler
+        from ledger.models import Transfer
 
         binance_network_addresses = {
             'TRX': config('HOT_WALLET_TRX_ADDRESS'),
