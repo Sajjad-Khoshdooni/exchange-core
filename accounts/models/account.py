@@ -28,7 +28,7 @@ class Account(models.Model):
 
     primary = models.BooleanField(default=True)
 
-    last_margin_warn = models.DateTimeField(null=True, blank=True)
+    margin_alerting = models.BooleanField(default=False)
 
     referred_by = models.ForeignKey(
         to='accounts.Referral',
