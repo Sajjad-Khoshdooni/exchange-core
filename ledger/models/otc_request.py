@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 from django.utils import timezone
 
 from accounts.models import Account
@@ -175,3 +176,13 @@ class OTCRequest(models.Model):
 
     def __str__(self):
         return 'Buy %s %s from %s' % (self.to_asset.get_presentation_amount(self.to_amount), self.to_asset, self.from_asset)
+
+    class Meta:
+        constraints = [
+            CheckConstraint(check=Q(
+                from_amount__gte=0,
+                to_amount__gte=0,
+                to_price__gte=0,
+                to_price_absolute_irt__gte=0,
+                to_price_absolute_usdt__gte=0,
+            ), name='check_ledger_otc_request_amounts', ), ]

@@ -1,6 +1,7 @@
 import math
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 
 from ledger.consts import BEP20_SYMBOL_TO_SMART_CONTRACT
 from ledger.utils.fields import get_amount_field
@@ -32,3 +33,6 @@ class NetworkAsset(models.Model):
 
     class Meta:
         unique_together = ('asset', 'network')
+        constraints = [
+            CheckConstraint(check=Q(withdraw_fee__gte=0, withdraw_min__gte=0, withdraw_max__gte=0), name='check_ledger_network_amounts', ),
+        ]

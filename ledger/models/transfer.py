@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.db import models
-from django.db.models import UniqueConstraint, Q
+from django.db.models import UniqueConstraint, Q, CheckConstraint
 from yekta_config.config import config
 
 from accounts.models import Account, Notification
@@ -213,5 +213,6 @@ class Transfer(models.Model):
                 fields=["trx_hash", "network", "deposit"],
                 name="unique_transfer_tx_hash_network",
                 condition=Q(status__in=["pending", "done"]),
-            )
+            ),
+            CheckConstraint(check=Q(amount__gte=0, fee_amount__gte=0), name='check_ledger_transfer_amounts', ),
         ]

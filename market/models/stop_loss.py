@@ -2,7 +2,7 @@ import logging
 from decimal import Decimal
 
 from django.db import models
-from django.db.models import F
+from django.db.models import F, CheckConstraint, Q
 from django.utils import timezone
 
 from ledger.models import Wallet
@@ -64,3 +64,12 @@ class StopLoss(models.Model):
 
     def hard_delete(self):
         super(StopLoss, self).delete()
+
+    class Meta:
+        constraints = [
+            CheckConstraint(check=Q(
+                amount__gte=0,
+                price__gte=0,
+                filled_amount__gte=0
+            ), name='check_market_stoploss_amounts', ),
+        ]

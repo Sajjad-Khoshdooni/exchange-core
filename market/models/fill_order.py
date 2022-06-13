@@ -6,7 +6,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
 from django.db import models
-from django.db.models import F
+from django.db.models import F, CheckConstraint, Q
 
 from accounts.gamification.gamify import check_prize_achievements
 from accounts.models import Account
@@ -64,6 +64,15 @@ class FillOrder(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['created', 'symbol', ]),
+        ]
+        constraints = [
+            CheckConstraint(check=Q(
+                amount__gte=0,
+                price__gte=0,
+                base_amount__gte=0,
+                taker_fee_amount__gte=0,
+                maker_fee_amount__gte=0
+            ), name='check_market_fillorder_amounts', ),
         ]
 
     def get_side(self, account: Account, list_index: int):

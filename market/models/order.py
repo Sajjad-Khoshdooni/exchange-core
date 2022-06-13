@@ -83,7 +83,10 @@ class Order(models.Model):
             models.Index(fields=['symbol', 'status']),
             models.Index(name='market_new_orders_price_idx', fields=['price'], condition=Q(status='new')),
         ]
-        constraints = [CheckConstraint(check=Q(filled_amount__lte=F('amount')), name='check_filled_amount', ), ]
+        constraints = [
+            CheckConstraint(check=Q(filled_amount__lte=F('amount')), name='check_filled_amount', ),
+            CheckConstraint(check=Q(amount__gte=0, filled_amount__gte=0, price__gte=0), name='check_market_order_amounts', ),
+        ]
 
     objects = models.Manager()
     open_objects = OpenOrderManager()
