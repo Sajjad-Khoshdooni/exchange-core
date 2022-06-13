@@ -28,7 +28,7 @@ class Network(models.Model):
         try:
             return DepositAddress.objects.get(network=self, account=account)
         except DepositAddress.DoesNotExist:
-            return DepositAddress.new_deposit_address(account=account, network=self)
+            return DepositAddress.new_deposit_address(account=account, network=self.symbol)
 
     def __str__(self):
         return self.symbol
