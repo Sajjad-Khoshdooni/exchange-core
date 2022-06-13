@@ -2,14 +2,14 @@ import json
 
 import requests
 
-from .consts import MASTERKEY_WALLET_URL
+from ledger.requester.consts import MASTERKEY_WALLET_URL, MASTERKEY_TOKEN
 
 
 class AddressRequester:
     def __init__(self):
         self.url = MASTERKEY_WALLET_URL
         self.header = {
-            'Authorization': 'Token ' + 'c22f401defb400ab345a9744d042573882e68ac7' # it shouldnt be hardcode
+            'Authorization': 'Token ' + MASTERKEY_TOKEN
         }
 
     def create_wallet(self, network_symbol):
