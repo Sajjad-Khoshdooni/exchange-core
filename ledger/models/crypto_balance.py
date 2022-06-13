@@ -20,7 +20,7 @@ class CryptoBalance(models.Model):
 
     class Meta:
         unique_together = ('deposit_address', 'asset')
-
+    
     def __str__(self):
         return '%s %s %f' % (self.asset, self.deposit_address, self.amount)
 
