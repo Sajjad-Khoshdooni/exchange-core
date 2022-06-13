@@ -20,10 +20,10 @@ class FeeHandler:
             'BNB': Decimal('0.000105'),
             'DEFAULT': Decimal('0.00030')
         },
-        # 'ETH': {
-        #     'ETH': 0,
-        #     'DEFAULT': 0.004  # todo: check fee
-        # }
+        'ETH': {
+            'ETH': Decimal('0.000756'),
+            'DEFAULT':Decimal('0.002160')
+        }
     }
 
     def __init__(self, network: Network, asset: Asset):
