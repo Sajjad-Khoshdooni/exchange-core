@@ -34,7 +34,7 @@ class OTCRequest(models.Model):
 
     to_amount = get_amount_field()
     from_amount = get_amount_field()
-    to_price = get_amount_field()
+    to_price = get_amount_field(max_digits=40, decimal_places=18)
 
     to_price_absolute_irt = get_amount_field()
     to_price_absolute_usdt = get_amount_field()

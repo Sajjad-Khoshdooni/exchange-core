@@ -3,10 +3,9 @@ from uuid import uuid4
 
 from django.db import models
 
-from accounts.models import Account, Notification
+from accounts.models import Account
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_amount_field
-from ledger.utils.precision import humanize_number
 
 logger = logging.getLogger(__name__)
 

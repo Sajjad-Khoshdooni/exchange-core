@@ -5,7 +5,7 @@ from ledger.models import Asset
 from ledger.utils.test import new_account, set_price
 
 
-class WalletTestCase(TestCase):
+class OTCTestCase(TestCase):
     def setUp(self):
         self.account = new_account()
         user = self.account.user
