@@ -4,7 +4,7 @@ from math import log10
 
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import Sum
+from django.db.models import Sum, CheckConstraint, Q
 
 from accounts.models import Account
 from ledger.models import Asset, Trx
@@ -193,3 +193,6 @@ class ProviderOrder(models.Model):
                 return True
 
         return True
+
+    class Meta:
+        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_provider_order_amount', ), ]
