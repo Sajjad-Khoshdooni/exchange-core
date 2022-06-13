@@ -24,17 +24,17 @@ class MarginInfoView(APIView):
         margin_info = MarginInfo.get(account)
 
         return Response({
-            'total_assets': round(Decimal(margin_info.total_assets), 8),
-            'total_debt': round(Decimal(margin_info.total_debt), 8),
+            'total_assets': round(Decimal(margin_info.total_assets), 2),
+            'total_debt': round(Decimal(margin_info.total_debt), 2),
             'margin_level': round(margin_info.get_margin_level(), 3),
-            'total_equity': round(Decimal(margin_info.get_total_equity()), 8),
+            'total_equity': round(Decimal(margin_info.get_total_equity()), 2),
         })
 
 
 class AssetMarginInfoView(APIView):
     def get(self, request: Request, symbol):
         account = request.user.account
-        asset = get_object_or_404(Asset, symbol=symbol.upper())
+        asset = get_object_or_404(Asset, symbol=symbol.upper(), margin_enable=True)
 
         margin_info = MarginInfo.get(account)
 
@@ -68,7 +68,7 @@ class MarginTransferSerializer(serializers.ModelSerializer):
             raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
 
         if not user.margin_quiz_pass_date:
-            raise ValidationError('شما باید ابتدا به سوالات این بخش پاسخ دهید.')
+            raise ValidationError('شما باید ابتدا به سوالات معاملات تعهدی پاسخ دهید.')
 
         return super(MarginTransferSerializer, self).create(validated_data)
 

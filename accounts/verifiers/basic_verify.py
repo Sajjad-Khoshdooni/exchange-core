@@ -53,10 +53,9 @@ def basic_verify(user: User):
         return queryset.filter(verified=True).first() or queryset.filter(verified=None).first() or \
                    queryset.filter(verified=False).first()
 
-    bank_account = get_first_verify_qs(user.bankaccount_set.all())
     bank_card = get_first_verify_qs(user.bankcard_set.all())
 
-    if not bank_account or not bank_card:
+    if not bank_card:
         user.change_status(User.REJECTED)
         logger.info('no bank card or account for user_d = %d' % user.id)
         return
@@ -65,13 +64,6 @@ def basic_verify(user: User):
         logger.info('verifying bank_card for user_d = %d' % user.id)
 
         if verify_bank_card(bank_card) is False:
-            user.change_status(User.REJECTED)
-            return
-
-    if not bank_account.verified:
-        logger.info('verifying bank_account for user_d = %d' % user.id)
-
-        if verify_bank_account(bank_account) is False:
             user.change_status(User.REJECTED)
             return
 

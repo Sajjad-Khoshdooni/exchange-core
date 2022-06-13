@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 
 from django.db import models
+from yekta_config.config import config
 
 from accounts.models import Account
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
@@ -31,6 +32,9 @@ class CryptoBalance(models.Model):
         self.amount = balance
         self.save()
 
+    def get_value(self):
+        return self.amount * get_trading_price_usdt(self.asset.symbol, BUY, raw_price=True)
+
     def send_to(self, address: str, amount: Decimal):
         from ledger.models import Transfer
         from ledger.withdraw.withdraw_handler import WithdrawHandler
@@ -52,13 +56,28 @@ class CryptoBalance(models.Model):
 
     def collect(self):
         from ledger.withdraw.fee_handler import FeeHandler
+        from ledger.models import Transfer
+
+        if self.deposit_address.account.is_system():
+            logger.info('ignoring transfer system accounts')
+            return
 
         binance_network_addresses = {
-            'TRX': 'TWnBUM28vwaN2g4NWNf8VVphbXSe537SCv',
-            'BSC': '0x4b6c77358c69ed0a3af7c1a1131560432b824d69'
+            'TRX': config('HOT_WALLET_TRX_ADDRESS'),
+            'BSC': config('HOT_WALLET_BSC_ADDRESS')
         }
 
         network = self.deposit_address.network
+
+        if Transfer.objects.filter(
+                status__in=[Transfer.PROCESSING, Transfer.PENDING],
+                deposit=False,
+                source=Transfer.SELF,
+                deposit_address=self.deposit_address
+            ):
+            logger.info('ignoring transfer due to already alive transfer')
+            return
+
         coin = self.asset.symbol
         base_coin = DEFAULT_COIN_OF_NETWORK[network.symbol]
 

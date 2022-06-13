@@ -127,6 +127,8 @@ class ReferralTestCase(TestCase):
         )
 
     def test_referral_usdt_irt(self):
+        self.account_3.print()
+
         order_5 = new_order(self.usdtirt, Account.system(), 20, 20000, Order.BUY)
         order_6 = new_order(self.usdtirt, self.account_3, 20, 20000, Order.SELL)
 

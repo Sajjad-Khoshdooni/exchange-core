@@ -14,20 +14,20 @@ logger = logging.getLogger(__name__)
 
 
 def cancel_order(order: Order) -> CancelRequest:
-    with transaction.atomic():
-        request = CancelRequest.objects.create(order=order)
-        Order.cancel_orders(Order.objects.filter(id=order.id))
+    request = CancelRequest.objects.create(order=order)
+    order.cancel()
 
-        return request
+    return request
 
 
 def cancel_orders(orders):
     if not orders:
         return
+
     with transaction.atomic():
-        Order.cancel_orders(orders)
         for order in orders:
             CancelRequest.objects.create(order=order)
+            order.cancel()
 
 
 def get_open_orders(wallet: Wallet):

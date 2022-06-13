@@ -51,8 +51,9 @@ def get_serializer_amount_field(max_digits: int = None, decimal_places: int = No
 
     return SerializerDecimalField(
         max_digits=max_digits or AMOUNT_MAX_DIGITS,
-        decimal_places=decimal_places or AMOUNT_DECIMAL_PLACES,
-        **kwargs
+        decimal_places=decimal_places or 8,
+        min_value=0,
+        **kwargs,
     )
 
 
@@ -67,7 +68,13 @@ def get_status_field():
 
 def get_lock_field(null: bool = True, **kwargs):
     return models.OneToOneField(
-        'ledger.BalanceLock', on_delete=models.SET_NULL, null=null, blank=null, editable=False, **kwargs)
+        'ledger.BalanceLock',
+        on_delete=models.SET_NULL if null else models.PROTECT,
+        null=null,
+        blank=null,
+        editable=False,
+        **kwargs
+    )
 
 
 def get_group_id_field(db_index: bool = False):

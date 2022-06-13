@@ -29,6 +29,11 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     pin_to_top = serializers.SerializerMethodField()
 
+    precision = serializers.SerializerMethodField()
+
+    def get_precision(self, asset: Asset):
+        return asset.get_precision()
+
     def get_pin_to_top(self, asset: Asset):
         return asset.pin_to_top
 

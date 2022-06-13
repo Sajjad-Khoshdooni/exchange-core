@@ -263,7 +263,16 @@ if settings.DEBUG:
                 'queue': 'stop_loss',
                 'expire': 1
             },
-        }
+        },
+        'check_margin_level': {
+            'task': 'ledger.tasks.margin.check_margin_level',
+            'schedule': 5,
+            'options': {
+                'queue': 'margin',
+                'expire': 5
+            },
+        },
+
         # 'random_trader': {
         #     'task': 'trader.tasks.random_trader.random_trader',
         #     'schedule': 60,

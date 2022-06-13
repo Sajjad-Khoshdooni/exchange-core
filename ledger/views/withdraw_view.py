@@ -63,7 +63,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         if not api:
             code = attrs['code']
-            otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_WITHDRAW)
+            otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CRYPTO_WITHDRAW)
 
             if not otp_code:
                 raise ValidationError({'code': 'کد نامعتبر است.'})

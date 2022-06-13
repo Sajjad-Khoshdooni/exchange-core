@@ -29,23 +29,17 @@ class MarginTransfer(models.Model):
 
     asset = models.ForeignKey(to=Asset, on_delete=models.PROTECT)
 
-    lock = get_lock_field()
-
     group_id = models.UUIDField(default=uuid4)
 
     def save(self, *args, **kwargs):
-        asset = Asset.get(Asset.USDT)
-
-        spot_wallet = asset.get_wallet(self.account, Wallet.SPOT)
-        margin_wallet = asset.get_wallet(self.account, Wallet.MARGIN)
+        spot_wallet = self.asset.get_wallet(self.account, Wallet.SPOT)
+        margin_wallet = self.asset.get_wallet(self.account, Wallet.MARGIN)
 
         if self.type == self.SPOT_TO_MARGIN:
-            sender = spot_wallet
-            receiver = margin_wallet
+            sender, receiver = spot_wallet, margin_wallet
 
         elif self.type == self.MARGIN_TO_SPOT:
-            sender = margin_wallet
-            receiver = spot_wallet
+            sender, receiver = margin_wallet, spot_wallet
 
             margin_info = MarginInfo.get(self.account)
 
@@ -54,13 +48,11 @@ class MarginTransfer(models.Model):
         else:
             raise NotImplementedError
 
-        with transaction.atomic():
-            self.lock = sender.lock_balance(self.amount)
-            super(MarginTransfer, self).save(*args, **kwargs)
+        sender.has_balance(self.amount, raise_exception=True)
 
         with transaction.atomic():
+            super(MarginTransfer, self).save(*args)
             Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_TRANSFER, self.group_id)
-            self.lock.release()
 
 
 class MarginLoan(models.Model):
@@ -90,14 +82,6 @@ class MarginLoan(models.Model):
     def borrow_wallet(self) -> 'Wallet':
         return self.asset.get_wallet(self.account, Wallet.LOAN)
 
-    # def create_ledger(self):
-    #     if self.type == self.REPAY:
-    #         sender
-    #
-    #     with transaction.atomic():
-    #         Trx.transaction(self.margin_wallet, self.borrow_wallet, self.amount, Trx.MARGIN_BORROW)
-    #         self.lock.release()
-
     def finalize(self):
         hedged = ProviderOrder.try_hedge_for_new_order(
             asset=self.asset,
@@ -115,39 +99,41 @@ class MarginLoan(models.Model):
             with transaction.atomic():
                 self.status = DONE
                 self.save()
-                Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_BORROW, self.group_id)
                 if self.lock:
                     self.lock.release()
+
+                Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_BORROW, self.group_id)
 
     @classmethod
     def new_loan(cls, account: Account, asset: Asset, amount: Decimal, loan_type: str):
         assert amount > 0
         assert asset.symbol != Asset.IRT
 
-        loan = MarginLoan(
-            account=account,
-            asset=asset,
-            amount=amount,
-            type=loan_type
-        )
+        with transaction.atomic():
+            loan = MarginLoan(
+                account=account,
+                asset=asset,
+                amount=amount,
+                type=loan_type
+            )
 
-        if loan_type == cls.REPAY:
-            loan.borrow_wallet.has_debt(-amount, raise_exception=True)
-            loan.lock = loan.margin_wallet.lock_balance(amount)
-            loan.save()
+            if loan_type == cls.REPAY:
+                loan.borrow_wallet.has_debt(-amount, raise_exception=True)
+                loan.lock = loan.margin_wallet.lock_balance(amount)
+                loan.save()
 
-        else:
-            margin_info = MarginInfo.get(account)
-            max_borrowable = margin_info.get_max_borrowable() / get_trading_price_usdt(asset.symbol, SELL, raw_price=True)
+            else:
+                margin_info = MarginInfo.get(account)
+                max_borrowable = margin_info.get_max_borrowable() / get_trading_price_usdt(asset.symbol, SELL, raw_price=True)
 
-            if amount > max_borrowable:
-                raise MaxBorrowableExceeds()
+                if amount > max_borrowable:
+                    raise MaxBorrowableExceeds()
 
-            loan.save()
+                loan.save()
 
-        loan.finalize()
+            loan.finalize()
 
-        return loan
+            return loan
 
 
 class MarginLiquidation(models.Model):
