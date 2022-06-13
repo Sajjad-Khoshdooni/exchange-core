@@ -175,11 +175,11 @@ class FiatWithdrawRequest(models.Model):
         assert self.status not in (CANCELED, self.DONE)
 
         with transaction.atomic():
-            if new_status == DONE:
-                self.build_trx()
-
             if new_status in (self.CANCELED, self.DONE):
                 self.lock.release()
+
+            if new_status == DONE:
+                self.build_trx()
 
             if new_status == self.PENDING:
                 self.withdraw_datetime = timezone.now()
