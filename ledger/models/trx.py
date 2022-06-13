@@ -76,13 +76,16 @@ class Trx(models.Model):
             amount: Union[Decimal, int],
             scope: str,
             group_id: Union[str, UUID],
+            fake_trx: bool = False
     ):
         assert amount >= 0
 
-        if amount == 0 or sender == receiver:
+        if amount == 0 or sender == receiver or fake_trx:
             return FakeTrx(
                 sender=sender,
-                receiver=receiver
+                receiver=receiver,
+                amount=amount,
+                group_id=group_id
             )
 
         with transaction.atomic():
