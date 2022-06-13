@@ -257,7 +257,6 @@ class FillOrder(models.Model):
         from market.models import ReferralTrx
         referral_trx = fill_order.init_referrals(trade_trx_list)
         ReferralTrx.objects.bulk_create(list(filter(bool, referral_trx.referral)))
-        Trx.objects.bulk_create(list(filter(lambda trx: trx and trx.amount, referral_trx.trx)))
         fill_order.save()
 
         # updating trade_volume_irt of accounts
