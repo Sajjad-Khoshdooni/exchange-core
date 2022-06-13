@@ -12,10 +12,9 @@ class AddressRequester:
             'Authorization': 'Token ' + MASTERKEY_TOKEN
         }
 
-    def create_wallet(self, network_symbol):
+    def create_wallet(self):
         data = {
-            'tag': 'tag',
-            'network': network_symbol
+            'tag': 'tag'
         }
         res = requests.post(url=self.url, data=data, headers=self.header)
         response = json.loads(res.content.decode('utf-8'))
