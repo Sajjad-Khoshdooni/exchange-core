@@ -225,7 +225,7 @@ class ZibalGateway(Gateway):
 
         resp = requests.post(
             self.BASE_URL + '/v1/verify',
-            data={
+            json={
                 'merchant': payment_request.gateway.merchant_id,
                 'trackId': int(payment_request.authority)
             }
