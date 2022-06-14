@@ -62,4 +62,4 @@ class BalanceLock(models.Model):
         return '%s %s %s' % (self.wallet, self.wallet.asset.get_presentation_amount(self.amount), self.freed)
 
     class Meta:
-        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_amount', ), ]
+        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_ledger_balance_lock_amount', ), ]

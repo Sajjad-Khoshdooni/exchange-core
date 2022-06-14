@@ -6,13 +6,12 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
 from django.db import models
-from django.db.models import F
+from django.db.models import F, CheckConstraint, Q
 
 from accounts.gamification.gamify import check_prize_achievements
 from accounts.models import Account
 from ledger.models import Trx, OTCTrade, Asset
-from ledger.models.trx import FakeTrx
-from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_field
+from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, precision_to_step
 from ledger.utils.price import get_tether_irt_price, BUY
 from market.models import Order, PairSymbol
@@ -36,7 +35,7 @@ class FillOrder(models.Model):
     maker_order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='made_fills')
 
     amount = get_amount_field()
-    price = get_price_field()
+    price = get_amount_field()
     is_buyer_maker = models.BooleanField()
 
     group_id = get_group_id_field()
@@ -65,6 +64,15 @@ class FillOrder(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['created', 'symbol', ]),
+        ]
+        constraints = [
+            CheckConstraint(check=Q(
+                amount__gte=0,
+                price__gte=0,
+                base_amount__gte=0,
+                taker_fee_amount__gte=0,
+                maker_fee_amount__gte=0
+            ), name='check_market_fillorder_amounts', ),
         ]
 
     def get_side(self, account: Account, list_index: int):

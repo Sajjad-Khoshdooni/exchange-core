@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 
 from ledger.models import Asset, Network
 from ledger.utils.fields import get_amount_field
@@ -25,6 +26,9 @@ class ProviderTransfer(models.Model):
 
     provider_transfer_id = models.CharField(max_length=64)
     caller_id = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_provider_transfer_amount', ), ]
 
     @classmethod
     def new_withdraw(cls, asset: Asset, network: Network, amount: Decimal, address: str, caller_id: str = '') -> 'ProviderTransfer':

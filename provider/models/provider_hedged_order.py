@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 
 from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
@@ -79,3 +80,6 @@ class ProviderHedgedOrder(models.Model):
             return min_amount
         else:
             return min_amount + step_size - reminder
+
+    class Meta:
+        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_provider_hedged_order_amount', ), ]

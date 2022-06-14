@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 from yekta_config.config import config
 
 from accounts.models import Account
@@ -21,6 +22,7 @@ class CryptoBalance(models.Model):
 
     class Meta:
         unique_together = ('deposit_address', 'asset')
+        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_ledger_crypto_balance_amount', ), ]
 
     def __str__(self):
         return '%s %s %f' % (self.asset, self.deposit_address, self.amount)

@@ -28,8 +28,8 @@ class Wallet(models.Model):
     )
 
     check_balance = models.BooleanField(default=True)
-    balance = get_amount_field(max_digits=30, decimal_places=8, default=Decimal(0))
-    locked = get_amount_field(max_digits=30, decimal_places=8, default=Decimal(0))
+    balance = get_amount_field(default=Decimal(0))
+    locked = get_amount_field(default=Decimal(0))
 
     def __str__(self):
         market_verbose = dict(self.MARKET_CHOICES)[self.market]
