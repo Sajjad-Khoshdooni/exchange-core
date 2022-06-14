@@ -17,6 +17,7 @@ class CreateOrderTestCase(TestCase):
     def setUp(self):
         PairSymbol.objects.filter(name='BTCIRT').update(enable=True)
         PairSymbol.objects.filter(name='BTCUSDT').update(enable=True)
+        Asset.objects.filter(symbol='BTC').update(enable=True)
 
         self.account = new_account()
 
@@ -29,6 +30,8 @@ class CreateOrderTestCase(TestCase):
 
         self.btcirt = PairSymbol.objects.get(name='BTCIRT')
         self.btcusdt = PairSymbol.objects.get(name='BTCUSDT')
+
+        Asset.objects.filter(symbol='BTC').update(margin_enable=True)
 
         self.fill = FillOrder.objects.all()
 
@@ -134,9 +137,12 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(fill_order.amount, 2)
 
     def test_fill_three_order(self):
+        account = new_account()
+        account.airdrop(self.irt, 6 * 200020)
+
         order_5 = new_order(self.btcirt, Account.system(), 2, 200000, Order.SELL)
         order_6 = new_order(self.btcirt, Account.system(), 3, 200010, Order.SELL)
-        order_7 = new_order(self.btcirt, Account.system(), 6, 200020, Order.BUY)
+        order_7 = new_order(self.btcirt, account, 6, 200020, Order.BUY)
 
         order_5.refresh_from_db(), order_6.refresh_from_db(), order_7.refresh_from_db()
 
@@ -253,17 +259,6 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(fill_order.price, 2000000)
         self.assertEqual(fill_order.amount, Decimal('0.1'))
 
-    def test_market_sell_order(self):
-        limit_order = new_order(self.btcirt, Account.system(), 2, 2000000, Order.SELL)
-        order = new_order(self.btcirt, Account.system(), Decimal('0.1'), None, Order.BUY, fill_type=Order.MARKET)
-        order.refresh_from_db()
-
-        fill_order = FillOrder.objects.last()
-
-        self.assertEqual(order.status, Order.FILLED)
-        self.assertEqual(fill_order.price, 2000000)
-        self.assertEqual(fill_order.amount, Decimal('0.1'))
-
     def test_market_order_large_amount(self):
         new_order(self.btcirt, Account.system(), 1, 2000000, Order.BUY)
         order = new_order(self.btcirt, Account.system(), 2, None, Order.SELL, fill_type=Order.MARKET)
@@ -328,7 +323,6 @@ class CreateOrderTestCase(TestCase):
             'fill_type': 'limit',
             'market': 'margin'
         })
-
         self.assertEqual(resp.status_code, 201)
         self.assertEqual(Decimal(resp.json()['amount']), Decimal('1.5'))
 

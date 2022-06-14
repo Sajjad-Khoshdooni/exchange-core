@@ -4,6 +4,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 
 from ledger.models import Trx, Asset, Wallet
 from ledger.utils.fields import get_amount_field
@@ -71,7 +72,7 @@ class ReferralTrx(models.Model):
 
         self.trx_dict = {}
         for receiver_type in [self.TRADER, self.REFERRER]:
-            self.trx_dict[receiver_type] = Trx(
+            self.trx_dict[receiver_type] = Trx.transaction(
                 sender=system_wallet,
                 receiver=self.get_receiver(irt_asset, fee_trx, receiver_type),
                 amount=amount * self.get_share_factor(referral, receiver_type),
@@ -112,3 +113,8 @@ class ReferralTrx(models.Model):
         if referrals.taker and referrals.taker.trx_dict:
             trx_list.extend(referrals.taker.trx_dict.values())
         return trx_list
+
+    class Meta:
+        constraints = [
+            CheckConstraint(check=Q(referrer_amount__gte=0, trader_amount__gte=0), name='check_market_referraltrx_amounts', ),
+        ]

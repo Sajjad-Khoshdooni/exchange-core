@@ -203,10 +203,12 @@ class LiquidationEngine:
 
                 transfer_amount = request.to_amount
 
+            sender = wallet.asset.get_wallet(self.account, market=Wallet.MARGIN)
+
             Trx.transaction(
-                sender=wallet.asset.get_wallet(self.account, market=Wallet.MARGIN),
+                sender=sender,
                 receiver=wallet,
-                amount=transfer_amount,
+                amount=min(transfer_amount, sender.balance),
                 scope=Trx.LIQUID,
                 group_id=self.margin_liquidation.group_id,
             )

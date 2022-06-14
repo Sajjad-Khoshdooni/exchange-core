@@ -2,6 +2,8 @@ import time
 from decimal import Decimal
 
 from django.db.models import Min
+from django.http import Http404
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import get_object_or_404
@@ -9,7 +11,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from accounts.views.authentication import CustomTokenAuthentication
 from collector.models import CoinMarketCap
-from ledger.models import Asset, Wallet, NetworkAsset
+from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
 from ledger.utils.price_manager import PriceManager
@@ -165,6 +167,8 @@ class AssetsViewSet(ModelViewSet):
 
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication,)
     permission_classes = []
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['margin_enable']
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -190,6 +194,7 @@ class AssetsViewSet(ModelViewSet):
 
     def get_options(self, key: str):
         options = {
+            'coin': self.request.query_params.get('coin') == '1',
             'prices': self.request.query_params.get('prices') == '1',
             'trend': self.request.query_params.get('trend') == '1',
             'extra_info': self.request.query_params.get('extra_info') == '1',
@@ -200,6 +205,7 @@ class AssetsViewSet(ModelViewSet):
         return options[key]
 
     def get_serializer_class(self):
+        print(self.get_options('extra_info'))
         return AssetSerializerBuilder.create_serializer(
             prices=self.get_options('prices'),
             extra_info=self.get_options('extra_info')
@@ -214,18 +220,27 @@ class AssetsViewSet(ModelViewSet):
         queryset = queryset.filter(trade_enable=True)
 
         if self.get_options('category'):
-            queryset = queryset.filter(coincategory__name=self.get_options('category'))
+            category = get_object_or_404(CoinCategory, name=self.get_options('category'))
+            queryset = queryset.filter(coincategory=category)
 
         if self.get_options('trend'):
             queryset = queryset.filter(trend=True)
 
         if self.get_options('market') == Wallet.MARGIN:
+            queryset = queryset.filter(margin_enable=True)
+
+        if self.get_options('coin'):
             queryset = queryset.exclude(symbol=Asset.IRT)
 
         return queryset
 
     def get_object(self):
-        return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper(), enable=True)
+        asset = self.get_queryset().filter(symbol=self.kwargs['symbol'].upper(), enable=True).first()
+
+        if not asset:
+            raise Http404()
+
+        return asset
 
     def get(self, *args, **kwargs):
         with PriceManager():

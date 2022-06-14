@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Union
 
 from django.db import models
 from django.db.models import UniqueConstraint, Q, Sum
@@ -27,7 +28,7 @@ class Account(models.Model):
 
     primary = models.BooleanField(default=True)
 
-    last_margin_warn = models.DateTimeField(null=True, blank=True)
+    margin_alerting = models.BooleanField(default=False)
 
     referred_by = models.ForeignKey(
         to='accounts.Referral',
@@ -38,9 +39,8 @@ class Account(models.Model):
 
     trade_volume_irt = models.PositiveBigIntegerField(default=0)
 
-    bookmark_market = models.ManyToManyField("market.PairSymbol", null=True, blank=True)
-
-    bookmark_assets = models.ManyToManyField("ledger.Asset", null=True, blank=True)
+    bookmark_market = models.ManyToManyField("market.PairSymbol")
+    bookmark_assets = models.ManyToManyField("ledger.Asset")
 
     def is_system(self) -> bool:
         return self.type == self.SYSTEM
@@ -119,6 +119,10 @@ class Account(models.Model):
 
     def get_invited_count(self):
         return int(Account.objects.filter(referred_by__owner=self).count())
+
+    def airdrop(self, asset, amount: Union[Decimal, int]):
+        wallet = asset.get_wallet(self)
+        wallet.airdrop(amount)
 
     class Meta:
         constraints = [

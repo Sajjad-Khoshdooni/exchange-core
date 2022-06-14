@@ -32,49 +32,49 @@ class EstimateReceiveTimeTestCase(TestCase):
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2020, 5, 17, 0, 10),
+            datetime=datetime.datetime(2020, 5, 17, 0, 10).astimezone(),
         )
         fiat_withdraw_2 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2020, 5, 17, 9, 10),
+            datetime=datetime.datetime(2020, 5, 17, 9, 10).astimezone(),
         )
         fiat_withdraw_3 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2020, 5, 17, 12, 0),
+            datetime=datetime.datetime(2020, 5, 17, 12, 0).astimezone(),
         )
         fiat_withdraw_4 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2020, 5, 17, 15, 10),
+            datetime=datetime.datetime(2020, 5, 17, 15, 10).astimezone(),
         )
         fiat_withdraw_5 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2020, 5, 17, 20, 0),
+            datetime=datetime.datetime(2020, 5, 17, 20, 0).astimezone(),
         )
         fiat_withdraw_6 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2022, 5, 19, 20, 0),
+            datetime=datetime.datetime(2022, 5, 19, 20, 0).astimezone(),
         )
         fiat_withdraw_7 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2022, 5, 20, 8, 10),
+            datetime=datetime.datetime(2022, 5, 20, 8, 10).astimezone(),
         )
         fiat_withdraw_8 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2022, 5, 20, 12, 10),
+            datetime=datetime.datetime(2022, 5, 20, 12, 10).astimezone(),
         )
 
         self.assertEqual(

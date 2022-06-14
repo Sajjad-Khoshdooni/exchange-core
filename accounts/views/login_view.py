@@ -18,7 +18,7 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(required=True)
 
     def save(self, **kwargs):
-        login = self.validated_data['login']
+        login = self.validated_data['login'].lower()
         password = self.validated_data['password']
         return authenticate(login=login, password=password)
 

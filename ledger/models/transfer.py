@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.db import models
-from django.db.models import UniqueConstraint, Q
+from django.db.models import UniqueConstraint, Q, CheckConstraint
 from yekta_config.config import config
 
 from accounts.models import Account, Notification
@@ -113,7 +113,6 @@ class Transfer(models.Model):
         assert network_asset.withdraw_max >= amount >= max(network_asset.withdraw_min, network_asset.withdraw_fee)
 
         lock = wallet.lock_balance(amount)
-        deposit_address = network.get_deposit_address(wallet.account)
 
         commission = network_asset.withdraw_fee
 
@@ -124,7 +123,6 @@ class Transfer(models.Model):
             fee_amount=commission,
             lock=lock,
             source=cls.BINANCE,
-            deposit_address=deposit_address,
             out_address=address,
             deposit=False
         )
@@ -165,7 +163,7 @@ class Transfer(models.Model):
             logger.exception('failed to update crypto balance')
 
     def alert_user(self):
-        if self.status == Transfer.DONE and not self.hidden:
+        if self.status == Transfer.DONE and not self.hidden and self.wallet.account.user:
             sent_amount = self.asset.get_presentation_amount(self.amount)
             user_email = self.wallet.account.user.email
             if self.deposit:
@@ -181,7 +179,7 @@ class Transfer(models.Model):
                         context={
                             'amount': humanize_number(sent_amount),
                             'wallet_asset': self.wallet.asset.symbol,
-                            'withdraw_address': self.deposit_address,
+                            'withdraw_address': self.out_address,
                             'trx_hash': self.trx_hash,
                             'brand': config('BRAND'),
                             'panel_url': config('PANEL_URL'),
@@ -215,5 +213,6 @@ class Transfer(models.Model):
                 fields=["trx_hash", "network", "deposit"],
                 name="unique_transfer_tx_hash_network",
                 condition=Q(status__in=["pending", "done"]),
-            )
+            ),
+            CheckConstraint(check=Q(amount__gte=0, fee_amount__gte=0), name='check_ledger_transfer_amounts', ),
         ]

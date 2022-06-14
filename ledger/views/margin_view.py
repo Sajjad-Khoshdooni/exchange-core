@@ -1,21 +1,21 @@
 from decimal import Decimal
 
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView, get_object_or_404
+from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import serializers
 from rest_framework.viewsets import ModelViewSet
 
 from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowableExceeds
 from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet
 from ledger.models.asset import CoinField
-from ledger.utils.fields import SerializerDecimalField, get_serializer_amount_field
+from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import MarginInfo
-from ledger.utils.price import get_trading_price_usdt, BUY, SELL
+from ledger.utils.price import get_trading_price_usdt, SELL
 
 
 class MarginInfoView(APIView):
@@ -24,17 +24,17 @@ class MarginInfoView(APIView):
         margin_info = MarginInfo.get(account)
 
         return Response({
-            'total_assets': round(Decimal(margin_info.total_assets), 8),
-            'total_debt': round(Decimal(margin_info.total_debt), 8),
+            'total_assets': round(Decimal(margin_info.total_assets), 2),
+            'total_debt': round(Decimal(margin_info.total_debt), 2),
             'margin_level': round(margin_info.get_margin_level(), 3),
-            'total_equity': round(Decimal(margin_info.get_total_equity()), 8),
+            'total_equity': round(Decimal(margin_info.get_total_equity()), 2),
         })
 
 
 class AssetMarginInfoView(APIView):
     def get(self, request: Request, symbol):
         account = request.user.account
-        asset = get_object_or_404(Asset, symbol=symbol.upper())
+        asset = get_object_or_404(Asset, symbol=symbol.upper(), margin_enable=True)
 
         margin_info = MarginInfo.get(account)
 
@@ -58,10 +58,23 @@ class AssetMarginInfoView(APIView):
 
 class MarginTransferSerializer(serializers.ModelSerializer):
     amount = get_serializer_amount_field()
+    coin = CoinField(source='asset')
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+
+        asset = validated_data['asset']
+        if not user.show_margin or not asset.margin_enable:
+            raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
+
+        if not user.margin_quiz_pass_date:
+            raise ValidationError('شما باید ابتدا به سوالات معاملات تعهدی پاسخ دهید.')
+
+        return super(MarginTransferSerializer, self).create(validated_data)
 
     class Meta:
         model = MarginTransfer
-        fields = ('created', 'amount', 'type')
+        fields = ('created', 'amount', 'type', 'coin')
         read_only_fields = ('created', )
 
 
@@ -90,6 +103,10 @@ class MarginLoanSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context['request'].user
+        asset = validated_data['asset']
+
+        if not user.show_margin or not asset.margin_enable:
+            raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
 
         if not user.margin_quiz_pass_date:
             raise ValidationError('شما باید ابتدا به سوالات این بخش پاسخ دهید.')

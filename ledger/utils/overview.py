@@ -5,7 +5,7 @@ from django.db.models import Sum
 
 from accounts.models import Account
 from ledger.models import Trx, Asset, CryptoBalance
-from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price
+from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, get_binance_trading_symbol
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
 
@@ -86,7 +86,8 @@ class AssetOverview:
         return self._internal_deposits.get(asset.symbol, 0)
 
     def get_future_position_amount(self, asset: Asset):
-        amount = float(self._future_positions.get(asset.future_symbol + 'USDT', {}).get('positionAmt', 0))
+        symbol = get_binance_trading_symbol(asset.future_symbol)
+        amount = float(self._future_positions.get(symbol, {}).get('positionAmt', 0))
 
         if asset.symbol == Asset.SHIB:
             amount *= 1000
@@ -106,7 +107,7 @@ class AssetOverview:
         return value
 
     def get_future_position_value(self, asset: Asset):
-        return float(self._future_positions.get(asset.future_symbol + 'USDT', {}).get('notional', 0))
+        return float(self._future_positions.get(get_binance_trading_symbol(asset.future_symbol), {}).get('notional', 0))
 
     def get_total_assets(self, asset: Asset):
         if asset.symbol == Asset.IRT:
@@ -135,7 +136,7 @@ class AssetOverview:
 
     def get_total_hedge_value(self):
         return sum([
-            abs(self.get_hedge_value(asset) or 0) for asset in Asset.objects.exclude(symbol__in=[Asset.IRT, Asset.USDT])
+            abs(self.get_hedge_value(asset) or 0) for asset in Asset.objects.exclude(hedge_method=Asset.HEDGE_NONE)
         ])
 
     def get_binance_balance(self, asset: Asset) -> Decimal:

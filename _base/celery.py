@@ -200,10 +200,10 @@ app.conf.beat_schedule = {
 
     'moving_average_trader': {
         'task': 'trader.tasks.moving_average.update_all_moving_averages',
-        'schedule': 67,
+        'schedule': 17,
         'options': {
             'queue': 'trader-ma',
-            'expire': 67
+            'expire': 17
         }
     },
     'update_withdraw_status': {
@@ -263,7 +263,16 @@ if settings.DEBUG:
                 'queue': 'stop_loss',
                 'expire': 1
             },
-        }
+        },
+        'check_margin_level': {
+            'task': 'ledger.tasks.margin.check_margin_level',
+            'schedule': 5,
+            'options': {
+                'queue': 'margin',
+                'expire': 5
+            },
+        },
+
         # 'random_trader': {
         #     'task': 'trader.tasks.random_trader.random_trader',
         #     'schedule': 60,

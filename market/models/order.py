@@ -6,18 +6,17 @@ from math import floor, log10
 from random import randrange, random
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import models, transaction
-from django.db.models import Sum, F, Q, Max, Min
-from django.utils import timezone
+from django.db.models import Sum, F, Q, Max, Min, CheckConstraint, QuerySet
 
 from accounts.gamification.gamify import check_prize_achievements
-from ledger.models import Trx, Wallet, BalanceLock
+from ledger.models import Trx, Wallet
 from ledger.models.asset import Asset
-from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
+from ledger.utils.fields import get_amount_field, get_lock_field
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
 from market.models import PairSymbol
-from market.models.stop_loss import StopLoss
 from market.models.referral_trx import ReferralTrx
 from provider.models import ProviderOrder
 
@@ -33,8 +32,8 @@ class Order(models.Model):
     MARKET_BORDER = Decimal('1e-2')
     MIN_IRT_ORDER_SIZE = Decimal('1e5')
     MIN_USDT_ORDER_SIZE = Decimal(5)
-    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('5e7')
-    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(2000)
+    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('2e7')
+    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(1000)
     MAKER_ORDERS_COUNT = 10 if settings.DEBUG else 50
 
     BUY, SELL = 'buy', 'sell'
@@ -64,7 +63,7 @@ class Order(models.Model):
     symbol = models.ForeignKey(PairSymbol, on_delete=models.CASCADE)
     amount = get_amount_field()
     filled_amount = get_amount_field(default=Decimal(0))
-    price = get_price_field()
+    price = get_amount_field()
     side = models.CharField(max_length=8, choices=ORDER_CHOICES)
     fill_type = models.CharField(max_length=8, choices=FILL_TYPE_CHOICES)
     status = models.CharField(default=NEW, max_length=8, choices=STATUS_CHOICES)
@@ -84,9 +83,24 @@ class Order(models.Model):
             models.Index(fields=['symbol', 'status']),
             models.Index(name='market_new_orders_price_idx', fields=['price'], condition=Q(status='new')),
         ]
+        constraints = [
+            CheckConstraint(check=Q(filled_amount__lte=F('amount')), name='check_filled_amount', ),
+            CheckConstraint(check=Q(amount__gte=0, filled_amount__gte=0, price__gte=0), name='check_market_order_amounts', ),
+        ]
 
     objects = models.Manager()
     open_objects = OpenOrderManager()
+
+    def cancel(self):
+        self.refresh_from_db()
+
+        if self.status == self.FILLED:
+            return
+
+        with transaction.atomic():
+            self.status = self.CANCELED
+            self.save(update_fields=['status'])
+            self.lock.release()
 
     @property
     def base_wallet(self):
@@ -110,25 +124,25 @@ class Order(models.Model):
         return floor_precision(amount, self.symbol.step_size)
 
     @staticmethod
+    def matching_orders_filter(side, price, op):
+        return(lambda order: order.side == side and order.price >= price) if op == 'gte' else \
+                (lambda order: order.side == side and order.price <= price)
+
+    @staticmethod
     def get_opposite_side(side):
         return Order.SELL if side.lower() == Order.BUY else Order.BUY
 
     @staticmethod
     def get_order_by(side):
-        return ('-price', '-created') if side == Order.BUY else ('price', '-created')
+        return (lambda order: (-order.price, -order.created.timestamp())) if side == Order.BUY else \
+                (lambda order: (order.price, -order.created.timestamp()))
 
     @classmethod
-    def cancel_orders(cls, to_cancel_orders):
-        to_cancel_orders = to_cancel_orders.exclude(status=cls.FILLED)
+    def cancel_orders(cls, to_cancel_orders: QuerySet):
+        to_cancel_orders = list(to_cancel_orders.exclude(status=cls.FILLED))
 
-        now = timezone.now()
-
-        lock_ids = list(to_cancel_orders.values_list('lock_id', flat=True))
-        cancels = to_cancel_orders.update(status=Order.CANCELED)
-
-        BalanceLock.objects.filter(id__in=lock_ids).update(freed=True, release_date=now)
-
-        logger.info(f'cancels: {cancels}')
+        for order in to_cancel_orders:
+            order.cancel()
 
     @staticmethod
     def get_price_filter(price, side):
@@ -156,11 +170,11 @@ class Order(models.Model):
             return round_up_to_exponent(boundary_price / loose_factor, precision)
 
     @classmethod
-    def get_lock_wallet(cls, wallet, base_wallet, side):
+    def get_to_lock_wallet(cls, wallet, base_wallet, side) -> Wallet:
         return base_wallet if side == Order.BUY else wallet
 
     @classmethod
-    def get_lock_amount(cls, amount, price, side):
+    def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
         return amount * price if side == Order.BUY else amount
 
     def submit(self):
@@ -168,21 +182,32 @@ class Order(models.Model):
         self.make_match()
 
     def acquire_lock(self):
-        lock_wallet = self.get_lock_wallet(self.wallet, self.base_wallet, self.side)
-        lock_amount = Order.get_lock_amount(self.amount, self.price, self.side)
-        self.lock = lock_wallet.lock_balance(lock_amount)
+        to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
+        lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side)
+        self.lock = to_lock_wallet.lock_balance(lock_amount)
         self.save()
 
     def release_lock(self, release_amount):
-        from ledger.models import BalanceLock
-        release_amount = Order.get_lock_amount(release_amount, self.price, self.side)
-        BalanceLock.objects.filter(id=self.lock.id).update(amount=F('amount') - release_amount)
+        release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side)
+        self.lock.decrease_lock(release_amount)
 
     def make_match(self):
+        key = 'mm-cc-%s' % self.symbol.name
+        log_prefix = 'MM %s: ' % self.symbol.name
+
+        logger.info(log_prefix + 'make match started...')
         with transaction.atomic():
             from market.models import FillOrder
             # lock symbol open orders
-            Order.open_objects.select_for_update().filter(symbol=self.symbol)
+            open_orders = list(Order.open_objects.select_for_update().filter(symbol=self.symbol))
+
+            logger.info(log_prefix + 'make match danger zone')
+
+            # if cache.get(key):
+            #     logger.info(log_prefix + 'concurrent detected!')
+            #     raise Exception('Concurrent make match!')
+
+            cache.set(key, 1, 10)
 
             to_cancel_orders = Order.open_objects.filter(
                 symbol=self.symbol, cancel_request__isnull=False
@@ -191,14 +216,14 @@ class Order(models.Model):
 
             opp_side = self.get_opposite_side(self.side)
 
-            matching_orders = Order.open_objects.filter(
-                symbol=self.symbol, side=opp_side, **Order.get_price_filter(self.price, self.side)
-            ).order_by(*self.get_order_by(opp_side))
+            operator = 'lte' if self.side == Order.BUY else 'gte'
+            matching_orders = list(sorted(filter(
+                self.matching_orders_filter(side=opp_side, price=self.price, op=operator), open_orders
+            ), key=self.get_order_by(opp_side)))
 
             unfilled_amount = self.unfilled_amount
 
             fill_orders = []
-            trx_list = []
 
             referral_list = []
             for matching_order in matching_orders:
@@ -231,18 +256,17 @@ class Order(models.Model):
                     irt_value=base_irt_price * trade_price * match_amount,
                     trade_source=FillOrder.SYSTEM if is_system_trade else FillOrder.MARKET
                 )
-                trade_trx_list = fill_order.init_trade_trxs()
-                trx_list.extend(trade_trx_list.values())
-                fill_order.calculate_amounts_from_trx(trade_trx_list)
-                referral_trx = fill_order.init_referrals(trade_trx_list)
-                trx_list.extend(referral_trx.trx)
-                referral_list.extend(referral_trx.referral)
-
-                fill_orders.append(fill_order)
 
                 self.release_lock(match_amount)
                 matching_order.release_lock(match_amount)
                 self.update_filled_amount((self.id, matching_order.id), match_amount)
+
+                trade_trxs = fill_order.create_trade_trxs()
+                fill_order.set_amounts(trade_trxs)
+                referral_trx = fill_order.init_referrals(trade_trxs)
+                referral_list.extend(referral_trx.referral)
+
+                fill_orders.append(fill_order)
 
                 if self.wallet.account.is_ordinary_user() != matching_order.wallet.account.is_ordinary_user():
                     ordinary_order = self if self.type == Order.ORDINARY else matching_order
@@ -283,7 +307,6 @@ class Order(models.Model):
                 self.lock.release()
                 self.save(update_fields=['status'])
 
-            Trx.objects.bulk_create(filter(lambda trx: trx and trx.amount, trx_list))
             ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referral_list))
             FillOrder.objects.bulk_create(fill_orders)
 
@@ -297,6 +320,9 @@ class Order(models.Model):
                         account.save(update_fields=['trade_volume_irt'])
                         account.refresh_from_db()
                         check_prize_achievements(account)
+            
+            cache.delete(key)
+            logger.info(log_prefix + 'make match finished.')
 
     @classmethod
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):

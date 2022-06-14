@@ -2,11 +2,11 @@ import logging
 from decimal import Decimal
 
 from django.db import models
-from django.db.models import F
+from django.db.models import F, CheckConstraint, Q
 from django.utils import timezone
 
 from ledger.models import Wallet
-from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
+from ledger.utils.fields import get_amount_field, get_lock_field
 from ledger.utils.precision import floor_precision
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ class StopLoss(models.Model):
     symbol = models.ForeignKey('market.PairSymbol', on_delete=models.CASCADE)
     amount = get_amount_field()
     filled_amount = get_amount_field(default=Decimal(0))
-    price = get_price_field()
+    price = get_amount_field()
     side = models.CharField(max_length=8, choices=ORDER_CHOICES)
 
     lock = get_lock_field(related_name='market_stop_loss')
@@ -49,8 +49,8 @@ class StopLoss(models.Model):
 
     def acquire_lock(self):
         from market.models import Order
-        lock_wallet = Order.get_lock_wallet(self.wallet, self.base_wallet, self.side)
-        lock_amount = Order.get_lock_amount(self.unfilled_amount, self.price, self.side)
+        lock_wallet = Order.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
+        lock_amount = Order.get_to_lock_amount(self.unfilled_amount, self.price, self.side)
         self.lock = lock_wallet.lock_balance(lock_amount)
         self.save()
 
@@ -64,3 +64,13 @@ class StopLoss(models.Model):
 
     def hard_delete(self):
         super(StopLoss, self).delete()
+
+    class Meta:
+        # todo: add constraint filled_amount <= amount
+        constraints = [
+            CheckConstraint(check=Q(
+                amount__gte=0,
+                price__gte=0,
+                filled_amount__gte=0
+            ), name='check_market_stoploss_amounts', ),
+        ]

@@ -1,21 +1,30 @@
 import logging
 from collections import namedtuple
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
 from django.db import models
-from django.db.models import F
+from django.db.models import F, CheckConstraint, Q
 
 from accounts.gamification.gamify import check_prize_achievements
 from accounts.models import Account
 from ledger.models import Trx, OTCTrade, Asset
-from ledger.utils.fields import get_amount_field, get_group_id_field, get_price_field
+from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, precision_to_step
 from ledger.utils.price import get_tether_irt_price, BUY
 from market.models import Order, PairSymbol
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class FillOrderTrxs:
+    base: Trx
+    trade: Trx
+    taker_fee: Trx
+    maker_fee: Trx
 
 
 class FillOrder(models.Model):
@@ -26,7 +35,7 @@ class FillOrder(models.Model):
     maker_order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='made_fills')
 
     amount = get_amount_field()
-    price = get_price_field()
+    price = get_amount_field()
     is_buyer_maker = models.BooleanField()
 
     group_id = get_group_id_field()
@@ -56,6 +65,15 @@ class FillOrder(models.Model):
         indexes = [
             models.Index(fields=['created', 'symbol', ]),
         ]
+        constraints = [
+            CheckConstraint(check=Q(
+                amount__gte=0,
+                price__gte=0,
+                base_amount__gte=0,
+                taker_fee_amount__gte=0,
+                maker_fee_amount__gte=0
+            ), name='check_market_fillorder_amounts', ),
+        ]
 
     def get_side(self, account: Account, list_index: int):
         # refactor to remove list_index
@@ -76,39 +94,42 @@ class FillOrder(models.Model):
         else:
             return self.maker_fee_amount if self.get_side(account, list_index) == Order.SELL else self.taker_fee_amount
 
-    def calculate_amounts_from_trx(self, trade_trx_list):
-        self.base_amount = trade_trx_list['base'].amount
-        self.taker_fee_amount = trade_trx_list['taker_fee'].amount if trade_trx_list['taker_fee'] else Decimal(0)
-        self.maker_fee_amount = trade_trx_list['maker_fee'].amount if trade_trx_list['maker_fee'] else Decimal(0)
+    def set_amounts(self, trade_trxs: FillOrderTrxs):
+        self.base_amount = trade_trxs.base.amount
+        self.taker_fee_amount = trade_trxs.taker_fee.amount
+        self.maker_fee_amount = trade_trxs.maker_fee.amount
 
     def __str__(self):
         return f'{self.symbol}-{Order.BUY if self.is_buyer_maker else Order.SELL} ' \
                f'({self.taker_order_id}-{self.maker_order_id}) ' \
                f'[p:{self.price:.2f}] (a:{self.amount:.5f})'
 
-    def init_trade_trxs(self, ignore_fee=False):
-        trade_trx = self.__init_trade_trx()
-        base_trx = self.__init_base_trx()
+    def create_trade_trxs(self, ignore_fee=False, fake_trade: bool = False) -> FillOrderTrxs:
+        trade_trx = self._create_trade_trx(fake=fake_trade)
+        base_trx = self._create_base_trx(fake=fake_trade)
 
         # make sure sender and receiver wallets have same market
         assert trade_trx.sender.market == base_trx.receiver.market
         assert trade_trx.receiver.market == base_trx.sender.market
 
-        return {
-            'trade': trade_trx,
-            'base': base_trx,
-            'taker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.taker_order, is_taker=True),
-            'maker_fee': Decimal(0) if ignore_fee else self.__init_fee_trx(self.maker_order, is_taker=False),
-        }
+        taker_fee = self._create_fee_trx(self.taker_order, is_taker=True, fake=ignore_fee)
+        maker_fee = self._create_fee_trx(self.maker_order, is_taker=False, fake=ignore_fee)
 
-    def init_referrals(self, trade_trx_list):
+        return FillOrderTrxs(
+            trade=trade_trx,
+            base=base_trx,
+            taker_fee=taker_fee,
+            maker_fee=maker_fee
+        )
+
+    def init_referrals(self, trade_trxs: FillOrderTrxs):
         tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
             get_tether_irt_price(BUY)
 
         from market.models import ReferralTrx
         referrals = ReferralTrx.get_trade_referrals(
-            trade_trx_list['maker_fee'],
-            trade_trx_list['taker_fee'],
+            trade_trxs.maker_fee,
+            trade_trxs.taker_fee,
             self.price,
             tether_irt,
             is_buyer_maker=self.is_buyer_maker,
@@ -116,29 +137,32 @@ class FillOrder(models.Model):
         ReferralTrxTuple = namedtuple("ReferralTrx", "referral trx")
         return ReferralTrxTuple(referrals, ReferralTrx.get_trx_list(referrals))
 
-    def __init_trade_trx(self):
-        return Trx(
+    def _create_trade_trx(self, fake: bool = False) -> Trx:
+        return Trx.transaction(
             sender=self.maker_order.wallet if self.taker_order.side == Order.BUY else self.taker_order.wallet,
             receiver=self.taker_order.wallet if self.taker_order.side == Order.BUY else self.maker_order.wallet,
             amount=self.amount,
             group_id=self.group_id,
-            scope=Trx.TRADE
+            scope=Trx.TRADE,
+            fake_trx=fake,
         )
 
-    def __init_base_trx(self):
-        return Trx(
+    def _create_base_trx(self, fake: bool = False) -> Trx:
+        return Trx.transaction(
             sender=self.maker_order.base_wallet if self.taker_order.side == Order.SELL else self.taker_order.base_wallet,
             receiver=self.taker_order.base_wallet if self.taker_order.side == Order.SELL else self.maker_order.base_wallet,
             amount=self.amount * self.price,
             group_id=self.group_id,
-            scope=Trx.TRADE
+            scope=Trx.TRADE,
+            fake_trx=fake,
         )
 
-    def __init_fee_trx(self, order, is_taker):
+    def _create_fee_trx(self, order: Order, is_taker: bool, fake: bool = False) -> Trx:
         fee = order.symbol.taker_fee if is_taker else order.symbol.maker_fee
 
         fee_wallet = order.wallet if order.side == Order.BUY else order.base_wallet
         trx_amount = fee * (self.amount if order.side == Order.BUY else self.amount * self.price)
+
         if trx_amount:
             referral = self.taker_order.wallet.account.referred_by if is_taker else \
                 self.maker_order.wallet.account.referred_by
@@ -147,14 +171,14 @@ class FillOrder(models.Model):
                 trx_amount *= Decimal(1) - (Decimal(ReferralTrx.REFERRAL_MAX_RETURN_PERCENT) / 100 - Decimal(
                     referral.owner_share_percent) / 100)
 
-        if trx_amount:
-            return Trx(
-                sender=fee_wallet,
-                receiver=fee_wallet.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=fee_wallet.market),
-                amount=trx_amount,
-                group_id=self.group_id,
-                scope=Trx.COMMISSION
-            )
+        return Trx.transaction(
+            sender=fee_wallet,
+            receiver=fee_wallet.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=fee_wallet.market),
+            amount=trx_amount,
+            group_id=self.group_id,
+            scope=Trx.COMMISSION,
+            fake_trx=fake
+        )
 
     @classmethod
     def get_last(cls, symbol: 'PairSymbol', max_datetime=None):
@@ -188,76 +212,71 @@ class FillOrder(models.Model):
 
     @classmethod
     def create_for_otc_trade(cls, otc_trade: 'OTCTrade'):
-        market_symbol = None
-        try:
-            config = otc_trade.otc_request.get_trade_config()
-            market_symbol = f'{config.coin.symbol}{config.cash.symbol}'.upper()
-            symbol = PairSymbol.get_by(name=market_symbol)
-            amount = floor_precision(config.coin_amount, symbol.step_size)
-            price = (config.cash_amount / config.coin_amount).quantize(
-                precision_to_step(symbol.tick_size), rounding=ROUND_HALF_UP)
-            system_wallet = symbol.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=otc_trade.otc_request.market)
-            maker_order = Order.objects.create(
-                wallet=system_wallet,
-                symbol=symbol,
-                amount=amount,
-                price=price,
-                side=Order.get_opposite_side(config.side),
-                fill_type=Order.MARKET,
-                status=Order.FILLED,
-            )
-            taker_wallet = symbol.asset.get_wallet(otc_trade.otc_request.account, market=otc_trade.otc_request.market)
-            taker_order = Order.objects.create(
-                wallet=taker_wallet,
-                symbol=symbol,
-                amount=amount,
-                price=price,
-                side=config.side,
-                fill_type=Order.MARKET,
-                status=Order.FILLED,
-            )
+        config = otc_trade.otc_request.get_trade_config()
+        market_symbol = f'{config.coin.symbol}{config.cash.symbol}'.upper()
+        symbol = PairSymbol.get_by(name=market_symbol)
+        amount = floor_precision(config.coin_amount, symbol.step_size)
+        price = (config.cash_amount / config.coin_amount).quantize(
+            precision_to_step(symbol.tick_size), rounding=ROUND_HALF_UP)
+        system_wallet = symbol.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=otc_trade.otc_request.market)
 
-            base_irt_price = 1
+        maker_order = Order.objects.create(
+            wallet=system_wallet,
+            symbol=symbol,
+            amount=amount,
+            price=price,
+            side=Order.get_opposite_side(config.side),
+            fill_type=Order.MARKET,
+            status=Order.FILLED,
+        )
 
-            if symbol.base_asset.symbol == Asset.USDT:
-                try:
-                    base_irt_price = get_tether_irt_price(BUY)
-                except:
-                    base_irt_price = 27000
+        taker_wallet = symbol.asset.get_wallet(otc_trade.otc_request.account, market=otc_trade.otc_request.market)
+        taker_order = Order.objects.create(
+            wallet=taker_wallet,
+            symbol=symbol,
+            amount=amount,
+            price=price,
+            side=config.side,
+            fill_type=Order.MARKET,
+            status=Order.FILLED,
+        )
 
-            fill_order = FillOrder(
-                symbol=symbol,
-                taker_order=taker_order,
-                maker_order=maker_order,
-                amount=amount,
-                price=price,
-                is_buyer_maker=(maker_order.side == Order.BUY),
-                group_id=otc_trade.group_id,
-                irt_value=base_irt_price * price * amount,
-                trade_source=FillOrder.OTC
-            )
-            trade_trx_list = fill_order.init_trade_trxs()
-            fill_order.calculate_amounts_from_trx(trade_trx_list)
-            from market.models import ReferralTrx
-            referral_trx = fill_order.init_referrals(trade_trx_list)
-            ReferralTrx.objects.bulk_create(list(filter(bool, referral_trx.referral)))
-            Trx.objects.bulk_create(list(filter(lambda trx: trx and trx.amount, referral_trx.trx)))
-            fill_order.save()
+        base_irt_price = 1
 
-            # updating trade_volume_irt of accounts
-            accounts = [fill_order.maker_order.wallet.account, fill_order.taker_order.wallet.account]
+        if symbol.base_asset.symbol == Asset.USDT:
+            try:
+                base_irt_price = get_tether_irt_price(BUY)
+            except:
+                base_irt_price = 27000
 
-            for account in accounts:
-                if not account.is_system():
-                    account.trade_volume_irt = F('trade_volume_irt') + fill_order.irt_value
-                    account.save(update_fields=['trade_volume_irt'])
-                    account.refresh_from_db()
+        fill_order = FillOrder(
+            symbol=symbol,
+            taker_order=taker_order,
+            maker_order=maker_order,
+            amount=amount,
+            price=price,
+            is_buyer_maker=(maker_order.side == Order.BUY),
+            group_id=otc_trade.group_id,
+            irt_value=base_irt_price * price * amount,
+            trade_source=FillOrder.OTC
+        )
+        trade_trx_list = fill_order.create_trade_trxs(fake_trade=True)
+        fill_order.set_amounts(trade_trx_list)
+        from market.models import ReferralTrx
+        referral_trx = fill_order.init_referrals(trade_trx_list)
+        ReferralTrx.objects.bulk_create(list(filter(bool, referral_trx.referral)))
+        fill_order.save()
 
-                    check_prize_achievements(account)
+        # updating trade_volume_irt of accounts
+        accounts = [fill_order.maker_order.wallet.account, fill_order.taker_order.wallet.account]
 
-            for key in ('taker_fee', 'maker_fee'):
-                if trade_trx_list[key]:
-                    trade_trx_list[key].save()
+        for account in accounts:
+            if not account.is_system():
+                account.trade_volume_irt = F('trade_volume_irt') + fill_order.irt_value
+                account.save(update_fields=['trade_volume_irt'])
+                account.refresh_from_db()
 
-        except PairSymbol.DoesNotExist:
-            logger.exception(f'Could not found market {market_symbol}')
+                check_prize_achievements(account)
+
+        trade_trx_list.taker_fee.save()
+        trade_trx_list.maker_fee.save()

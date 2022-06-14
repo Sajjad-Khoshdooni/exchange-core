@@ -2,12 +2,13 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from accounts.models import Account
-from ledger.models import Wallet, Asset, Trx
-from ledger.utils.price import SELL, BUY, get_trading_price_usdt
+from ledger.models import Wallet
+from ledger.utils.price import SELL, BUY
 
 TRANSFER_OUT_BLOCK_ML = Decimal('2')
 BORROW_BLOCK_ML = Decimal('1.5')  # leverage = 3
-MARGIN_CALL_ML_THRESHOLD = Decimal('1.25')
+MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD = Decimal('1.3')
+MARGIN_CALL_ML_THRESHOLD = Decimal('1.22')
 LIQUIDATION_ML_THRESHOLD = Decimal('1.15')
 
 
