@@ -129,7 +129,7 @@ class PayirChanel(FiatWithdraw):
 
         }
         status = data['cashout']['status']
-        return maping_status.get(int(status), default=cls.PENDING)
+        return maping_status.get(int(status), cls.PENDING)
 
 
 class ZiblaChanel(FiatWithdraw):
@@ -208,4 +208,4 @@ class ZiblaChanel(FiatWithdraw):
             "0": cls.DONE,
         }
         status = data['checkoutStatus']
-        return maping_status.get(status, default=cls.PENDING)
+        return maping_status.get(status, cls.PENDING)
