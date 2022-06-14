@@ -175,13 +175,17 @@ class AssetSerializer(serializers.ModelSerializer):
 
 class AssetSerializerMini(serializers.ModelSerializer):
     precision = serializers.SerializerMethodField()
+    step_size = serializers.SerializerMethodField()
 
     def get_precision(self, asset: Asset):
         return asset.get_precision()
 
+    def get_step_size(self, asset: Asset):
+        return get_precision(asset.trade_quantity_step)
+
     class Meta:
         model = Asset
-        fields = ('symbol', 'margin_enable', 'precision')
+        fields = ('symbol', 'margin_enable', 'precision', 'step_size')
 
 
 class CoinField(serializers.CharField):
