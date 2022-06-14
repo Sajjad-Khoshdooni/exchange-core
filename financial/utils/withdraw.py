@@ -5,7 +5,7 @@ import requests
 from yekta_config import secret
 from yekta_config.config import config
 
-from financial.models import BankAccount
+from financial.models import BankAccount, FiatWithdrawRequest
 
 logger = logging.getLogger(__name__)
 
@@ -25,16 +25,14 @@ class Wallet:
 class FiatWithdraw:
 
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
-    ZIBAL = 'zibal'
-    PAY_IR = 'pay_ir'
 
     WITHDRAW_CHANEL = config('WITHDRAW_CHANEL')
 
     @classmethod
     def get_withdraw_chanel(cls, chanel=None):
         maping = {
-            cls.PAY_IR: PayirChanel,
-            cls.ZIBAL: ZiblaChanel
+            FiatWithdrawRequest.PAYIR: PayirChanel,
+            FiatWithdrawRequest.ZIBAL: ZiblaChanel
         }
         if chanel:
             return maping[chanel]()

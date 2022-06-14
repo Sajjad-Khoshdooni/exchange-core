@@ -1,4 +1,5 @@
 import logging
+
 from django.db import models, transaction
 from django.utils import timezone
 from yekta_config.config import config
@@ -11,7 +12,6 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import BankAccount
-from financial.utils.withdraw import FiatWithdraw, PayirChanel, ZiblaChanel
 from ledger.models import Trx, Asset
 from ledger.utils.fields import DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
 from ledger.utils.precision import humanize_number
@@ -84,6 +84,7 @@ class FiatWithdrawRequest(models.Model):
     def create_withdraw_request(self):
         assert not self.provider_withdraw_id
         assert self.status == self.PROCESSING
+        from financial.utils.withdraw import FiatWithdraw
 
         withdraw = FiatWithdraw.get_withdraw_chanel()
 
@@ -113,6 +114,7 @@ class FiatWithdrawRequest(models.Model):
         self.save()
 
     def update_status(self):
+        from financial.utils.withdraw import FiatWithdraw
 
         if self.status != self.PENDING:
             return
