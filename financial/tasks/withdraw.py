@@ -9,7 +9,7 @@ def process_withdraw(withdraw_request_id: int):
     if withdraw_request.status != FiatWithdrawRequest.PROCESSING:
         return
 
-    withdraw_request.create_withdraw_request_paydotir()
+    withdraw_request.create_withdraw_request()
 
 
 @shared_task(queue='finance')

@@ -12,6 +12,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RemoveConstraint(
+            model_name='order',
+            name='check_filled_amount'
+        ),
         migrations.AlterField(
             model_name='fillorder',
             name='amount',
@@ -39,13 +43,13 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterField(
             model_name='order',
-            name='amount',
-            field=models.DecimalField(decimal_places=8, max_digits=30, validators=[django.core.validators.MinValueValidator(0)]),
+            name='filled_amount',
+            field=models.DecimalField(decimal_places=8, default=Decimal('0'), max_digits=30, validators=[django.core.validators.MinValueValidator(0)]),
         ),
         migrations.AlterField(
             model_name='order',
-            name='filled_amount',
-            field=models.DecimalField(decimal_places=8, default=Decimal('0'), max_digits=30, validators=[django.core.validators.MinValueValidator(0)]),
+            name='amount',
+            field=models.DecimalField(decimal_places=8, max_digits=30, validators=[django.core.validators.MinValueValidator(0)]),
         ),
         migrations.AlterField(
             model_name='order',
@@ -111,5 +115,11 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name='stoploss',
             constraint=models.CheckConstraint(check=models.Q(('amount__gte', 0), ('filled_amount__gte', 0), ('price__gte', 0)), name='check_market_stoploss_amounts'),
+        ),
+        migrations.AddConstraint(
+            model_name='order',
+            constraint=models.CheckConstraint(
+                check=models.Q(('filled_amount__lte', django.db.models.expressions.F('amount'))),
+                name='check_filled_amount'),
         ),
     ]

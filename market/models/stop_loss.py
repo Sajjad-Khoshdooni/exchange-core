@@ -66,6 +66,7 @@ class StopLoss(models.Model):
         super(StopLoss, self).delete()
 
     class Meta:
+        # todo: add constraint filled_amount <= amount
         constraints = [
             CheckConstraint(check=Q(
                 amount__gte=0,
