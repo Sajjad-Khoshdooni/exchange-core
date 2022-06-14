@@ -34,6 +34,15 @@ class Asset(models.Model):
     HEDGE_BINANCE_FUTURE = 'binance-future'
     HEDGE_BINANCE_SPOT = 'binance-spot'
 
+    HEDGE_KUCOIN_FUTURE = 'kucoin-feature'
+    HEDGE_KUCOIN_SPOT = 'kucoin-spot'
+
+    HEDGE_METHOD_CHOICE =(
+        (HEDGE_KUCOIN_SPOT, HEDGE_KUCOIN_SPOT),
+        (HEDGE_KUCOIN_FUTURE, HEDGE_KUCOIN_FUTURE),
+        (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
+        (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE)
+    )
     PRECISION = 8
 
     objects = models.Manager()
@@ -61,9 +70,7 @@ class Asset(models.Model):
 
     trade_enable = models.BooleanField(default=True)
 
-    hedge_method = models.CharField(max_length=16, default=HEDGE_BINANCE_FUTURE, choices=[
-        (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE), (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
-    ])
+    hedge_method = models.CharField(max_length=16, default=HEDGE_BINANCE_FUTURE, choices=HEDGE_METHOD_CHOICE)
 
     bid_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
         MinValueValidator(0),

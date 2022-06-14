@@ -18,6 +18,20 @@ GET, POST = 'GET', 'POST'
 HOUR = 3600
 
 
+
+
+class ExchangeHandler:
+
+    def maping_exchange(self, hedge_method: str):
+        from ledger.models.asset import Asset
+        map = {
+            Asset.HEDGE_BINANCE_SPOT: BinanceSpotHandler
+            Asset.HEDGE_BINANCE_FUTURE:
+            Asset.HEDGE_KUCOIN_SPOT:
+            Asset.HEDGE_KUCOIN_FUTURE:
+        }
+
+
 class BinanceSpotHandler:
     order_url = '/api/v3/order'
 
