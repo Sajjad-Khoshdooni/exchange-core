@@ -39,13 +39,13 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterField(
             model_name='order',
-            name='amount',
-            field=models.DecimalField(decimal_places=8, max_digits=30, validators=[django.core.validators.MinValueValidator(0)]),
+            name='filled_amount',
+            field=models.DecimalField(decimal_places=8, default=Decimal('0'), max_digits=30, validators=[django.core.validators.MinValueValidator(0)]),
         ),
         migrations.AlterField(
             model_name='order',
-            name='filled_amount',
-            field=models.DecimalField(decimal_places=8, default=Decimal('0'), max_digits=30, validators=[django.core.validators.MinValueValidator(0)]),
+            name='amount',
+            field=models.DecimalField(decimal_places=8, max_digits=30, validators=[django.core.validators.MinValueValidator(0)]),
         ),
         migrations.AlterField(
             model_name='order',
