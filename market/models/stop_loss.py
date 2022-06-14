@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models import F, CheckConstraint, Q
 from django.utils import timezone
 
-from ledger.models import Wallet
+from ledger.models import Wallet, BalanceLock
 from ledger.utils.fields import get_amount_field, get_lock_field
 from ledger.utils.precision import floor_precision
 
@@ -51,7 +51,7 @@ class StopLoss(models.Model):
         from market.models import Order
         lock_wallet = Order.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
         lock_amount = Order.get_to_lock_amount(self.unfilled_amount, self.price, self.side)
-        self.lock = lock_wallet.lock_balance(lock_amount)
+        self.lock = lock_wallet.lock_balance(lock_amount, BalanceLock.TRADE)
         self.save()
 
     objects = models.Manager()

@@ -3,12 +3,16 @@ from decimal import Decimal
 
 from accounts.models import Account
 from ledger.models import Wallet, Trx, OTCTrade, OTCRequest, Asset
-from ledger.models.margin import MarginLiquidation
-from ledger.utils.margin import MarginInfo
-from ledger.utils.price import get_trading_price_usdt, SELL, BUY
+from ledger.models.margin import CloseRequest
+from ledger.margin.margin_info import MarginInfo
+from ledger.utils.price import get_trading_price_usdt, BUY
 from provider.utils import round_with_step_size
 
+
 logger = logging.getLogger(__name__)
+
+
+INF = Decimal('INF')
 
 
 def get_wallet_balances(account: Account, market: str):
@@ -24,19 +28,18 @@ def get_wallet_balances(account: Account, market: str):
     return balances
 
 
-class LiquidationEngine:
+class PositionCloser:
 
-    def __init__(self, margin_liquidation: MarginLiquidation, margin_info: MarginInfo):
-        self.account = margin_liquidation.account
-        self.margin_info = margin_info
-        self.margin_liquidation = margin_liquidation
+    def __init__(self, close_request: CloseRequest, close_value: Decimal = INF):
+        self.account = close_request.account
+        self.close_request = close_request
 
-        self.liquidation_amount = self.margin_info.get_liquidation_amount()
+        self.to_close_value = close_value
 
         self.tether = Asset.get(Asset.USDT)
 
         if self.finished:
-            self.info_log('Skipping liquidation...')
+            self.info_log('Skipping closing...')
             return
 
         self.margin_wallets = get_wallet_balances(self.account, Wallet.MARGIN)
@@ -45,26 +48,32 @@ class LiquidationEngine:
         }
 
     def info_log(self, msg):
-        logger.info(msg + ' (id=%s)' % self.margin_liquidation.id)
+        logger.info(msg + ' (id=%s)' % self.close_request.id)
 
     def start(self):
-        self.info_log('Starting liquidation (liquidation_amount=%s$)' % self.liquidation_amount)
+        self.info_log('Starting closing (close_amount=%s$)' % self.to_close_value)
 
-        self._fast_liquidate()
+        self._fast_closing()
 
-        self.info_log('After fast_liquidation (liquidation_amount=%s$)' % self.liquidation_amount)
+        self.info_log('After fast_liquidation (liquidation_amount=%s$)' % self.to_close_value)
 
         if not self.finished:
             self._provide_tether()
-            self.info_log('After providing_tether (liquidation_amount=%s$)' % self.liquidation_amount)
+            self.info_log('After providing_tether (liquidation_amount=%s$)' % self.to_close_value)
 
-            self._liquidate_funds()
+            self._close_funds()
 
-            self.info_log('After liquidate_funds (liquidation_amount=%s$)' % self.liquidation_amount)
+            self.info_log('After liquidate_funds (liquidation_amount=%s$)' % self.to_close_value)
 
         self.info_log('Liquidation completed')
 
-    def _fast_liquidate(self):
+    # def _force_release_margin_locks(self):
+    #     locked_wallets = Wallet.objects.filter(account=self.account, locked__gt=0)
+    #
+    #     for wallet in locked_wallets:
+    #         wallet.
+
+    def _fast_closing(self):
         margin_asset_to_wallet = {w.asset: w for w in self.margin_wallets}
         borrowed_asset_to_wallet = {w.asset: w for w in self.borrowed_wallets}
 
@@ -84,14 +93,18 @@ class LiquidationEngine:
                 margin_wallet = margin_asset_to_wallet[asset]
                 margin_amount = self.margin_wallets[margin_wallet]
 
-                price = get_trading_price_usdt(asset.symbol, BUY)
-                max_amount = self.liquidation_amount / price
+                if self.to_close_value is INF:
+                    price = 0
+                    max_amount = INF
+                else:
+                    price = get_trading_price_usdt(asset.symbol, BUY)
+                    max_amount = self.to_close_value / price
 
                 amount = min(margin_amount, borrowed_amount, max_amount)
 
                 self.info_log(
-                    'Fast liquidating %s %s (margin_amount=%s, borrowed_amount=%s, liquid_amount=%s, price=%s, max_amount=%s)' % (
-                        amount, asset, margin_amount, borrowed_amount, self.liquidation_amount, price, max_amount
+                    'Fast liquidating %s %s (margin_amount=%s, borrowed_amount=%s, liquid_amount=%s)' % (
+                        amount, asset, margin_amount, borrowed_amount, self.to_close_value
                     )
                 )
 
@@ -100,10 +113,10 @@ class LiquidationEngine:
                     receiver=borrowed_asset_to_wallet[asset],
                     amount=amount,
                     scope=Trx.FAST_LIQUID,
-                    group_id=self.margin_liquidation.group_id
+                    group_id=self.close_request.group_id
                 )
 
-                self.liquidation_amount -= amount * price
+                self.to_close_value -= amount * price
 
                 self.borrowed_wallets[borrowed_wallet] -= amount
                 self.margin_wallets[margin_wallet] -= amount
@@ -121,7 +134,7 @@ class LiquidationEngine:
         margin_tether_wallet = self.tether.get_wallet(self.account, Wallet.MARGIN)
         tether_amount = margin_tether_wallet.get_free()
 
-        to_provide_tether = self.liquidation_amount - tether_amount
+        to_provide_tether = self.to_close_value - tether_amount
 
         self.info_log('providing tether %s$' % to_provide_tether)
 
@@ -159,7 +172,7 @@ class LiquidationEngine:
 
             to_provide_tether -= request.to_amount
 
-    def _liquidate_funds(self):
+    def _close_funds(self):
         self.info_log('liquidating funds')
 
         borrowed_wallet_values = {
@@ -175,12 +188,12 @@ class LiquidationEngine:
 
         for wallet in borrowed_wallets:
 
-            if self.liquidation_amount < 0.1 or tether_amount < 0.1:
+            if self.to_close_value < 0.1 or tether_amount < 0.1:
                 return
 
             value = borrowed_wallet_values[wallet]
 
-            max_value = min(self.liquidation_amount * Decimal('1.002'), value, tether_amount / Decimal('1.01'))
+            max_value = min(self.to_close_value * Decimal('1.002'), value, tether_amount / Decimal('1.01'))
             amount = max_value / value * self.borrowed_wallets[wallet]
             amount = round_with_step_size(amount, wallet.asset.trade_quantity_step)
 
@@ -210,12 +223,12 @@ class LiquidationEngine:
                 receiver=wallet,
                 amount=min(transfer_amount, sender.balance),
                 scope=Trx.LIQUID,
-                group_id=self.margin_liquidation.group_id,
+                group_id=self.close_request.group_id,
             )
 
             tether_amount = margin_tether_wallet.get_balance()
-            self.liquidation_amount -= amount
+            self.to_close_value -= amount
 
     @property
     def finished(self):
-        return self.liquidation_amount < 0.1
+        return self.to_close_value <= 0 or not self.account.has_debt()

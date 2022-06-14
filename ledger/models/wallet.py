@@ -8,7 +8,7 @@ from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
 from ledger.models import BalanceLock
 from ledger.utils.fields import get_amount_field
-from ledger.utils.price import BUY, SELL, get_trading_price_usdt, get_tether_irt_price
+from ledger.utils.price import BUY, get_trading_price_usdt, get_tether_irt_price
 
 
 class Wallet(models.Model):
@@ -55,63 +55,62 @@ class Wallet(models.Model):
     def get_locked(self) -> Decimal:
         return self.locked
 
-    def lock_balance(self, amount: Decimal) -> BalanceLock:
+    def lock_balance(self, amount: Decimal, reason: str) -> BalanceLock:
         assert amount > 0
-
-        if not (self.account.type == Account.SYSTEM and self.account.primary):
-            self.has_balance(amount, raise_exception=True)
 
         self.locked += amount
 
-        return BalanceLock.new_lock(wallet=self, amount=amount)
+        return BalanceLock.new_lock(wallet=self, amount=amount, reason=reason)
 
     def get_free(self) -> Decimal:
         return self.balance - self.locked
 
-    def get_free_usdt(self) -> Decimal:
+    def get_free_usdt(self, side: str = BUY) -> Decimal:
         if self.asset.symbol == self.asset.IRT:
-            tether_irt = get_tether_irt_price(SELL)
+            tether_irt = get_tether_irt_price(side)
             return self.get_free() / tether_irt
 
-        price = get_trading_price_usdt(self.asset.symbol, BUY, raw_price=True)
+        price = get_trading_price_usdt(self.asset.symbol, side, raw_price=True)
 
         if price:
             return self.get_free() * price
 
-    def get_free_irt(self):
+    def get_free_irt(self, side: str = BUY):
         if self.asset.symbol == self.asset.IRT:
             return self.get_free()
 
-        tether_irt = get_tether_irt_price(SELL)
+        tether_irt = get_tether_irt_price(side)
 
         free_usdt = self.get_free_usdt()
 
         if free_usdt:
             return free_usdt * tether_irt
 
-    def get_balance_usdt(self) -> Decimal:
+    def get_balance_usdt(self, side: str = BUY) -> Decimal:
         if self.asset.symbol == self.asset.IRT:
-            tether_irt = get_tether_irt_price(SELL)
+            tether_irt = get_tether_irt_price(side)
             return self.get_balance() / tether_irt
 
-        price = get_trading_price_usdt(self.asset.symbol, BUY, raw_price=True)
+        price = get_trading_price_usdt(self.asset.symbol, side, raw_price=True)
 
         if price:
             return self.get_balance() * price
 
-    def get_balance_irt(self):
+    def get_balance_irt(self, side: str = BUY):
         if self.asset.symbol == self.asset.IRT:
             return self.get_balance()
 
-        tether_irt = get_tether_irt_price(SELL)
+        tether_irt = get_tether_irt_price(side)
         balance_usdt = self.get_balance_usdt()
 
         if balance_usdt:
             return balance_usdt * tether_irt
 
     def has_balance(self, amount: Decimal, raise_exception: bool = False) -> bool:
-        if amount < 0:
-            can = False
+        assert amount >= 0 and self.market != Wallet.LOAN
+
+        if self.account.type == Account.SYSTEM and self.account.primary:
+            can = True
         else:
             can = self.get_free() >= amount
 
@@ -121,10 +120,9 @@ class Wallet(models.Model):
         return can
 
     def has_debt(self, amount: Decimal, raise_exception: bool = False) -> bool:
-        if amount > 0:
-            can = False
-        else:
-            can = -self.get_free() >= -amount
+        assert amount <= 0 and self.market == Wallet.LOAN
+
+        can = -self.get_free() >= -amount
 
         if raise_exception and not can:
             raise InsufficientDebt()

@@ -9,7 +9,7 @@ from .trx import Trx
 from .otc_request import OTCRequest
 from .otc_trade import OTCTrade
 from .transfer import Transfer
-from .margin import MarginTransfer, MarginLoan, MarginLiquidation
+from .margin import MarginTransfer, MarginLoan, CloseRequest
 from .crypto_balance import CryptoBalance
 from .prize import Prize
 from .address_book import AddressBook

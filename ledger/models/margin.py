@@ -6,10 +6,9 @@ from django.db.models import CheckConstraint, Q
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
+from ledger.margin.margin_info import MarginInfo
 from ledger.models import Asset, Wallet, Trx
-from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_lock_field, DONE, \
-    get_created_field
-from ledger.utils.margin import MarginInfo
+from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt
 from provider.models import ProviderOrder
 
@@ -72,7 +71,6 @@ class MarginLoan(models.Model):
     )
 
     status = get_status_field()
-    lock = get_lock_field()
     group_id = get_group_id_field()
 
     class Meta:
@@ -86,32 +84,11 @@ class MarginLoan(models.Model):
     def borrow_wallet(self) -> 'Wallet':
         return self.asset.get_wallet(self.account, Wallet.LOAN)
 
-    def finalize(self):
-        hedged = ProviderOrder.try_hedge_for_new_order(
-            asset=self.asset,
-            side=BUY if self.type == self.BORROW else SELL,
-            amount=self.amount,
-            scope=ProviderOrder.BORROW
-        )
-
-        if hedged:
-            if self.type == self.BORROW:
-                sender, receiver = self.borrow_wallet, self.margin_wallet
-            else:
-                sender, receiver = self.margin_wallet, self.borrow_wallet
-
-            with transaction.atomic():
-                self.status = DONE
-                self.save()
-                if self.lock:
-                    self.lock.release()
-
-                Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_BORROW, self.group_id)
-
     @classmethod
     def new_loan(cls, account: Account, asset: Asset, amount: Decimal, loan_type: str):
         assert amount > 0
         assert asset.symbol != Asset.IRT
+        assert loan_type in (cls.BORROW, cls.REPAY)
 
         with transaction.atomic():
             loan = MarginLoan(
@@ -123,8 +100,7 @@ class MarginLoan(models.Model):
 
             if loan_type == cls.REPAY:
                 loan.borrow_wallet.has_debt(-amount, raise_exception=True)
-                loan.lock = loan.margin_wallet.lock_balance(amount)
-                loan.save()
+                loan.margin_wallet.has_balance(amount, raise_exception=True)
 
             else:
                 margin_info = MarginInfo.get(account)
@@ -133,19 +109,43 @@ class MarginLoan(models.Model):
                 if amount > max_borrowable:
                     raise MaxBorrowableExceeds()
 
-                loan.save()
+            ProviderOrder.try_hedge_for_new_order(
+                asset=asset,
+                side=BUY if loan_type == cls.BORROW else SELL,
+                amount=amount,
+                scope=ProviderOrder.BORROW,
+                raise_exception=True
+            )
 
-            loan.finalize()
+            if loan_type == cls.BORROW:
+                sender, receiver = loan.borrow_wallet, loan.margin_wallet
+            else:
+                sender, receiver = loan.margin_wallet, loan.borrow_wallet
+
+            Trx.transaction(sender, receiver, amount, Trx.MARGIN_BORROW, loan.group_id)
+
+            loan.save()
 
             return loan
 
 
-class MarginLiquidation(models.Model):
+class CloseRequest(models.Model):
+    LIQUIDATION, USER = 'liquid', 'user'
+    NEW, DONE = 'new', 'done'
+
     created = get_created_field()
     group_id = get_group_id_field()
 
     account = models.ForeignKey(Account, on_delete=models.CASCADE)
     margin_level = get_amount_field()
+
+    reason = models.CharField(
+        max_length=8, choices=[(LIQUIDATION, LIQUIDATION), (USER, USER)]
+    )
+
+    status = models.CharField(
+        max_length=8, choices=[(NEW, NEW), (DONE, DONE)], default=NEW
+    )
 
     class Meta:
         constraints = [CheckConstraint(check=Q(margin_level__gte=0), name='check_margin_level', ), ]

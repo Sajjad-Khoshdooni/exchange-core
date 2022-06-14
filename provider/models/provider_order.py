@@ -7,6 +7,7 @@ from django.db import models, transaction
 from django.db.models import Sum, CheckConstraint, Q
 
 from accounts.models import Account
+from ledger.exceptions import HedgeError
 from ledger.models import Asset, Trx
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_trading_price_usdt, SELL, get_binance_trading_symbol
@@ -130,7 +131,8 @@ class ProviderOrder(models.Model):
         return get_binance_trading_symbol(asset.symbol)
 
     @classmethod
-    def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '', dry_run: bool = False) -> bool:
+    def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '',
+                                dry_run: bool = False, raise_exception: bool = False) -> bool:
         # todo: this method should not called more than once at a single time
 
         if settings.DEBUG_OR_TESTING:
@@ -183,6 +185,10 @@ class ProviderOrder(models.Model):
 
             if not dry_run:
                 order = cls.new_order(asset, side, order_amount, scope, market=market)
+
+                if not order and raise_exception:
+                    raise HedgeError
+
                 return bool(order)
 
             else:

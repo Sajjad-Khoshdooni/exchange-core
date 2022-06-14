@@ -8,7 +8,7 @@ from yekta_config.config import config
 
 from accounts.models import Account, Notification
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
-from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
+from ledger.models import Trx, NetworkAsset, Asset, DepositAddress, BalanceLock
 from ledger.models import Wallet, Network
 from ledger.models.crypto_balance import CryptoBalance
 from ledger.utils.fields import get_amount_field, get_address_field, get_lock_field
@@ -112,7 +112,7 @@ class Transfer(models.Model):
         network_asset = NetworkAsset.objects.get(network=network, asset=wallet.asset)
         assert network_asset.withdraw_max >= amount >= max(network_asset.withdraw_min, network_asset.withdraw_fee)
 
-        lock = wallet.lock_balance(amount)
+        lock = wallet.lock_balance(amount, BalanceLock.WITHDRAW)
 
         commission = network_asset.withdraw_fee
 

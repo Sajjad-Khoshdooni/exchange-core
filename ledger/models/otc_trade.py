@@ -8,7 +8,7 @@ from django.db.models import Q
 
 from accounts.models import Account
 from ledger.exceptions import AbruptDecrease
-from ledger.models import OTCRequest, Trx, Asset
+from ledger.models import OTCRequest, Trx, Asset, BalanceLock
 from ledger.utils.fields import get_lock_field
 from ledger.utils.price import SELL
 from provider.models import ProviderOrder
@@ -90,7 +90,7 @@ class OTCTrade(models.Model):
         cls.check_abrupt_decrease(otc_request)
 
         with transaction.atomic():
-            lock = from_wallet.lock_balance(otc_request.from_amount)
+            lock = from_wallet.lock_balance(otc_request.from_amount, BalanceLock.TRADE)
 
             otc_trade = OTCTrade.objects.create(
                 otc_request=otc_request,

@@ -4,7 +4,7 @@ from django.db import IntegrityError
 from django.test import TestCase
 
 from accounts.models import Account
-from ledger.models import Asset, Trx
+from ledger.models import Asset, Trx, BalanceLock
 from ledger.utils.test import new_account
 
 
@@ -73,7 +73,7 @@ class WalletTestCase(TestCase):
         self.assertEqual(self.wallet.locked, 0)
         self.assertEqual(self.system_wallet.balance, -10)
 
-        lock = self.wallet.lock_balance(4)
+        lock = self.wallet.lock_balance(4, BalanceLock.TRADE)
 
         self.assertEqual(self.wallet.balance, 10)
         self.assertEqual(self.wallet.locked, 4)

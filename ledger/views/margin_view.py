@@ -10,11 +10,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowableExceeds
+from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowableExceeds, HedgeError
+from ledger.margin.margin_info import MarginInfo
 from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet
 from ledger.models.asset import CoinField
 from ledger.utils.fields import get_serializer_amount_field
-from ledger.utils.margin import MarginInfo
 from ledger.utils.price import get_trading_price_usdt, SELL
 
 
@@ -121,6 +121,8 @@ class MarginLoanSerializer(serializers.ModelSerializer):
             raise ValidationError('میزان بدهی کمتر از مقدار بازپرداخت است.')
         except MaxBorrowableExceeds:
             raise ValidationError('میزان بدهی بیشتر از حد مجاز است.')
+        except HedgeError:
+            raise ValidationError('مشکلی در پردازش اطلاعات به وجود آمد.')
 
     class Meta:
         fields = ('created', 'amount', 'type', 'coin', 'status')
@@ -142,3 +144,10 @@ class MarginLoanViewSet(ModelViewSet):
         return MarginLoan.objects.filter(
             account=self.request.user.account
         ).order_by('-created')
+
+
+class MarginClosePosition(APIView):
+    def post(self, request: Request):
+        account = request.user.account
+
+        return Response('ok', status=201)

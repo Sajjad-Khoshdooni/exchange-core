@@ -19,7 +19,7 @@ from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit, get_fiat_estimate_receive_time
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Asset
+from ledger.models import Asset, BalanceLock
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         try:
             with transaction.atomic():
-                lock = wallet.lock_balance(amount)
+                lock = wallet.lock_balance(amount, BalanceLock.WITHDRAW)
 
                 withdraw_request = FiatWithdrawRequest.objects.create(
                     amount=withdraw_amount,

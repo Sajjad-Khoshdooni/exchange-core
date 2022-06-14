@@ -8,11 +8,11 @@ from accounts.tasks import send_message_by_kavenegar
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet
-from ledger.models.margin import MarginLiquidation
-from ledger.utils.liquidation import LiquidationEngine
-from ledger.utils.margin import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD, \
+from ledger.models.margin import CloseRequest
+from ledger.margin.liquidation import LiquidationEngine
+from ledger.margin.margin_info import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD, \
     MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD
-from ledger.utils.margin import MarginInfo
+from ledger.margin.margin_info import MarginInfo
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def check_margin_level():
         logger.info('margin_level for account=%d is %s' % (account.id, margin_level))
 
         if margin_level <= LIQUIDATION_ML_THRESHOLD:
-            liquidation = MarginLiquidation.objects.create(
+            liquidation = CloseRequest.objects.create(
                 account=account,
                 margin_level=margin_level
             )

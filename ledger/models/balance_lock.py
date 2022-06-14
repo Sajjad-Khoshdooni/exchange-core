@@ -11,12 +11,20 @@ logger = logging.getLogger(__name__)
 
 
 class BalanceLock(models.Model):
+
+    TRADE, WITHDRAW = 'trade', 'withdraw'
+
     created = models.DateTimeField(auto_now_add=True)
     release_date = models.DateTimeField(null=True, blank=True)
 
     wallet = models.ForeignKey('ledger.Wallet', on_delete=models.CASCADE)
     amount = get_amount_field()
     freed = models.BooleanField(default=False, db_index=True)
+
+    reason = models.CharField(
+        max_length=8,
+        choices=[(TRADE, TRADE), (WITHDRAW, WITHDRAW)]
+    )
 
     def release(self):
         self.refresh_from_db()
@@ -43,15 +51,23 @@ class BalanceLock(models.Model):
             Wallet.objects.filter(id=self.wallet_id).update(locked=F('locked') - amount)
 
     @classmethod
-    def new_lock(cls, wallet, amount: Decimal):
+    def new_lock(cls, wallet, amount: Decimal, reason: str):
         assert amount > 0
 
         from ledger.models import Wallet
 
+        allowed_locking = [
+            (Wallet.SPOT, BalanceLock.TRADE), (Wallet.SPOT, BalanceLock.WITHDRAW),
+            (Wallet.MARGIN, BalanceLock.TRADE)
+        ]
+
+        assert (wallet.market, reason) in allowed_locking
+
         with transaction.atomic():
             lock = BalanceLock.objects.create(
                 wallet=wallet,
-                amount=amount
+                amount=amount,
+                reason=reason
             )
 
             Wallet.objects.filter(id=wallet.id).update(locked=F('locked') + amount)
