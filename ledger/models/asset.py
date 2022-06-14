@@ -52,7 +52,6 @@ class Asset(models.Model):
 
     price_precision_usdt = models.SmallIntegerField(default=2)
     price_precision_irt = models.SmallIntegerField(default=0)
-    precision = models.SmallIntegerField(default=0)
 
     enable = models.BooleanField(default=False)
     order = models.SmallIntegerField(default=0, db_index=True)
