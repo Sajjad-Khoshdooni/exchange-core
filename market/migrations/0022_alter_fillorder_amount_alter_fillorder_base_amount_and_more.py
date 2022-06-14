@@ -12,6 +12,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RemoveConstraint(
+            model_name='order',
+            name='check_filled_amount'
+        ),
         migrations.AlterField(
             model_name='fillorder',
             name='amount',
@@ -111,5 +115,11 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name='stoploss',
             constraint=models.CheckConstraint(check=models.Q(('amount__gte', 0), ('filled_amount__gte', 0), ('price__gte', 0)), name='check_market_stoploss_amounts'),
+        ),
+        migrations.AddConstraint(
+            model_name='order',
+            constraint=models.CheckConstraint(
+                check=models.Q(('filled_amount__lte', django.db.models.expressions.F('amount'))),
+                name='check_filled_amount'),
         ),
     ]
