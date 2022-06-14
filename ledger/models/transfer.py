@@ -2,7 +2,7 @@ import logging
 from decimal import Decimal
 from uuid import uuid4
 
-from django.db import models
+from django.db import models, transaction
 from django.db.models import UniqueConstraint, Q
 from yekta_config.config import config
 
@@ -105,9 +105,50 @@ class Transfer(models.Model):
             )
 
     @classmethod
+    def check_internal(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):
+        if DepositAddress.objects.filter(address=address).exists():
+            account = Account.objects.get(address=address)
+            receiver_wallet = cls.wallet.asset.get_wallet(account=account)
+            with transaction.atomic():
+                Trx.objects.create(
+                    sender=wallet,
+                    receiver=receiver_wallet,
+                    scope=Trx.TRANSFER,
+                    group_id=cls.group_id,
+                    amount=amount
+                )
+                Transfer.objects.create(
+                    status=Transfer.DONE,
+                    deposit_address=cls.deposit_address,
+                    wallet=wallet,
+                    network=network,
+                    amount=amount,
+                    deposit=True,
+                    trx_hash='internal: <%s>' % str(cls.group_id),
+                    # block_hash=block_hash,
+                    # block_number=block_number,
+                    out_address=address
+                )
+                Transfer.objects.create(
+                    status=Transfer.DONE,
+                    deposit_address=address,
+                    wallet=wallet,
+                    network=network,
+                    amount=amount,
+                    deposit=False,
+                    trx_hash='internal: <%s>' % str(cls.group_id),
+                    # block_hash=block_hash,
+                    # block_number=block_number,
+                    out_address=cls.deposit_address
+                )
+
+
+    @classmethod
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):
         assert wallet.asset.symbol != Asset.IRT
         assert wallet.account.is_ordinary_user()
+
+        cls.check_internal(wallet=wallet, network=network, amount=amount, address=address)
 
         network_asset = NetworkAsset.objects.get(network=network, asset=wallet.asset)
         assert network_asset.withdraw_max >= amount >= max(network_asset.withdraw_min, network_asset.withdraw_fee)
