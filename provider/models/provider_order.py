@@ -5,18 +5,20 @@ from math import log10
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Sum
+from yekta_config.config import config
 
 from accounts.models import Account
 from ledger.models import Asset, Trx
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_trading_price_usdt, SELL, get_binance_trading_symbol
-from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
+
 
 logger = logging.getLogger(__name__)
 
 
 class ProviderOrder(models.Model):
-    BINANCE = 'binance'
+
+    EXCHANGE = config('EXCHANGE')
 
     SPOT, MARGIN, FUTURE = 'spot', 'mar', 'fut'
 
@@ -29,7 +31,7 @@ class ProviderOrder(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
 
-    exchange = models.CharField(max_length=8, default=BINANCE)
+    exchange = models.CharField(max_length=8, default=EXCHANGE)
     market = models.CharField(
         max_length=4,
         default=FUTURE,
@@ -54,6 +56,8 @@ class ProviderOrder(models.Model):
 
     @classmethod
     def new_order(cls, asset: Asset, side: str, amount: Decimal, scope: str, market: str = FUTURE) -> 'ProviderOrder':
+        hedger = asset.get_hedger()
+
         with transaction.atomic():
             order = ProviderOrder.objects.create(
                 asset=asset, amount=amount, side=side, scope=scope, market=market
@@ -65,22 +69,29 @@ class ProviderOrder(models.Model):
                 symbol = symbol.replace('SHIB', '1000SHIB')
                 amount = round(amount / 1000)
 
-            if market == cls.FUTURE:
-                resp = BinanceFuturesHandler.place_order(
-                    symbol=symbol,
-                    side=side,
-                    amount=amount,
-                    client_order_id=order.id
-                )
-            elif market == cls.SPOT:
-                resp = BinanceSpotHandler.place_order(
-                    symbol=symbol,
-                    side=side,
-                    amount=amount,
-                    client_order_id=order.id
-                )
-            else:
-                raise NotImplementedError
+            resp = hedger.place_order(
+                symbol=symbol,
+                side=side,
+                amount=amount,
+                client_order_id=order.id
+            )
+
+            # if market == cls.FUTURE:
+            #     resp = BinanceFuturesHandler.place_order(
+            #         symbol=symbol,
+            #         side=side,
+            #         amount=amount,
+            #         client_order_id=order.id
+            #     )
+            # elif market == cls.SPOT:
+            #     resp = BinanceSpotHandler.place_order(
+            #         symbol=symbol,
+            #         side=side,
+            #         amount=amount,
+            #         client_order_id=order.id
+            #     )
+            # else:
+            #     raise NotImplementedError
 
             order.order_id = resp['orderId']
             order.save()
@@ -144,14 +155,17 @@ class ProviderOrder(models.Model):
 
         symbol = cls.get_trading_symbol(asset)
 
-        if asset.hedge_method == Asset.HEDGE_BINANCE_FUTURE:
-            handler = BinanceFuturesHandler
-            market = cls.FUTURE
-        elif asset.hedge_method == Asset.HEDGE_BINANCE_SPOT:
-            handler = BinanceSpotHandler
-            market = cls.SPOT
-        else:
-            raise NotImplementedError
+        handler = asset.get_hedger()
+        market = handler.MARKET
+
+        # if asset.hedge_method == Asset.HEDGE_BINANCE_FUTURE:
+        #     handler = BinanceFuturesHandler
+        #     market = cls.FUTURE
+        # elif asset.hedge_method == Asset.HEDGE_BINANCE_SPOT:
+        #     handler = BinanceSpotHandler
+        #     market = cls.SPOT
+        # else:
+        #     raise NotImplementedError
 
         step_size = handler.get_step_size(symbol)
 

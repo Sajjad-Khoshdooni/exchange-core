@@ -10,6 +10,7 @@ from ledger.utils.precision import get_precision, get_presentation_amount
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 from provider.exchanges import BinanceSpotHandler, BinanceFuturesHandler
+from provider.exchanges.binance.interface import ExchangeHandler
 
 
 class InvalidAmount(Exception):
@@ -164,13 +165,8 @@ class Asset(models.Model):
         else:
             return self.symbol
 
-    def get_hedger(self) -> type(BinanceSpotHandler):
-        if self.hedge_method == self.HEDGE_BINANCE_SPOT:
-            return BinanceSpotHandler
-        elif self.hedge_method == self.HEDGE_BINANCE_FUTURE:
-            return BinanceFuturesHandler
-        else:
-            raise NotImplementedError
+    def get_hedger(self) -> ExchangeHandler:
+        return ExchangeHandler.mapping_exchange(hedge_method=self.hedge_method)
 
 
 class AssetSerializer(serializers.ModelSerializer):

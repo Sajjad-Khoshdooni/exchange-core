@@ -132,7 +132,7 @@ class AssetAdmin(AdvancedAdmin):
     def get_hedge_threshold(self, asset: Asset):
         if asset.enable:
             symbol = get_binance_trading_symbol(asset.symbol)
-            return asset.get_hedger().get_step_size(symbol)
+            return asset.get_hedger().get_step_spotsize(symbol)
 
     get_hedge_threshold.short_description = 'hedge threshold'
 
