@@ -15,11 +15,6 @@ logger = logging.getLogger(__name__)
 
 TIMEOUT = 30
 
-kucoin_session = requests.Session()
-kucoin_session.headers = {
-    'KC-API-KEY': secret(f'kucoin-api-key', default=''),
-    'KC-API-KEY-VERSION': config(f'kucoin-api-version', default=''),
-}
 
 if not settings.DEBUG:
     BINANCE_SPOT_BASE_URL = "https://api.binance.com"
@@ -77,24 +72,32 @@ def hashing(query_string):
         secret_key.encode("utf-8"), query_string.encode("utf-8"), hashlib.sha256
     ).hexdigest()
 
-def add_sign_kucoin(headers, params_str):
-    _secret_key = secret(f'kucoin-secret-key', default='')
-    _passphrase_key = secret(f'kucoin-passphrase-key', default='')
+def add_sign_kucoin(params_str, timestamp):
+    headers = {}
+    _secret_key = secret('KUCOIN_SECRET_KEY', default='')
+    headers['KC-API-KEY'] = secret(f'KC-API-KEY', default=''),
+    headers['KC-API-PASSPHRASE'] = secret('KC-API-PASSPHRASE', default=''),
+    headers['KC-API-KEY-VERSION']= config('KC-API-KEY-VERSION', default=''),
+    headers['KC-API-TIMESTAMP'] = str(timestamp)
     headers['KC-API-SIGN'] = base64.b64encode(
-        hmac.new(_secret_key.encode('utf-8'), params_str.encode('utf-8'), hashlib.sha256).digest()
+        hmac.new(_secret_key.encode('utf-8'),
+                 params_str.encode('utf-8'),
+                 hashlib.sha256).digest()
     )
-    headers['KC-API-PASSPHRASE'] = _passphrase_key
+
     return headers
 
 
 def get_timestamp():
     return int(time.time() * 1000)
 
+def get_session():
+    return requests.session()
 
 def dispatch_request(http_method):
     api_key = secret('BINANCE_API_KEY', default='')
 
-    session = requests.Session()
+    session = get_session()
     session.headers.update(
         {"Content-Type": "application/json;charset=utf-8", "X-MBX-APIKEY": api_key}
     )
@@ -194,22 +197,22 @@ def kucoin_spot_send_public_request(endpoint, method='POST', **kwargs):
 
 
 def kucoin_spot_send_signed_request(http_method, url_path, **kwargs):
-    _session = kucoin_session
-    kucoin_session.headers = {
+    timestamp = get_timestamp()
+
+    url = KUCOIN_SPOT_BASE_URL + url_path
+
+    session = get_session()
+    session.headers = {
         'KC-API-KEY': secret(f'kucoin-api-key', default=''),
         'KC-API-KEY-VERSION': config(f'kucoin-api-version', default=''),
     }
-    data =kwargs.pop('data', {})
-    timestamp = get_timestamp()
 
-    headers = kwargs.get('headers', {}) or {}
-    headers['KC-API-TIMESTAMP'] = str(timestamp)
+    data =kwargs.pop('data', {})
 
     if http_method in ('GET', 'DELETE'):
         query_params = f'?{"&".join(map(lambda i: f"{i[0]}={i[1]}", data.items()))}' if data else ''
         params_str = f'{timestamp}{http_method.upper()}{url_path}{query_params}'
-        kwargs['headers'] = add_sign_kucoin(headers, params_str)
-        url = KUCOIN_SPOT_BASE_URL + url_path
+        kwargs['headers'] = add_sign_kucoin(params_str, timestamp)
         if http_method == 'GET':
             response: requests.Response = requests.session().get(url, **kwargs, timeout=15)
 

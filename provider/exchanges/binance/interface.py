@@ -304,9 +304,9 @@ class kucoinSpotHAndler(ExchangeHandler):
         data = data or {}
 
         if signed:
-            return kucoin_spot_send_signed_request(method, url, data)
+            return kucoin_spot_send_signed_request(method, url, data=data)
         else:
-            return kucoin_spot_send_public_request(url, data)
+            return kucoin_spot_send_public_request(url, data=data)
 
     @classmethod
     def place_order(cls, symbol: str, side: str, amount: Decimal, order_type: str = MARKET,
