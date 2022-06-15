@@ -74,9 +74,9 @@ def hashing(query_string):
 
 def add_sign_kucoin(params_str, timestamp):
     headers = {}
-    _secret_key = secret('KUCOIN_SECRET_KEY', default='')
+    _secret_key = secret('KUCOIN_SECRET_KEY', default=''),
+    _secret_passphrase = secret('KC-API-PASSPHRASE', default=''),
     headers['KC-API-KEY'] = secret(f'KC-API-KEY', default=''),
-    headers['KC-API-PASSPHRASE'] = secret('KC-API-PASSPHRASE', default=''),
     headers['KC-API-KEY-VERSION']= config('KC-API-KEY-VERSION', default=''),
     headers['KC-API-TIMESTAMP'] = str(timestamp)
     headers['KC-API-SIGN'] = base64.b64encode(
@@ -84,7 +84,10 @@ def add_sign_kucoin(params_str, timestamp):
                  params_str.encode('utf-8'),
                  hashlib.sha256).digest()
     )
-
+    headers['KC-API-PASSPHRASE'] =base64.b64encode(
+        hmac.new(_secret_key.encode('utf-8'),
+                 _secret_passphrase .encode('utf-8'),
+                 hashlib.sha256).digest())
     return headers
 
 
@@ -208,17 +211,22 @@ def kucoin_spot_send_signed_request(http_method, url_path, **kwargs):
     }
 
     data =kwargs.pop('data', {})
-
+    str_to_sign = timestamp + http_method + url_path
+    query_params = "?" + urlencode(data)
     if http_method in ('GET', 'DELETE'):
-        query_params = f'?{"&".join(map(lambda i: f"{i[0]}={i[1]}", data.items()))}' if data else ''
-        params_str = f'{timestamp}{http_method.upper()}{url_path}{query_params}'
-        kwargs['headers'] = add_sign_kucoin(params_str, timestamp)
+
+
+        kwargs['headers'] = add_sign_kucoin(str_to_sign, timestamp)
         if http_method == 'GET':
             response: requests.Response = requests.session().get(url, **kwargs, timeout=15)
 
         # response = super(KucoinHandler, cls).collect_api(endpoint, method=method, session=cls._session, params=data,
         #                                                  **kwargs)
         return response
+    if http_method in ('POST', 'PUT'):
+        str_to_sign += query_params
+        kwargs['headers'] = add_sign_kucoin(str_to_sign, timestamp)
+        response = requests.request(http_method, url, kwargs['headers'] )
 
 
 def kucoin_futures_send_public_request():
