@@ -145,7 +145,7 @@ class Transfer(models.Model):
                     trx_hash='internal: <%s>' % str(trx.id),
                     out_address=sender_deposit_address.address
                 )
-                return True
+            return Trx.objects.filter(group_id=group_id).exists()
 
     @classmethod
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):
