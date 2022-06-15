@@ -105,50 +105,55 @@ class Transfer(models.Model):
             )
 
     @classmethod
-    def check_internal(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):
+    def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str):
         if DepositAddress.objects.filter(address=address).exists():
-            account = Account.objects.get(address=address)
-            receiver_wallet = cls.wallet.asset.get_wallet(account=account)
+            sender_deposit_address = DepositAddress.objects.filter(sender_wallet.account).first()
+
+            receiver_deposit_address = DepositAddress.objects.filter(address=address).first()
+            receiver_account = receiver_deposit_address.account
+            receiver_wallet = Wallet.objects.get(account=receiver_account)
+
+            group_id = uuid4()
+
             with transaction.atomic():
-                Trx.objects.create(
-                    sender=wallet,
+                trx = Trx.objects.create(
+                    sender=sender_wallet,
                     receiver=receiver_wallet,
                     scope=Trx.TRANSFER,
-                    group_id=cls.group_id,
+                    group_id=group_id,
                     amount=amount
                 )
                 Transfer.objects.create(
                     status=Transfer.DONE,
-                    deposit_address=cls.deposit_address,
-                    wallet=wallet,
+                    deposit_address=sender_deposit_address,
+                    wallet=sender_wallet,
                     network=network,
                     amount=amount,
-                    deposit=True,
-                    trx_hash='internal: <%s>' % str(cls.group_id),
-                    # block_hash=block_hash,
-                    # block_number=block_number,
+                    deposit=False,
+                    group_id=group_id,
+                    trx_hash='internal: <%s>' % str(trx.id),
                     out_address=address
                 )
                 Transfer.objects.create(
                     status=Transfer.DONE,
-                    deposit_address=address,
-                    wallet=wallet,
+                    deposit_address=receiver_deposit_address,
+                    wallet=receiver_wallet,
                     network=network,
                     amount=amount,
-                    deposit=False,
-                    trx_hash='internal: <%s>' % str(cls.group_id),
-                    # block_hash=block_hash,
-                    # block_number=block_number,
-                    out_address=cls.deposit_address
+                    deposit=True,
+                    group_id=group_id,
+                    trx_hash='internal: <%s>' % str(trx.id),
+                    out_address=sender_deposit_address.address
                 )
-
+                return True
 
     @classmethod
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):
         assert wallet.asset.symbol != Asset.IRT
         assert wallet.account.is_ordinary_user()
 
-        cls.check_internal(wallet=wallet, network=network, amount=amount, address=address)
+        if cls.check_fast_forward(wallet=wallet, network=network, amount=amount, address=address):
+            return
 
         network_asset = NetworkAsset.objects.get(network=network, asset=wallet.asset)
         assert network_asset.withdraw_max >= amount >= max(network_asset.withdraw_min, network_asset.withdraw_fee)

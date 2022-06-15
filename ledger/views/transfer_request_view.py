@@ -35,10 +35,12 @@ class TransferUpdateView(APIView):
         deposit_address = DepositAddress().new_deposit_address(account=acc, network=network)
         asset = Asset.objects.get(symbol=data['coin'])
         wallet = asset.get_wallet(acc)
+        deposit = data['type'] == 'deposit'
 
         if data['type'] == 'deposit':
             deposit_address = DepositAddress().new_deposit_address(account=acc, network=network)
             out_address = data['receiver_address']
+
         elif data['type'] == 'withdraw':
             deposit_address = DepositAddress().new_deposit_address(account=acc, network=network)
             out_address = data['sender_address']
@@ -50,6 +52,6 @@ class TransferUpdateView(APIView):
                                             wallet=wallet,
                                           defaults={
                                               'status': data['status'],
-                                              'deposit': True,
+                                              'deposit': deposit,
                                           })
         return Response(201)
