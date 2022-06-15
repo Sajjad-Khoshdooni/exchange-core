@@ -6,8 +6,9 @@ from django.conf import settings
 
 from ledger.utils.cache import get_cache_func_key, cache
 from ledger.utils.precision import decimal_to_str
-from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request, \
-    spot_send_public_request, futures_send_public_request
+from provider.exchanges.binance.sdk import binance_spot_send_signed_request, binance_futures_send_signed_request, \
+    binance_futures_send_public_request, binance_spot_send_public_request, kucoin_spot_send_public_request,\
+    kucoin_spot_send_signed_request
 
 BINANCE = 'binance'
 
@@ -47,7 +48,7 @@ class ExchangeHandler:
 
 class BinanceSpotHandler(ExchangeHandler):
     order_url = '/api/v3/order'
-    MARKET = 'spot'
+    MARKET_TYPE = 'spot'
     @classmethod
     def collect_api(cls, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
                     cache_timeout: int = None):
@@ -75,9 +76,9 @@ class BinanceSpotHandler(ExchangeHandler):
         data = data or {}
 
         if signed:
-            return spot_send_signed_request(method, url, data)
+            return binance_spot_send_signed_request(method, url, data)
         else:
-            return spot_send_public_request(url, data)
+            return binance_spot_send_public_request(url, data)
 
     @classmethod
     def place_order(cls, symbol: str, side: str, amount: Decimal, order_type: str = MARKET,
@@ -203,9 +204,9 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         data = data or {}
 
         if signed:
-            return futures_send_signed_request(method, url, data)
+            return binance_futures_send_signed_request(method, url, data)
         else:
-            return futures_send_public_request(url, data)
+            return binance_futures_send_public_request(url, data)
 
     @classmethod
     def get_account_details(cls):
@@ -266,11 +267,19 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
 class kucoinSpotHAndler(ExchangeHandler):
 
-    order_url = '/api/v3/order'
-    MARKET = 'spot'
+    order_url = '/api/v1/order'
+    MARKET_TYPE = 'spot'
+
+    _base_api_url = None
+    _session = None
+
+    api_path = None
+    exchange = None
+
     @classmethod
     def collect_api(cls, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
                     cache_timeout: int = None):
+
         cache_key = None
 
         if cache_timeout:
@@ -295,9 +304,9 @@ class kucoinSpotHAndler(ExchangeHandler):
         data = data or {}
 
         if signed:
-            return spot_send_signed_request(method, url, data)
+            return kucoin_spot_send_signed_request(method, url, data)
         else:
-            return spot_send_public_request(url, data)
+            return kucoin_spot_send_public_request(url, data)
 
     @classmethod
     def place_order(cls, symbol: str, side: str, amount: Decimal, order_type: str = MARKET,
@@ -311,12 +320,12 @@ class kucoinSpotHAndler(ExchangeHandler):
 
         data = {
             'symbol': symbol,
-            'side': side,
-            'type': order_type,
-            'quantity': decimal_to_str(amount),
+            'side': side.lower(),
+            'type': order_type.lower(),
+            'size': decimal_to_str(amount),
         }
 
         if client_order_id:
-            data['newClientOrderId'] = client_order_id
+            data['clientOid'] = client_order_id
 
-        return cls.collect_api(cls.order_url, data=data, method=POST)
+        return (cls.collect_api(url=cls.order_url, data=data) or {}).get('data',  {'orderId': None})

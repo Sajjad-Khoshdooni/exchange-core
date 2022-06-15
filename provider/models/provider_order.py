@@ -156,7 +156,7 @@ class ProviderOrder(models.Model):
         symbol = cls.get_trading_symbol(asset)
 
         handler = asset.get_hedger()
-        market = handler.MARKET
+        market = handler.MARKET_TYPE
 
         # if asset.hedge_method == Asset.HEDGE_BINANCE_FUTURE:
         #     handler = BinanceFuturesHandler
