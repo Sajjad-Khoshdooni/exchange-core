@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from django.db import models, transaction
 from django.db.models import UniqueConstraint, Q
+from django.conf import settings
 from yekta_config.config import config
 
 from accounts.models import Account, Notification
@@ -183,7 +184,7 @@ class Transfer(models.Model):
         return transfer
 
     def save(self, *args, **kwargs):
-        if self.status == self.DONE:
+        if self.status == self.DONE and not settings.DEBUG:
             self.update_crypto_balances()
 
         return super().save(*args, **kwargs)
