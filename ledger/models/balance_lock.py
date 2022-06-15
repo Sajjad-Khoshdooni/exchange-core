@@ -19,6 +19,9 @@ class BalanceLock(models.Model):
     freed = models.BooleanField(default=False, db_index=True)
 
     def release(self):
+        if not self.wallet.should_lock_balance():
+            return
+
         self.refresh_from_db()
 
         if self.freed:
@@ -35,6 +38,8 @@ class BalanceLock(models.Model):
 
     def decrease_lock(self, amount: Decimal):
         assert amount > 0
+        if not self.wallet.should_lock_balance():
+            return
 
         from ledger.models import Wallet
 
