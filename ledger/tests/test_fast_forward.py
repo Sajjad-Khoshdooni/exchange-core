@@ -19,9 +19,8 @@ class FastForwardTestCase(TestCase):
         self.receiver_wallet = self.asset.get_wallet(account=self.receiver_account)
 
     def test_fast_forward2(self):
-
         Transfer.new_withdraw(wallet=self.sender_wallet, network=self.network, amount=Decimal(11),
                               address=self.receiver_deposit_address.address)
 
         self.assertEqual(Trx.objects.get(sender=self.sender_wallet).group_id,
-                         Transfer.objects.get(deposit_address=self.receiver_deposit_address))
+                         Transfer.objects.get(deposit_address=self.receiver_deposit_address).group_id)

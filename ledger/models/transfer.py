@@ -10,6 +10,7 @@ from accounts.models import Account, Notification
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
+from ledger.models.address_key import AddressKey
 from ledger.models.crypto_balance import CryptoBalance
 from ledger.utils.fields import get_amount_field, get_address_field, get_lock_field
 from ledger.utils.precision import humanize_number
@@ -107,10 +108,11 @@ class Transfer(models.Model):
     @classmethod
     def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str):
         if DepositAddress.objects.filter(address=address).exists():
-            sender_deposit_address = DepositAddress.objects.filter(account=sender_wallet.account).first()
+            sender_address_key = AddressKey.objects.filter(account=sender_wallet.account).first()
+            sender_deposit_address = DepositAddress.objects.filter(address_key=sender_address_key).first()
 
             receiver_deposit_address = DepositAddress.objects.filter(address=address).first()
-            receiver_account = receiver_deposit_address.account
+            receiver_account = receiver_deposit_address.address_key.account
             receiver_wallet = Wallet.objects.get(account=receiver_account)
 
             group_id = uuid4()
@@ -145,7 +147,7 @@ class Transfer(models.Model):
                     trx_hash='internal: <%s>' % str(trx.id),
                     out_address=sender_deposit_address.address
                 )
-            return Trx.objects.filter(group_id=group_id).exists()
+                return True
 
     @classmethod
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):

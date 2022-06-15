@@ -32,9 +32,9 @@ class DepositAddress(models.Model):
             address=get_presentation_address(network=network, base16_address=address),
         )
 
-    @property
-    def account(self):
-        return self.account
+    # @property
+    # def account(self):
+    #     return self.account
 
     class Meta:
         unique_together = (
