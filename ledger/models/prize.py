@@ -2,11 +2,11 @@ import logging
 from uuid import uuid4
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 
-from accounts.models import Account, Notification
+from accounts.models import Account
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_amount_field
-from ledger.utils.precision import humanize_number
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,7 @@ class Prize(models.Model):
 
     class Meta:
         unique_together = [('account', 'scope', 'variant')]
+        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_ledger_prize_amount', ), ]
 
     def build_trx(self):
         if self.redeemed:

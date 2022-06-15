@@ -14,7 +14,7 @@ from django.db.models import Sum, F, Q, Max, Min, CheckConstraint, QuerySet
 from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Trx, Wallet
 from ledger.models.asset import Asset
-from ledger.utils.fields import get_amount_field, get_price_field, get_lock_field
+from ledger.utils.fields import get_amount_field, get_lock_field
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
 from market.models import PairSymbol
@@ -64,7 +64,7 @@ class Order(models.Model):
     symbol = models.ForeignKey(PairSymbol, on_delete=models.CASCADE)
     amount = get_amount_field()
     filled_amount = get_amount_field(default=Decimal(0))
-    price = get_price_field()
+    price = get_amount_field()
     side = models.CharField(max_length=8, choices=ORDER_CHOICES)
     fill_type = models.CharField(max_length=8, choices=FILL_TYPE_CHOICES)
     status = models.CharField(default=NEW, max_length=8, choices=STATUS_CHOICES)
@@ -84,7 +84,10 @@ class Order(models.Model):
             models.Index(fields=['symbol', 'status']),
             models.Index(name='market_new_orders_price_idx', fields=['price'], condition=Q(status='new')),
         ]
-        constraints = [CheckConstraint(check=Q(filled_amount__lte=F('amount')), name='check_filled_amount', ), ]
+        constraints = [
+            CheckConstraint(check=Q(filled_amount__lte=F('amount')), name='check_filled_amount', ),
+            CheckConstraint(check=Q(amount__gte=0, filled_amount__gte=0, price__gte=0), name='check_market_order_amounts', ),
+        ]
 
     objects = models.Manager()
     open_objects = OpenOrderManager()

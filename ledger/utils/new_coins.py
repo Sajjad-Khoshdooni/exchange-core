@@ -46,7 +46,6 @@ def add_candidate_coins(coins: list):
         asset.min_trade_quantity = lot_size['minQty']
         asset.max_trade_quantity = lot_size['maxQty']
 
-        asset.precision = -int(math.log10(Decimal(lot_size['stepSize'])))
         asset.price_precision_usdt = -int(math.log10(Decimal(price_filter['tickSize'])))
         asset.price_precision_irt = max(asset.price_precision_usdt - 3, 0)
 

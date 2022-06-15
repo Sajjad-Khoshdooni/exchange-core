@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import CheckConstraint
 
 from ledger.utils.fields import get_created_field, get_amount_field
 

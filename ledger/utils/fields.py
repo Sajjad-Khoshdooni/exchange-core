@@ -10,20 +10,12 @@ from ledger.utils.precision import normalize_fraction
 
 PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 
-COMMISSION_MAX_DIGITS = 32
 
-AMOUNT_DECIMAL_PLACES = 18
-AMOUNT_MAX_DIGITS = 40
-
-PRICE_DECIMAL_PLACES = 18
-PRICE_MAX_DIGITS = 40
-
-
-def get_amount_field(max_digits: int = None, decimal_places: int = None, default: Decimal = None):
+def get_amount_field(default: Decimal = None, max_digits: int = None, decimal_places: int = None):
 
     kwargs = {
-        'max_digits': max_digits or AMOUNT_MAX_DIGITS,
-        'decimal_places': decimal_places or AMOUNT_DECIMAL_PLACES,
+        'max_digits': max_digits or 30,
+        'decimal_places': decimal_places or 8,
         'validators': [MinValueValidator(0)]
     }
 
@@ -33,25 +25,11 @@ def get_amount_field(max_digits: int = None, decimal_places: int = None, default
     return models.DecimalField(**kwargs)
 
 
-def get_price_field(max_digits: int = None, decimal_places: int = None, default: Decimal = None):
-
-    kwargs = {
-        'max_digits': max_digits or PRICE_MAX_DIGITS,
-        'decimal_places': decimal_places or PRICE_DECIMAL_PLACES,
-        'validators': [MinValueValidator(0)]
-    }
-
-    if default is not None:
-        kwargs['default'] = default
-
-    return models.DecimalField(**kwargs)
-
-
-def get_serializer_amount_field(max_digits: int = None, decimal_places: int = None, **kwargs):
+def get_serializer_amount_field(**kwargs):
 
     return SerializerDecimalField(
-        max_digits=max_digits or AMOUNT_MAX_DIGITS,
-        decimal_places=decimal_places or 8,
+        max_digits=30,
+        decimal_places=8,
         min_value=0,
         **kwargs,
     )
