@@ -8,7 +8,6 @@ from wallet.utils import get_base58_address
 class DepositAddress(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     network = models.ForeignKey('ledger.Network', on_delete=models.PROTECT)
-    account = models.ForeignKey('accounts.account', on_delete=models.PROTECT)
     address = models.CharField(max_length=256, blank=True)
     is_registered = models.BooleanField(default=False)
     address_key = models.OneToOneField('ledger.AddressKey', on_delete=models.PROTECT, unique=True)
@@ -22,7 +21,7 @@ class DepositAddress(models.Model):
             return DepositAddress.objects.get(address_key__account=account)
 
         address = AddressRequester().create_wallet()
-        address_key = AddressKey.objects().create(
+        address_key = AddressKey.objects.create(
             account=account,
             address=address
         )
@@ -44,7 +43,7 @@ class DepositAddress(models.Model):
 
 
 def get_presentation_address(network, base16_address):
-    if network == 'BSC' or network == 'ETH':
+    if network.symbol == 'BSC' or network.symbol == 'ETH':
         return base16_address
-    elif network == 'TRX':
-        return get_base58_address('41' + base16_address)
+    elif network.symbol == 'TRX':
+        return get_base58_address('41' + base16_address[2:])

@@ -1,8 +1,10 @@
 import json
+import random
 
 import requests
 
 from ledger.requester.consts import MASTERKEY_WALLET_URL, MASTERKEY_TOKEN
+from django.conf import settings
 
 
 class AddressRequester:
@@ -13,6 +15,8 @@ class AddressRequester:
         }
 
     def create_wallet(self):
+        if settings.DEBUG_FAST_FORWARD:
+            return '0xtest6Eb0c7Db0eAbbE8E04b9AF02C0b7212b' + str(random.randint(1000, 10000))
         data = {
             'tag': 'tag'
         }

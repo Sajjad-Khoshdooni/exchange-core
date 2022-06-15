@@ -107,7 +107,7 @@ class Transfer(models.Model):
     @classmethod
     def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str):
         if DepositAddress.objects.filter(address=address).exists():
-            sender_deposit_address = DepositAddress.objects.filter(sender_wallet.account).first()
+            sender_deposit_address = DepositAddress.objects.filter(account=sender_wallet.account).first()
 
             receiver_deposit_address = DepositAddress.objects.filter(address=address).first()
             receiver_account = receiver_deposit_address.account
@@ -152,7 +152,7 @@ class Transfer(models.Model):
         assert wallet.asset.symbol != Asset.IRT
         assert wallet.account.is_ordinary_user()
 
-        if cls.check_fast_forward(wallet=wallet, network=network, amount=amount, address=address):
+        if cls.check_fast_forward(sender_wallet=wallet, network=network, amount=amount, address=address):
             return
 
         network_asset = NetworkAsset.objects.get(network=network, asset=wallet.asset)
