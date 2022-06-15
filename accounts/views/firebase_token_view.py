@@ -7,6 +7,7 @@ from accounts.models.firebase_token import FirebaseToken
 
 
 class FirebaseTokenSerializer(serializers.ModelSerializer):
+    token = serializers.CharField()
 
     class Meta:
         model = FirebaseToken
@@ -30,11 +31,12 @@ class FirebaseTokenView(APIView):
         firebase_token = FirebaseToken.objects.all()
         filter_firebase_token = firebase_token.filter(token=token)
         if filter_firebase_token:
-            if user and filter_firebase_token.values_list('user', flat=True)[0] is None:
-                filter_firebase_token.update(user=user)
-                return Response({'msg': 'توکن اپدیت شد.'})
+            if user and filter_firebase_token.first().user is None:
+                filter_firebase_token.delete()
+                firebase_token.filter(user=user).update(token=token)
+                return Response({'msg': 'token updated'})
             else:
-                return Response({'msg': 'امکان انتقال توکن به کاربر دیگر وجود ندارد.'})
+                return Response({'msg': 'change user of token impossible'})
         else:
             if user is None or not firebase_token.filter(user=user):
                 FirebaseToken.objects.create(token=token, user=user)
