@@ -101,7 +101,6 @@ class Trx(models.Model):
             )
 
             if created:
-
                 wallet_changes = [
                     (sender.id, F('balance') - amount),
                     (receiver.id, F('balance') + amount),

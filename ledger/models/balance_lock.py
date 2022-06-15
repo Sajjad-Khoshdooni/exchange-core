@@ -27,11 +27,11 @@ class BalanceLock(models.Model):
         from ledger.models import Wallet
 
         with transaction.atomic():
+            Wallet.objects.filter(id=self.wallet_id).update(locked=F('locked') - self.amount)
+
             self.freed = True
             self.release_date = timezone.now()
             self.save(update_fields=['freed', 'release_date'])
-
-            Wallet.objects.filter(id=self.wallet_id).update(locked=F('locked') - self.amount)
 
     def decrease_lock(self, amount: Decimal):
         assert amount > 0
@@ -39,8 +39,8 @@ class BalanceLock(models.Model):
         from ledger.models import Wallet
 
         with transaction.atomic():
-            BalanceLock.objects.filter(id=self.id).update(amount=F('amount') - amount)
             Wallet.objects.filter(id=self.wallet_id).update(locked=F('locked') - amount)
+            BalanceLock.objects.filter(id=self.id).update(amount=F('amount') - amount)
 
     @classmethod
     def new_lock(cls, wallet, amount: Decimal):
