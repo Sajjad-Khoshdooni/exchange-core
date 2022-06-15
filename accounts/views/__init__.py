@@ -19,3 +19,5 @@ from .referral_view import ReferralReportAPIView, ReferralViewSet, ReferralOverv
 from .gamification_view import GamificationAPIView
 from .banner_view import BannerAlertAPIView
 from .prize_view import PrizeView
+
+from .firebase_token_view import FirebaseTokenView
