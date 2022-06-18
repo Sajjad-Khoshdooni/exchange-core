@@ -76,4 +76,6 @@ urlpatterns = [
     })),
 
     path('banner/', views.BannerAlertAPIView.as_view()),
+
+    path('firebase/', views.FirebaseTokenView.as_view()),
 ]
