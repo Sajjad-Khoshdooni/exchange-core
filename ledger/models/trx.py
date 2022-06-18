@@ -101,10 +101,13 @@ class Trx(models.Model):
             )
 
             if created:
-                wallet_changes = [
-                    (sender.id, F('balance') - amount),
-                    (receiver.id, F('balance') + amount),
-                ]
+                wallet_changes = []
+
+                if sender.should_update_balance_fields():
+                    wallet_changes.append((sender.id, F('balance') - amount))
+
+                if receiver.should_update_balance_fields():
+                    wallet_changes.append((receiver.id, F('balance') + amount))
 
                 wallet_changes.sort(key=lambda w: w[0])
 

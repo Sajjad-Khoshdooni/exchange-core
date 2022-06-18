@@ -71,30 +71,25 @@ class WalletTestCase(TestCase):
 
         self.assertEqual(self.wallet.balance, 10)
         self.assertEqual(self.wallet.locked, 0)
-        self.assertEqual(self.system_wallet.balance, -10)
 
         lock = self.wallet.lock_balance(4)
 
         self.assertEqual(self.wallet.balance, 10)
         self.assertEqual(self.wallet.locked, 4)
-        self.assertEqual(self.system_wallet.balance, -10)
 
         self.wallet.refresh_from_db()
 
         self.assertEqual(self.wallet.balance, 10)
         self.assertEqual(self.wallet.locked, 4)
-        self.assertEqual(self.system_wallet.balance, -10)
 
         lock.decrease_lock(2)
         self.wallet.refresh_from_db()
 
         self.assertEqual(self.wallet.balance, 10)
         self.assertEqual(self.wallet.locked, 2)
-        self.assertEqual(self.system_wallet.balance, -10)
 
         lock.release()
         self.wallet.refresh_from_db()
 
         self.assertEqual(self.wallet.balance, 10)
         self.assertEqual(self.wallet.locked, 0)
-        self.assertEqual(self.system_wallet.balance, -10)

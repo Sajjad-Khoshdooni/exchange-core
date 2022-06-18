@@ -58,7 +58,7 @@ class Wallet(models.Model):
     def lock_balance(self, amount: Decimal) -> BalanceLock:
         assert amount > 0
 
-        if self.should_lock_balance():
+        if self.should_update_balance_fields():
             self.has_balance(amount, raise_exception=True)
 
         self.locked += amount
@@ -145,5 +145,5 @@ class Wallet(models.Model):
             scope=Trx.AIRDROP
         )
 
-    def should_lock_balance(self):
+    def should_update_balance_fields(self):
         return not (self.account.type == Account.SYSTEM and self.account.primary)
