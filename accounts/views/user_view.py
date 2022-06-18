@@ -13,7 +13,6 @@ from market.models import Order
 
 
 class UserSerializer(serializers.ModelSerializer):
-    on_boarding_status = serializers.SerializerMethodField()
     possible_time_for_withdraw = serializers.SerializerMethodField()
 
     class Meta:
