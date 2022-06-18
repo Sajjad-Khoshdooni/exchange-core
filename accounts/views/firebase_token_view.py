@@ -28,19 +28,14 @@ class FirebaseTokenView(APIView):
 
         token = serializer.validated_data['token']
 
-        firebase_token = FirebaseToken.objects.all()
-        filter_firebase_token = firebase_token.filter(token=token)
-        if filter_firebase_token:
-            if user and filter_firebase_token.first().user is None:
-                filter_firebase_token.delete()
-                firebase_token.filter(user=user).update(token=token)
+        firebase_token = FirebaseToken.objects.filter(token=token).first()
+
+        if firebase_token:
+            if user and firebase_token.user is None:
+                FirebaseToken.objects.filter(token=token).update(user=user)
                 return Response({'msg': 'token updated'})
             else:
                 return Response({'msg': 'change user of token impossible'})
         else:
-            if user is None or not firebase_token.filter(user=user):
-                FirebaseToken.objects.create(token=token, user=user)
-                return Response({'msg': 'token create'})
-            else:
-                firebase_token.filter(user=user).update(token=token)
-                return Response({'msg': 'token update'})
+            FirebaseToken.objects.create(token=token, user=user)
+            return Response({'msg': 'token create'})
