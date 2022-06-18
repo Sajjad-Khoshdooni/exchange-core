@@ -5,7 +5,7 @@ from typing import Union
 from uuid import uuid4, UUID
 
 from django.db import models, transaction
-from django.db.models import F
+from django.db.models import F, CheckConstraint, Q
 
 from ledger.models import Wallet
 from ledger.utils.fields import get_amount_field
@@ -60,6 +60,7 @@ class Trx(models.Model):
 
     class Meta:
         unique_together = ('group_id', 'sender', 'receiver', 'scope')
+        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_ledger_trx_amount', ), ]
 
     def save(self, *args, **kwargs):
         assert self.sender.asset == self.receiver.asset
@@ -76,13 +77,16 @@ class Trx(models.Model):
             amount: Union[Decimal, int],
             scope: str,
             group_id: Union[str, UUID],
+            fake_trx: bool = False
     ):
         assert amount >= 0
 
-        if amount == 0 or sender == receiver:
+        if amount == 0 or sender == receiver or fake_trx:
             return FakeTrx(
                 sender=sender,
-                receiver=receiver
+                receiver=receiver,
+                amount=amount,
+                group_id=group_id
             )
 
         with transaction.atomic():

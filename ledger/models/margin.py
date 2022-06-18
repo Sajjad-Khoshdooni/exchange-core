@@ -2,6 +2,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.db import models, transaction
+from django.db.models import CheckConstraint, Q
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
@@ -74,6 +75,9 @@ class MarginLoan(models.Model):
     lock = get_lock_field()
     group_id = get_group_id_field()
 
+    class Meta:
+        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_ledger_margin_loan_amount', ), ]
+
     @property
     def margin_wallet(self) -> 'Wallet':
         return self.asset.get_wallet(self.account, Wallet.MARGIN)
@@ -83,15 +87,12 @@ class MarginLoan(models.Model):
         return self.asset.get_wallet(self.account, Wallet.LOAN)
 
     def finalize(self):
-        if self.asset.symbol != Asset.USDT:
-            hedged = ProviderOrder.try_hedge_for_new_order(
-                asset=self.asset,
-                side=BUY if self.type == self.BORROW else SELL,
-                amount=self.amount,
-                scope=ProviderOrder.BORROW
-            )
-        else:
-            hedged = True
+        hedged = ProviderOrder.try_hedge_for_new_order(
+            asset=self.asset,
+            side=BUY if self.type == self.BORROW else SELL,
+            amount=self.amount,
+            scope=ProviderOrder.BORROW
+        )
 
         if hedged:
             if self.type == self.BORROW:
@@ -145,3 +146,6 @@ class MarginLiquidation(models.Model):
 
     account = models.ForeignKey(Account, on_delete=models.CASCADE)
     margin_level = get_amount_field()
+
+    class Meta:
+        constraints = [CheckConstraint(check=Q(margin_level__gte=0), name='check_margin_level', ), ]

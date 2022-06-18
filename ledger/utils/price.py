@@ -14,6 +14,7 @@ from ledger.utils.price_manager import PriceManager
 
 BINANCE = 'interface'
 NOBITEX = 'nobitex'
+KUCOIN = 'kucoin'
 
 USDT = 'USDT'
 IRT = 'IRT'
@@ -46,7 +47,7 @@ SIDE_MAP = {
 }
 
 
-def get_binance_trading_symbol(coin: str):
+def get_trading_symbol_binance(coin: str):
     if coin == 'LUNC':
         base = 'BUSD'
     else:
@@ -58,8 +59,22 @@ def get_binance_trading_symbol(coin: str):
     return coin + base
 
 
+def get_trading_symbol_kucion(coin: str):
+
+    base = 'USDT'
+
+    return coin + '-' + base
+
+
+def get_trading_symbol(coin: str, exchange=BINANCE) :
+    if exchange == BINANCE:
+        return get_trading_symbol_binance(coin=coin)
+    if exchange == KUCOIN:
+        return get_trading_symbol_kucion(coin=coin)
+
+
 def get_binance_price_stream(coin: str):
-    return get_binance_trading_symbol(coin).lower()
+    return get_trading_symbol(coin).lower()
 
 
 def get_asset_diff_multiplier(coin: str):

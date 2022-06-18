@@ -4,12 +4,14 @@ from decimal import Decimal
 from celery import shared_task
 
 from accounts.models import Account, Notification
+from accounts.tasks import send_message_by_kavenegar
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet
 from ledger.models.margin import MarginLiquidation
 from ledger.utils.liquidation import LiquidationEngine
-from ledger.utils.margin import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD
+from ledger.utils.margin import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD, \
+    MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD
 from ledger.utils.margin import MarginInfo
 
 logger = logging.getLogger(__name__)
@@ -39,12 +41,17 @@ def check_margin_level():
 
             status = 2
 
-        elif margin_level <= MARGIN_CALL_ML_THRESHOLD:
+        elif not account.margin_alerting and margin_level <= MARGIN_CALL_ML_THRESHOLD:
             logger.warning('Send MARGIN_CALL_ML_THRESHOLD for account = %d' % account.id)
             warn_risky_level(account, margin_level)
 
             if status == 0:
                 status = 1
+
+            Account.objects.filter(id=account.id).update(margin_alerting=True)
+
+        elif margin_level > MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD:
+            Account.objects.filter(id=account.id).update(margin_alerting=False)
 
     return status
 
@@ -65,8 +72,8 @@ def warn_risky_level(account: Account, margin_level: Decimal):
         link=link
     )
 
-    # send_message_by_kavenegar(
-    #     phone=user.phone,
-    #     template='liquidation',
-    #     token=str(levelup)
-    # )
+    send_message_by_kavenegar(
+        phone=user.phone,
+        template='alert-margin-liquidation',
+        token='تعهدی'
+    )
