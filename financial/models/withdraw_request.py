@@ -50,7 +50,7 @@ class FiatWithdrawRequest(models.Model):
     withdraw_datetime = models.DateTimeField(null=True, blank=True)
     provider_withdraw_id = models.CharField(max_length=64, blank=True)
 
-    withdraw_chanel = models.CharField(max_length=10, choices=CHANEL_CHOICES, default=PAYIR)
+    withdraw_channel = models.CharField(max_length=10, choices=CHANEL_CHOICES, default=PAYIR)
 
     @property
     def total_amount(self):
@@ -119,7 +119,7 @@ class FiatWithdrawRequest(models.Model):
         if self.status != self.PENDING:
             return
 
-        withdraw = FiatWithdraw.get_withdraw_chanel(self.withdraw_chanel)
+        withdraw = FiatWithdraw.get_withdraw_chanel(self.withdraw_channel)
         status = withdraw.get_withdraw_status(self.id)
 
         logger.info(f'FiatRequest {self.id} status: {status}')

@@ -26,7 +26,7 @@ class FiatWithdraw:
 
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
 
-    WITHDRAW_CHANEL = config('WITHDRAW_CHANEL')
+    WITHDRAW_CHANNEL = config('WITHDRAW_CHANNEL')
 
     @classmethod
     def get_withdraw_chanel(cls, chanel=None):
@@ -37,7 +37,7 @@ class FiatWithdraw:
         if chanel:
             return maping[chanel]()
         else:
-            return maping[cls.WITHDRAW_CHANEL]()
+            return maping[cls.WITHDRAW_CHANNEL]()
 
 
     def get_wallet_id(self):
