@@ -13,12 +13,12 @@ def create_transaction_from_not_broadcasts():
     WithdrawHandler.create_transaction_from_not_broadcasts()
 
 
-@shared_task(queue='binance')
+@shared_task(queue='interface')
 def create_binance_withdraw(transfer_id: int):
     handle_binance_withdraw(transfer_id)
 
 
-@shared_task(queue='binance')
+@shared_task(queue='interface')
 def update_binance_withdraw():
 
     re_handle_transfers = Transfer.objects.filter(

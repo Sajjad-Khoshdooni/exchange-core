@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProviderTransfer(models.Model):
-    BINANCE = 'binance'
+    BINANCE = 'interface'
 
     created = models.DateTimeField(auto_now_add=True)
 

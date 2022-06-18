@@ -10,7 +10,7 @@ from ledger.utils.precision import get_precision, get_presentation_amount
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 from provider.exchanges import BinanceSpotHandler, BinanceFuturesHandler
-from provider.exchanges.binance.interface import ExchangeHandler
+from provider.exchanges.interface.binance_interface import ExchangeHandler
 
 
 class InvalidAmount(Exception):
@@ -32,13 +32,13 @@ class Asset(models.Model):
     USDT = 'USDT'
     SHIB = 'SHIB'
 
-    HEDGE_BINANCE_FUTURE = 'binance-future'
-    HEDGE_BINANCE_SPOT = 'binance-spot'
+    HEDGE_BINANCE_FUTURE = 'binance_interface-future'
+    HEDGE_BINANCE_SPOT = 'binance_interface-spot'
 
-    HEDGE_KUCOIN_FUTURE = 'kucoin-feature'
-    HEDGE_KUCOIN_SPOT = 'kucoin-spot'
+    HEDGE_KUCOIN_FUTURE = 'kucoin_interface-feature'
+    HEDGE_KUCOIN_SPOT = 'kucoin_interface-spot'
 
-    HEDGE_METHOD_CHOICE =(
+    HEDGE_METHOD_CHOICE = (
         (HEDGE_KUCOIN_SPOT, HEDGE_KUCOIN_SPOT),
         (HEDGE_KUCOIN_FUTURE, HEDGE_KUCOIN_FUTURE),
         (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),

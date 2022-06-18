@@ -43,7 +43,7 @@ def handle_binance_withdraw(transfer_id: int):
         if balance_map[coin] < amount:
             to_buy_amount = amount - balance_map[coin]
 
-            logger.info('not enough %s in binance spot. So buy %s of it!' % (coin, to_buy_amount))
+            logger.info('not enough %s in interface spot. So buy %s of it!' % (coin, to_buy_amount))
 
             if coin != Asset.USDT:
                 to_buy_value = to_buy_amount * get_price(coin, side=SELL) * Decimal('1.002')
@@ -51,7 +51,7 @@ def handle_binance_withdraw(transfer_id: int):
                 to_buy_value = to_buy_amount
 
             if to_buy_value > balance_map[Asset.USDT]:
-                raise Exception('insufficient balance in binance spot to full fill withdraw')
+                raise Exception('insufficient balance in interface spot to full fill withdraw')
 
             if transfer.asset.symbol != Asset.USDT:
                 ProviderHedgedOrder.new_hedged_order(

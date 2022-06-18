@@ -77,15 +77,15 @@ app.conf.beat_schedule = {
         'task': 'ledger.tasks.withdraw.update_binance_withdraw',
         'schedule': 10,
         'options': {
-            'queue': 'binance',
+            'queue': 'interface',
             'expire': 10
         },
     },
     'inject_tether_to_futures': {
-        'task': 'provider.tasks.binance.inject_tether_to_futures',
+        'task': 'provider.tasks.interface.inject_tether_to_futures',
         'schedule': 1,
         'options': {
-            'queue': 'binance-monitor',
+            'queue': 'interface-monitor',
             'expire': 1
         },
     },
@@ -139,10 +139,10 @@ app.conf.beat_schedule = {
         },
     },
     'fill_future_binance_income': {
-        'task': 'collector.tasks.binance.fill_future_binance_income',
+        'task': 'collector.tasks.interface.fill_future_binance_income',
         'schedule': crontab(minute=5),
         'options': {
-            'queue': 'binance',
+            'queue': 'interface',
             'expire': 3600
         },
     },
@@ -150,7 +150,7 @@ app.conf.beat_schedule = {
         'task': 'provider.tasks.auto_hedge.auto_hedge_assets',
         'schedule': crontab(hour=1, minute=30),
         'options': {
-            'queue': 'binance',
+            'queue': 'interface',
             'expire': 36000
         },
     },

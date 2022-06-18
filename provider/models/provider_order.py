@@ -103,11 +103,11 @@ class ProviderOrder(models.Model):
         """
         how much assets we have more!
 
-        out = -internal - binance transfer deposit
-        hedge = all assets - users = (internal + binance manual deposit + binance transfer deposit + binance trades)
-                + system + out = system + binance trades + binance manual deposit
+        out = -internal - interface transfer deposit
+        hedge = all assets - users = (internal + interface manual deposit + interface transfer deposit + interface trades)
+                + system + out = system + interface trades + interface manual deposit
 
-        given binance manual deposit = 0 -> hedge = system + binance manual deposit + binance trades
+        given interface manual deposit = 0 -> hedge = system + interface manual deposit + interface trades
         """
 
         received = Trx.objects.filter(

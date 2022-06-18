@@ -6,11 +6,10 @@ from django.conf import settings
 
 from ledger.utils.cache import get_cache_func_key, cache
 from ledger.utils.precision import decimal_to_str
-from provider.exchanges.binance.sdk import binance_spot_send_signed_request, binance_futures_send_signed_request, \
-    binance_futures_send_public_request, binance_spot_send_public_request, kucoin_spot_send_public_request,\
-    kucoin_spot_send_signed_request
+from provider.exchanges.sdk.binance_sdk import binance_spot_send_signed_request, binance_futures_send_signed_request, \
+    binance_futures_send_public_request, binance_spot_send_public_request
 
-BINANCE = 'binance'
+BINANCE = 'interface'
 
 MARKET, LIMIT = 'MARKET', 'LIMIT'
 SELL, BUY = 'SELL', 'BUY'
@@ -264,68 +263,3 @@ class BinanceFuturesHandler(BinanceSpotHandler):
             }
         )
 
-
-class kucoinSpotHAndler(ExchangeHandler):
-
-    order_url = '/api/v1/order'
-    MARKET_TYPE = 'spot'
-
-    _base_api_url = None
-    _session = None
-
-    api_path = None
-    exchange = None
-
-    @classmethod
-    def collect_api(cls, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
-                    cache_timeout: int = None):
-
-        cache_key = None
-
-        if cache_timeout:
-            cache_key = get_cache_func_key(cls, url, method, data, signed)
-            result = cache.get(cache_key)
-
-            if result is not None:
-                return result
-
-        result = cls._collect_api(url=url, method=method, data=data, signed=signed)
-
-        if cache_timeout:
-            cache.set(cache_key, result, cache_timeout)
-
-        return result
-
-    @classmethod
-    def _collect_api(cls, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        if settings.DEBUG_OR_TESTING:
-            return {}
-
-        data = data or {}
-
-        if signed:
-            return kucoin_spot_send_signed_request(method, url, data=data)
-        else:
-            return kucoin_spot_send_public_request(url, data=data)
-
-    @classmethod
-    def place_order(cls, symbol: str, side: str, amount: Decimal, order_type: str = MARKET,
-                    client_order_id: str = None) -> dict:
-
-        side = side.upper()
-        order_type = order_type.upper()
-
-        assert side in (SELL, BUY)
-        assert order_type in (MARKET, LIMIT)
-
-        data = {
-            'symbol': symbol,
-            'side': side.lower(),
-            'type': order_type.lower(),
-            'size': decimal_to_str(amount),
-        }
-
-        if client_order_id:
-            data['clientOid'] = client_order_id
-
-        return (cls.collect_api(url=cls.order_url, data=data) or {}).get('data',  {'orderId': None})

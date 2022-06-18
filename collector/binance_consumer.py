@@ -16,7 +16,7 @@ from ledger.utils.price import get_binance_price_stream
 logger = logging.getLogger(__name__)
 
 
-BINANCE_WSS_URL = 'wss://stream.binance.com:9443/stream?streams='
+BINANCE_WSS_URL = 'wss://stream.interface.com:9443/stream?streams='
 
 
 class BinanceConsumer:

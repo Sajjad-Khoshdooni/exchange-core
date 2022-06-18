@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class Transfer(models.Model):
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
-    SELF, BINANCE = 'self', 'binance'
+    SELF, BINANCE = 'self', 'interface'
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)

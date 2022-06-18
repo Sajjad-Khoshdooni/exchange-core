@@ -12,7 +12,7 @@ from collector.utils.price import price_redis
 from ledger.utils.cache import cache_for
 from ledger.utils.price_manager import PriceManager
 
-BINANCE = 'binance'
+BINANCE = 'interface'
 NOBITEX = 'nobitex'
 
 USDT = 'USDT'

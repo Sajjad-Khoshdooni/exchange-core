@@ -4,7 +4,7 @@ from ledger.models import Asset
 from provider.models import ProviderOrder
 
 
-@shared_task(queue='binance')
+@shared_task(queue='interface')
 def auto_hedge_assets():
     for asset in Asset.objects.exclude(symbol__in=[Asset.IRT, Asset.USDT]):
         ProviderOrder.try_hedge_for_new_order(asset, ProviderOrder.HEDGE, dry_run=True)
