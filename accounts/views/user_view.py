@@ -20,37 +20,11 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'on_boarding_flow', 'on_boarding_status', 'possible_time_for_withdraw', 'chat_uuid'
+            'show_margin', 'possible_time_for_withdraw', 'chat_uuid'
         )
 
     def get_possible_time_for_withdraw(self, user: User):
         return possible_time_for_withdraw(user)
-
-    def get_on_boarding_status(self, user: User):
-        has_trade = Order.objects.filter(wallet__account=user.account).count() >= 3
-
-        if has_trade:
-            resp = 'trade_is_done'
-
-            if user.account.trade_volume_irt < Prize.TRADE_THRESHOLD_STEP1:
-                resp = 'waiting_for_trade'
-        else:
-            if user.on_boarding_flow == 'crypto':
-                transfer = Transfer.objects.filter(wallet__account=user.account, deposit=True)
-
-                if transfer:
-                    resp = 'waiting_for_crypto_trade'
-                else:
-                    resp = 'waiting_for_crypto_deposit'
-            else:
-                if user.level == User.LEVEL1:
-                    resp = 'waiting_for_auth'
-                else:
-                    if user.first_fiat_deposit_date:
-                        resp = 'waiting_for_trade'
-                    else:
-                        resp = 'waiting_for_fiat_deposit'
-        return resp
 
 
 class ProfileSerializer(UserSerializer):

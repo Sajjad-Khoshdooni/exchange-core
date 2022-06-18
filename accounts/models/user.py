@@ -124,13 +124,6 @@ class User(AbstractUser):
         verbose_name='امکان برداشت وجه پیش از سپری شدن ۴۸ ساعت از اولین واریز',
     )
 
-    on_boarding_flow = models.CharField(
-        max_length=10,
-        choices=((FIAT, FIAT), (CRYPTO, CRYPTO),),
-        blank=True,
-        default=''
-    )
-
     class Meta:
         verbose_name = _('user')
         verbose_name_plural = _('users')
