@@ -11,7 +11,7 @@ from django.db import models, transaction
 from django.db.models import Sum, F, Q, Max, Min, CheckConstraint, QuerySet
 
 from accounts.gamification.gamify import check_prize_achievements
-from ledger.models import Trx, Wallet
+from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_lock_field
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent
@@ -187,7 +187,7 @@ class Order(models.Model):
         self.lock = to_lock_wallet.lock_balance(lock_amount)
         self.save()
 
-    def release_lock(self, release_amount):
+    def release_lock(self, release_amount: Decimal):
         release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side)
         self.lock.decrease_lock(release_amount)
 

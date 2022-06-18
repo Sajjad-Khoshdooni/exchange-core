@@ -19,6 +19,9 @@ class BalanceLock(models.Model):
     freed = models.BooleanField(default=False, db_index=True)
 
     def release(self):
+        if not self.wallet.should_update_balance_fields():
+            return
+
         self.refresh_from_db()
 
         if self.freed:
@@ -27,20 +30,22 @@ class BalanceLock(models.Model):
         from ledger.models import Wallet
 
         with transaction.atomic():
+            Wallet.objects.filter(id=self.wallet_id).update(locked=F('locked') - self.amount)
+
             self.freed = True
             self.release_date = timezone.now()
             self.save(update_fields=['freed', 'release_date'])
 
-            Wallet.objects.filter(id=self.wallet_id).update(locked=F('locked') - self.amount)
-
     def decrease_lock(self, amount: Decimal):
         assert amount > 0
+        if not self.wallet.should_update_balance_fields():
+            return
 
         from ledger.models import Wallet
 
         with transaction.atomic():
-            BalanceLock.objects.filter(id=self.id).update(amount=F('amount') - amount)
             Wallet.objects.filter(id=self.wallet_id).update(locked=F('locked') - amount)
+            BalanceLock.objects.filter(id=self.id).update(amount=F('amount') - amount)
 
     @classmethod
     def new_lock(cls, wallet, amount: Decimal):
