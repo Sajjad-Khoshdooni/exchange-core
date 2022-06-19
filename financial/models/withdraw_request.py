@@ -86,11 +86,11 @@ class FiatWithdrawRequest(models.Model):
         assert self.status == self.PROCESSING
         from financial.utils.withdraw import FiatWithdraw
 
-        withdraw = FiatWithdraw.get_withdraw_chanel()
+        withdraw_handler = FiatWithdraw.get_withdraw_channel()
 
-        wallet_id = withdraw.get_wallet_id()
+        wallet_id = withdraw_handler.get_wallet_id()
 
-        wallet = withdraw.get_wallet_data(wallet_id)
+        wallet = withdraw_handler.get_wallet_data(wallet_id)
 
         if wallet.free < self.amount:
             logger.info(f'Not enough wallet balance to full fill bank acc')
@@ -102,7 +102,7 @@ class FiatWithdrawRequest(models.Model):
             )
             return
 
-        self.ref_id = self.provider_withdraw_id = withdraw.create_withdraw(
+        self.ref_id = self.provider_withdraw_id = withdraw_handler.create_withdraw(
             wallet_id,
             self.bank_account,
             self.amount,
@@ -119,8 +119,8 @@ class FiatWithdrawRequest(models.Model):
         if self.status != self.PENDING:
             return
 
-        withdraw = FiatWithdraw.get_withdraw_chanel(self.withdraw_channel)
-        status = withdraw.get_withdraw_status(self.id)
+        withdraw_handler = FiatWithdraw.get_withdraw_channel(self.withdraw_channel)
+        status = withdraw_handler.get_withdraw_status(self.id, self.provider_withdraw_id)
 
         logger.info(f'FiatRequest {self.id} status: {status}')
 

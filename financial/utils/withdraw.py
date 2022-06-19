@@ -29,27 +29,26 @@ class FiatWithdraw:
     WITHDRAW_CHANNEL = config('WITHDRAW_CHANNEL')
 
     @classmethod
-    def get_withdraw_chanel(cls, chanel=None):
-        maping = {
+    def get_withdraw_channel(cls, channel: str = None) -> 'FiatWithdraw':
+        mapping = {
             FiatWithdrawRequest.PAYIR: PayirChanel,
-            FiatWithdrawRequest.ZIBAL: ZiblaChanel
+            FiatWithdrawRequest.ZIBAL: ZibalChanel
         }
-        if chanel:
-            return maping[chanel]()
+        if channel:
+            return mapping[channel]()
         else:
-            return maping[cls.WITHDRAW_CHANNEL]()
+            return mapping[cls.WITHDRAW_CHANNEL]()
 
-
-    def get_wallet_id(self):
+    def get_wallet_id(self) -> int:
         raise NotImplementedError
 
     def get_wallet_data(self, wallet_id: int):
         raise NotImplementedError
 
-    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int):
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> str:
         raise NotImplementedError
 
-    def get_withdraw_status(self, request_id: int) -> int:
+    def get_withdraw_status(self, request_id: int, provider_id: str) -> int:
         raise NotImplementedError
 
 
@@ -105,7 +104,7 @@ class PayirChanel(FiatWithdraw):
             free=data['cashoutableAmount'] // 10
         )
 
-    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> int:
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> str:
         data = self.collect_api('/api/v2/cashouts', method='POST', data={
             'walletId': wallet_id,
             'amount': amount * 10,
@@ -114,23 +113,22 @@ class PayirChanel(FiatWithdraw):
             'uid': request_id,
         })
 
-        return data['cashout']['id']
+        return str(data['cashout']['id'])
 
-    @classmethod
-    def get_withdraw_status(cls, request_id: int) -> str:
-        data = cls.collect_api(f'/api/v2/cashouts/track/{request_id}')
+    def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
+        data = self.collect_api(f'/api/v2/cashouts/track/{request_id}')
 
-        maping_status = {
-           3: cls.CANCELED,
-           4: cls.DONE,
-           5: cls.CANCELED
+        mapping_status = {
+           3: self.CANCELED,
+           4: self.DONE,
+           5: self.CANCELED
 
         }
         status = data['cashout']['status']
-        return maping_status.get(int(status), cls.PENDING)
+        return mapping_status.get(int(status), self.PENDING)
 
 
-class ZiblaChanel(FiatWithdraw):
+class ZibalChanel(FiatWithdraw):
 
     def get_wallet_id(self):
         return config('ZIBAL_WALLET_ID', cast=int)
@@ -178,32 +176,31 @@ class ZiblaChanel(FiatWithdraw):
         })
 
         return Wallet(
-            id=data['id'],
+            id=wallet_id,
             name=data['name'],
             balance=data['balance'] // 10,
             free=data['withdrawableBalance'] // 10
         )
 
-    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> int:
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> str:
         data = self.collect_api('/v1/wallet/checkout', method='POST', data={
-            'amount': amount * 10,
             'id': wallet_id,
-            'bankAcount': receiver.iban[2:],
+            'amount': amount * 10,
+            'bankAccount': receiver.iban[2:],
             "checkoutDelay": 0,
-            'description': receiver.user.get_full_name(),
+            'uniqueCode': request_id
         })
 
         return data['id']
 
-    @classmethod
-    def get_withdraw_status(cls, request_id: int) -> int:
-        data = cls.collect_api(f'/v1/report/checkout/inquire/', method='POST', data={
-            "checkoutRequestId": request_id
+    def get_withdraw_status(self, request_id: int, provider_id: str) -> int:
+        data = self.collect_api(f'/v1/report/checkout/inquire/', method='POST', data={
+            "checkoutRequestId": provider_id
         })
 
-        maping_status = {
-            "1": cls.CANCELED,
-            "0": cls.DONE,
+        mapping_status = {
+            "1": self.CANCELED,
+            "0": self.DONE,
         }
         status = data['checkoutStatus']
-        return maping_status.get(status, cls.PENDING)
+        return mapping_status.get(status, self.PENDING)
