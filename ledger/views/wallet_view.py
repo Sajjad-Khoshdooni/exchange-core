@@ -115,33 +115,6 @@ class AssetListSerializer(serializers.ModelSerializer):
         ref_name = 'ledger asset'
 
 
-class TransferSerializer(serializers.ModelSerializer):
-    link = serializers.SerializerMethodField()
-    amount = serializers.SerializerMethodField()
-    fee_amount = serializers.SerializerMethodField()
-    network = serializers.SerializerMethodField()
-    coin = serializers.SerializerMethodField()
-
-    def get_link(self, transfer: Transfer):
-        return transfer.get_explorer_link()
-
-    def get_amount(self, transfer: Transfer):
-        return transfer.wallet.asset.get_presentation_amount(transfer.total_amount - transfer.fee_amount)
-
-    def get_fee_amount(self, transfer: Transfer):
-        return transfer.wallet.asset.get_presentation_amount(transfer.fee_amount)
-
-    def get_coin(self, transfer: Transfer):
-        return transfer.wallet.asset.symbol
-
-    def get_network(self, transfer: Transfer):
-        return transfer.network.symbol
-
-    class Meta:
-        model = Transfer
-        fields = ('created', 'amount', 'status', 'link', 'out_address', 'coin', 'network', 'trx_hash', 'fee_amount')
-
-
 class NetworkAssetSerializer(serializers.ModelSerializer):
     network = serializers.SerializerMethodField()
     network_name = serializers.SerializerMethodField()
@@ -240,9 +213,8 @@ class WalletViewSet(ModelViewSet):
             return Asset.live_objects.all()
 
     def list(self, request, *args, **kwargs):
-        with PriceManager():
+        with PriceManager(fetch_all=True):
             queryset = self.get_queryset()
-            get_prices_dict(coins=list(queryset.values_list('symbol', flat=True)))  # cache prices
 
             serializer = self.get_serializer(queryset, many=True)
             data = serializer.data
@@ -250,7 +222,6 @@ class WalletViewSet(ModelViewSet):
             pin_to_top_wallets = list(filter(lambda w: w['pin_to_top'], data))
             with_balance_wallets = list(filter(lambda w: w['balance'] != '0' and not w['pin_to_top'], data))
             without_balance_wallets = list(filter(lambda w: w['balance'] == '0' and not w['pin_to_top'], data))
-
 
             wallets = pin_to_top_wallets + sorted(with_balance_wallets, key=lambda w: Decimal(w['balance_irt'] or 0), reverse=True) + without_balance_wallets
 
