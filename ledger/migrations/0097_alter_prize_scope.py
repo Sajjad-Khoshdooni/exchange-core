@@ -4,7 +4,7 @@ from django.db import migrations, models
 
 
 def populate_fake_verify_prize(apps, schema_editor):
-    Account = apps.get_model('account', 'Account')
+    Account = apps.get_model('accounts', 'Account')
     Prize = apps.get_model('ledger', 'Prize')
     Asset = apps.get_model('ledger', 'Asset')
 
