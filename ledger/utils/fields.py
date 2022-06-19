@@ -6,7 +6,10 @@ from django.db import models
 from django.db.models import CharField
 from rest_framework import serializers
 
+
+from ledger.utils.cache import cache_for
 from ledger.utils.precision import normalize_fraction
+
 
 PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 
@@ -80,3 +83,11 @@ class SerializerDecimalField(serializers.DecimalField):
             data = Decimal(str(data).strip())
 
         return str(normalize_fraction(data))
+
+
+@cache_for(time=600)
+def get_market_irt_enable():
+    from market.models import PairSymbol
+    from ledger.models import Asset
+    return set(PairSymbol.objects.select_related('base_asset').filter(
+        base_asset__symbol=Asset.IRT).values_list('asset', flat=True))
