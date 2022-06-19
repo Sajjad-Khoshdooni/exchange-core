@@ -86,7 +86,7 @@ class SerializerDecimalField(serializers.DecimalField):
 
 
 @cache_for(time=600)
-def get_market_irt_enable():
+def get_irt_market_assets():
     from market.models import PairSymbol
     from ledger.models import Asset
     return set(PairSymbol.objects.select_related('base_asset').filter(

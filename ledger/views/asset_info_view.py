@@ -13,7 +13,7 @@ from rest_framework.viewsets import ModelViewSet
 from collector.models import CoinMarketCap
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
-from ledger.utils.fields import get_market_irt_enable
+from ledger.utils.fields import get_irt_market_assets
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
 from ledger.utils.price_manager import PriceManager
 
@@ -182,7 +182,7 @@ class AssetsViewSet(ModelViewSet):
         else:
             ctx['bookmark_assets'] = set()
 
-        ctx['enable_irt_market_list'] = get_market_irt_enable()
+        ctx['enable_irt_market_list'] = get_irt_market_assets()
 
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))

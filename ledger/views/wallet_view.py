@@ -9,7 +9,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Wallet, DepositAddress, NetworkAsset
 from ledger.models.asset import Asset
-from ledger.utils.fields import get_market_irt_enable
+from ledger.utils.fields import get_irt_market_assets
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.price import get_trading_price_irt, BUY, SELL
 from ledger.utils.price_manager import PriceManager
@@ -199,7 +199,7 @@ class WalletViewSet(ModelViewSet):
 
         wallets = Wallet.objects.filter(account=self.request.user.account, market=Wallet.SPOT)
         ctx['asset_to_wallet'] = {wallet.asset_id: wallet for wallet in wallets}
-        ctx['enable_irt_market_list'] = get_market_irt_enable()
+        ctx['enable_irt_market_list'] = get_irt_market_assets()
         return ctx
 
     def get_serializer_class(self):
