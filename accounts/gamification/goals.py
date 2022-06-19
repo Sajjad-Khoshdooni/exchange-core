@@ -147,9 +147,20 @@ class InviteGoal(Goal):
     name = 'invite'
     title = 'دعوت از دوستان'
     link = '/account/referral'
-    description = 'دوستان خود را به {} دعوت کنید و جایزه بگیرید.'.format(config('BRAND'))
+    description = '۵ نفر از دوستان خود را به {} دعوت کنید و جایزه بگیرید.'.format(config('BRAND'))
     alert_level = Notification.INFO
 
     def get_progress(self):
         return self.account.get_invited_count()
 
+
+class SetEmailGoal(Goal):
+    type = Goal.BOOL
+    name = 'set_email'
+    title = 'ثبت ایمیل'
+    link = '/account'
+    description = 'برای دریافت اطلاع‌رسانی‌ها و اخبار مهم ایمیل‌تان را وارد کنید.'
+    alert_level = Notification.INFO
+
+    def get_progress(self):
+        return bool(self.account.user.email)

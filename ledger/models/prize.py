@@ -15,12 +15,14 @@ class Prize(models.Model):
     TRADE_THRESHOLD_STEP1 = 2_000_000
     TRADE_THRESHOLD_STEP2 = 20_000_000
 
+    VERIFY_PRIZE = 'level2_verify'
     TRADE_PRIZE_STEP1 = 'trade_2m'
     TRADE_PRIZE_STEP2 = 'trade_s2'
     REFERRAL_TRADE_2M_PRIZE = 'referral_trade_2m'
 
     PRIZE_AMOUNTS = {
-        TRADE_PRIZE_STEP1: 50_000,
+        VERIFY_PRIZE: 30_000,
+        TRADE_PRIZE_STEP1: 30_000,
         REFERRAL_TRADE_2M_PRIZE: 50_000,
         TRADE_PRIZE_STEP2: 100_000,
     }
@@ -31,7 +33,9 @@ class Prize(models.Model):
     scope = models.CharField(
         max_length=25,
         choices=(
+            (VERIFY_PRIZE, VERIFY_PRIZE),
             (TRADE_PRIZE_STEP1, TRADE_PRIZE_STEP1),
+            (TRADE_PRIZE_STEP2, TRADE_PRIZE_STEP2),
             (REFERRAL_TRADE_2M_PRIZE, REFERRAL_TRADE_2M_PRIZE)
         ),
         verbose_name='نوع'

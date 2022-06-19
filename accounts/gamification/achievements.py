@@ -108,3 +108,31 @@ class TradePrizeAchievementStep2(PrizeAchievement):
                 link='/account/tasks'
             )
 
+
+class VerifyPrizeAchievement(PrizeAchievement):
+    scope = Prize.VERIFY_PRIZE
+
+    def achieve_prize(self):
+        with transaction.atomic():
+            prize, _ = Prize.objects.get_or_create(
+                account=self.account,
+                scope=Prize.VERIFY_PRIZE,
+                defaults={
+                    'amount': Prize.PRIZE_AMOUNTS[Prize.VERIFY_PRIZE],
+                    'asset': Asset.get(Asset.SHIB),
+                }
+            )
+
+            title = 'جایزه به شما تعلق گرفت.'
+            description = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
+                humanize_number(prize.asset.get_presentation_amount(prize.amount))
+            )
+
+            Notification.send(
+                recipient=self.account.user,
+                title=title,
+                message=description,
+                level=Notification.SUCCESS,
+                link='/account/tasks'
+            )
+
