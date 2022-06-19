@@ -1,6 +1,7 @@
 import logging
 
-from accounts.gamification.achievements import TradePrizeAchievementStep1, TradePrizeAchievementStep2
+from accounts.gamification.achievements import TradePrizeAchievementStep1, TradePrizeAchievementStep2, \
+    VerifyPrizeAchievement
 from accounts.gamification.goals import GoalGroup, VerifyLevel2Goal, DepositGoal, TradeStep1Goal, InviteGoal, \
     TradeStep2Goal, SetEmailGoal
 from accounts.models import Account
@@ -11,7 +12,15 @@ logger = logging.getLogger(__name__)
 goal_groups = [
     GoalGroup(
         conditions=[
-            VerifyLevel2Goal, DepositGoal, TradeStep1Goal
+            VerifyLevel2Goal
+        ],
+        achievements=[
+            VerifyPrizeAchievement
+        ]
+    ),
+    GoalGroup(
+        conditions=[
+            DepositGoal, TradeStep1Goal
         ],
         achievements=[
             TradePrizeAchievementStep1

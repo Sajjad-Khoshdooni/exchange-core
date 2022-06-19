@@ -158,7 +158,7 @@ class SetEmailGoal(Goal):
     type = Goal.BOOL
     name = 'set_email'
     title = 'ثبت ایمیل'
-    link = '/'
+    link = '/account'
     description = 'برای دریافت اطلاع‌رسانی‌ها و اخبار مهم ایمیل‌تان را وارد کنید.'
     alert_level = Notification.INFO
 
