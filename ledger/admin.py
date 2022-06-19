@@ -368,6 +368,7 @@ class AddressBookAdmin(admin.ModelAdmin):
 @admin.register(models.Prize)
 class PrizeAdmin(admin.ModelAdmin):
     list_display = ('created', 'scope', 'account', 'get_asset_amount')
+    readonly_fields = ('account', 'asset', )
 
     def get_asset_amount(self, prize: Prize):
         return str(get_presentation_amount(prize.amount)) + str(prize.asset)
