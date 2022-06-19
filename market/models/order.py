@@ -16,6 +16,7 @@ from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_lock_field
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
+from ledger.utils.wallet_update_manager import WalletUpdateManager
 from market.models import PairSymbol
 from market.models.referral_trx import ReferralTrx
 from provider.models import ProviderOrder
@@ -178,8 +179,9 @@ class Order(models.Model):
         return amount * price if side == Order.BUY else amount
 
     def submit(self):
-        self.acquire_lock()
-        self.make_match()
+        with WalletUpdateManager():
+            self.acquire_lock()
+            self.make_match()
 
     def acquire_lock(self):
         to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
@@ -232,6 +234,7 @@ class Order(models.Model):
                         self.side == Order.SELL and self.price > trade_price
                 ):
                     continue
+
                 match_amount = min(matching_order.unfilled_amount, unfilled_amount)
                 if match_amount <= 0:
                     continue

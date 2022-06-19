@@ -17,8 +17,9 @@ logger = logging.getLogger(__name__)
 class FakeTrx:
     sender: Wallet
     receiver: Wallet
-    amount: int = 0
-    group_id: str = '00000000-0000-0000-0000-000000000000'
+    amount: Decimal = 0
+    group_id: Union[str,UUID] = '00000000-0000-0000-0000-000000000000'
+    scope: str = ''
 
     def save(self):
         logger.info('ignoring saving null trx')
@@ -29,6 +30,9 @@ class FakeTrx:
             return trx
 
         return FakeTrx(sender=trx.sender, receiver=trx.receiver, amount=trx.amount)
+
+    def to_trx(self) -> 'Trx':
+        return Trx(sender=self.sender, receiver=self.receiver, amount=self.amount, group_id=self.group_id, scope=self.scope)
 
 
 class Trx(models.Model):
@@ -78,46 +82,23 @@ class Trx(models.Model):
             scope: str,
             group_id: Union[str, UUID],
             fake_trx: bool = False
-    ):
+    ) -> FakeTrx:
         assert amount >= 0
 
-        if amount == 0 or sender == receiver or fake_trx:
-            return FakeTrx(
-                sender=sender,
-                receiver=receiver,
-                amount=amount,
-                group_id=group_id
-            )
+        if amount != 0 and sender != receiver and not fake_trx:
+            from ledger.utils.wallet_update_manager import WalletUpdateManager
+            updater = WalletUpdateManager.get_active_or_instant()
+            updater.new_trx(sender=sender, receiver=receiver, amount=amount, scope=scope, group_id=group_id)
 
-        with transaction.atomic():
-            trx, created = Trx.objects.get_or_create(
-                sender=sender,
-                receiver=receiver,
-                scope=scope,
-                group_id=group_id,
-                defaults={
-                    'amount': amount
-                }
-            )
+            sender.balance -= amount
+            receiver.balance += amount
 
-            if created:
-                wallet_changes = []
-
-                if sender.should_update_balance_fields():
-                    wallet_changes.append((sender.id, F('balance') - amount))
-
-                if receiver.should_update_balance_fields():
-                    wallet_changes.append((receiver.id, F('balance') + amount))
-
-                wallet_changes.sort(key=lambda w: w[0])
-
-                for wallet_id, balance_change in wallet_changes:
-                    Wallet.objects.filter(id=wallet_id).update(balance=balance_change)
-
-                sender.balance -= amount
-                receiver.balance += amount
-
-        return trx
+        return FakeTrx(
+            sender=sender,
+            receiver=receiver,
+            amount=amount,
+            group_id=group_id
+        )
 
     def revert(self):
         group_id = uuid4()

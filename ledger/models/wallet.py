@@ -1,4 +1,5 @@
 from decimal import Decimal
+from uuid import UUID
 
 from django.conf import settings
 from django.db import models
@@ -6,7 +7,6 @@ from django.db.models import CheckConstraint, Q, F
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
-from ledger.models import BalanceLock
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt, get_tether_irt_price
 
@@ -55,7 +55,7 @@ class Wallet(models.Model):
     def get_locked(self) -> Decimal:
         return self.locked
 
-    def lock_balance(self, amount: Decimal) -> BalanceLock:
+    def lock_balance(self, key: UUID, amount: Decimal) -> None:
         assert amount > 0
 
         if self.should_update_balance_fields():
@@ -63,7 +63,9 @@ class Wallet(models.Model):
 
         self.locked += amount
 
-        return BalanceLock.new_lock(wallet=self, amount=amount)
+        from ledger.utils.wallet_update_manager import WalletUpdateManager
+        updater = WalletUpdateManager.get_active_or_instant()
+        updater.new_lock(key=key, wallet=self, amount=amount)
 
     def get_free(self) -> Decimal:
         return self.balance - self.locked

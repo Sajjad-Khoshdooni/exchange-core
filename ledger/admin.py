@@ -289,14 +289,6 @@ class TransferAdmin(admin.ModelAdmin):
     readonly_fields = ('deposit_address', 'network', 'wallet', 'lock', 'provider_transfer')
 
 
-@admin.register(models.BalanceLock)
-class BalanceLockAdmin(admin.ModelAdmin):
-    list_display = ('created', 'release_date', 'wallet', 'amount', 'freed')
-    list_filter = ('freed', 'wallet')
-    ordering = ('-created', )
-    readonly_fields = ('wallet', )
-
-
 class CryptoAccountTypeFilter(SimpleListFilter):
     title = 'type' # or use _('country') for translated title
     parameter_name = 'type'
