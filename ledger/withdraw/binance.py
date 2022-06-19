@@ -12,13 +12,14 @@ from provider.models import ProviderTransfer, ProviderHedgedOrder
 logger = logging.getLogger(__name__)
 
 
-def handle_binance_withdraw(transfer_id: int):
+def handle_withdraw(transfer_id: int):
     if settings.DEBUG_OR_TESTING:
         return
 
     logger.info('withdraw handling transfer_id = %d' % transfer_id)
 
     transfer = Transfer.objects.get(id=transfer_id)
+    handler = transfer.asset.get_hedger()
 
     if transfer.handling:
         logger.info('ignored because of handling flag')
@@ -33,11 +34,11 @@ def handle_binance_withdraw(transfer_id: int):
         assert transfer.status == transfer.PROCESSING
         assert not transfer.provider_transfer
 
-        balance_map = BinanceSpotHandler.get_free_dict()
+        balance_map = handler.get_free_dict()
 
         coin = transfer.asset.symbol
 
-        binance_fee = BinanceSpotHandler.get_withdraw_fee(transfer.asset.symbol, transfer.network.symbol)
+        binance_fee = handler.get_withdraw_fee(transfer.asset.symbol, transfer.network.symbol)
         amount = transfer.amount + binance_fee
 
         if balance_map[coin] < amount:
@@ -64,7 +65,7 @@ def handle_binance_withdraw(transfer_id: int):
                 logger.info('waiting to finish buying...')
                 time.sleep(1)
 
-        balance_map = BinanceSpotHandler.get_free_dict()
+        balance_map = handler.get_free_dict()
 
         if balance_map[coin] < amount:
             logger.info('ignored withdrawing because of insufficient spot balance')
@@ -78,8 +79,9 @@ def handle_binance_withdraw(transfer_id: int):
 
 
 def withdraw(transfer: Transfer):
-    binance_fee = BinanceSpotHandler.get_withdraw_fee(transfer.wallet.asset.symbol, transfer.network.symbol)
-    withdraw_amount = transfer.amount + binance_fee
+    handler = transfer.asset.get_hedger()
+    fee = handler.get_withdraw_fee(transfer.wallet.asset.symbol, transfer.network.symbol)
+    withdraw_amount = transfer.amount + fee
 
     logger.info('withdrawing %s %s in %s network' % (withdraw_amount, transfer.asset, transfer.network))
 

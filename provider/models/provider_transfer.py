@@ -40,8 +40,8 @@ class ProviderTransfer(models.Model):
         transfer = ProviderTransfer.objects.create(
             asset=asset, network=network, amount=amount, address=address, caller_id=caller_id
         )
-
-        resp = BinanceSpotHandler.withdraw(
+        handler = Asset.get_hedger()
+        resp = handler.withdraw(
             coin=asset.symbol,
             network=network.symbol,
             address=address,

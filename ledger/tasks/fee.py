@@ -13,7 +13,8 @@ def update_network_fees():
     network_assets = NetworkAsset.objects.all()
 
     for ns in network_assets:
-        info = BinanceSpotHandler.get_network_info(ns.asset.symbol, ns.network.symbol)
+        handler = ns.asset
+        info = handler.get_network_info(ns.asset.symbol, ns.network.symbol)
 
         if info:
             symbol_pair = (ns.network.symbol, ns.asset.symbol)

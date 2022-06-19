@@ -11,9 +11,10 @@ from provider.exchanges.sdk.binance_sdk import get_timestamp
 
 if not settings.DEBUG:
     KUCOIN_SPOT_BASE_URL = "https://api.kucoin.com"
-    KUCOIN_FUTURES_BASE_URL = "https://api-futures.kucoin.com/"
+    KUCOIN_FUTURES_BASE_URL = ''
 else:
-    KUCOIN_SPOT_BASE_URL = "https://api.kucoin.com"
+    KUCOIN_SPOT_BASE_URL = " https://openapi-sandbox.kucoin.com"
+    KUCOIN_FUTURES_BASE_URL = ''
 
 
 def kucoin_spot_send_public_request(endpoint, method='POST', **kwargs):
@@ -47,7 +48,10 @@ def add_sign_kucoin(params_str, timestamp, http_method):
 def kucoin_spot_send_signed_request(http_method, url_path, **kwargs):
     timestamp = get_timestamp()
 
-    url = KUCOIN_SPOT_BASE_URL + url_path
+    if kwargs.get('futures'):
+        url = KUCOIN_FUTURES_BASE_URL + url_path
+    else:
+        url = KUCOIN_SPOT_BASE_URL + url_path
 
     data = kwargs.pop('data', {})
 
@@ -57,17 +61,10 @@ def kucoin_spot_send_signed_request(http_method, url_path, **kwargs):
     if http_method in ('GET', 'DELETE'):
         headers = add_sign_kucoin(str_to_sign, timestamp, http_method)
         response = requests.request('get', url, headers=headers)
-        return response
+        return response.json().get('data')
     if http_method in ('POST', 'PUT'):
         str_to_sign += data_json
         headers = add_sign_kucoin(str_to_sign, timestamp, http_method)
         response = requests.request(http_method, url, headers=headers, json=data, data=data_json)
-        return response
+        return response.json().get('data')
 
-
-def kucoin_futures_send_public_request():
-    pass
-
-
-def kucoin_futures_send_signed_request():
-    pass

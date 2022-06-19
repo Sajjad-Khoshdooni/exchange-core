@@ -13,7 +13,7 @@ def inject_tether_to_futures():
     futures_margin_ratio = float(details.get('totalMarginBalance', 0)) / float(details.get('totalInitialMargin', 1e-10))
 
     if futures_margin_ratio < 2:
-        balance_map = BinanceSpotHandler.get_free_dict()
+        balance_map = BinanceSpotHandler().get_free_dict()
         usdt_amount = min(balance_map[Asset.USDT], 2000)
 
         if usdt_amount > 1:

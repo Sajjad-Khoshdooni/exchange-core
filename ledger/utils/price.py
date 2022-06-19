@@ -11,6 +11,7 @@ from collector.price.grpc_client import gRPCClient
 from collector.utils.price import price_redis
 from ledger.utils.cache import cache_for
 from ledger.utils.price_manager import PriceManager
+from provider.exchanges import BinanceSpotHandler
 
 BINANCE = 'interface'
 NOBITEX = 'nobitex'
@@ -47,34 +48,8 @@ SIDE_MAP = {
 }
 
 
-def get_trading_symbol_binance(coin: str):
-    if coin == 'LUNC':
-        base = 'BUSD'
-    else:
-        base = 'USDT'
-
-    if coin == 'BTT':
-        coin = 'BTTC'
-
-    return coin + base
-
-
-def get_trading_symbol_kucion(coin: str):
-
-    base = 'USDT'
-
-    return coin + '-' + base
-
-
-def get_trading_symbol(coin: str, exchange=BINANCE) :
-    if exchange == BINANCE:
-        return get_trading_symbol_binance(coin=coin)
-    if exchange == KUCOIN:
-        return get_trading_symbol_kucion(coin=coin)
-
-
 def get_binance_price_stream(coin: str):
-    return get_trading_symbol(coin).lower()
+    return BinanceSpotHandler().get_trading_symbol(coin).lower()
 
 
 def get_asset_diff_multiplier(coin: str):

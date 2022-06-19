@@ -10,7 +10,7 @@ from accounts.models import Account
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory
 from ledger.utils.overview import AssetOverview
-from ledger.utils.price import get_trading_price_usdt, BUY, get_trading_symbol
+from ledger.utils.price import get_trading_price_usdt, BUY
 from provider.exchanges import BinanceFuturesHandler
 from ledger.utils.precision import humanize_number
 from provider.models import ProviderOrder
@@ -134,7 +134,7 @@ class AssetAdmin(AdvancedAdmin):
             hedger = asset.get_hedger()
 
             if hedger:
-                symbol = get_trading_symbol(asset.symbol)
+                symbol = hedger.get_trading_symbol(coin=asset.symbol)
                 return hedger.get_step_size(symbol)
 
     get_hedge_threshold.short_description = 'hedge threshold'

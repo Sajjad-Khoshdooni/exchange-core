@@ -1,13 +1,15 @@
 
 from decimal import Decimal
 
+from django.conf import settings
+
 from ledger.utils.precision import decimal_to_str
 from provider.exchanges.interface.binance_interface import ExchangeHandler, SELL, BUY, MARKET, LIMIT, HOUR
 from provider.exchanges.sdk.kucoin_sdk import kucoin_spot_send_signed_request, kucoin_spot_send_public_request
 
 
 class KucoinSpotHandler(ExchangeHandler):
-
+    MAIN, TRADE, MARGIN, = 'main', 'trade', 'margin',
     order_url = '/api/v1/orders'
     MARKET_TYPE = 'spot'
 
@@ -49,8 +51,11 @@ class KucoinSpotHandler(ExchangeHandler):
         else:
             return kucoin_spot_send_public_request(url, data=data)
 
-    @classmethod
-    def place_order(cls, symbol: str, side: str, amount: Decimal, order_type: str = MARKET,
+    def get_trading_symbol(self, coin: str) -> str:
+
+        return coin + '-' + 'USDT'
+
+    def place_order(self, symbol: str, side: str, amount: Decimal, order_type: str = MARKET,
                     client_order_id: str = None) -> dict:
 
         side = side.upper()
@@ -69,14 +74,9 @@ class KucoinSpotHandler(ExchangeHandler):
         if client_order_id:
             data['clientOid'] = client_order_id
 
-        return (cls.collect_api(url=cls.order_url, data=data) or {})
+        return self.collect_api(url=self.order_url, data=data) or {}
 
-    @classmethod
-    def get_account_details(cls):
-        return cls.collect_api(url='/api/v1/accounts', method='GET') or {}
-
-    @classmethod
-    def withdraw(cls, coin: str, network: str, address: str, amount: Decimal, address_tag: str = None,
+    def withdraw(self, coin: str, network: str, address: str, amount: Decimal, address_tag: str = None,
                  client_id: str = None) -> dict:
 
         data = {
@@ -87,7 +87,15 @@ class KucoinSpotHandler(ExchangeHandler):
             'memo': address_tag,
             'withdrawOrderId': client_id
         }
-        return cls.collect_api('/api/v1/withdrawals', method='POST', data=data)
+        return self.collect_api('/api/v1/withdrawals', method='POST', data=data)
+
+    @classmethod
+    def get_account_details(cls):
+        return cls.collect_api(url='/api/v1/accounts', method='GET') or {}
+
+    def get_free_dict(self):
+        balances_list = self.get_account_details()
+        return {b['currency']: Decimal(b['available']) for b in balances_list}
 
     @classmethod
     def get_all_coins(cls):
@@ -95,42 +103,63 @@ class KucoinSpotHandler(ExchangeHandler):
 
     @classmethod
     def get_coin_data(cls, coin: str):
-        # info = list(filter(lambda d: d['currency'] == coin, cls.get_all_coins().json().get('data')))
-        # if not info:
-        #     return
-        #
-        # return info[0]
         return cls.collect_api('/api/v2/currencies/{}'.format(coin),
                                method='GET',
                                cache_timeout=HOUR).json().get('data', {})
 
-    @classmethod
-    def get_network_info(cls, coin: str, network: str):
-        chains = cls.get_coin_data(coin=coin).get('chains')
+    def get_network_info(self, coin: str, network: str):
+        chains = self.get_coin_data(coin=coin).get('chains')
         info = list(filter(lambda d: d['chainName'] == network, chains))
         return info
 
-    @classmethod
-    def get_withdraw_fee(cls, coin: str, network: str):
-        info = cls.get_network_info(coin, network)
+    def get_withdraw_fee(self, coin: str, network: str):
+        info = self.get_network_info(coin, network)
         return Decimal(info[0].get('withdrawalMinFee'))
 
     @classmethod
-    def transfer(cls, asset: str, amount: float, to: str, clientOid:str, _from='mian'):
+    def transfer(cls, asset: str, amount: float, to: str, client_oid: str, _from=MAIN):
         return cls.collect_api(
-            f'/api/v2/accounts/inner-transfer',
+            url='/api/v2/accounts/inner-transfer',
             method='POST',
             data={
-                'clientOid': clientOid,
+                'clientOid': client_oid,
                 'currency': asset,
                 'from': _from,
                 'to': to,
                 'amount': amount,
             }
         )
+
     @classmethod
     def get_symbol_data(cls, symbol: str):
-        data = cls.collect_api('')
+        data = cls.collect_api('/api/v1/symbols', method='GET').json().get('data')
+        coin_data = list(filter(lambda d: d['symbol'] == symbol, data))
+        if not coin_data:
+            return
+        return coin_data
+
+    @classmethod
+    def get_step_size(cls, symbol: str) -> Decimal:
+        data = cls.get_symbol_data(symbol=symbol)
+        return data[0].get('quoteIncrement')
+
+    @classmethod
+    def get_lot_min_quantity(cls, symbol: str) ->Decimal:
+        data = cls.get_symbol_data(symbol=symbol)
+        return data[0].get('quoteMinSize')
+
 
 class KucoinFuturesHandler(KucoinSpotHandler):
+    order_url = '/api/v1/orders'
     pass
+
+    @classmethod
+    def _collect_api(cls, url: str, method: str = 'POST', data: dict = None, signed: bool = True):
+        if settings.DEBUG_OR_TESTING:
+            return {}
+        data = data or {}
+
+        if signed:
+            return kucoin_spot_send_signed_request(method, url, data=data, futures=True)
+        else:
+            return kucoin_spot_send_public_request(url, data=data, futures=True)

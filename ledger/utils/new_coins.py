@@ -2,7 +2,6 @@ import math
 from decimal import Decimal
 
 from ledger.models import Asset, Network, NetworkAsset
-from ledger.utils.price import get_trading_symbol
 from market.utils.fix import create_missing_symbols
 from provider.exchanges.interface.binance_interface import BinanceSpotHandler, BinanceFuturesHandler
 
@@ -14,7 +13,7 @@ def add_candidate_coins(coins: list):
     for coin in coins:
         coin = coin.upper()
 
-        symbol = get_trading_symbol(coin)
+        symbol = BinanceSpotHandler().get_trading_symbol(coin)
         spot = BinanceSpotHandler.get_symbol_data(symbol)
 
         if not spot or spot['status'] != 'TRADING':

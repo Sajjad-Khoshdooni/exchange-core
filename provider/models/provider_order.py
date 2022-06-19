@@ -10,15 +10,13 @@ from yekta_config.config import config
 from accounts.models import Account
 from ledger.models import Asset, Trx
 from ledger.utils.fields import get_amount_field
-from ledger.utils.price import get_trading_price_usdt, SELL, get_trading_symbol
+from ledger.utils.price import get_trading_price_usdt, SELL
 
 
 logger = logging.getLogger(__name__)
 
 
 class ProviderOrder(models.Model):
-
-    EXCHANGE = config('EXCHANGE')
 
     SPOT, MARGIN, FUTURE = 'spot', 'mar', 'fut'
 
@@ -31,7 +29,7 @@ class ProviderOrder(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
 
-    exchange = models.CharField(max_length=8, default=EXCHANGE)
+    exchange = models.CharField(max_length=8)
     market = models.CharField(
         max_length=4,
         default=FUTURE,
@@ -63,7 +61,7 @@ class ProviderOrder(models.Model):
                 asset=asset, amount=amount, side=side, scope=scope, market=market
             )
 
-            symbol = cls.get_trading_symbol(asset)
+            symbol = hedger.get_trading_symbol(asset.symbol)
 
             if market == cls.FUTURE and asset.symbol == 'SHIB':
                 symbol = symbol.replace('SHIB', '1000SHIB')
@@ -75,23 +73,6 @@ class ProviderOrder(models.Model):
                 amount=amount,
                 client_order_id=order.id
             )
-
-            # if market == cls.FUTURE:
-            #     resp = BinanceFuturesHandler.place_order(
-            #         symbol=symbol,
-            #         side=side,
-            #         amount=amount,
-            #         client_order_id=order.id
-            #     )
-            # elif market == cls.SPOT:
-            #     resp = BinanceSpotHandler.place_order(
-            #         symbol=symbol,
-            #         side=side,
-            #         amount=amount,
-            #         client_order_id=order.id
-            #     )
-            # else:
-            #     raise NotImplementedError
 
             order.order_id = resp['orderId']
             order.save()
@@ -136,14 +117,11 @@ class ProviderOrder(models.Model):
 
         return system_balance + orders_amount
 
-    @classmethod
-    def get_trading_symbol(cls, asset: Asset) -> str:
-        return get_trading_symbol(coin=asset.symbol, exchange=cls.EXCHANGE)
 
     @classmethod
     def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '', dry_run: bool = False) -> bool:
         # todo: this method should not called more than once at a single time
-
+        hedger = asset.get_hedger()
         if settings.DEBUG_OR_TESTING:
             return True
 
@@ -153,19 +131,10 @@ class ProviderOrder(models.Model):
         to_buy = amount if side == cls.BUY else -amount
         hedge_amount = cls.get_hedge(asset) - to_buy
 
-        symbol = cls.get_trading_symbol(asset)
+        symbol = hedger.get_trading_symbol(asset.symbol)
 
         handler = asset.get_hedger()
         market = handler.MARKET_TYPE
-
-        # if asset.hedge_method == Asset.HEDGE_BINANCE_FUTURE:
-        #     handler = BinanceFuturesHandler
-        #     market = cls.FUTURE
-        # elif asset.hedge_method == Asset.HEDGE_BINANCE_SPOT:
-        #     handler = BinanceSpotHandler
-        #     market = cls.SPOT
-        # else:
-        #     raise NotImplementedError
 
         step_size = handler.get_step_size(symbol)
 
