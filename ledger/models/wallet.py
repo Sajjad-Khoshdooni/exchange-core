@@ -101,7 +101,9 @@ class Wallet(models.Model):
             return balance_usdt * tether_irt
 
     def has_balance(self, amount: Decimal, raise_exception: bool = False) -> bool:
-        if amount < 0:
+        if not self.check_balance:
+            can = True
+        elif amount < 0:
             can = False
         else:
             can = self.get_free() >= amount
@@ -136,6 +138,3 @@ class Wallet(models.Model):
                 group_id=uuid4(),
                 scope=Trx.AIRDROP
             )
-
-    def should_update_balance_fields(self):
-        return not (self.account.type == Account.SYSTEM and self.account.primary)

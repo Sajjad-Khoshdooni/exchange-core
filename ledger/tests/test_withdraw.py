@@ -18,6 +18,8 @@ class WithdrawTestCase(TestCase):
         self.address_book_without_coin = new_address_book(account=self.account, network=self.network)
         self.usdt = Asset.get(Asset.USDT)
 
+        new_network_asset(self.usdt, self.network)
+
         self.usdt.get_wallet(self.user.account).airdrop(100000)
 
     def test_withdraw_without_addressbook(self):
@@ -50,7 +52,7 @@ class WithdrawTestCase(TestCase):
         })
         self.assertEqual(resp.status_code, 400)
 
-    def test_withdraw_with_coin_with_addressbook_without_coin(self):
+    def test_withdraw_with_coin_with_address_book_without_coin(self):
         amount = '50'
         resp = self.client.post('/api/v1/withdraw/', {
             'amount': amount,
@@ -60,7 +62,7 @@ class WithdrawTestCase(TestCase):
         })
         self.assertEqual(resp.status_code, 201)
 
-    def test_withdraw_with_coin_with_addressbook_with_coin(self):
+    def test_withdraw_with_coin_with_address_book_with_coin(self):
         amount = '50'
         resp = self.client.post('/api/v1/withdraw/', {
             'amount': amount,

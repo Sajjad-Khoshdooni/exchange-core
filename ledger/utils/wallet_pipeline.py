@@ -15,7 +15,7 @@ def sorted_flatten_dict(data: dict) -> list:
 
 
 class WalletPipeline(Atomic):
-    def __init__(self, verbose: bool = False):
+    def __init__(self, verbose: bool = True):
         super(WalletPipeline, self).__init__(using=None, savepoint=True, durable=False)
         self.verbose = verbose
 
@@ -27,7 +27,7 @@ class WalletPipeline(Atomic):
 
         self._trxs = []
 
-        self._locks = []
+        self._locks = {}
         self._locks_amount = defaultdict(Decimal)
 
         return self
@@ -42,7 +42,13 @@ class WalletPipeline(Atomic):
         from ledger.models import BalanceLock
 
         assert amount > 0
-        if not wallet.should_update_balance_fields():
+
+        if isinstance(key, str):
+            key = UUID(key)
+
+        assert isinstance(key, UUID)
+
+        if not wallet.check_balance:
             return
 
         wallet.locked += amount
@@ -54,7 +60,7 @@ class WalletPipeline(Atomic):
             original_amount=amount
         )
 
-        self._locks.append(lock)
+        self._locks[key] = lock
         self._wallet_locks[wallet.id] += amount
 
     def release_lock(self, key: UUID, amount: Union[Decimal, int] = None):
@@ -62,16 +68,35 @@ class WalletPipeline(Atomic):
 
         assert amount is None or amount >= 0
 
-        lock = BalanceLock.objects.filter(key=key).first()
+        if isinstance(key, str):
+            key = UUID(key)
 
-        if not lock:
-            return
+        assert isinstance(key, UUID)
 
-        if amount is None:
-            amount = lock.amount
+        # check first new locks
+        if key in self._locks:
+            lock = self._locks[key]
 
-        self._locks_amount[key] -= amount
-        self._wallet_locks[lock.wallet_id] -= amount
+            if amount is None:
+                amount = lock.amount
+
+            lock.amount -= amount
+            self._wallet_locks[lock.wallet_id] -= amount
+
+            if lock.amount == 0:
+                del self._locks[key]
+
+        else:
+            lock = BalanceLock.objects.filter(key=key).first()
+
+            if not lock:
+                return
+
+            if amount is None:
+                amount = lock.amount
+
+            self._locks_amount[key] -= amount
+            self._wallet_locks[lock.wallet_id] -= amount
 
     def new_trx(self, sender, receiver, amount: Union[Decimal, int], scope: str, group_id: UUID):
         from ledger.models.trx import Trx
@@ -101,10 +126,12 @@ class WalletPipeline(Atomic):
         updates = defaultdict(dict)
 
         for wallet_id, balance in balances:
-            updates[wallet_id]['balance'] = F('balance') + balance
+            if balance:
+                updates[wallet_id]['balance'] = F('balance') + balance
 
         for wallet_id, lock in locks:
-            updates[wallet_id]['locked'] = F('locked') + lock
+            if lock:
+                updates[wallet_id]['locked'] = F('locked') + lock
 
         return updates
 
@@ -114,7 +141,8 @@ class WalletPipeline(Atomic):
         updates = defaultdict(dict)
 
         for lock_id, amount in locks:
-            updates[lock_id]['amount'] = F('amount') + amount
+            if amount:
+                updates[lock_id]['amount'] = F('amount') + amount
 
         return updates
 
@@ -128,14 +156,14 @@ class WalletPipeline(Atomic):
         from ledger.models import Wallet, BalanceLock
         from ledger.models.trx import Trx
 
-        for wallet_id, wallet_update in sorted_flatten_dict(self._build_wallet_updates()):
-            Wallet.objects.filter(id=wallet_id).update(**wallet_update)
-
         for lock_id, lock_update in self._build_lock_updates().items():
             BalanceLock.objects.filter(key=lock_id).update(**lock_update)
+
+        for wallet_id, wallet_update in sorted_flatten_dict(self._build_wallet_updates()):
+            Wallet.objects.filter(id=wallet_id).update(**wallet_update)
 
         if self._trxs:
             Trx.objects.bulk_create(self._trxs)
 
         if self._locks:
-            BalanceLock.objects.bulk_create(self._locks)
+            BalanceLock.objects.bulk_create(list(self._locks.values()))
