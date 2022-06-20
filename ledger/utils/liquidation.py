@@ -5,7 +5,8 @@ from accounts.models import Account
 from ledger.models import Wallet, Trx, OTCTrade, OTCRequest, Asset
 from ledger.models.margin import MarginLiquidation
 from ledger.utils.margin import MarginInfo
-from ledger.utils.price import get_trading_price_usdt, SELL, BUY
+from ledger.utils.price import get_trading_price_usdt, BUY
+from ledger.utils.wallet_pipeline import WalletPipeline
 from provider.utils import round_with_step_size
 
 logger = logging.getLogger(__name__)
@@ -95,13 +96,14 @@ class LiquidationEngine:
                     )
                 )
 
-                Trx.transaction(
-                    sender=margin_asset_to_wallet[asset],
-                    receiver=borrowed_asset_to_wallet[asset],
-                    amount=amount,
-                    scope=Trx.FAST_LIQUID,
-                    group_id=self.margin_liquidation.group_id
-                )
+                with WalletPipeline() as pipeline:
+                    pipeline.new_trx(
+                        sender=margin_asset_to_wallet[asset],
+                        receiver=borrowed_asset_to_wallet[asset],
+                        amount=amount,
+                        scope=Trx.FAST_LIQUID,
+                        group_id=self.margin_liquidation.group_id
+                    )
 
                 self.liquidation_amount -= amount * price
 
@@ -205,13 +207,14 @@ class LiquidationEngine:
 
             sender = wallet.asset.get_wallet(self.account, market=Wallet.MARGIN)
 
-            Trx.transaction(
-                sender=sender,
-                receiver=wallet,
-                amount=min(transfer_amount, sender.balance),
-                scope=Trx.LIQUID,
-                group_id=self.margin_liquidation.group_id,
-            )
+            with WalletPipeline() as pipeline:
+                pipeline.new_trx(
+                    sender=sender,
+                    receiver=wallet,
+                    amount=min(transfer_amount, sender.balance),
+                    scope=Trx.LIQUID,
+                    group_id=self.margin_liquidation.group_id,
+                )
 
             tether_amount = margin_tether_wallet.get_balance()
             self.liquidation_amount -= amount

@@ -7,6 +7,7 @@ from django.db.models import CheckConstraint, Q
 from accounts.models import Account
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_amount_field
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ class Prize(models.Model):
         unique_together = [('account', 'scope', 'variant')]
         constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_ledger_prize_amount', ), ]
 
-    def build_trx(self):
+    def build_trx(self, pipeline: WalletPipeline):
         if self.redeemed:
             logger.info('Ignored redeem prize because it is redeemed before.')
             return
@@ -61,7 +62,7 @@ class Prize(models.Model):
         self.save(update_fields=['redeemed'])
 
         system = Account.system()
-        Trx.transaction(
+        pipeline.new_trx(
             group_id=self.group_id,
             sender=self.asset.get_wallet(system),
             receiver=self.asset.get_wallet(self.account),

@@ -1,6 +1,6 @@
 import logging
 
-from django.db import models, transaction
+from django.db import models
 from django.utils import timezone
 from yekta_config.config import config
 
@@ -13,8 +13,9 @@ from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
-from ledger.utils.fields import DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
+from ledger.utils.fields import DONE, get_group_id_field, PENDING, CANCELED
 from ledger.utils.precision import humanize_number
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,6 @@ class FiatWithdrawRequest(models.Model):
         max_length=10,
         choices=[(PROCESSING, 'در حال پردازش'), (PENDING, 'در انتظار'), (DONE, 'انجام شده'), (CANCELED, 'لغو شده')]
     )
-    lock = get_lock_field()
 
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
     ref_doc = models.FileField(verbose_name='رسید انتقال', null=True, blank=True)
@@ -56,7 +56,7 @@ class FiatWithdrawRequest(models.Model):
     def total_amount(self):
         return self.amount + self.fee_amount
 
-    def build_trx(self):
+    def build_trx(self, pipeline: WalletPipeline):
         asset = Asset.get(Asset.IRT)
         out_wallet = asset.get_wallet(Account.out())
 
@@ -64,7 +64,7 @@ class FiatWithdrawRequest(models.Model):
 
         sender, receiver = asset.get_wallet(account), out_wallet
 
-        Trx.transaction(
+        pipeline.new_trx(
             group_id=self.group_id,
             sender=sender,
             receiver=receiver,
@@ -73,7 +73,7 @@ class FiatWithdrawRequest(models.Model):
         )
 
         if self.fee_amount:
-            Trx.transaction(
+            pipeline.new_trx(
                 group_id=self.group_id,
                 sender=sender,
                 receiver=asset.get_wallet(Account.system()),
@@ -86,11 +86,11 @@ class FiatWithdrawRequest(models.Model):
         assert self.status == self.PROCESSING
         from financial.utils.withdraw import FiatWithdraw
 
-        withdraw = FiatWithdraw.get_withdraw_chanel()
+        withdraw_handler = FiatWithdraw.get_withdraw_channel()
 
-        wallet_id = withdraw.get_wallet_id()
+        wallet_id = withdraw_handler.get_wallet_id()
 
-        wallet = withdraw.get_wallet_data(wallet_id)
+        wallet = withdraw_handler.get_wallet_data(wallet_id)
 
         if wallet.free < self.amount:
             logger.info(f'Not enough wallet balance to full fill bank acc')
@@ -102,7 +102,7 @@ class FiatWithdrawRequest(models.Model):
             )
             return
 
-        self.ref_id = self.provider_withdraw_id = withdraw.create_withdraw(
+        self.ref_id = self.provider_withdraw_id = withdraw_handler.create_withdraw(
             wallet_id,
             self.bank_account,
             self.amount,
@@ -119,8 +119,8 @@ class FiatWithdrawRequest(models.Model):
         if self.status != self.PENDING:
             return
 
-        withdraw = FiatWithdraw.get_withdraw_chanel(self.withdraw_channel)
-        status = withdraw.get_withdraw_status(self.id)
+        withdraw_handler = FiatWithdraw.get_withdraw_channel(self.withdraw_channel)
+        status = withdraw_handler.get_withdraw_status(self.id, self.provider_withdraw_id)
 
         logger.info(f'FiatRequest {self.id} status: {status}')
 
@@ -190,12 +190,12 @@ class FiatWithdrawRequest(models.Model):
 
         assert self.status not in (CANCELED, self.DONE)
 
-        with transaction.atomic():
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
             if new_status in (self.CANCELED, self.DONE):
-                self.lock.release()
+                pipeline.release_lock(self.group_id)
 
             if new_status == DONE:
-                self.build_trx()
+                self.build_trx(pipeline)
 
             if new_status == self.PENDING:
                 self.withdraw_datetime = timezone.now()
