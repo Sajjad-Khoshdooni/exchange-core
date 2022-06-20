@@ -62,9 +62,9 @@ class WalletPipeline(Atomic):
 
         assert amount is None or amount >= 0
 
-        lock = BalanceLock.objects.get(key=key)
+        lock = BalanceLock.objects.filter(key=key).first()
 
-        if not lock.wallet.should_update_balance_fields():
+        if not lock:
             return
 
         if amount is None:
@@ -75,12 +75,10 @@ class WalletPipeline(Atomic):
 
     def new_trx(self, sender, receiver, amount: Union[Decimal, int], scope: str, group_id: UUID):
         from ledger.models.trx import Trx
-
-        if amount == 0:
-            return
-
         assert sender.asset == receiver.asset
-        assert sender != receiver
+
+        if amount == 0 or sender == receiver:
+            return
 
         self._trxs.append(Trx(
             sender=sender,

@@ -120,7 +120,7 @@ class OTCTrade(models.Model):
                 from market.models import FillOrder
                 self.change_status(self.DONE)
                 self.create_ledger(pipeline)
-                FillOrder.create_for_otc_trade(self)
+                FillOrder.create_for_otc_trade(self, pipeline)
             else:
                 self.change_status(self.CANCELED)
 

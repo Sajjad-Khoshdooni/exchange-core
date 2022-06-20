@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models import CheckConstraint, Q
 
 from ledger.models import Trx, Asset, Wallet
+from ledger.models.trx import FakeTrx
 from ledger.utils.fields import get_amount_field
 
 logger = logging.getLogger(__name__)
@@ -39,19 +40,19 @@ class ReferralTrx(models.Model):
         self.trx_dict = None
 
     @staticmethod
-    def get_trade_referrals(maker_fee, taker_fee, trade_price, tether_irt, is_buyer_maker: bool):
+    def get_trade_referrals(pipeline, maker_fee, taker_fee, trade_price, tether_irt, is_buyer_maker: bool):
         irt_asset = Asset.get(symbol=Asset.IRT)
         maker_referral = ReferralTrx().init_trx(
-            maker_fee, trade_price, tether_irt, irt_asset=irt_asset, sell=not is_buyer_maker
+            pipeline, maker_fee, trade_price, tether_irt, irt_asset=irt_asset, sell=not is_buyer_maker
         )
         taker_referral = ReferralTrx().init_trx(
-            taker_fee, trade_price, tether_irt, irt_asset=irt_asset, sell=is_buyer_maker
+            pipeline, taker_fee, trade_price, tether_irt, irt_asset=irt_asset, sell=is_buyer_maker
         )
 
         TradeReferral = namedtuple("TradeReferral", "maker taker")
         return TradeReferral(maker_referral, taker_referral)
 
-    def init_trx(self, fee_trx, trade_price: Decimal, tether_factor: Decimal, sell: bool, irt_asset=None):
+    def init_trx(self, pipeline, fee_trx, trade_price: Decimal, tether_factor: Decimal, sell: bool, irt_asset=None):
         if not fee_trx or not fee_trx.amount:
             return
 
@@ -72,13 +73,17 @@ class ReferralTrx(models.Model):
 
         self.trx_dict = {}
         for receiver_type in [self.TRADER, self.REFERRER]:
-            self.trx_dict[receiver_type] = Trx.transaction(
-                sender=system_wallet,
-                receiver=self.get_receiver(irt_asset, fee_trx, receiver_type),
-                amount=amount * self.get_share_factor(referral, receiver_type),
-                group_id=fee_trx.group_id,
-                scope=Trx.COMMISSION
-            )
+            trx_data = {
+                'sender': system_wallet,
+                'receiver': self.get_receiver(irt_asset, fee_trx, receiver_type),
+                'amount': amount * self.get_share_factor(referral, receiver_type),
+                'group_id': fee_trx.group_id,
+                'scope': Trx.COMMISSION,
+            }
+
+            pipeline.new_trx(**trx_data)
+
+            self.trx_dict[receiver_type] = FakeTrx(**trx_data)
 
         if self.trx_dict[ReferralTrx.TRADER]:
             self.trader = self.trx_dict[ReferralTrx.TRADER].receiver.account

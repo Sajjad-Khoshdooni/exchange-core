@@ -19,17 +19,6 @@ if settings.DEBUG_OR_TESTING:
         u = User.objects.create(username=name, phone=name)
         return u.account
 
-
-    def new_trx(account: Account, asset: Asset, amount):
-        return Trx.transaction(
-            sender=asset.get_wallet(Account.out()),
-            receiver=asset.get_wallet(account),
-            amount=amount,
-            scope=Trx.TRANSFER,
-            group_id=str(uuid4())
-        )
-
-
     def set_price(asset: Asset, ask: float, bid: float = None):
         if not bid:
             bid = ask

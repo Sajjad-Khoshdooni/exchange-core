@@ -264,9 +264,9 @@ class Order(models.Model):
 
                 self.update_filled_amount((self.id, matching_order.id), match_amount)
 
-                trade_trxs = fill_order.create_trade_trxs()
+                trade_trxs = fill_order.create_trade_trxs(pipeline)
                 fill_order.set_amounts(trade_trxs)
-                referral_trx = fill_order.init_referrals(trade_trxs)
+                referral_trx = fill_order.init_referrals(pipeline, trade_trxs)
                 referral_list.extend(referral_trx.referral)
 
                 fill_orders.append(fill_order)
