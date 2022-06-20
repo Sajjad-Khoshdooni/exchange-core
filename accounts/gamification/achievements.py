@@ -32,7 +32,8 @@ class PrizeAchievement(Achievement):
             'amount': Prize.PRIZE_AMOUNTS[self.scope],
             'asset': 'SHIB',
             'achieved': bool(prize),
-            'redeemed': bool(prize) and prize.redeemed
+            'redeemed': bool(prize) and prize.redeemed,
+            'fake': bool(prize) and prize.fake,
         }
 
     def achieved(self):

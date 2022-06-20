@@ -45,15 +45,16 @@ def get_groups_data(account, only_active=False):
     for group in goal_groups:
         data = group.as_dict(account)
 
-        data['active'] = not data['finished'] and not activated
+        if not list(filter(lambda achievement: achievement['fake'], data['achievements'])):
+            data['active'] = not data['finished'] and not activated
 
-        if data['active']:
-            activated = True
+            if data['active']:
+                activated = True
 
-            if only_active:
-                return data
+                if only_active:
+                    return data
 
-        groups.append(data)
+            groups.append(data)
 
     if only_active:
         return
