@@ -13,10 +13,10 @@ from django.db.models import Sum, F, Q, Max, Min, CheckConstraint, QuerySet
 from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Wallet
 from ledger.models.asset import Asset
-from ledger.utils.fields import get_amount_field, get_lock_field
+from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
-from ledger.utils.wallet_update_manager import WalletUpdateManager
+from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
 from market.models.referral_trx import ReferralTrx
 from provider.models import ProviderOrder
@@ -69,7 +69,7 @@ class Order(models.Model):
     fill_type = models.CharField(max_length=8, choices=FILL_TYPE_CHOICES)
     status = models.CharField(default=NEW, max_length=8, choices=STATUS_CHOICES)
 
-    lock = get_lock_field(related_name='market_order')
+    group_id = get_group_id_field()
 
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
@@ -98,10 +98,10 @@ class Order(models.Model):
         if self.status == self.FILLED:
             return
 
-        with transaction.atomic():
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
             self.status = self.CANCELED
             self.save(update_fields=['status'])
-            self.lock.release()
+            pipeline.release_lock(key=self.group_id)
 
     @property
     def base_wallet(self):
@@ -179,21 +179,20 @@ class Order(models.Model):
         return amount * price if side == Order.BUY else amount
 
     def submit(self):
-        with WalletUpdateManager():
-            self.acquire_lock()
-            self.make_match()
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
+            self.acquire_lock(pipeline)
+            self.make_match(pipeline)
 
-    def acquire_lock(self):
+    def acquire_lock(self, pipeline: WalletPipeline):
         to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side)
-        self.lock = to_lock_wallet.lock_balance(lock_amount)
-        self.save()
+        pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount)
 
-    def release_lock(self, release_amount: Decimal):
+    def release_lock(self, pipeline: WalletPipeline, release_amount: Decimal):
         release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side)
-        self.lock.decrease_lock(release_amount)
+        pipeline.release_lock(key=self.group_id, amount=release_amount)
 
-    def make_match(self):
+    def make_match(self, pipeline: WalletPipeline):
         key = 'mm-cc-%s' % self.symbol.name
         log_prefix = 'MM %s: ' % self.symbol.name
 
@@ -260,8 +259,9 @@ class Order(models.Model):
                     trade_source=FillOrder.SYSTEM if is_system_trade else FillOrder.MARKET
                 )
 
-                self.release_lock(match_amount)
-                matching_order.release_lock(match_amount)
+                pipeline.release_lock(key=self.group_id, amount=match_amount)
+                pipeline.release_lock(key=matching_order.group_id, amount=match_amount)
+
                 self.update_filled_amount((self.id, matching_order.id), match_amount)
 
                 trade_trxs = fill_order.create_trade_trxs()
@@ -290,12 +290,12 @@ class Order(models.Model):
 
                 unfilled_amount -= match_amount
                 if match_amount == matching_order.unfilled_amount:
-                    matching_order.lock.release()
+                    pipeline.release_lock(matching_order.group_id)
                     matching_order.status = Order.FILLED
                     matching_order.save(update_fields=['status'])
 
                 if unfilled_amount <= 0:
-                    self.lock.release()
+                    pipeline.release_lock(self.group_id)
                     self.status = Order.FILLED
                     self.save(update_fields=['status'])
                     if unfilled_amount < 0:
@@ -307,7 +307,7 @@ class Order(models.Model):
 
             if self.fill_type == Order.MARKET and self.status == Order.NEW:
                 self.status = Order.CANCELED
-                self.lock.release()
+                pipeline.release_lock(self.group_id)
                 self.save(update_fields=['status'])
 
             ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referral_list))

@@ -4,8 +4,8 @@ from decimal import Decimal
 from typing import Union
 from uuid import uuid4, UUID
 
-from django.db import models, transaction
-from django.db.models import F, CheckConstraint, Q
+from django.db import models
+from django.db.models import CheckConstraint, Q
 
 from ledger.models import Wallet
 from ledger.utils.fields import get_amount_field
@@ -64,7 +64,9 @@ class Trx(models.Model):
 
     class Meta:
         unique_together = ('group_id', 'sender', 'receiver', 'scope')
-        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_ledger_trx_amount', ), ]
+        constraints = [
+            CheckConstraint(check=Q(amount__gt=0), name='check_ledger_trx_amount', ),
+        ]
 
     def save(self, *args, **kwargs):
         assert self.sender.asset == self.receiver.asset
@@ -72,41 +74,3 @@ class Trx(models.Model):
         assert self.amount > 0
 
         return super(Trx, self).save(*args, **kwargs)
-
-    @classmethod
-    def transaction(
-            cls,
-            sender: Wallet,
-            receiver: Wallet,
-            amount: Union[Decimal, int],
-            scope: str,
-            group_id: Union[str, UUID],
-            fake_trx: bool = False
-    ) -> FakeTrx:
-        assert amount >= 0
-
-        if amount != 0 and sender != receiver and not fake_trx:
-            from ledger.utils.wallet_update_manager import WalletUpdateManager
-            updater = WalletUpdateManager.get_active_or_instant()
-            updater.new_trx(sender=sender, receiver=receiver, amount=amount, scope=scope, group_id=group_id)
-
-            sender.balance -= amount
-            receiver.balance += amount
-
-        return FakeTrx(
-            sender=sender,
-            receiver=receiver,
-            amount=amount,
-            group_id=group_id
-        )
-
-    def revert(self):
-        group_id = uuid4()
-
-        return self.transaction(
-            sender=self.receiver,
-            receiver=self.sender,
-            amount=self.amount,
-            scope=self.REVERT,
-            group_id=group_id
-        )

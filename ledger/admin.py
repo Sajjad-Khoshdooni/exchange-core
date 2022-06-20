@@ -286,7 +286,7 @@ class TransferAdmin(admin.ModelAdmin):
     list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount', 'deposit', 'status', 'is_fee', 'source')
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
-    readonly_fields = ('deposit_address', 'network', 'wallet', 'lock', 'provider_transfer')
+    readonly_fields = ('deposit_address', 'network', 'wallet', 'provider_transfer')
 
 
 class CryptoAccountTypeFilter(SimpleListFilter):
@@ -380,6 +380,7 @@ class PrizeAdmin(admin.ModelAdmin):
 class CoinCategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'get_coin_count']
 
-    def get_coin_count(self, coincaterogy:CoinCategory):
-        return coincaterogy.coins.count()
+    def get_coin_count(self, coin_category: CoinCategory):
+        return coin_category.coins.count()
+
     get_coin_count.short_description = 'تعداد رمزارز'

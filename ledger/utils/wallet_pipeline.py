@@ -1,12 +1,10 @@
 from collections import defaultdict
 from decimal import Decimal
+from typing import Union
 from uuid import UUID
 
-from django.db import transaction
 from django.db.models import F
-
-from ledger.models import Wallet, BalanceLock
-from ledger.models.trx import Trx
+from django.db.transaction import Atomic
 
 
 def sorted_flatten_dict(data: dict) -> list:
@@ -16,10 +14,13 @@ def sorted_flatten_dict(data: dict) -> list:
     return sorted(data.items(), key=lambda x: x[0])
 
 
-class WalletUpdater:
-    def __init__(self, instant: bool = False):
-        self._instant = instant
-        self._executed = False
+class WalletPipeline(Atomic):
+    def __init__(self, verbose: bool = False):
+        super(WalletPipeline, self).__init__(using=None, savepoint=True, durable=False)
+        self.verbose = verbose
+
+    def __enter__(self):
+        super(WalletPipeline, self).__enter__()
 
         self._wallet_locks = defaultdict(Decimal)
         self._wallet_balances = defaultdict(Decimal)
@@ -29,10 +30,22 @@ class WalletUpdater:
         self._locks = []
         self._locks_amount = defaultdict(Decimal)
 
-    def new_lock(self, key: UUID, wallet: Wallet, amount: Decimal):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            self._execute()
+        finally:
+            super(WalletPipeline, self).__exit__(exc_type, exc_val, exc_tb)
+
+    def new_lock(self, key: UUID, wallet, amount: Union[int, Decimal]):
+        from ledger.models import BalanceLock
+
         assert amount > 0
         if not wallet.should_update_balance_fields():
             return
+
+        wallet.locked += amount
 
         lock = BalanceLock(
             key=key,
@@ -44,9 +57,9 @@ class WalletUpdater:
         self._locks.append(lock)
         self._wallet_locks[wallet.id] += amount
 
-        self._execute_if_instant()
+    def release_lock(self, key: UUID, amount: Union[Decimal, int] = None):
+        from ledger.models import BalanceLock
 
-    def release_lock(self, key: UUID, amount: Decimal = None):
         assert amount is None or amount >= 0
 
         lock = BalanceLock.objects.get(key=key)
@@ -60,9 +73,15 @@ class WalletUpdater:
         self._locks_amount[key] -= amount
         self._wallet_locks[lock.wallet_id] -= amount
 
-        self._execute_if_instant()
+    def new_trx(self, sender, receiver, amount: Union[Decimal, int], scope: str, group_id: UUID):
+        from ledger.models.trx import Trx
 
-    def new_trx(self, sender: Wallet, receiver: Wallet, amount: Decimal, scope: str, group_id: UUID):
+        if amount == 0:
+            return
+
+        assert sender.asset == receiver.asset
+        assert sender != receiver
+
         self._trxs.append(Trx(
             sender=sender,
             receiver=receiver,
@@ -71,10 +90,11 @@ class WalletUpdater:
             group_id=group_id
         ))
 
+        sender.balance -= amount
+        receiver.balance += amount
+
         self._wallet_balances[sender.id] -= amount
         self._wallet_balances[receiver.id] += amount
-
-        self._execute_if_instant()
 
     def _build_wallet_updates(self) -> dict:
         balances = sorted_flatten_dict(self._wallet_balances)
@@ -86,7 +106,7 @@ class WalletUpdater:
             updates[wallet_id]['balance'] = F('balance') + balance
 
         for wallet_id, lock in locks:
-            updates[wallet_id]['balance'] = F('locked') + lock
+            updates[wallet_id]['locked'] = F('locked') + lock
 
         return updates
 
@@ -100,24 +120,24 @@ class WalletUpdater:
 
         return updates
 
-    def execute(self):
-        assert not self._executed
+    def _execute(self):
+        if self.verbose:
+            print('wallet_update', self._build_wallet_updates())
+            print('lock_update', self._build_lock_updates())
+            print('new locks count', len(self._locks))
+            print('new trxs', len(self._trxs))
 
-        with transaction.atomic():
-            for wallet_id, wallet_update in sorted_flatten_dict(self._build_wallet_updates()):
-                Wallet.objects.filter(id=wallet_id).update(**wallet_update)
+        from ledger.models import Wallet, BalanceLock
+        from ledger.models.trx import Trx
 
-            for lock_id, lock_update in self._build_lock_updates().items():
-                BalanceLock.objects.filter(id=lock_id).update(**lock_update)
+        for wallet_id, wallet_update in sorted_flatten_dict(self._build_wallet_updates()):
+            Wallet.objects.filter(id=wallet_id).update(**wallet_update)
 
-            if self._trxs:
-                Trx.objects.bulk_create(self._trxs)
+        for lock_id, lock_update in self._build_lock_updates().items():
+            BalanceLock.objects.filter(key=lock_id).update(**lock_update)
 
-            if self._locks:
-                BalanceLock.objects.bulk_create(self._locks)
+        if self._trxs:
+            Trx.objects.bulk_create(self._trxs)
 
-        self._executed = True
-
-    def _execute_if_instant(self):
-        if self._instant:
-            self.execute()
+        if self._locks:
+            BalanceLock.objects.bulk_create(self._locks)
