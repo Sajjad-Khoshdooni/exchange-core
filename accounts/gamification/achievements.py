@@ -29,7 +29,7 @@ class PrizeAchievement(Achievement):
             'type': 'prize',
             'id': prize and prize.id,
             'scope': self.scope,
-            'amount': Prize.PRIZE_AMOUNTS[self.scope],
+            'amount': prize.amount,
             'asset': 'SHIB',
             'achieved': bool(prize),
             'redeemed': bool(prize) and prize.redeemed,
