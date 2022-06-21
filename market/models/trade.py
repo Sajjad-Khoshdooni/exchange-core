@@ -75,10 +75,6 @@ class Trade(models.Model):
             ), name='check_market_trade_amounts', ),
         ]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.taker_order = None
-
     def __str__(self):
         return f'{self.symbol}-{self.side} ' \
                f'({self.order_id}) ' \
@@ -88,15 +84,15 @@ class Trade(models.Model):
         self.base_amount = trade_trxs.base.amount
         self.fee_amount = trade_trxs.maker_fee.amount if self.is_maker else trade_trxs.taker_fee.amount
 
-    def create_trade_trxs(self, pipeline: WalletPipeline, ignore_fee=False, fake_trade: bool = False) -> FillOrderTrxs:
-        trade_trx = self._create_trade_trx(pipeline, fake=fake_trade)
-        base_trx = self._create_base_trx(pipeline, fake=fake_trade)
+    def create_trade_trxs(self, pipeline: WalletPipeline, taker_order: Order, ignore_fee=False, fake_trade: bool = False) -> FillOrderTrxs:
+        trade_trx = self._create_trade_trx(pipeline, taker_order, fake=fake_trade)
+        base_trx = self._create_base_trx(pipeline, taker_order, fake=fake_trade)
 
         # make sure sender and receiver wallets have same market
         assert trade_trx.sender.market == base_trx.receiver.market
         assert trade_trx.receiver.market == base_trx.sender.market
 
-        taker_fee = self._create_fee_trx(pipeline, self.taker_order, is_taker=True, fake=ignore_fee)
+        taker_fee = self._create_fee_trx(pipeline, taker_order, is_taker=True, fake=ignore_fee)
         maker_fee = self._create_fee_trx(pipeline, self.order, is_taker=False, fake=ignore_fee)
 
         return FillOrderTrxs(
@@ -106,26 +102,24 @@ class Trade(models.Model):
             maker_fee=maker_fee
         )
 
-    def init_referrals(self, pipeline: WalletPipeline, trade_trxs: FillOrderTrxs):
-        tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
-            get_tether_irt_price(BUY)
-
+    def create_referral(self, pipeline: WalletPipeline, fee_trx: FakeTrx, tether_irt: Decimal):
         from market.models import ReferralTrx
-        referrals = ReferralTrx.get_trade_referrals(
+        return ReferralTrx.get_trade_referral(
             pipeline,
-            trade_trxs.maker_fee,
-            trade_trxs.taker_fee,
+            fee_trx,
             self.price,
             tether_irt,
-            is_buyer_maker=self.side == Order.BUY,
+            sell=self.side == Order.SELL,
         )
-        ReferralTrxTuple = namedtuple("ReferralTrx", "referral trx")
-        return ReferralTrxTuple(referrals, ReferralTrx.get_trx_list(referrals))
 
-    def _create_trade_trx(self, pipeline: WalletPipeline, fake: bool = False) -> FakeTrx:
+    def _create_trade_trx(self, pipeline: WalletPipeline, taker_order: Order, fake: bool = False) -> FakeTrx:
+        if self.side == Order.BUY:
+            sender, receiver = taker_order.wallet, self.order.wallet
+        else:
+            sender, receiver = self.order.wallet, taker_order.wallet
         trx_data = {
-            'sender': self.order.wallet if self.taker_order.side == Order.BUY else self.taker_order.wallet,
-            'receiver': self.taker_order.wallet if self.taker_order.side == Order.BUY else self.order.wallet,
+            'sender': sender,
+            'receiver': receiver,
             'amount': self.amount,
             'group_id': self.group_id,
             'scope': Trx.TRADE,
@@ -136,24 +130,18 @@ class Trade(models.Model):
 
         return FakeTrx(**trx_data)
 
-    def _create_base_trx(self, pipeline: WalletPipeline, fake: bool = False) -> FakeTrx:
+    def _create_base_trx(self, pipeline: WalletPipeline, taker_order: Order, fake: bool = False) -> FakeTrx:
+        if self.side == Order.SELL:
+            sender, receiver = taker_order.base_wallet, self.order.base_wallet
+        else:
+            sender, receiver = self.order.base_wallet, taker_order.base_wallet
         trx_data = {
-            'sender': self.maker_order.base_wallet if self.taker_order.side == Order.SELL else self.taker_order.base_wallet,
-            'receiver': self.taker_order.base_wallet if self.taker_order.side == Order.SELL else self.maker_order.base_wallet,
+            'sender': sender,
+            'receiver': receiver,
             'amount': self.amount * self.price,
             'group_id': self.group_id,
             'scope': Trx.TRADE,
         }
-
-    def _create_base_trx(self, fake: bool = False) -> Trx:
-        return Trx.transaction(
-            sender=self.order.base_wallet if self.taker_order.side == Order.SELL else self.taker_order.base_wallet,
-            receiver=self.taker_order.base_wallet if self.taker_order.side == Order.SELL else self.order.base_wallet,
-            amount=self.amount * self.price,
-            group_id=self.group_id,
-            scope=Trx.TRADE,
-            fake_trx=fake,
-        )
         if not fake:
             pipeline.new_trx(**trx_data)
 
@@ -166,8 +154,7 @@ class Trade(models.Model):
         trx_amount = fee * (self.amount if order.side == Order.BUY else self.amount * self.price)
 
         if trx_amount:
-            referral = self.taker_order.wallet.account.referred_by if is_taker else \
-                self.order.wallet.account.referred_by
+            referral = order.wallet.account.referred_by
             if referral:
                 from market.models import ReferralTrx
                 trx_amount *= Decimal(1) - (Decimal(ReferralTrx.REFERRAL_MAX_RETURN_PERCENT) / 100 - Decimal(
@@ -263,16 +250,19 @@ class Trade(models.Model):
             trade_source=Trade.OTC,
             group_id=otc_trade.group_id,
         )
-        trade_trxs = trades_pair.maker.create_trade_trxs(pipeline, fake_trade=True)
+        trade_trxs = trades_pair.maker.create_trade_trxs(pipeline, taker_order, fake_trade=True)
+
+        tether_irt = Decimal(1) if symbol.base_asset.symbol == symbol.base_asset.IRT else \
+            get_tether_irt_price(Order.BUY)
+        referrals = []
         for trade in trades_pair:
             trade.set_amounts(trade_trxs)
+            fee_trx = trade_trxs.maker_fee if trade.is_maker else trade_trxs.taker_fee
+            referrals.append(trade.create_referral(pipeline, fee_trx, tether_irt))
+
         from market.models import ReferralTrx
-        referral_trx = trades_pair.maker.init_referrals(trade_trxs)
-        referral_trx = fill_order.init_referrals(pipeline, trade_trx_list)
-        ReferralTrx.objects.bulk_create(list(filter(bool, referral_trx.referral)))
-        Trx.objects.bulk_create(list(filter(lambda trx: trx and trx.amount, referral_trx.trx)))
-        for trade in trades_pair:
-            trade.save()
+        ReferralTrx.objects.bulk_create(list(filter(bool, referrals)))
+        Trade.objects.bulk_create([*trades_pair])
 
         # updating trade_volume_irt of accounts
         accounts = [trades_pair.maker.account, trades_pair.taker.account]
@@ -284,9 +274,6 @@ class Trade(models.Model):
                 account.refresh_from_db()
 
                 check_prize_achievements(account)
-
-        trade_trxs.taker_fee.save()
-        trade_trxs.maker_fee.save()
 
     @classmethod
     def init_pair(cls, symbol, taker_order, maker_order, amount, price, irt_value, trade_source, **kwargs):

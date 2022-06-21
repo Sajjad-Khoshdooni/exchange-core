@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.core.cache import cache
-from django.db import models, transaction
+from django.db import models
 from django.db.models import Sum, F, Q, Max, Min, CheckConstraint, QuerySet
 
 from accounts.gamification.gamify import check_prize_achievements
@@ -225,8 +225,7 @@ class Order(models.Model):
         unfilled_amount = self.unfilled_amount
 
         trades = []
-
-        referral_list = []
+        referrals = []
         for matching_order in matching_orders:
             trade_price = matching_order.price
             if (self.side == Order.BUY and self.price < trade_price) or (
@@ -260,13 +259,16 @@ class Order(models.Model):
             )
 
             self.release_lock(pipeline, match_amount)
-            matching_order.release_lock(pipeline,match_amount)
+            matching_order.release_lock(pipeline, match_amount)
 
-            trade_trxs = trades_pair.maker.create_trade_trxs()
+            trade_trxs = trades_pair.maker.create_trade_trxs(pipeline, self)
+
+            tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
+                get_tether_irt_price(self.BUY)
             for trade in trades_pair:
                 trade.set_amounts(trade_trxs)
-            referral_trx = trades_pair.maker.init_referrals(trade_trxs)
-            referral_list.extend(referral_trx.referral)
+                fee_trx = trade_trxs.maker_fee if trade.is_maker else trade_trxs.taker_fee
+                referrals.append(trade.create_referral(pipeline, fee_trx, tether_irt))
 
             trades.extend(trades_pair)
 
@@ -304,17 +306,17 @@ class Order(models.Model):
             pipeline.release_lock(self.group_id)
             self.save(update_fields=['status'])
 
-        ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referral_list))
+        ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referrals))
         Trade.objects.bulk_create(trades)
 
         # updating trade_volume_irt of accounts
         for trade in trades:
             account = trade.account
-                if not account.is_system():
-                    account.trade_volume_irt = F('trade_volume_irt') + trade.irt_value
-                    account.save(update_fields=['trade_volume_irt'])
-                    account.refresh_from_db()
-                    check_prize_achievements(account)
+            if not account.is_system():
+                account.trade_volume_irt = F('trade_volume_irt') + trade.irt_value
+                account.save(update_fields=['trade_volume_irt'])
+                account.refresh_from_db()
+                check_prize_achievements(account)
             
             cache.delete(key)
             logger.info(log_prefix + 'make match finished.')
