@@ -193,7 +193,7 @@ class ZibalChanel(FiatWithdraw):
         return data['id']
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> int:
-        data = self.collect_api(f'/v1/report/checkout/inquire/', method='POST', data={
+        data = self.collect_api(f'/v1/report/checkout/inquire', method='POST', data={
             "checkoutRequestId": provider_id
         })
 
