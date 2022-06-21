@@ -1,9 +1,9 @@
-from django.db import transaction
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Prize
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class PrizeSerializer(serializers.ModelSerializer):
@@ -14,8 +14,8 @@ class PrizeSerializer(serializers.ModelSerializer):
         redeemed = validated_data['redeemed']
 
         if redeemed is True and not prize.redeemed:
-            with transaction.atomic():
-                prize.build_trx()
+            with WalletPipeline() as pipeline:
+                prize.build_trx(pipeline)
 
         return prize
 

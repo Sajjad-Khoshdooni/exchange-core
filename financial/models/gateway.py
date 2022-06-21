@@ -9,6 +9,7 @@ from financial.models import BankCard
 from financial.models import PaymentRequest
 from financial.models.payment import Payment
 from ledger.utils.fields import DONE, CANCELED
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -112,13 +113,13 @@ class ZarinpalGateway(Gateway):
             logger.warning('duplicate verify!', extra={'payment_id': payment.id})
 
         if data['code'] in (100, 101):
-            with transaction.atomic():
+            with WalletPipeline() as pipeline:
                 payment.status = DONE
                 payment.ref_id = data.get('ref_id')
                 payment.ref_status = data['code']
                 payment.save()
 
-                payment.accept()
+                payment.accept(pipeline)
 
         else:
             payment.status = CANCELED
@@ -225,7 +226,7 @@ class ZibalGateway(Gateway):
 
         resp = requests.post(
             self.BASE_URL + '/v1/verify',
-            data={
+            json={
                 'merchant': payment_request.gateway.merchant_id,
                 'trackId': int(payment_request.authority)
             }

@@ -3,16 +3,17 @@ from decimal import Decimal
 
 from django.db.models import Min
 from django.http import Http404
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 
-from accounts.views.authentication import CustomTokenAuthentication
 from collector.models import CoinMarketCap
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
+from ledger.utils.fields import get_irt_market_assets
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
 from ledger.utils.price_manager import PriceManager
 
@@ -36,12 +37,14 @@ class AssetSerializerBuilder(AssetSerializerMini):
     circulating_supply = serializers.SerializerMethodField()
     min_withdraw_amount = serializers.SerializerMethodField()
     min_withdraw_fee = serializers.SerializerMethodField()
-
-    bookmark_assets = serializers.SerializerMethodField()
+    market_irt_enable = serializers.SerializerMethodField()
 
     class Meta:
         model = Asset
         fields = ()
+
+    def get_market_irt_enable(self, asset: Asset):
+        return asset.id in self.context['enable_irt_market_list']
 
     def get_bookmark_assets(self, asset: Asset):
         return asset.id in self.context['bookmark_assets']
@@ -146,13 +149,13 @@ class AssetSerializerBuilder(AssetSerializerMini):
         new_fields = []
 
         if prices:
-            new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h', 'bookmark_assets']
+            new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h', 'market_irt_enable']
 
         if extra_info:
             new_fields = [
                 'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
                 'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
-                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee', 'bookmark_assets',
+                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee',
             ]
 
         class Serializer(cls):
@@ -163,10 +166,11 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return Serializer
 
 
+@method_decorator(cache_page(20), name='dispatch')
 class AssetsViewSet(ModelViewSet):
 
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication,)
-    permission_classes = []
+    authentication_classes = ()
+    permission_classes = ()
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['margin_enable']
 
@@ -177,6 +181,8 @@ class AssetsViewSet(ModelViewSet):
             ctx['bookmark_assets'] = set(self.request.user.account.bookmark_assets.values_list('id', flat=True))
         else:
             ctx['bookmark_assets'] = set()
+
+        ctx['enable_irt_market_list'] = get_irt_market_assets()
 
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))

@@ -83,7 +83,7 @@ class UserFilter(SimpleListFilter):
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount', 'wallet')
     list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
-    readonly_fields = ('wallet', 'symbol', 'lock')
+    readonly_fields = ('wallet', 'symbol')
 
 
 @admin.register(Trade)

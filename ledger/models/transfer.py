@@ -11,9 +11,10 @@ from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
 from ledger.models.crypto_balance import CryptoBalance
-from ledger.utils.fields import get_amount_field, get_address_field, get_lock_field
+from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
 from accounts.utils import email
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +40,6 @@ class Transfer(models.Model):
         choices=[(PROCESSING, PROCESSING), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
         db_index=True
     )
-
-    lock = get_lock_field()
 
     trx_hash = models.CharField(max_length=128, db_index=True, null=True, blank=True)
     block_hash = models.CharField(max_length=128, db_index=True, blank=True)
@@ -74,7 +73,7 @@ class Transfer(models.Model):
 
         return self.network.explorer_link.format(hash=self.trx_hash)
 
-    def build_trx(self):
+    def build_trx(self, pipeline: WalletPipeline):
         if self.hidden or (self.deposit and self.is_fee):
             logger.info(f'Creating Trx for transfer id: {self.id} ignored.')
             return
@@ -87,7 +86,7 @@ class Transfer(models.Model):
         else:
             sender, receiver = self.wallet, out_wallet
 
-        Trx.transaction(
+        pipeline.new_trx(
             group_id=self.group_id,
             sender=sender,
             receiver=receiver,
@@ -96,7 +95,7 @@ class Transfer(models.Model):
         )
 
         if self.fee_amount:
-            Trx.transaction(
+            pipeline.new_trx(
                 group_id=self.group_id,
                 sender=sender,
                 receiver=asset.get_wallet(Account.system()),
@@ -108,24 +107,25 @@ class Transfer(models.Model):
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):
         assert wallet.asset.symbol != Asset.IRT
         assert wallet.account.is_ordinary_user()
+        wallet.has_balance(amount, raise_exception=True)
 
         network_asset = NetworkAsset.objects.get(network=network, asset=wallet.asset)
         assert network_asset.withdraw_max >= amount >= max(network_asset.withdraw_min, network_asset.withdraw_fee)
 
-        lock = wallet.lock_balance(amount)
-
         commission = network_asset.withdraw_fee
 
-        transfer = Transfer.objects.create(
-            wallet=wallet,
-            network=network,
-            amount=amount - commission,
-            fee_amount=commission,
-            lock=lock,
-            source=cls.BINANCE,
-            out_address=address,
-            deposit=False
-        )
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
+            transfer = Transfer.objects.create(
+                wallet=wallet,
+                network=network,
+                amount=amount - commission,
+                fee_amount=commission,
+                source=cls.BINANCE,
+                out_address=address,
+                deposit=False
+            )
+
+            pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount)
 
         from ledger.tasks import create_binance_withdraw
         create_binance_withdraw.delay(transfer.id)
@@ -133,7 +133,7 @@ class Transfer(models.Model):
         return transfer
 
     def save(self, *args, **kwargs):
-        if self.status == self.DONE:
+        if self.source == self.SELF and self.status == self.DONE:
             self.update_crypto_balances()
 
         return super().save(*args, **kwargs)
