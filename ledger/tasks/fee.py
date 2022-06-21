@@ -13,7 +13,7 @@ def update_network_fees():
     network_assets = NetworkAsset.objects.all()
 
     for ns in network_assets:
-        handler = ns.asset
+        handler = ns.asset.get_hedger()
         info = handler.get_network_info(ns.asset.symbol, ns.network.symbol)
 
         if info:

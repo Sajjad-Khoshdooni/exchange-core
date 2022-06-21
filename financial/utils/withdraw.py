@@ -41,7 +41,6 @@ class FiatWithdraw:
         else:
             return maping[cls.WITHDRAW_CHANEL]()
 
-
     def get_wallet_id(self):
         raise NotImplementedError
 

@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.conf import settings
 
+from ledger.models import Transfer
 from ledger.utils.precision import decimal_to_str
 from provider.exchanges.interface.binance_interface import ExchangeHandler, SELL, BUY, MARKET, LIMIT, HOUR
 from provider.exchanges.sdk.kucoin_sdk import kucoin_spot_send_signed_request, kucoin_spot_send_public_request
@@ -76,18 +77,33 @@ class KucoinSpotHandler(ExchangeHandler):
 
         return self.collect_api(url=self.order_url, data=data) or {}
 
-    def withdraw(self, coin: str, network: str, address: str, amount: Decimal, address_tag: str = None,
+    def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal, fee_amount: Decimal,
+                 address_tag: str = None,
                  client_id: str = None) -> dict:
+
+        amount = decimal_to_str(Decimal(transfer_amount) + Decimal(fee_amount))
+
+        self.transfer(
+            asset=coin,
+            amount=amount,
+            to=self.MAIN,
+            client_oid=client_id,
+            _from=self.TRADE
+        )
 
         data = {
             'currency': coin,
             'address': address,
-            'amount': decimal_to_str(amount),
+            'amount': decimal_to_str(transfer_amount),
             'network': network,
             'memo': address_tag,
             'withdrawOrderId': client_id
         }
-        return self.collect_api('/api/v1/withdrawals', method='POST', data=data)
+
+        resp = dict()
+        resp['id'] = self.collect_api('/api/v1/withdrawals', method='POST', data=data).get('withdrawalId')
+
+        return resp
 
     @classmethod
     def get_account_details(cls):
@@ -95,7 +111,7 @@ class KucoinSpotHandler(ExchangeHandler):
 
     def get_free_dict(self):
         balances_list = self.get_account_details()
-        return {b['currency']: Decimal(b['available']) for b in balances_list}
+        return {b['currency']: Decimal(b['available']) for b in balances_list if b['type'] == 'trade'}
 
     @classmethod
     def get_all_coins(cls):
@@ -105,7 +121,7 @@ class KucoinSpotHandler(ExchangeHandler):
     def get_coin_data(cls, coin: str):
         return cls.collect_api('/api/v2/currencies/{}'.format(coin),
                                method='GET',
-                               cache_timeout=HOUR).json().get('data', {})
+                               cache_timeout=HOUR)
 
     def get_network_info(self, coin: str, network: str):
         chains = self.get_coin_data(coin=coin).get('chains')
@@ -117,7 +133,7 @@ class KucoinSpotHandler(ExchangeHandler):
         return Decimal(info[0].get('withdrawalMinFee'))
 
     @classmethod
-    def transfer(cls, asset: str, amount: float, to: str, client_oid: str, _from=MAIN):
+    def transfer(cls, asset: str, amount: Decimal, to: str, client_oid: str, _from=TRADE):
         return cls.collect_api(
             url='/api/v2/accounts/inner-transfer',
             method='POST',
@@ -132,7 +148,7 @@ class KucoinSpotHandler(ExchangeHandler):
 
     @classmethod
     def get_symbol_data(cls, symbol: str):
-        data = cls.collect_api('/api/v1/symbols', method='GET').json().get('data')
+        data = cls.collect_api('/api/v1/symbols', method='GET')
         coin_data = list(filter(lambda d: d['symbol'] == symbol, data))
         if not coin_data:
             return
@@ -147,6 +163,23 @@ class KucoinSpotHandler(ExchangeHandler):
     def get_lot_min_quantity(cls, symbol: str) ->Decimal:
         data = cls.get_symbol_data(symbol=symbol)
         return data[0].get('quoteMinSize')
+
+    def get_withdraw_status(self, withdraw_id: str) -> dict:
+        data = self.collect_api(
+            '/api/v1/withdrawals/{}'.format(withdraw_id), 'GET')
+
+        if not data:
+            return
+
+        resp = dict()
+        resp['txId'] = data.get('walletTxId')
+        mapping = {
+            'SUCCESS': Transfer.DONE,
+            'PROCESSING': Transfer.PROCESSING,
+            'FAILURE': Transfer.CANCELED
+        }
+        resp['status'] = mapping.get(data.get('status'))
+        return data
 
 
 class KucoinFuturesHandler(KucoinSpotHandler):

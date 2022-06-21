@@ -58,7 +58,7 @@ class ProviderOrder(models.Model):
 
         with transaction.atomic():
             order = ProviderOrder.objects.create(
-                asset=asset, amount=amount, side=side, scope=scope, market=market
+                asset=asset, amount=amount, side=side, scope=scope, market=market, exchange=asset.hedge_method
             )
 
             symbol = hedger.get_trading_symbol(asset.symbol)

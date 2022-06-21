@@ -6,7 +6,6 @@ from django.conf import settings
 
 from ledger.models import Transfer, Asset
 from ledger.utils.price import BUY, get_price, SELL
-from provider.exchanges import BinanceSpotHandler
 from provider.models import ProviderTransfer, ProviderHedgedOrder
 
 logger = logging.getLogger(__name__)
@@ -30,7 +29,7 @@ def handle_withdraw(transfer_id: int):
         transfer.save()
 
         assert not transfer.deposit
-        assert transfer.source == transfer.BINANCE
+        assert transfer.source == transfer.BINANCE or transfer.KUCOIN
         assert transfer.status == transfer.PROCESSING
         assert not transfer.provider_transfer
 
@@ -38,8 +37,8 @@ def handle_withdraw(transfer_id: int):
 
         coin = transfer.asset.symbol
 
-        binance_fee = handler.get_withdraw_fee(transfer.asset.symbol, transfer.network.symbol)
-        amount = transfer.amount + binance_fee
+        fee = handler.get_withdraw_fee(transfer.asset.symbol, transfer.network.symbol)
+        amount = transfer.amount + fee
 
         if balance_map[coin] < amount:
             to_buy_amount = amount - balance_map[coin]
@@ -80,15 +79,15 @@ def handle_withdraw(transfer_id: int):
 
 def withdraw(transfer: Transfer):
     handler = transfer.asset.get_hedger()
-    fee = handler.get_withdraw_fee(transfer.wallet.asset.symbol, transfer.network.symbol)
-    withdraw_amount = transfer.amount + fee
+    withdraw_fee = handler.get_withdraw_fee(transfer.wallet.asset.symbol, transfer.network.symbol)
 
-    logger.info('withdrawing %s %s in %s network' % (withdraw_amount, transfer.asset, transfer.network))
+    logger.info('withdrawing %s %s in %s network' % (withdraw_fee + transfer.amount, transfer.asset, transfer.network))
 
     provider_transfer = ProviderTransfer.new_withdraw(
         transfer.asset,
         transfer.network,
-        withdraw_amount,
+        transfer.amount,
+        withdraw_fee,
         transfer.out_address,
         caller_id=str(transfer.id)
     )

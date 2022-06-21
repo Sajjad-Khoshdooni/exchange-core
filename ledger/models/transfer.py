@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class Transfer(models.Model):
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
-    SELF, BINANCE = 'self', 'interface'
+    SELF, BINANCE, KUCOIN = 'self', 'binance_interface', 'kucoin_interface'
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
@@ -50,7 +50,7 @@ class Transfer(models.Model):
 
     is_fee = models.BooleanField(default=False)
 
-    source = models.CharField(max_length=8, default=SELF, choices=((SELF, SELF), (BINANCE, BINANCE)))
+    source = models.CharField(max_length=8, default=SELF, choices=((SELF, SELF), (BINANCE, BINANCE), (KUCOIN, KUCOIN)))
     provider_transfer = models.OneToOneField(to='provider.ProviderTransfer', on_delete=models.PROTECT, null=True,
                                              blank=True)
     handling = models.BooleanField(default=False)

@@ -4,6 +4,7 @@ from typing import Union
 
 from django.conf import settings
 
+from ledger.models import Transfer
 from ledger.utils.cache import get_cache_func_key, cache
 from ledger.utils.precision import decimal_to_str
 
@@ -44,7 +45,8 @@ class ExchangeHandler:
                     client_order_id: str = None) -> dict:
         return NotImplementedError
 
-    def withdraw(self, coin: str, network: str, address: str, amount: Decimal, address_tag: str = None,
+    def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal,
+                 fee_amount: Decimal, address_tag: str = None,
                  client_id: str = None) -> dict:
         return NotImplementedError
 
@@ -63,6 +65,9 @@ class ExchangeHandler:
     def get_lot_min_quantity(self, symbol: str) -> Decimal:
         return NotImplementedError
 
+    def get_withdraw_status(self, withdraw_id: str) -> dict:
+        return NotImplementedError
+        
 
 class BinanceSpotHandler(ExchangeHandler):
     order_url = '/api/v3/order'
@@ -131,13 +136,13 @@ class BinanceSpotHandler(ExchangeHandler):
 
         return self.collect_api(self.order_url, data=data, method=POST)
 
-    def withdraw(self, coin: str, network: str, address: str, amount: Decimal, address_tag: str = None,
-                 client_id: str = None) -> dict:
+    def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal, fee_amount: Decimal,
+                 address_tag: str = None, client_id: str = None,) -> dict:
 
         return self.collect_api('/sapi/v1/capital/withdraw/apply', method='POST', data={
             'coin': coin,
             'network': network,
-            'amount': decimal_to_str(amount),
+            'amount': decimal_to_str(Decimal(transfer_amount) + Decimal(fee_amount)),
             'address': address,
             'addressTag': address_tag,
             'withdrawOrderId': client_id
@@ -210,6 +215,31 @@ class BinanceSpotHandler(ExchangeHandler):
     def get_lot_min_quantity(self, symbol: str) -> Decimal:
         lot_size = self.get_lot_size_data(symbol)
         return lot_size and Decimal(lot_size['minQty'])
+
+    def get_withdraw_status(self, withdraw_id: str) -> dict:
+        data = self.collect_api(
+            '/sapi/v1/capital/withdraw/history', 'GET',
+            data={'withdrawOrderId': self.id})
+
+        if not data:
+            return
+
+        data = data[0]
+
+        resp = dict()
+
+        if data['status'] % 2 == 1:
+            resp['status'] = Transfer.CANCELED
+
+        elif data['status'] == 6:
+            resp['status'] = Transfer.DONE
+
+        else:
+            resp['status'] = Transfer.PENDING
+
+        resp['txId'] = data.get('txId')
+
+        return resp
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):

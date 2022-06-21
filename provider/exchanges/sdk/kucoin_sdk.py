@@ -13,7 +13,8 @@ if not settings.DEBUG:
     KUCOIN_SPOT_BASE_URL = "https://api.kucoin.com"
     KUCOIN_FUTURES_BASE_URL = ''
 else:
-    KUCOIN_SPOT_BASE_URL = " https://openapi-sandbox.kucoin.com"
+    KUCOIN_SPOT_BASE_URL = "https://api.kucoin.com"
+        # " https://openapi-sandbox.kucoin.com"
     KUCOIN_FUTURES_BASE_URL = ''
 
 

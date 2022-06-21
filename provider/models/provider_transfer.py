@@ -6,7 +6,6 @@ from django.db.models import CheckConstraint, Q
 
 from ledger.models import Asset, Network
 from ledger.utils.fields import get_amount_field
-from provider.exchanges import BinanceSpotHandler
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +30,10 @@ class ProviderTransfer(models.Model):
         constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_provider_transfer_amount', ), ]
 
     @classmethod
-    def new_withdraw(cls, asset: Asset, network: Network, amount: Decimal, address: str, caller_id: str = '') -> 'ProviderTransfer':
+    def new_withdraw(cls, asset: Asset, network: Network, transfer_amount: Decimal, withdraw_fee: Decimal, address: str,
+                     caller_id: str = '') -> 'ProviderTransfer':
+
+        amount = Decimal(transfer_amount) + Decimal(withdraw_fee)
 
         if ProviderTransfer.objects.filter(provider_transfer_id__isnull=False, caller_id=caller_id).exists():
             logger.warning('transfer ignored due to duplicated caller_id')
@@ -45,7 +47,8 @@ class ProviderTransfer(models.Model):
             coin=asset.symbol,
             network=network.symbol,
             address=address,
-            amount=amount,
+            transfer_amount=transfer_amount,
+            fee_amaount=withdraw_fee,
             client_id=transfer.id
         )
 
@@ -55,17 +58,8 @@ class ProviderTransfer(models.Model):
         return transfer
 
     def get_status(self) -> dict:
-        data = BinanceSpotHandler.collect_api(
-            '/sapi/v1/capital/withdraw/history', 'GET',
-            data={'withdrawOrderId': self.id}
-        )
-
-        if not data:
-            return
-
-        data = data[0]
-
-        return data
+        handler = self.transfer.asset.get_hedger()
+        return handler.get_withdraw_status()
 
     def __str__(self):
         return '%s %s %s' % (self.asset, self.amount, self.network)
