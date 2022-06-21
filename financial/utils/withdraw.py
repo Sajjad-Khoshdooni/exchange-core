@@ -186,7 +186,7 @@ class ZibalChanel(FiatWithdraw):
         data = self.collect_api('/v1/wallet/checkout/plus', method='POST', data={
             'id': wallet_id,
             'amount': amount * 10,
-            'bankAccount': receiver.iban[2:],
+            'bankAccount': receiver.iban,
             'uniqueCode': request_id
         })
 
