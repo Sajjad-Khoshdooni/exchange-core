@@ -9,6 +9,7 @@ from financial.models import BankCard
 from financial.models import PaymentRequest
 from financial.models.payment import Payment
 from ledger.utils.fields import DONE, CANCELED
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +23,12 @@ class Gateway(models.Model):
 
     ZARINPAL = 'zarinpal'
     PAYDOTIR = 'paydotir'
+    ZIBAL = 'zibal'
 
     name = models.CharField(max_length=128)
     type = models.CharField(
         max_length=8,
-        choices=((ZARINPAL, ZARINPAL), (PAYDOTIR, PAYDOTIR))
+        choices=((ZARINPAL, ZARINPAL), (PAYDOTIR, PAYDOTIR), (ZIBAL, ZIBAL))
     )
     merchant_id = models.CharField(max_length=128)
     active = models.BooleanField(default=False)
@@ -41,7 +43,8 @@ class Gateway(models.Model):
     def get_concrete_gateway(self) -> 'Gateway':
         mapping = {
             self.ZARINPAL: ZarinpalGateway,
-            self.PAYDOTIR: PaydotirGateway
+            self.PAYDOTIR: PaydotirGateway,
+            self.ZIBAL: ZibalGateway,
         }
 
         self.__class__ = mapping[self.type]
@@ -110,13 +113,13 @@ class ZarinpalGateway(Gateway):
             logger.warning('duplicate verify!', extra={'payment_id': payment.id})
 
         if data['code'] in (100, 101):
-            with transaction.atomic():
+            with WalletPipeline() as pipeline:
                 payment.status = DONE
                 payment.ref_id = data.get('ref_id')
                 payment.ref_status = data['code']
                 payment.save()
 
-                payment.accept()
+                payment.accept(pipeline)
 
         else:
             payment.status = CANCELED
@@ -171,6 +174,67 @@ class PaydotirGateway(Gateway):
         data = resp.json()
 
         if data['status'] == 1:
+            with transaction.atomic():
+                payment.status = DONE
+                payment.ref_id = data.get('transId')
+                payment.ref_status = data['status']
+                payment.save()
+
+                payment.accept()
+
+        else:
+            payment.status = CANCELED
+            payment.ref_status = data['status']
+            payment.save()
+
+    class Meta:
+        proxy = True
+
+
+class ZibalGateway(Gateway):
+    BASE_URL = 'https://gateway.zibal.ir'
+
+    def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:
+        resp = requests.post(
+            self.BASE_URL + '/v1/request',
+            json={
+                'merchant': self.merchant_id,
+                'amount': amount * 10,
+                'callbackUrl': settings.HOST_URL + reverse('finance:zibal-callback'),
+                'description': 'افزایش اعتبار',
+                'allowedCards': bank_card.card_pan
+            }
+        )
+
+        if resp.json()['result'] != 100:
+            raise GatewayFailed
+
+        authority = resp.json()['trackId']
+
+        return PaymentRequest.objects.create(
+            bank_card=bank_card,
+            amount=amount,
+            gateway=self,
+            authority=authority
+        )
+
+    def get_redirect_url(self, payment_request: PaymentRequest):
+        return 'https://gateway.zibal.ir/start/{}'.format(payment_request.authority)
+
+    def verify(self, payment: Payment):
+        payment_request = payment.payment_request
+
+        resp = requests.post(
+            self.BASE_URL + '/v1/verify',
+            json={
+                'merchant': payment_request.gateway.merchant_id,
+                'trackId': int(payment_request.authority)
+            }
+        )
+
+        data = resp.json()
+
+        if data['result'] == 100:
             with transaction.atomic():
                 payment.status = DONE
                 payment.ref_id = data.get('transId')

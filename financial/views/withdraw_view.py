@@ -2,7 +2,6 @@ import logging
 from datetime import timedelta
 
 from django.conf import settings
-from django.db import transaction
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers, status
@@ -11,6 +10,7 @@ from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from yekta_config.config import config
 
 from accounts.models import VerificationCode
 from accounts.permissions import IsBasicVerified
@@ -19,7 +19,8 @@ from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit, get_fiat_estimate_receive_time
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Asset, BalanceLock
+from ledger.models import Asset
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -69,15 +70,15 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         withdraw_amount = amount - fee_amount
 
         try:
-            with transaction.atomic():
-                lock = wallet.lock_balance(amount, BalanceLock.WITHDRAW)
-
+            with WalletPipeline() as pipeline:  # type: WalletPipeline
                 withdraw_request = FiatWithdrawRequest.objects.create(
                     amount=withdraw_amount,
                     fee_amount=fee_amount,
-                    lock=lock,
-                    bank_account=bank_account
+                    bank_account=bank_account,
+                    withdraw_channel=config('WITHDRAW_CHANNEL')
                 )
+
+                pipeline.new_lock(key=withdraw_request.group_id, wallet=wallet, amount=amount, reason=pipeline.WITHDRAW)
 
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست'})

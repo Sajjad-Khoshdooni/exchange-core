@@ -6,7 +6,10 @@ from django.db import models
 from django.db.models import CharField
 from rest_framework import serializers
 
+
+from ledger.utils.cache import cache_for
 from ledger.utils.precision import normalize_fraction
+
 
 PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 
@@ -44,17 +47,6 @@ def get_status_field():
     )
 
 
-def get_lock_field(null: bool = True, **kwargs):
-    return models.OneToOneField(
-        'ledger.BalanceLock',
-        on_delete=models.SET_NULL if null else models.PROTECT,
-        null=null,
-        blank=null,
-        editable=False,
-        **kwargs
-    )
-
-
 def get_group_id_field(db_index: bool = False):
     return models.UUIDField(default=uuid4, editable=False, db_index=db_index)
 
@@ -80,3 +72,11 @@ class SerializerDecimalField(serializers.DecimalField):
             data = Decimal(str(data).strip())
 
         return str(normalize_fraction(data))
+
+
+@cache_for(time=600)
+def get_irt_market_assets():
+    from market.models import PairSymbol
+    from ledger.models import Asset
+    return set(PairSymbol.objects.select_related('base_asset').filter(
+        base_asset__symbol=Asset.IRT).values_list('asset', flat=True))

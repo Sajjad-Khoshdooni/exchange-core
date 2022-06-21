@@ -1,7 +1,7 @@
 from decimal import Decimal
 from uuid import uuid4
 
-from django.db import models, transaction
+from django.db import models
 from django.db.models import CheckConstraint, Q
 
 from accounts.models import Account
@@ -10,6 +10,7 @@ from ledger.margin.margin_info import MarginInfo
 from ledger.models import Asset, Wallet, Trx
 from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt
+from ledger.utils.wallet_pipeline import WalletPipeline
 from provider.models import ProviderOrder
 
 
@@ -50,9 +51,9 @@ class MarginTransfer(models.Model):
 
         sender.has_balance(self.amount, raise_exception=True)
 
-        with transaction.atomic():
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
             super(MarginTransfer, self).save(*args)
-            Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_TRANSFER, self.group_id)
+            pipeline.new_trx(sender, receiver, self.amount, Trx.MARGIN_TRANSFER, self.group_id)
 
 
 class MarginLoan(models.Model):
@@ -90,7 +91,7 @@ class MarginLoan(models.Model):
         assert asset.symbol != Asset.IRT
         assert loan_type in (cls.BORROW, cls.REPAY)
 
-        with transaction.atomic():
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
             loan = MarginLoan(
                 account=account,
                 asset=asset,
@@ -101,7 +102,6 @@ class MarginLoan(models.Model):
             if loan_type == cls.REPAY:
                 loan.borrow_wallet.has_debt(-amount, raise_exception=True)
                 loan.margin_wallet.has_balance(amount, raise_exception=True)
-
             else:
                 margin_info = MarginInfo.get(account)
                 max_borrowable = margin_info.get_max_borrowable() / get_trading_price_usdt(asset.symbol, SELL, raw_price=True)
@@ -122,7 +122,7 @@ class MarginLoan(models.Model):
             else:
                 sender, receiver = loan.margin_wallet, loan.borrow_wallet
 
-            Trx.transaction(sender, receiver, amount, Trx.MARGIN_BORROW, loan.group_id)
+            pipeline.new_trx(sender, receiver, amount, Trx.MARGIN_BORROW, loan.group_id)
 
             loan.save()
 

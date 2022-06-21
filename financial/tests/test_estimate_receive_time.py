@@ -16,13 +16,7 @@ class EstimateReceiveTimeTestCase(TestCase):
         self.bank_account = new_bank_account(self.user_1)
         self.IRT = Asset.get(Asset.IRT)
 
-        Trx.transaction(
-            group_id=uuid4(),
-            sender=self.IRT.get_wallet(Account.system()),
-            receiver=self.IRT.get_wallet(self.user_1.account),
-            amount=1000000000,
-            scope=Trx.TRANSFER
-        )
+        self.IRT.get_wallet(self.user_1.account).airdrop(1000000000)
 
     def test_estimate_receive_time(self):
 

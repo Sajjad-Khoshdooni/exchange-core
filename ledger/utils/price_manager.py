@@ -1,6 +1,21 @@
 from datetime import datetime
 from decimal import Decimal
 
+from ledger.utils.cache import cache_for
+
+
+@cache_for(time=20)
+def prefetch_all_prices(side: str):
+    from ledger.utils.price import get_prices_dict
+    from ledger.models import Asset
+
+    coins = list(Asset.live_objects.values_list('symbol', flat=True))
+
+    return get_prices_dict(
+        coins=coins,
+        side=side
+    )
+
 
 class PriceManager:
     _prices = None
@@ -13,12 +28,12 @@ class PriceManager:
             from ledger.models import Asset
 
             if fetch_all:
-                coins = list(Asset.live_objects.values_list('symbol', flat=True))
-
-            self._default_prices = get_prices_dict(
-                coins=coins,
-                side=side
-            )
+                self._default_prices = prefetch_all_prices(side)
+            else:
+                self._default_prices = get_prices_dict(
+                    coins=coins,
+                    side=side
+                )
 
     def __enter__(self):
         PriceManager._prices = {}

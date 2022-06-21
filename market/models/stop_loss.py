@@ -1,13 +1,15 @@
 import logging
 from decimal import Decimal
+from uuid import uuid4
 
 from django.db import models
 from django.db.models import F, CheckConstraint, Q
 from django.utils import timezone
 
 from ledger.models import Wallet, BalanceLock
-from ledger.utils.fields import get_amount_field, get_lock_field
+from ledger.utils.fields import get_amount_field
 from ledger.utils.precision import floor_precision
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +37,9 @@ class StopLoss(models.Model):
     price = get_amount_field()
     side = models.CharField(max_length=8, choices=ORDER_CHOICES)
 
-    lock = get_lock_field(related_name='market_stop_loss')
     canceled_at = models.DateTimeField(blank=True, null=True)
+
+    group_id = models.UUIDField(default=uuid4)
 
     @property
     def unfilled_amount(self):
@@ -47,12 +50,11 @@ class StopLoss(models.Model):
     def base_wallet(self):
         return self.symbol.base_asset.get_wallet(self.wallet.account, self.wallet.market)
 
-    def acquire_lock(self):
+    def acquire_lock(self, pipeline: WalletPipeline):
         from market.models import Order
         lock_wallet = Order.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
         lock_amount = Order.get_to_lock_amount(self.unfilled_amount, self.price, self.side)
-        self.lock = lock_wallet.lock_balance(lock_amount, BalanceLock.TRADE)
-        self.save()
+        pipeline.new_lock(key=self.group_id, wallet=lock_wallet, amount=lock_amount, reason=pipeline.TRADE)
 
     objects = models.Manager()
     live_objects = StopLossManager()

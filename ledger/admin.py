@@ -286,15 +286,7 @@ class TransferAdmin(admin.ModelAdmin):
     list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount', 'deposit', 'status', 'is_fee', 'source')
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
-    readonly_fields = ('deposit_address', 'network', 'wallet', 'lock', 'provider_transfer')
-
-
-@admin.register(models.BalanceLock)
-class BalanceLockAdmin(admin.ModelAdmin):
-    list_display = ('created', 'release_date', 'wallet', 'amount', 'freed')
-    list_filter = ('freed', 'wallet')
-    ordering = ('-created', )
-    readonly_fields = ('wallet', )
+    readonly_fields = ('deposit_address', 'network', 'wallet', 'provider_transfer')
 
 
 class CryptoAccountTypeFilter(SimpleListFilter):
@@ -376,6 +368,7 @@ class AddressBookAdmin(admin.ModelAdmin):
 @admin.register(models.Prize)
 class PrizeAdmin(admin.ModelAdmin):
     list_display = ('created', 'scope', 'account', 'get_asset_amount')
+    readonly_fields = ('account', 'asset', )
 
     def get_asset_amount(self, prize: Prize):
         return str(get_presentation_amount(prize.amount)) + str(prize.asset)
@@ -387,6 +380,7 @@ class PrizeAdmin(admin.ModelAdmin):
 class CoinCategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'get_coin_count']
 
-    def get_coin_count(self, coincaterogy:CoinCategory):
-        return coincaterogy.coins.count()
+    def get_coin_count(self, coin_category: CoinCategory):
+        return coin_category.coins.count()
+
     get_coin_count.short_description = 'تعداد رمزارز'

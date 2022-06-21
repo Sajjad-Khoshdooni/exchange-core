@@ -9,3 +9,4 @@ from .external_notif import ExternalNotification
 from .email_verification import EmailVerificationCode
 from .referral import Referral
 from .custom_token import CustomToken
+from .firebase_token import FirebaseToken

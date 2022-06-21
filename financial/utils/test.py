@@ -30,7 +30,6 @@ if settings.DEBUG_OR_TESTING:
         return FiatWithdrawRequest.objects.create(
             amount=amount,
             fee_amount=fee_amount,
-            lock=wallet.lock_balance(amount, BalanceLock.WITHDRAW),
             bank_account=bank_account,
             withdraw_datetime=datetime,
         )
