@@ -183,11 +183,10 @@ class ZibalChanel(FiatWithdraw):
         )
 
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> str:
-        data = self.collect_api('/v1/wallet/checkout', method='POST', data={
+        data = self.collect_api('/v1/wallet/checkout/plus', method='POST', data={
             'id': wallet_id,
             'amount': amount * 10,
             'bankAccount': receiver.iban[2:],
-            "checkoutDelay": 0,
             'uniqueCode': request_id
         })
 
@@ -199,8 +198,9 @@ class ZibalChanel(FiatWithdraw):
         })
 
         mapping_status = {
-            "1": self.CANCELED,
             "0": self.DONE,
+            "1": self.CANCELED,
+            "2": self.CANCELED,
         }
-        status = data['checkoutStatus']
+        status = data.get('checkoutStatus', self.PENDING)
         return mapping_status.get(status, self.PENDING)
