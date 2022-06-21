@@ -7,7 +7,7 @@ from rest_framework.request import Request
 
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from market.models import Trade
-from market.serializers.trade_serializer import TradeSerializer, FillOrderSerializer
+from market.serializers.trade_serializer import TradeSerializer, AccountTradeSerializer
 
 
 class TradeFilter(django_filters.FilterSet):
@@ -27,11 +27,11 @@ class AccountTradeHistoryView(ListAPIView):
         if not market:
             return Trade.objects.filter(
                 account=self.request.user.account
-            ).select_related('symbol__asset', 'symbol__base_asset').order_by('-created')
+            ).select_related('symbol', 'symbol__asset', 'symbol__base_asset', 'order__wallet').order_by('-created')
 
         return Trade.objects.filter(
             account=self.request.user.account, maker_order__wallet__market=market
-        ).select_related('symbol__asset', 'symbol__base_asset').order_by('-created')
+        ).select_related('symbol', 'symbol__asset', 'symbol__base_asset', 'order__wallet').order_by('-created')
 
     def get_serializer_context(self):
         return {
@@ -46,7 +46,7 @@ class AccountTradeHistoryView(ListAPIView):
 
         result = []
         for index, trade in enumerate(page):
-            result.append(FillOrderSerializer(
+            result.append(AccountTradeSerializer(
                 instance=trade,
                 context={'account': self.request.user.account, 'index': index}
             ).data)

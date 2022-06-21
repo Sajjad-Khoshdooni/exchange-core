@@ -7,7 +7,7 @@ from ledger.utils.precision import floor_precision
 from market.models import Trade, Order
 
 
-class FillOrderSerializer(serializers.ModelSerializer):
+class AccountTradeSerializer(serializers.ModelSerializer):
     coin = serializers.CharField(source='symbol.asset.symbol')
     pair = serializers.CharField(source='symbol.base_asset.symbol')
     pair_amount = serializers.CharField(source='base_amount')
@@ -17,7 +17,7 @@ class FillOrderSerializer(serializers.ModelSerializer):
         return instance.order.wallet.market
 
     def to_representation(self, trade: Trade):
-        data = super(FillOrderSerializer, self).to_representation(trade)
+        data = super(AccountTradeSerializer, self).to_representation(trade)
         amount = floor_precision(Decimal(data['amount']), trade.symbol.step_size)
         if not amount:
             amount = floor_precision(trade.symbol.min_trade_quantity, trade.symbol.step_size)
@@ -39,7 +39,7 @@ class FillOrderSerializer(serializers.ModelSerializer):
         fields = ('created', 'coin', 'pair', 'side', 'amount', 'price', 'pair_amount', 'fee_amount', 'market')
 
 
-class TradeSerializer(FillOrderSerializer):
+class TradeSerializer(AccountTradeSerializer):
     coin = serializers.CharField(source='symbol.asset.symbol')
     pair = serializers.CharField(source='symbol.base_asset.symbol')
     pair_amount = serializers.CharField(source='base_amount')
