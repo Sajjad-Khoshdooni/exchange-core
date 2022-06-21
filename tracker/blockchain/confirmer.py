@@ -1,8 +1,7 @@
+import requests
 from django.db import transaction
 
-from accounts.models import Notification
 from ledger.models import Transfer
-from ledger.utils.precision import humanize_number
 from tracker.blockchain.dtos import BlockDTO
 
 
@@ -11,21 +10,39 @@ class Confirmer:
         self.network = network
         self.block_tracker = block_tracker
 
+    def confirm_trx(self, transfer: Transfer):
+        return bool(transfer.trx_hash)
+
     def confirm(self, block: BlockDTO):
         pending_transfers = Transfer.objects.filter(
             block_number__lte=block.number - self.network.min_confirm,
             network=self.network,
             status=Transfer.PENDING,
         )
+
         for transfer in pending_transfers:
-            if not self.block_tracker.has(transfer.block_hash):
+
+            confirmed = self.block_tracker.has(transfer.block_hash) and self.confirm_trx(transfer)
+
+            if confirmed:
+                with transaction.atomic():
+                    transfer.status = Transfer.DONE
+                    transfer.build_trx()
+                    transfer.save()
+
+                transfer.alert_user()
+
+            else:
                 transfer.status = Transfer.CANCELED
                 transfer.save()
-                continue
 
-            with transaction.atomic():
-                transfer.status = Transfer.DONE
-                transfer.build_trx()
-                transfer.save()
 
-            transfer.alert_user()
+class BSCConfirmer(Confirmer):
+    url = 'https://api.bscscan.com/api?module=transaction&action=gettxreceiptstatus&txhash={}&apikey=H78N3ND259DJINGK7A1SNMIWDA8EUMUMFG'
+
+    def confirm_trx(self, transfer: Transfer):
+        if not super(BSCConfirmer, self).confirm_trx(transfer):
+            return False
+
+        resp = requests.get(self.url.format(transfer.trx_hash))
+        return resp.json()['result']['status'] == '1'
