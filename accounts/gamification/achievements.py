@@ -3,6 +3,7 @@ from django.db import transaction
 from accounts.models import Account, Notification
 from ledger.models import Prize, Asset
 from ledger.utils.precision import humanize_number
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class Achievement:
@@ -49,7 +50,7 @@ class TradePrizeAchievementStep1(PrizeAchievement):
     scope = Prize.TRADE_PRIZE_STEP1
 
     def achieve_prize(self):
-        with transaction.atomic():
+        with WalletPipeline() as pipeline:
             prize, _ = Prize.objects.get_or_create(
                 account=self.account,
                 scope=Prize.TRADE_PRIZE_STEP1,
@@ -84,7 +85,7 @@ class TradePrizeAchievementStep1(PrizeAchievement):
                 )
 
                 if created:
-                    prize.build_trx()
+                    prize.build_trx(pipeline)
 
 
 class TradePrizeAchievementStep2(PrizeAchievement):

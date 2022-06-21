@@ -7,6 +7,7 @@ from django.utils import timezone
 from accounts.models import Account
 from ledger.models import Asset, Trx, Wallet
 from ledger.utils.test import new_account
+from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol, FillOrder, Order
 from market.utils import new_order, cancel_order
 
@@ -35,28 +36,30 @@ class CreateOrderTestCase(TestCase):
 
         self.fill = FillOrder.objects.all()
 
-        for market in (Wallet.SPOT, Wallet.MARGIN):
-            Trx.transaction(
-                group_id=uuid4(),
-                sender=self.usdt.get_wallet(Account.system()),
-                receiver=self.usdt.get_wallet(self.account, market=market),
-                amount=1000 * 1000 * 10000,
-                scope=Trx.TRANSFER
-            )
-            Trx.transaction(
-                group_id=uuid4(),
-                sender=self.irt.get_wallet(Account.system()),
-                receiver=self.irt.get_wallet(self.account, market=market),
-                amount=1000 * 1000 * 10000,
-                scope=Trx.TRANSFER
-            )
-            Trx.transaction(
-                group_id=uuid4(),
-                sender=self.btc.get_wallet(Account.system()),
-                receiver=self.btc.get_wallet(self.account, market=market),
-                amount=1000 * 1000 * 10000,
-                scope=Trx.TRANSFER
-            )
+        with WalletPipeline() as pipeline:
+
+            for market in (Wallet.SPOT, Wallet.MARGIN):
+                pipeline.new_trx(
+                    group_id=uuid4(),
+                    sender=self.usdt.get_wallet(Account.system()),
+                    receiver=self.usdt.get_wallet(self.account, market=market),
+                    amount=1000 * 1000 * 10000,
+                    scope=Trx.TRANSFER
+                )
+                pipeline.new_trx(
+                    group_id=uuid4(),
+                    sender=self.irt.get_wallet(Account.system()),
+                    receiver=self.irt.get_wallet(self.account, market=market),
+                    amount=1000 * 1000 * 10000,
+                    scope=Trx.TRANSFER
+                )
+                pipeline.new_trx(
+                    group_id=uuid4(),
+                    sender=self.btc.get_wallet(Account.system()),
+                    receiver=self.btc.get_wallet(self.account, market=market),
+                    amount=1000 * 1000 * 10000,
+                    scope=Trx.TRANSFER
+                )
 
         self.account.user.margin_quiz_pass_date = timezone.now()
         self.account.user.show_margin = True

@@ -8,6 +8,7 @@ from accounts.models import Account
 from accounts.utils.test import create_referral, set_referred_by
 from ledger.models import Trx, Asset
 from ledger.utils.test import new_account
+from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol, Order, FillOrder, ReferralTrx
 from market.utils import new_order
 
@@ -31,29 +32,9 @@ class ReferralTestCase(TestCase):
         self.btcusdt = PairSymbol.objects.get(name='BTCUSDT')
         self.usdtirt = PairSymbol.objects.get(name='USDTIRT')
 
-        Trx.transaction(
-            group_id=uuid4(),
-            sender=self.btc.get_wallet(Account.system()),
-            receiver=self.btc.get_wallet(self.account_2),
-            amount=1000 * 1000 * 1000,
-            scope=Trx.TRANSFER
-        )
-
-        Trx.transaction(
-            group_id=uuid4(),
-            sender=self.irt.get_wallet(Account.system()),
-            receiver=self.irt.get_wallet(self.account_3),
-            amount=1000 * 1000 * 10000,
-            scope=Trx.TRANSFER
-        )
-
-        Trx.transaction(
-            group_id=uuid4(),
-            sender=self.usdt.get_wallet(Account.system()),
-            receiver=self.usdt.get_wallet(self.account_3),
-            amount=1000 * 1000 * 10000,
-            scope=Trx.TRANSFER
-        )
+        self.btc.get_wallet(self.account_2).airdrop(1000 * 1000 * 1000)
+        self.irt.get_wallet(self.account_3).airdrop(1000 * 1000 * 1000)
+        self.usdt.get_wallet(self.account_3).airdrop(1000 * 1000 * 1000)
 
     def test_referral_btc_irt(self):
         order_1 = new_order(self.btcitr, self.account_2, 2, 200000, Order.SELL)

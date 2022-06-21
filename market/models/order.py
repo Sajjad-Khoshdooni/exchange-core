@@ -13,9 +13,10 @@ from django.db.models import Sum, F, Q, Max, Min, CheckConstraint, QuerySet
 from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Wallet
 from ledger.models.asset import Asset
-from ledger.utils.fields import get_amount_field, get_lock_field
+from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
+from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
 from market.models.referral_trx import ReferralTrx
 from provider.models import ProviderOrder
@@ -68,7 +69,7 @@ class Order(models.Model):
     fill_type = models.CharField(max_length=8, choices=FILL_TYPE_CHOICES)
     status = models.CharField(default=NEW, max_length=8, choices=STATUS_CHOICES)
 
-    lock = get_lock_field(related_name='market_order')
+    group_id = get_group_id_field()
 
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
@@ -97,10 +98,10 @@ class Order(models.Model):
         if self.status == self.FILLED:
             return
 
-        with transaction.atomic():
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
             self.status = self.CANCELED
             self.save(update_fields=['status'])
-            self.lock.release()
+            pipeline.release_lock(key=self.group_id)
 
     @property
     def base_wallet(self):
@@ -178,151 +179,147 @@ class Order(models.Model):
         return amount * price if side == Order.BUY else amount
 
     def submit(self):
-        self.acquire_lock()
-        self.make_match()
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
+            self.acquire_lock(pipeline)
+            self.make_match(pipeline)
 
-    def acquire_lock(self):
+    def acquire_lock(self, pipeline: WalletPipeline):
         to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side)
-        self.lock = to_lock_wallet.lock_balance(lock_amount)
-        self.save()
+        to_lock_wallet.has_balance(lock_amount, raise_exception=True)
+        pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount)
 
-    def release_lock(self, release_amount: Decimal):
+    def release_lock(self, pipeline: WalletPipeline, release_amount: Decimal):
         release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side)
-        self.lock.decrease_lock(release_amount)
+        pipeline.release_lock(key=self.group_id, amount=release_amount)
 
-    def make_match(self):
+    def make_match(self, pipeline: WalletPipeline):
         key = 'mm-cc-%s' % self.symbol.name
         log_prefix = 'MM %s: ' % self.symbol.name
 
         logger.info(log_prefix + 'make match started...')
-        with transaction.atomic():
-            from market.models import FillOrder
-            # lock symbol open orders
-            open_orders = list(Order.open_objects.select_for_update().filter(symbol=self.symbol))
 
-            logger.info(log_prefix + 'make match danger zone')
+        from market.models import FillOrder
+        # lock symbol open orders
+        open_orders = list(Order.open_objects.select_for_update().filter(symbol=self.symbol))
 
-            # if cache.get(key):
-            #     logger.info(log_prefix + 'concurrent detected!')
-            #     raise Exception('Concurrent make match!')
+        logger.info(log_prefix + 'make match danger zone')
 
-            cache.set(key, 1, 10)
+        # if cache.get(key):
+        #     logger.info(log_prefix + 'concurrent detected!')
+        #     raise Exception('Concurrent make match!')
 
-            to_cancel_orders = Order.open_objects.filter(
-                symbol=self.symbol, cancel_request__isnull=False
+        cache.set(key, 1, 10)
+
+        to_cancel_orders = Order.open_objects.filter(
+            symbol=self.symbol, cancel_request__isnull=False
+        )
+        self.cancel_orders(to_cancel_orders)
+
+        opp_side = self.get_opposite_side(self.side)
+
+        operator = 'lte' if self.side == Order.BUY else 'gte'
+        matching_orders = list(sorted(filter(
+            self.matching_orders_filter(side=opp_side, price=self.price, op=operator), open_orders
+        ), key=self.get_order_by(opp_side)))
+
+        unfilled_amount = self.unfilled_amount
+
+        fill_orders = []
+
+        referral_list = []
+        for matching_order in matching_orders:
+            trade_price = matching_order.price
+            if (self.side == Order.BUY and self.price < trade_price) or (
+                    self.side == Order.SELL and self.price > trade_price
+            ):
+                continue
+
+            match_amount = min(matching_order.unfilled_amount, unfilled_amount)
+            if match_amount <= 0:
+                continue
+
+            base_irt_price = 1
+
+            if self.symbol.base_asset.symbol == Asset.USDT:
+                try:
+                    base_irt_price = get_tether_irt_price(self.side)
+                except:
+                    base_irt_price = 27000
+
+            is_system_trade = self.wallet.account.is_system() and matching_order.wallet.account.is_system()
+
+            fill_order = FillOrder(
+                symbol=self.symbol,
+                taker_order=self,
+                maker_order=matching_order,
+                amount=match_amount,
+                price=trade_price,
+                is_buyer_maker=(self.side == Order.SELL),
+                irt_value=base_irt_price * trade_price * match_amount,
+                trade_source=FillOrder.SYSTEM if is_system_trade else FillOrder.MARKET
             )
-            self.cancel_orders(to_cancel_orders)
 
-            opp_side = self.get_opposite_side(self.side)
+            self.release_lock(pipeline, match_amount)
+            matching_order.release_lock(pipeline, match_amount)
 
-            operator = 'lte' if self.side == Order.BUY else 'gte'
-            matching_orders = list(sorted(filter(
-                self.matching_orders_filter(side=opp_side, price=self.price, op=operator), open_orders
-            ), key=self.get_order_by(opp_side)))
+            self.update_filled_amount((self.id, matching_order.id), match_amount)
 
-            unfilled_amount = self.unfilled_amount
+            trade_trxs = fill_order.create_trade_trxs(pipeline)
+            fill_order.set_amounts(trade_trxs)
+            referral_trx = fill_order.init_referrals(pipeline, trade_trxs)
+            referral_list.extend(referral_trx.referral)
 
-            fill_orders = []
+            fill_orders.append(fill_order)
 
-            referral_list = []
-            for matching_order in matching_orders:
-                trade_price = matching_order.price
-                if (self.side == Order.BUY and self.price < trade_price) or (
-                        self.side == Order.SELL and self.price > trade_price
-                ):
-                    continue
-                match_amount = min(matching_order.unfilled_amount, unfilled_amount)
-                if match_amount <= 0:
-                    continue
-
-                base_irt_price = 1
-
-                if self.symbol.base_asset.symbol == Asset.USDT:
-                    try:
-                        base_irt_price = get_tether_irt_price(self.side)
-                    except:
-                        base_irt_price = 27000
-
-                is_system_trade = self.wallet.account.is_system() and matching_order.wallet.account.is_system()
-
-                fill_order = FillOrder(
-                    symbol=self.symbol,
-                    taker_order=self,
-                    maker_order=matching_order,
+            if self.wallet.account.is_ordinary_user() != matching_order.wallet.account.is_ordinary_user():
+                ordinary_order = self if self.type == Order.ORDINARY else matching_order
+                placed_hedge_order = ProviderOrder.try_hedge_for_new_order(
+                    asset=self.wallet.asset,
+                    side=ordinary_order.side,
                     amount=match_amount,
-                    price=trade_price,
-                    is_buyer_maker=(self.side == Order.SELL),
-                    irt_value=base_irt_price * trade_price * match_amount,
-                    trade_source=FillOrder.SYSTEM if is_system_trade else FillOrder.MARKET
+                    scope=ProviderOrder.TRADE
                 )
 
-                self.release_lock(match_amount)
-                matching_order.release_lock(match_amount)
-                self.update_filled_amount((self.id, matching_order.id), match_amount)
-
-                trade_trxs = fill_order.create_trade_trxs()
-                fill_order.set_amounts(trade_trxs)
-                referral_trx = fill_order.init_referrals(trade_trxs)
-                referral_list.extend(referral_trx.referral)
-
-                fill_orders.append(fill_order)
-
-                if self.wallet.account.is_ordinary_user() != matching_order.wallet.account.is_ordinary_user():
-                    ordinary_order = self if self.type == Order.ORDINARY else matching_order
-                    placed_hedge_order = ProviderOrder.try_hedge_for_new_order(
-                        asset=self.wallet.asset,
-                        side=ordinary_order.side,
-                        amount=match_amount,
-                        scope=ProviderOrder.TRADE
+                if not placed_hedge_order:
+                    logger.exception(
+                        'failed placing hedge order',
+                        extra={
+                            'order': ordinary_order
+                        }
                     )
 
-                    if not placed_hedge_order:
-                        logger.exception(
-                            'failed placing hedge order',
-                            extra={
-                                'order': ordinary_order
-                            }
-                        )
+            unfilled_amount -= match_amount
+            if match_amount == matching_order.unfilled_amount:  # unfilled_amount reduced in DB but not updated here :)
+                matching_order.status = Order.FILLED
+                matching_order.save(update_fields=['status'])
 
-                unfilled_amount -= match_amount
-                if match_amount == matching_order.unfilled_amount:
-                    matching_order.lock.release()
-                    matching_order.status = Order.FILLED
-                    matching_order.save(update_fields=['status'])
-
-                if unfilled_amount <= 0:
-                    self.lock.release()
-                    self.status = Order.FILLED
-                    self.save(update_fields=['status'])
-                    if unfilled_amount < 0:
-                        logger.critical(f'order {self.symbol} filled more than unfilled amount', extra={
-                            'order_id': self.id,
-                            'unfilled_amount': unfilled_amount,
-                        })
-                    break
-
-            if self.fill_type == Order.MARKET and self.status == Order.NEW:
-                self.status = Order.CANCELED
-                self.lock.release()
+            if unfilled_amount == 0:
+                self.status = Order.FILLED
                 self.save(update_fields=['status'])
+                break
 
-            ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referral_list))
-            FillOrder.objects.bulk_create(fill_orders)
+        if self.fill_type == Order.MARKET and self.status == Order.NEW:
+            self.status = Order.CANCELED
+            pipeline.release_lock(self.group_id)
+            self.save(update_fields=['status'])
 
-            # updating trade_volume_irt of accounts
-            for fill_order in fill_orders:
-                accounts = [fill_order.maker_order.wallet.account, fill_order.taker_order.wallet.account]
+        ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referral_list))
+        FillOrder.objects.bulk_create(fill_orders)
 
-                for account in accounts:
-                    if not account.is_system():
-                        account.trade_volume_irt = F('trade_volume_irt') + fill_order.irt_value
-                        account.save(update_fields=['trade_volume_irt'])
-                        account.refresh_from_db()
-                        check_prize_achievements(account)
-            
-            cache.delete(key)
-            logger.info(log_prefix + 'make match finished.')
+        # updating trade_volume_irt of accounts
+        for fill_order in fill_orders:
+            accounts = [fill_order.maker_order.wallet.account, fill_order.taker_order.wallet.account]
+
+            for account in accounts:
+                if not account.is_system():
+                    account.trade_volume_irt = F('trade_volume_irt') + fill_order.irt_value
+                    account.save(update_fields=['trade_volume_irt'])
+                    account.refresh_from_db()
+                    check_prize_achievements(account)
+
+        cache.delete(key)
+        logger.info(log_prefix + 'make match finished.')
 
     @classmethod
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):
