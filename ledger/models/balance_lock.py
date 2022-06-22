@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class BalanceLock(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    key = models.UUIDField(unique=True)
+    key = models.UUIDField(unique=True, null=True)
     wallet = models.ForeignKey('ledger.Wallet', on_delete=models.CASCADE)
 
     original_amount = get_amount_field()
