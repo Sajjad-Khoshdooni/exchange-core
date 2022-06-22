@@ -111,7 +111,7 @@ class Web3TransactionCreator(TransactionCreator):
             'to': self.web3.toChecksumAddress(transfer.out_address),
             'value': self.web3.toWei(transfer.amount, 'ether'),
             'gas': 21_000,
-            'gasPrice': self.web3.toWei('7', 'gwei')  # todo: eth gas price is around 64. this is for only bsc
+            'gasPrice': self.web3.toWei('5', 'gwei')  # todo: eth gas price is around 64. this is for only bsc
         }
         signed_tx = self.web3.eth.account.sign_transaction(tx, self.wallet.key)
 
