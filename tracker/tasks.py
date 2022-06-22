@@ -11,7 +11,7 @@ from ledger.models import Network, Asset
 from ledger.symbol_contract_mapper import bep20_symbol_contract_mapper, erc20_symbol_contract_mapper
 from tracker.blockchain.abi_getter import bsc_abi_getter, eth_abi_getter
 from tracker.blockchain.block_info_populator import AllPopulatorGetter
-from tracker.blockchain.confirmer import Confirmer, BSCConfirmer
+from tracker.blockchain.confirmer import Confirmer
 from tracker.blockchain.history_builder import HistoryBuilder
 from tracker.blockchain.reverter import Reverter
 from tracker.blockchain.transfer_creator import TransferCreator
@@ -68,7 +68,7 @@ def bsc_network_consumer(initial=False):
         ),
         network=network,
         block_tracker=BSCBlockTracker,
-        confirmer=BSCConfirmer(block_tracker=BSCBlockTracker, network=network),
+        confirmer=Confirmer(block_tracker=BSCBlockTracker, network=network),
     ).build(only_add_now_block=initial, maximum_block_step_for_backward=100)
 
 

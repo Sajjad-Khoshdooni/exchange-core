@@ -3,6 +3,7 @@ from django.db import transaction
 
 from ledger.models import Transfer
 from tracker.blockchain.dtos import BlockDTO
+from tracker.clients import validate_bsc_trx, validate_tron_trx
 
 
 class Confirmer:
@@ -22,7 +23,7 @@ class Confirmer:
 
         for transfer in pending_transfers:
 
-            confirmed = self.block_tracker.has(transfer.block_hash) and self.confirm_trx(transfer)
+            confirmed = self.block_tracker.has(transfer.block_hash) and self.confirm_trx(transfer) and self.client_confirm(trx_hash=transfer.trx_hash)
 
             if confirmed:
                 with transaction.atomic():
@@ -36,13 +37,8 @@ class Confirmer:
                 transfer.status = Transfer.CANCELED
                 transfer.save()
 
-
-class BSCConfirmer(Confirmer):
-    url = 'https://api.bscscan.com/api?module=transaction&action=gettxreceiptstatus&txhash={}&apikey=H78N3ND259DJINGK7A1SNMIWDA8EUMUMFG'
-
-    def confirm_trx(self, transfer: Transfer):
-        if not super(BSCConfirmer, self).confirm_trx(transfer):
-            return False
-
-        resp = requests.get(self.url.format(transfer.trx_hash))
-        return resp.json()['result']['status'] == '1'
+    def client_confirm(self, trx_hash):
+        if self.network == 'BSC':
+            return validate_bsc_trx(trx_hash=trx_hash)
+        if self.network == 'TRX':
+            return validate_tron_trx(trx_hash=trx_hash)
