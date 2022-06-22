@@ -127,8 +127,8 @@ class Transfer(models.Model):
             deposit=False
         )
 
-        from ledger.tasks import create_binance_withdraw
-        create_binance_withdraw.delay(transfer.id)
+        from ledger.tasks import create_withdraw
+        create_withdraw.delay(transfer.id)
 
         return transfer
 

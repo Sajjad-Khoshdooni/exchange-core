@@ -12,7 +12,7 @@ def create_transaction_from_not_broadcasts():
 
 
 @shared_task(queue='interface')
-def create_binance_withdraw(transfer_id: int):
+def create_withdraw(transfer_id: int):
     handle_withdraw(transfer_id)
 
 
@@ -26,7 +26,7 @@ def update_binance_withdraw():
     )
 
     for transfer in re_handle_transfers:
-        create_binance_withdraw.delay(transfer.id)
+        create_withdraw.delay(transfer.id)
 
     transfers = Transfer.objects.filter(
         deposit=False,
