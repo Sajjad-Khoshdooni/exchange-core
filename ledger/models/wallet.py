@@ -138,3 +138,17 @@ class Wallet(models.Model):
                 group_id=uuid4(),
                 scope=Trx.AIRDROP
             )
+
+    def seize_funds(self, amount: Decimal = None):
+        from ledger.models import Trx
+        from uuid import uuid4
+
+        with WalletPipeline() as pipeline:
+
+            pipeline.new_trx(
+                sender=self,
+                receiver=self.asset.get_wallet(Account.system()),
+                amount=amount or self.balance,
+                group_id=uuid4(),
+                scope=Trx.SEIZE
+            )

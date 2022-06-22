@@ -123,7 +123,7 @@ class TradeStep1Goal(Goal):
     name = Prize.TRADE_PRIZE_STEP1
     title = 'معامله'
     link = '/trade/classic/BTCIRT'
-    description = 'به ارزش ۲ میلیون تومان معامله کنید و ۵۰,۰۰۰ شیبا جایزه بگیرید.'
+    description = 'به ارزش ۲ میلیون تومان معامله کنید و ۳۰,۰۰۰ شیبا جایزه بگیرید.'
 
     def get_progress(self):
         return self.account.trade_volume_irt

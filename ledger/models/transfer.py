@@ -163,7 +163,9 @@ class Transfer(models.Model):
             logger.exception('failed to update crypto balance')
 
     def alert_user(self):
-        if self.status == Transfer.DONE and not self.hidden and self.wallet.account.user:
+        user = self.wallet.account.user
+
+        if self.status == Transfer.DONE and not self.hidden and user and user.is_active:
             sent_amount = self.asset.get_presentation_amount(self.amount)
             user_email = self.wallet.account.user.email
             if self.deposit:
