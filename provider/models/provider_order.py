@@ -54,20 +54,20 @@ class ProviderOrder(models.Model):
 
     @classmethod
     def new_order(cls, asset: Asset, side: str, amount: Decimal, scope: str, market: str = FUTURE) -> 'ProviderOrder':
-        hedger = asset.get_hedger()
+        handler = asset.get_hedger()
 
         with transaction.atomic():
             order = ProviderOrder.objects.create(
                 asset=asset, amount=amount, side=side, scope=scope, market=market, exchange=asset.hedge_method
             )
 
-            symbol = hedger.get_trading_symbol(asset.symbol)
+            symbol = handler.get_trading_symbol(asset.symbol)
 
             if market == cls.FUTURE and asset.symbol == 'SHIB':
                 symbol = symbol.replace('SHIB', '1000SHIB')
                 amount = round(amount / 1000)
 
-            resp = hedger.place_order(
+            resp = handler.place_order(
                 symbol=symbol,
                 side=side,
                 amount=amount,
@@ -121,7 +121,7 @@ class ProviderOrder(models.Model):
     @classmethod
     def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '', dry_run: bool = False) -> bool:
         # todo: this method should not called more than once at a single time
-        hedger = asset.get_hedger()
+        handler = asset.get_hedger()
         if settings.DEBUG_OR_TESTING:
             return True
 
@@ -131,7 +131,7 @@ class ProviderOrder(models.Model):
         to_buy = amount if side == cls.BUY else -amount
         hedge_amount = cls.get_hedge(asset) - to_buy
 
-        symbol = hedger.get_trading_symbol(asset.symbol)
+        symbol = handler.get_trading_symbol(asset.symbol)
 
         handler = asset.get_hedger()
         market = handler.MARKET_TYPE

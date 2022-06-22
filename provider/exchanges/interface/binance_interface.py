@@ -4,7 +4,7 @@ from typing import Union
 
 from django.conf import settings
 
-from ledger.models import Transfer
+
 from ledger.utils.cache import get_cache_func_key, cache
 from ledger.utils.precision import decimal_to_str
 
@@ -38,6 +38,10 @@ class ExchangeHandler:
         else:
             return mapping[Asset.HEDGE_BINANCE_FUTURE]()
 
+    def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
+                    cache_timeout: int = None):
+        return NotImplementedError
+
     def get_trading_symbol(self, symbol: str) -> str:
         return NotImplementedError
 
@@ -50,13 +54,28 @@ class ExchangeHandler:
                  client_id: str = None) -> dict:
         return NotImplementedError
 
+    def get_account_details(self):
+        return NotImplementedError
+
     def get_free_dict(self):
+        return NotImplementedError
+
+    def get_all_coins(self):
+        return NotImplementedError
+
+    def get_coin_data(self, coin: str) -> Union[dict, None]:
         return NotImplementedError
 
     def get_network_info(self, coin: str, network: str) -> Union[dict, None]:
         return NotImplementedError
 
     def get_withdraw_fee(self, coin: str, network: str) -> Decimal:
+        return NotImplementedError
+
+    def transfer(self, asset: str, amount: float, market: str, transfer_type: int):
+        return NotImplementedError
+
+    def get_symbol_data(self, symbol: str) -> Union[dict, None]:
         return NotImplementedError
 
     def get_step_size(self, symbol: str) -> Decimal:
@@ -73,27 +92,25 @@ class BinanceSpotHandler(ExchangeHandler):
     order_url = '/api/v3/order'
     MARKET_TYPE = 'spot'
 
-    @classmethod
-    def collect_api(cls, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
+    def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
                     cache_timeout: int = None):
         cache_key = None
 
         if cache_timeout:
-            cache_key = get_cache_func_key(cls, url, method, data, signed)
+            cache_key = get_cache_func_key(self.__class__, url, method, data, signed)
             result = cache.get(cache_key)
 
             if result is not None:
                 return result
 
-        result = cls._collect_api(url=url, method=method, data=data, signed=signed)
+        result = self._collect_api(url=url, method=method, data=data, signed=signed)
 
         if cache_timeout:
             cache.set(cache_key, result, cache_timeout)
 
         return result
 
-    @classmethod
-    def _collect_api(cls, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
+    def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
         if settings.DEBUG_OR_TESTING:
             return {}
 
@@ -148,21 +165,18 @@ class BinanceSpotHandler(ExchangeHandler):
             'withdrawOrderId': client_id
         })
 
-    @classmethod
-    def get_account_details(cls):
-        return cls.collect_api('/api/v3/account', method='GET') or {}
+    def get_account_details(self):
+        return self.collect_api('/api/v3/account', method='GET') or {}
 
     def get_free_dict(self):
         balances_list = self.get_account_details()['balances']
         return {b['asset']: Decimal(b['free']) for b in balances_list}
 
-    @classmethod
-    def get_all_coins(cls):
-        return cls.collect_api('/sapi/v1/capital/config/getall', method='GET', cache_timeout=HOUR)
+    def get_all_coins(self):
+        return self.collect_api('/sapi/v1/capital/config/getall', method='GET', cache_timeout=HOUR)
 
-    @classmethod
-    def get_coin_data(cls, coin: str) -> Union[dict, None]:
-        info = list(filter(lambda d: d['coin'] == coin, cls.get_all_coins()))
+    def get_coin_data(self, coin: str) -> Union[dict, None]:
+        info = list(filter(lambda d: d['coin'] == coin, self.get_all_coins()))
 
         if not info:
             return
@@ -183,24 +197,21 @@ class BinanceSpotHandler(ExchangeHandler):
         info = self.get_network_info(coin, network)
         return Decimal(info['withdrawFee'])
 
-    @classmethod
-    def transfer(cls, asset: str, amount: float, market: str, transfer_type: int):
-        return cls.collect_api(f'/sapi/v1/{market}/transfer', method='POST', data={
+    def transfer(self, asset: str, amount: float, market: str, transfer_type: int):
+        return self.collect_api(f'/sapi/v1/{market}/transfer', method='POST', data={
             'asset': asset, 'amount': amount, 'type': transfer_type
         })
 
-    @classmethod
-    def get_symbol_data(cls, symbol: str) -> Union[dict, None]:
-        data = cls.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False, cache_timeout=HOUR)
+    def get_symbol_data(self, symbol: str) -> Union[dict, None]:
+        data = self.collect_api('/api/v3/exchangeInfo', data={'symbol': symbol}, signed=False, cache_timeout=HOUR)
 
         if not data:
             return
 
         return data['symbols'][0]
 
-    @classmethod
-    def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
-        data = cls.get_symbol_data(symbol)
+    def _get_lot_size_data(self, symbol: str) -> Union[dict, None]:
+        data = self.get_symbol_data(symbol)
 
         if not data:
             return
@@ -209,14 +220,15 @@ class BinanceSpotHandler(ExchangeHandler):
         return filters and filters[0]
 
     def get_step_size(self, symbol: str) -> Decimal:
-        lot_size = self.get_lot_size_data(symbol)
+        lot_size = self._get_lot_size_data(symbol)
         return lot_size and Decimal(lot_size['stepSize'])
 
     def get_lot_min_quantity(self, symbol: str) -> Decimal:
-        lot_size = self.get_lot_size_data(symbol)
+        lot_size = self._get_lot_size_data(symbol)
         return lot_size and Decimal(lot_size['minQty'])
 
     def get_withdraw_status(self, withdraw_id: str) -> dict:
+        from ledger.models import Transfer
         data = self.collect_api(
             '/sapi/v1/capital/withdraw/history', 'GET',
             data={'withdrawOrderId': self.id})
@@ -241,6 +253,13 @@ class BinanceSpotHandler(ExchangeHandler):
 
         return resp
 
+    def add_spot_binance_condidate_coins(self, symbol: str):
+        spot = BinanceSpotHandler().get_symbol_data(symbol)
+        if not spot or spot['status'] != 'TRADING':
+            print('%s not found or stopped trading in interface spot' % symbol)
+            return
+        return spot
+
 
 class BinanceFuturesHandler(BinanceSpotHandler):
     order_url = '/fapi/v1/order'
@@ -249,8 +268,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         'SHIBUSDT': '1000SHIBUSDT'
     }
 
-    @classmethod
-    def _collect_api(cls, url: str, method: str = 'POST', data: dict = None, signed: bool = True):
+    def _collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True):
         if settings.DEBUG_OR_TESTING:
             return {}
 
@@ -261,22 +279,19 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         else:
             return binance_futures_send_public_request(url, data)
 
-    @classmethod
-    def get_account_details(cls):
-        return cls.collect_api('/fapi/v2/account', method='GET')
+    def get_account_details(self):
+        return self.collect_api('/fapi/v2/account', method='GET')
 
-    @classmethod
-    def get_order_detail(cls, symbol: str, order_id: str):
-        return cls.collect_api(
+    def get_order_detail(self, symbol: str, order_id: str):
+        return self.collect_api(
             '/fapi/v1/order', method='GET', data={'orderId': order_id, 'symbol': symbol}
         )
 
-    @classmethod
-    def get_symbol_data(cls, symbol: str) -> Union[dict, None]:
-        if symbol in cls.renamed_symbols:
-            symbol = cls.renamed_symbols[symbol]
+    def get_symbol_data(self, symbol: str) -> Union[dict, None]:
+        if symbol in self.renamed_symbols:
+            symbol = self.renamed_symbols[symbol]
 
-        data = cls.collect_api('/fapi/v1/exchangeInfo', signed=False, cache_timeout=HOUR)
+        data = self.collect_api('/fapi/v1/exchangeInfo', signed=False, cache_timeout=HOUR)
 
         if not data:
             return
@@ -289,9 +304,8 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
         return coin_data[0]
 
-    @classmethod
-    def get_lot_size_data(cls, symbol: str) -> Union[dict, None]:
-        coin_data = cls.get_symbol_data(symbol)
+    def get_lot_size_data(self, symbol: str) -> Union[dict, None]:
+        coin_data = self.get_symbol_data(symbol)
         if not coin_data:
             return
 
@@ -300,15 +314,14 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         if filters:
             lot_size = filters[0]
 
-            if symbol in cls.renamed_symbols:
+            if symbol in self.renamed_symbols:
                 lot_size['stepSize'] = Decimal(lot_size['stepSize']) * 1000
                 lot_size['minQty'] = Decimal(lot_size['minQty']) * 1000
 
             return lot_size
 
-    @classmethod
-    def get_incomes(cls, start_date: datetime, end_date: datetime) -> list:
-        return cls.collect_api(
+    def get_incomes(self, start_date: datetime, end_date: datetime) -> list:
+        return self.collect_api(
             '/fapi/v1/income', method='GET', data={
                 # 'incomeType': income_type,
                 'startTime': int(start_date.timestamp() * 1000),

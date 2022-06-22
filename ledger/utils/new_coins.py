@@ -13,16 +13,19 @@ def add_candidate_coins(coins: list):
     for coin in coins:
         coin = coin.upper()
 
-        symbol = BinanceSpotHandler().get_trading_symbol(coin)
-        spot = BinanceSpotHandler.get_symbol_data(symbol)
+        binance_symbol = BinanceSpotHandler().get_trading_symbol(coin)
+        # spot = BinanceSpotHandler.get_symbol_data(symbol)
+        #
+        # if not spot or spot['status'] != 'TRADING':
+        #     print('%s not found or stopped trading in interface spot' % coin)
+        #     continue
 
-        if not spot or spot['status'] != 'TRADING':
-            print('%s not found or stopped trading in interface spot' % coin)
-            continue
+        binance_spot = BinanceSpotHandler.add_spot_binance_condidate_coins(symbol=binance_symbol)
 
-        futures = BinanceFuturesHandler.get_symbol_data(symbol)
+        binance_futures = BinanceFuturesHandler.get_symbol_data(symbol=binance_symbol)
 
         asset, created = Asset.objects.get_or_create(symbol=coin)
+
         asset.hedge_method = Asset.HEDGE_BINANCE_SPOT
 
         if created:
@@ -32,11 +35,11 @@ def add_candidate_coins(coins: list):
         if not asset.enable:
             asset.candidate = True
 
-        data = spot
+        data = binance_spot
 
-        if futures and futures['status'] == 'TRADING':
+        if binance_futures and binance_futures['status'] == 'TRADING':
             asset.hedge_method = Asset.HEDGE_BINANCE_FUTURE
-            data = futures
+            data = binance_futures
 
         lot_size = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', spot['filters']))[0]
         price_filter = list(filter(lambda f: f['filterType'] == 'PRICE_FILTER', spot['filters']))[0]
@@ -57,7 +60,7 @@ def add_candidate_coins(coins: list):
 
 
 def update_coin_networks(asset: Asset):
-    coin_data = BinanceSpotHandler.get_coin_data(asset.symbol)
+    coin_data = BinanceSpotHandler().get_coin_data(asset.symbol)
 
     for n in coin_data['networkList']:
         network, _ = Network.objects.get_or_create(symbol=n['network'], defaults={

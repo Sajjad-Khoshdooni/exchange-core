@@ -36,7 +36,7 @@ def get_internal_asset_deposits():
 
 class AssetOverview:
     def __init__(self):
-        self._future = BinanceFuturesHandler.get_account_details()
+        self._future = BinanceFuturesHandler().get_account_details()
 
         self._future_positions = {
             pos['symbol']: pos for pos in self._future['positions']
@@ -55,7 +55,7 @@ class AssetOverview:
 
         self._usdt_irt = get_tether_irt_price(SELL)
 
-        balances_list = BinanceSpotHandler.get_account_details()['balances']
+        balances_list = BinanceSpotHandler().get_account_details()['balances']
         self._binance_spot_balance_map = {b['asset']: float(b['free']) for b in balances_list}
 
         self._internal_deposits = get_internal_asset_deposits()

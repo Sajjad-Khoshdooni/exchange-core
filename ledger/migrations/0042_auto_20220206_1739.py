@@ -14,7 +14,7 @@ def create_network_assets(apps, schema_editor):
     assets = Asset.objects.all()
     assets_map = {a.symbol: a for a in assets}
 
-    coins = BinanceSpotHandler.get_all_coins()
+    coins = BinanceSpotHandler().get_all_coins()
 
     for c in coins:
         if c['coin'] not in assets_map:

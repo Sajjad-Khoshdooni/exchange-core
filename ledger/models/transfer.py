@@ -50,7 +50,7 @@ class Transfer(models.Model):
 
     is_fee = models.BooleanField(default=False)
 
-    source = models.CharField(max_length=8, default=SELF, choices=((SELF, SELF), (BINANCE, BINANCE), (KUCOIN, KUCOIN)))
+    source = models.CharField(max_length=32, default=SELF, choices=((SELF, SELF), (BINANCE, BINANCE), (KUCOIN, KUCOIN)))
     provider_transfer = models.OneToOneField(to='provider.ProviderTransfer', on_delete=models.PROTECT, null=True,
                                              blank=True)
     handling = models.BooleanField(default=False)
