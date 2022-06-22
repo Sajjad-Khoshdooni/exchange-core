@@ -1,9 +1,9 @@
+import math
 from datetime import datetime
 from decimal import Decimal
 from typing import Union
 
 from django.conf import settings
-
 
 from ledger.utils.cache import get_cache_func_key, cache
 from ledger.utils.precision import decimal_to_str
@@ -252,13 +252,6 @@ class BinanceSpotHandler(ExchangeHandler):
         resp['txId'] = data.get('txId')
 
         return resp
-
-    def add_spot_binance_condidate_coins(self, symbol: str):
-        spot = BinanceSpotHandler().get_symbol_data(symbol)
-        if not spot or spot['status'] != 'TRADING':
-            print('%s not found or stopped trading in interface spot' % symbol)
-            return
-        return spot
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):
