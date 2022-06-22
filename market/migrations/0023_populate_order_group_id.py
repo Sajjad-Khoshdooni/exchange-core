@@ -7,7 +7,7 @@ import uuid
 def populate_order_group_id(apps, schema_editor):
     Order = apps.get_model('market', 'Order')
 
-    orders = list(Order.objects.all())
+    orders = list(Order.objects.filter(status='new'))
     for order in orders:
         order.group_id = uuid.uuid4()
 
@@ -24,16 +24,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='order',
             name='group_id',
-            field=models.UUIDField(null=True),
+            field=models.UUIDField(blank=True, null=True, default=uuid.uuid4, editable=False),
         ),
 
         migrations.RunPython(
             code=populate_order_group_id, reverse_code=migrations.RunPython.noop
-        ),
-
-        migrations.AlterField(
-            model_name='order',
-            name='group_id',
-            field=models.UUIDField(default=uuid.uuid4, editable=False),
         ),
     ]
