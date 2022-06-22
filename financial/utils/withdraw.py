@@ -189,7 +189,7 @@ class ZibalChanel(FiatWithdraw):
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> int:
         data = self.collect_api(f'/v1/report/checkout/inquire', method='POST', data={
-            "checkoutRequestId": provider_id
+            "checkoutRequestId": '2649446'
         })
 
         mapping_status = {
@@ -197,5 +197,5 @@ class ZibalChanel(FiatWithdraw):
             "1": self.CANCELED,
             "2": self.CANCELED,
         }
-        status = data.get('checkoutStatus', self.PENDING)
+        status = data['details'].get('checkoutStatus', self.PENDING)
         return mapping_status.get(status, self.PENDING)
