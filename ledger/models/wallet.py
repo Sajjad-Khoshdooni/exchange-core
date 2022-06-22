@@ -147,3 +147,15 @@ class Wallet(models.Model):
 
     def should_update_balance_fields(self):
         return not (self.account.type == Account.SYSTEM and self.account.primary)
+
+    def seize_funds(self, amount: Decimal = None):
+        from ledger.models import Trx
+        from uuid import uuid4
+
+        Trx.transaction(
+            sender=self,
+            receiver=self.asset.get_wallet(Account.system()),
+            amount=amount or self.balance,
+            group_id=uuid4(),
+            scope=Trx.SEIZE
+        )
