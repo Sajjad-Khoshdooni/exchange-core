@@ -1,13 +1,13 @@
 import requests
 from django.db import transaction
 
-from ledger.models import Transfer, Network
+from ledger.models import Transfer
 from tracker.blockchain.dtos import BlockDTO
 from tracker.clients import validate_bsc_trx, validate_tron_trx
 
 
 class Confirmer:
-    def __init__(self, network: Network, block_tracker):
+    def __init__(self, network, block_tracker):
         self.network = network
         self.block_tracker = block_tracker
 
@@ -38,7 +38,7 @@ class Confirmer:
                 transfer.save()
 
     def client_confirm(self, trx_hash):
-        if self.network.symbol == 'BSC':
+        if self.network == 'BSC':
             return validate_bsc_trx(trx_hash=trx_hash)
-        if self.network.symbol == 'TRX':
+        if self.network == 'TRX':
             return validate_tron_trx(trx_hash=trx_hash)
