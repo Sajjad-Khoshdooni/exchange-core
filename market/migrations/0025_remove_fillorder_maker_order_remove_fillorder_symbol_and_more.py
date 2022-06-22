@@ -11,18 +11,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='fillorder',
-            name='maker_order',
-        ),
-        migrations.RemoveField(
-            model_name='fillorder',
-            name='symbol',
-        ),
-        migrations.RemoveField(
-            model_name='fillorder',
-            name='taker_order',
-        ),
         migrations.AlterField(
             model_name='trade',
             name='amount',
