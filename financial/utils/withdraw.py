@@ -197,5 +197,5 @@ class ZibalChanel(FiatWithdraw):
             "1": self.CANCELED,
             "2": self.CANCELED,
         }
-        status = data['details'].get('checkoutStatus', self.PENDING)
+        status = data['details'][0].get('checkoutStatus', self.PENDING)
         return mapping_status.get(status, self.PENDING)
