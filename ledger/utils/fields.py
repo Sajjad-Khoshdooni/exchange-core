@@ -90,4 +90,6 @@ def get_irt_market_assets():
     from market.models import PairSymbol
     from ledger.models import Asset
     return set(PairSymbol.objects.select_related('base_asset').filter(
-        base_asset__symbol=Asset.IRT).values_list('asset', flat=True))
+        enable=True,
+        base_asset__symbol=Asset.IRT
+    ).values_list('asset', flat=True))
