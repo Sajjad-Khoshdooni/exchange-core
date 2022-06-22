@@ -45,10 +45,10 @@ def trx_network_consumer(initial=False):
 
 @shared_task()
 def bsc_network_consumer(initial=False):
-    network = Network.objects.get(symbol='BSC')
-    asset = Asset.objects.get(symbol='BNB')
+network = Network.objects.get(symbol='BSC')
+asset = Asset.objects.get(symbol='BNB')
 
-    normalizer = AmountNormalizer(network=network)
+normalizer = AmountNormalizer(network=network)
 
     HistoryBuilder(
         requester=Web3Requester(get_web3_bsc_client()),
