@@ -117,10 +117,10 @@ class OTCTrade(models.Model):
             pipeline.release_lock(self.group_id)
 
             if hedged:
-                from market.models import FillOrder
+                from market.models import Trade
                 self.change_status(self.DONE)
                 self.create_ledger(pipeline)
-                FillOrder.create_for_otc_trade(self, pipeline)
+                Trade.create_for_otc_trade(self, pipeline)
             else:
                 self.change_status(self.CANCELED)
 

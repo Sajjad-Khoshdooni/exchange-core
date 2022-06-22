@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ledger.utils.precision import floor_precision
-from market.models import PairSymbol, FillOrder
+from market.models import PairSymbol, Trade
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,7 @@ class OHLCVAPIView(APIView):
         start = request.query_params.get('from', (timezone.now() - timedelta(hours=24)).timestamp())
         end = request.query_params.get('to', timezone.now().timestamp())
         interval = request.query_params.get('resolution', 3600)
-        candles = FillOrder.get_grouped_by_interval(
+        candles = Trade.get_grouped_by_interval(
             symbol_id=symbol.id,
             interval_in_secs=interval,
             start=datetime.fromtimestamp(int(start)).astimezone(),

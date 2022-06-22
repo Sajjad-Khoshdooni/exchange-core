@@ -8,7 +8,7 @@ from accounts.models import Account
 from ledger.models import Asset, Trx, Wallet
 from ledger.utils.test import new_account
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import PairSymbol, FillOrder, Order
+from market.models import PairSymbol, Trade, Order
 from market.utils import new_order, cancel_order
 
 
@@ -34,7 +34,7 @@ class CreateOrderTestCase(TestCase):
 
         Asset.objects.filter(symbol='BTC').update(margin_enable=True)
 
-        self.fill = FillOrder.objects.all()
+        self.fill = Trade.objects.all()
 
         with WalletPipeline() as pipeline:
 
@@ -87,18 +87,20 @@ class CreateOrderTestCase(TestCase):
         order_2 = new_order(self.btcirt, Account.system(), 2, 200000, Order.BUY)
         order.refresh_from_db()
 
-        fill_order = FillOrder.objects.last()
+        trade_pair = Trade.objects.order_by('-id')[:2]
 
         self.assertEqual(order.status, Order.FILLED)
-        self.assertEqual(fill_order.price, 200000)
-        self.assertEqual(fill_order.amount, 2)
+        self.assertEqual(trade_pair[0].price, 200000)
+        self.assertEqual(trade_pair[0].amount, 2)
+        self.assertEqual(trade_pair[1].price, 200000)
+        self.assertEqual(trade_pair[1].amount, 2)
 
     def test_fill_order_with_different_price(self):
         order_3 = new_order(self.btcirt, Account.system(), 2, 200000, Order.SELL)
         order_4 = new_order(self.btcirt, self.account, 2, 200010, Order.BUY)
         order_3.refresh_from_db(), order_4.refresh_from_db()
 
-        fill_order = FillOrder.objects.get(maker_order=order_3)
+        fill_order = Trade.objects.get(order=order_3)
 
         trx_asset = Trx.objects.get(
             group_id=fill_order.group_id,
@@ -149,13 +151,15 @@ class CreateOrderTestCase(TestCase):
 
         order_5.refresh_from_db(), order_6.refresh_from_db(), order_7.refresh_from_db()
 
-        fill_order_between_5_7 = FillOrder.objects.get(maker_order=order_5)
-        fill_order_between_6_7 = FillOrder.objects.get(maker_order=order_6)
+        trade_between_5_7 = Trade.objects.get(order=order_5)
+        trade_between_7_5 = Trade.objects.get(order=order_7, group_id=trade_between_5_7.group_id)
+        trade_between_6_7 = Trade.objects.get(order=order_6)
+        trade_between_7_6 = Trade.objects.get(order=order_7, group_id=trade_between_6_7.group_id)
 
-        self.assertEqual(fill_order_between_5_7.taker_fee_amount, 2 * self.btcirt.taker_fee)
-        self.assertEqual(fill_order_between_5_7.maker_fee_amount, 2 * self.btcirt.maker_fee)
-        self.assertEqual(fill_order_between_6_7.taker_fee_amount, 3 * self.btcirt.taker_fee)
-        self.assertEqual(fill_order_between_6_7.maker_fee_amount, 3 * self.btcirt.maker_fee)
+        self.assertEqual(trade_between_7_5.fee_amount, 2 * self.btcirt.taker_fee)
+        self.assertEqual(trade_between_5_7.fee_amount, 2 * self.btcirt.maker_fee)
+        self.assertEqual(trade_between_7_6.fee_amount, 3 * self.btcirt.taker_fee)
+        self.assertEqual(trade_between_6_7.fee_amount, 3 * self.btcirt.maker_fee)
 
         self.assertEqual(order_5.filled_amount, 2)
         self.assertEqual(order_6.filled_amount, 3)
@@ -168,11 +172,15 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(order_6.status, Order.FILLED)
         self.assertEqual(order_7.status, Order.NEW)
 
-        self.assertEqual(fill_order_between_5_7.amount, 2)
-        self.assertEqual(fill_order_between_6_7.amount, 3)
+        self.assertEqual(trade_between_5_7.amount, 2)
+        self.assertEqual(trade_between_6_7.amount, 3)
+        self.assertEqual(trade_between_7_5.amount, 2)
+        self.assertEqual(trade_between_7_6.amount, 3)
 
-        self.assertEqual(fill_order_between_5_7.price, 200000)
-        self.assertEqual(fill_order_between_6_7.price, 200010)
+        self.assertEqual(trade_between_5_7.price, 200000)
+        self.assertEqual(trade_between_6_7.price, 200010)
+        self.assertEqual(trade_between_7_5.price, 200000)
+        self.assertEqual(trade_between_7_6.price, 200010)
 
     def test_not_fill_order(self):
         order_8 = new_order(self.btcirt, Account.system(), 2, 200000, Order.SELL)
@@ -194,7 +202,7 @@ class CreateOrderTestCase(TestCase):
 
         order_10.refresh_from_db(), order_11.refresh_from_db()
 
-        fill_order = FillOrder.objects.get(maker_order=order_10)
+        fill_order = Trade.objects.get(order=order_10)
 
         self.assertEqual(order_10.status, Order.CANCELED)
         self.assertEqual(order_11.status, Order.FILLED)
@@ -214,7 +222,7 @@ class CreateOrderTestCase(TestCase):
 
         order_12.refresh_from_db(), order_13.refresh_from_db()
 
-        fill_order = FillOrder.objects.get(maker_order=order_12)
+        fill_order = Trade.objects.get(order=order_12)
 
         self.assertEqual(order_12.status, Order.FILLED)
         self.assertEqual(order_13.status, Order.FILLED)
@@ -256,22 +264,26 @@ class CreateOrderTestCase(TestCase):
         order = new_order(self.btcirt, Account.system(), Decimal('0.1'), None, Order.SELL, fill_type=Order.MARKET)
         order.refresh_from_db()
 
-        fill_order = FillOrder.objects.last()
+        trade_pair = Trade.objects.order_by('-id')[:2]
 
         self.assertEqual(order.status, Order.FILLED)
-        self.assertEqual(fill_order.price, 2000000)
-        self.assertEqual(fill_order.amount, Decimal('0.1'))
+        self.assertEqual(trade_pair[0].price, 2000000)
+        self.assertEqual(trade_pair[0].amount, Decimal('0.1'))
+        self.assertEqual(trade_pair[1].price, 2000000)
+        self.assertEqual(trade_pair[1].amount, Decimal('0.1'))
 
     def test_market_order_large_amount(self):
         new_order(self.btcirt, Account.system(), 1, 2000000, Order.BUY)
         order = new_order(self.btcirt, Account.system(), 2, None, Order.SELL, fill_type=Order.MARKET)
         order.refresh_from_db()
 
-        fill_order = FillOrder.objects.last()
+        trade_pair = Trade.objects.order_by('-id')[:2]
 
         self.assertEqual(order.status, Order.CANCELED)
-        self.assertEqual(fill_order.price, 2000000)
-        self.assertEqual(fill_order.amount, 1)
+        self.assertEqual(trade_pair[0].price, 2000000)
+        self.assertEqual(trade_pair[0].amount, 1)
+        self.assertEqual(trade_pair[1].price, 2000000)
+        self.assertEqual(trade_pair[1].amount, 1)
 
     def test_market_order_multi_match_price(self):
         new_order(self.btcirt, Account.system(), Decimal('0.5'), 2000000, Order.BUY)
@@ -281,9 +293,10 @@ class CreateOrderTestCase(TestCase):
 
         self.assertEqual(order.status, Order.CANCELED)
 
-        fill_orders = FillOrder.objects.all().order_by('-id')[:2]
+        fill_orders = Trade.objects.filter(order=order).order_by('-id')[:2]
         for fill_order in fill_orders:
-            self.assertEqual(fill_order.price, fill_order.maker_order.price)
+            maker_trade = Trade.objects.filter(group_id=fill_order.group_id).exclude(id=fill_order.id).first()
+            self.assertEqual(fill_order.price, maker_trade.order.price)
             self.assertEqual(fill_order.amount, Decimal('0.5'))
 
     def test_market_order_multi_match_price_unmatched_orders(self):
@@ -296,9 +309,11 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(order.status, Order.CANCELED)
         self.assertEqual(order.filled_amount, 1)
 
-        fill_orders = FillOrder.objects.all().order_by('-id')[:2]
+        assert Trade.objects.filter(order=order).count() == 2
+        fill_orders = Trade.objects.filter(order=order).order_by('-id')[:2]
         for fill_order in fill_orders:
-            self.assertEqual(fill_order.price, fill_order.maker_order.price)
+            maker_trade = Trade.objects.filter(group_id=fill_order.group_id).exclude(id=fill_order.id).first()
+            self.assertEqual(fill_order.price, maker_trade.price)
             self.assertEqual(fill_order.amount, Decimal('0.5'))
 
     def test_margin_create_order(self):
@@ -329,12 +344,12 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(resp.status_code, 201)
         self.assertEqual(Decimal(resp.json()['amount']), Decimal('1.5'))
 
-        fill_order = FillOrder.objects.last()
+        fill_order = Trade.objects.exclude(order=order).last()
         order.refresh_from_db()
         self.assertEqual(fill_order.price, 20000)
         self.assertEqual(fill_order.amount, Decimal('1.5'))
-        self.assertEqual(fill_order.taker_order.wallet.market, Wallet.MARGIN)
-        self.assertEqual(fill_order.taker_order.base_wallet.market, Wallet.MARGIN)
+        self.assertEqual(fill_order.order.wallet.market, Wallet.MARGIN)
+        self.assertEqual(fill_order.order.base_wallet.market, Wallet.MARGIN)
 
     def test_not_enough_for_sell_margin(self):
         self.client.force_login(self.account_2.user)
