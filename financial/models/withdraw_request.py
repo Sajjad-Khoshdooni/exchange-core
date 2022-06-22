@@ -86,7 +86,7 @@ class FiatWithdrawRequest(models.Model):
         assert self.status == self.PROCESSING
         from financial.utils.withdraw import FiatWithdraw
 
-        withdraw_handler = FiatWithdraw.get_withdraw_channel()
+        withdraw_handler = FiatWithdraw.get_withdraw_channel(self.withdraw_channel)
 
         wallet_id = withdraw_handler.get_wallet_id()
 

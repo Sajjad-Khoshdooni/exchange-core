@@ -26,18 +26,13 @@ class FiatWithdraw:
 
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
 
-    WITHDRAW_CHANNEL = config('WITHDRAW_CHANNEL')
-
     @classmethod
-    def get_withdraw_channel(cls, channel: str = None) -> 'FiatWithdraw':
+    def get_withdraw_channel(cls, channel) -> 'FiatWithdraw':
         mapping = {
             FiatWithdrawRequest.PAYIR: PayirChanel,
             FiatWithdrawRequest.ZIBAL: ZibalChanel
         }
-        if channel:
-            return mapping[channel]()
-        else:
-            return mapping[cls.WITHDRAW_CHANNEL]()
+        return mapping[channel]()
 
     def get_wallet_id(self) -> int:
         raise NotImplementedError

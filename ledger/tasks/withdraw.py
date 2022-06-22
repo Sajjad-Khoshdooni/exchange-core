@@ -47,7 +47,9 @@ def update_binance_withdraw():
 
         if status % 2 == 1:
             transfer.status = transfer.CANCELED
+            transfer.lock.release()
             transfer.save()
+            
         elif status == 6:
 
             with transaction.atomic():
