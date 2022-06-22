@@ -38,7 +38,9 @@ class Confirmer:
                 transfer.save()
 
     def client_confirm(self, trx_hash):
-        if self.network == 'BSC':
+        if self.network.symbol == 'BSC':
             return validate_bsc_trx(trx_hash=trx_hash)
-        if self.network == 'TRX':
+        elif self.network.symbol == 'TRX':
             return validate_tron_trx(trx_hash=trx_hash)
+        else:
+            raise NotImplementedError
