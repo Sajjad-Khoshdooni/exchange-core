@@ -236,7 +236,7 @@ class ZibalGateway(Gateway):
         if data['result'] == 100:
             with transaction.atomic():
                 payment.status = DONE
-                payment.ref_id = data.get('transId')
+                payment.ref_id = data.get('refNumber')
                 payment.ref_status = data['status']
                 payment.save()
 
