@@ -14,6 +14,8 @@ class NetworkAsset(models.Model):
     withdraw_max = get_amount_field()
     withdraw_precision = models.PositiveSmallIntegerField()
 
+    hedger_withdraw_enable = models.BooleanField(default=True)
+
     binance_withdraw_enable = models.BooleanField(default=True)
     kucoin_withdraw_enable = models.BooleanField(default=False)
 

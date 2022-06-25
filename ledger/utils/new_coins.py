@@ -203,6 +203,6 @@ class KucoinCoins:
                     'withdraw_fee': n['withdrawalMinFee'],
                     'withdraw_min': n['withdrawalMinSize'],
                     'withdraw_max': '20000000000000',
-                    'withdraw_precision': -int(math.log10(withdraw_integer_multiple))
+                    'withdraw_precision': withdraw_integer_multiple
                 }
             )

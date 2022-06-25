@@ -63,7 +63,7 @@ class ProviderOrder(models.Model):
 
             symbol = handler.get_trading_symbol(asset.symbol)
 
-            if market == cls.FUTURE and asset.symbol == 'SHIB':
+            if asset.get_hedger() == Asset.HEDGE_BINANCE_FUTURE and market == cls.FUTURE and asset.symbol == 'SHIB':
                 symbol = symbol.replace('SHIB', '1000SHIB')
                 amount = round(amount / 1000)
 
@@ -116,7 +116,6 @@ class ProviderOrder(models.Model):
             orders_amount += amount
 
         return system_balance + orders_amount
-
 
     @classmethod
     def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '', dry_run: bool = False) -> bool:

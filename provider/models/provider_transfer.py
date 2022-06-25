@@ -15,7 +15,7 @@ class ProviderTransfer(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
 
-    exchange = models.CharField(max_length=8, default=BINANCE)
+    exchange = models.CharField(max_length=16, default=BINANCE)
 
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     network = models.ForeignKey(Network, on_delete=models.CASCADE)
@@ -42,13 +42,13 @@ class ProviderTransfer(models.Model):
         transfer = ProviderTransfer.objects.create(
             asset=asset, network=network, amount=amount, address=address, caller_id=caller_id
         )
-        handler = Asset.get_hedger()
+        handler = asset.get_hedger()
         resp = handler.withdraw(
             coin=asset.symbol,
             network=network.symbol,
             address=address,
             transfer_amount=transfer_amount,
-            fee_amaount=withdraw_fee,
+            fee_amount=withdraw_fee,
             client_id=transfer.id
         )
 

@@ -26,7 +26,7 @@ def update_network_fees():
                 withdraw_min *= 2
 
             if not withdraw_min:
-                withdraw_min = Decimal(info['withdrawIntegerMultiple'])
+                withdraw_min = Decimal(info.get('withdrawIntegerMultiple'))
 
             price = get_trading_price_usdt(ns.asset.symbol, BUY, raw_price=True)
 
@@ -40,8 +40,8 @@ def update_network_fees():
 
             ns.withdraw_fee = withdraw_fee
             ns.withdraw_min = withdraw_min
-            ns.withdraw_max = info['withdrawMax']
-            ns.binance_withdraw_enable = info['withdrawEnable']
+            ns.withdraw_max = info.get('withdrawMax', '20000000000000')
+            ns.binance_withdraw_enable = info.get('withdrawEnable')
         else:
             ns.binance_withdraw_enable = False
 

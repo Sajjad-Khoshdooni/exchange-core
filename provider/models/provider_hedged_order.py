@@ -7,7 +7,6 @@ from django.db.models import CheckConstraint, Q
 from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import BUY, SELL, get_price
-from provider.exchanges import BinanceSpotHandler
 from provider.models import ProviderOrder
 
 logger = logging.getLogger(__name__)

@@ -20,7 +20,7 @@ class VerificationCode(models.Model):
     SCOPE_FORGET_PASSWORD = 'forget'
     SCOPE_VERIFY_PHONE = 'verify'
     SCOPE_VERIFY_EMAIL = 'email_verify'
-    SCOPE_CRYPTO_WITHDRAW= 'withdraw'
+    SCOPE_CRYPTO_WITHDRAW = 'withdraw'
     SCOPE_FIAT_WITHDRAW = 'fiat_withdraw'
     SCOPE_TELEPHONE = 'tel'
     SCOPE_CHANGE_PASSWORD = 'change_pass'

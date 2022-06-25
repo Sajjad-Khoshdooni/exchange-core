@@ -119,11 +119,16 @@ class KucoinSpotHandler(ExchangeHandler):
     def get_network_info(self, coin: str, network: str):
         chains = self.get_coin_data(coin=coin).get('chains')
         info = list(filter(lambda d: d['chainName'] == network, chains))
-        return info
+        response = {
+            'withdrawMin': info[0].get('withdrawalMinSize'),
+            'withdrawFee': info[0].get('withdrawalMinFee'),
+            'withdrawEnable': info[0].get('isWithdrawEnabled')
+        }
+        return response
 
     def get_withdraw_fee(self, coin: str, network: str):
         info = self.get_network_info(coin, network)
-        return Decimal(info[0].get('withdrawalMinFee'))
+        return Decimal(info.get('withdrawFee'))
 
     def transfer(self, asset: str, amount: Decimal, to: str, client_oid: str, _from=TRADE):
         return self.collect_api(
