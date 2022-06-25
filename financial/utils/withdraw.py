@@ -43,7 +43,7 @@ class FiatWithdraw:
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> str:
         raise NotImplementedError
 
-    def get_withdraw_status(self, request_id: int, provider_id: str) -> int:
+    def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
         raise NotImplementedError
 
 
@@ -182,15 +182,21 @@ class ZibalChanel(FiatWithdraw):
             'id': wallet_id,
             'amount': amount * 10,
             'bankAccount': receiver.iban,
-            'uniqueCode': request_id
+            'uniqueCode': request_id,
+            'wageFeeMode': 2
         })
 
         return data['id']
 
-    def get_withdraw_status(self, request_id: int, provider_id: str) -> int:
+    def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
         data = self.collect_api(f'/v1/report/checkout/inquire', method='POST', data={
             "checkoutRequestId": str(provider_id)
         })
+
+        if data['type'] == 'canceledCheckout':
+            return self.CANCELED
+        elif data['type'] == 'checkoutQueue':
+            return self.PENDING
 
         mapping_status = {
             0: self.DONE,
