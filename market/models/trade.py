@@ -198,7 +198,7 @@ class Trade(models.Model):
                 "max(price) as high, min(price) as low, "
                 "sum(amount) as volume, "
                 "(date_trunc('seconds', (created - (timestamptz 'epoch' - interval '30 min')) / %s) * %s + (timestamptz 'epoch' - interval '30 min')) as tf "
-                "from market_fillorder where symbol_id = %s and side = 'buy' and created between %s and %s group by tf order by tf",
+                "from market_trade where symbol_id = %s and side = 'buy' and created between %s and %s group by tf order by tf",
                 [interval_in_secs, interval_in_secs, symbol_id, start, end]
             )
         ]
