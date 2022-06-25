@@ -195,6 +195,8 @@ class ZibalChanel(FiatWithdraw):
 
         if data['type'] == 'canceledCheckout':
             return self.CANCELED
+        elif data['type'] == 'checkoutQueue':
+            return self.PENDING
 
         mapping_status = {
             0: self.DONE,
