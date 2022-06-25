@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers, status
@@ -10,6 +11,7 @@ from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from yekta_config import secret
 from yekta_config.config import config
 
 from accounts.models import VerificationCode
@@ -32,6 +34,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
     code = serializers.CharField(write_only=True)
 
     def create(self, validated_data):
+        if config('WITHDRAW_ENABLE', '1') == '0':
+            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
+
         amount = validated_data['amount']
         iban = validated_data['iban']
         code = validated_data['code']
@@ -78,7 +83,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
                     withdraw_channel=config('WITHDRAW_CHANNEL')
                 )
 
-                pipeline.new_lock(key=withdraw_request.group_id, wallet=wallet, amount=amount, reason=pipeline.WITHDRAW)
+                pipeline.new_lock(key=withdraw_request.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست'})

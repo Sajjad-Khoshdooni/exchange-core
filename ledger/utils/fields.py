@@ -47,8 +47,8 @@ def get_status_field():
     )
 
 
-def get_group_id_field(db_index: bool = False):
-    return models.UUIDField(default=uuid4, editable=False, db_index=db_index)
+def get_group_id_field(db_index: bool = False, null: bool = False):
+    return models.UUIDField(default=uuid4, editable=False, db_index=db_index, null=null, blank=null)
 
 
 def get_address_field():
@@ -79,4 +79,6 @@ def get_irt_market_assets():
     from market.models import PairSymbol
     from ledger.models import Asset
     return set(PairSymbol.objects.select_related('base_asset').filter(
-        base_asset__symbol=Asset.IRT).values_list('asset', flat=True))
+        enable=True,
+        base_asset__symbol=Asset.IRT
+    ).values_list('asset', flat=True))

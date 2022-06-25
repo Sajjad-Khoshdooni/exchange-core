@@ -1,4 +1,5 @@
 from decimal import Decimal
+from uuid import UUID
 
 from django.conf import settings
 from django.db import models
@@ -104,8 +105,6 @@ class Wallet(models.Model):
 
         if not self.check_balance:
             can = True
-        elif amount < 0:
-            can = False
         else:
             can = self.get_free() >= amount
 
@@ -137,4 +136,18 @@ class Wallet(models.Model):
                 amount=amount,
                 group_id=uuid4(),
                 scope=Trx.AIRDROP
+            )
+
+    def seize_funds(self, amount: Decimal = None):
+        from ledger.models import Trx
+        from uuid import uuid4
+
+        with WalletPipeline() as pipeline:
+
+            pipeline.new_trx(
+                sender=self,
+                receiver=self.asset.get_wallet(Account.system()),
+                amount=amount or self.balance,
+                group_id=uuid4(),
+                scope=Trx.SEIZE
             )

@@ -26,14 +26,20 @@ class PrizeAchievement(Achievement):
     def as_dict(self):
         prize = Prize.objects.filter(account=self.account, scope=self.scope).first()
 
+        if prize:
+            amount = prize.amount
+        else:
+            amount = Prize.PRIZE_AMOUNTS[self.scope]
+
         return {
             'type': 'prize',
             'id': prize and prize.id,
             'scope': self.scope,
-            'amount': Prize.PRIZE_AMOUNTS[self.scope],
+            'amount': amount,
             'asset': 'SHIB',
             'achieved': bool(prize),
-            'redeemed': bool(prize) and prize.redeemed
+            'redeemed': bool(prize) and prize.redeemed,
+            'fake': bool(prize) and prize.fake,
         }
 
     def achieved(self):

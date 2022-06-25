@@ -4,7 +4,7 @@ from django.db import IntegrityError
 from django.test import TestCase
 
 from accounts.models import Account
-from ledger.models import Asset, Trx, BalanceLock
+from ledger.models import Asset, Trx
 from ledger.utils.test import new_account
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -135,7 +135,7 @@ class WalletTestCase(TestCase):
         lock_key = uuid4()
 
         with WalletPipeline() as pipeline:
-            pipeline.new_lock(key=lock_key, wallet=self.wallet, amount=4, reason=pipeline.TRADE)
+            pipeline.new_lock(key=lock_key, wallet=self.wallet, amount=4, reason=WalletPipeline.TRADE)
 
         self.wallet.refresh_from_db()
 

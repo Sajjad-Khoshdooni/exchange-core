@@ -26,18 +26,13 @@ class FiatWithdraw:
 
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
 
-    WITHDRAW_CHANNEL = config('WITHDRAW_CHANNEL')
-
     @classmethod
-    def get_withdraw_channel(cls, channel: str = None) -> 'FiatWithdraw':
+    def get_withdraw_channel(cls, channel) -> 'FiatWithdraw':
         mapping = {
             FiatWithdrawRequest.PAYIR: PayirChanel,
             FiatWithdrawRequest.ZIBAL: ZibalChanel
         }
-        if channel:
-            return mapping[channel]()
-        else:
-            return mapping[cls.WITHDRAW_CHANNEL]()
+        return mapping[channel]()
 
     def get_wallet_id(self) -> int:
         raise NotImplementedError
@@ -183,24 +178,24 @@ class ZibalChanel(FiatWithdraw):
         )
 
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> str:
-        data = self.collect_api('/v1/wallet/checkout', method='POST', data={
+        data = self.collect_api('/v1/wallet/checkout/plus', method='POST', data={
             'id': wallet_id,
             'amount': amount * 10,
-            'bankAccount': receiver.iban[2:],
-            "checkoutDelay": 0,
+            'bankAccount': receiver.iban,
             'uniqueCode': request_id
         })
 
         return data['id']
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> int:
-        data = self.collect_api(f'/v1/report/checkout/inquire/', method='POST', data={
-            "checkoutRequestId": provider_id
+        data = self.collect_api(f'/v1/report/checkout/inquire', method='POST', data={
+            "checkoutRequestId": str(provider_id)
         })
 
         mapping_status = {
-            "1": self.CANCELED,
-            "0": self.DONE,
+            0: self.DONE,
+            1: self.CANCELED,
+            2: self.CANCELED,
         }
-        status = data['checkoutStatus']
+        status = data['details'][0].get('checkoutStatus', self.PENDING)
         return mapping_status.get(status, self.PENDING)

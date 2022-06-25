@@ -8,7 +8,7 @@ from yekta_config.config import config
 
 from accounts.models import Account, Notification
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
-from ledger.models import Trx, NetworkAsset, Asset, DepositAddress, BalanceLock
+from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
 from ledger.models.crypto_balance import CryptoBalance
 from ledger.utils.fields import get_amount_field, get_address_field
@@ -125,7 +125,7 @@ class Transfer(models.Model):
                 deposit=False
             )
 
-            pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=pipeline.WITHDRAW)
+            pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
         from ledger.tasks import create_binance_withdraw
         create_binance_withdraw.delay(transfer.id)
@@ -163,7 +163,9 @@ class Transfer(models.Model):
             logger.exception('failed to update crypto balance')
 
     def alert_user(self):
-        if self.status == Transfer.DONE and not self.hidden and self.wallet.account.user:
+        user = self.wallet.account.user
+
+        if self.status == Transfer.DONE and not self.hidden and user and user.is_active:
             sent_amount = self.asset.get_presentation_amount(self.amount)
             user_email = self.wallet.account.user.email
             if self.deposit:

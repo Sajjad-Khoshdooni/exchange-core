@@ -9,7 +9,7 @@ from rest_framework.generics import get_object_or_404
 from accounts.models import Account
 from ledger.models import Asset
 from ledger.utils.precision import get_presentation_amount, floor_precision
-from market.models import PairSymbol, FillOrder
+from market.models import PairSymbol, Trade
 
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
     margin_enable = serializers.SerializerMethodField()
 
     def get_price(self, symbol: PairSymbol):
-        last_trade = FillOrder.get_last(symbol=symbol)
+        last_trade = Trade.get_last(symbol=symbol)
         if last_trade:
             return last_trade.format_values()['price']
 
@@ -60,10 +60,10 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_change_value_pairs(symbol: PairSymbol):
-        previous_trade = FillOrder.get_last(symbol=symbol, max_datetime=timezone.now() - timedelta(hours=24))
+        previous_trade = Trade.get_last(symbol=symbol, max_datetime=timezone.now() - timedelta(hours=24))
         if not previous_trade:
             return None, None
-        last_trade = FillOrder.get_last(symbol=symbol)
+        last_trade = Trade.get_last(symbol=symbol)
         if not last_trade:
             return None, None
         return last_trade.price, previous_trade.price
@@ -94,7 +94,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
         return str(floor_precision((last_price - previous_price), symbol.tick_size))
 
     def get_high(self, symbol: PairSymbol):
-        high_price = FillOrder.objects.filter(
+        high_price = Trade.objects.filter(
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
@@ -103,7 +103,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             return str(floor_precision(high_price, symbol.tick_size))
 
     def get_low(self, symbol: PairSymbol):
-        low_price = FillOrder.objects.filter(
+        low_price = Trade.objects.filter(
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
@@ -112,7 +112,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             return str(floor_precision(low_price, symbol.tick_size))
 
     def get_volume(self, symbol: PairSymbol):
-        total_amount = FillOrder.objects.filter(
+        total_amount = Trade.objects.filter(
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
@@ -121,7 +121,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             return str(floor_precision(total_amount, symbol.step_size))
 
     def get_base_volume(self, symbol: PairSymbol):
-        total_amount = FillOrder.objects.filter(
+        total_amount = Trade.objects.filter(
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),

@@ -90,7 +90,7 @@ class OTCTrade(models.Model):
             otc_trade = OTCTrade.objects.create(
                 otc_request=otc_request,
             )
-            pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount, reason=pipeline.TRADE)
+            pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount, reason=WalletPipeline.TRADE)
 
         otc_trade.hedge_and_finalize()
 
@@ -117,10 +117,10 @@ class OTCTrade(models.Model):
             pipeline.release_lock(self.group_id)
 
             if hedged:
-                from market.models import FillOrder
+                from market.models import Trade
                 self.change_status(self.DONE)
                 self.create_ledger(pipeline)
-                FillOrder.create_for_otc_trade(self, pipeline)
+                Trade.create_for_otc_trade(self, pipeline)
             else:
                 self.change_status(self.CANCELED)
 

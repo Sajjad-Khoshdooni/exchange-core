@@ -21,22 +21,16 @@ def populate_balance_lock_keys(apps, schema_editor):
 
     lock_mapping = {}
 
-    lock_mapping.update(dict(Order.objects.values_list('lock', 'group_id')))
+    lock_mapping.update(dict(Order.objects.filter(status='new').values_list('lock', 'group_id')))
     lock_mapping.update(dict(Transfer.objects.values_list('lock', 'group_id')))
     lock_mapping.update(dict(OTCTrade.objects.values_list('lock', 'group_id')))
     lock_mapping.update(dict(MarginLoan.objects.values_list('lock', 'group_id')))
     lock_mapping.update(dict(FiatWithdrawRequest.objects.values_list('lock', 'group_id')))
 
-    locks = list(BalanceLock.objects.all())
+    locks = list(BalanceLock.objects.filter(id__in=list(lock_mapping)))
 
     for balance_lock in locks:
-        key = balance_lock.key = lock_mapping.get(balance_lock.id)
-
-        if key is None:
-            if balance_lock.freed or balance_lock.amount == 0:
-                balance_lock.key = uuid4()
-            else:
-                raise Exception('Could not find open lock parent %s' % balance_lock.id)
+        balance_lock.key = balance_lock.key = lock_mapping[balance_lock.id]
 
     BalanceLock.objects.bulk_update(locks, ['key'])
 
