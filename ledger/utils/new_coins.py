@@ -202,7 +202,7 @@ class KucoinCoins:
                 defaults={
                     'withdraw_fee': n['withdrawalMinFee'],
                     'withdraw_min': n['withdrawalMinSize'],
-                    'withdraw_max': '10000000',
+                    'withdraw_max': '20000000000000',
                     'withdraw_precision': -int(math.log10(withdraw_integer_multiple))
                 }
             )
