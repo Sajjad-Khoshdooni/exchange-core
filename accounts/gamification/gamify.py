@@ -1,8 +1,9 @@
 import logging
 
-from accounts.gamification.achievements import TradePrizeAchievementStep1, TradePrizeAchievementStep2
+from accounts.gamification.achievements import TradePrizeAchievementStep1, TradePrizeAchievementStep2, \
+    VerifyPrizeAchievement
 from accounts.gamification.goals import GoalGroup, VerifyLevel2Goal, DepositGoal, TradeStep1Goal, InviteGoal, \
-    TradeStep2Goal
+    TradeStep2Goal, SetEmailGoal
 from accounts.models import Account
 
 logger = logging.getLogger(__name__)
@@ -11,7 +12,15 @@ logger = logging.getLogger(__name__)
 goal_groups = [
     GoalGroup(
         conditions=[
-            VerifyLevel2Goal, DepositGoal, TradeStep1Goal
+            VerifyLevel2Goal
+        ],
+        achievements=[
+            VerifyPrizeAchievement
+        ]
+    ),
+    GoalGroup(
+        conditions=[
+            DepositGoal, TradeStep1Goal
         ],
         achievements=[
             TradePrizeAchievementStep1
@@ -19,7 +28,7 @@ goal_groups = [
     ),
     GoalGroup(
         conditions=[
-            InviteGoal, TradeStep2Goal
+            InviteGoal, SetEmailGoal, TradeStep2Goal
         ],
         achievements=[
             TradePrizeAchievementStep2
@@ -36,15 +45,16 @@ def get_groups_data(account, only_active=False):
     for group in goal_groups:
         data = group.as_dict(account)
 
-        data['active'] = not data['finished'] and not activated
+        if not list(filter(lambda achievement: achievement['fake'], data['achievements'])):
+            data['active'] = not data['finished'] and not activated
 
-        if data['active']:
-            activated = True
+            if data['active']:
+                activated = True
 
-            if only_active:
-                return data
+                if only_active:
+                    return data
 
-        groups.append(data)
+            groups.append(data)
 
     if only_active:
         return

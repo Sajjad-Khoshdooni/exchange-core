@@ -34,3 +34,7 @@ def get_tron_client(network='mainnet') -> Tron:
             _trons.append(Tron(provider=provider))
         _tron_proxy = TronProxy(_trons)
     return _tron_proxy
+
+
+def validate_tron_trx(trx_hash):
+    return get_tron_client().get_transaction(trx_hash)['ret'][0]['contractRet'] == 'SUCCESS'

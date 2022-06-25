@@ -6,29 +6,15 @@ if settings.DEBUG_OR_TESTING:
 
     from accounts.models import Account, User, VerificationCode
     from collector.utils.price import price_redis
-    from ledger.models import Asset, Trx, AddressBook, Network, NetworkAsset
-    from uuid import uuid4
-
+    from ledger.models import Asset, AddressBook, Network, NetworkAsset
 
     def get_rand_int():
         return random.randint(0, 100000000)
-
 
     def new_account() -> Account:
         name = 'test' + str(get_rand_int())
         u = User.objects.create(username=name, phone=name)
         return u.account
-
-
-    def new_trx(account: Account, asset: Asset, amount):
-        return Trx.transaction(
-            sender=asset.get_wallet(Account.out()),
-            receiver=asset.get_wallet(account),
-            amount=amount,
-            scope=Trx.TRANSFER,
-            group_id=str(uuid4())
-        )
-
 
     def set_price(asset: Asset, ask: float, bid: float = None):
         if not bid:

@@ -1,4 +1,5 @@
 from decimal import Decimal
+from uuid import UUID
 
 from django.conf import settings
 from django.db import models
@@ -6,9 +7,9 @@ from django.db.models import CheckConstraint, Q, F
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
-from ledger.models import BalanceLock
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt, get_tether_irt_price
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class Wallet(models.Model):
@@ -55,16 +56,6 @@ class Wallet(models.Model):
     def get_locked(self) -> Decimal:
         return self.locked
 
-    def lock_balance(self, amount: Decimal) -> BalanceLock:
-        assert amount > 0
-
-        if self.should_update_balance_fields():
-            self.has_balance(amount, raise_exception=True)
-
-        self.locked += amount
-
-        return BalanceLock.new_lock(wallet=self, amount=amount)
-
     def get_free(self) -> Decimal:
         return self.balance - self.locked
 
@@ -110,7 +101,9 @@ class Wallet(models.Model):
             return balance_usdt * tether_irt
 
     def has_balance(self, amount: Decimal, raise_exception: bool = False) -> bool:
-        if amount < 0:
+        if not self.check_balance:
+            can = True
+        elif amount < 0:
             can = False
         else:
             can = self.get_free() >= amount
@@ -137,13 +130,25 @@ class Wallet(models.Model):
         from ledger.models import Trx
         from uuid import uuid4
 
-        Trx.transaction(
-            sender=self.asset.get_wallet(Account.out()),
-            receiver=self,
-            amount=amount,
-            group_id=uuid4(),
-            scope=Trx.AIRDROP
-        )
+        with WalletPipeline() as pipeline:
+            pipeline.new_trx(
+                sender=self.asset.get_wallet(Account.out()),
+                receiver=self,
+                amount=amount,
+                group_id=uuid4(),
+                scope=Trx.AIRDROP
+            )
 
-    def should_update_balance_fields(self):
-        return not (self.account.type == Account.SYSTEM and self.account.primary)
+    def seize_funds(self, amount: Decimal = None):
+        from ledger.models import Trx
+        from uuid import uuid4
+
+        with WalletPipeline() as pipeline:
+
+            pipeline.new_trx(
+                sender=self,
+                receiver=self.asset.get_wallet(Account.system()),
+                amount=amount or self.balance,
+                group_id=uuid4(),
+                scope=Trx.SEIZE
+            )

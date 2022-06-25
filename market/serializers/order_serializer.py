@@ -126,10 +126,12 @@ class OrderSerializer(serializers.ModelSerializer):
         return str(floor_precision(order.filled_amount, order.symbol.step_size))
 
     def get_filled_price(self, order: Order):
-        filled_price = order.filled_price
-        if filled_price is None:
+        fills_amount, fills_value = self.context['trades'].get(order.id, (0, 0))
+        amount = Decimal((fills_amount or 0))
+        if not amount:
             return None
-        return str(floor_precision(filled_price, order.symbol.tick_size))
+        price = Decimal((fills_value or 0)) / amount
+        return str(floor_precision(price, order.symbol.tick_size))
 
     class Meta:
         model = Order

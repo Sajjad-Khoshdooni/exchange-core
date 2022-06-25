@@ -22,6 +22,7 @@ from financial.models.bank_card import BankAccount, BankAccountSerializer
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit, get_fiat_estimate_receive_time
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
     code = serializers.CharField(write_only=True)
 
     def create(self, validated_data):
+        if config('WITHDRAW_ENABLE', '1') == '0':
+            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
+
         amount = validated_data['amount']
         iban = validated_data['iban']
         code = validated_data['code']
@@ -71,16 +75,15 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         withdraw_amount = amount - fee_amount
 
         try:
-            with transaction.atomic():
-                lock = wallet.lock_balance(amount)
-
+            with WalletPipeline() as pipeline:  # type: WalletPipeline
                 withdraw_request = FiatWithdrawRequest.objects.create(
                     amount=withdraw_amount,
                     fee_amount=fee_amount,
-                    lock=lock,
                     bank_account=bank_account,
                     withdraw_channel=config('WITHDRAW_CHANNEL')
                 )
+
+                pipeline.new_lock(key=withdraw_request.group_id, wallet=wallet, amount=amount)
 
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست'})

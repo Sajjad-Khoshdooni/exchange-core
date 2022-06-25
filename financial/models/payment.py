@@ -11,6 +11,7 @@ from ledger.utils.fields import get_group_id_field, get_status_field
 from accounts.models import Notification
 from accounts.utils import email
 from ledger.utils.precision import humanize_number, get_presentation_amount
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class PaymentRequest(models.Model):
@@ -79,12 +80,12 @@ class Payment(models.Model):
                          }
             )
 
-    def accept(self):
+    def accept(self, pipeline: WalletPipeline):
         asset = Asset.get(Asset.IRT)
         user = self.payment_request.bank_card.user
         account = user.account
 
-        Trx.transaction(
+        pipeline.new_trx(
             sender=asset.get_wallet(Account.out()),
             receiver=asset.get_wallet(account),
             amount=self.payment_request.amount,

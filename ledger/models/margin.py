@@ -1,16 +1,17 @@
 from decimal import Decimal
 from uuid import uuid4
 
-from django.db import models, transaction
+from django.db import models
 from django.db.models import CheckConstraint, Q
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
 from ledger.models import Asset, Wallet, Trx
-from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_lock_field, DONE, \
+from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, DONE, \
     get_created_field
 from ledger.utils.margin import MarginInfo
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt
+from ledger.utils.wallet_pipeline import WalletPipeline
 from provider.models import ProviderOrder
 
 
@@ -51,9 +52,9 @@ class MarginTransfer(models.Model):
 
         sender.has_balance(self.amount, raise_exception=True)
 
-        with transaction.atomic():
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
             super(MarginTransfer, self).save(*args)
-            Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_TRANSFER, self.group_id)
+            pipeline.new_trx(sender, receiver, self.amount, Trx.MARGIN_TRANSFER, self.group_id)
 
 
 class MarginLoan(models.Model):
@@ -72,7 +73,6 @@ class MarginLoan(models.Model):
     )
 
     status = get_status_field()
-    lock = get_lock_field()
     group_id = get_group_id_field()
 
     class Meta:
@@ -100,20 +100,21 @@ class MarginLoan(models.Model):
             else:
                 sender, receiver = self.margin_wallet, self.borrow_wallet
 
-            with transaction.atomic():
+            with WalletPipeline() as pipeline:  # type: WalletPipeline
                 self.status = DONE
                 self.save()
-                if self.lock:
-                    self.lock.release()
 
-                Trx.transaction(sender, receiver, self.amount, Trx.MARGIN_BORROW, self.group_id)
+                if self.type == self.REPAY:
+                    pipeline.release_lock(self.group_id)
+
+                pipeline.new_trx(sender, receiver, self.amount, Trx.MARGIN_BORROW, self.group_id)
 
     @classmethod
     def new_loan(cls, account: Account, asset: Asset, amount: Decimal, loan_type: str):
         assert amount > 0
         assert asset.symbol != Asset.IRT
 
-        with transaction.atomic():
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
             loan = MarginLoan(
                 account=account,
                 asset=asset,
@@ -123,8 +124,7 @@ class MarginLoan(models.Model):
 
             if loan_type == cls.REPAY:
                 loan.borrow_wallet.has_debt(-amount, raise_exception=True)
-                loan.lock = loan.margin_wallet.lock_balance(amount)
-                loan.save()
+                pipeline.new_lock(key=loan.group_id, amount=amount, wallet=loan.margin_wallet)
 
             else:
                 margin_info = MarginInfo.get(account)

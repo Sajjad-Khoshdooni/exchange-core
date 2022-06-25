@@ -1,8 +1,8 @@
 from celery import shared_task
-from django.db import transaction
 
 from ledger.models import Transfer
 from ledger.withdraw.exchange import handle_withdraw
+from ledger.utils.wallet_pipeline import WalletPipeline
 from ledger.withdraw.withdraw_handler import WithdrawHandler
 
 
@@ -44,14 +44,15 @@ def update_binance_withdraw():
 
         if status == transfer.CANCELED:
             transfer.status = transfer.CANCELED
+            transfer.lock.release()
             transfer.save()
         elif status == transfer.DONE:
 
-            with transaction.atomic():
+            with WalletPipeline() as pipeline:  # type: WalletPipeline
                 transfer.status = transfer.DONE
                 transfer.save()
 
-                transfer.lock.release()
-                transfer.build_trx()
+                pipeline.release_lock(transfer.group_id)
+                transfer.build_trx(pipeline)
 
             transfer.alert_user()

@@ -2,15 +2,13 @@ import logging
 from decimal import Decimal
 from uuid import uuid4
 
-from django.conf import settings
-from django.db import models, transaction
-from django.db.models import Q
+from django.db import models
 
 from accounts.models import Account
 from ledger.exceptions import AbruptDecrease
-from ledger.models import OTCRequest, Trx, Asset
-from ledger.utils.fields import get_lock_field
+from ledger.models import OTCRequest, Trx
 from ledger.utils.price import SELL
+from ledger.utils.wallet_pipeline import WalletPipeline
 from provider.models import ProviderOrder
 
 logger = logging.getLogger(__name__)
@@ -39,34 +37,31 @@ class OTCTrade(models.Model):
         verbose_name='وضعیت'
     )
 
-    lock = get_lock_field()
-
     def change_status(self, status: str):
         self.status = status
         self.save()
 
-    def create_ledger(self):
+    def create_ledger(self, pipeline: WalletPipeline):
         system = Account.system()
         user = self.otc_request.account
 
         from_asset = self.otc_request.from_asset
         to_asset = self.otc_request.to_asset
 
-        with transaction.atomic():
-            Trx.transaction(
-                sender=from_asset.get_wallet(user, market=self.otc_request.market),
-                receiver=from_asset.get_wallet(system, market=self.otc_request.market),
-                amount=self.otc_request.from_amount,
-                group_id=self.group_id,
-                scope=Trx.TRADE
-            )
-            Trx.transaction(
-                sender=to_asset.get_wallet(system, market=self.otc_request.market),
-                receiver=to_asset.get_wallet(user, market=self.otc_request.market),
-                amount=self.otc_request.to_amount,
-                group_id=self.group_id,
-                scope=Trx.TRADE
-            )
+        pipeline.new_trx(
+            sender=from_asset.get_wallet(user, market=self.otc_request.market),
+            receiver=from_asset.get_wallet(system, market=self.otc_request.market),
+            amount=self.otc_request.from_amount,
+            group_id=self.group_id,
+            scope=Trx.TRADE
+        )
+        pipeline.new_trx(
+            sender=to_asset.get_wallet(system, market=self.otc_request.market),
+            receiver=to_asset.get_wallet(user, market=self.otc_request.market),
+            amount=self.otc_request.to_amount,
+            group_id=self.group_id,
+            scope=Trx.TRADE
+        )
 
     @property
     def client_order_id(self):
@@ -86,16 +81,16 @@ class OTCTrade(models.Model):
         conf.coin.is_trade_amount_valid(conf.coin_amount, raise_exception=True)
 
         from_wallet = from_asset.get_wallet(account, market=otc_request.market)
+        amount = otc_request.from_amount
+        from_wallet.has_balance(amount, raise_exception=True)
 
         cls.check_abrupt_decrease(otc_request)
 
-        with transaction.atomic():
-            lock = from_wallet.lock_balance(otc_request.from_amount)
-
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
             otc_trade = OTCTrade.objects.create(
                 otc_request=otc_request,
-                lock=lock
             )
+            pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount)
 
         otc_trade.hedge_and_finalize()
 
@@ -118,18 +113,18 @@ class OTCTrade(models.Model):
         else:
             hedged = True
 
-        if hedged:
-            with transaction.atomic():
-                from market.models import FillOrder
-                self.change_status(self.DONE)
-                self.lock.release()
-                self.create_ledger()
-                FillOrder.create_for_otc_trade(self)
-        else:
-            with transaction.atomic():
-                self.change_status(self.CANCELED)
-                self.lock.release()
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
+            pipeline.release_lock(self.group_id)
 
+            if hedged:
+                from market.models import Trade
+                self.change_status(self.DONE)
+                self.create_ledger(pipeline)
+                Trade.create_for_otc_trade(self, pipeline)
+            else:
+                self.change_status(self.CANCELED)
+
+        if not hedged:
             raise ProcessingError
 
     @classmethod
