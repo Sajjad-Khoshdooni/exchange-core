@@ -7,6 +7,7 @@ from ledger.models import Wallet, Trx, OTCTrade, OTCRequest, Asset
 from ledger.models.margin import CloseRequest
 from ledger.utils.price import get_trading_price_usdt, BUY
 from ledger.utils.wallet_pipeline import WalletPipeline
+from market.models import Order
 from provider.utils import round_with_step_size
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,8 @@ class LiquidationEngine:
 
     def start(self):
         self.info_log('Starting liquidation (liquidation_amount=%s$)' % self.liquidation_amount)
+
+        self.cancel_open_orders()
 
         self._fast_liquidate()
 
@@ -175,28 +178,19 @@ class LiquidationEngine:
         tether_amount = margin_tether_wallet.get_free()
 
         for wallet in borrowed_wallets:
+            borrowed_value = borrowed_wallet_values[wallet]
 
-            if self.liquidation_amount < 0.1 or tether_amount < 0.1:
-                return
-
-            value = borrowed_wallet_values[wallet]
-
-            max_value = min(self.liquidation_amount * Decimal('1.002'), value, tether_amount / Decimal('1.01'))
-            amount = max_value / value * self.borrowed_wallets[wallet]
-            amount = round_with_step_size(amount, wallet.asset.trade_quantity_step)
-
-            if amount < wallet.asset.min_trade_quantity:
-                continue
+            to_buy_value = min(borrowed_value, tether_amount)
 
             if wallet.asset.symbol == Asset.USDT:
-                transfer_amount = amount
+                transfer_amount = to_buy_value
             else:
                 request = OTCRequest.new_trade(
                     self.account,
                     market=Wallet.MARGIN,
                     from_asset=self.tether,
                     to_asset=wallet.asset,
-                    to_amount=amount,
+                    from_amount=to_buy_value,
                     allow_small_trades=True
                 )
 
@@ -216,8 +210,11 @@ class LiquidationEngine:
                 )
 
             tether_amount = margin_tether_wallet.get_balance()
-            self.liquidation_amount -= amount
+            self.liquidation_amount -= to_buy_value
 
     @property
     def finished(self):
         return self.liquidation_amount < 0.1
+
+    def cancel_open_orders(self):
+        Order.cancel_orders(Order.open_objects.filter(wallet__account=self.account))
