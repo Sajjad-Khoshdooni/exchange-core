@@ -182,7 +182,8 @@ class ZibalChanel(FiatWithdraw):
             'id': wallet_id,
             'amount': amount * 10,
             'bankAccount': receiver.iban,
-            'uniqueCode': request_id
+            'uniqueCode': request_id,
+            'wageFeeMode': 2
         })
 
         return data['id']
