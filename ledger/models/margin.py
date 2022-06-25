@@ -11,7 +11,7 @@ from ledger.models import Asset, Wallet, Trx
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt
 from ledger.utils.wallet_pipeline import WalletPipeline
 from provider.models import ProviderOrder
-from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field
+from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field, DONE
 
 
 class MarginTransfer(models.Model):
@@ -96,7 +96,8 @@ class MarginLoan(models.Model):
                 account=account,
                 asset=asset,
                 amount=amount,
-                type=loan_type
+                type=loan_type,
+                status=DONE
             )
 
             if loan_type == cls.REPAY:
