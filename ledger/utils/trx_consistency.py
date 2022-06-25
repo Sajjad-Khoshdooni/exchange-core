@@ -10,18 +10,6 @@ from ledger.models import Trx, Wallet, BalanceLock
 logger = logging.getLogger(__name__)
 
 
-def check_wallet_balance_correctness(wallet: Wallet, balance: Decimal):
-    if wallet.market != Wallet.LOAN:
-        valid = balance >= 0
-    else:
-        valid = balance <= 0
-
-    if not valid:
-        logger.info('Invalid wallet state for wallet_id=%s, balance=%s' % (wallet.id, balance))
-
-    return valid
-
-
 def check_account_consistency(account: Account):
     trx_history = Trx.objects.filter(Q(sender__account=account) | Q(receiver__account=account)).order_by('created')
 
@@ -30,13 +18,9 @@ def check_account_consistency(account: Account):
     for trx in trx_history:
         if trx.sender.account == account:
             balances[trx.sender_id] -= trx.amount
-            if not check_wallet_balance_correctness(trx.sender, balances[trx.sender_id]):
-                logger.info('trx_id= %s, created= %s' % (trx.id, trx.created))
 
         if trx.receiver.account == account:
             balances[trx.receiver_id] += trx.amount
-            if not check_wallet_balance_correctness(trx.receiver, balances[trx.receiver_id]):
-                logger.info('trx_id= %s, created= %s' % (trx.id, trx.created))
 
     for wallet in Wallet.objects.filter(account=account):
         if wallet.balance != balances.get(wallet.id, 0):
