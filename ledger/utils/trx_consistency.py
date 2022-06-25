@@ -11,16 +11,21 @@ logger = logging.getLogger(__name__)
 
 
 def check_account_consistency(account: Account):
-    trx_history = Trx.objects.filter(Q(sender__account=account) | Q(receiver__account=account)).order_by('created')
+    received = Trx.objects.filter(
+        receiver__account=account,
+    ).values('receiver__account').annotate(amount=Sum('amount')).values_list('receiver__account', 'amount')
+
+    sent = Trx.objects.filter(
+        sender__account=account,
+    ).values('sender__account').annotate(amount=Sum('amount')).values_list('sender__account', 'amount')
 
     balances = defaultdict(Decimal)
 
-    for trx in trx_history:
-        if trx.sender.account == account:
-            balances[trx.sender_id] -= trx.amount
+    for wallet_id, amount in received:
+        balances[wallet_id] += amount
 
-        if trx.receiver.account == account:
-            balances[trx.receiver_id] += trx.amount
+    for wallet_id, amount in sent:
+        balances[wallet_id] -= amount
 
     for wallet in Wallet.objects.filter(account=account):
         if wallet.balance != balances.get(wallet.id, 0):
