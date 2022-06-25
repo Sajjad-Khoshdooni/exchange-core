@@ -13,11 +13,11 @@ logger = logging.getLogger(__name__)
 def check_account_consistency(account: Account):
     received = Trx.objects.filter(
         receiver__account=account,
-    ).values('receiver__account').annotate(amount=Sum('amount')).values_list('receiver__account', 'amount')
+    ).values('receiver').annotate(amount=Sum('amount')).values_list('receiver', 'amount')
 
     sent = Trx.objects.filter(
         sender__account=account,
-    ).values('sender__account').annotate(amount=Sum('amount')).values_list('sender__account', 'amount')
+    ).values('sender').annotate(amount=Sum('amount')).values_list('sender', 'amount')
 
     balances = defaultdict(Decimal)
 
