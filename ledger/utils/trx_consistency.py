@@ -23,10 +23,6 @@ def check_wallet_balance_correctness(wallet: Wallet, balance: Decimal):
 
 
 def check_account_consistency(account: Account):
-    if not account.is_ordinary_user():
-        logger.info('ignoring non ordinary account checking! account_id=%s' % account.id)
-        return
-
     trx_history = Trx.objects.filter(Q(sender__account=account) | Q(receiver__account=account)).order_by('created')
 
     balances = defaultdict(Decimal)
@@ -42,18 +38,21 @@ def check_account_consistency(account: Account):
             if not check_wallet_balance_correctness(trx.receiver, balances[trx.receiver_id]):
                 logger.info('trx_id= %s, created= %s' % (trx.id, trx.created))
 
-    locked = BalanceLock.objects.filter(wallet__account=account, freed=False).values('wallet').annotate(amount=Sum('amount'))
-    locked_dict = {}
-
-    for l in locked:
-        locked_dict[l['wallet']] = l['amount']
-
     for wallet in Wallet.objects.filter(account=account):
         if wallet.balance != balances.get(wallet.id, 0):
             logger.info('balance mismatch for wallet %s: %f != %f' % (wallet.id, wallet.balance, balances.get(wallet.id, 0)))
 
-        if wallet.locked != locked_dict.get(wallet.id, 0):
-            logger.info('locked mismatch for wallet %s: %f != %f' % (wallet.id, wallet.locked, locked_dict.get(wallet.id, 0)))
+    if account.is_ordinary_user():
+        locked = BalanceLock.objects.filter(wallet__account=account, freed=False).values('wallet').annotate(
+            amount=Sum('amount'))
+        locked_dict = {}
+
+        for l in locked:
+            locked_dict[l['wallet']] = l['amount']
+
+        for wallet in Wallet.objects.filter(account=account):
+            if wallet.locked != locked_dict.get(wallet.id, 0):
+                logger.info('locked mismatch for wallet %s: %f != %f' % (wallet.id, wallet.locked, locked_dict.get(wallet.id, 0)))
 
 
 def check_all_accounts_consistency():
