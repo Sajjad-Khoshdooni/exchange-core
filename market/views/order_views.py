@@ -1,4 +1,5 @@
 import django_filters
+from django.db.models import F, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins
 from rest_framework.authentication import SessionAuthentication
@@ -7,7 +8,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
-from market.models import StopLoss
+from market.models import StopLoss, Trade
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from accounts.views.authentication import CustomTokenAuthentication
 from market.models import Order, CancelRequest
@@ -50,9 +51,18 @@ class OrderViewSet(mixins.CreateModelMixin,
         return Order.objects.filter(wallet__account=self.request.user.account).order_by('-created')
 
     def get_serializer_context(self):
+        trades = {
+            trade['order_id']: (trade['sum_amount'], trade['sum_value']) for trade in
+            Trade.objects.filter(order__wallet__account=self.request.user.account).annotate(
+                value=F('amount') * F('price')
+            ).values('order').annotate(sum_amount=Sum('amount'), sum_value=Sum('value')).values(
+                'order_id', 'sum_amount', 'sum_value'
+            )
+        }
         return {
             **super(OrderViewSet, self).get_serializer_context(),
-            'account': self.request.user.account
+            'account': self.request.user.account,
+            'trades': trades,
         }
 
 

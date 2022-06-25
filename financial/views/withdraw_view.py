@@ -34,6 +34,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
     code = serializers.CharField(write_only=True)
 
     def create(self, validated_data):
+        if config('WITHDRAW_ENABLE', '1') == '0':
+            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
+
         amount = validated_data['amount']
         iban = validated_data['iban']
         code = validated_data['code']

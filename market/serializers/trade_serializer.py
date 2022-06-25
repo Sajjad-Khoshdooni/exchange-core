@@ -4,31 +4,20 @@ from rest_framework import serializers
 
 from ledger.models import Asset
 from ledger.utils.precision import floor_precision
-from market.models import FillOrder, Order
+from market.models import Trade, Order
 
 
-class FillOrderSerializer(serializers.ModelSerializer):
+class AccountTradeSerializer(serializers.ModelSerializer):
     coin = serializers.CharField(source='symbol.asset.symbol')
     pair = serializers.CharField(source='symbol.base_asset.symbol')
     pair_amount = serializers.CharField(source='base_amount')
-    side = serializers.SerializerMethodField()
-    fee_amount = serializers.SerializerMethodField()
     market = serializers.SerializerMethodField()
 
-    def get_side(self, instance: FillOrder):
-        return instance.get_side(self.context['account'], self.context['index'])
+    def get_market(self, instance: Trade):
+        return instance.order.wallet.market
 
-    def get_market(self, instance: FillOrder):
-        if instance.maker_order.wallet.account == self.context['account']:
-            return instance.maker_order.wallet.market
-        elif instance.taker_order.wallet.account:
-            return instance.taker_order.wallet.market
-
-    def get_fee_amount(self, instance: FillOrder):
-        return instance.get_fee(self.context['account'], self.context['index'])
-
-    def to_representation(self, trade: FillOrder):
-        data = super(FillOrderSerializer, self).to_representation(trade)
+    def to_representation(self, trade: Trade):
+        data = super(AccountTradeSerializer, self).to_representation(trade)
         amount = floor_precision(Decimal(data['amount']), trade.symbol.step_size)
         if not amount:
             amount = floor_precision(trade.symbol.min_trade_quantity, trade.symbol.step_size)
@@ -46,15 +35,20 @@ class FillOrderSerializer(serializers.ModelSerializer):
         return data
 
     class Meta:
-        model = FillOrder
+        model = Trade
         fields = ('created', 'coin', 'pair', 'side', 'amount', 'price', 'pair_amount', 'fee_amount', 'market')
 
 
-class TradeSerializer(FillOrderSerializer):
+class TradeSerializer(AccountTradeSerializer):
     coin = serializers.CharField(source='symbol.asset.symbol')
     pair = serializers.CharField(source='symbol.base_asset.symbol')
     pair_amount = serializers.CharField(source='base_amount')
+    is_buyer_maker = serializers.SerializerMethodField()
+
+    @classmethod
+    def get_is_buyer_maker(cls, instance: Trade):
+        return (instance.side == Order.BUY) == instance.is_maker
 
     class Meta:
-        model = FillOrder
+        model = Trade
         fields = ('created', 'coin', 'pair', 'amount', 'price', 'pair_amount', 'is_buyer_maker')

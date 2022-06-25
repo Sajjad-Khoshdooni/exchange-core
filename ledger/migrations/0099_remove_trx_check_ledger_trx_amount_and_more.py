@@ -34,11 +34,6 @@ class Migration(migrations.Migration):
             model_name='transfer',
             name='lock',
         ),
-        migrations.AlterField(
-            model_name='balancelock',
-            name='key',
-            field=models.UUIDField(unique=True),
-        ),
         migrations.AddConstraint(
             model_name='trx',
             constraint=models.CheckConstraint(check=models.Q(('amount__gt', 0)), name='check_ledger_trx_amount'),

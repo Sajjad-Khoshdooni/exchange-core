@@ -1,5 +1,6 @@
 import re
 
+from decouple import config
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
@@ -25,6 +26,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
     address = serializers.CharField(write_only=True, required=False)
 
     def validate(self, attrs):
+
+        if config('WITHDRAW_ENABLE', '1') == '0':
+            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
+
         user = self.context['request'].user
         account = user.account
         api = self.context.get('api')

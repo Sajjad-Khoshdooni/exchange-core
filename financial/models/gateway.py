@@ -174,13 +174,13 @@ class PaydotirGateway(Gateway):
         data = resp.json()
 
         if data['status'] == 1:
-            with transaction.atomic():
+            with WalletPipeline() as pipeline:
                 payment.status = DONE
                 payment.ref_id = data.get('transId')
                 payment.ref_status = data['status']
                 payment.save()
 
-                payment.accept()
+                payment.accept(pipeline)
 
         else:
             payment.status = CANCELED
@@ -235,13 +235,13 @@ class ZibalGateway(Gateway):
         data = resp.json()
 
         if data['result'] == 100:
-            with transaction.atomic():
+            with WalletPipeline() as pipeline:
                 payment.status = DONE
-                payment.ref_id = data.get('transId')
+                payment.ref_id = data.get('refNumber')
                 payment.ref_status = data['status']
                 payment.save()
 
-                payment.accept()
+                payment.accept(pipeline)
 
         else:
             payment.status = CANCELED

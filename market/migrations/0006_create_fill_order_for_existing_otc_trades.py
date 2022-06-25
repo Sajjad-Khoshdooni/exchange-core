@@ -2,13 +2,9 @@
 
 from django.db import migrations
 
-from ledger.models import OTCTrade
-from market.models import FillOrder
-
 
 def populate_fill_orders(apps, schema_editor):
-    for trade in OTCTrade.objects.filter(status='done'):
-        FillOrder.create_for_otc_trade(trade)
+    pass
 
 
 class Migration(migrations.Migration):
