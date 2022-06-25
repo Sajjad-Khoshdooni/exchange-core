@@ -25,7 +25,7 @@ else:
     BINANCE_FUTURES_BASE_URL = "https://testnet.binancefuture.com"
 
 
-def create_binance_requset_and_log(response: str, url: str, method: str, data: dict):
+def create_binance_request_and_log(response, url: str, method: str, data: dict):
     from provider.models import BinanceRequests
     resp_data = response.json()
     if not response.ok:
@@ -109,7 +109,7 @@ def binance_spot_send_signed_request(http_method, url_path, payload: dict):
 
     response = dispatch_request(http_method)(**params)
 
-    return create_binance_requset_and_log(
+    return create_binance_request_and_log(
         response=response,
         url=url_path,
         method=http_method,
@@ -125,7 +125,7 @@ def binance_spot_send_public_request(url_path: str, payload: dict):
         url = url + "?" + query_string
     print("{}".format(url))
     response = dispatch_request("GET")(url=url, timeout=TIMEOUT)
-    return create_binance_requset_and_log(
+    return create_binance_request_and_log(
         response=response,
         url=url_path,
         method="GET",
@@ -151,7 +151,7 @@ def binance_futures_send_signed_request(http_method: str, url_path: str, payload
 
     response = dispatch_request(http_method)(**params)
 
-    return create_binance_requset_and_log(
+    return create_binance_request_and_log(
         response=response,
         url=url_path,
         method=http_method,
@@ -169,7 +169,7 @@ def binance_futures_send_public_request(url_path, payload: dict):
     print("{}".format(url))
 
     response = dispatch_request("GET")(url=url, timeout=TIMEOUT)
-    return create_binance_requset_and_log(
+    return create_binance_request_and_log(
         response=response,
         url=url_path,
         method='GET',

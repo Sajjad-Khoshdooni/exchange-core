@@ -5,7 +5,7 @@ import requests
 from yekta_config import secret
 from yekta_config.config import config
 
-from financial.models import BankAccount
+from financial.models import BankAccount, FiatWithdrawRequest
 
 logger = logging.getLogger(__name__)
 
@@ -25,21 +25,19 @@ class Wallet:
 class FiatWithdraw:
 
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
-    ZIBAL = 'zibal'
-    PAY_IR = 'pay_ir'
 
-    WITHDRAW_CHANEL = config('WITHDRAW_CHANEL')
+    WITHDRAW_CHANNEL = config('WITHDRAW_CHANNEL')
 
     @classmethod
     def get_withdraw_chanel(cls, chanel=None):
         maping = {
-            cls.PAY_IR: PayirChanel,
-            cls.ZIBAL: ZiblaChanel
+            FiatWithdrawRequest.PAYIR: PayirChanel,
+            FiatWithdrawRequest.ZIBAL: ZiblaChanel
         }
         if chanel:
             return maping[chanel]()
         else:
-            return maping[cls.WITHDRAW_CHANEL]()
+            return maping[cls.WITHDRAW_CHANNEL]()
 
     def get_wallet_id(self):
         raise NotImplementedError
@@ -128,7 +126,7 @@ class PayirChanel(FiatWithdraw):
 
         }
         status = data['cashout']['status']
-        return maping_status.get(int(status), default=cls.PENDING)
+        return maping_status.get(int(status), cls.PENDING)
 
 
 class ZiblaChanel(FiatWithdraw):
@@ -207,4 +205,4 @@ class ZiblaChanel(FiatWithdraw):
             "0": cls.DONE,
         }
         status = data['checkoutStatus']
-        return maping_status.get(status, default=cls.PENDING)
+        return maping_status.get(status, cls.PENDING)

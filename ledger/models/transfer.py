@@ -133,7 +133,7 @@ class Transfer(models.Model):
         return transfer
 
     def save(self, *args, **kwargs):
-        if self.status == self.DONE:
+        if self.source == self.SELF and self.status == self.DONE:
             self.update_crypto_balances()
 
         return super().save(*args, **kwargs)
