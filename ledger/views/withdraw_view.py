@@ -76,7 +76,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if not is_48h_rule_passed(user):
             raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
 
-        network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
+        network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network, hedger_withdraw_enable=True)
 
         amount = attrs['amount']
 

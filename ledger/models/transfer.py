@@ -64,15 +64,16 @@ class Transfer(models.Model):
     def total_amount(self):
         return self.amount + self.fee_amount
 
-    def mapping_source(self, hedger: str) -> str:
+    @classmethod
+    def mapping_source(cls, hedger: str) -> str:
         mapping = {
-            Asset.HEDGE_KUCOIN_SPOT: self.KUCOIN,
-            Asset.HEDGE_KUCOIN_FUTURE: self.KUCOIN,
-            Asset.HEDGE_BINANCE_SPOT: self.BINANCE,
-            Asset.HEDGE_BINANCE_FUTURE: self.BINANCE,
+            Asset.HEDGE_KUCOIN_SPOT: cls.KUCOIN,
+            Asset.HEDGE_KUCOIN_FUTURE: cls.KUCOIN,
+            Asset.HEDGE_BINANCE_SPOT: cls.BINANCE,
+            Asset.HEDGE_BINANCE_FUTURE: cls.BINANCE,
         }
 
-        return mapping.get(hedger,self.BINANCE)
+        return mapping.get(hedger, cls.BINANCE)
 
     def get_explorer_link(self) -> str:
         if not self.trx_hash:

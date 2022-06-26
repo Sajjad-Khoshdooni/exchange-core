@@ -119,12 +119,14 @@ class KucoinSpotHandler(ExchangeHandler):
     def get_network_info(self, coin: str, network: str):
         chains = self.get_coin_data(coin=coin).get('chains')
         info = list(filter(lambda d: d['chainName'] == network, chains))
-        response = {
-            'withdrawMin': info[0].get('withdrawalMinSize'),
-            'withdrawFee': info[0].get('withdrawalMinFee'),
-            'withdrawEnable': info[0].get('isWithdrawEnabled')
-        }
-        return response
+        if info:
+            response = {
+                'withdrawMin': info[0].get('withdrawalMinSize'),
+                'withdrawFee': info[0].get('withdrawalMinFee'),
+                'withdrawEnable': info[0].get('isWithdrawEnabled')
+            }
+            return response
+        return
 
     def get_withdraw_fee(self, coin: str, network: str):
         info = self.get_network_info(coin, network)
@@ -152,7 +154,7 @@ class KucoinSpotHandler(ExchangeHandler):
 
     def get_step_size(self, symbol: str) -> Decimal:
         data = self.get_symbol_data(symbol=symbol)
-        return data[0].get('baseIncrement')
+        return Decimal(data[0].get('baseIncrement'))
 
     def get_lot_min_quantity(self, symbol: str) ->Decimal:
         data = self.get_symbol_data(symbol=symbol)

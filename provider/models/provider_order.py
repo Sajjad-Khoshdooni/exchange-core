@@ -29,7 +29,7 @@ class ProviderOrder(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
 
-    exchange = models.CharField(max_length=8)
+    exchange = models.CharField(max_length=32)
     market = models.CharField(
         max_length=4,
         default=FUTURE,

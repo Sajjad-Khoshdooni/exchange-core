@@ -13,6 +13,8 @@ def update_network_fees():
     network_assets = NetworkAsset.objects.all()
 
     for ns in network_assets:
+        if ns.asset.symbol != 'ACE':
+            continue
         handler = ns.asset.get_hedger()
         info = handler.get_network_info(ns.asset.symbol, ns.network.symbol)
 
@@ -41,9 +43,9 @@ def update_network_fees():
             ns.withdraw_fee = withdraw_fee
             ns.withdraw_min = withdraw_min
             ns.withdraw_max = info.get('withdrawMax', '20000000000000')
-            ns.binance_withdraw_enable = info.get('withdrawEnable')
+            ns.hedger_withdraw_enable = info.get('withdrawEnable')
         else:
-            ns.binance_withdraw_enable = False
+            ns.hedger_withdraw_enable = False
 
     NetworkAsset.objects.bulk_update(network_assets, fields=['withdraw_fee', 'withdraw_min', 'withdraw_max',
-                                                             'binance_withdraw_enable'])
+                                                             'hedger_withdraw_enable'])
