@@ -64,6 +64,16 @@ class Transfer(models.Model):
     def total_amount(self):
         return self.amount + self.fee_amount
 
+    def mapping_source(self, hedger: str) -> str:
+        mapping = {
+            Asset.HEDGE_KUCOIN_SPOT: self.KUCOIN,
+            Asset.HEDGE_KUCOIN_FUTURE: self.KUCOIN,
+            Asset.HEDGE_BINANCE_SPOT: self.BINANCE,
+            Asset.HEDGE_BINANCE_FUTURE: self.BINANCE,
+        }
+
+        return mapping.get(hedger,self.BINANCE)
+
     def get_explorer_link(self) -> str:
         if not self.trx_hash:
             return ''
@@ -120,7 +130,7 @@ class Transfer(models.Model):
                 network=network,
                 amount=amount - commission,
                 fee_amount=commission,
-                source=cls.BINANCE,
+                source=cls.mapping_source(wallet.asset.hedge_method),
                 out_address=address,
                 deposit=False
             )

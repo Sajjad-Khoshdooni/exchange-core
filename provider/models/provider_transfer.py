@@ -31,7 +31,7 @@ class ProviderTransfer(models.Model):
 
     @classmethod
     def new_withdraw(cls, asset: Asset, network: Network, transfer_amount: Decimal, withdraw_fee: Decimal, address: str,
-                     caller_id: str = '') -> 'ProviderTransfer':
+                     caller_id: str = '', exchange: str = BINANCE) -> 'ProviderTransfer':
 
         amount = Decimal(transfer_amount) + Decimal(withdraw_fee)
 
@@ -40,7 +40,7 @@ class ProviderTransfer(models.Model):
             return
 
         transfer = ProviderTransfer.objects.create(
-            asset=asset, network=network, amount=amount, address=address, caller_id=caller_id
+            asset=asset, network=network, amount=amount, address=address, caller_id=caller_id, exchange=exchange
         )
         handler = asset.get_hedger()
         resp = handler.withdraw(
@@ -49,7 +49,7 @@ class ProviderTransfer(models.Model):
             address=address,
             transfer_amount=transfer_amount,
             fee_amount=withdraw_fee,
-            client_id=transfer.id
+            client_id=transfer.id,
         )
 
         transfer.provider_transfer_id = resp['id']

@@ -84,12 +84,13 @@ def withdraw(transfer: Transfer):
     logger.info('withdrawing %s %s in %s network' % (withdraw_fee + transfer.amount, transfer.asset, transfer.network))
 
     provider_transfer = ProviderTransfer.new_withdraw(
-        transfer.asset,
-        transfer.network,
-        transfer.amount,
-        withdraw_fee,
-        transfer.out_address,
-        caller_id=str(transfer.id)
+        asset=transfer.asset,
+        network=transfer.network,
+        transfer_amount=transfer.amount,
+        withdraw_fee=withdraw_fee,
+        address=transfer.out_address,
+        caller_id=str(transfer.id),
+        exchange=transfer.source,
     )
 
     if not provider_transfer:
