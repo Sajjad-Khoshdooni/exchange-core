@@ -31,15 +31,7 @@ def check_margin_level():
         logger.info('margin_level for account=%d is %s' % (account.id, margin_level))
 
         if margin_level <= LIQUIDATION_ML_THRESHOLD:
-            liquidation = CloseRequest.objects.create(
-                account=account,
-                margin_level=margin_level,
-                reason=CloseRequest.LIQUIDATION
-            )
-
-            engine = LiquidationEngine(liquidation, margin_info)
-            engine.start()
-
+            CloseRequest.close_margin(account, reason=CloseRequest.LIQUIDATION)
             status = 2
 
         elif not account.margin_alerting and margin_level <= MARGIN_CALL_ML_THRESHOLD:

@@ -1,11 +1,13 @@
 from decimal import Decimal
+from typing import Union
 from uuid import uuid4
 
 from django.db import models
-from django.db.models import CheckConstraint, Q
+from django.db.models import CheckConstraint, Q, UniqueConstraint
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
+from ledger.margin.liquidation import LiquidationEngine
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import Asset, Wallet, Trx
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt
@@ -149,4 +151,27 @@ class CloseRequest(models.Model):
     )
 
     class Meta:
-        constraints = [CheckConstraint(check=Q(margin_level__gte=0), name='check_margin_level', ), ]
+        constraints = [
+            CheckConstraint(check=Q(margin_level__gte=0), name='check_margin_level', ),
+            UniqueConstraint(fields=['account'], condition=Q(status='new'), name='unique_margin_close_request_account'),
+        ]
+
+    @classmethod
+    def close_margin(cls, account: Account, reason: str) -> Union['CloseRequest', None]:
+        if CloseRequest.objects.filter(account=account, status=CloseRequest.NEW):
+            return
+
+        margin_info = MarginInfo.get(account)
+
+        close_request = CloseRequest.objects.create(
+            account=account,
+            margin_level=margin_info.get_margin_level(),
+            reason=reason,
+            status=CloseRequest.NEW
+        )
+
+        engine = LiquidationEngine(close_request, margin_info)
+        engine.start()
+
+        close_request.status = cls.DONE
+        close_request.save()

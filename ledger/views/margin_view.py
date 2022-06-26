@@ -12,7 +12,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowableExceeds, HedgeError
 from ledger.margin.margin_info import MarginInfo
-from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet
+from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet, CloseRequest
 from ledger.models.asset import CoinField
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.price import get_trading_price_usdt, SELL
@@ -146,8 +146,10 @@ class MarginLoanViewSet(ModelViewSet):
         ).order_by('-created')
 
 
-class MarginClosePosition(APIView):
+class MarginClosePositionView(APIView):
     def post(self, request: Request):
         account = request.user.account
+
+        CloseRequest.close_margin(account, reason=CloseRequest.USER)
 
         return Response('ok', status=201)

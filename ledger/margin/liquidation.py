@@ -4,10 +4,8 @@ from decimal import Decimal
 from accounts.models import Account
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import Wallet, Trx, OTCTrade, OTCRequest, Asset
-from ledger.models.margin import CloseRequest
 from ledger.utils.price import get_trading_price_usdt, BUY
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order
 from provider.utils import round_with_step_size
 
 logger = logging.getLogger(__name__)
@@ -27,10 +25,10 @@ def get_wallet_balances(account: Account, market: str):
 
 
 class LiquidationEngine:
-    def __init__(self, margin_liquidation: CloseRequest, margin_info: MarginInfo):
-        self.account = margin_liquidation.account
+    def __init__(self, close_request, margin_info: MarginInfo):
+        self.account = close_request.account
         self.margin_info = margin_info
-        self.margin_liquidation = margin_liquidation
+        self.margin_liquidation = close_request
 
         self.liquidation_amount = self.margin_info.get_liquidation_amount()
 
@@ -217,4 +215,5 @@ class LiquidationEngine:
         return self.liquidation_amount < 0.1
 
     def cancel_open_orders(self):
+        from market.models import Order
         Order.cancel_orders(Order.open_objects.filter(wallet__account=self.account))
