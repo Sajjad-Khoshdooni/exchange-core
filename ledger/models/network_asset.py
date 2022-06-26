@@ -16,8 +16,6 @@ class NetworkAsset(models.Model):
 
     hedger_withdraw_enable = models.BooleanField(default=True)
 
-    binance_withdraw_enable = models.BooleanField(default=True)
-    kucoin_withdraw_enable = models.BooleanField(default=False)
 
     def can_deposit(self):
         if not self.network.can_deposit:

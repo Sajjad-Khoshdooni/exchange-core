@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('exchange', models.CharField(default='interface', max_length=8)),
+                ('exchange', models.CharField(default='binance', max_length=8)),
                 ('amount', models.DecimalField(decimal_places=18, max_digits=40, validators=[django.core.validators.MinValueValidator(0)])),
                 ('address', models.CharField(max_length=256)),
                 ('provider_transfer_id', models.CharField(max_length=64)),

@@ -13,7 +13,7 @@ from ledger.utils.cache import cache_for
 from ledger.utils.price_manager import PriceManager
 from provider.exchanges import BinanceSpotHandler
 
-BINANCE = 'interface'
+BINANCE = 'binance'
 NOBITEX = 'nobitex'
 KUCOIN = 'kucoin'
 

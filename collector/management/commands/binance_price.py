@@ -4,7 +4,7 @@ from collector.binance_consumer import BinanceConsumer
 
 
 class Command(BaseCommand):
-    help = 'Fetch interface prices'
+    help = 'Fetch binance prices'
 
     def handle(self, *args, **options):
         consumer = BinanceConsumer()

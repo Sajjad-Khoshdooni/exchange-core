@@ -5,7 +5,6 @@ from math import log10
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Sum, CheckConstraint, Q
-from yekta_config.config import config
 
 from accounts.models import Account
 from ledger.models import Asset, Trx
@@ -84,11 +83,11 @@ class ProviderOrder(models.Model):
         """
         how much assets we have more!
 
-        out = -internal - interface transfer deposit
-        hedge = all assets - users = (internal + interface manual deposit + interface transfer deposit + interface trades)
-                + system + out = system + interface trades + interface manual deposit
+        out = -internal - binance transfer deposit
+        hedge = all assets - users = (internal + binance manual deposit + binance transfer deposit + binance trades)
+                + system + out = system + binance trades + binance manual deposit
 
-        given interface manual deposit = 0 -> hedge = system + interface manual deposit + interface trades
+        given binance manual deposit = 0 -> hedge = system + binance manual deposit + binance trades
         """
 
         received = Trx.objects.filter(

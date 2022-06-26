@@ -1,2 +1,2 @@
-BINANCE = 'interface'
+BINANCE = 'binance'
 NOBITEX = 'nobitex'

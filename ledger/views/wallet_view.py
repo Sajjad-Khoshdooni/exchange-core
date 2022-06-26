@@ -274,7 +274,7 @@ class BriefNetworkAssetsView(ListAPIView):
         if 'symbol' in query_params:
             return query_set.filter(asset__symbol=query_params['symbol'].upper(),
                                     network__can_withdraw=True,
-                                    binance_withdraw_enable=True)
+                                    hedger_withdraw_enable=True)
         else:
             query_set = query_set.distinct('network__symbol')
 
