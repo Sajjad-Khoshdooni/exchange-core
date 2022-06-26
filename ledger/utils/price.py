@@ -15,7 +15,6 @@ from provider.exchanges import BinanceSpotHandler
 
 BINANCE = 'binance'
 NOBITEX = 'nobitex'
-KUCOIN = 'kucoin'
 
 USDT = 'USDT'
 IRT = 'IRT'

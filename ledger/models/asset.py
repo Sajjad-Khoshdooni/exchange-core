@@ -30,17 +30,19 @@ class Asset(models.Model):
     USDT = 'USDT'
     SHIB = 'SHIB'
 
+    HEDGE_NONE = ''
     HEDGE_BINANCE_FUTURE = 'binance-future'
     HEDGE_BINANCE_SPOT = 'binance-spot'
 
-    HEDGE_KUCOIN_FUTURE = 'kucoin-feature'
+    HEDGE_KUCOIN_FUTURE = 'kucoin-future'
     HEDGE_KUCOIN_SPOT = 'kucoin-spot'
 
     HEDGE_METHOD_CHOICE = (
         (HEDGE_KUCOIN_SPOT, HEDGE_KUCOIN_SPOT),
         (HEDGE_KUCOIN_FUTURE, HEDGE_KUCOIN_FUTURE),
         (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
-        (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE)
+        (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE),
+        (HEDGE_NONE, HEDGE_NONE)
     )
     PRECISION = 8
 
@@ -163,7 +165,7 @@ class Asset(models.Model):
             return self.symbol
 
     def get_hedger(self) -> ExchangeHandler():
-        return ExchangeHandler.mapping_exchange(hedge_method=self.hedge_method)
+        return ExchangeHandler.get_handler(hedge_method=self.hedge_method)
 
 
 class AssetSerializer(serializers.ModelSerializer):

@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class Transfer(models.Model):
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
-    SELF, BINANCE, KUCOIN = 'self', 'binance_interface', 'kucoin_interface'
+    SELF, BINANCE, KUCOIN = 'self', 'binance', 'kucoin'
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
@@ -63,17 +63,6 @@ class Transfer(models.Model):
     @property
     def total_amount(self):
         return self.amount + self.fee_amount
-
-    @classmethod
-    def mapping_source(cls, hedger: str) -> str:
-        mapping = {
-            Asset.HEDGE_KUCOIN_SPOT: cls.KUCOIN,
-            Asset.HEDGE_KUCOIN_FUTURE: cls.KUCOIN,
-            Asset.HEDGE_BINANCE_SPOT: cls.BINANCE,
-            Asset.HEDGE_BINANCE_FUTURE: cls.BINANCE,
-        }
-
-        return mapping.get(hedger, cls.BINANCE)
 
     def get_explorer_link(self) -> str:
         if not self.trx_hash:
@@ -131,15 +120,15 @@ class Transfer(models.Model):
                 network=network,
                 amount=amount - commission,
                 fee_amount=commission,
-                source=cls.mapping_source(wallet.asset.hedge_method),
+                source=wallet.asset.get_hedger().NAME,
                 out_address=address,
                 deposit=False
             )
 
             pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
-        from ledger.tasks import create_withdraw
-        create_withdraw.delay(transfer.id)
+        from ledger.tasks import create_provider_withdraw
+        create_provider_withdraw.delay(transfer.id)
 
         return transfer
 

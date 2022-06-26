@@ -11,7 +11,6 @@ from ledger.utils.precision import decimal_to_str
 from provider.exchanges.sdk.binance_sdk import binance_spot_send_signed_request, binance_futures_send_signed_request, \
     binance_futures_send_public_request, binance_spot_send_public_request
 
-BINANCE = 'interface'
 
 MARKET, LIMIT = 'MARKET', 'LIMIT'
 SELL, BUY = 'SELL', 'BUY'
@@ -22,9 +21,10 @@ HOUR = 3600
 
 class ExchangeHandler:
     MARKET_TYPE = ''
+    NAME = ''
 
     @classmethod
-    def mapping_exchange(cls, hedge_method: str):
+    def get_handler(cls, hedge_method: str):
         from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler, KucoinFuturesHandler
         from ledger.models.asset import Asset
         mapping = {
@@ -33,14 +33,26 @@ class ExchangeHandler:
             Asset.HEDGE_KUCOIN_SPOT: KucoinSpotHandler,
             Asset.HEDGE_KUCOIN_FUTURE: KucoinFuturesHandler
         }
-        if hedge_method:
-            return mapping[hedge_method]()
-        else:
-            return mapping[Asset.HEDGE_BINANCE_FUTURE]()
+
+        return mapping[hedge_method]()
 
     def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
                     cache_timeout: int = None):
-        return NotImplementedError
+        cache_key = None
+
+        if cache_timeout:
+            cache_key = get_cache_func_key(self.__class__, url, method, data, signed)
+            result = cache.get(cache_key)
+
+            if result is not None:
+                return result
+
+        result = self._collect_api(url=url, method=method, data=data, signed=signed)
+
+        if cache_timeout:
+            cache.set(cache_key, result, cache_timeout)
+
+        return result
 
     def get_trading_symbol(self, symbol: str) -> str:
         return NotImplementedError
@@ -91,24 +103,7 @@ class ExchangeHandler:
 class BinanceSpotHandler(ExchangeHandler):
     order_url = '/api/v3/order'
     MARKET_TYPE = 'spot'
-
-    def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
-                    cache_timeout: int = None):
-        cache_key = None
-
-        if cache_timeout:
-            cache_key = get_cache_func_key(self.__class__, url, method, data, signed)
-            result = cache.get(cache_key)
-
-            if result is not None:
-                return result
-
-        result = self._collect_api(url=url, method=method, data=data, signed=signed)
-
-        if cache_timeout:
-            cache.set(cache_key, result, cache_timeout)
-
-        return result
+    NAME = 'binance'
 
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
         if settings.DEBUG_OR_TESTING:
@@ -191,7 +186,11 @@ class BinanceSpotHandler(ExchangeHandler):
         networks = list(filter(lambda d: d['network'] == network, coin['networkList']))
 
         if networks:
+            if not networks[0].get('withdrawMin'):
+                networks[0]['withdrawMin'] = Decimal(network[0].get('withdrawIntegerMultiple'))
             return networks[0]
+
+        return
 
     def get_withdraw_fee(self, coin: str, network: str) -> Decimal:
         info = self.get_network_info(coin, network)

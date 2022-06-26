@@ -25,9 +25,6 @@ def update_network_fees():
                 withdraw_fee *= 2
                 withdraw_min *= 2
 
-            if not withdraw_min:
-                withdraw_min = Decimal(info.get('withdrawIntegerMultiple'))
-
             price = get_trading_price_usdt(ns.asset.symbol, BUY, raw_price=True)
 
             if price and withdraw_min:
@@ -40,8 +37,8 @@ def update_network_fees():
 
             ns.withdraw_fee = withdraw_fee
             ns.withdraw_min = withdraw_min
-            ns.withdraw_max = info.get('withdrawMax', '20000000000000')
-            ns.hedger_withdraw_enable = info.get('withdrawEnable')
+            ns.withdraw_max = info['withdrawMax']
+            ns.hedger_withdraw_enable = info['withdrawEnable']
         else:
             ns.hedger_withdraw_enable = False
 

@@ -11,7 +11,7 @@ from provider.models import ProviderTransfer, ProviderHedgedOrder
 logger = logging.getLogger(__name__)
 
 
-def handle_withdraw(transfer_id: int):
+def handle_provider_withdraw(transfer_id: int):
     if settings.DEBUG_OR_TESTING:
         return
 
@@ -29,7 +29,7 @@ def handle_withdraw(transfer_id: int):
         transfer.save()
 
         assert not transfer.deposit
-        assert transfer.source == transfer.BINANCE or transfer.KUCOIN
+        assert transfer.source == handler.NAME
         assert transfer.status == transfer.PROCESSING
         assert not transfer.provider_transfer
 
@@ -66,18 +66,21 @@ def handle_withdraw(transfer_id: int):
 
         balance_map = handler.get_free_dict()
 
-        if balance_map.get(coin) < amount:
+        if balance_map[coin] < amount:
             logger.info('ignored withdrawing because of insufficient spot balance')
             return
 
-        withdraw(transfer)
+        provider_withdraw(transfer)
 
     finally:
         transfer.handling = False
         transfer.save()
 
 
-def withdraw(transfer: Transfer):
+def provider_withdraw(transfer: Transfer):
+
+    assert transfer.source == transfer.asset.get_hedger().NAME
+
     handler = transfer.asset.get_hedger()
     withdraw_fee = handler.get_withdraw_fee(transfer.wallet.asset.symbol, transfer.network.symbol)
 

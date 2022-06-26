@@ -10,6 +10,7 @@ from provider.exchanges.sdk.kucoin_sdk import kucoin_spot_send_signed_request, k
 
 
 class KucoinSpotHandler(ExchangeHandler):
+    NAME = 'kucoin'
     MAIN, TRADE, MARGIN, = 'main', 'trade', 'margin',
     order_url = '/api/v1/orders'
     MARKET_TYPE = 'spot'
@@ -19,25 +20,6 @@ class KucoinSpotHandler(ExchangeHandler):
 
     api_path = None
     exchange = None
-
-    def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
-                    cache_timeout: int = None):
-
-        cache_key = None
-
-        # if cache_timeout:
-        #     cache_key = get_cache_func_key(self, url, method, data, signed)
-        #     result = cache.get(cache_key)
-        #
-        #     if result is not None:
-        #         return result
-
-        result = self._collect_api(url=url, method=method, data=data, signed=signed)
-
-        # if cache_timeout:
-        #     cache.set(cache_key, result, cache_timeout)
-
-        return result
 
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
         # if settings.DEBUG_OR_TESTING:
@@ -123,7 +105,8 @@ class KucoinSpotHandler(ExchangeHandler):
             response = {
                 'withdrawMin': info[0].get('withdrawalMinSize'),
                 'withdrawFee': info[0].get('withdrawalMinFee'),
-                'withdrawEnable': info[0].get('isWithdrawEnabled')
+                'withdrawEnable': info[0].get('isWithdrawEnabled'),
+                'withdrawMax': info[0].get('isWithdrawEnabled', '1000000000')
             }
             return response
         return

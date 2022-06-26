@@ -27,6 +27,7 @@ def add_candidate_coins(coins: list, hedger: str):
 
 
 def update_coin_networks(asset: Asset):
+
     coin_data = BinanceSpotHandler().get_coin_data(asset.symbol)
 
     for n in coin_data['networkList']:

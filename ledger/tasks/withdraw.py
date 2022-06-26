@@ -1,7 +1,7 @@
 from celery import shared_task
 
 from ledger.models import Transfer
-from ledger.withdraw.exchange import handle_withdraw
+from ledger.withdraw.exchange import handle_provider_withdraw
 from ledger.utils.wallet_pipeline import WalletPipeline
 from ledger.withdraw.withdraw_handler import WithdrawHandler
 
@@ -12,8 +12,8 @@ def create_transaction_from_not_broadcasts():
 
 
 @shared_task(queue='binance')
-def create_withdraw(transfer_id: int):
-    handle_withdraw(transfer_id)
+def create_provider_withdraw(transfer_id: int):
+    handle_provider_withdraw(transfer_id)
 
 
 @shared_task(queue='binance')
@@ -26,7 +26,7 @@ def update_binance_withdraw():
     )
 
     for transfer in re_handle_transfers:
-        create_withdraw.delay(transfer.id)
+        create_provider_withdraw.delay(transfer.id)
 
     transfers = Transfer.objects.filter(
         deposit=False,
@@ -37,10 +37,10 @@ def update_binance_withdraw():
     for transfer in transfers:
         data = transfer.provider_transfer.get_status()
 
-        status = data.get('status')
+        status = data['status']
 
         if 'txId' in data:
-            transfer.trx_hash = data.get('txId')
+            transfer.trx_hash = data['txId']
 
         if status == transfer.CANCELED:
             transfer.status = transfer.CANCELED
