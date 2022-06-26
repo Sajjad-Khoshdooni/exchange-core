@@ -1,22 +1,18 @@
 from django.contrib import admin
-from django.utils import timezone
 from django.contrib.admin import SimpleListFilter
 from django.utils.safestring import mark_safe
-from datetime import timedelta
-
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import User
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
-from accounts.tasks.verify_user import alert_user_verify_status
+from accounts.models import User
 from accounts.utils.admin import url_to_admin_list
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
     FiatWithdrawRequest
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from ledger.utils.precision import humanize_number
-from financial.utils.withdraw_limit import get_fiat_estimate_receive_time
+
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
@@ -81,7 +77,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 
     def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
         if withdraw.withdraw_datetime:
-            data_time = get_fiat_estimate_receive_time(withdraw.withdraw_datetime)
+            data_time = withdraw.channel_handler.get_estimated_receive_time(withdraw.withdraw_datetime)
 
             return ('زمان : %s تاریخ %s' % (
                 data_time.time().strftime("%H:%M"),

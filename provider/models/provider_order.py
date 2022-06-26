@@ -8,7 +8,7 @@ from django.db.models import Sum, CheckConstraint, Q
 
 from accounts.models import Account
 from ledger.exceptions import HedgeError
-from ledger.models import Asset, Trx
+from ledger.models import Asset, Wallet
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_trading_price_usdt, SELL, get_binance_trading_symbol
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
@@ -100,17 +100,12 @@ class ProviderOrder(models.Model):
         given binance manual deposit = 0 -> hedge = system + binance manual deposit + binance trades
         """
 
-        received = Trx.objects.filter(
-            receiver__account__type=Account.SYSTEM,
-            receiver__asset=asset
-        ).aggregate(amount=Sum('amount'))['amount'] or 0
-
-        sent = Trx.objects.filter(
-            sender__account__type=Account.SYSTEM,
-            receiver__asset=asset
-        ).aggregate(amount=Sum('amount'))['amount'] or 0
-
-        system_balance = received - sent
+        system_balance = Wallet.objects.filter(
+            account__type=Account.SYSTEM,
+            asset=asset
+        ).aggregate(
+            sum=Sum('balance')
+        )['sum'] or 0
 
         orders = ProviderOrder.objects.filter(asset=asset).values('side').annotate(amount=Sum('amount'))
 

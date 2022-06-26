@@ -59,7 +59,7 @@ class TradeHistoryView(ListAPIView):
     permission_classes = ()
     pagination_class = LimitOffsetPagination
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
-    queryset = Trade.objects.exclude(trade_source=Trade.OTC).order_by('-created')
+    queryset = Trade.objects.filter(is_maker=True).exclude(trade_source=Trade.OTC).order_by('-created')
     serializer_class = TradeSerializer
 
     filter_backends = [DjangoFilterBackend]
