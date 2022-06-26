@@ -33,7 +33,7 @@ def create_binance_request_and_log(response, url: str, method: str, data: dict):
         print(resp_data)
 
         logger.warning(
-            'interface request failed',
+            'binance request failed',
             extra={
                 'url': url,
                 'method': method,
@@ -175,4 +175,3 @@ def binance_futures_send_public_request(url_path, payload: dict):
         method='GET',
         data=payload
     )
-

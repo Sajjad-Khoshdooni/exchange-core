@@ -16,7 +16,6 @@ class NetworkAsset(models.Model):
 
     hedger_withdraw_enable = models.BooleanField(default=True)
 
-
     def can_deposit(self):
         if not self.network.can_deposit:
             return False
