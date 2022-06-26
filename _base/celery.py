@@ -198,14 +198,14 @@ app.conf.beat_schedule = {
         }
     },
 
-    'moving_average_trader': {
-        'task': 'trader.tasks.moving_average.update_all_moving_averages',
-        'schedule': 17,
-        'options': {
-            'queue': 'trader-ma',
-            'expire': 17
-        }
-    },
+    # 'moving_average_trader': {
+    #     'task': 'trader.tasks.moving_average.update_all_moving_averages',
+    #     'schedule': 17,
+    #     'options': {
+    #         'queue': 'trader-ma',
+    #         'expire': 17
+    #     }
+    # },
     'update_withdraw_status': {
         'task': 'financial.tasks.withdraw.update_withdraw_status',
         'schedule': 300,
@@ -214,14 +214,14 @@ app.conf.beat_schedule = {
             'expire': 300
         },
     },
-    # 'random_trader': {
-    #     'task': 'trader.tasks.random_trader.random_trader',
-    #     'schedule': 60,
-    #     'options': {
-    #         'queue': 'trader-ma',
-    #         'expire': 60
-    #     }
-    # },
+    'random_trader': {
+        'task': 'trader.tasks.random_trader.random_trader',
+        'schedule': 17,
+        'options': {
+            'queue': 'trader-ma',
+            'expire': 17
+        }
+    },
 }
 
 if settings.DEBUG:
@@ -248,14 +248,14 @@ if settings.DEBUG:
                 'expire': 2
             },
         },
-        'moving_average_trader': {
-            'task': 'trader.tasks.moving_average.update_all_moving_averages',
-            'schedule': 67,
-            'options': {
-                'queue': 'trader-ma',
-                'expire': 67
-            }
-        },
+        # 'moving_average_trader': {
+        #     'task': 'trader.tasks.moving_average.update_all_moving_averages',
+        #     'schedule': 67,
+        #     'options': {
+        #         'queue': 'trader-ma',
+        #         'expire': 67
+        #     }
+        # },
         'handle open stop loss': {
             'task': 'market.tasks.stop_loss.handle_stop_loss',
             'schedule': 1,
@@ -273,12 +273,12 @@ if settings.DEBUG:
             },
         },
 
-        # 'random_trader': {
-        #     'task': 'trader.tasks.random_trader.random_trader',
-        #     'schedule': 60,
-        #     'options': {
-        #         'queue': 'trader-ma',
-        #         'expire': 60
-        #     }
-        # },
+        'random_trader': {
+            'task': 'trader.tasks.random_trader.random_trader',
+            'schedule': 17,
+            'options': {
+                'queue': 'trader-ma',
+                'expire': 17
+            }
+        },
     }

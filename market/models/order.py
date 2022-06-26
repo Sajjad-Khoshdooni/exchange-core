@@ -177,15 +177,17 @@ class Order(models.Model):
     def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
         return amount * price if side == Order.BUY else amount
 
-    def submit(self):
-        with WalletPipeline() as pipeline:  # type: WalletPipeline
-            self.acquire_lock(pipeline)
-            self.make_match(pipeline)
+    def submit(self, pipeline: WalletPipeline, check_balance: bool = True):
+        self.acquire_lock(pipeline, check_balance=check_balance)
+        self.make_match(pipeline)
 
-    def acquire_lock(self, pipeline: WalletPipeline):
+    def acquire_lock(self, pipeline: WalletPipeline, check_balance: bool = True):
         to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side)
-        to_lock_wallet.has_balance(lock_amount, raise_exception=True)
+
+        if check_balance:
+            to_lock_wallet.has_balance(lock_amount, raise_exception=True)
+
         pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 
     def release_lock(self, pipeline: WalletPipeline, release_amount: Decimal):

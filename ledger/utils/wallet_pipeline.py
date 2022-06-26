@@ -17,7 +17,7 @@ def sorted_flatten_dict(data: dict) -> list:
 class WalletPipeline(Atomic):
     TRADE, WITHDRAW = 'trade', 'withdraw'
 
-    def __init__(self, verbose: bool = True):
+    def __init__(self, verbose: bool = False):
         super(WalletPipeline, self).__init__(using=None, savepoint=True, durable=False)
         self.verbose = verbose
 
