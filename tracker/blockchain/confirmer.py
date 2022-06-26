@@ -2,6 +2,7 @@ import requests
 from django.db import transaction
 
 from ledger.models import Transfer
+from ledger.utils.wallet_pipeline import WalletPipeline
 from tracker.blockchain.dtos import BlockDTO
 from tracker.clients import validate_bsc_trx, validate_tron_trx
 
@@ -26,9 +27,9 @@ class Confirmer:
             confirmed = self.block_tracker.has(transfer.block_hash) and self.confirm_trx(transfer) and self.client_confirm(trx_hash=transfer.trx_hash)
 
             if confirmed:
-                with transaction.atomic():
+                with WalletPipeline() as pipeline:
                     transfer.status = Transfer.DONE
-                    transfer.build_trx()
+                    transfer.build_trx(pipeline)
                     transfer.save()
 
                 transfer.alert_user()
@@ -38,7 +39,9 @@ class Confirmer:
                 transfer.save()
 
     def client_confirm(self, trx_hash):
-        if self.network == 'BSC':
+        if self.network.symbol == 'BSC':
             return validate_bsc_trx(trx_hash=trx_hash)
-        if self.network == 'TRX':
+        elif self.network.symbol == 'TRX':
             return validate_tron_trx(trx_hash=trx_hash)
+        else:
+            raise NotImplementedError

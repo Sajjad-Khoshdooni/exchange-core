@@ -90,7 +90,7 @@ class OTCTrade(models.Model):
             otc_trade = OTCTrade.objects.create(
                 otc_request=otc_request,
             )
-            pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount)
+            pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount, reason=WalletPipeline.TRADE)
 
         otc_trade.hedge_and_finalize()
 

@@ -353,7 +353,7 @@ class MarginLoanAdmin(admin.ModelAdmin):
     search_fields = ('group_id',)
 
 
-@admin.register(models.MarginLiquidation)
+@admin.register(models.CloseRequest)
 class MarginLiquidationAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'margin_level', 'group_id')
     search_fields = ('group_id',)

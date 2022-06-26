@@ -186,7 +186,7 @@ class Order(models.Model):
         to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side)
         to_lock_wallet.has_balance(lock_amount, raise_exception=True)
-        pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount)
+        pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 
     def release_lock(self, pipeline: WalletPipeline, release_amount: Decimal):
         release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side)
