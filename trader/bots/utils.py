@@ -39,16 +39,13 @@ def random_min_order_value(base_symbol: str) -> Decimal:
 
 
 def random_buy(symbol: PairSymbol, account: Account):
-    wallet = symbol.base_asset.get_wallet(account)
-    balance = wallet.get_free()
-
     ask = get_current_price(symbol, SELL)
 
     price = floor_precision(ask * Decimal('1.03'), symbol.tick_size)
 
-    max_value = min(balance, random_min_order_value(symbol.base_asset.symbol))
+    amount_value = random_min_order_value(symbol.base_asset.symbol)
 
-    amount = floor_precision(Decimal(max_value / ask), symbol.step_size)
+    amount = floor_precision(Decimal(amount_value / ask), symbol.step_size)
 
     if amount * price < min_order_value(symbol.base_asset.symbol):
         logger.info('buy ignored due to small amount')
