@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='asset',
             name='hedge_method',
-            field=models.CharField(choices=[('interface-future', 'interface-future'), ('interface-spot', 'interface-spot')], default='interface-future', max_length=16),
+            field=models.CharField(choices=[('binance-future', 'binance-future'), ('binance-spot', 'binance-spot')], default='binance-future', max_length=16),
         ),
     ]

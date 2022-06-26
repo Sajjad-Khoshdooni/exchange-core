@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='transfer',
             name='source',
-            field=models.CharField(choices=[('self', 'self'), ('interface', 'interface')], default='self', max_length=8),
+            field=models.CharField(choices=[('self', 'self'), ('binance', 'binance')], default='self', max_length=8),
         ),
         migrations.AlterField(
             model_name='transfer',
