@@ -15,6 +15,8 @@ def sorted_flatten_dict(data: dict) -> list:
 
 
 class WalletPipeline(Atomic):
+    TRADE, WITHDRAW = 'trade', 'withdraw'
+
     def __init__(self, verbose: bool = True):
         super(WalletPipeline, self).__init__(using=None, savepoint=True, durable=False)
         self.verbose = verbose
@@ -38,8 +40,9 @@ class WalletPipeline(Atomic):
         finally:
             super(WalletPipeline, self).__exit__(exc_type, exc_val, exc_tb)
 
-    def new_lock(self, key: UUID, wallet, amount: Union[int, Decimal]):
+    def new_lock(self, key: UUID, wallet, amount: Union[int, Decimal], reason: str):
         from ledger.models import BalanceLock
+        from ledger.models import Wallet
 
         assert amount > 0
 
@@ -51,13 +54,21 @@ class WalletPipeline(Atomic):
         if not wallet.check_balance:
             return
 
+        allowed_locking = [
+            (Wallet.SPOT, self.TRADE), (Wallet.SPOT, self.WITHDRAW),
+            (Wallet.MARGIN, self.TRADE)
+        ]
+
+        assert (wallet.market, reason) in allowed_locking
+
         wallet.locked += amount
 
         lock = BalanceLock(
             key=key,
             wallet=wallet,
             amount=amount,
-            original_amount=amount
+            original_amount=amount,
+            reason=reason
         )
 
         self._locks[key] = lock

@@ -43,6 +43,11 @@ class TradeSerializer(AccountTradeSerializer):
     coin = serializers.CharField(source='symbol.asset.symbol')
     pair = serializers.CharField(source='symbol.base_asset.symbol')
     pair_amount = serializers.CharField(source='base_amount')
+    is_buyer_maker = serializers.SerializerMethodField()
+
+    @classmethod
+    def get_is_buyer_maker(cls, instance: Trade):
+        return (instance.side == Order.BUY) == instance.is_maker
 
     class Meta:
         model = Trade

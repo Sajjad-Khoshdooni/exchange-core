@@ -136,7 +136,7 @@ class Transfer(models.Model):
                 deposit=False
             )
 
-            pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount)
+            pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
         from ledger.tasks import create_withdraw
         create_withdraw.delay(transfer.id)

@@ -28,9 +28,6 @@ def random_trader():
 
     account = get_account()
 
-    if random.randint(0, 3600 // TASK_INTERVAL) == 0:  # balance every one hour
-        balance_tether(account)
-
     for symbol in symbols:
         random_trade(symbol, account)
 

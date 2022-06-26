@@ -19,7 +19,8 @@ from accounts.permissions import IsBasicVerified
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
-from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit, get_fiat_estimate_receive_time
+from financial.utils.withdraw import FiatWithdraw
+from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -83,7 +84,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
                     withdraw_channel=config('WITHDRAW_CHANNEL')
                 )
 
-                pipeline.new_lock(key=withdraw_request.group_id, wallet=wallet, amount=amount)
+                pipeline.new_lock(key=withdraw_request.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست'})
@@ -136,7 +137,7 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
 
     def get_rial_estimate_receive_time(self, fiat_withdraw_request: FiatWithdrawRequest):
         return fiat_withdraw_request.withdraw_datetime and \
-               get_fiat_estimate_receive_time(fiat_withdraw_request.withdraw_datetime)
+               fiat_withdraw_request.channel_handler.get_estimated_receive_time(fiat_withdraw_request.withdraw_datetime)
 
     def get_status(self, withdraw: FiatWithdrawRequest):
         if withdraw.status == FiatWithdrawRequest.PENDING:

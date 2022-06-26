@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             name='Trade',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created', models.DateTimeField(auto_now_add=True)),
+                ('created', models.DateTimeField()),
                 ('side', models.CharField(choices=[('buy', 'buy'), ('sell', 'sell')], max_length=8)),
                 ('amount', models.DecimalField(decimal_places=18, max_digits=40, validators=[django.core.validators.MinValueValidator(0)])),
                 ('price', models.DecimalField(decimal_places=18, max_digits=40, validators=[django.core.validators.MinValueValidator(0)])),

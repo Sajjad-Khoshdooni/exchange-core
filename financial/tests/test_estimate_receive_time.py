@@ -1,12 +1,13 @@
 import datetime
-from uuid import uuid4
 
 from django.test import TestCase
 
-from accounts.models import Account
+from financial.models import FiatWithdrawRequest
 from financial.utils.test import new_user, new_bank_account, new_fiat_withdraw_request
-from financial.utils.withdraw_limit import get_fiat_estimate_receive_time
-from ledger.models import Asset, Trx
+from financial.utils.withdraw import FiatWithdraw
+from ledger.models import Asset
+
+get_fiat_estimate_receive_time = FiatWithdraw.get_withdraw_channel(FiatWithdrawRequest.PAYIR).get_estimated_receive_time
 
 
 class EstimateReceiveTimeTestCase(TestCase):

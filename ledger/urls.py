@@ -32,6 +32,7 @@ urlpatterns = [
     })),
 
     path('v1/margin/wallets/', views.MarginWalletViewSet.as_view({'get': 'list'})),
+    path('v1/margin/close/', views.MarginClosePositionView.as_view()),
     path('v1/margin/loan/', views.MarginLoanViewSet.as_view({
         'get': 'list',
         'post': 'create'
