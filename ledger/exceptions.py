@@ -11,6 +11,10 @@ class MaxBorrowableExceeds(Exception):
     pass
 
 
+class HedgeError(Exception):
+    pass
+
+
 class SmallAmountTrade(Exception):
     pass
 

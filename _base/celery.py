@@ -154,7 +154,7 @@ app.conf.beat_schedule = {
             'expire': 36000
         },
     },
-    #
+
     # 'lock_monitor': {
     #     'task': 'ledger.tasks.lock_monitor.lock_monitor',
     #     'schedule': crontab(minute=0),

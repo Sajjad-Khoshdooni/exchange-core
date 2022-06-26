@@ -54,7 +54,7 @@ class StopLoss(models.Model):
         from market.models import Order
         lock_wallet = Order.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
         lock_amount = Order.get_to_lock_amount(self.unfilled_amount, self.price, self.side)
-        pipeline.new_lock(key=self.group_id, wallet=lock_wallet, amount=lock_amount)
+        pipeline.new_lock(key=self.group_id, wallet=lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 
     objects = models.Manager()
     live_objects = StopLossManager()

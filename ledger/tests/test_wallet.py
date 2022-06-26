@@ -135,7 +135,7 @@ class WalletTestCase(TestCase):
         lock_key = uuid4()
 
         with WalletPipeline() as pipeline:
-            pipeline.new_lock(key=lock_key, wallet=self.wallet, amount=4)
+            pipeline.new_lock(key=lock_key, wallet=self.wallet, amount=4, reason=WalletPipeline.TRADE)
 
         self.wallet.refresh_from_db()
 

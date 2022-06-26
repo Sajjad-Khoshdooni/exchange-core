@@ -48,12 +48,14 @@ class OrderViewSet(mixins.CreateModelMixin,
     filter_class = OrderFilter
 
     def get_queryset(self):
-        return Order.objects.filter(wallet__account=self.request.user.account).order_by('-created')
+        return Order.objects.filter(
+            wallet__account=self.request.user.account
+        ).select_related('symbol', 'wallet').order_by('-created')
 
     def get_serializer_context(self):
         trades = {
             trade['order_id']: (trade['sum_amount'], trade['sum_value']) for trade in
-            Trade.objects.filter(order__wallet__account=self.request.user.account).annotate(
+            Trade.objects.filter(account=self.request.user.account).annotate(
                 value=F('amount') * F('price')
             ).values('order').annotate(sum_amount=Sum('amount'), sum_value=Sum('value')).values(
                 'order_id', 'sum_amount', 'sum_value'
