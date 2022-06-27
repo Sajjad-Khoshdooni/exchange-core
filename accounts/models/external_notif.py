@@ -43,7 +43,7 @@ class ExternalNotification(models.Model):
 
         if scope == cls.SCOPE_LEVEL_2_PRIZE:
             template = '64694'
-            params = {'token': 'سی هزار شیبا هدیه‌ {}'.format(config('BRAND'))}
+            params = {'brand': '{}، و دریافت جایزه‌ی سی هزار شیبا'.format(config('BRAND'))}
 
         elif scope == cls.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE:
             template = '64695'
