@@ -26,7 +26,8 @@ class ExternalNotification(models.Model):
     )
     scope = models.CharField(
         max_length=22,
-        choices=SCOPE_CHOICES
+        choices=SCOPE_CHOICES,
+        verbose_name='نوع'
     )
     user = models.ForeignKey(
         to=User,
@@ -68,3 +69,6 @@ class ExternalNotification(models.Model):
     @staticmethod
     def get_users_sent_sms_notif(scope: str):
         return ExternalNotification.objects.filter(scope=scope).values_list('user_id')
+
+    class Meta:
+        verbose_name = verbose_name_plural = 'نوتیف‌های بیرون پنل'
