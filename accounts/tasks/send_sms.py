@@ -13,6 +13,7 @@ from yekta_config.config import config
 from accounts.models import User
 from accounts.models.external_notif import ExternalNotification
 from accounts.verifiers.finotech import token_cache
+from ledger.models import Transfer
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +113,9 @@ def send_level_2_prize_notifs():
     to_exclude_user_ids = ExternalNotification.get_users_sent_sms_notif(ExternalNotification.SCOPE_LEVEL_2_PRIZE)
 
     users = User.objects.filter(
+        is_active=True,
         level=User.LEVEL1,
+        date_joined__gte=timezone.now() - timedelta(days=16),
         date_joined__lte=timezone.now() - timedelta(days=3),
     ).exclude(id__in=to_exclude_user_ids)
 
@@ -127,8 +130,10 @@ def send_first_fiat_deposit_notifs():
     to_exclude_user_ids = ExternalNotification.get_users_sent_sms_notif(ExternalNotification.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE)
 
     users = User.objects.filter(
+        is_active=True,
         level__gte=User.LEVEL2,
         first_fiat_deposit_date=None,
+        level_2_verify_datetime__gte=timezone.now() - timedelta(days=16),
         level_2_verify_datetime__lte=timezone.now() - timedelta(days=2),
     ).exclude(id__in=to_exclude_user_ids)
 
@@ -145,10 +150,12 @@ def send_trade_notifs():
     to_exclude_user_ids = ExternalNotification.get_users_sent_sms_notif(ExternalNotification.SCOPE_TRADE_PRIZE)
 
     users = User.objects.filter(
+        is_active=True,
         level__gte=User.LEVEL2,
         first_fiat_deposit_date__isnull=False,
-        first_fiat_deposit_date__lte=timezone.now() - timedelta(days=7),
-        account__trade_volume_irt__lte=Prize.TRADE_THRESHOLD_STEP1,
+        first_fiat_deposit_date__gte=timezone.now() - timedelta(days=21),
+        first_fiat_deposit_date__lte=timezone.now() - timedelta(days=10),
+        account__trade_volume_irt__lt=Prize.TRADE_THRESHOLD_STEP1,
     ).exclude(id__in=to_exclude_user_ids)
 
     for user in users:
