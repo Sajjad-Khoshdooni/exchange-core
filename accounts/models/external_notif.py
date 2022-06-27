@@ -43,15 +43,15 @@ class ExternalNotification(models.Model):
 
         if scope == cls.SCOPE_LEVEL_2_PRIZE:
             template = '64694'
-            params = {'token': 'پنجاه هزار شیبا هدیه‌ {}'.format(config('BRAND'))}
+            params = {'token': 'سی هزار شیبا هدیه‌ {}'.format(config('BRAND'))}
 
         elif scope == cls.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE:
             template = '64695'
-            params = {'brand': 'و دریافت هدیه پنجاه هزار شیبا به {}'.format(config('BRAND'))}
+            params = {'brand': 'و دریافت هدیه سی هزار شیبا به {}'.format(config('BRAND'))}
 
         elif scope == cls.SCOPE_TRADE_PRIZE:
             template = '65788'
-            params = {'token': 'پنجاه هزار شیبا هدیه {}'.format(config('BRAND'))}
+            params = {'token': 'سی هزار شیبا هدیه {}'.format(config('BRAND'))}
 
         else:
             raise NotImplementedError
