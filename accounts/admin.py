@@ -126,8 +126,8 @@ class UserCommentInLine(admin.TabularInline):
 class ExternalNotificationInLine(admin.TabularInline):
     model = ExternalNotification
     extra = 0
-    fields = ('scope', )
-    readonly_fields = ('scope', )
+    fields = ('created', 'scope', )
+    readonly_fields = ('created', 'scope', )
     can_delete = False
 
     def has_add_permission(self, request, obj):
@@ -589,4 +589,9 @@ class CustomTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 @admin.register(FirebaseToken)
 class FirebaseTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ['user', 'token']
+
+
+@admin.register(ExternalNotification)
+class ExternalNotificationAdmin(admin.ModelAdmin):
+    list_display = ['created', 'user', 'phone', 'scope']
 
