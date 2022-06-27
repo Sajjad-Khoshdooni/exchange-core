@@ -13,7 +13,6 @@ from yekta_config.config import config
 from accounts.models import User
 from accounts.models.external_notif import ExternalNotification
 from accounts.verifiers.finotech import token_cache
-from ledger.models import Transfer
 
 logger = logging.getLogger(__name__)
 
