@@ -71,7 +71,6 @@ def get_sms_ir_token():
 
 @shared_task(queue='sms')
 def send_message_by_sms_ir(phone: str, template: str, params: dict):
-
     param_array = [
         {"Parameter": key, "ParameterValue": value} for (key, value) in params.items()
     ]
@@ -90,6 +89,9 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
         }
     )
 
+    if not resp.ok:
+        return
+
     data = resp.json()
 
     if not data['IsSuccessful']:
@@ -99,6 +101,8 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
             'params': params,
             'data': data
         })
+
+        return
 
     return data
 

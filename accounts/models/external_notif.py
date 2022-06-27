@@ -39,8 +39,6 @@ class ExternalNotification(models.Model):
     @classmethod
     def send_sms(cls, user: User, scope: str, ):
         from accounts.tasks import send_message_by_sms_ir
-        ExternalNotification.objects.create(phone=user.phone, scope=scope, user=user)
-
         if scope == cls.SCOPE_LEVEL_2_PRIZE:
             template = '64694'
             params = {'brand': '{} و دریافت سی هزار شیبا،'.format(config('BRAND'))}
@@ -60,11 +58,14 @@ class ExternalNotification(models.Model):
             print('template={},phone={},params={}'.format(template, user.phone, params))
             return
 
-        send_message_by_sms_ir(
+        resp = send_message_by_sms_ir(
             phone=user.phone,
             params=params,
             template=template
         )
+
+        if resp:
+            ExternalNotification.objects.create(phone=user.phone, scope=scope, user=user)
 
     @staticmethod
     def get_users_sent_sms_notif(scope: str):
