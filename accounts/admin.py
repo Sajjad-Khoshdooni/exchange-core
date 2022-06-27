@@ -134,6 +134,17 @@ class ExternalNotificationInLine(admin.TabularInline):
         return False
 
 
+class NotificationInLine(admin.TabularInline):
+    model = Notification
+    extra = 0
+    fields = ('created', 'title', 'link', 'message', 'read_date')
+    readonly_fields = ('created', 'title', 'link', 'message', 'read_date' )
+    can_delete = False
+
+    def has_add_permission(self, request, obj):
+        return False
+
+
 @admin.register(User)
 class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     default_edit_condition = M.superuser
@@ -201,7 +212,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
         'is_staff', 'is_superuser', 'is_active', 'groups',
     )
-    inlines = [UserCommentInLine, ExternalNotificationInLine]
+    inlines = [UserCommentInLine, ExternalNotificationInLine, NotificationInLine]
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify')
     readonly_fields = (
