@@ -185,12 +185,15 @@ class BinanceSpotHandler(ExchangeHandler):
 
         networks = list(filter(lambda d: d['network'] == network, coin['networkList']))
 
-        if networks:
-            if not networks[0].get('withdrawMin'):
-                networks[0]['withdrawMin'] = Decimal(network[0].get('withdrawIntegerMultiple'))
-            return networks[0]
+        if not networks:
+            return
 
-        return
+        network = networks[0]
+
+        if not network.get('withdrawMin'):
+            network['withdrawMin'] = Decimal(network.get('withdrawIntegerMultiple'))
+
+        return network
 
     def get_withdraw_fee(self, coin: str, network: str) -> Decimal:
         info = self.get_network_info(coin, network)
