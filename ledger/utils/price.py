@@ -159,7 +159,6 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
 @ttl_cache(maxsize=1000, ttl=0.5)
 def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
               now: datetime = None) -> Decimal:
-    return Decimal('.06')
     if PriceManager.active():
         price = PriceManager.get_price(coin, side, exchange, market_symbol, now)
         if price is not None:
@@ -246,7 +245,7 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
 def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0) -> Decimal:
     if coin == IRT:
         return Decimal(1)
-    return 2000
+
     tether = get_tether_irt_price(side)
     price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether)
 

@@ -70,10 +70,8 @@ class ProviderHedgedOrder(models.Model):
         symbol = handler.get_trading_symbol(asset.symbol)
 
         min_notional_amount = 10 / price * Decimal('1.002')
-        a = handler.get_lot_min_quantity(symbol)
-        amount
-        min_amount = max(amount, handler.get_lot_min_quantity(symbol))
-            # max(amount, min_notional_amount, handler.get_lot_min_quantity(symbol))
+
+        min_amount = max(amount, min_notional_amount, handler.get_lot_min_quantity(symbol))
         step_size = handler.get_step_size(symbol)
 
         reminder = min_amount % step_size
