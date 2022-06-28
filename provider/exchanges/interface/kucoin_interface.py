@@ -159,7 +159,7 @@ class KucoinSpotHandler(ExchangeHandler):
             }
         ]}
         if coin_data[0].get('enableTrading'):
-            resp['filters'][0]['status'] = 'TRADING'
+            resp['status'] = 'TRADING'
 
         return resp
 
