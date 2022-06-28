@@ -21,12 +21,6 @@ def add_candidate_coins(coins: list, handler: str):
 
     exchange_handler = handler_mapping.get(handler)()
 
-
-    if not exchange_handler:
-        return print('exchange choices are binance and kucoin')
-
-    # handler.add_candidate_coins(coins=coins)
-
     order = Asset.objects.order_by('order').last().order
 
     for coin in coins:
@@ -37,10 +31,11 @@ def add_candidate_coins(coins: list, handler: str):
 
         if not spot or spot.get('status') != 'TRADING':
             print('%s not found or stopped trading in interface spot' % spot_symbol)
+            continue
 
         asset, created = Asset.objects.get_or_create(symbol=coin)
 
-        asset.hedge_method = hedger_mapping['handler']
+        asset.hedge_method = hedger_mapping[handler]
 
         if created:
             order += 1
@@ -49,7 +44,7 @@ def add_candidate_coins(coins: list, handler: str):
         if not asset.enable:
             asset.candidate = True
 
-        if exchange_handler == BinanceSpotHandler():
+        if exchange_handler.NAME == BinanceSpotHandler.NAME:
             futures_symbol = BinanceFuturesHandler().get_trading_symbol(coin=coin)
             futures = BinanceFuturesHandler().get_symbol_data(futures_symbol)
             if futures and futures['status'] == 'TRADING':
@@ -70,7 +65,6 @@ def add_candidate_coins(coins: list, handler: str):
 
         asset.save()
     create_missing_symbols()
-    return
 
 
 def _update_coin_networks(self, asset: Asset, exchange_handler):

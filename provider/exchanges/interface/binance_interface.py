@@ -24,7 +24,7 @@ class ExchangeHandler:
     NAME = ''
 
     @classmethod
-    def get_handler(cls, hedge_method: str):
+    def get_handler(cls, name: str):
         from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler, KucoinFuturesHandler
         from ledger.models.asset import Asset
         mapping = {
@@ -34,7 +34,7 @@ class ExchangeHandler:
             Asset.HEDGE_KUCOIN_FUTURE: KucoinFuturesHandler
         }
 
-        return mapping[hedge_method]()
+        return mapping[name]()
 
     def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
                     cache_timeout: int = None):

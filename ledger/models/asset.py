@@ -165,7 +165,7 @@ class Asset(models.Model):
             return self.symbol
 
     def get_hedger(self) -> ExchangeHandler():
-        return ExchangeHandler.get_handler(hedge_method=self.hedge_method)
+        return ExchangeHandler.get_handler(name=self.hedge_method)
 
 
 class AssetSerializer(serializers.ModelSerializer):

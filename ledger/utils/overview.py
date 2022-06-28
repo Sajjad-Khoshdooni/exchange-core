@@ -86,6 +86,8 @@ class AssetOverview:
         return self._internal_deposits.get(asset.symbol, 0)
 
     def get_future_position_amount(self, asset: Asset):
+        if Asset.hedge_method == Asset.HEDGE_KUCOIN_SPOT:
+            return
         handler = Asset.get_hedger()
         symbol = handler.get_trading_symbol(asset.future_symbol)
         amount = float(self._future_positions.get(symbol, {}).get('positionAmt', 0))

@@ -74,14 +74,10 @@ def get_timestamp():
     return int(time.time() * 1000)
 
 
-def get_session():
-    return requests.session()
-
-
 def dispatch_request(http_method):
     api_key = secret('BINANCE_API_KEY', default='')
 
-    session = get_session()
+    session = requests.session()
     session.headers.update(
         {"Content-Type": "application/json;charset=utf-8", "X-MBX-APIKEY": api_key}
     )
