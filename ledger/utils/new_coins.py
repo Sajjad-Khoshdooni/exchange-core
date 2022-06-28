@@ -67,7 +67,7 @@ def add_candidate_coins(coins: list, handler: str):
     create_missing_symbols()
 
 
-def _update_coin_networks(self, asset: Asset, exchange_handler):
+def _update_coin_networks(asset: Asset, exchange_handler):
 
     coin_data = exchange_handler.get_coin_data(asset.symbol)
 

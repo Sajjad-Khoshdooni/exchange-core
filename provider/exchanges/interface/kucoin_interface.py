@@ -103,10 +103,11 @@ class KucoinSpotHandler(ExchangeHandler):
         data = {'networkList': []}
         for chain in network_list:
             data['networkList'].append({
+                'network': chain['chainName'],
                 'name': chain['chainName'],
-                'address_regex': chain.get('address_regex'),
-                'min_confirm': chain.get('min_confirm'),
-                'unlock_confirm': chain.get('confirms'),
+                'addressRegex': chain.get('address_regex', ''),
+                'minConfirm': chain.get('confirms'),
+                'unLockConfirm': chain.get('confirms'),
                 'withdrawFee': chain.get('withdrawalMinFee'),
                 'withdrawMin': chain.get('withdrawalMinSize'),
                 'withdrawMax': chain.get('withdrawMax', '10000000000'),
