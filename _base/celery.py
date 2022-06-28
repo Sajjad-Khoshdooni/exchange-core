@@ -73,8 +73,8 @@ app.conf.beat_schedule = {
             'expire': 30 * 60
         },
     },
-    'update_binance_withdraw': {
-        'task': 'ledger.tasks.withdraw.update_binance_withdraw',
+    'update_exchange_withdraw': {
+        'task': 'ledger.tasks.withdraw.update_exchange_withdraw',
         'schedule': 10,
         'options': {
             'queue': 'binance',

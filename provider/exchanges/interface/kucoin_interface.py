@@ -22,8 +22,8 @@ class KucoinSpotHandler(ExchangeHandler):
     exchange = None
 
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        # if settings.DEBUG_OR_TESTING:
-        #     return {}
+        if settings.DEBUG_OR_TESTING:
+            return {}
 
         data = data or {}
 
@@ -121,7 +121,7 @@ class KucoinSpotHandler(ExchangeHandler):
         chains = self.get_coin_data(coin=coin).get('networkList')
         info = list(filter(lambda d: d['name'] == network, chains))
         if info:
-            return info
+            return info[0]
         return
 
     def get_withdraw_fee(self, coin: str, network: str):
@@ -172,7 +172,7 @@ class KucoinSpotHandler(ExchangeHandler):
     def get_lot_min_quantity(self, symbol: str) ->Decimal:
         data = self.get_symbol_data(symbol=symbol)
         lot_size = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['filters']))[0]
-        return data.get('minQty')
+        return Decimal(lot_size.get('minQty'))
 
     def get_withdraw_status(self, withdraw_id: str) -> dict:
         from ledger.models import Transfer
@@ -190,7 +190,7 @@ class KucoinSpotHandler(ExchangeHandler):
             'FAILURE': Transfer.CANCELED
         }
         resp['status'] = mapping.get(data.get('status'))
-        return data
+        return resp
 
 
 class KucoinFuturesHandler(KucoinSpotHandler):

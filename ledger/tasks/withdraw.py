@@ -1,4 +1,5 @@
 from celery import shared_task
+from django.db.models import Q
 
 from ledger.models import Transfer
 from ledger.withdraw.exchange import handle_provider_withdraw
@@ -17,22 +18,20 @@ def create_provider_withdraw(transfer_id: int):
 
 
 @shared_task(queue='binance')
-def update_binance_withdraw():
+def update_exchange_withdraw():
     re_handle_transfers = Transfer.objects.filter(
         deposit=False,
-        source=Transfer.BINANCE,
         status=Transfer.PROCESSING,
         handling=False
-    )
+    ).filter(~Q(source=Transfer.SELF))
 
     for transfer in re_handle_transfers:
         create_provider_withdraw.delay(transfer.id)
 
     transfers = Transfer.objects.filter(
         deposit=False,
-        source=Transfer.BINANCE,
         status=Transfer.PENDING
-    )
+    ).filter(~Q(source=Transfer.SELF))
 
     for transfer in transfers:
         data = transfer.provider_transfer.get_status()
