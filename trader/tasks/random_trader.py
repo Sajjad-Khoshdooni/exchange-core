@@ -8,7 +8,7 @@ from yekta_config.config import config
 
 from accounts.models import Account
 from market.models import PairSymbol
-from trader.bots.utils import balance_tether, random_buy, random_sell
+from trader.bots.utils import random_buy, random_sell
 
 logger = logging.getLogger(__name__)
 
