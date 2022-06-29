@@ -5,7 +5,8 @@ from django.test import Client
 from django.test import TestCase
 from django.utils import timezone
 
-from ledger.models import Asset, Wallet, OTCRequest, OTCTrade
+from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
+from ledger.models import Asset, Wallet, OTCRequest, OTCTrade, Trx
 from ledger.tasks import check_margin_level
 from ledger.utils.price import BUY
 from ledger.utils.test import new_account, set_price
@@ -298,3 +299,40 @@ class MarginTestCase(TestCase):
 
         self.assertEqual(check_margin_level(), 2)
         self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('1.5'))
+
+    def test_liquidate_more_below_one(self):
+        self.pass_quiz()
+        self.transfer_usdt(TO_TRANSFER_USDT)
+
+        loan_amount = 2 * TO_TRANSFER_USDT / XRP_USDT_PRICE
+        self.loan(self.xrp.symbol, loan_amount)
+
+        self.assert_margin_info(TO_TRANSFER_USDT, 2 * TO_TRANSFER_USDT, 3 * TO_TRANSFER_USDT, Decimal('1.5'))
+        self.assertEqual(check_margin_level(), 0)
+
+        otc_request = OTCRequest.new_trade(
+            self.account,
+            market=Wallet.MARGIN,
+            from_asset=self.xrp,
+            to_asset=self.usdt,
+            from_amount=Decimal(loan_amount),
+            allow_small_trades=True
+        )
+
+        OTCTrade.execute_trade(otc_request)
+        usdt_wallet = self.usdt.get_wallet(self.account, market=Wallet.MARGIN)
+
+        self.assertEqual(usdt_wallet.balance, otc_request.to_amount + TO_TRANSFER_USDT)
+
+        new_order(self.btcusdt, self.account, amount=usdt_wallet.balance / BTC_USDT_PRICE, price=BTC_USDT_PRICE, side=BUY, market=Wallet.MARGIN)
+
+        new_equity = usdt_wallet.balance - 2 * TO_TRANSFER_USDT
+
+        self.assert_margin_info(new_equity, 2 * TO_TRANSFER_USDT, new_equity + 2 * TO_TRANSFER_USDT)
+
+        set_price(self.xrp, XRP_USDT_PRICE * 2)
+
+        self.assertEqual(check_margin_level(), 2)
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
+
+        self.assertTrue(Trx.objects.filter(sender__account=MARGIN_INSURANCE_ACCOUNT).exists())

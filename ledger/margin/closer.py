@@ -1,9 +1,14 @@
 import logging
 
-from ledger.models import Wallet, OTCTrade, OTCRequest, Asset, CloseRequest, MarginLoan
+from yekta_config.config import config
+
+from ledger.models import Wallet, OTCTrade, OTCRequest, Asset, CloseRequest, MarginLoan, Trx
 from ledger.utils.fields import PENDING, DONE
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
+
+MARGIN_INSURANCE_ACCOUNT = config('MARGIN_INSURANCE_ACCOUNT', cast=int)
 
 
 class MarginCloser:
@@ -107,6 +112,9 @@ class MarginCloser:
     def _liquidate_funds(self):
         loan_wallets = self._get_loan_wallets()
 
+        requests = []
+        usdt_need = 0
+
         for wallet in loan_wallets:
             if not wallet.balance:
                 continue
@@ -120,11 +128,35 @@ class MarginCloser:
                     from_asset=self.tether,
                     to_asset=wallet.asset,
                     to_amount=-wallet.balance,
-                    allow_small_trades=True
+                    allow_small_trades=True,
+                    check_enough_balance=False
                 )
 
-                OTCTrade.execute_trade(request)
+                requests.append(request)
 
+                usdt_need += request.from_amount
+
+        margin_usdt_wallet = self.tether.get_wallet(self.account, market=Wallet.MARGIN)
+
+        if usdt_need > margin_usdt_wallet.balance:
+            insure = usdt_need - margin_usdt_wallet.balance
+            self.info_log('Asking insurance to give funds %s$' % insure)
+
+            margin_insurance_usdt_wallet = self.tether.get_wallet(MARGIN_INSURANCE_ACCOUNT)
+
+            with WalletPipeline() as pipeline:
+                pipeline.new_trx(
+                    sender=margin_insurance_usdt_wallet,
+                    receiver=margin_usdt_wallet,
+                    amount=insure,
+                    scope=Trx.TRANSFER,
+                    group_id=self.request.group_id
+                )
+
+        for request in requests:
+            OTCTrade.execute_trade(request)
+
+        for wallet in loan_wallets:
             MarginLoan.new_loan(
                 account=self.account,
                 asset=wallet.asset,
