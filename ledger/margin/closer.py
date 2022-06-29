@@ -1,13 +1,14 @@
 import logging
 
 from ledger.models import Wallet, OTCTrade, OTCRequest, Asset, CloseRequest, MarginLoan
+from ledger.utils.fields import PENDING, DONE
 
 logger = logging.getLogger(__name__)
 
 
 class MarginCloser:
     def __init__(self, close_request: CloseRequest):
-        assert close_request.status == CloseRequest.NEW
+        assert close_request.status == PENDING
 
         self.account = close_request.account
         self.request = close_request
@@ -135,7 +136,7 @@ class MarginCloser:
         return not self._get_loan_wallets().exists()
 
     def set_finished(self):
-        self.request.status = CloseRequest.DONE
+        self.request.status = DONE
         self.request.save()
 
     def cancel_open_orders(self):

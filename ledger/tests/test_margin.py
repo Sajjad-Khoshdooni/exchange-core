@@ -5,10 +5,9 @@ from django.test import Client
 from django.test import TestCase
 from django.utils import timezone
 
-from accounts.models import Account
 from ledger.models import Asset, Wallet, OTCRequest, OTCTrade
 from ledger.tasks import check_margin_level
-from ledger.utils.price import SELL, BUY
+from ledger.utils.price import BUY
 from ledger.utils.test import new_account, set_price
 from market.models import PairSymbol
 from market.utils import new_order

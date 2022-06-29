@@ -70,6 +70,9 @@ class MarginTransferSerializer(serializers.ModelSerializer):
         if not user.margin_quiz_pass_date:
             raise ValidationError('شما باید ابتدا به سوالات معاملات تعهدی پاسخ دهید.')
 
+        if CloseRequest.is_liquidating(user.account):
+            raise ValidationError('حساب تعهدی شما در حال تسویه خودکار است. فعلا امکان این عملیات وجود ندارد.')
+
         return super(MarginTransferSerializer, self).create(validated_data)
 
     class Meta:
@@ -110,6 +113,9 @@ class MarginLoanSerializer(serializers.ModelSerializer):
 
         if not user.margin_quiz_pass_date:
             raise ValidationError('شما باید ابتدا به سوالات این بخش پاسخ دهید.')
+
+        if CloseRequest.is_liquidating(user.account):
+            raise ValidationError('حساب تعهدی شما در حال تسویه خودکار است. فعلا امکان این عملیات وجود ندارد.')
 
         validated_data['loan_type'] = validated_data.pop('type')
 
