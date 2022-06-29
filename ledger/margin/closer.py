@@ -54,7 +54,7 @@ class MarginCloser:
             self.info_log('providing tether')
             self._provide_tether()
 
-            self.info_log('providing tether')
+            self.info_log('liquidating funds')
             self._liquidate_funds()
 
         self.info_log('acquiring liquidation fee')

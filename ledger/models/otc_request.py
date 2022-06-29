@@ -152,7 +152,7 @@ class OTCRequest(models.Model):
                 if prev_from_amount != from_amount:
                     from_amount += self.to_asset.trade_quantity_step
 
-                to_amount = from_amount / to_price  # re calc cash
+                # to_amount = from_amount / to_price  # re calc cash
 
         else:
             self.from_amount = from_amount
@@ -164,7 +164,7 @@ class OTCRequest(models.Model):
 
             if self.from_asset.is_trade_base() and self.to_asset.symbol != Asset.IRT:
                 to_amount = to_amount - (to_amount % self.to_asset.trade_quantity_step)
-                from_amount = to_amount * to_price  # re calc cash
+                # from_amount = to_amount * to_price  # re calc cash
             else:
                 self.from_asset.is_trade_amount_valid(from_amount, raise_exception=not allow_dust)
 
