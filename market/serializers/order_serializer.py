@@ -9,7 +9,7 @@ from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.generics import get_object_or_404
 
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Wallet, Asset
+from ledger.models import Wallet, Asset, CloseRequest
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount
 from ledger.utils.price import IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -69,6 +69,9 @@ class OrderSerializer(serializers.ModelSerializer):
                 raise ValidationError(_('You need to pass margin quiz'))
             if symbol.base_asset.symbol == Asset.IRT or not symbol.asset.margin_enable:
                 raise ValidationError(_('{symbol} is not enable in margin trading').format(symbol=symbol))
+            if CloseRequest.is_liquidating(self.context['account']):
+                raise ValidationError('حساب تعهدی شما در حال تسویه خودکار است. فعلا امکان این عملیات وجود ندارد.')
+
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
         wallet = symbol.asset.get_wallet(self.context['account'], market=market)
         min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE

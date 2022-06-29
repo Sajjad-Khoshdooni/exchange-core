@@ -7,13 +7,12 @@ from django.db.models import CheckConstraint, Q, UniqueConstraint
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
-from ledger.margin.liquidation import LiquidationEngine
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import Asset, Wallet, Trx
+from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field, DONE, PENDING
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt
 from ledger.utils.wallet_pipeline import WalletPipeline
 from provider.models import ProviderOrder
-from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field, DONE
 
 
 class MarginTransfer(models.Model):
@@ -134,7 +133,6 @@ class MarginLoan(models.Model):
 
 class CloseRequest(models.Model):
     LIQUIDATION, USER = 'liquid', 'user'
-    NEW, DONE = 'new', 'done'
 
     created = get_created_field()
     group_id = get_group_id_field()
@@ -146,19 +144,21 @@ class CloseRequest(models.Model):
         max_length=8, choices=[(LIQUIDATION, LIQUIDATION), (USER, USER)]
     )
 
-    status = models.CharField(
-        max_length=8, choices=[(NEW, NEW), (DONE, DONE)], default=NEW
-    )
+    status = get_status_field()
 
     class Meta:
         constraints = [
             CheckConstraint(check=Q(margin_level__gte=0), name='check_margin_level', ),
-            UniqueConstraint(fields=['account'], condition=Q(status='new'), name='unique_margin_close_request_account'),
+            UniqueConstraint(fields=['account'], condition=Q(status='pending'), name='unique_margin_close_request_account'),
         ]
 
     @classmethod
+    def is_liquidating(cls, account: Account) -> bool:
+        return CloseRequest.objects.filter(account=account, status=PENDING).exists()
+
+    @classmethod
     def close_margin(cls, account: Account, reason: str) -> Union['CloseRequest', None]:
-        if CloseRequest.objects.filter(account=account, status=CloseRequest.NEW):
+        if cls.is_liquidating(account):
             return
 
         margin_info = MarginInfo.get(account)
@@ -167,11 +167,12 @@ class CloseRequest(models.Model):
             account=account,
             margin_level=margin_info.get_margin_level(),
             reason=reason,
-            status=CloseRequest.NEW
+            status=PENDING
         )
 
-        engine = LiquidationEngine(close_request, margin_info)
+        from ledger.margin.closer import MarginCloser
+        engine = MarginCloser(close_request, force_liquidation=reason == cls.LIQUIDATION)
         engine.start()
 
-        close_request.status = cls.DONE
+        close_request.status = DONE
         close_request.save()

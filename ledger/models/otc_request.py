@@ -48,7 +48,7 @@ class OTCRequest(models.Model):
 
     @classmethod
     def new_trade(cls, account: Account, market: str, from_asset: Asset, to_asset: Asset, from_amount: Decimal = None,
-                  to_amount: Decimal = None, allow_small_trades: bool = False) -> 'OTCRequest':
+                  to_amount: Decimal = None, allow_small_trades: bool = False, check_enough_balance: bool = True) -> 'OTCRequest':
 
         assert from_amount or to_amount
 
@@ -70,8 +70,9 @@ class OTCRequest(models.Model):
             if check_amount * get_trading_price_irt(check_asset.symbol, BUY, raw_price=True) < 8_000:
                 raise SmallAmountTrade()
 
-        from_wallet = from_asset.get_wallet(account, otc_request.market)
-        from_wallet.has_balance(otc_request.from_amount, raise_exception=True)
+        if check_enough_balance:
+            from_wallet = from_asset.get_wallet(account, otc_request.market)
+            from_wallet.has_balance(otc_request.from_amount, raise_exception=True)
 
         otc_request.save()
 

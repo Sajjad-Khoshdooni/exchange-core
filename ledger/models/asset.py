@@ -96,7 +96,7 @@ class Asset(models.Model):
     def get_wallet(self, account: Account, market: str = Wallet.SPOT):
         assert market in Wallet.MARKETS
 
-        if type(account) == int:
+        if isinstance(account, int):
             account_filter = {'account_id': account}
 
             if account == SYSTEM_ACCOUNT_ID:
@@ -104,9 +104,11 @@ class Asset(models.Model):
             else:
                 account_type = Account.ORDINARY
 
-        else:
+        elif isinstance(account, Account):
             account_filter = {'account': account}
             account_type = account.type
+        else:
+            raise NotImplementedError
 
         wallet, _ = Wallet.objects.get_or_create(
             asset=self,

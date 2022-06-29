@@ -7,12 +7,11 @@ from accounts.models import Account, Notification
 from accounts.tasks import send_message_by_kavenegar
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
-from ledger.models import Wallet
-from ledger.models.margin import CloseRequest
-from ledger.margin.liquidation import LiquidationEngine
 from ledger.margin.margin_info import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD, \
     MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD
 from ledger.margin.margin_info import MarginInfo
+from ledger.models import Wallet
+from ledger.models.margin import CloseRequest
 
 logger = logging.getLogger(__name__)
 
