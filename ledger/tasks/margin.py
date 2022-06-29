@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task(queue='margin')
 def check_margin_level():
-    margin_accounts = set(Wallet.objects.filter(market=Wallet.MARGIN).values_list('account', flat=True))
+    margin_accounts = set(Wallet.objects.filter(market=Wallet.LOAN, balance__gt=0).values_list('account', flat=True))
     accounts = Account.objects.filter(id__in=margin_accounts, user__isnull=False)
 
     status = 0
