@@ -1,4 +1,4 @@
-from .asset_info_view import AssetsViewSet
+from .asset_info_view import AssetsViewSet, AssetOverviewAPIView
 from .wallet_view import WalletViewSet, WalletBalanceView, BriefNetworkAssetsView
 from .deposit_address_view import DepositAddressView
 from .otc_trade_view import OTCTradeRequestView, OTCTradeView, OTCInfoView
