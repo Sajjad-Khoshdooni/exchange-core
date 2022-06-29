@@ -549,7 +549,7 @@ class AccountAdmin(admin.ModelAdmin):
 @admin.register(Referral)
 class ReferralAdmin(admin.ModelAdmin):
     list_display = ('owner', 'code', 'owner_share_percent')
-    search_fields = ('code',)
+    search_fields = ('code', 'owner__user__phone')
 
 
 class FinotechRequestUserFilter(SimpleListFilter):
