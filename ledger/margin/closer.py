@@ -1,24 +1,31 @@
 import logging
+from decimal import Decimal
 
 from yekta_config.config import config
 
 from ledger.models import Wallet, OTCTrade, OTCRequest, Asset, CloseRequest, MarginLoan, Trx
 from ledger.utils.fields import PENDING, DONE
+from ledger.utils.price import get_trading_price_usdt, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
 MARGIN_INSURANCE_ACCOUNT = config('MARGIN_INSURANCE_ACCOUNT', cast=int)
 
+LIQUIDATION_FEE_RATE = Decimal('0.05')
+
 
 class MarginCloser:
-    def __init__(self, close_request: CloseRequest):
+    def __init__(self, close_request: CloseRequest, force_liquidation: bool):
         assert close_request.status == PENDING
 
         self.account = close_request.account
         self.request = close_request
 
         self.tether = Asset.get(Asset.USDT)
+        self.force_liquidation = force_liquidation
+
+        self._liquidated_value = 0
 
     def info_log(self, msg):
         logger.info(msg + ' (id=%s)' % self.request.id)
@@ -43,23 +50,36 @@ class MarginCloser:
         self.info_log('fast repay')
         self._fast_repay()
 
-        if self.is_done():
-            self.info_log('finishing margin closing.')
-            self.set_finished()
-            return
+        if not self.is_done():
+            self.info_log('providing tether')
+            self._provide_tether()
 
-        self.info_log('providing tether')
-        self._provide_tether()
+            self.info_log('providing tether')
+            self._liquidate_funds()
 
-        self.info_log('providing tether')
-        self._liquidate_funds()
+        self.info_log('acquiring liquidation fee')
+        self._acquire_liquidation_fee()
 
         if self.is_done():
             self.info_log('finishing margin closing.')
             self.set_finished()
             return
         else:
-            raise Exception('')
+            raise Exception('Margin account is not closed even after liquidating funds')
+
+    def _acquire_liquidation_fee(self):
+        fee = self._liquidated_value * LIQUIDATION_FEE_RATE
+        margin_usdt_wallet = self.tether.get_wallet(self.account, market=Wallet.MARGIN)
+        margin_insurance_usdt_wallet = self.tether.get_wallet(MARGIN_INSURANCE_ACCOUNT)
+
+        with WalletPipeline() as pipeline:
+            pipeline.new_trx(
+                sender=margin_usdt_wallet,
+                receiver=margin_insurance_usdt_wallet,
+                amount=min(fee, margin_usdt_wallet.balance),
+                scope=Trx.TRANSFER,
+                group_id=self.request.group_id
+            )
 
     def _fast_repay(self):
         margin_wallets = self._get_margin_wallets()
@@ -80,6 +100,8 @@ class MarginCloser:
 
             amount = min(margin_wallet.balance, -loan_wallet.balance)
 
+            asset = margin_wallet.asset
+
             # todo: add reason field to margin loan
             MarginLoan.new_loan(
                 account=self.account,
@@ -87,6 +109,9 @@ class MarginCloser:
                 amount=amount,
                 loan_type=MarginLoan.REPAY
             )
+
+            price = get_trading_price_usdt(asset.symbol, side=SELL, raw_price=True)
+            self._liquidated_value += amount * price
 
     def _provide_tether(self):
 
@@ -157,12 +182,18 @@ class MarginCloser:
             OTCTrade.execute_trade(request)
 
         for wallet in loan_wallets:
+            asset = wallet.asset
+            amount = -wallet.balance
+
             MarginLoan.new_loan(
                 account=self.account,
-                asset=wallet.asset,
-                amount=-wallet.balance,
+                asset=asset,
+                amount=amount,
                 loan_type=MarginLoan.REPAY
             )
+
+            price = get_trading_price_usdt(asset.symbol, side=SELL, raw_price=True)
+            self._liquidated_value += amount * price
 
     def is_done(self):
         return not self._get_loan_wallets().exists()

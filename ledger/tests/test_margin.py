@@ -226,7 +226,8 @@ class MarginTestCase(TestCase):
         self.assertEqual(check_margin_level(), 2)
 
         self.print_wallets(self.account)
-        # self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('1.45'))  # todo: check why fails
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
+        self.assertTrue(Trx.objects.filter(receiver__account=MARGIN_INSURANCE_ACCOUNT).exists())
 
     def test_liquidate_trade_different_loan(self):
         self.pass_quiz()
@@ -263,7 +264,8 @@ class MarginTestCase(TestCase):
         self.assertEqual(check_margin_level(), 2)
 
         self.print_wallets(self.account)
-        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('1.45'))
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
+        self.assertTrue(Trx.objects.filter(receiver__account=MARGIN_INSURANCE_ACCOUNT).exists())
 
     def test_liquidate_trade_with_open_order(self):
         self.pass_quiz()
@@ -299,6 +301,7 @@ class MarginTestCase(TestCase):
 
         self.assertEqual(check_margin_level(), 2)
         self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('1.5'))
+        self.assertTrue(Trx.objects.filter(receiver__account=MARGIN_INSURANCE_ACCOUNT).exists())
 
     def test_liquidate_more_below_one(self):
         self.pass_quiz()
@@ -336,3 +339,4 @@ class MarginTestCase(TestCase):
         self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
 
         self.assertTrue(Trx.objects.filter(sender__account=MARGIN_INSURANCE_ACCOUNT).exists())
+        self.assertTrue(Trx.objects.filter(receiver__account=MARGIN_INSURANCE_ACCOUNT).exists())

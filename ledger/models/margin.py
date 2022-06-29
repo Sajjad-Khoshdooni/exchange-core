@@ -171,7 +171,7 @@ class CloseRequest(models.Model):
         )
 
         from ledger.margin.closer import MarginCloser
-        engine = MarginCloser(close_request)
+        engine = MarginCloser(close_request, force_liquidation=reason == cls.LIQUIDATION)
         engine.start()
 
         close_request.status = DONE
