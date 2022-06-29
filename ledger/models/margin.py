@@ -7,13 +7,12 @@ from django.db.models import CheckConstraint, Q, UniqueConstraint
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
-from ledger.margin.liquidation import LiquidationEngine
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import Asset, Wallet, Trx
+from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field, DONE
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt
 from ledger.utils.wallet_pipeline import WalletPipeline
 from provider.models import ProviderOrder
-from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field, DONE
 
 
 class MarginTransfer(models.Model):
@@ -170,7 +169,8 @@ class CloseRequest(models.Model):
             status=CloseRequest.NEW
         )
 
-        engine = LiquidationEngine(close_request, margin_info)
+        from ledger.margin.closer import MarginCloser
+        engine = MarginCloser(close_request)
         engine.start()
 
         close_request.status = cls.DONE
