@@ -206,7 +206,7 @@ class MarginTestCase(TestCase):
             from_asset=self.usdt,
             to_asset=self.xrp,
             from_amount=Decimal(3 * TO_TRANSFER_USDT),
-            allow_small_trades=True
+            allow_dust=True
         )
 
         OTCTrade.execute_trade(otc_request)
@@ -244,7 +244,7 @@ class MarginTestCase(TestCase):
             from_asset=self.xrp,
             to_asset=self.usdt,
             from_amount=Decimal(loan_amount / 2),
-            allow_small_trades=True
+            allow_dust=True
         )
 
         OTCTrade.execute_trade(otc_request)
@@ -283,7 +283,7 @@ class MarginTestCase(TestCase):
             from_asset=self.xrp,
             to_asset=self.usdt,
             from_amount=Decimal(loan_amount),
-            allow_small_trades=True
+            allow_dust=True
         )
 
         OTCTrade.execute_trade(otc_request)
@@ -319,7 +319,7 @@ class MarginTestCase(TestCase):
             from_asset=self.xrp,
             to_asset=self.usdt,
             from_amount=Decimal(loan_amount),
-            allow_small_trades=True
+            allow_dust=True
         )
 
         OTCTrade.execute_trade(otc_request)

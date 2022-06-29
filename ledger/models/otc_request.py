@@ -48,9 +48,10 @@ class OTCRequest(models.Model):
 
     @classmethod
     def new_trade(cls, account: Account, market: str, from_asset: Asset, to_asset: Asset, from_amount: Decimal = None,
-                  to_amount: Decimal = None, allow_small_trades: bool = False, check_enough_balance: bool = True) -> 'OTCRequest':
+                  to_amount: Decimal = None, allow_dust: bool = False, check_enough_balance: bool = True) -> 'OTCRequest':
 
         assert from_amount or to_amount
+        assert (from_amount or to_amount) > 0
 
         otc_request = OTCRequest(
             account=account,
@@ -59,9 +60,9 @@ class OTCRequest(models.Model):
             market=market,
         )
 
-        otc_request.set_amounts(from_amount, to_amount)
+        otc_request.set_amounts(from_amount, to_amount, allow_dust)
 
-        if not allow_small_trades:
+        if not allow_dust:
             if from_amount:
                 check_asset, check_amount = from_asset, from_amount
             else:
@@ -129,7 +130,7 @@ class OTCRequest(models.Model):
         other_side = get_other_side(conf.side)
         return get_trading_price_usdt(self.to_asset.symbol, other_side)
 
-    def set_amounts(self, from_amount: Decimal = None, to_amount: Decimal = None,):
+    def set_amounts(self, from_amount: Decimal = None, to_amount: Decimal = None, allow_dust: bool = False):
         assert (from_amount or to_amount) and (not from_amount or not to_amount), 'exactly one amount should present'
 
         to_price = self.get_to_price()
@@ -143,9 +144,14 @@ class OTCRequest(models.Model):
             from_amount = to_price * to_amount
 
             if self.from_asset.is_trade_base() and self.to_asset.symbol != Asset.IRT:
-                self.to_asset.is_trade_amount_valid(to_amount, raise_exception=True)
+                self.to_asset.is_trade_amount_valid(to_amount, raise_exception=not allow_dust)
             else:
-                from_amount = from_amount - (from_amount % self.from_asset.trade_quantity_step)  # step coin
+                prev_from_amount = from_amount
+                from_amount = from_amount - (from_amount % self.from_asset.trade_quantity_step)
+
+                if prev_from_amount != from_amount:
+                    from_amount += self.to_asset.trade_quantity_step
+
                 to_amount = from_amount / to_price  # re calc cash
 
         else:
@@ -157,10 +163,10 @@ class OTCRequest(models.Model):
             to_amount = from_amount / to_price
 
             if self.from_asset.is_trade_base() and self.to_asset.symbol != Asset.IRT:
-                to_amount = to_amount - (to_amount % self.to_asset.trade_quantity_step)  # step coin
+                to_amount = to_amount - (to_amount % self.to_asset.trade_quantity_step)
                 from_amount = to_amount * to_price  # re calc cash
             else:
-                self.from_asset.is_trade_amount_valid(from_amount, raise_exception=True)
+                self.from_asset.is_trade_amount_valid(from_amount, raise_exception=not allow_dust)
 
         self.to_price = to_price
         self.from_amount = from_amount

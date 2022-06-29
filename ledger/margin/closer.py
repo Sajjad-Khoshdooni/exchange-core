@@ -129,10 +129,10 @@ class MarginCloser:
                 from_asset=wallet.asset,
                 to_asset=self.tether,
                 from_amount=wallet.balance,
-                allow_small_trades=True
+                allow_dust=True
             )
 
-            OTCTrade.execute_trade(request)
+            OTCTrade.execute_trade(request, force=True)
 
     def _liquidate_funds(self):
         loan_wallets = self._get_loan_wallets()
@@ -153,7 +153,7 @@ class MarginCloser:
                     from_asset=self.tether,
                     to_asset=wallet.asset,
                     to_amount=-wallet.balance,
-                    allow_small_trades=True,
+                    allow_dust=True,
                     check_enough_balance=False
                 )
 
@@ -179,7 +179,7 @@ class MarginCloser:
                 )
 
         for request in requests:
-            OTCTrade.execute_trade(request)
+            OTCTrade.execute_trade(request, force=True)
 
         for wallet in loan_wallets:
             asset = wallet.asset
