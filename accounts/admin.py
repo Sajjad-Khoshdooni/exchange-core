@@ -510,7 +510,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         link = url_to_admin_list(DepositAddress) + '?account_secret__account__user__id__exact={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
-    get_deposit_address.short_description = 'آدرس‌های کیف پول'
+    get_deposit_address.short_description = 'آٔدرس‌های کیف پول'
 
 
 @admin.register(Account)
