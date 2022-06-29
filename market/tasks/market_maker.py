@@ -8,6 +8,7 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Max, Min, Count
 
+from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
 from market.utils.order_utils import get_market_top_prices
 from market.utils.redis import set_top_prices, set_open_orders_count, get_open_orders_count, set_top_depth_prices, \
@@ -91,9 +92,9 @@ def update_symbol_maker_orders(symbol):
                 if int(open_depth_orders_count[side]) > Order.MAKER_ORDERS_COUNT:
                     with transaction.atomic():
                         Order.cancel_waste_maker_orders(symbol, open_depth_orders_count)
-                with transaction.atomic():
+                with WalletPipeline() as pipeline:
                     order.save()
-                    order.submit()
+                    order.submit(pipeline)
     except Exception as e:
         if settings.DEBUG:
             raise e
@@ -129,9 +130,9 @@ def create_depth_orders(symbol=None, open_depth_orders_count=None):
                 for rank in range(open_depth_orders_count[side], Order.MAKER_ORDERS_COUNT):
                     order = Order.init_maker_order(symbol, side, price * get_price_factor(side, rank))
                     if order and order.price not in present_prices:
-                        with transaction.atomic():
+                        with WalletPipeline() as pipeline:
                             order.save()
-                            order.submit()
+                            order.submit(pipeline)
         except Exception as e:
             if settings.DEBUG:
                 raise e

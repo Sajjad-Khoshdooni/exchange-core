@@ -132,14 +132,15 @@ class OTCTrade(models.Model):
         old_coin_price = otc_request.to_price
         new_coin_price = otc_request.get_to_price()
 
-        threshold = Decimal('0.0035')
+        rate = new_coin_price / old_coin_price - 1
+
+        threshold = Decimal('0.002')
 
         conf = otc_request.get_trade_config()
 
         if conf.side == SELL:
-            old_coin_price = 1 / old_coin_price
-            new_coin_price = 1 / new_coin_price
+            rate = -rate
 
-        if new_coin_price <= old_coin_price * (1 - threshold):
-            logger.error('otc failed because of abrupt decrease!')
+        if rate > threshold:
+            logger.error('otc failed because of abrupt change!')
             raise AbruptDecrease()

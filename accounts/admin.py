@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import CustomToken, FirebaseToken
+from accounts.models import CustomToken, FirebaseToken, ExternalNotification
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -123,6 +123,28 @@ class UserCommentInLine(admin.TabularInline):
     extra = 1
 
 
+class ExternalNotificationInLine(admin.TabularInline):
+    model = ExternalNotification
+    extra = 0
+    fields = ('created', 'scope', )
+    readonly_fields = ('created', 'scope', )
+    can_delete = False
+
+    def has_add_permission(self, request, obj):
+        return False
+
+
+class NotificationInLine(admin.TabularInline):
+    model = Notification
+    extra = 0
+    fields = ('created', 'title', 'link', 'message', 'read_date')
+    readonly_fields = ('created', 'title', 'link', 'message', 'read_date' )
+    can_delete = False
+
+    def has_add_permission(self, request, obj):
+        return False
+
+
 @admin.register(User)
 class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     default_edit_condition = M.superuser
@@ -190,7 +212,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
         'is_staff', 'is_superuser', 'is_active', 'groups',
     )
-    inlines = [UserCommentInLine]
+    inlines = [UserCommentInLine, ExternalNotificationInLine, NotificationInLine]
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify')
     readonly_fields = (
@@ -578,4 +600,9 @@ class CustomTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 @admin.register(FirebaseToken)
 class FirebaseTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ['user', 'token']
+
+
+@admin.register(ExternalNotification)
+class ExternalNotificationAdmin(admin.ModelAdmin):
+    list_display = ['created', 'user', 'phone', 'scope']
 
