@@ -35,10 +35,10 @@ class AssetAdmin(AdvancedAdmin):
         'get_ledger_balance_users', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
         'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'trade_enable', 'hedge_method',
         # 'bid_diff', 'ask_diff'
-        'candidate', 'margin_enable'
+        'candidate', 'margin_enable', 'new_coin'
     )
     list_filter = ('enable', 'trend', 'candidate', 'margin_enable')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable', 'new_coin')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
 
