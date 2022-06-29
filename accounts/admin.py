@@ -191,7 +191,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         (_('لینک های مهم'), {
             'fields': (
                 'get_wallet', 'get_transfer_link', 'get_payment_address',
-                'get_withdraw_address', 'get_otctrade_address',  'get_fill_order_address',
+                'get_withdraw_address', 'get_otctrade_address', 'get_fill_order_address',
                 'get_open_order_address', 'get_deposit_address', 'get_bank_card_link',
                 'get_bank_account_link', 'get_finotech_request_link',
                 'get_user_with_same_national_code', 'get_login_activity_link',
