@@ -79,6 +79,8 @@ class Asset(models.Model):
 
     margin_enable = models.BooleanField(default=False)
 
+    new_coin = models.BooleanField(default=False)
+
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
 

@@ -8,6 +8,8 @@ from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from collector.models import CoinMarketCap
@@ -251,3 +253,57 @@ class AssetsViewSet(ModelViewSet):
     def get(self, *args, **kwargs):
         with PriceManager():
             return super().get(*args, **kwargs)
+
+
+class AssetOverViewSerializer(serializers.Serializer):
+
+    high_volume = serializers.SerializerMethodField()
+    high_24h_change = serializers.SerializerMethodField()
+    newest = serializers.SerializerMethodField()
+
+    def get_high_volume(self, *args):
+        return self.context['high_volume']
+
+    def get_high_24h_change(self, *args):
+        return self.context['high_24h_change']
+
+    def get_newest(self, *args):
+        return self.context['newest']
+
+
+class AssetOverviewAPIView(APIView):
+
+    @classmethod
+    def set_price(cls, coins: list, price: dict, tether_irt: Decimal):
+        for coin in coins:
+            coin['price_usdt'] = price[coin['symbol']]
+
+            if coin['price_usdt']:
+                coin['price_irt'] = tether_irt * coin['price_usdt']
+
+    def get(self, request):
+        symbols = Asset.live_objects.exclude(symbol__in=['IRT', 'IOTA'])
+
+        list_symbol = list(symbols.values_list('symbol', flat=True))
+        newest_coin = list(symbols.filter(new_coin=True))
+
+        caps = CoinMarketCap.objects.filter(symbol__in=list_symbol)
+
+        price = get_prices_dict(coins=list_symbol, side=BUY)
+        tether_irt = get_tether_irt_price(BUY)
+
+        high_volume = list(caps.order_by('-volume_24h').values('symbol', 'change_24h',))[:3]
+        AssetOverviewAPIView.set_price(high_volume, price, tether_irt)
+
+        high_24h_change = list(caps.order_by('-change_24h').values('symbol', 'change_24h',))[:3]
+
+        AssetOverviewAPIView.set_price(high_24h_change, price, tether_irt)
+
+        new = list(caps.filter(symbol__in=newest_coin).values('symbol', 'change_24h'))[:3]
+        AssetOverviewAPIView.set_price(new, price, tether_irt)
+
+        return Response({
+            'high_volume': high_volume,
+            'high_24h_change': high_24h_change,
+            'newest': new
+        })
