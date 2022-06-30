@@ -1,11 +1,13 @@
 import logging
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 import requests
 from yekta_config import secret
 from yekta_config.config import config
 
 from financial.models import BankAccount, FiatWithdrawRequest
+from financial.utils.withdraw_limit import is_holiday, time_in_range
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,9 @@ class FiatWithdraw:
         raise NotImplementedError
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
+        raise NotImplementedError
+
+    def get_estimated_receive_time(self, created: datetime):
         raise NotImplementedError
 
 
@@ -122,6 +127,47 @@ class PayirChanel(FiatWithdraw):
         status = data['cashout']['status']
         return mapping_status.get(int(status), self.PENDING)
 
+    def get_estimated_receive_time(self, created: datetime):
+        request_date = created.astimezone()
+        request_time = request_date.time()
+        receive_time = request_date.replace(microsecond=0)
+
+        if is_holiday(request_date):
+
+            if time_in_range('00:00', '10:00', request_time):
+                receive_time = receive_time.replace(hour=15, minute=00, second=00)
+            else:
+                receive_time += timedelta(days=1)
+
+                if is_holiday(receive_time):
+                    receive_time = receive_time.replace(hour=15, minute=00, second=00)
+                else:
+                    receive_time = receive_time.replace(hour=10, minute=30, second=00)
+
+        else:
+            if time_in_range('0:0', '0:30', request_time):
+                receive_time = receive_time.replace(hour=10, minute=30, second=00)
+
+            elif time_in_range('0:30', '10:30', request_time):
+                receive_time = receive_time.replace(hour=14, minute=30, second=00)
+
+            elif time_in_range('10:30', '13:23', request_time):
+                receive_time = receive_time.replace(hour=19, minute=30, second=00)
+
+            elif time_in_range('13:23', '18:30', request_time):
+                receive_time += timedelta(days=1)
+                receive_time = receive_time.replace(hour=4, minute=30, second=00)
+
+            else:
+                receive_time += timedelta(days=1)
+
+                if is_holiday(receive_time):
+                    receive_time = receive_time.replace(hour=14, minute=30, second=00)
+                else:
+                    receive_time = receive_time.replace(hour=10, minute=30, second=00)
+
+        return receive_time
+
 
 class ZibalChanel(FiatWithdraw):
 
@@ -183,7 +229,8 @@ class ZibalChanel(FiatWithdraw):
             'amount': amount * 10,
             'bankAccount': receiver.iban,
             'uniqueCode': request_id,
-            'wageFeeMode': 2
+            'wageFeeMode': 2,
+            'checkoutDelay': 0,
         })
 
         return data['id']
@@ -205,3 +252,7 @@ class ZibalChanel(FiatWithdraw):
         }
         status = data['details'][0].get('checkoutStatus', self.PENDING)
         return mapping_status.get(status, self.PENDING)
+
+    def get_estimated_receive_time(self, created: datetime):
+        request_date = created.astimezone() + timedelta(days=1)
+        return request_date.replace(microsecond=0, hour=19, minute=30)

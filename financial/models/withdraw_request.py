@@ -56,6 +56,12 @@ class FiatWithdrawRequest(models.Model):
     def total_amount(self):
         return self.amount + self.fee_amount
 
+    @property
+    def channel_handler(self):
+        from financial.utils.withdraw import FiatWithdraw
+
+        return FiatWithdraw.get_withdraw_channel(self.withdraw_channel)
+
     def build_trx(self, pipeline: WalletPipeline):
         asset = Asset.get(Asset.IRT)
         out_wallet = asset.get_wallet(Account.out())
@@ -84,13 +90,10 @@ class FiatWithdrawRequest(models.Model):
     def create_withdraw_request(self):
         assert not self.provider_withdraw_id
         assert self.status == self.PROCESSING
-        from financial.utils.withdraw import FiatWithdraw
 
-        withdraw_handler = FiatWithdraw.get_withdraw_channel(self.withdraw_channel)
+        wallet_id = self.channel_handler.get_wallet_id()
 
-        wallet_id = withdraw_handler.get_wallet_id()
-
-        wallet = withdraw_handler.get_wallet_data(wallet_id)
+        wallet = self.channel_handler.get_wallet_data(wallet_id)
 
         if wallet.free < self.amount:
             logger.info(f'Not enough wallet balance to full fill bank acc')
@@ -102,7 +105,7 @@ class FiatWithdrawRequest(models.Model):
             )
             return
 
-        self.ref_id = self.provider_withdraw_id = withdraw_handler.create_withdraw(
+        self.ref_id = self.provider_withdraw_id = self.channel_handler.create_withdraw(
             wallet_id,
             self.bank_account,
             self.amount,
@@ -131,12 +134,9 @@ class FiatWithdrawRequest(models.Model):
             self.change_status(FiatWithdrawRequest.CANCELED)
 
     def alert_withdraw_verify_status(self):
-        from financial.utils.withdraw_limit import get_fiat_estimate_receive_time
         if self.withdraw_datetime:
             estimated_receive_time = gregorian_to_jalali_datetime_str(
-                get_fiat_estimate_receive_time(
-                    self.withdraw_datetime
-                )
+                self.channel_handler.get_estimated_receive_time(self.withdraw_datetime)
             )
         else:
             estimated_receive_time = None

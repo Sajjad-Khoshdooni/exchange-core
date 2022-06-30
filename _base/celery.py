@@ -180,8 +180,17 @@ app.conf.beat_schedule = {
     #         'expire': 3600
     #     }
     # },
+    'send_level_2_prize_notifs': {
+        'task': 'accounts.tasks.send_sms.send_level_2_prize_notifs',
+        'schedule': crontab(hour=4, minute=30),
+        'options': {
+            'queue': 'celery',
+            'expire': 3600
+        }
+    },
+
     'send_first_fiat_deposit_sms': {
-        'task': 'accounts.tasks.send_first_fiat_deposit_notifs',
+        'task': 'accounts.tasks.send_sms.send_first_fiat_deposit_notifs',
         'schedule': crontab(hour=4, minute=30),
         'options': {
             'queue': 'celery',
@@ -190,7 +199,7 @@ app.conf.beat_schedule = {
     },
 
     'send_trade_notifs': {
-        'task': 'accounts.tasks.send_trade_notifs',
+        'task': 'accounts.tasks.send_sms.send_trade_notifs',
         'schedule': crontab(hour=4, minute=30),
         'options': {
             'queue': 'celery',
@@ -198,14 +207,14 @@ app.conf.beat_schedule = {
         }
     },
 
-    'moving_average_trader': {
-        'task': 'trader.tasks.moving_average.update_all_moving_averages',
-        'schedule': 17,
-        'options': {
-            'queue': 'trader-ma',
-            'expire': 17
-        }
-    },
+    # 'moving_average_trader': {
+    #     'task': 'trader.tasks.moving_average.update_all_moving_averages',
+    #     'schedule': 17,
+    #     'options': {
+    #         'queue': 'trader-ma',
+    #         'expire': 17
+    #     }
+    # },
     'update_withdraw_status': {
         'task': 'financial.tasks.withdraw.update_withdraw_status',
         'schedule': 300,
@@ -214,14 +223,14 @@ app.conf.beat_schedule = {
             'expire': 300
         },
     },
-    # 'random_trader': {
-    #     'task': 'trader.tasks.random_trader.random_trader',
-    #     'schedule': 60,
-    #     'options': {
-    #         'queue': 'trader-ma',
-    #         'expire': 60
-    #     }
-    # },
+    'random_trader': {
+        'task': 'trader.tasks.random_trader.random_trader',
+        'schedule': 17,
+        'options': {
+            'queue': 'trader-ma',
+            'expire': 17
+        }
+    },
 }
 
 if settings.DEBUG:
@@ -248,14 +257,14 @@ if settings.DEBUG:
                 'expire': 2
             },
         },
-        'moving_average_trader': {
-            'task': 'trader.tasks.moving_average.update_all_moving_averages',
-            'schedule': 67,
-            'options': {
-                'queue': 'trader-ma',
-                'expire': 67
-            }
-        },
+        # 'moving_average_trader': {
+        #     'task': 'trader.tasks.moving_average.update_all_moving_averages',
+        #     'schedule': 67,
+        #     'options': {
+        #         'queue': 'trader-ma',
+        #         'expire': 67
+        #     }
+        # },
         'handle open stop loss': {
             'task': 'market.tasks.stop_loss.handle_stop_loss',
             'schedule': 1,
@@ -273,12 +282,12 @@ if settings.DEBUG:
             },
         },
 
-        # 'random_trader': {
-        #     'task': 'trader.tasks.random_trader.random_trader',
-        #     'schedule': 60,
-        #     'options': {
-        #         'queue': 'trader-ma',
-        #         'expire': 60
-        #     }
-        # },
+        'random_trader': {
+            'task': 'trader.tasks.random_trader.random_trader',
+            'schedule': 17,
+            'options': {
+                'queue': 'trader-ma',
+                'expire': 17
+            }
+        },
     }

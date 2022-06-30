@@ -3,16 +3,16 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
-from ledger.utils.precision import get_presentation_amount
+
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory
+from ledger.models import Asset, Prize, CoinCategory, DepositAddress
 from ledger.utils.overview import AssetOverview
-from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol
-from provider.exchanges import BinanceFuturesHandler
+from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
+from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol
 from provider.models import ProviderOrder
 
 
@@ -157,7 +157,13 @@ class NetworkAssetAdmin(admin.ModelAdmin):
 
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_display = ('account_secret', 'network', 'address')
+    list_filter = ('account_secret__account__user', 'network')
+    list_display = ('account_secret', 'network', 'get_address')
+
+    def get_address(self, depositaddress: DepositAddress):
+        return depositaddress.presentation_address
+
+    get_address.short_description = 'آدرس‌ کیف پول‌'
 
 
 @admin.register(models.OTCRequest)

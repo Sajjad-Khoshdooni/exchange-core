@@ -229,15 +229,17 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
     # if ask_diff is None:
     #     ask_diff = Decimal('0.005')
 
-    bid_diff = Decimal('0.005') * get_asset_diff_multiplier(coin)
-    ask_diff = Decimal('0.005') * get_asset_diff_multiplier(coin)
+    bid_diff = Decimal('0.0025') * get_asset_diff_multiplier(coin)
+    ask_diff = Decimal('0.0025') * get_asset_diff_multiplier(coin)
 
     diff_multiplier = 1
 
     if value:
         if value > 1000:
-            diff_multiplier = 4
+            diff_multiplier = 8
         elif value > 10:
+            diff_multiplier = 4
+        elif value > 3:
             diff_multiplier = 2
 
     if raw_price:
