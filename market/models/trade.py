@@ -35,7 +35,7 @@ class Trade(models.Model):
     SYSTEM_TAKER = 'sys-take'
     MARKET = 'market'
 
-    SOURCE_CHOICES = ((OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'), (SYSTEM_MAKER, SYSTEM_TAKER),
+    SOURCE_CHOICES = ((OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'), (SYSTEM_MAKER, SYSTEM_MAKER),
                       (SYSTEM_TAKER, SYSTEM_TAKER))
 
     created = models.DateTimeField(auto_now_add=True)
