@@ -257,6 +257,8 @@ class Order(models.Model):
                 (False, False): Trade.MARKET,
             }
 
+            trade_source = source_map[maker_is_system, taker_is_system]
+
             trades_pair = Trade.init_pair(
                 symbol=self.symbol,
                 taker_order=self,
@@ -264,9 +266,12 @@ class Order(models.Model):
                 amount=match_amount,
                 price=trade_price,
                 irt_value=base_irt_price * trade_price * match_amount,
-                trade_source=source_map[maker_is_system, taker_is_system],
+                trade_source=trade_source,
                 group_id=uuid4()
             )
+
+            if trade_source == Trade.SYSTEM_TAKER and not self.wallet.account.primary:
+                raise Exception('Non primary system is being taker! dangerous.')
 
             self.release_lock(pipeline, match_amount)
             matching_order.release_lock(pipeline, match_amount)
