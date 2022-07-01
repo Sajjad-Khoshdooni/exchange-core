@@ -134,8 +134,8 @@ class Order(models.Model):
 
     @staticmethod
     def get_order_by(side):
-        return (lambda order: (-order.price, -order.created.timestamp())) if side == Order.BUY else \
-                (lambda order: (order.price, -order.created.timestamp()))
+        return (lambda order: (-order.price, order.id)) if side == Order.BUY else \
+                (lambda order: (order.price, order.id))
 
     @classmethod
     def cancel_orders(cls, to_cancel_orders: QuerySet):
