@@ -247,7 +247,15 @@ class Order(models.Model):
                 except:
                     base_irt_price = 27000
 
-            is_system_trade = self.wallet.account.is_system() and matching_order.wallet.account.is_system()
+            taker_is_system = self.wallet.account.is_system()
+            maker_is_system = matching_order.wallet.account.is_system()
+
+            source_map = {
+                (True, True): Trade.SYSTEM,
+                (True, False): Trade.SYSTEM_MAKER,
+                (False, True): Trade.SYSTEM_TAKER,
+                (False, False): Trade.MARKET,
+            }
 
             trades_pair = Trade.init_pair(
                 symbol=self.symbol,
@@ -256,7 +264,7 @@ class Order(models.Model):
                 amount=match_amount,
                 price=trade_price,
                 irt_value=base_irt_price * trade_price * match_amount,
-                trade_source=Trade.SYSTEM if is_system_trade else Trade.MARKET,
+                trade_source=source_map[maker_is_system, taker_is_system],
                 group_id=uuid4()
             )
 

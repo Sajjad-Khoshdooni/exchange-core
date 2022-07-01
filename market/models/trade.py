@@ -29,6 +29,15 @@ class FillOrderTrxs:
 
 
 class Trade(models.Model):
+    OTC = 'otc'
+    SYSTEM = 'system'
+    SYSTEM_MAKER = 'sys-make'
+    SYSTEM_TAKER = 'sys-take'
+    MARKET = 'market'
+
+    SOURCE_CHOICES = ((OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'), (SYSTEM_MAKER, SYSTEM_TAKER),
+                      (SYSTEM_TAKER, SYSTEM_TAKER))
+
     created = models.DateTimeField(auto_now_add=True)
     symbol = models.ForeignKey(PairSymbol, on_delete=models.CASCADE)
 
@@ -47,10 +56,6 @@ class Trade(models.Model):
     fee_amount = get_amount_field()
 
     irt_value = models.PositiveIntegerField()
-    OTC = 'otc'
-    SYSTEM = 'system'
-    MARKET = 'market'
-    SOURCE_CHOICES = ((OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'))
 
     trade_source = models.CharField(
         max_length=8,
