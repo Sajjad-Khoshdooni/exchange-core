@@ -35,7 +35,7 @@ def min_order_value(base_symbol: str):
 
 def random_min_order_value(base_symbol: str) -> Decimal:
     min_order = min_order_value(base_symbol)
-    return Decimal(random.randint(2 * min_order, 40 * min_order))
+    return Decimal(random.randint(2 * min_order, 5 * min_order))
 
 
 def random_buy(symbol: PairSymbol, account: Account):
