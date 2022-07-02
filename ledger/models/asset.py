@@ -43,7 +43,6 @@ class Asset(models.Model):
 
     name = models.CharField(max_length=32, blank=True)
     name_fa = models.CharField(max_length=32, blank=True)
-    logo = models.ImageField(blank=True)
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
