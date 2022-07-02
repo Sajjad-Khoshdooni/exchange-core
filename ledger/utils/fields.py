@@ -13,12 +13,14 @@ from ledger.utils.precision import normalize_fraction
 
 PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 
+AMOUNT_PRECISION = 8
+
 
 def get_amount_field(default: Decimal = None, max_digits: int = None, decimal_places: int = None, null: bool = False):
 
     kwargs = {
         'max_digits': max_digits or 30,
-        'decimal_places': decimal_places or 8,
+        'decimal_places': decimal_places or AMOUNT_PRECISION,
         'validators': [MinValueValidator(0)],
         'blank': null,
         'null': null,
