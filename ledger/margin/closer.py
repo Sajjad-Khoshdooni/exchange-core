@@ -188,7 +188,8 @@ class MarginCloser:
 
         for wallet in loan_wallets:
             asset = wallet.asset
-            amount = -wallet.balance
+            margin = asset.get_wallet(wallet.account, Wallet.MARGIN)
+            amount = min(margin.balance, -wallet.balance)
 
             MarginLoan.new_loan(
                 account=self.account,
