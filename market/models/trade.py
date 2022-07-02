@@ -13,7 +13,7 @@ from ledger.models import Trx, OTCTrade, Asset
 from ledger.models.trx import FakeTrx
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, precision_to_step
-from ledger.utils.price import get_tether_irt_price, BUY
+from ledger.utils.price import get_tether_irt_price, BUY, get_trading_price_irt, get_trading_price_usdt, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
 
@@ -63,6 +63,9 @@ class Trade(models.Model):
         db_index=True,
         default=MARKET
     )
+
+    hedge_price = get_amount_field(null=True)
+    gap_revenue = get_amount_field(null=True)
 
     TradesPair = namedtuple("TradesPair", "maker taker")
 
@@ -294,19 +297,50 @@ class Trade(models.Model):
             irt_value=irt_value,
             **kwargs
         )
+
+        taker_trade = cls(
+            symbol=symbol,
+            order=taker_order,
+            account=taker_order.wallet.account,
+            side=taker_order.side,
+            is_maker=False,
+            trade_source=trade_source,
+            amount=amount,
+            price=price,
+            irt_value=irt_value,
+            **kwargs
+        )
+
+        maker_trade.set_gap_revenue()
+        taker_trade.set_gap_revenue()
+
         maker_trade.taker_order = taker_order
+
         return cls.TradesPair(
             maker=maker_trade,
-            taker=cls(
-                symbol=symbol,
-                order=taker_order,
-                account=taker_order.wallet.account,
-                side=taker_order.side,
-                is_maker=False,
-                trade_source=trade_source,
-                amount=amount,
-                price=price,
-                irt_value=irt_value,
-                **kwargs
-            )
+            taker=taker_trade,
         )
+
+    def set_gap_revenue(self):
+        self.gap_revenue = 0
+
+        if self.trade_source == self.MARKET and self.order.wallet.account.is_system():
+            return
+
+        reverse_side = BUY if self.side == SELL else SELL
+
+        if self.order.symbol.base_asset.symbol == Asset.IRT:
+            get_price = get_trading_price_irt
+        elif self.order.symbol.base_asset.symbol == Asset.USDT:
+            get_price = get_trading_price_usdt
+        else:
+            raise NotImplementedError
+
+        self.hedge_price = get_price(self.order.symbol.asset.symbol, side=reverse_side, raw_price=True)
+
+        if self.side == BUY:
+            gap_price = self.hedge_price - self.price
+        else:
+            gap_price = self.price - self.hedge_price
+
+        self.gap_revenue = gap_price * self.amount
