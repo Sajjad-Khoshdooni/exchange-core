@@ -46,10 +46,9 @@ class MarginTestCase(TestCase):
 
         set_price(self.usdt, USDT_IRT_PRICE)
         set_price(self.xrp, XRP_USDT_PRICE)
+        set_price(self.btc, int(BTC_USDT_PRICE))
 
         self.btcusdt = PairSymbol.objects.get(name='BTCUSDT')
-        self.btcusdt.taker_fee = 0
-        self.btcusdt.save()
 
         self.xrpusdt = PairSymbol.objects.get(name='ADAUSDT')
         self.xrpusdt.taker_fee = 0
@@ -340,3 +339,26 @@ class MarginTestCase(TestCase):
 
         self.assertTrue(Trx.objects.filter(sender__account=MARGIN_INSURANCE_ACCOUNT).exists())
         self.assertTrue(Trx.objects.filter(receiver__account=MARGIN_INSURANCE_ACCOUNT).exists())
+
+    def test_close_request(self):
+        self.pass_quiz()
+        self.transfer_usdt(TO_TRANSFER_USDT)
+
+        loan_amount = 2 * TO_TRANSFER_USDT / BTC_USDT_PRICE
+        self.loan(self.btc.symbol, loan_amount)
+
+        otc_request = OTCRequest.new_trade(
+            self.account,
+            market=Wallet.MARGIN,
+            from_asset=self.btc,
+            to_asset=self.usdt,
+            from_amount=Decimal(loan_amount),
+            allow_dust=True
+        )
+
+        OTCTrade.execute_trade(otc_request)
+
+        resp = self.client.post('/api/v1/margin/close/')
+        self.assertEqual(resp.status_code, 201)
+
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))

@@ -150,7 +150,7 @@ class MarginCloser:
 
                 symbol = PairSymbol.objects.get(asset=wallet.asset, base_asset=self.tether)
                 to_buy = -wallet.balance
-                to_buy *= to_buy / (1 - symbol.taker_fee)
+                to_buy = to_buy / (1 - symbol.taker_fee)
 
                 request = OTCRequest.new_trade(
                     self.account,
