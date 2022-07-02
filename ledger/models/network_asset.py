@@ -22,7 +22,7 @@ class NetworkAsset(models.Model):
         elif self.network.symbol == 'TRX':
             return self.asset.symbol in ('TRX', 'USDT')
         elif self.network.symbol == 'BSC':
-            return self.asset.symbol in BEP20_SYMBOL_TO_SMART_CONTRACT
+            return self.asset.symbol == 'BNB' or self.asset.symbol in BEP20_SYMBOL_TO_SMART_CONTRACT
         else:
             return False
 

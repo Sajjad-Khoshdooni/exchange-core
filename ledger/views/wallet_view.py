@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView
 from rest_framework.generics import get_object_or_404
@@ -19,7 +20,7 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     name = serializers.CharField()
     name_fa = serializers.CharField()
-    logo = serializers.FileField()
+    logo = serializers.SerializerMethodField()
 
     balance = serializers.SerializerMethodField()
     balance_irt = serializers.SerializerMethodField()
@@ -118,6 +119,9 @@ class AssetListSerializer(serializers.ModelSerializer):
             network__can_withdraw=True,
             binance_withdraw_enable=True
         ).exists()
+
+    def get_logo(self, asset: Asset):
+        return settings.HOST_URL + '/static/%s.png' % asset.symbol
 
     class Meta:
         model = Asset
