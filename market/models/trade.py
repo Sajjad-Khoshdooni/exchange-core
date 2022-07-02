@@ -324,14 +324,16 @@ class Trade(models.Model):
     def set_gap_revenue(self):
         self.gap_revenue = 0
 
-        if self.trade_source == self.MARKET and self.order.wallet.account.is_system():
+        if self.trade_source == self.MARKET or self.order.wallet.account.is_system():
             return
 
         reverse_side = BUY if self.side == SELL else SELL
 
-        if self.order.symbol.base_asset.symbol == Asset.IRT:
+        base_asset = self.order.symbol.base_asset
+
+        if base_asset.symbol == Asset.IRT:
             get_price = get_trading_price_irt
-        elif self.order.symbol.base_asset.symbol == Asset.USDT:
+        elif base_asset.symbol == Asset.USDT:
             get_price = get_trading_price_usdt
         else:
             raise NotImplementedError
@@ -344,3 +346,6 @@ class Trade(models.Model):
             gap_price = self.price - self.hedge_price
 
         self.gap_revenue = gap_price * self.amount
+
+        if base_asset.symbol == Asset.USDT:
+            self.gap_revenue *= get_tether_irt_price(side=reverse_side)
