@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -232,6 +233,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         # 'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
 
     'DEFAULT_PERMISSION_CLASSES': [
@@ -247,6 +249,12 @@ REST_FRAMEWORK = {
         'burst_api': '200/min',
         'sustained_api': '200000/day',
     }
+}
+
+SIMPLE_JWT = {
+    'REFRESH_TOKEN_LIFETIME': timedelta(hours=6),
+    'ROTATE_REFRESH_TOKENS': False,
+    'AUTH_HEADER_TYPES': ('Bearer', 'JWT'),
 }
 
 AUTH_USER_MODEL = 'accounts.User'
