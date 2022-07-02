@@ -157,7 +157,7 @@ class MarginCloser:
                     market=Wallet.MARGIN,
                     from_asset=self.tether,
                     to_asset=wallet.asset,
-                    to_amount=-wallet.balance,
+                    to_amount=to_buy,
                     allow_dust=True,
                     check_enough_balance=False
                 )

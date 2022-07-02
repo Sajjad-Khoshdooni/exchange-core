@@ -361,8 +361,9 @@ class MarginLoanAdmin(admin.ModelAdmin):
 
 @admin.register(models.CloseRequest)
 class MarginLiquidationAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'margin_level', 'group_id')
+    list_display = ('created', 'account', 'margin_level', 'group_id', 'status')
     search_fields = ('group_id',)
+    list_filter = ('status', )
 
 
 @admin.register(models.AddressBook)
