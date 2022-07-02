@@ -41,6 +41,10 @@ class AssetSerializerBuilder(AssetSerializerMini):
     min_withdraw_fee = serializers.SerializerMethodField()
     market_irt_enable = serializers.SerializerMethodField()
 
+    name = serializers.CharField()
+    name_fa = serializers.CharField()
+    logo = serializers.FileField()
+
     class Meta:
         model = Asset
         fields = ()
@@ -151,7 +155,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
         new_fields = []
 
         if prices:
-            new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h', 'market_irt_enable']
+            new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h', 'market_irt_enable',
+                          'name', 'name_fa', 'logo']
 
         if extra_info:
             new_fields = [
