@@ -191,15 +191,16 @@ class MarginCloser:
             margin = asset.get_wallet(wallet.account, Wallet.MARGIN)
             amount = min(margin.balance, -wallet.balance)
 
-            MarginLoan.new_loan(
-                account=self.account,
-                asset=asset,
-                amount=amount,
-                loan_type=MarginLoan.REPAY
-            )
+            if amount > 0:
+                MarginLoan.new_loan(
+                    account=self.account,
+                    asset=asset,
+                    amount=amount,
+                    loan_type=MarginLoan.REPAY
+                )
 
-            price = get_trading_price_usdt(asset.symbol, side=SELL, raw_price=True)
-            self._liquidated_value += amount * price
+                price = get_trading_price_usdt(asset.symbol, side=SELL, raw_price=True)
+                self._liquidated_value += amount * price
 
     def is_done(self):
         return not self._get_loan_wallets().exists()
