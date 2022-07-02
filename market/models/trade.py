@@ -341,9 +341,9 @@ class Trade(models.Model):
         self.hedge_price = get_price(self.order.symbol.asset.symbol, side=reverse_side, raw_price=True)
 
         if self.side == BUY:
-            gap_price = self.hedge_price - self.price
-        else:
             gap_price = self.price - self.hedge_price
+        else:
+            gap_price = self.hedge_price - self.price
 
         self.gap_revenue = gap_price * self.amount
 
