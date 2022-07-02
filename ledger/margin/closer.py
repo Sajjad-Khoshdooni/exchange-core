@@ -145,7 +145,9 @@ class MarginCloser:
             if not wallet.balance:
                 continue
 
-            if wallet.asset.symbol != Asset.USDT:
+            if wallet.asset.symbol == Asset.USDT:
+                usdt_need += -wallet.balance
+            else:
                 # todo: add reason field to otc
 
                 symbol = PairSymbol.objects.get(asset=wallet.asset, base_asset=self.tether)
