@@ -7,6 +7,7 @@ from ledger.models import Wallet, OTCTrade, OTCRequest, Asset, CloseRequest, Mar
 from ledger.utils.fields import PENDING, DONE
 from ledger.utils.price import get_trading_price_usdt, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
+from market.models import PairSymbol
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +147,10 @@ class MarginCloser:
 
             if wallet.asset.symbol != Asset.USDT:
                 # todo: add reason field to otc
+
+                symbol = PairSymbol.objects.get(asset=wallet.asset, base_asset=self.tether)
+                to_buy = -wallet.balance
+                to_buy *= to_buy / (1 - symbol.taker_fee)
 
                 request = OTCRequest.new_trade(
                     self.account,

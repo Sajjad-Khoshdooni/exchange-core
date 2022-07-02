@@ -83,7 +83,7 @@ class MarginLoan(models.Model):
         return self.asset.get_wallet(self.account, Wallet.MARGIN)
 
     @property
-    def borrow_wallet(self) -> 'Wallet':
+    def loan_wallet(self) -> 'Wallet':
         return self.asset.get_wallet(self.account, Wallet.LOAN)
 
     @classmethod
@@ -102,7 +102,7 @@ class MarginLoan(models.Model):
             )
 
             if loan_type == cls.REPAY:
-                loan.borrow_wallet.has_debt(-amount, raise_exception=True)
+                loan.loan_wallet.has_debt(-amount, raise_exception=True)
                 loan.margin_wallet.has_balance(amount, raise_exception=True)
             else:
                 margin_info = MarginInfo.get(account)
@@ -120,9 +120,9 @@ class MarginLoan(models.Model):
             )
 
             if loan_type == cls.BORROW:
-                sender, receiver = loan.borrow_wallet, loan.margin_wallet
+                sender, receiver = loan.loan_wallet, loan.margin_wallet
             else:
-                sender, receiver = loan.margin_wallet, loan.borrow_wallet
+                sender, receiver = loan.margin_wallet, loan.loan_wallet
 
             pipeline.new_trx(sender, receiver, amount, Trx.MARGIN_BORROW, loan.group_id)
 
