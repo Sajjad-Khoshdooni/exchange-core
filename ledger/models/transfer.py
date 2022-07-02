@@ -209,6 +209,7 @@ class Transfer(models.Model):
                         }
                     )
 
+
     class Meta:
         constraints = [
             UniqueConstraint(
