@@ -85,6 +85,14 @@ class MarginTestCase(TestCase):
         print(Asset.get('USDT').margin_enable, self.user.show_margin)
         self.assertEqual(resp.status_code, check_status)
 
+    def transfer_xrp(self, amount, type: str = 'sm', check_status=201):
+        resp = self.client.post('/api/v1/margin/transfer/', {
+            'amount': amount,
+            'type': type,
+            'coin': 'ADA'
+        })
+        self.assertEqual(resp.status_code, check_status)
+
     def loan(self, coin: str, amount, type: str = 'borrow', check_status=201):
         resp = self.client.post('/api/v1/margin/loan/', {
             'amount': amount,
@@ -362,3 +370,34 @@ class MarginTestCase(TestCase):
         self.assertEqual(resp.status_code, 201)
 
         self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
+
+    def test_liquidate_more_below_one2(self):
+        self.pass_quiz()
+        transfer_amount = TO_TRANSFER_USDT
+        self.xrp.get_wallet(self.account).airdrop(transfer_amount)
+        self.transfer_xrp(transfer_amount)
+
+        loan_amount = 2 * transfer_amount
+        self.loan(self.xrp.symbol, loan_amount)
+
+        self.assert_margin_info(transfer_amount * XRP_USDT_PRICE, 2 * transfer_amount * XRP_USDT_PRICE, 3 * transfer_amount * XRP_USDT_PRICE, Decimal('1.5'))
+        self.assertEqual(check_margin_level(), 0)
+
+        otc_request = OTCRequest.new_trade(
+            self.account,
+            market=Wallet.MARGIN,
+            from_asset=self.xrp,
+            to_asset=self.usdt,
+            from_amount=Decimal(transfer_amount * 3),
+            allow_dust=True
+        )
+
+        OTCTrade.execute_trade(otc_request)
+
+        set_price(self.xrp, XRP_USDT_PRICE * 1.5)
+
+        self.assertEqual(check_margin_level(), 2)
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
+
+        self.assertTrue(Trx.objects.filter(sender__account=MARGIN_INSURANCE_ACCOUNT).exists())
+        self.assertTrue(Trx.objects.filter(receiver__account=MARGIN_INSURANCE_ACCOUNT).exists())
