@@ -64,8 +64,8 @@ class Trade(models.Model):
         default=MARKET
     )
 
-    hedge_price = get_amount_field(null=True)
-    gap_revenue = get_amount_field(null=True)
+    hedge_price = get_amount_field(default=Decimal(0))
+    gap_revenue = get_amount_field(default=Decimal(0))
 
     TradesPair = namedtuple("TradesPair", "maker taker")
 
