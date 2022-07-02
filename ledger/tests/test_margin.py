@@ -371,7 +371,7 @@ class MarginTestCase(TestCase):
 
         self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
 
-    def test_liquidate_more_below_one2(self):
+    def test_liquidate_more_below_one_transfer_xrp(self):
         self.pass_quiz()
         transfer_amount = TO_TRANSFER_USDT
         self.xrp.get_wallet(self.account).airdrop(transfer_amount)
@@ -394,7 +394,35 @@ class MarginTestCase(TestCase):
 
         OTCTrade.execute_trade(otc_request)
 
-        set_price(self.xrp, XRP_USDT_PRICE * 1.5)
+        set_price(self.xrp, XRP_USDT_PRICE * 3)
+
+        self.assertEqual(check_margin_level(), 2)
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
+
+        self.assertTrue(Trx.objects.filter(sender__account=MARGIN_INSURANCE_ACCOUNT).exists())
+        self.assertTrue(Trx.objects.filter(receiver__account=MARGIN_INSURANCE_ACCOUNT).exists())
+
+    def test_liquidate_more_below_one_borrow_usdt(self):
+        self.pass_quiz()
+        self.transfer_usdt(TO_TRANSFER_USDT)
+
+        loan_amount = 2 * TO_TRANSFER_USDT
+        self.loan(self.usdt.symbol, loan_amount)
+
+        self.assertEqual(check_margin_level(), 0)
+
+        otc_request = OTCRequest.new_trade(
+            self.account,
+            market=Wallet.MARGIN,
+            from_asset=self.usdt,
+            to_asset=self.xrp,
+            from_amount=Decimal(TO_TRANSFER_USDT * 3),
+            allow_dust=True
+        )
+
+        OTCTrade.execute_trade(otc_request)
+
+        set_price(self.xrp, XRP_USDT_PRICE / 2)
 
         self.assertEqual(check_margin_level(), 2)
         self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))

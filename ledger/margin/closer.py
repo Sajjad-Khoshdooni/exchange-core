@@ -137,6 +137,7 @@ class MarginCloser:
 
     def _liquidate_funds(self):
         loan_wallets = self._get_loan_wallets()
+        insurance_asked = False
 
         requests = []
         usdt_need = 0
@@ -185,6 +186,8 @@ class MarginCloser:
                     group_id=self.request.group_id
                 )
 
+                insurance_asked = True
+
         for request in requests:
             OTCTrade.execute_trade(request, force=True)
 
@@ -201,6 +204,10 @@ class MarginCloser:
 
             price = get_trading_price_usdt(asset.symbol, side=SELL, raw_price=True)
             self._liquidated_value += amount * price
+
+        if insurance_asked:
+            # when insurance asked make sure to transfer all extra funds to insurance
+            self._liquidated_value = Decimal('inf')
 
     def is_done(self):
         return not self._get_loan_wallets().exists()
