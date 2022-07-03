@@ -1,15 +1,15 @@
 from decimal import Decimal
+from typing import Union
 from uuid import uuid4
 
 from django.db import models
-from django.db.models import CheckConstraint, Q
+from django.db.models import CheckConstraint, Q, UniqueConstraint
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
+from ledger.margin.margin_info import MarginInfo
 from ledger.models import Asset, Wallet, Trx
-from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, DONE, \
-    get_created_field
-from ledger.utils.margin import MarginInfo
+from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field, DONE, PENDING
 from ledger.utils.price import BUY, SELL, get_trading_price_usdt
 from ledger.utils.wallet_pipeline import WalletPipeline
 from provider.models import ProviderOrder
@@ -83,49 +83,27 @@ class MarginLoan(models.Model):
         return self.asset.get_wallet(self.account, Wallet.MARGIN)
 
     @property
-    def borrow_wallet(self) -> 'Wallet':
+    def loan_wallet(self) -> 'Wallet':
         return self.asset.get_wallet(self.account, Wallet.LOAN)
-
-    def finalize(self):
-        hedged = ProviderOrder.try_hedge_for_new_order(
-            asset=self.asset,
-            side=BUY if self.type == self.BORROW else SELL,
-            amount=self.amount,
-            scope=ProviderOrder.BORROW
-        )
-
-        if hedged:
-            if self.type == self.BORROW:
-                sender, receiver = self.borrow_wallet, self.margin_wallet
-            else:
-                sender, receiver = self.margin_wallet, self.borrow_wallet
-
-            with WalletPipeline() as pipeline:  # type: WalletPipeline
-                self.status = DONE
-                self.save()
-
-                if self.type == self.REPAY:
-                    pipeline.release_lock(self.group_id)
-
-                pipeline.new_trx(sender, receiver, self.amount, Trx.MARGIN_BORROW, self.group_id)
 
     @classmethod
     def new_loan(cls, account: Account, asset: Asset, amount: Decimal, loan_type: str):
         assert amount > 0
         assert asset.symbol != Asset.IRT
+        assert loan_type in (cls.BORROW, cls.REPAY)
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             loan = MarginLoan(
                 account=account,
                 asset=asset,
                 amount=amount,
-                type=loan_type
+                type=loan_type,
+                status=DONE
             )
 
             if loan_type == cls.REPAY:
-                loan.borrow_wallet.has_debt(-amount, raise_exception=True)
-                pipeline.new_lock(key=loan.group_id, amount=amount, wallet=loan.margin_wallet)
-
+                loan.loan_wallet.has_debt(-amount, raise_exception=True)
+                loan.margin_wallet.has_balance(amount, raise_exception=True)
             else:
                 margin_info = MarginInfo.get(account)
                 max_borrowable = margin_info.get_max_borrowable() / get_trading_price_usdt(asset.symbol, SELL, raw_price=True)
@@ -133,19 +111,68 @@ class MarginLoan(models.Model):
                 if amount > max_borrowable:
                     raise MaxBorrowableExceeds()
 
-                loan.save()
+            ProviderOrder.try_hedge_for_new_order(
+                asset=asset,
+                side=BUY if loan_type == cls.BORROW else SELL,
+                amount=amount,
+                scope=ProviderOrder.BORROW,
+                raise_exception=True
+            )
 
-            loan.finalize()
+            if loan_type == cls.BORROW:
+                sender, receiver = loan.loan_wallet, loan.margin_wallet
+            else:
+                sender, receiver = loan.margin_wallet, loan.loan_wallet
+
+            pipeline.new_trx(sender, receiver, amount, Trx.MARGIN_BORROW, loan.group_id)
+
+            loan.save()
 
             return loan
 
 
-class MarginLiquidation(models.Model):
+class CloseRequest(models.Model):
+    LIQUIDATION, USER = 'liquid', 'user'
+
     created = get_created_field()
     group_id = get_group_id_field()
 
     account = models.ForeignKey(Account, on_delete=models.CASCADE)
     margin_level = get_amount_field()
 
+    reason = models.CharField(
+        max_length=8, choices=[(LIQUIDATION, LIQUIDATION), (USER, USER)]
+    )
+
+    status = get_status_field()
+
     class Meta:
-        constraints = [CheckConstraint(check=Q(margin_level__gte=0), name='check_margin_level', ), ]
+        constraints = [
+            CheckConstraint(check=Q(margin_level__gte=0), name='check_margin_level', ),
+            UniqueConstraint(fields=['account'], condition=Q(status='pending'), name='unique_margin_close_request_account'),
+        ]
+
+    @classmethod
+    def is_liquidating(cls, account: Account) -> bool:
+        return CloseRequest.objects.filter(account=account, status=PENDING).exists()
+
+    @classmethod
+    def close_margin(cls, account: Account, reason: str) -> Union['CloseRequest', None]:
+        if cls.is_liquidating(account):
+            return
+
+        margin_info = MarginInfo.get(account)
+
+        close_request = CloseRequest.objects.create(
+            account=account,
+            margin_level=margin_info.get_margin_level(),
+            reason=reason,
+            status=PENDING
+        )
+
+        from ledger.margin.closer import MarginCloser
+        engine = MarginCloser(close_request, force_liquidation=reason == cls.LIQUIDATION)
+        engine.start()
+
+        close_request.status = DONE
+        close_request.save()

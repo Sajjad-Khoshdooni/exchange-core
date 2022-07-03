@@ -50,8 +50,9 @@ class MinNotionalError(Exception):
 
 
 def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Decimal, side: str,
-              fill_type: str = Order.LIMIT, raise_exception: bool = True, check_balance: bool = False) -> Union[Order, None]:
-    wallet = symbol.asset.get_wallet(account)
+              fill_type: str = Order.LIMIT, raise_exception: bool = True, market: str = Wallet.SPOT, check_balance: bool = False) -> Union[Order, None]:
+
+    wallet = symbol.asset.get_wallet(account, market=market)
     if fill_type == Order.MARKET:
         price = Order.get_market_price(symbol, Order.get_opposite_side(side))
         if not price:

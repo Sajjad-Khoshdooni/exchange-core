@@ -16,6 +16,12 @@ class BalanceLock(models.Model):
     original_amount = get_amount_field()
     amount = get_amount_field()
 
+    reason = models.CharField(
+        max_length=8,
+        null=True,
+        blank=True
+    )
+
     def __str__(self):
         return '%s %s/%s' % (self.wallet, self.amount, self.original_amount)
 

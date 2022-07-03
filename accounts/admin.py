@@ -16,7 +16,7 @@ from financial.models.payment import Payment
 from financial.models.withdraw_request import FiatWithdrawRequest
 from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdraw_irt_value, CRYPTO_WITHDRAW_LIMIT, \
     get_crypto_withdraw_irt_value
-from ledger.models import OTCTrade
+from ledger.models import OTCTrade, DepositAddress
 from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import get_presentation_amount
@@ -186,15 +186,16 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         }),
         (_('Important dates'), {'fields': (
             'get_last_login_jalali', 'get_date_joined_jalali', 'get_first_fiat_deposit_date_jalali',
-            'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali', 'get_selfie_image_uploaded'
+            'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali', 'get_selfie_image_uploaded',
+            'margin_quiz_pass_date'
         )}),
         (_('لینک های مهم'), {
             'fields': (
-                'get_payment_address', 'get_withdraw_address',
-                'get_otctrade_address', 'get_wallet_address', 'get_bank_card_link',
-                'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
-                'get_user_with_same_national_code', 'get_fill_order_address',
-                'get_open_order_address', 'get_login_activity_link',
+                'get_wallet', 'get_transfer_link', 'get_payment_address',
+                'get_withdraw_address', 'get_otctrade_address', 'get_fill_order_address',
+                'get_open_order_address', 'get_deposit_address', 'get_bank_card_link',
+                'get_bank_account_link', 'get_finotech_request_link',
+                'get_user_with_same_national_code', 'get_login_activity_link',
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
@@ -216,11 +217,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     ordering = ('-id', )
     actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify')
     readonly_fields = (
-        'get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet_address',
+        'get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet',
         'get_sum_of_value_buy_sell',
         'get_selfie_image', 'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
         'get_first_fiat_deposit_date_jalali', 'get_date_joined_jalali', 'get_last_login_jalali',
-        'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit',
+        'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit', 'get_deposit_address',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
         'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium',
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
@@ -357,10 +358,10 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     get_user_reject_reason.short_description = 'وضعیت احراز'
 
-    def get_wallet_address(self, user: User):
+    def get_wallet(self, user: User):
         link = url_to_admin_list(Wallet) + '?account={}'.format(user.account.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
-    get_wallet_address.short_description = 'لیست کیف‌ها'
+    get_wallet.short_description = 'لیست کیف‌ها'
 
     def get_sum_of_value_buy_sell(self, user: User):
         if not hasattr(user, 'account'):
@@ -506,6 +507,12 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     get_selfie_image_uploaded.short_description = 'زمان آپلود عکس سلفی'
 
+    def get_deposit_address(self, user: User):
+        link = url_to_admin_list(DepositAddress) + '?account_secret__account__user__id__exact={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+
+    get_deposit_address.short_description = 'آٔدرس‌های کیف پول'
+
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
@@ -515,17 +522,17 @@ class AccountAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('اطلاعات', {'fields': (
-            'name', 'user', 'type', 'primary', 'trade_volume_irt', 'get_wallet_address',
+            'name', 'user', 'type', 'primary', 'trade_volume_irt', 'get_wallet',
             'get_total_balance_irt_admin', 'get_total_balance_usdt_admin', 'referred_by'
         )}),
     )
-    readonly_fields = ('user', 'get_wallet_address', 'get_total_balance_irt_admin', 'get_total_balance_usdt_admin',
+    readonly_fields = ('user', 'get_wallet', 'get_total_balance_irt_admin', 'get_total_balance_usdt_admin',
                        'trade_volume_irt', 'referred_by')
 
-    def get_wallet_address(self, account: Account):
+    def get_wallet(self, account: Account):
         link = url_to_admin_list(Wallet) + '?account={}'.format(account.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
-    get_wallet_address.short_description = 'لیست کیف‌ها'
+    get_wallet.short_description = 'لیست کیف‌ها'
 
     def get_total_balance_irt_admin(self, account: Account):
         total_balance_irt = account.get_total_balance_irt(market=Wallet.SPOT, side='buy')
@@ -543,7 +550,7 @@ class AccountAdmin(admin.ModelAdmin):
 @admin.register(Referral)
 class ReferralAdmin(admin.ModelAdmin):
     list_display = ('owner', 'code', 'owner_share_percent')
-    search_fields = ('code',)
+    search_fields = ('code', 'owner__user__phone')
 
 
 class FinotechRequestUserFilter(SimpleListFilter):

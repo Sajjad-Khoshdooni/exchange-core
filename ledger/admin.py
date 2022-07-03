@@ -8,7 +8,7 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory
+from ledger.models import Asset, Prize, CoinCategory, DepositAddress
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
@@ -35,10 +35,10 @@ class AssetAdmin(AdvancedAdmin):
         'get_ledger_balance_users', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
         'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'trade_enable', 'hedge_method',
         # 'bid_diff', 'ask_diff'
-        'candidate', 'margin_enable'
+        'candidate', 'margin_enable', 'new_coin'
     )
     list_filter = ('enable', 'trend', 'candidate', 'margin_enable')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable', 'new_coin')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
 
@@ -157,7 +157,13 @@ class NetworkAssetAdmin(admin.ModelAdmin):
 
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_display = ('account_secret', 'network', 'address')
+    list_filter = ('account_secret__account__user', 'network')
+    list_display = ('account_secret', 'network', 'get_address')
+
+    def get_address(self, depositaddress: DepositAddress):
+        return depositaddress.presentation_address
+
+    get_address.short_description = 'آدرس‌ کیف پول‌'
 
 
 @admin.register(models.OTCRequest)
@@ -353,10 +359,11 @@ class MarginLoanAdmin(admin.ModelAdmin):
     search_fields = ('group_id',)
 
 
-@admin.register(models.MarginLiquidation)
+@admin.register(models.CloseRequest)
 class MarginLiquidationAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'margin_level', 'group_id')
+    list_display = ('created', 'account', 'margin_level', 'group_id', 'status')
     search_fields = ('group_id',)
+    list_filter = ('status', )
 
 
 @admin.register(models.AddressBook)

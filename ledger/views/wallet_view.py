@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView
 from rest_framework.generics import get_object_or_404
@@ -9,13 +10,18 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Wallet, DepositAddress, NetworkAsset
 from ledger.models.asset import Asset
-from ledger.utils.fields import get_irt_market_assets
+from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.price import get_trading_price_irt, BUY, SELL
 from ledger.utils.price_manager import PriceManager
 
 
 class AssetListSerializer(serializers.ModelSerializer):
+
+    name = serializers.CharField()
+    name_fa = serializers.CharField()
+    logo = serializers.SerializerMethodField()
+
     balance = serializers.SerializerMethodField()
     balance_irt = serializers.SerializerMethodField()
     balance_usdt = serializers.SerializerMethodField()
@@ -35,7 +41,7 @@ class AssetListSerializer(serializers.ModelSerializer):
     market_irt_enable = serializers.SerializerMethodField()
 
     def get_market_irt_enable(self, asset: Asset):
-        return asset.id in self.context['enable_irt_market_list']
+        return asset.symbol in self.context['enable_irt_market_list']
 
     def get_precision(self, asset: Asset):
         return asset.get_precision()
@@ -114,10 +120,14 @@ class AssetListSerializer(serializers.ModelSerializer):
             binance_withdraw_enable=True
         ).exists()
 
+    def get_logo(self, asset: Asset):
+        return settings.HOST_URL + '/static/%s.png' % asset.symbol
+
     class Meta:
         model = Asset
         fields = ('symbol', 'precision', 'free', 'free_irt', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt',
-                  'buy_price_irt', 'can_deposit', 'can_withdraw', 'trade_enable', 'pin_to_top', 'market_irt_enable')
+                  'buy_price_irt', 'can_deposit', 'can_withdraw', 'trade_enable', 'pin_to_top', 'market_irt_enable',
+                  'name', 'name_fa', 'logo')
         ref_name = 'ledger asset'
 
 
@@ -199,7 +209,7 @@ class WalletViewSet(ModelViewSet):
 
         wallets = Wallet.objects.filter(account=self.request.user.account, market=Wallet.SPOT)
         ctx['asset_to_wallet'] = {wallet.asset_id: wallet for wallet in wallets}
-        ctx['enable_irt_market_list'] = get_irt_market_assets()
+        ctx['enable_irt_market_list'] = get_irt_market_asset_symbols()
         return ctx
 
     def get_serializer_class(self):

@@ -156,7 +156,7 @@ class FiatWithdrawRequest(models.Model):
             description = ''
             level = Notification.ERROR
             template = 'withdraw-rejected'
-            email_template = email.SCOPE_CANSEL_FIAT_WITHDRAW
+            email_template = email.SCOPE_CANCEL_FIAT_WITHDRAW
         else:
             return
 

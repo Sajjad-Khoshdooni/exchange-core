@@ -88,9 +88,9 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(Trade)
 class TradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'symbol', 'amount', 'price', 'irt_value', 'trade_source')
+    list_display = ('created', 'symbol', 'amount', 'price', 'gap_revenue', 'hedge_price', 'side', 'trade_source', 'irt_value', 'account')
     list_filter = ('trade_source', UserTradeFilter)
-    readonly_fields = ('symbol', 'order',)
+    readonly_fields = ('symbol', 'order', 'account')
     search_fields = ('symbol__name', )
 
 

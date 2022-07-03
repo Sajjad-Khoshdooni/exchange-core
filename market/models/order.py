@@ -12,6 +12,7 @@ from django.db import models
 from django.db.models import Sum, F, Q, Max, Min, CheckConstraint, QuerySet
 
 from accounts.gamification.gamify import check_prize_achievements
+from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_group_id_field
@@ -134,8 +135,8 @@ class Order(models.Model):
 
     @staticmethod
     def get_order_by(side):
-        return (lambda order: (-order.price, -order.created.timestamp())) if side == Order.BUY else \
-                (lambda order: (order.price, -order.created.timestamp()))
+        return (lambda order: (-order.price, order.id)) if side == Order.BUY else \
+                (lambda order: (order.price, order.id))
 
     @classmethod
     def cancel_orders(cls, to_cancel_orders: QuerySet):
@@ -188,7 +189,7 @@ class Order(models.Model):
         if check_balance:
             to_lock_wallet.has_balance(lock_amount, raise_exception=True)
 
-        pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount)
+        pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 
     def release_lock(self, pipeline: WalletPipeline, release_amount: Decimal):
         release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side)
@@ -247,7 +248,17 @@ class Order(models.Model):
                 except:
                     base_irt_price = 27000
 
-            is_system_trade = self.wallet.account.is_system() and matching_order.wallet.account.is_system()
+            taker_is_system = self.wallet.account.is_system()
+            maker_is_system = matching_order.wallet.account.is_system()
+
+            source_map = {
+                (True, True): Trade.SYSTEM,
+                (True, False): Trade.SYSTEM_MAKER,
+                (False, True): Trade.SYSTEM_TAKER,
+                (False, False): Trade.MARKET,
+            }
+
+            trade_source = source_map[maker_is_system, taker_is_system]
 
             trades_pair = Trade.init_pair(
                 symbol=self.symbol,
@@ -256,9 +267,26 @@ class Order(models.Model):
                 amount=match_amount,
                 price=trade_price,
                 irt_value=base_irt_price * trade_price * match_amount,
-                trade_source=Trade.SYSTEM if is_system_trade else Trade.MARKET,
+                trade_source=trade_source,
                 group_id=uuid4()
             )
+
+            if not taker_is_system:
+                Notification.send(
+                    recipient=self.wallet.account.user,
+                    title='معامله {}'.format(self.symbol),
+                    message=( 'مقدار {symbol} {amount} معامله شد.').format(amount=self.amount, symbol= self.symbol)
+                )
+
+            if not maker_is_system:
+                Notification.send(
+                    recipient=matching_order.wallet.account.user,
+                    title='معامله {}'.format(matching_order.symbol),
+                    message=('مقدار {symbol} {amount} معامله شد.').format(amount=self.amount, symbol=matching_order.symbol)
+                )
+
+            if trade_source == Trade.SYSTEM_TAKER and not self.wallet.account.primary:
+                raise Exception('Non primary system is being taker! dangerous.')
 
             self.release_lock(pipeline, match_amount)
             matching_order.release_lock(pipeline, match_amount)

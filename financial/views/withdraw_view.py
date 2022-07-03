@@ -84,7 +84,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
                     withdraw_channel=config('WITHDRAW_CHANNEL')
                 )
 
-                pipeline.new_lock(key=withdraw_request.group_id, wallet=wallet, amount=amount)
+                pipeline.new_lock(key=withdraw_request.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست'})
