@@ -21,7 +21,7 @@ class TransferViewSerializer(serializers.ModelSerializer):
                   'block_number', 'network_symbol', 'sender_address', 'receiver_address', 'coin']
 
 
-class TransferUpdateView(APIView):
+class DepositTransferUpdateView(APIView):
     authentication_classes = [TokenAuthentication]
 
     def post(self, request):
@@ -36,13 +36,13 @@ class TransferUpdateView(APIView):
         asset = Asset.objects.get(symbol=data['coin'])
         wallet = asset.get_wallet(acc)
 
-        Transfer.objects.update_or_create(deposit_address=deposit_address,
-                                            network=network, amount=data['amount'],
-                                            trx_hash=data['trx_hash'], block_hash=data['block_hash'],
-                                            block_number=data['block_number'], out_address=data['receiver_address'],
-                                            wallet=wallet,
-                                          defaults={
-                                              'status': data['status'],
-                                              'deposit': data['type'],
-                                          })
+        Transfer.objects.update_or_create(
+            deposit_address=deposit_address,
+            network=network, amount=data['amount'],
+            trx_hash=data['trx_hash'], block_hash=data['block_hash'],
+            block_number=data['block_number'], out_address=data['receiver_address'],
+            wallet=wallet, deposit=data['type'],
+            defaults={
+                'status': data['status'],
+            })
         return Response(201)
