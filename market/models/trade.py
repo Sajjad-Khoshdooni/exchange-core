@@ -354,7 +354,7 @@ class Trade(models.Model):
     def get_account_orders_filled_price(account_id):
         return {
             trade['order_id']: (trade['sum_amount'], trade['sum_value']) for trade in
-            Trade.objects.filter(order__wallet__account=account_id).annotate(
+            Trade.objects.filter(account=account_id).annotate(
                 value=F('amount') * F('price')
             ).values('order').annotate(sum_amount=Sum('amount'), sum_value=Sum('value')).values(
                 'order_id', 'sum_amount', 'sum_value'
