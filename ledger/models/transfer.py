@@ -7,6 +7,7 @@ from django.db.models import UniqueConstraint, Q, CheckConstraint
 from yekta_config.config import config
 
 from accounts.models import Account, Notification
+from accounts.utils.push_notif import send_push_notif
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
@@ -125,7 +126,7 @@ class Transfer(models.Model):
                 deposit=False
             )
 
-            pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount)
+            pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
         from ledger.tasks import create_binance_withdraw
         create_binance_withdraw.delay(transfer.id)
@@ -169,45 +170,37 @@ class Transfer(models.Model):
             sent_amount = self.asset.get_presentation_amount(self.amount)
             user_email = self.wallet.account.user.email
             if self.deposit:
-                Notification.send(
-                    recipient=self.wallet.account.user,
-                    title='دریافت شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol),
-                    message='از ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
-                )
-                if user_email:
-                    email.send_email_by_template(
-                        recipient=user_email,
-                        template=email.SCOPE_DEPOSIT_EMAIL,
-                        context={
-                            'amount': humanize_number(sent_amount),
-                            'wallet_asset': self.wallet.asset.symbol,
-                            'withdraw_address': self.out_address,
-                            'trx_hash': self.trx_hash,
-                            'brand': config('BRAND'),
-                            'panel_url': config('PANEL_URL'),
-                            'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-                        }
-                    )
+                title = 'دریافت شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol)
+                message = 'از ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
+                template = email.SCOPE_DEPOSIT_EMAIL
+
             else:
-                Notification.send(
-                    recipient=self.wallet.account.user,
-                    title='ارسال شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol),
-                    message='به ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
+                title = 'ارسال شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol)
+                message = 'به ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
+                template = email.SCOPE_WITHDRAW_EMAIL,
+
+            Notification.send(
+                recipient=self.wallet.account.user,
+                title=title,
+                message=message
+            )
+
+            send_push_notif(user=user, title=title, message=message)
+
+            if user_email:
+                email.send_email_by_template(
+                    recipient=user_email,
+                    template=template,
+                    context={
+                        'amount': humanize_number(sent_amount),
+                        'wallet_asset': self.wallet.asset.symbol,
+                        'withdraw_address': self.out_address,
+                        'trx_hash': self.trx_hash,
+                        'brand': config('BRAND'),
+                        'panel_url': config('PANEL_URL'),
+                        'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+                    }
                 )
-                if user_email:
-                    email.send_email_by_template(
-                        recipient=user_email,
-                        template=email.SCOPE_WITHDRAW_EMAIL,
-                        context={
-                            'amount': humanize_number(sent_amount),
-                            'wallet_asset': self.wallet.asset.symbol,
-                            'withdraw_address': self.out_address,
-                            'trx_hash': self.trx_hash,
-                            'brand': config('BRAND'),
-                            'panel_url': config('PANEL_URL'),
-                            'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-                        }
-                    )
 
     class Meta:
         constraints = [

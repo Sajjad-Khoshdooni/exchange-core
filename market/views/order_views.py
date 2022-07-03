@@ -7,6 +7,7 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from market.models import StopLoss, Trade
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
@@ -39,7 +40,7 @@ class OrderViewSet(mixins.CreateModelMixin,
                    mixins.RetrieveModelMixin,
                    mixins.ListModelMixin,
                    GenericViewSet):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     pagination_class = LimitOffsetPagination
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
     serializer_class = OrderSerializer
@@ -48,12 +49,14 @@ class OrderViewSet(mixins.CreateModelMixin,
     filter_class = OrderFilter
 
     def get_queryset(self):
-        return Order.objects.filter(wallet__account=self.request.user.account).order_by('-created')
+        return Order.objects.filter(
+            wallet__account=self.request.user.account
+        ).select_related('symbol', 'wallet').order_by('-created')
 
     def get_serializer_context(self):
         trades = {
             trade['order_id']: (trade['sum_amount'], trade['sum_value']) for trade in
-            Trade.objects.filter(order__wallet__account=self.request.user.account).annotate(
+            Trade.objects.filter(account=self.request.user.account).annotate(
                 value=F('amount') * F('price')
             ).values('order').annotate(sum_amount=Sum('amount'), sum_value=Sum('value')).values(
                 'order_id', 'sum_amount', 'sum_value'
@@ -67,7 +70,7 @@ class OrderViewSet(mixins.CreateModelMixin,
 
 
 class CancelOrderAPIView(CreateAPIView):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
     serializer_class = CancelRequestSerializer
@@ -81,7 +84,7 @@ class CancelOrderAPIView(CreateAPIView):
 
 
 class StopLossViewSet(ModelViewSet):
-    authentication_classes = (SessionAuthentication,)
+    authentication_classes = (SessionAuthentication, JWTAuthentication)
     permission_classes = (IsAuthenticated,)
     pagination_class = LimitOffsetPagination
 

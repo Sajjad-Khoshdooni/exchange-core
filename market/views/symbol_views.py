@@ -4,6 +4,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView, RetrieveAPIView, UpdateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.models import User
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
@@ -24,7 +25,7 @@ class SymbolFilter(django_filters.FilterSet):
 
 
 class SymbolListAPIView(ListAPIView):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication,)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     permission_classes = ()
     filter_backends = [DjangoFilterBackend]
     filter_class = SymbolFilter

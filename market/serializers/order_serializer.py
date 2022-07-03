@@ -9,7 +9,8 @@ from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.generics import get_object_or_404
 
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Wallet, Asset
+from ledger.models import Wallet, Asset, CloseRequest
+from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount
 from ledger.utils.price import IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -61,14 +62,14 @@ class OrderSerializer(serializers.ModelSerializer):
         symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
         if not symbol.enable or not symbol.asset.enable:
             raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
+
         market = validated_data.pop('wallet')['market']
         if market == Wallet.MARGIN:
-            if not self.context['account'].user.show_margin:
-                raise ValidationError(_('margin trading is not enable'))
-            if not self.context['account'].user.margin_quiz_pass_date:
-                raise ValidationError(_('You need to pass margin quiz'))
-            if symbol.base_asset.symbol == Asset.IRT or not symbol.asset.margin_enable:
+            check_margin_view_permission(self.context['account'], symbol.asset)
+
+            if symbol.base_asset.symbol == Asset.IRT:
                 raise ValidationError(_('{symbol} is not enable in margin trading').format(symbol=symbol))
+
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
         wallet = symbol.asset.get_wallet(self.context['account'], market=market)
         min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE

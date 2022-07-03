@@ -68,7 +68,7 @@ class OTCTrade(models.Model):
         return 'otc-%s' % self.id
 
     @classmethod
-    def execute_trade(cls, otc_request: OTCRequest) -> 'OTCTrade':
+    def execute_trade(cls, otc_request: OTCRequest, force: bool = False) -> 'OTCTrade':
 
         if otc_request.expired():
             raise TokenExpired()
@@ -78,19 +78,21 @@ class OTCTrade(models.Model):
         from_asset = otc_request.from_asset
         conf = otc_request.get_trade_config()
 
-        conf.coin.is_trade_amount_valid(conf.coin_amount, raise_exception=True)
+        if not force:
+            conf.coin.is_trade_amount_valid(conf.coin_amount, raise_exception=True)
 
         from_wallet = from_asset.get_wallet(account, market=otc_request.market)
         amount = otc_request.from_amount
         from_wallet.has_balance(amount, raise_exception=True)
 
-        cls.check_abrupt_decrease(otc_request)
+        if not force:
+            cls.check_abrupt_decrease(otc_request)
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             otc_trade = OTCTrade.objects.create(
                 otc_request=otc_request,
             )
-            pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount)
+            pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount, reason=WalletPipeline.TRADE)
 
         otc_trade.hedge_and_finalize()
 

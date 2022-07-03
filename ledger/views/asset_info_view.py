@@ -1,6 +1,8 @@
 import time
 from decimal import Decimal
 
+from django.conf import settings
+from django.conf.urls import static
 from django.db.models import Min
 from django.http import Http404
 from django.utils.decorators import method_decorator
@@ -8,12 +10,14 @@ from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from collector.models import CoinMarketCap
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
-from ledger.utils.fields import get_irt_market_assets
+from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
 from ledger.utils.price_manager import PriceManager
 
@@ -39,12 +43,16 @@ class AssetSerializerBuilder(AssetSerializerMini):
     min_withdraw_fee = serializers.SerializerMethodField()
     market_irt_enable = serializers.SerializerMethodField()
 
+    name = serializers.CharField()
+    name_fa = serializers.CharField()
+    logo = serializers.SerializerMethodField()
+
     class Meta:
         model = Asset
         fields = ()
 
     def get_market_irt_enable(self, asset: Asset):
-        return asset.id in self.context['enable_irt_market_list']
+        return asset.symbol in self.context['enable_irt_market_list']
 
     def get_bookmark_assets(self, asset: Asset):
         return asset.id in self.context['bookmark_assets']
@@ -143,13 +151,17 @@ class AssetSerializerBuilder(AssetSerializerMini):
         if cap:
             return int(cap.circulating_supply)
 
+    def get_logo(self, asset: Asset):
+        return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
+
     @classmethod
     def create_serializer(cls,  prices: bool = True, extra_info: bool = True):
         fields = AssetSerializerMini.Meta.fields
         new_fields = []
 
         if prices:
-            new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h', 'market_irt_enable']
+            new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h', 'market_irt_enable',
+                          'name', 'name_fa', 'logo']
 
         if extra_info:
             new_fields = [
@@ -182,7 +194,7 @@ class AssetsViewSet(ModelViewSet):
         else:
             ctx['bookmark_assets'] = set()
 
-        ctx['enable_irt_market_list'] = get_irt_market_assets()
+        ctx['enable_irt_market_list'] = get_irt_market_asset_symbols()
 
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
@@ -251,3 +263,58 @@ class AssetsViewSet(ModelViewSet):
     def get(self, *args, **kwargs):
         with PriceManager():
             return super().get(*args, **kwargs)
+
+
+class AssetOverViewSerializer(serializers.Serializer):
+
+    high_volume = serializers.SerializerMethodField()
+    high_24h_change = serializers.SerializerMethodField()
+    newest = serializers.SerializerMethodField()
+
+    def get_high_volume(self, *args):
+        return self.context['high_volume']
+
+    def get_high_24h_change(self, *args):
+        return self.context['high_24h_change']
+
+    def get_newest(self, *args):
+        return self.context['newest']
+
+
+class AssetOverviewAPIView(APIView):
+
+    @classmethod
+    def set_price(cls, coins: list, price: dict, tether_irt: Decimal):
+        for coin in coins:
+            coin['price_usdt'] = price[coin['symbol']]
+
+            if coin['price_usdt']:
+                coin['price_irt'] = tether_irt * coin['price_usdt']
+            coin['market_irt_enable'] = coin['symbol'] in get_irt_market_asset_symbols()
+
+    def get(self, request):
+        symbols = Asset.live_objects.exclude(symbol__in=['IRT', 'IOTA'])
+
+        list_symbol = list(symbols.values_list('symbol', flat=True))
+        newest_coin = list(symbols.filter(new_coin=True))
+
+        caps = CoinMarketCap.objects.filter(symbol__in=list_symbol)
+
+        price = get_prices_dict(coins=list_symbol, side=BUY)
+        tether_irt = get_tether_irt_price(BUY)
+
+        high_volume = list(caps.order_by('-volume_24h').values('symbol', 'change_24h',))[:3]
+        AssetOverviewAPIView.set_price(high_volume, price, tether_irt)
+
+        high_24h_change = list(caps.order_by('-change_24h').values('symbol', 'change_24h',))[:3]
+
+        AssetOverviewAPIView.set_price(high_24h_change, price, tether_irt)
+
+        new = list(caps.filter(symbol__in=newest_coin).values('symbol', 'change_24h'))[:3]
+        AssetOverviewAPIView.set_price(new, price, tether_irt)
+
+        return Response({
+            'high_volume': high_volume,
+            'high_24h_change': high_24h_change,
+            'newest': new
+        })

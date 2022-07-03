@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
@@ -19,6 +21,7 @@ from provider.models import ProviderOrder
 @admin.register(models.Asset)
 class AssetAdmin(AdvancedAdmin):
     default_edit_condition = M.superuser
+    default_edit_condition = M.superuser
 
     fields_edit_conditions = {
         'order': True,
@@ -32,13 +35,13 @@ class AssetAdmin(AdvancedAdmin):
     list_display = (
         'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount',
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
-        'get_ledger_balance_users', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
+        'get_ledger_balance_users', 'get_users_usdt_value', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
         'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'trade_enable', 'hedge_method',
         # 'bid_diff', 'ask_diff'
-        'candidate', 'margin_enable'
+        'candidate', 'margin_enable', 'new_coin'
     )
     list_filter = ('enable', 'trend', 'candidate', 'margin_enable')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable', 'new_coin')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
 
@@ -73,6 +76,12 @@ class AssetAdmin(AdvancedAdmin):
         )
 
     get_ledger_balance_users.short_description = 'users'
+
+    def get_users_usdt_value(self, asset: Asset):
+        return self.overview and self.overview.get_ledger_balance(Account.ORDINARY, asset) * get_trading_price_usdt(
+            coin=asset.symbol, side=BUY
+        )
+    get_users_usdt_value.short_description = 'usdt_value'
 
     def get_ledger_balance_system(self, asset: Asset):
         return self.overview and asset.get_presentation_amount(self.overview.get_ledger_balance(Account.SYSTEM, asset))
@@ -359,10 +368,11 @@ class MarginLoanAdmin(admin.ModelAdmin):
     search_fields = ('group_id',)
 
 
-@admin.register(models.MarginLiquidation)
+@admin.register(models.CloseRequest)
 class MarginLiquidationAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'margin_level', 'group_id')
+    list_display = ('created', 'account', 'margin_level', 'group_id', 'status')
     search_fields = ('group_id',)
+    list_filter = ('status', )
 
 
 @admin.register(models.AddressBook)
