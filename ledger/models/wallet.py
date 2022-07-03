@@ -1,5 +1,4 @@
 from decimal import Decimal
-from uuid import UUID
 
 from django.conf import settings
 from django.db import models

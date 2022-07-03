@@ -7,6 +7,7 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from market.models import StopLoss, Trade
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
@@ -39,7 +40,7 @@ class OrderViewSet(mixins.CreateModelMixin,
                    mixins.RetrieveModelMixin,
                    mixins.ListModelMixin,
                    GenericViewSet):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     pagination_class = LimitOffsetPagination
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
     serializer_class = OrderSerializer
@@ -69,7 +70,7 @@ class OrderViewSet(mixins.CreateModelMixin,
 
 
 class CancelOrderAPIView(CreateAPIView):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
     serializer_class = CancelRequestSerializer
@@ -83,7 +84,7 @@ class CancelOrderAPIView(CreateAPIView):
 
 
 class StopLossViewSet(ModelViewSet):
-    authentication_classes = (SessionAuthentication,)
+    authentication_classes = (SessionAuthentication, JWTAuthentication)
     permission_classes = (IsAuthenticated,)
     pagination_class = LimitOffsetPagination
 

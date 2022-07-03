@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.viewsets import ModelViewSet
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from ledger.models import Prize
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -29,7 +30,7 @@ class PrizeSerializer(serializers.ModelSerializer):
 
 
 class PrizeView(ModelViewSet):
-    authentication_classes = (SessionAuthentication, )
+    authentication_classes = (SessionAuthentication, JWTAuthentication)
     serializer_class = PrizeSerializer
 
     def get_queryset(self):

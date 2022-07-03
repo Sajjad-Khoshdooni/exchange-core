@@ -6,6 +6,8 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
 from accounts.models import VerificationCode
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from accounts.verifiers.legal import is_48h_rule_passed
@@ -128,7 +130,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
 
 class WithdrawView(CreateAPIView):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication,)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
     serializer_class = WithdrawSerializer
     queryset = Transfer.objects.all()
