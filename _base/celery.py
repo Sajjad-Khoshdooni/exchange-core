@@ -231,8 +231,16 @@ app.conf.beat_schedule = {
             'expire': 17
         }
     },
-}
 
+    'health_withdraw_alert_pending': {
+            'task': 'health.tasks.withdraw_alert_pending',
+            'schedule': 600,
+            'options': {
+                'queue': 'binance',
+                'expire': 3600
+            }
+        },
+}
 if settings.DEBUG:
     app.conf.beat_schedule = {
         'coin_market_cap_update': {

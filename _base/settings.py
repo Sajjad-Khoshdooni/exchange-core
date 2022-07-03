@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'market',
     'trader',
     'jalali_date',
+    'health',
 ]
 
 MIDDLEWARE = [
