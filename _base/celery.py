@@ -233,10 +233,10 @@ app.conf.beat_schedule = {
     },
 
     'health_alert_pending': {
-            'task': 'health.tasks.alert_pending',
+            'task': 'health.tasks.alert_pending.alert_pending',
             'schedule': 600,
             'options': {
-                'queue': 'binance',
+                'queue': 'celery',
                 'expire': 3600
             }
         },

@@ -9,7 +9,7 @@ from financial.models import FiatWithdrawRequest
 from ledger.models import Transfer, OTCTrade
 
 
-@shared_task(queue='binance')
+@shared_task(queue='celery')
 def alert_pending():
     transfer = Transfer.objects.filter(
         status__in=(Transfer.PENDING, Transfer.PROCESSING),
@@ -28,14 +28,14 @@ def alert_pending():
     message = ''
     link = ''
     if transfer != 0:
-        message += 'number of crypto_withdraw in pending or process is:{} \n'.format(transfer)
-        link += url_to_admin_list(Transfer) + '?status__in=process,pending\n'
+        message += 'pending crypto_withdraw:{} \n'.format(transfer) +\
+                   url_to_admin_list(Transfer) + '?status__in=process,pending\n\n'
     if fiat_withdraw != 0:
-        message += 'number of fiat_withdraw in pending or process is: {} \n'.format(fiat_withdraw)
-        link += url_to_admin_list(FiatWithdrawRequest) + '?status__in=process,pending\n'
+        message += 'pending fiat_withdraw : {} \n'.format(fiat_withdraw) +\
+                   url_to_admin_list(FiatWithdrawRequest) + '?status__in=process,pending\n\n'
     if otc_trade != 0:
-        message += 'number of otc_trade in pending or process is: {}'
-        link += url_to_admin_list(Transfer) + '?status__exact=pending'
+        message += 'pending otc_trade: {}' + \
+                   url_to_admin_list(OTCTrade) + '?status__exact=pending'
 
     send_system_message(message=message, link=link)
 
