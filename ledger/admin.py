@@ -21,7 +21,6 @@ from provider.models import ProviderOrder
 @admin.register(models.Asset)
 class AssetAdmin(AdvancedAdmin):
     default_edit_condition = M.superuser
-    default_edit_condition = M.superuser
 
     fields_edit_conditions = {
         'order': True,
@@ -78,9 +77,10 @@ class AssetAdmin(AdvancedAdmin):
     get_ledger_balance_users.short_description = 'users'
 
     def get_users_usdt_value(self, asset: Asset):
-        return self.overview and self.overview.get_ledger_balance(Account.ORDINARY, asset) * get_trading_price_usdt(
-            coin=asset.symbol, side=BUY
-        )
+        # return self.overview and self.overview.get_ledger_balance(Account.ORDINARY, asset) * get_trading_price_usdt(
+        #     coin=asset.symbol, side=BUY
+        # )
+        return ''
     get_users_usdt_value.short_description = 'usdt_value'
 
     def get_ledger_balance_system(self, asset: Asset):
