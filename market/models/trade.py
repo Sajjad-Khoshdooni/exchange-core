@@ -6,7 +6,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
 from django.db import models
-from django.db.models import F, CheckConstraint, Q
+from django.db.models import F, CheckConstraint, Q, Sum
 
 from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Trx, OTCTrade, Asset
@@ -349,3 +349,14 @@ class Trade(models.Model):
 
         if base_asset.symbol == Asset.USDT:
             self.gap_revenue *= get_tether_irt_price(side=reverse_side)
+
+    @staticmethod
+    def get_account_orders_filled_price(account_id):
+        return {
+            trade['order_id']: (trade['sum_amount'], trade['sum_value']) for trade in
+            Trade.objects.filter(account=account_id).annotate(
+                value=F('amount') * F('price')
+            ).values('order').annotate(sum_amount=Sum('amount'), sum_value=Sum('value')).values(
+                'order_id', 'sum_amount', 'sum_value'
+            )
+        }
