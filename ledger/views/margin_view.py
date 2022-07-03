@@ -15,6 +15,7 @@ from ledger.margin.margin_info import MarginInfo
 from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet, CloseRequest
 from ledger.models.asset import CoinField
 from ledger.utils.fields import get_serializer_amount_field
+from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.price import get_trading_price_usdt, SELL
 
 
@@ -64,14 +65,8 @@ class MarginTransferSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
 
         asset = validated_data['asset']
-        if not user.show_margin or not asset.margin_enable:
-            raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
 
-        if not user.margin_quiz_pass_date:
-            raise ValidationError('شما باید ابتدا به سوالات معاملات تعهدی پاسخ دهید.')
-
-        if CloseRequest.is_liquidating(user.account):
-            raise ValidationError('حساب تعهدی شما در حال تسویه خودکار است. فعلا امکان این عملیات وجود ندارد.')
+        check_margin_view_permission(user.account, asset)
 
         return super(MarginTransferSerializer, self).create(validated_data)
 
@@ -108,14 +103,7 @@ class MarginLoanSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         asset = validated_data['asset']
 
-        if not user.show_margin or not asset.margin_enable:
-            raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
-
-        if not user.margin_quiz_pass_date:
-            raise ValidationError('شما باید ابتدا به سوالات این بخش پاسخ دهید.')
-
-        if CloseRequest.is_liquidating(user.account):
-            raise ValidationError('حساب تعهدی شما در حال تسویه خودکار است. فعلا امکان این عملیات وجود ندارد.')
+        check_margin_view_permission(user.account, asset)
 
         validated_data['loan_type'] = validated_data.pop('type')
 
