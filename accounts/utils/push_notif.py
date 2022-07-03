@@ -1,4 +1,6 @@
 from oauth2client.service_account import ServiceAccountCredentials
+from yekta_config.config import config
+
 from accounts.models import User
 import requests
 
@@ -8,11 +10,12 @@ def _get_access_token():
 
   :return: Access token.
   """
-
     SCOPES = ['https://www.googleapis.com/auth/firebase.messaging']
 
+    file_path = config('FIREBASE_FILE_PATH')
+
     credentials = ServiceAccountCredentials.from_json_keyfile_name(
-        '/home/yektanet/Downloads/glassy-ripsaw-271116-bbd810287776.json', SCOPES)
+        file_path, SCOPES)
     access_token_info = credentials.get_access_token()
 
     return access_token_info.access_token

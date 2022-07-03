@@ -39,7 +39,7 @@ TEMPLATES = {
     },
     'cansel_fiat_withdraw_email': {
         'subject': '{} | اطلاع‌رسانی لغو برداشت ریالی '.format(BRAND),
-        'html': 'accounts/email/cansell_fiat_withdraw_email.min.html',
+        'html': 'accounts/email/cancel_fiat_withdraw_email.min.html',
         'text': 'accounts/text/cansel_fiat_withdraw_email.txt',
     },
     'deposit_email': {
