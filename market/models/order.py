@@ -12,6 +12,7 @@ from django.db import models
 from django.db.models import Sum, F, Q, Max, Min, CheckConstraint, QuerySet
 
 from accounts.gamification.gamify import check_prize_achievements
+from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_group_id_field
@@ -188,7 +189,7 @@ class Order(models.Model):
         if check_balance:
             to_lock_wallet.has_balance(lock_amount, raise_exception=True)
 
-        pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount)
+        pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 
     def release_lock(self, pipeline: WalletPipeline, release_amount: Decimal):
         release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side)
@@ -269,6 +270,20 @@ class Order(models.Model):
                 trade_source=trade_source,
                 group_id=uuid4()
             )
+
+            if not taker_is_system:
+                Notification.send(
+                    recipient=self.wallet.account.user,
+                    title='معامله {}'.format(self.symbol),
+                    message=( 'مقدار {symbol} {amount} معامله شد.').format(amount=self.amount, symbol= self.symbol)
+                )
+
+            if not maker_is_system:
+                Notification.send(
+                    recipient=matching_order.wallet.account.user,
+                    title='معامله {}'.format(matching_order.symbol),
+                    message=('مقدار {symbol} {amount} معامله شد.').format(amount=self.amount, symbol=matching_order.symbol)
+                )
 
             if trade_source == Trade.SYSTEM_TAKER and not self.wallet.account.primary:
                 raise Exception('Non primary system is being taker! dangerous.')

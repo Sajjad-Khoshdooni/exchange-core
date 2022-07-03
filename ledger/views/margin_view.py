@@ -10,11 +10,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowableExceeds
-from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet
+from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowableExceeds, HedgeError
+from ledger.margin.margin_info import MarginInfo
+from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet, CloseRequest
 from ledger.models.asset import CoinField
 from ledger.utils.fields import get_serializer_amount_field
-from ledger.utils.margin import MarginInfo
+from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.price import get_trading_price_usdt, SELL
 
 
@@ -64,11 +65,8 @@ class MarginTransferSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
 
         asset = validated_data['asset']
-        if not user.show_margin or not asset.margin_enable:
-            raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
 
-        if not user.margin_quiz_pass_date:
-            raise ValidationError('شما باید ابتدا به سوالات معاملات تعهدی پاسخ دهید.')
+        check_margin_view_permission(user.account, asset)
 
         return super(MarginTransferSerializer, self).create(validated_data)
 
@@ -105,11 +103,7 @@ class MarginLoanSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         asset = validated_data['asset']
 
-        if not user.show_margin or not asset.margin_enable:
-            raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
-
-        if not user.margin_quiz_pass_date:
-            raise ValidationError('شما باید ابتدا به سوالات این بخش پاسخ دهید.')
+        check_margin_view_permission(user.account, asset)
 
         validated_data['loan_type'] = validated_data.pop('type')
 
@@ -121,6 +115,8 @@ class MarginLoanSerializer(serializers.ModelSerializer):
             raise ValidationError('میزان بدهی کمتر از مقدار بازپرداخت است.')
         except MaxBorrowableExceeds:
             raise ValidationError('میزان بدهی بیشتر از حد مجاز است.')
+        except HedgeError:
+            raise ValidationError('مشکلی در پردازش اطلاعات به وجود آمد.')
 
     class Meta:
         fields = ('created', 'amount', 'type', 'coin', 'status')
@@ -142,3 +138,12 @@ class MarginLoanViewSet(ModelViewSet):
         return MarginLoan.objects.filter(
             account=self.request.user.account
         ).order_by('-created')
+
+
+class MarginClosePositionView(APIView):
+    def post(self, request: Request):
+        account = request.user.account
+
+        CloseRequest.close_margin(account, reason=CloseRequest.USER)
+
+        return Response('ok', status=201)

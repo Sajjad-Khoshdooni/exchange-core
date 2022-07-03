@@ -3,6 +3,7 @@ from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from accounts.views.authentication import CustomTokenAuthentication
@@ -39,7 +40,7 @@ class TransferSerializer(serializers.ModelSerializer):
 
 class WithdrawHistoryView(ListAPIView):
 
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication,)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
 
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
