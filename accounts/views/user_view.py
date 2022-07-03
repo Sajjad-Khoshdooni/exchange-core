@@ -4,6 +4,7 @@ from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.models import User, CustomToken
 from accounts.verifiers.legal import possible_time_for_withdraw
@@ -84,7 +85,7 @@ class AuthTokenSerializer(serializers.ModelSerializer):
 
 
 class CreateAuthToken(APIView):
-    authentication_classes = (SessionAuthentication,)
+    authentication_classes = (SessionAuthentication, JWTAuthentication)
     serializer_class = AuthTokenSerializer
 
     def get(self, request):

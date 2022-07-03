@@ -4,6 +4,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.request import Request
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from market.models import Trade
@@ -19,7 +20,7 @@ class TradeFilter(django_filters.FilterSet):
 
 
 class AccountTradeHistoryView(ListAPIView):
-    authentication_classes = (SessionAuthentication,)
+    authentication_classes = (SessionAuthentication, JWTAuthentication)
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):

@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -59,6 +60,7 @@ INSTALLED_APPS = [
     'market',
     'trader',
     'jalali_date',
+    'health',
 ]
 
 MIDDLEWARE = [
@@ -232,6 +234,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         # 'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
 
     'DEFAULT_PERMISSION_CLASSES': [
@@ -248,6 +251,25 @@ REST_FRAMEWORK = {
         'sustained_api': '200000/day',
     }
 }
+
+SIMPLE_JWT = {
+    'ROTATE_REFRESH_TOKENS': False,
+    'AUTH_HEADER_TYPES': ('Bearer', 'JWT'),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+}
+
+if not (DEBUG or TESTING):
+    with open(config('jwt-private-key-path', './jwtRS256.key'), 'r') as fin:
+        JWT_PRIVATE_KEY = fin.read()
+    with open(config('jwt-public-key-path', './jwtRS256.key.pub'), 'r') as fin:
+        JWT_PUBLIC_KEY = fin.read()
+    SIMPLE_JWT = {
+        **SIMPLE_JWT,
+        'ALGORITHM': 'RS256',
+        'SIGNING_KEY': JWT_PRIVATE_KEY,
+        'VERIFYING_KEY': JWT_PUBLIC_KEY,
+        'REFRESH_TOKEN_LIFETIME': timedelta(hours=6),
+    }
 
 AUTH_USER_MODEL = 'accounts.User'
 AUTHENTICATION_BACKENDS = ('accounts.backends.AuthenticationBackend',)
