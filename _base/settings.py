@@ -259,9 +259,9 @@ SIMPLE_JWT = {
 }
 
 if not (DEBUG or TESTING):
-    with open(config('jwt-private-key-path', './jwtRS256.key'), 'r') as fin:
+    with open(config('JWT_PRIVATE_KEY_PATH', './jwtRS256.key'), 'r') as fin:
         JWT_PRIVATE_KEY = fin.read()
-    with open(config('jwt-public-key-path', './jwtRS256.key.pub'), 'r') as fin:
+    with open(config('JWT_PUBLIC_KEY_PATH', './jwtRS256.key.pub'), 'r') as fin:
         JWT_PUBLIC_KEY = fin.read()
     SIMPLE_JWT = {
         **SIMPLE_JWT,
