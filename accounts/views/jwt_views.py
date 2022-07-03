@@ -9,8 +9,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
 
-        account = Account.objects.filter(user_id=user.pk).first()
-        token['account_id'] = account.id if account else None
+        account = Account.objects.get(user_id=user.pk)
+        token['account_id'] = account.id
 
         return token
 
