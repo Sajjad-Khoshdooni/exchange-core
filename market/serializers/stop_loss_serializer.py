@@ -21,7 +21,6 @@ class StopLossSerializer(OrderSerializer):
     completed = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
 
-
     def get_completed(self, stop_loss: StopLoss):
         return stop_loss.filled_amount == stop_loss.amount
 
