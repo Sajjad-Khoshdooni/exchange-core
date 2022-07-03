@@ -31,6 +31,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
             raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
 
         user = self.context['request'].user
+
+        if user.level < user.LEVEL2:
+            raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
+
         account = user.account
         api = self.context.get('api')
         if attrs['address_book_id'] and (not api):

@@ -2,7 +2,6 @@ import logging
 from datetime import timedelta
 
 from django.conf import settings
-from django.db import transaction
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers, status
@@ -11,7 +10,6 @@ from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
-from yekta_config import secret
 from yekta_config.config import config
 
 from accounts.models import VerificationCode
@@ -19,7 +17,6 @@ from accounts.permissions import IsBasicVerified
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
-from financial.utils.withdraw import FiatWithdraw
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
@@ -38,11 +35,15 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         if config('WITHDRAW_ENABLE', '1') == '0':
             raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
 
+        user = self.context['request'].user
+
+        if user.level < user.LEVEL2:
+            raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
+
         amount = validated_data['amount']
         iban = validated_data['iban']
         code = validated_data['code']
 
-        user = self.context['request'].user
         bank_account = get_object_or_404(BankAccount, iban=iban, user=user)
 
         assert user.account.is_ordinary_user()
