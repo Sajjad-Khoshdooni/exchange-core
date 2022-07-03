@@ -31,14 +31,12 @@ class Wallet(models.Model):
     balance = get_amount_field(default=Decimal(0))
     locked = get_amount_field(default=Decimal(0))
 
-    variant_id = models.UUIDField(editable=False, null=True, blank=True)
-
     def __str__(self):
         market_verbose = dict(self.MARKET_CHOICES)[self.market]
         return '%s Wallet %s [%s]' % (market_verbose, self.asset, self.account)
 
     class Meta:
-        unique_together = [('account', 'asset', 'market', 'variant_id')]
+        unique_together = [('account', 'asset', 'market')]
         constraints = [
             CheckConstraint(
                 check=Q(check_balance=False) | (~Q(market='loan') & Q(balance__gte=0) & Q(balance__gte=F('locked'))) |
@@ -153,24 +151,3 @@ class Wallet(models.Model):
                 group_id=uuid4(),
                 scope=Trx.SEIZE
             )
-
-    # def reserve_funds(self, amount: Decimal):
-    #     from ledger.models import Trx
-    #     from uuid import uuid4
-    #
-    #     if self.has_balance(amount):
-    #         group_id = uuid4()
-    #         with WalletPipeline() as pipeline:
-    #             pipeline.new_trx(
-    #                 sender=self,
-    #                 receiver=child_wallet,
-    #                 amount=amount,
-    #                 group_id=group_id,
-    #                 scope=Trx.RESERVE
-    #             )
-    #             ReserveWallet.objects.create(
-    #                 sender=self,
-    #                 receiver=child_wallet,
-    #                 amount=amount,
-    #                 group_id=group_id
-    #             )

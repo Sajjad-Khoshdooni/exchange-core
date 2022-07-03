@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
 from django.urls import path, include, re_path
 from django.views.generic import TemplateView
 
@@ -8,11 +9,6 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
-from rest_framework_simplejwt.views import (
-    TokenRefreshView,
-)
-
-from accounts.views.jwt_views import CustomTokenObtainPairView
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -28,9 +24,7 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path('token/', CustomTokenObtainPairView.as_view(), name='obtain_token'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-
+    path('admin/', admin.site.urls),
     path('api/v1/accounts/', include('accounts.urls')),
     path('api/v1/media/', include('multimedia.urls')),
     path('api/v1/finance/', include(('financial.urls', 'financial'), 'finance', )),
