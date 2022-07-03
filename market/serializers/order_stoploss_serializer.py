@@ -17,12 +17,14 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
     filled_amount = serializers.SerializerMethodField()
     filled_price = serializers.SerializerMethodField()
     trigger_price = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
 
     def to_representation(self, instance: Union[Order, StopLoss]):
         data = super(OrderStopLossSerializer, self).to_representation(instance)
         data['amount'] = str(floor_precision(Decimal(data['amount']), instance.symbol.step_size))
-        data['price'] = str(floor_precision(Decimal(data['price']), instance.symbol.tick_size))
+        if data['price']:
+            data['price'] = str(floor_precision(Decimal(data['price']), instance.symbol.tick_size))
         data['symbol'] = instance.symbol.name
         return data
 
@@ -30,6 +32,11 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
         if isinstance(instance, StopLoss):
             return f'sl-{instance.id}'
         return str(instance.id)
+
+    def get_status(self, instance: Union[Order, StopLoss]):
+        if isinstance(instance, StopLoss):
+            return StopLoss.TRIGGERED if instance.order_set.exists() else StopLoss.NEW
+        return instance.status
 
     def get_filled_amount(self, instance: Union[Order, StopLoss]):
         return str(floor_precision(instance.filled_amount, instance.symbol.step_size))

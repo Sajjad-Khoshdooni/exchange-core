@@ -31,6 +31,8 @@ class StopLossManager(models.Manager):
 
 
 class StopLoss(models.Model):
+    NEW = 'new'
+    TRIGGERED = 'triggered'
     BUY, SELL = 'buy', 'sell'
     ORDER_CHOICES = [(BUY, BUY), (SELL, SELL)]
     LIMIT, MARKET = 'limit', 'market'
