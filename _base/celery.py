@@ -232,8 +232,8 @@ app.conf.beat_schedule = {
         }
     },
 
-    'health_withdraw_alert_pending': {
-            'task': 'health.tasks.withdraw_alert_pending',
+    'health_alert_pending': {
+            'task': 'health.tasks.alert_pending',
             'schedule': 600,
             'options': {
                 'queue': 'binance',
