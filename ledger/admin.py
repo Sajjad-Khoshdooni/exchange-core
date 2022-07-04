@@ -14,7 +14,7 @@ from ledger.models import Asset, Prize, CoinCategory, DepositAddress
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol
+from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol, get_tether_irt_price, SELL
 from provider.models import ProviderOrder
 
 
@@ -55,7 +55,10 @@ class AssetAdmin(AdvancedAdmin):
                 'binance_margin_ratio': round(self.overview.margin_ratio, 2),
                 'hedge_value': round(self.overview.get_total_hedge_value(), 2),
                 'binance_spot_usdt': round(self.overview.get_binance_spot_amount(Asset.get(Asset.USDT)), 2),
-                'internal_usdt': round(self.overview.get_internal_usdt_value(), 2)
+                'internal_usdt': round(self.overview.get_internal_usdt_value(), 2),
+                'fiat_irt': round(self.overview.get_fiat_irt(), 0),
+                'total_assets_usdt': round(self.overview.get_all_assets_usdt(), 0),
+                'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
             }
         else:
             self.overview = None
@@ -77,10 +80,8 @@ class AssetAdmin(AdvancedAdmin):
     get_ledger_balance_users.short_description = 'users'
 
     def get_users_usdt_value(self, asset: Asset):
-        # return self.overview and self.overview.get_ledger_balance(Account.ORDINARY, asset) * get_trading_price_usdt(
-        #     coin=asset.symbol, side=BUY
-        # )
-        return ''
+        return self.overview and round(self.overview.get_users_asset_value(asset), 2)
+
     get_users_usdt_value.short_description = 'usdt_value'
 
     def get_ledger_balance_system(self, asset: Asset):
