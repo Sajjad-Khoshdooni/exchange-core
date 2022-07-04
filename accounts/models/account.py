@@ -2,9 +2,9 @@ from decimal import Decimal
 from typing import Union
 
 from django.db import models
-from django.db.models import UniqueConstraint, Q, Sum
+from django.db.models import UniqueConstraint, Q
+
 from accounts.models import User
-from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt
 from ledger.utils.price_manager import PriceManager
 
 

@@ -86,7 +86,7 @@ class Wallet(models.Model):
 
         price = get_trading_price_usdt(self.asset.symbol, side, raw_price=True)
 
-        if price:
+        if price is not None:
             return self.get_balance() * price
 
     def get_balance_irt(self, side: str = BUY):
@@ -96,7 +96,7 @@ class Wallet(models.Model):
         tether_irt = get_tether_irt_price(side)
         balance_usdt = self.get_balance_usdt()
 
-        if balance_usdt:
+        if balance_usdt is not None:
             return balance_usdt * tether_irt
 
     def has_balance(self, amount: Decimal, raise_exception: bool = False) -> bool:
