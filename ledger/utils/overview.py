@@ -83,8 +83,8 @@ class AssetOverview:
     def get_binance_spot_amount(self, asset: Asset) -> float:
         return self._binance_spot_balance_map.get(asset.symbol, 0)
 
-    def get_binance_spot_total_value(self) -> float:
-        value = 0
+    def get_binance_spot_total_value(self) -> Decimal:
+        value = Decimal(0)
 
         for symbol, amount in self._binance_spot_balance_map.items():
             if amount > 0:
@@ -105,8 +105,8 @@ class AssetOverview:
         # Hedge = Real assets - Promised assets to users (user)
         return self.get_total_assets(asset) - self.get_ledger_balance(Account.ORDINARY, asset)
 
-    def get_internal_usdt_value(self):
-        total = 0
+    def get_internal_usdt_value(self) -> Decimal:
+        total = Decimal(0)
 
         for symbol, amount in self._internal_deposits.items():
             total += amount * (self.prices.get(symbol) or 0)
@@ -150,7 +150,7 @@ class AssetOverview:
         return float(self.get_fiat_irt() / self.usdt_irt)
 
     def get_all_assets_usdt(self):
-        return self.get_binance_spot_total_value() + self.total_margin_balance + self.get_internal_usdt_value() + self.get_fiat_usdt()
+        return float(self.get_binance_spot_total_value()) + self.total_margin_balance + float(self.get_internal_usdt_value()) + self.get_fiat_usdt()
 
     def get_exchange_assets_usdt(self):
         return self.get_all_assets_usdt() - self.get_all_users_asset_value()
