@@ -122,7 +122,7 @@ class AssetOverview:
 
     def get_users_asset_value(self, asset: Asset):
         balance = self.get_ledger_balance(Account.ORDINARY, asset)
-        return balance * self.prices.get(asset.symbol, 0)
+        return balance * (self.prices.get(asset.symbol) or 0)
 
     def get_all_users_asset_value(self):
         value = 0
