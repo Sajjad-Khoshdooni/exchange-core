@@ -146,8 +146,8 @@ class AssetOverview:
     def get_fiat_irt(self):
         return self.get_total_assets(Asset.get(Asset.IRT))
 
-    def get_fiat_usdt(self):
-        return self.get_fiat_irt() / self.usdt_irt
+    def get_fiat_usdt(self) -> float:
+        return float(self.get_fiat_irt() / self.usdt_irt)
 
     def get_all_assets_usdt(self):
         return self.get_binance_spot_total_value() + self.total_margin_balance + self.get_internal_usdt_value() + self.get_fiat_usdt()
