@@ -13,17 +13,17 @@ from ledger.models import Transfer, OTCTrade
 def alert_pending():
     transfer = Transfer.objects.filter(
         status__in=(Transfer.PENDING, Transfer.PROCESSING),
-        created__lt=timezone.now() - timedelta(minutes=60)
+        created__lt=timezone.now() - timedelta(minutes=30)
     ).count()
 
     fiat_withdraw = FiatWithdrawRequest.objects.filter(
         status__in=(FiatWithdrawRequest.PENDING, FiatWithdrawRequest.PROCESSING),
-        created__lt=timezone.now() - timedelta(minutes=60)
+        created__lt=timezone.now() - timedelta(hours=10)
     ).count()
 
     otc_trade = OTCTrade.objects.filter(
         status=OTCTrade.PENDING,
-        created__lt=timezone.now() - timedelta(minutes=60)
+        created__lt=timezone.now() - timedelta(minutes=5)
     ).count()
     message = ''
     link = ''
