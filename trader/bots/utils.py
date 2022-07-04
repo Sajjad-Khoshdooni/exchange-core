@@ -71,9 +71,9 @@ def random_buy(symbol: PairSymbol, account: Account):
     ask = get_current_price(symbol, SELL)
     amount = floor_precision(Decimal(amount_value / ask), symbol.step_size)
 
-    if not is_all_system(symbol, SELL, amount):
-        logger.info('buy ignored due to user top')
-        return
+    # if not is_all_system(symbol, SELL, amount):
+    #     logger.info('buy ignored due to user top')
+    #     return
 
     price = floor_precision(ask * Decimal('1.03'), symbol.tick_size)
 
@@ -93,9 +93,9 @@ def random_sell(symbol: PairSymbol, account: Account):
     balance = min(balance, random_min_order_value(symbol.base_asset.symbol) / bid)
     amount = floor_precision(balance, symbol.step_size)
 
-    if not is_all_system(symbol, BUY, amount):
-        logger.info('sell ignored due to user top')
-        return
+    # if not is_all_system(symbol, BUY, amount):
+    #     logger.info('sell ignored due to user top')
+    #     return
 
     price = floor_precision(bid * Decimal('0.97'), symbol.tick_size)
 
