@@ -124,8 +124,8 @@ class AssetOverview:
         balance = self.get_ledger_balance(Account.ORDINARY, asset)
         return balance * (self.prices.get(asset.symbol) or 0)
 
-    def get_all_users_asset_value(self):
-        value = 0
+    def get_all_users_asset_value(self) -> Decimal:
+        value = Decimal(0)
 
         for asset in Asset.candid_objects.all():
             value += self.get_users_asset_value(asset)
@@ -153,4 +153,4 @@ class AssetOverview:
         return float(self.get_binance_spot_total_value()) + self.total_margin_balance + float(self.get_internal_usdt_value()) + self.get_fiat_usdt()
 
     def get_exchange_assets_usdt(self):
-        return self.get_all_assets_usdt() - self.get_all_users_asset_value()
+        return self.get_all_assets_usdt() - float(self.get_all_users_asset_value())
