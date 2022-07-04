@@ -6,6 +6,7 @@ from ledger.utils.overview import AssetOverview
 
 
 USDT_CURRENCY = {'currency': 'USDT'}
+IRT_CURRENCY = {'currency': 'IRT'}
 
 
 @shared_task()
@@ -20,3 +21,6 @@ def collect_values():
 
     set_metric('binance_spot_value', labels=USDT_CURRENCY, value=overview.get_binance_spot_total_value())
     set_metric('internal_value', labels=USDT_CURRENCY, value=overview.get_internal_usdt_value())
+    set_metric('fiat_irt', labels=IRT_CURRENCY, value=overview.get_fiat_irt())
+    set_metric('total_assets', labels=USDT_CURRENCY, value=overview.get_all_assets_usdt())
+    set_metric('exchange_assets', labels=USDT_CURRENCY, value=overview.get_exchange_assets_usdt())
