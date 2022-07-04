@@ -225,7 +225,6 @@ class User(AbstractUser):
         if self.level == User.LEVEL1 and self.verify_status == self.PENDING:
             if User.objects.exclude(id=self.id).filter(national_code=self.national_code, level__gt=User.LEVEL1).exists():
                 self.national_code_duplicated_alert = True
-                self.save()
                 self.change_status(User.REJECTED)
 
             level2_fields = self.get_level2_verify_fields()
