@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
@@ -10,11 +8,12 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
+from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Asset, Prize, CoinCategory, DepositAddress
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol, get_tether_irt_price, SELL
+from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol
 from provider.models import ProviderOrder
 
 
@@ -48,6 +47,8 @@ class AssetAdmin(AdvancedAdmin):
 
         if not settings.DEBUG:
             self.overview = AssetOverview()
+            account = MARGIN_INSURANCE_ACCOUNT
+
             context = {
                 'binance_initial_margin': round(self.overview.total_initial_margin, 2),
                 'binance_maint_margin': round(self.overview.total_maintenance_margin, 2),
@@ -59,6 +60,7 @@ class AssetAdmin(AdvancedAdmin):
                 'fiat_irt': round(self.overview.get_fiat_irt(), 0),
                 'total_assets_usdt': round(self.overview.get_all_assets_usdt(), 0),
                 'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
+                'margin_insurance_balance': Asset.get(Asset.USDT).get_wallet(account).balance
             }
         else:
             self.overview = None
