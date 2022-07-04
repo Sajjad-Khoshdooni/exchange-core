@@ -29,6 +29,7 @@ class MarginInfoView(APIView):
             'total_debt': round(Decimal(margin_info.total_debt), 2),
             'margin_level': round(margin_info.get_margin_level(), 3),
             'total_equity': round(Decimal(margin_info.get_total_equity()), 2),
+            'has_position': Wallet.objects.filter(market=Wallet.LOAN, balance__lt=0).exists()
         })
 
 
