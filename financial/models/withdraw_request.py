@@ -141,7 +141,6 @@ class FiatWithdrawRequest(models.Model):
         else:
             estimated_receive_time = None
         user = self.bank_account.user
-        user_email = user.email
 
         if self.status == PENDING:
             title = 'درخواست برداشت شما به بانک ارسال گردید.'
@@ -172,17 +171,16 @@ class FiatWithdrawRequest(models.Model):
             token=humanize_number(self.amount)
         )
 
-        if user_email:
-            email.send_email_by_template(
-                recipient=user_email,
-                template=email_template,
-                context={
-                    'estimated_receive_time': estimated_receive_time or None,
-                    'brand': config('BRAND'),
-                    'panel_url': config('PANEL_URL'),
-                    'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-                }
-            )
+        email.send_email_by_template(
+            recipient=user.email,
+            template=email_template,
+            context={
+                'estimated_receive_time': estimated_receive_time or None,
+                'brand': config('BRAND'),
+                'panel_url': config('PANEL_URL'),
+                'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+            }
+        )
 
     def change_status(self, new_status: str):
         if self.status == new_status:

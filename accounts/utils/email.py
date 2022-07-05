@@ -18,6 +18,8 @@ SCOPE_DEPOSIT_EMAIL = 'deposit_email'
 SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw_email'
 SCOPE_CANCEL_FIAT_WITHDRAW = 'cancel_fiat_withdraw_email'
 SCOPE_PAYMENT = 'payment_email'
+SCOPE_MARGIN_LIQUIDATED = 'margin_liquidated'
+SCOPE_MARGIN_LIQUIDATION_FINISHED = 'liquidation_finished'
 
 BRAND = config('BRAND')
 
@@ -56,6 +58,9 @@ TEMPLATES = {
 
 
 def send_email_by_template(recipient: str, template: str, context: dict = None):
+    if not recipient:
+        return
+
     data = TEMPLATES[template]
 
     body_html = render_to_string(data['html'], context or {})

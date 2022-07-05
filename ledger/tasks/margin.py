@@ -5,6 +5,7 @@ from celery import shared_task
 
 from accounts.models import Account, Notification
 from accounts.tasks import send_message_by_kavenegar
+from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.margin.margin_info import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD, \
@@ -32,6 +33,7 @@ def check_margin_level():
         if margin_level <= LIQUIDATION_ML_THRESHOLD:
             CloseRequest.close_margin(account, reason=CloseRequest.LIQUIDATION)
             status = 2
+
 
         elif not account.margin_alerting and margin_level <= MARGIN_CALL_ML_THRESHOLD:
             logger.warning('Send MARGIN_CALL_ML_THRESHOLD for account = %d' % account.id)
@@ -68,4 +70,26 @@ def warn_risky_level(account: Account, margin_level: Decimal):
         phone=user.phone,
         template='alert-margin-liquidation',
         token='تعهدی'
+    )
+
+
+def alert_liquidation(account: Account):
+    user = account.user
+
+    Notification.send(
+        recipient=user,
+        title='حساب تعهدی شما تسویه خودکار شد.',
+        message='حساب تعهدی شما به خاطر افزایش بدهی‌هایتان به صورت خودکار تسویه شد.',
+        level=Notification.ERROR
+    )
+
+    email.send_email_by_template(
+        recipient=user.email,
+        template=email_template,
+        context={
+            'estimated_receive_time': estimated_receive_time or None,
+            'brand': config('BRAND'),
+            'panel_url': config('PANEL_URL'),
+            'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+        }
     )
