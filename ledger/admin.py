@@ -167,9 +167,24 @@ class NetworkAssetAdmin(admin.ModelAdmin):
     search_fields = ('network__symbol', 'asset__symbol')
 
 
+class UserFilter(admin.SimpleListFilter):
+    title = 'کاربران'
+    parameter_name = 'user_id'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user_id')
+        if user is not None:
+            return queryset.filter(account_secret__account__user=user)
+        else:
+            return queryset
+
+
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_filter = ('account_secret__account__user', 'network')
+    list_filter = (UserFilter, 'network')
     list_display = ('account_secret', 'network', 'get_address')
 
     def get_address(self, depositaddress: DepositAddress):

@@ -515,7 +515,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_selfie_image_uploaded.short_description = 'زمان آپلود عکس سلفی'
 
     def get_deposit_address(self, user: User):
-        link = url_to_admin_list(DepositAddress) + '?account_secret__account__user__id__exact={}'.format(user.id)
+        link = url_to_admin_list(DepositAddress) + '?user_id={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
     get_deposit_address.short_description = 'آٔدرس‌های کیف پول'
