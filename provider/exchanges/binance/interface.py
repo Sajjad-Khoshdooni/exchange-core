@@ -76,16 +76,19 @@ class BinanceSpotHandler:
 
     @classmethod
     def withdraw(cls, coin: str, network: str, address: str, amount: Decimal, address_tag: str = None,
-                 client_id: str = None) -> dict:
-
-        return cls.collect_api('/sapi/v1/capital/withdraw/apply', method='POST', data={
+                 client_id: str = None, memo: str = None) -> dict:
+        data = {
             'coin': coin,
             'network': network,
             'amount': decimal_to_str(amount),
             'address': address,
             'addressTag': address_tag,
             'withdrawOrderId': client_id
-        })
+        }
+        if memo:
+            data['addressTag'] = memo
+
+        return cls.collect_api('/sapi/v1/capital/withdraw/apply', method='POST', data=data)
 
     @classmethod
     def get_account_details(cls):
