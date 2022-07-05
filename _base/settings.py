@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'raven.contrib.django.raven_compat',
     'django_admin_listfilter_dropdown',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'hijack',
     'hijack.contrib.admin',
