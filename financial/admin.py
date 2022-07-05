@@ -45,6 +45,21 @@ class UserRialWithdrawRequestFilter(SimpleListFilter):
 
 @admin.register(FiatWithdrawRequest)
 class FiatWithdrawRequestAdmin(admin.ModelAdmin):
+
+    def save_model(self, request, fiat_withdraw_request: FiatWithdrawRequest, form, change):
+
+        old = fiat_withdraw_request.id and FiatWithdrawRequest.objects.get(id=fiat_withdraw_request.id)
+
+        if old and old.status == FiatWithdrawRequest.DONE and fiat_withdraw_request.status != FiatWithdrawRequest.DONE:
+            return
+
+        if old and old.status == FiatWithdrawRequest.CANCELED and fiat_withdraw_request != FiatWithdrawRequest.CANCELED:
+            return
+
+        old.change_status(fiat_withdraw_request.status)
+
+        super().save_model(request, fiat_withdraw_request, form, change)
+
     fieldsets = (
         ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'ref_doc',
                                         'get_withdraw_request_receive_time', 'provider_withdraw_id')}),
@@ -55,7 +70,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     # list_display = ('bank_account', )
     list_filter = ('status', UserRialWithdrawRequestFilter, )
     ordering = ('-created', )
-    readonly_fields = ('amount', 'fee_amount', 'bank_account', 'created', 'get_withdraw_request_iban',
+    readonly_fields = ('created', 'get_withdraw_request_iban',
                        'get_withdraw_request_user', 'get_withdraw_request_user_mobile', 'withdraw_channel',
                        'get_withdraw_request_receive_time'
                        )
