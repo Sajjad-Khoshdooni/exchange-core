@@ -93,6 +93,9 @@ class Account(models.Model):
 
         with PriceManager(fetch_all=True):
             for wallet in wallets:
+                if wallet.balance == 0:
+                    continue
+
                 balance = wallet.get_balance_irt(side)
                 total += balance
 
