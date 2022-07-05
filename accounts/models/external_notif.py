@@ -40,16 +40,27 @@ class ExternalNotification(models.Model):
     def send_sms(cls, user: User, scope: str, ):
         from accounts.tasks import send_message_by_sms_ir
         if scope == cls.SCOPE_LEVEL_2_PRIZE:
-            template = '64694'
-            params = {'brand': '{} و دریافت سی هزار شیبا،'.format(config('BRAND'))}
+            template = '67757'
+
+            params = {
+                'brand': '{} و دریافت سی هزار شیبا،'.format(config('BRAND')),
+                'department': config('RETENTION_URL_VERIFY')
+            }
 
         elif scope == cls.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE:
-            template = '64695'
-            params = {'brand': 'و دریافت هدیه سی هزار شیبا به {}'.format(config('BRAND'))}
+            template = '67758'
+            params = {
+                'name': 'صرافی {}'.format(config('BRAND')),
+                'brand': 'و دریافت هدیه سی هزار شیبا به {}'.format(config('BRAND')),
+                'department': config('RETENTION_URL_DEPOSIT')
+            }
 
         elif scope == cls.SCOPE_TRADE_PRIZE:
-            template = '65788'
-            params = {'token': 'سی هزار شیبا هدیه {}'.format(config('BRAND'))}
+            template = '67764'
+            params = {
+                'name': 'سی هزار شیبا هدیه {}'.format(config('BRAND')),
+                'department': config('RETENTION_URL_TRADE')
+            }
 
         else:
             raise NotImplementedError
