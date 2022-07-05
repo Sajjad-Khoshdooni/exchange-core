@@ -195,7 +195,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                 'get_withdraw_address', 'get_otctrade_address', 'get_fill_order_address',
                 'get_open_order_address', 'get_deposit_address', 'get_bank_card_link',
                 'get_bank_account_link', 'get_finotech_request_link',
-                'get_user_with_same_national_code', 'get_login_activity_link',
+                'get_user_with_same_national_code', 'get_referred_user', 'get_login_activity_link',
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
@@ -225,7 +225,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
         'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium',
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
-        'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_login_activity_link',
+        'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
+        'get_login_activity_link',
     )
     preserve_filters = ('archived', )
 
@@ -395,6 +396,12 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     get_finotech_request_link.short_description = 'درخواست‌های فینوتک'
 
+    def get_referred_user(self, user: User):
+
+        link = url_to_admin_list(Account) + '?referral_owner_id={}'.format(user.account.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+    get_referred_user.short_description = 'کاربران دعوت شده'
+
     def get_login_activity_link(self, user: User):
         link = url_to_admin_list(LoginActivity) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
@@ -514,11 +521,31 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_deposit_address.short_description = 'آٔدرس‌های کیف پول'
 
 
+class AccountIdFilter(SimpleListFilter):
+    title = 'لیست دریافتی'
+    parameter_name = 'referral_owner_id'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+
+        owner_id = request.GET.get('referral_owner_id')
+        if owner_id is not None:
+            referral_codes = Referral.objects.filter(owner=int(owner_id))
+            account_id_list = []
+            for referral_code in referral_codes:
+                account_id_list.extend(referral_code.referred_accounts.values_list('id', flat=True))
+            return queryset.filter(id__in=account_id_list)
+        else:
+            return queryset
+
+
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
     list_display = ('user', 'type', 'name', 'trade_volume_irt')
     search_fields = ('user__phone', )
-    list_filter = ('type', 'primary')
+    list_filter = ('type', 'primary', AccountIdFilter,)
 
     fieldsets = (
         ('اطلاعات', {'fields': (
