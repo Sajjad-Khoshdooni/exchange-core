@@ -50,7 +50,7 @@ class UserRialWithdrawRequestFilter(SimpleListFilter):
 class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 
     fieldsets = (
-        ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'ref_id', 'bank_account',
+        ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'bank_account',
          'ref_doc', 'get_withdraw_request_receive_time', 'provider_withdraw_id')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
                                       'get_withdraw_request_user_mobile')}),
@@ -59,18 +59,12 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     # list_display = ('bank_account', )
     list_filter = ('status', UserRialWithdrawRequestFilter, )
     ordering = ('-created', )
-    readonly_fields = ('created', 'get_withdraw_request_iban', 'fee_amount'
+    readonly_fields = ('created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount',
                        'get_withdraw_request_user', 'get_withdraw_request_user_mobile', 'withdraw_channel',
                        'get_withdraw_request_receive_time'
                        )
 
     list_display = ('bank_account', 'created', 'status', 'amount', 'withdraw_channel', 'ref_id')
-
-    def render_change_form(self, request, context, *args, **kwargs):
-        context['adminform'].form.fields['bank_account'].queryset = BankAccount.objects.filter(
-            user=request.user, verified=True
-        )
-        return super(FiatWithdrawRequestAdmin, self).render_change_form(request, context, *args, **kwargs)
 
     def save_model(self, request, fiat_withdraw_request: FiatWithdrawRequest, form, change):
 
