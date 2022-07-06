@@ -145,6 +145,22 @@ class NotificationInLine(admin.TabularInline):
         return False
 
 
+class User_referred_Filter(SimpleListFilter):
+    title = 'لیست کاربران دعوت شده'
+    parameter_name = 'owner_id'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+
+        owner_id = request.GET.get('owner_id')
+        if owner_id is not None:
+            return queryset.filter(account__referred_by__owner__user__id=owner_id)
+        else:
+            return queryset
+
+
 @admin.register(User)
 class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     default_edit_condition = M.superuser
@@ -211,7 +227,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
-        'is_staff', 'is_superuser', 'is_active', 'groups',
+        'is_staff', 'is_superuser', 'is_active', 'groups', User_referred_Filter
     )
     inlines = [UserCommentInLine, ExternalNotificationInLine, NotificationInLine]
     ordering = ('-id', )
@@ -398,7 +414,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     def get_referred_user(self, user: User):
 
-        link = url_to_admin_list(Account) + '?referral_owner_id={}'.format(user.account.id)
+        link = url_to_admin_list(User) + '?owner_id={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_referred_user.short_description = 'کاربران دعوت شده'
 
@@ -521,31 +537,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_deposit_address.short_description = 'آٔدرس‌های کیف پول'
 
 
-class AccountIdFilter(SimpleListFilter):
-    title = 'لیست دریافتی'
-    parameter_name = 'referral_owner_id'
-
-    def lookups(self, request, model_admin):
-        return [(1, 1)]
-
-    def queryset(self, request, queryset):
-
-        owner_id = request.GET.get('referral_owner_id')
-        if owner_id is not None:
-            referral_codes = Referral.objects.filter(owner=int(owner_id))
-            account_id_list = []
-            for referral_code in referral_codes:
-                account_id_list.extend(referral_code.referred_accounts.values_list('id', flat=True))
-            return queryset.filter(id__in=account_id_list)
-        else:
-            return queryset
-
-
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
     list_display = ('user', 'type', 'name', 'trade_volume_irt')
     search_fields = ('user__phone', )
-    list_filter = ('type', 'primary', AccountIdFilter,)
+    list_filter = ('type', 'primary')
 
     fieldsets = (
         ('اطلاعات', {'fields': (
