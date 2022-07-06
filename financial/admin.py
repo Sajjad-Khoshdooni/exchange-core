@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
@@ -26,7 +27,10 @@ class GatewayAdmin(admin.ModelAdmin):
 
     def get_total_wallet_irt_value(self, gateway: Gateway):
         channel = FiatWithdraw.get_withdraw_channel(gateway.type)
-        return channel.get_total_wallet_irt_value()
+        try:
+            return channel.get_total_wallet_irt_value()
+        except:
+            return None
         # pass
     get_total_wallet_irt_value.short_description = 'موجودی'
 
@@ -74,20 +78,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 
     list_display = ('bank_account', 'created', 'status', 'amount', 'withdraw_channel', 'ref_id')
 
-    def save_model(self, request, fiat_withdraw_request: FiatWithdrawRequest, form, change):
 
-        old = fiat_withdraw_request.id and FiatWithdrawRequest.objects.get(id=fiat_withdraw_request.id)
-
-        if old and old.status == FiatWithdrawRequest.DONE and fiat_withdraw_request.status != FiatWithdrawRequest.DONE:
-            return
-
-        if old and old.status == FiatWithdrawRequest.CANCELED and fiat_withdraw_request != FiatWithdrawRequest.CANCELED:
-            return
-
-        if old:
-            old.change_status(fiat_withdraw_request.status)
-
-        super().save_model(request, fiat_withdraw_request, form, change)
 
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.user.get_full_name()
