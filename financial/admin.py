@@ -12,6 +12,7 @@ from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
     FiatWithdrawRequest
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
+from financial.utils.withdraw import FiatWithdraw
 from ledger.models import Asset
 from ledger.utils.precision import humanize_number
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -19,8 +20,15 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'merchant_id', 'active')
+    list_display = ('name', 'type', 'merchant_id', 'active', 'get_total_wallet_irt_value')
     list_editable = ('active', )
+    readonly_fields = ('get_total_wallet_irt_value',)
+
+    def get_total_wallet_irt_value(self, gateway: Gateway):
+        channel = FiatWithdraw.get_withdraw_channel(gateway.type)
+        return channel.get_total_wallet_irt_value()
+        # pass
+    get_total_wallet_irt_value.short_description = 'موجودی'
 
 
 @admin.register(FiatTransaction)
