@@ -59,7 +59,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     # list_display = ('bank_account', )
     list_filter = ('status', UserRialWithdrawRequestFilter, )
     ordering = ('-created', )
-    readonly_fields = ('created', 'get_withdraw_request_iban',
+    readonly_fields = ('created', 'get_withdraw_request_iban', 'fee_amount'
                        'get_withdraw_request_user', 'get_withdraw_request_user_mobile', 'withdraw_channel',
                        'get_withdraw_request_receive_time'
                        )
