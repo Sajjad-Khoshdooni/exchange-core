@@ -50,8 +50,8 @@ class UserRialWithdrawRequestFilter(SimpleListFilter):
 class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 
     fieldsets = (
-        ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'bank_account', 'ref_doc',
-                                        'get_withdraw_request_receive_time', 'provider_withdraw_id')}),
+        ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'bank_account',
+         'ref_doc', 'get_withdraw_request_receive_time', 'provider_withdraw_id')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
                                       'get_withdraw_request_user_mobile')}),
         ('نظر', {'fields': ('comment',)})
@@ -82,25 +82,8 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
         if old and old.status == FiatWithdrawRequest.CANCELED and fiat_withdraw_request != FiatWithdrawRequest.CANCELED:
             return
 
-        if old and old.status != FiatWithdrawRequest.PROCESSING:
+        if old:
             old.change_status(fiat_withdraw_request.status)
-        else:
-            fiat_withdraw_request.withdraw_datetime = timezone.now()
-            with WalletPipeline() as pipeline:  # type: WalletPipeline
-
-                if fiat_withdraw_request.status == FiatWithdrawRequest.DONE:
-                    fiat_withdraw_request.build_trx(pipeline)
-                    fiat_withdraw_request.alert_withdraw_verify_status()
-
-                if fiat_withdraw_request.status in (FiatWithdrawRequest.PENDING, FiatWithdrawRequest.PROCESSING):
-                    fiat_withdraw_request.status = FiatWithdrawRequest.PENDING
-                    wallet = Asset.get(Asset.IRT).get_wallet(request.user.account)
-                    pipeline.new_lock(
-                        key=fiat_withdraw_request.group_id,
-                        wallet=wallet,
-                        amount=fiat_withdraw_request.amount + fiat_withdraw_request.fee_amount,
-                        reason=WalletPipeline.WITHDRAW
-                    )
 
         super().save_model(request, fiat_withdraw_request, form, change)
 
