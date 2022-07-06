@@ -227,7 +227,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
-        'is_staff', 'is_superuser', 'is_active', 'groups', User_referred_Filter
+        'is_staff', 'is_superuser', 'is_active', 'groups', UserReferredFilter
     )
     inlines = [UserCommentInLine, ExternalNotificationInLine, NotificationInLine]
     ordering = ('-id', )
