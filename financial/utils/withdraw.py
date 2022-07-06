@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 import requests
 from yekta_config import secret
@@ -51,6 +52,9 @@ class FiatWithdraw:
     def get_estimated_receive_time(self, created: datetime):
         raise NotImplementedError
 
+    def get_total_wallet_irt_value(self):
+        raise NotImplementedError
+
 
 class PayirChanel(FiatWithdraw):
 
@@ -65,7 +69,7 @@ class PayirChanel(FiatWithdraw):
         request_kwargs = {
             'url': url,
             'timeout': 60,
-            'headers': {'Authorization': 'Bearer ' + secret('PAY_IR_TOKEN')},
+            'headers': {'Authorization': 'Bearer ' + config('PAY_IR_TOKEN')},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
                 'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -168,6 +172,17 @@ class PayirChanel(FiatWithdraw):
 
         return receive_time
 
+    def get_total_wallet_irt_value(self):
+        resp = self.collect_api(
+            path='/api/v2/wallets/'
+        )
+
+        total_wallet_irt_value = 0
+        for wallet in resp['wallet']:
+            total_wallet_irt_value += Decimal(wallet['balance'])
+
+        return total_wallet_irt_value
+
 
 class ZibalChanel(FiatWithdraw):
 
@@ -182,7 +197,7 @@ class ZibalChanel(FiatWithdraw):
         request_kwargs = {
             'url': url,
             'timeout': 60,
-            'headers': {'Authorization': 'Bearer ' + secret('ZIBAL_TOKEN')},
+            'headers': {'Authorization': 'Bearer ' + config('ZIBAL_TOKEN')},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
                 'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -256,3 +271,14 @@ class ZibalChanel(FiatWithdraw):
     def get_estimated_receive_time(self, created: datetime):
         request_date = created.astimezone() + timedelta(days=1)
         return request_date.replace(microsecond=0, hour=19, minute=30)
+
+    def get_total_wallet_irt_value(self):
+        resp = self.collect_api(
+            path='/v1/wallet/list'
+        )
+
+        total_wallet_irt_value = 0
+        for wallet in resp:
+            total_wallet_irt_value += Decimal(wallet['balance'])
+
+        return total_wallet_irt_value
