@@ -145,7 +145,7 @@ class NotificationInLine(admin.TabularInline):
         return False
 
 
-class User_referred_Filter(SimpleListFilter):
+class UserReferredFilter(SimpleListFilter):
     title = 'لیست کاربران دعوت شده'
     parameter_name = 'owner_id'
 
