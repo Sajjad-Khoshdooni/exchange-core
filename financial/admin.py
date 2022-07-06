@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -12,7 +13,9 @@ from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAcc
     FiatWithdrawRequest
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from financial.utils.withdraw import FiatWithdraw
+from ledger.models import Asset
 from ledger.utils.precision import humanize_number
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 @admin.register(Gateway)
@@ -53,9 +56,10 @@ class UserRialWithdrawRequestFilter(SimpleListFilter):
 
 @admin.register(FiatWithdrawRequest)
 class FiatWithdrawRequestAdmin(admin.ModelAdmin):
+
     fieldsets = (
-        ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'ref_doc',
-                                        'get_withdraw_request_receive_time', 'provider_withdraw_id')}),
+        ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'bank_account',
+         'ref_doc', 'get_withdraw_request_receive_time', 'provider_withdraw_id')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
                                       'get_withdraw_request_user_mobile')}),
         ('نظر', {'fields': ('comment',)})
@@ -63,12 +67,27 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     # list_display = ('bank_account', )
     list_filter = ('status', UserRialWithdrawRequestFilter, )
     ordering = ('-created', )
-    readonly_fields = ('amount', 'fee_amount', 'bank_account', 'created', 'get_withdraw_request_iban',
+    readonly_fields = ('created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount',
                        'get_withdraw_request_user', 'get_withdraw_request_user_mobile', 'withdraw_channel',
                        'get_withdraw_request_receive_time'
                        )
 
     list_display = ('bank_account', 'created', 'status', 'amount', 'withdraw_channel', 'ref_id')
+
+    def save_model(self, request, fiat_withdraw_request: FiatWithdrawRequest, form, change):
+
+        old = fiat_withdraw_request.id and FiatWithdrawRequest.objects.get(id=fiat_withdraw_request.id)
+
+        if old and old.status == FiatWithdrawRequest.DONE and fiat_withdraw_request.status != FiatWithdrawRequest.DONE:
+            return
+
+        if old and old.status == FiatWithdrawRequest.CANCELED and fiat_withdraw_request != FiatWithdrawRequest.CANCELED:
+            return
+
+        if old:
+            old.change_status(fiat_withdraw_request.status)
+
+        super().save_model(request, fiat_withdraw_request, form, change)
 
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.user.get_full_name()

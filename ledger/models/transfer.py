@@ -47,6 +47,7 @@ class Transfer(models.Model):
     block_number = models.PositiveIntegerField(null=True, blank=True)
 
     out_address = get_address_field()
+    memo = models.CharField(max_length=64, blank=True)
 
     is_fee = models.BooleanField(default=False)
 
@@ -105,7 +106,7 @@ class Transfer(models.Model):
             )
 
     @classmethod
-    def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):
+    def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str, memo: str = ''):
         assert wallet.asset.symbol != Asset.IRT
         assert wallet.account.is_ordinary_user()
         wallet.has_balance(amount, raise_exception=True)
@@ -123,7 +124,8 @@ class Transfer(models.Model):
                 fee_amount=commission,
                 source=cls.BINANCE,
                 out_address=address,
-                deposit=False
+                deposit=False,
+                memo=memo,
             )
 
             pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)

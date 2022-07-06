@@ -88,7 +88,8 @@ def withdraw(transfer: Transfer):
         transfer.network,
         withdraw_amount,
         transfer.out_address,
-        caller_id=str(transfer.id)
+        caller_id=str(transfer.id),
+        memo=transfer.memo,
     )
 
     if not provider_transfer:
