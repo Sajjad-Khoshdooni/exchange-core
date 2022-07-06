@@ -23,6 +23,8 @@ class Network(models.Model):
     address_regex = models.CharField(max_length=128, blank=True)
     is_universal = models.BooleanField(default=False)
 
+    need_memo = models.BooleanField(default=False)
+
     def get_deposit_address(self, account: Account) -> DepositAddress:
         account_secret, _ = AccountSecret.objects.get_or_create(account=account)
 
