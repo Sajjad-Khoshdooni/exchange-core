@@ -64,7 +64,7 @@ msgstr "معاملات تعهدی برای شما مجاز نیست."
 
 #: market/serializers/order_serializer.py:68
 msgid "You need to pass margin quiz"
-msgstr "شما باید ابتدا به سوالات معاملات تعهدی پاسخ دهید."
+msgstr "لطفا ابتدا به سوالات آزمون معاملات تعهدی پاسخ دهید."
 
 #: market/serializers/order_serializer.py:70
 #, python-brace-format
