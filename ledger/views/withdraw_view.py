@@ -73,7 +73,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             raise ValidationError('نشانه دارایی اشتباه است.')
 
         if not network.need_memo:
-            memo = None
+            memo = ''
         else:
             if 'memo' not in attrs:
                 raise ValidationError('برای این شبکه وارد کرد فیلد memo ضروری است.')
