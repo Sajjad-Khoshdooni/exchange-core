@@ -33,7 +33,8 @@ class FiatWithdraw:
     def get_withdraw_channel(cls, channel) -> 'FiatWithdraw':
         mapping = {
             FiatWithdrawRequest.PAYIR: PayirChanel,
-            FiatWithdrawRequest.ZIBAL: ZibalChanel
+            FiatWithdrawRequest.ZIBAL: ZibalChanel,
+            FiatWithdrawRequest.ZARINPAL: ZarinpalChanel
         }
         return mapping[channel]()
 
@@ -69,7 +70,7 @@ class PayirChanel(FiatWithdraw):
         request_kwargs = {
             'url': url,
             'timeout': 60,
-            'headers': {'Authorization': 'Bearer ' + config('PAY_IR_TOKEN')},
+            'headers': {'Authorization': 'Bearer ' + secret('PAY_IR_TOKEN')},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
                 'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -197,7 +198,7 @@ class ZibalChanel(FiatWithdraw):
         request_kwargs = {
             'url': url,
             'timeout': 60,
-            'headers': {'Authorization': 'Bearer ' + config('ZIBAL_TOKEN')},
+            'headers': {'Authorization': 'Bearer ' + secret('ZIBAL_TOKEN')},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
                 'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -282,3 +283,9 @@ class ZibalChanel(FiatWithdraw):
             total_wallet_irt_value += Decimal(wallet['balance'])
 
         return total_wallet_irt_value
+
+
+class ZarinpalChanel(FiatWithdraw):
+
+    def get_total_wallet_irt_value(self):
+        return 0

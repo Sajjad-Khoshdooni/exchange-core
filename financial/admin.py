@@ -24,6 +24,7 @@ class GatewayAdmin(admin.ModelAdmin):
     def get_total_wallet_irt_value(self, gateway: Gateway):
         channel = FiatWithdraw.get_withdraw_channel(gateway.type)
         return channel.get_total_wallet_irt_value()
+        # pass
     get_total_wallet_irt_value.short_description = 'موجودی'
 
 
