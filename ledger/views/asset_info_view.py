@@ -282,6 +282,7 @@ class AssetOverViewSerializer(serializers.Serializer):
 
 
 class AssetOverviewAPIView(APIView):
+    permission_classes = []
 
     @classmethod
     def set_price(cls, coins: list, price: dict, tether_irt: Decimal):
