@@ -145,6 +145,22 @@ class NotificationInLine(admin.TabularInline):
         return False
 
 
+class UserReferredFilter(SimpleListFilter):
+    title = 'لیست کاربران دعوت شده'
+    parameter_name = 'owner_id'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+
+        owner_id = request.GET.get('owner_id')
+        if owner_id is not None:
+            return queryset.filter(account__referred_by__owner__user__id=owner_id)
+        else:
+            return queryset
+
+
 @admin.register(User)
 class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     default_edit_condition = M.superuser
@@ -195,7 +211,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                 'get_withdraw_address', 'get_otctrade_address', 'get_fill_order_address',
                 'get_open_order_address', 'get_deposit_address', 'get_bank_card_link',
                 'get_bank_account_link', 'get_finotech_request_link',
-                'get_user_with_same_national_code', 'get_login_activity_link',
+                'get_user_with_same_national_code', 'get_referred_user', 'get_login_activity_link',
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
@@ -211,7 +227,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
-        'is_staff', 'is_superuser', 'is_active', 'groups',
+        'is_staff', 'is_superuser', 'is_active', 'groups', UserReferredFilter
     )
     inlines = [UserCommentInLine, ExternalNotificationInLine, NotificationInLine]
     ordering = ('-id', )
@@ -225,7 +241,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
         'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium',
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
-        'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_login_activity_link',
+        'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
+        'get_login_activity_link',
     )
     preserve_filters = ('archived', )
 
@@ -395,10 +412,16 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     get_finotech_request_link.short_description = 'درخواست‌های فینوتک'
 
+    def get_referred_user(self, user: User):
+
+        link = url_to_admin_list(User) + '?owner_id={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+    get_referred_user.short_description = 'کاربران دعوت شده'
+
     def get_login_activity_link(self, user: User):
         link = url_to_admin_list(LoginActivity) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
-    get_login_activity_link.short_description = 'تاریخه ورود به حساب'
+    get_login_activity_link.short_description = 'تاریخچه ورود به حساب'
 
     def get_user_with_same_national_code(self, user: User):
         user_count = User.objects.filter(
@@ -508,10 +531,10 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_selfie_image_uploaded.short_description = 'زمان آپلود عکس سلفی'
 
     def get_deposit_address(self, user: User):
-        link = url_to_admin_list(DepositAddress) + '?account_secret__account__user__id__exact={}'.format(user.id)
+        link = url_to_admin_list(DepositAddress) + '?user_id={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
-    get_deposit_address.short_description = 'آٔدرس‌های کیف پول'
+    get_deposit_address.short_description = 'آدرس‌های کیف پول'
 
 
 @admin.register(Account)

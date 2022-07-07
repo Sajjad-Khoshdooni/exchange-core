@@ -1,5 +1,6 @@
 import logging
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from yekta_config.config import config
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 class FiatWithdrawRequest(models.Model):
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
 
-    ZIBAL, PAYIR = 'zibal', 'payir'
+    ZIBAL, PAYIR, ZARINPAL = 'zibal', 'payir', 'zarinpal'
     CHANEL_CHOICES = ((ZIBAL, ZIBAL), (PAYIR, PAYIR))
 
     FREEZE_TIME = 3 * 60
@@ -202,6 +203,19 @@ class FiatWithdrawRequest(models.Model):
             self.save()
 
         self.alert_withdraw_verify_status()
+
+    def clean(self):
+
+        old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
+
+        if old and old.status in (FiatWithdrawRequest.DONE, FiatWithdrawRequest.CANCELED) and\
+                self.status != old.status:
+            raise ValidationError('امکان تغییر وضعیت برای این ترکانش وجود ندارد.')
+
+        if old:
+            old.change_status(self.status)
+
+        # super().save_model(request, fiat_withdraw_request, form, change)
 
     def __str__(self):
         return '%s %s' % (self.bank_account, self.amount)
