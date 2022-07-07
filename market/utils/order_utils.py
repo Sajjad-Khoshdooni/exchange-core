@@ -8,26 +8,27 @@ from django.db.models import Max, Min
 
 from accounts.models import Account
 from ledger.models import Wallet, Asset
+from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, CancelRequest, PairSymbol
 
 logger = logging.getLogger(__name__)
 
 
 def cancel_order(order: Order) -> CancelRequest:
-    with transaction.atomic():
-        request = CancelRequest.objects.create(order=order)
-        Order.cancel_orders(Order.objects.filter(id=order.id))
+    request = CancelRequest.objects.create(order=order)
+    order.cancel()
 
-        return request
+    return request
 
 
 def cancel_orders(orders):
     if not orders:
         return
+
     with transaction.atomic():
-        Order.cancel_orders(orders)
         for order in orders:
             CancelRequest.objects.create(order=order)
+            order.cancel()
 
 
 def get_open_orders(wallet: Wallet):
@@ -49,8 +50,9 @@ class MinNotionalError(Exception):
 
 
 def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Decimal, side: str,
-              fill_type: str = Order.LIMIT, raise_exception: bool = True) -> Union[Order, None]:
-    wallet = symbol.asset.get_wallet(account)
+              fill_type: str = Order.LIMIT, raise_exception: bool = True, market: str = Wallet.SPOT, check_balance: bool = False) -> Union[Order, None]:
+
+    wallet = symbol.asset.get_wallet(account, market=market)
     if fill_type == Order.MARKET:
         price = Order.get_market_price(symbol, Order.get_opposite_side(side))
         if not price:
@@ -90,7 +92,7 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
             logger.info('new order failed: min_notional')
             return
 
-    with transaction.atomic():
+    with WalletPipeline() as pipeline:
         order = Order.objects.create(
             wallet=wallet,
             symbol=symbol,
@@ -100,7 +102,7 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
             fill_type=fill_type
         )
 
-        order.submit()
+        order.submit(pipeline, check_balance=check_balance)
 
     return order
 

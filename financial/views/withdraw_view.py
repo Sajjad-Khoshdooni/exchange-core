@@ -2,7 +2,6 @@ import logging
 from datetime import timedelta
 
 from django.conf import settings
-from django.db import transaction
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers, status
@@ -11,29 +10,40 @@ from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from yekta_config.config import config
 
+from accounts.models import VerificationCode
 from accounts.permissions import IsBasicVerified
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
-from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit, get_fiat_estimate_receive_time
+from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
-
 
 MIN_WITHDRAW = 100_000
 
 
 class WithdrawRequestSerializer(serializers.ModelSerializer):
     iban = serializers.CharField(write_only=True)
+    code = serializers.CharField(write_only=True)
 
     def create(self, validated_data):
-        amount = validated_data['amount']
-        iban = validated_data['iban']
+        if config('WITHDRAW_ENABLE', '1') == '0':
+            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
 
         user = self.context['request'].user
+
+        if user.level < user.LEVEL2:
+            raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
+
+        amount = validated_data['amount']
+        iban = validated_data['iban']
+        code = validated_data['code']
+
         bank_account = get_object_or_404(BankAccount, iban=iban, user=user)
 
         assert user.account.is_ordinary_user()
@@ -45,6 +55,11 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         if not bank_account.verified:
             logger.info('FiatRequest rejected due to unverified bank account. user=%s' % user.id)
             raise ValidationError({'iban': 'شماره حساب تایید نشده است.'})
+
+        otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_FIAT_WITHDRAW)
+
+        if not otp_code:
+            raise ValidationError({'code': 'کد نامعتبر است'})
 
         if amount < MIN_WITHDRAW:
             logger.info('FiatRequest rejected due to small amount. user=%s' % user.id)
@@ -62,18 +77,21 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         withdraw_amount = amount - fee_amount
 
         try:
-            with transaction.atomic():
-                lock = wallet.lock_balance(amount)
-
+            with WalletPipeline() as pipeline:  # type: WalletPipeline
                 withdraw_request = FiatWithdrawRequest.objects.create(
                     amount=withdraw_amount,
                     fee_amount=fee_amount,
-                    lock=lock,
-                    bank_account=bank_account
+                    bank_account=bank_account,
+                    withdraw_channel=config('WITHDRAW_CHANNEL')
                 )
+
+                pipeline.new_lock(key=withdraw_request.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست'})
+
+        if otp_code:
+            otp_code.set_code_used()
 
         from financial.tasks import process_withdraw
 
@@ -84,11 +102,11 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FiatWithdrawRequest
-        fields = ('iban', 'amount')
+        fields = ('iban', 'amount', 'code')
 
 
 class WithdrawRequestView(ModelViewSet):
-    permission_classes = (IsBasicVerified, )
+    permission_classes = (IsBasicVerified,)
     serializer_class = WithdrawRequestSerializer
 
     def get_queryset(self):
@@ -116,11 +134,11 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = FiatWithdrawRequest
         fields = ('id', 'created', 'status', 'fee_amount', 'amount', 'bank_account', 'ref_id',
-                  'rial_estimate_receive_time', )
+                  'rial_estimate_receive_time',)
 
     def get_rial_estimate_receive_time(self, fiat_withdraw_request: FiatWithdrawRequest):
         return fiat_withdraw_request.withdraw_datetime and \
-               get_fiat_estimate_receive_time(fiat_withdraw_request.withdraw_datetime)
+               fiat_withdraw_request.channel_handler.get_estimated_receive_time(fiat_withdraw_request.withdraw_datetime)
 
     def get_status(self, withdraw: FiatWithdrawRequest):
         if withdraw.status == FiatWithdrawRequest.PENDING:

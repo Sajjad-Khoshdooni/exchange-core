@@ -17,23 +17,28 @@ def update_network_fees():
 
         if info:
             symbol_pair = (ns.network.symbol, ns.asset.symbol)
+            withdraw_min = Decimal(info['withdrawMin'])
+            withdraw_fee = Decimal(info['withdrawFee'])
 
             if symbol_pair not in [('TRX', 'USDT'), ('TRX', 'TRX'), ('BSC', 'USDT')]:
-                info['withdrawFee'] = Decimal(info['withdrawFee']) * 2
-                info['withdrawMin'] = Decimal(info['withdrawMin']) * 2
+                withdraw_fee *= 2
+                withdraw_min *= 2
 
-            withdraw_min = Decimal(info['withdrawMin'])
+            if not withdraw_min:
+                withdraw_min = Decimal(info['withdrawIntegerMultiple'])
 
             price = get_trading_price_usdt(ns.asset.symbol, BUY, raw_price=True)
-            if price:
-                multiplier = max(math.ceil(5 / (price * withdraw_min)), 1)
-            else:
-                multiplier = 1
 
-            info['withdrawMin'] = withdraw_min * multiplier  # to prevent prize withdrawing
+            if price and withdraw_min:
+                multiplier = max(math.ceil(5 / (price * withdraw_min)), 1)  # withdraw_min >= 5$
+                withdraw_min *= multiplier
 
-            ns.withdraw_fee = info['withdrawFee']
-            ns.withdraw_min = info['withdrawMin']
+            if price and withdraw_fee:
+                multiplier = max(math.ceil(Decimal('0.2') / (price * withdraw_fee)), 1)  # withdraw_fee >= 0.2$
+                withdraw_fee *= multiplier
+
+            ns.withdraw_fee = withdraw_fee
+            ns.withdraw_min = withdraw_min
             ns.withdraw_max = info['withdrawMax']
             ns.binance_withdraw_enable = info['withdrawEnable']
         else:

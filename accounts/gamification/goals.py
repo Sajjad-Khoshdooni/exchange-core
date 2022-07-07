@@ -98,7 +98,7 @@ class VerifyLevel2Goal(Goal):
     name = 'verify_level2'
     title = 'احراز هویت'
     link = '/account/verification/basic'
-    description = 'با تکمیل احراز هویت، بدون محدودیت در {} معامله کنید.'.format(config('BRAND'))
+    description = 'احراز هویت کنید و شیبا جایزه بگیرید.'.format(config('BRAND'))
     alert_level = Notification.ERROR
 
     def get_progress(self):
@@ -123,7 +123,7 @@ class TradeStep1Goal(Goal):
     name = Prize.TRADE_PRIZE_STEP1
     title = 'معامله'
     link = '/trade/classic/BTCIRT'
-    description = 'به ارزش ۲ میلیون تومان معامله کنید و ۵۰,۰۰۰ شیبا جایزه بگیرید.'
+    description = 'به ارزش ۲ میلیون تومان معامله کنید و ۳۰,۰۰۰ شیبا جایزه بگیرید.'
 
     def get_progress(self):
         return self.account.trade_volume_irt
@@ -147,9 +147,32 @@ class InviteGoal(Goal):
     name = 'invite'
     title = 'دعوت از دوستان'
     link = '/account/referral'
-    description = 'دوستان خود را به {} دعوت کنید و جایزه بگیرید.'.format(config('BRAND'))
+    description = '۵ نفر از دوستان خود را به {} دعوت کنید و جایزه بگیرید.'.format(config('BRAND'))
     alert_level = Notification.INFO
 
     def get_progress(self):
         return self.account.get_invited_count()
 
+
+class SetEmailGoal(Goal):
+    type = Goal.BOOL
+    name = 'set_email'
+    title = 'ثبت ایمیل'
+    link = '/account/email'
+    description = 'برای دریافت اطلاع‌رسانی‌ها و اخبار مهم ایمیل‌تان را وارد کنید.'
+    alert_level = Notification.INFO
+
+    def get_progress(self):
+        return bool(self.account.user.email)
+
+
+class RedeemPrize(Goal):
+    type = Goal.BOOL
+    name = 'redeem_prize'
+    title = 'دریافت جایزه'
+    link = '/account/tasks'
+    description = 'جایزه‌ای به شما تعلق گرفت. برای دریافت آن کلیک کنید.'
+    alert_level = Notification.WARNING
+
+    def get_progress(self):
+        return False

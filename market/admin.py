@@ -20,7 +20,7 @@ class BaseAssetFilter(SimpleListFilter):
               return queryset
 
 
-class UserFillOrderFilter(SimpleListFilter):
+class UserTradeFilter(SimpleListFilter):
     title = 'کاربر'
     parameter_name = 'user'
 
@@ -30,7 +30,7 @@ class UserFillOrderFilter(SimpleListFilter):
     def queryset(self, request, queryset):
         user = request.GET.get('user')
         if user is not None:
-            return queryset.filter(taker_order__wallet__account__user=user)
+            return queryset.filter(account__user=user)
         else:
             return queryset
 
@@ -83,14 +83,14 @@ class UserFilter(SimpleListFilter):
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount', 'wallet')
     list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
-    readonly_fields = ('wallet', 'symbol', 'lock')
+    readonly_fields = ('wallet', 'symbol')
 
 
-@admin.register(FillOrder)
-class FillOrderAdmin(admin.ModelAdmin):
-    list_display = ('created', 'symbol', 'amount', 'price', 'irt_value', 'trade_source')
-    list_filter = ('trade_source', UserFillOrderFilter)
-    readonly_fields = ('symbol', 'taker_order', 'maker_order')
+@admin.register(Trade)
+class TradeAdmin(admin.ModelAdmin):
+    list_display = ('created', 'symbol', 'amount', 'price', 'gap_revenue', 'hedge_price', 'side', 'trade_source', 'irt_value', 'account')
+    list_filter = ('trade_source', UserTradeFilter)
+    readonly_fields = ('symbol', 'order', 'account')
     search_fields = ('symbol__name', )
 
 

@@ -1,12 +1,13 @@
 import datetime
-from uuid import uuid4
 
 from django.test import TestCase
 
-from accounts.models import Account
+from financial.models import FiatWithdrawRequest
 from financial.utils.test import new_user, new_bank_account, new_fiat_withdraw_request
-from financial.utils.withdraw_limit import get_fiat_estimate_receive_time
-from ledger.models import Asset, Trx
+from financial.utils.withdraw import FiatWithdraw
+from ledger.models import Asset
+
+get_fiat_estimate_receive_time = FiatWithdraw.get_withdraw_channel(FiatWithdrawRequest.PAYIR).get_estimated_receive_time
 
 
 class EstimateReceiveTimeTestCase(TestCase):
@@ -16,13 +17,7 @@ class EstimateReceiveTimeTestCase(TestCase):
         self.bank_account = new_bank_account(self.user_1)
         self.IRT = Asset.get(Asset.IRT)
 
-        Trx.transaction(
-            group_id=uuid4(),
-            sender=self.IRT.get_wallet(Account.system()),
-            receiver=self.IRT.get_wallet(self.user_1.account),
-            amount=1000000000,
-            scope=Trx.TRANSFER
-        )
+        self.IRT.get_wallet(self.user_1.account).airdrop(1000000000)
 
     def test_estimate_receive_time(self):
 
@@ -32,49 +27,49 @@ class EstimateReceiveTimeTestCase(TestCase):
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2020, 5, 17, 0, 10),
+            datetime=datetime.datetime(2020, 5, 17, 0, 10).astimezone(),
         )
         fiat_withdraw_2 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2020, 5, 17, 9, 10),
+            datetime=datetime.datetime(2020, 5, 17, 9, 10).astimezone(),
         )
         fiat_withdraw_3 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2020, 5, 17, 12, 0),
+            datetime=datetime.datetime(2020, 5, 17, 12, 0).astimezone(),
         )
         fiat_withdraw_4 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2020, 5, 17, 15, 10),
+            datetime=datetime.datetime(2020, 5, 17, 15, 10).astimezone(),
         )
         fiat_withdraw_5 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2020, 5, 17, 20, 0),
+            datetime=datetime.datetime(2020, 5, 17, 20, 0).astimezone(),
         )
         fiat_withdraw_6 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2022, 5, 19, 20, 0),
+            datetime=datetime.datetime(2022, 5, 19, 20, 0).astimezone(),
         )
         fiat_withdraw_7 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2022, 5, 20, 8, 10),
+            datetime=datetime.datetime(2022, 5, 20, 8, 10).astimezone(),
         )
         fiat_withdraw_8 = new_fiat_withdraw_request(
             amount=amount,
             wallet=wallet,
             bank_account=self.bank_account,
-            datetime=datetime.datetime(2022, 5, 20, 12, 10),
+            datetime=datetime.datetime(2022, 5, 20, 12, 10).astimezone(),
         )
 
         self.assertEqual(

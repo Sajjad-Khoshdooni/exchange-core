@@ -4,26 +4,15 @@ from decimal import Decimal
 from django.db.models import Sum
 
 from accounts.models import Account
-from ledger.models import Trx, Asset, CryptoBalance
+from financial.utils.stats import get_total_fiat_irt
+from ledger.models import Asset, CryptoBalance, Wallet
 from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, get_binance_trading_symbol
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
 
 def get_ledger_user_type_asset_balances():
-
-    received = Trx.objects.values('receiver__account__type', 'receiver__asset__symbol').annotate(amount=Sum('amount'))
-    sent = Trx.objects.values('sender__account__type', 'sender__asset__symbol').annotate(amount=Sum('amount'))
-
-    received_dict = {(r['receiver__account__type'], r['receiver__asset__symbol']): r['amount'] for r in received}
-    sent_dict = {(r['sender__account__type'], r['sender__asset__symbol']): r['amount'] for r in sent}
-
-    keys = set(received_dict.keys()) | set(sent_dict.keys())
-    total_dict = {}
-
-    for key in keys:
-        total_dict[key] = received_dict.get(key, 0) - sent_dict.get(key, 0)
-
-    return total_dict
+    wallets = Wallet.objects.values('account__type', 'asset__symbol').annotate(amount=Sum('balance'))
+    return {(w['account__type'], w['asset__symbol']): w['amount'] for w in wallets}
 
 
 def get_internal_asset_deposits():
@@ -48,12 +37,12 @@ class AssetOverview:
         for key, amount in self._user_type_asset_balances.items():
             self._user_type_balances[key[0]] += amount
 
-        self._prices = get_prices_dict(
+        self.prices = get_prices_dict(
             coins=list(Asset.candid_objects.values_list('symbol', flat=True)),
             side=SELL
         )
 
-        self._usdt_irt = get_tether_irt_price(SELL)
+        self.usdt_irt = get_tether_irt_price(SELL)
 
         balances_list = BinanceSpotHandler.get_account_details()['balances']
         self._binance_spot_balance_map = {b['asset']: float(b['free']) for b in balances_list}
@@ -76,11 +65,8 @@ class AssetOverview:
     def margin_ratio(self):
         return self.total_margin_balance / max(self.total_initial_margin, 1e-10)
 
-    def get_ledger_balance(self, user_type: str, asset: Asset = None):
-        if asset:
-            return self._user_type_asset_balances.get((user_type, asset.symbol), 0)
-        else:
-            return self._user_type_balances[user_type]
+    def get_ledger_balance(self, user_type: str, asset: Asset):
+        return self._user_type_asset_balances.get((user_type, asset.symbol), 0)
 
     def get_internal_deposits_balance(self, asset: Asset) -> Decimal:
         return self._internal_deposits.get(asset.symbol, 0)
@@ -97,12 +83,12 @@ class AssetOverview:
     def get_binance_spot_amount(self, asset: Asset) -> float:
         return self._binance_spot_balance_map.get(asset.symbol, 0)
 
-    def get_binance_spot_total_value(self) -> float:
-        value = 0
+    def get_binance_spot_total_value(self) -> Decimal:
+        value = Decimal(0)
 
         for symbol, amount in self._binance_spot_balance_map.items():
             if amount > 0:
-                value += Decimal(amount) * (self._prices.get(symbol) or 0)
+                value += Decimal(amount) * (self.prices.get(symbol) or 0)
 
         return value
 
@@ -111,7 +97,7 @@ class AssetOverview:
 
     def get_total_assets(self, asset: Asset):
         if asset.symbol == Asset.IRT:
-            return -asset.get_wallet(Account.out()).get_balance()
+            return get_total_fiat_irt()
         else:
             return self.get_binance_balance(asset) + self.get_internal_deposits_balance(asset)
 
@@ -119,24 +105,36 @@ class AssetOverview:
         # Hedge = Real assets - Promised assets to users (user)
         return self.get_total_assets(asset) - self.get_ledger_balance(Account.ORDINARY, asset)
 
-    def get_internal_usdt_value(self):
-        total = 0
+    def get_internal_usdt_value(self) -> Decimal:
+        total = Decimal(0)
 
         for symbol, amount in self._internal_deposits.items():
-            total += amount * (self._prices.get(symbol) or 0)
+            total += amount * (self.prices.get(symbol) or 0)
 
         return total
 
     def get_hedge_value(self, asset: Asset):
-        price = self._prices.get(asset.symbol)
+        price = self.prices.get(asset.symbol)
         if price is None:
             return None
 
         return Decimal(self.get_hedge_amount(asset)) * price
 
+    def get_users_asset_value(self, asset: Asset):
+        balance = self.get_ledger_balance(Account.ORDINARY, asset)
+        return balance * (self.prices.get(asset.symbol) or 0)
+
+    def get_all_users_asset_value(self) -> Decimal:
+        value = Decimal(0)
+
+        for asset in Asset.candid_objects.all():
+            value += self.get_users_asset_value(asset)
+
+        return value
+
     def get_total_hedge_value(self):
         return sum([
-            abs(self.get_hedge_value(asset) or 0) for asset in Asset.objects.exclude(symbol__in=[Asset.IRT, Asset.USDT])
+            abs(self.get_hedge_value(asset) or 0) for asset in Asset.objects.exclude(hedge_method=Asset.HEDGE_NONE)
         ])
 
     def get_binance_balance(self, asset: Asset) -> Decimal:
@@ -144,3 +142,15 @@ class AssetOverview:
         spot_amount = Decimal(self.get_binance_spot_amount(asset))
 
         return future_amount + spot_amount
+
+    def get_fiat_irt(self):
+        return self.get_total_assets(Asset.get(Asset.IRT))
+
+    def get_fiat_usdt(self) -> float:
+        return float(self.get_fiat_irt() / self.usdt_irt)
+
+    def get_all_assets_usdt(self):
+        return float(self.get_binance_spot_total_value()) + self.total_margin_balance + float(self.get_internal_usdt_value()) + self.get_fiat_usdt()
+
+    def get_exchange_assets_usdt(self):
+        return self.get_all_assets_usdt() - float(self.get_all_users_asset_value())

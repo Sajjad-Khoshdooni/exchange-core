@@ -24,7 +24,6 @@ class VerificationLevel2TestCase(TestCase):
             'birth_date': '2000-01-01',
             'national_code': '1230046917',
             'card_pan': '6104337574599260',
-            'iban': 'IR369271754583789114976929',
         }
 
         resp = self.client.post('/api/v1/accounts/verify/basic/', data)
@@ -38,9 +37,6 @@ class VerificationLevel2TestCase(TestCase):
             if key == 'card_pan':
                 resp_val = resp_val['card_pan']
 
-            if key == 'iban':
-                resp_val = resp_val['iban']
-
             self.assertEqual(resp_val, value)
 
     def test_error_age(self):
@@ -51,7 +47,6 @@ class VerificationLevel2TestCase(TestCase):
             'birth_date': '2200-01-01',
             'national_code': '1230046917',
             'card_pan': '6104337574599260',
-            'iban': 'IR369271754583789114976929',
         })
         self.assertEqual(resp.status_code, 400)
 
@@ -63,6 +58,5 @@ class VerificationLevel2TestCase(TestCase):
             'birth_date': '2000-01-01',
             'national_code': '1230046917',
             'card_pan': '6104337574599260',
-            'iban': 'IR369271754583789114976929',
         })
         self.assertEqual(resp.status_code, 400)

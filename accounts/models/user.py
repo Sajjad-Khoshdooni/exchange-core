@@ -46,7 +46,6 @@ class User(AbstractUser):
         }
     )
 
-
     first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام',)
     last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی',)
 
@@ -123,13 +122,6 @@ class User(AbstractUser):
     withdraw_before_48h_option = models.BooleanField(
         default=False,
         verbose_name='امکان برداشت وجه پیش از سپری شدن ۴۸ ساعت از اولین واریز',
-    )
-
-    on_boarding_flow = models.CharField(
-        max_length=10,
-        choices=((FIAT, FIAT), (CRYPTO, CRYPTO),),
-        blank=True,
-        default=''
     )
 
     class Meta:
@@ -209,19 +201,12 @@ class User(AbstractUser):
         elif not BankCard.live_objects.filter(user=self, verified__isnull=True):
             bank_card_verified = False
 
-        bank_account_verified = None
-
-        if BankAccount.live_objects.filter(user=self, verified=True):
-            bank_account_verified = True
-        elif not BankAccount.live_objects.filter(user=self, verified__isnull=True):
-            bank_account_verified = False
-
         return [
             bool(self.national_code), self.national_code_verified,
             bool(self.birth_date), self.birth_date_verified,
             bool(self.first_name), self.first_name_verified,
             bool(self.last_name), self.last_name_verified,
-            bank_card_verified, bank_account_verified
+            bank_card_verified
         ]
 
     def verify_level2_if_not(self) -> bool:
@@ -238,6 +223,10 @@ class User(AbstractUser):
     def reject_level2_if_should(self) -> bool:
 
         if self.level == User.LEVEL1 and self.verify_status == self.PENDING:
+            if User.objects.exclude(id=self.id).filter(national_code=self.national_code, level__gt=User.LEVEL1).exists():
+                self.national_code_duplicated_alert = True
+                self.change_status(User.REJECTED)
+
             level2_fields = self.get_level2_verify_fields()
             any_none = list(filter(lambda f: f is None, level2_fields))
 
@@ -273,8 +262,8 @@ class User(AbstractUser):
                     self.change_status(self.REJECTED)
 
         elif self.level == self.LEVEL1 and self.verify_status == self.PENDING:
-            self.verify_level2_if_not()
             self.reject_level2_if_should()
+            self.verify_level2_if_not()
 
         if old and old.selfie_image_verified is None and self.selfie_image_verified is False:
             Notification.send(

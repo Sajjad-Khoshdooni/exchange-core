@@ -1,11 +1,38 @@
+import logging
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Union
 from uuid import uuid4, UUID
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 
 from ledger.models import Wallet
 from ledger.utils.fields import get_amount_field
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class FakeTrx:
+    sender: Wallet
+    receiver: Wallet
+    amount: Decimal = 0
+    group_id: Union[str,UUID] = '00000000-0000-0000-0000-000000000000'
+    scope: str = ''
+
+    def save(self):
+        logger.info('ignoring saving null trx')
+
+    @classmethod
+    def from_trx(cls, trx: 'Trx') -> 'FakeTrx':
+        if isinstance(trx, FakeTrx):
+            return trx
+
+        return FakeTrx(sender=trx.sender, receiver=trx.receiver, amount=trx.amount)
+
+    def to_trx(self) -> 'Trx':
+        return Trx(sender=self.sender, receiver=self.receiver, amount=self.amount, group_id=self.group_id, scope=self.scope)
 
 
 class Trx(models.Model):
@@ -18,6 +45,8 @@ class Trx(models.Model):
     COMMISSION = 'c'
     PRIZE = 'p'
     REVERT = 'r'
+    AIRDROP = 'ad'
+    SEIZE = 'sz'
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -31,11 +60,14 @@ class Trx(models.Model):
         max_length=2,
         choices=((TRADE, 'trade'), (TRANSFER, 'transfer'), (MARGIN_TRANSFER, 'margin transfer'),
                  (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (LIQUID, 'liquid'),
-                 (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'), (REVERT, 'revert'))
+                 (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'), (REVERT, 'revert'), (AIRDROP, 'airdrop'))
     )
 
     class Meta:
         unique_together = ('group_id', 'sender', 'receiver', 'scope')
+        constraints = [
+            CheckConstraint(check=Q(amount__gt=0), name='check_ledger_trx_amount', ),
+        ]
 
     def save(self, *args, **kwargs):
         assert self.sender.asset == self.receiver.asset
@@ -43,35 +75,3 @@ class Trx(models.Model):
         assert self.amount > 0
 
         return super(Trx, self).save(*args, **kwargs)
-
-    @classmethod
-    def transaction(
-            cls,
-            sender: Wallet,
-            receiver: Wallet,
-            amount: Union[Decimal, int],
-            scope: str,
-            group_id: Union[str, UUID]
-    ):
-        trx, _ = Trx.objects.get_or_create(
-            sender=sender,
-            receiver=receiver,
-            scope=scope,
-            group_id=group_id,
-            defaults={
-                'amount': amount
-            }
-        )
-
-        return trx
-
-    def revert(self):
-        group_id = uuid4()
-
-        return self.transaction(
-            sender=self.receiver,
-            receiver=self.sender,
-            amount=self.amount,
-            scope=self.REVERT,
-            group_id=group_id
-        )

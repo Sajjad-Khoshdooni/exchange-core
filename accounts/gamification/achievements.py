@@ -3,6 +3,7 @@ from django.db import transaction
 from accounts.models import Account, Notification
 from ledger.models import Prize, Asset
 from ledger.utils.precision import humanize_number
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class Achievement:
@@ -25,14 +26,20 @@ class PrizeAchievement(Achievement):
     def as_dict(self):
         prize = Prize.objects.filter(account=self.account, scope=self.scope).first()
 
+        if prize:
+            amount = prize.amount
+        else:
+            amount = Prize.PRIZE_AMOUNTS[self.scope]
+
         return {
             'type': 'prize',
             'id': prize and prize.id,
             'scope': self.scope,
-            'amount': Prize.PRIZE_AMOUNTS[self.scope],
+            'amount': amount,
             'asset': 'SHIB',
             'achieved': bool(prize),
-            'redeemed': bool(prize) and prize.redeemed
+            'redeemed': bool(prize) and prize.redeemed,
+            'fake': bool(prize) and prize.fake,
         }
 
     def achieved(self):
@@ -43,7 +50,7 @@ class TradePrizeAchievementStep1(PrizeAchievement):
     scope = Prize.TRADE_PRIZE_STEP1
 
     def achieve_prize(self):
-        with transaction.atomic():
+        with WalletPipeline() as pipeline:
             prize, _ = Prize.objects.get_or_create(
                 account=self.account,
                 scope=Prize.TRADE_PRIZE_STEP1,
@@ -78,7 +85,7 @@ class TradePrizeAchievementStep1(PrizeAchievement):
                 )
 
                 if created:
-                    prize.build_trx()
+                    prize.build_trx(pipeline)
 
 
 class TradePrizeAchievementStep2(PrizeAchievement):
@@ -91,6 +98,34 @@ class TradePrizeAchievementStep2(PrizeAchievement):
                 scope=Prize.TRADE_PRIZE_STEP2,
                 defaults={
                     'amount': Prize.PRIZE_AMOUNTS[Prize.TRADE_PRIZE_STEP2],
+                    'asset': Asset.get(Asset.SHIB),
+                }
+            )
+
+            title = 'جایزه به شما تعلق گرفت.'
+            description = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
+                humanize_number(prize.asset.get_presentation_amount(prize.amount))
+            )
+
+            Notification.send(
+                recipient=self.account.user,
+                title=title,
+                message=description,
+                level=Notification.SUCCESS,
+                link='/account/tasks'
+            )
+
+
+class VerifyPrizeAchievement(PrizeAchievement):
+    scope = Prize.VERIFY_PRIZE
+
+    def achieve_prize(self):
+        with transaction.atomic():
+            prize, _ = Prize.objects.get_or_create(
+                account=self.account,
+                scope=Prize.VERIFY_PRIZE,
+                defaults={
+                    'amount': Prize.PRIZE_AMOUNTS[Prize.VERIFY_PRIZE],
                     'asset': Asset.get(Asset.SHIB),
                 }
             )

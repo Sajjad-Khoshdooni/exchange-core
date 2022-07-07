@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.models import User
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
@@ -28,7 +29,7 @@ class BalanceInformationSerializer(serializers.ModelSerializer):
 
 
 class GetBalanceInformation(ListAPIView):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
     serializer_class = BalanceInformationSerializer

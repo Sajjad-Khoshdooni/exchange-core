@@ -2,20 +2,23 @@ import logging
 from decimal import Decimal
 from uuid import uuid4
 
-from django.db import models, transaction
-from django.db.models import UniqueConstraint, Q
 from django.conf import settings
+from django.db import models, transaction
+from django.db.models import CheckConstraint
+from django.db.models import UniqueConstraint, Q
 from yekta_config.config import config
 
 from accounts.models import Account, Notification
+from accounts.utils import email
+from accounts.utils.push_notif import send_push_notif
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
 from ledger.models.address_key import AddressKey
 from ledger.models.crypto_balance import CryptoBalance
-from ledger.utils.fields import get_amount_field, get_address_field, get_lock_field
+from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
-from accounts.utils import email
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -42,13 +45,12 @@ class Transfer(models.Model):
         db_index=True
     )
 
-    lock = get_lock_field()
-
     trx_hash = models.CharField(max_length=128, db_index=True, null=True, blank=True)
     block_hash = models.CharField(max_length=128, db_index=True, blank=True)
     block_number = models.PositiveIntegerField(null=True, blank=True)
 
     out_address = get_address_field()
+    memo = models.CharField(max_length=64, blank=True)
 
     is_fee = models.BooleanField(default=False)
 
@@ -76,7 +78,7 @@ class Transfer(models.Model):
 
         return self.network.explorer_link.format(hash=self.trx_hash)
 
-    def build_trx(self):
+    def build_trx(self, pipeline: WalletPipeline):
         if self.hidden or (self.deposit and self.is_fee):
             logger.info(f'Creating Trx for transfer id: {self.id} ignored.')
             return
@@ -89,7 +91,7 @@ class Transfer(models.Model):
         else:
             sender, receiver = self.wallet, out_wallet
 
-        Trx.transaction(
+        pipeline.new_trx(
             group_id=self.group_id,
             sender=sender,
             receiver=receiver,
@@ -98,7 +100,7 @@ class Transfer(models.Model):
         )
 
         if self.fee_amount:
-            Trx.transaction(
+            pipeline.new_trx(
                 group_id=self.group_id,
                 sender=sender,
                 receiver=asset.get_wallet(Account.system()),
@@ -151,9 +153,10 @@ class Transfer(models.Model):
                 return True
 
     @classmethod
-    def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str):
+    def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str, memo: str = ''):
         assert wallet.asset.symbol != Asset.IRT
         assert wallet.account.is_ordinary_user()
+        wallet.has_balance(amount, raise_exception=True)
 
         if cls.check_fast_forward(sender_wallet=wallet, network=network, amount=amount, address=address):
             return
@@ -161,22 +164,21 @@ class Transfer(models.Model):
         network_asset = NetworkAsset.objects.get(network=network, asset=wallet.asset)
         assert network_asset.withdraw_max >= amount >= max(network_asset.withdraw_min, network_asset.withdraw_fee)
 
-        lock = wallet.lock_balance(amount)
-        deposit_address = network.get_deposit_address(wallet.account)
-
         commission = network_asset.withdraw_fee
 
-        transfer = Transfer.objects.create(
-            wallet=wallet,
-            network=network,
-            amount=amount - commission,
-            fee_amount=commission,
-            lock=lock,
-            source=cls.BINANCE,
-            deposit_address=deposit_address,
-            out_address=address,
-            deposit=False
-        )
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
+            transfer = Transfer.objects.create(
+                wallet=wallet,
+                network=network,
+                amount=amount - commission,
+                fee_amount=commission,
+                source=cls.BINANCE,
+                out_address=address,
+                deposit=False,
+                memo=memo,
+            )
+
+            pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
         from ledger.tasks import create_binance_withdraw
         create_binance_withdraw.delay(transfer.id)
@@ -184,7 +186,7 @@ class Transfer(models.Model):
         return transfer
 
     def save(self, *args, **kwargs):
-        if self.status == self.DONE and not settings.DEBUG:
+        if self.source == self.SELF and self.status == self.DONE and not settings.DEBUG:
             self.update_crypto_balances()
 
         return super().save(*args, **kwargs)
@@ -214,49 +216,43 @@ class Transfer(models.Model):
             logger.exception('failed to update crypto balance')
 
     def alert_user(self):
-        if self.status == Transfer.DONE and not self.hidden:
+        user = self.wallet.account.user
+
+        if self.status == Transfer.DONE and not self.hidden and user and user.is_active:
             sent_amount = self.asset.get_presentation_amount(self.amount)
             user_email = self.wallet.account.user.email
             if self.deposit:
-                Notification.send(
-                    recipient=self.wallet.account.user,
-                    title='دریافت شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol),
-                    message='از ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
-                )
-                if user_email:
-                    email.send_email_by_template(
-                        recipient=user_email,
-                        template=email.SCOPE_DEPOSIT_EMAIL,
-                        context={
-                            'amount': humanize_number(sent_amount),
-                            'wallet_asset': self.wallet.asset.symbol,
-                            'withdraw_address': self.deposit_address,
-                            'trx_hash': self.trx_hash,
-                            'brand': config('BRAND'),
-                            'panel_url': config('PANEL_URL'),
-                            'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-                        }
-                    )
+                title = 'دریافت شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol)
+                message = 'از ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
+                template = email.SCOPE_DEPOSIT_EMAIL
+
             else:
-                Notification.send(
-                    recipient=self.wallet.account.user,
-                    title='ارسال شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol),
-                    message='به ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
+                title = 'ارسال شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol)
+                message = 'به ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
+                template = email.SCOPE_WITHDRAW_EMAIL,
+
+            Notification.send(
+                recipient=self.wallet.account.user,
+                title=title,
+                message=message
+            )
+
+            send_push_notif(user=user, title=title, message=message)
+
+            if user_email:
+                email.send_email_by_template(
+                    recipient=user_email,
+                    template=template,
+                    context={
+                        'amount': humanize_number(sent_amount),
+                        'wallet_asset': self.wallet.asset.symbol,
+                        'withdraw_address': self.out_address,
+                        'trx_hash': self.trx_hash,
+                        'brand': config('BRAND'),
+                        'panel_url': config('PANEL_URL'),
+                        'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+                    }
                 )
-                if user_email:
-                    email.send_email_by_template(
-                        recipient=user_email,
-                        template=email.SCOPE_WITHDRAW_EMAIL,
-                        context={
-                            'amount': humanize_number(sent_amount),
-                            'wallet_asset': self.wallet.asset.symbol,
-                            'withdraw_address': self.out_address,
-                            'trx_hash': self.trx_hash,
-                            'brand': config('BRAND'),
-                            'panel_url': config('PANEL_URL'),
-                            'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-                        }
-                    )
 
     class Meta:
         constraints = [
@@ -264,5 +260,6 @@ class Transfer(models.Model):
                 fields=["trx_hash", "network", "deposit"],
                 name="unique_transfer_tx_hash_network",
                 condition=Q(status__in=["pending", "done"]),
-            )
+            ),
+            CheckConstraint(check=Q(amount__gte=0, fee_amount__gte=0), name='check_ledger_transfer_amounts', ),
         ]

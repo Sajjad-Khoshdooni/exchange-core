@@ -2,11 +2,12 @@ import logging
 from uuid import uuid4
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 
-from accounts.models import Account, Notification
+from accounts.models import Account
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_amount_field
-from ledger.utils.precision import humanize_number
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +16,14 @@ class Prize(models.Model):
     TRADE_THRESHOLD_STEP1 = 2_000_000
     TRADE_THRESHOLD_STEP2 = 20_000_000
 
+    VERIFY_PRIZE = 'level2_verify'
     TRADE_PRIZE_STEP1 = 'trade_2m'
     TRADE_PRIZE_STEP2 = 'trade_s2'
     REFERRAL_TRADE_2M_PRIZE = 'referral_trade_2m'
 
     PRIZE_AMOUNTS = {
-        TRADE_PRIZE_STEP1: 50_000,
+        VERIFY_PRIZE: 30_000,
+        TRADE_PRIZE_STEP1: 30_000,
         REFERRAL_TRADE_2M_PRIZE: 50_000,
         TRADE_PRIZE_STEP2: 100_000,
     }
@@ -31,7 +34,9 @@ class Prize(models.Model):
     scope = models.CharField(
         max_length=25,
         choices=(
+            (VERIFY_PRIZE, VERIFY_PRIZE),
             (TRADE_PRIZE_STEP1, TRADE_PRIZE_STEP1),
+            (TRADE_PRIZE_STEP2, TRADE_PRIZE_STEP2),
             (REFERRAL_TRADE_2M_PRIZE, REFERRAL_TRADE_2M_PRIZE)
         ),
         verbose_name='نوع'
@@ -46,8 +51,9 @@ class Prize(models.Model):
 
     class Meta:
         unique_together = [('account', 'scope', 'variant')]
+        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_ledger_prize_amount', ), ]
 
-    def build_trx(self):
+    def build_trx(self, pipeline: WalletPipeline):
         if self.redeemed:
             logger.info('Ignored redeem prize because it is redeemed before.')
             return
@@ -56,7 +62,7 @@ class Prize(models.Model):
         self.save(update_fields=['redeemed'])
 
         system = Account.system()
-        Trx.transaction(
+        pipeline.new_trx(
             group_id=self.group_id,
             sender=self.asset.get_wallet(system),
             receiver=self.asset.get_wallet(self.account),

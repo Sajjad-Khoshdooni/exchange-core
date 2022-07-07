@@ -1,6 +1,7 @@
 from django.conf import settings
 from uuid import uuid4
 from financial.models import BankCard, Gateway, FiatWithdrawRequest, BankAccount
+from ledger.models import BalanceLock
 
 if settings.DEBUG_OR_TESTING:
     from accounts.models import User
@@ -21,7 +22,7 @@ if settings.DEBUG_OR_TESTING:
 
     def new_gate_way() ->Gateway:
         name ='test_gateway'
-        type = Gateway.PAYDOTIR
+        type = Gateway.PAYIR
         gateway = Gateway.objects.create(name=name, type=type, merchant_id='test', active=True)
         return gateway
 
@@ -29,7 +30,6 @@ if settings.DEBUG_OR_TESTING:
         return FiatWithdrawRequest.objects.create(
             amount=amount,
             fee_amount=fee_amount,
-            lock=wallet.lock_balance(amount),
             bank_account=bank_account,
             withdraw_datetime=datetime,
         )
