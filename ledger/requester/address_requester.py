@@ -22,5 +22,5 @@ class AddressRequester:
             "address": address,
             "network": network
         }
-        response = requests.get(url=config('MASTERKEY_PUBLIC_ADDRESS_GENERATOR_URL'), data=data, headers=self.header)
+        response = requests.get(url=config('MASTERKEY_PUBLIC_ADDRESS_GENERATOR_URL'), data=data, headers=self.header).json()
         return response['public_address']
