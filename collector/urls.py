@@ -1,7 +1,7 @@
 from django.urls import path
 
-from collector.views import PriceGetterView
+from collector.views import CoinPriceView
 
 urlpatterns = [
-    path('price/getter/', PriceGetterView.as_view())
+    path('price/<str:coin>/<str:base>/<str:base>/', CoinPriceView.as_view())
 ]

@@ -3,24 +3,19 @@ from rest_framework.response import Response
 from rest_framework import serializers
 from rest_framework.authentication import TokenAuthentication
 
-from ledger.utils.price import get_trading_price_usdt
+from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt
 
 
-class PriceGetterSerializer(serializers.Serializer):
-    coin = serializers.CharField(max_length=16)
-    side = serializers.CharField(max_length=16)
-    raw_price = serializers.BooleanField(default=True)
-
-
-class PriceGetterView(APIView):
+class CoinPriceView(APIView):
     authentication_classes = [TokenAuthentication]
 
-    def get(self, request):
-        serializer = PriceGetterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        data = serializer.data
-        res = get_trading_price_usdt(data['coin'], side=data['side'], raw_price=data['raw_price'])
-        return Response(res, 201)
+    def get(self, request, coin, side, base):
+        if base == 'usdt':
+            res = get_trading_price_usdt(coin=coin, side=side)
+        elif base == 'irt':
+            res = get_trading_price_irt(coin=coin, side=side)
+        else:
+            return Response(404)
+        return Response(res, 200)
 
 
