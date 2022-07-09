@@ -56,6 +56,9 @@ class FiatWithdraw:
     def get_total_wallet_irt_value(self):
         raise NotImplementedError
 
+    def is_active(self):
+        return True
+
 
 class PayirChanel(FiatWithdraw):
 
@@ -278,6 +281,9 @@ class ZibalChanel(FiatWithdraw):
         return request_date.replace(microsecond=0, hour=19, minute=30)
 
     def get_total_wallet_irt_value(self):
+        if not self.is_active():
+            return 0
+
         resp = self.collect_api(
             path='/v1/wallet/list'
         )
@@ -287,6 +293,9 @@ class ZibalChanel(FiatWithdraw):
             total_wallet_irt_value += Decimal(wallet['balance'])
 
         return total_wallet_irt_value
+
+    def is_active(self):
+        return bool(config('ZIBAL_TOKEN'))
 
 
 class ZarinpalChanel(FiatWithdraw):
