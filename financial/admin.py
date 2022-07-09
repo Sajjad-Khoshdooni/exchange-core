@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.utils.safestring import mark_safe
@@ -24,7 +26,7 @@ class GatewayAdmin(admin.ModelAdmin):
     def get_total_wallet_irt_value(self, gateway: Gateway):
         channel = FiatWithdraw.get_withdraw_channel(gateway.type)
         try:
-            return channel.get_total_wallet_irt_value()
+            return humanize_number(Decimal(channel.get_total_wallet_irt_value()/10))
         except:
             return None
         # pass
