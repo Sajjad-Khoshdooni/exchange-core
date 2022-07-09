@@ -9,11 +9,13 @@ from ledger.utils.price_manager import PriceManager
 
 
 class Account(models.Model):
+    STAKE = 'st'
     SYSTEM = 's'
     OUT = 'o'
+
     ORDINARY = None
 
-    TYPE_CHOICES = ((SYSTEM, 'system'), (OUT, 'out'), (ORDINARY, 'ordinary'))
+    TYPE_CHOICES = ((SYSTEM, 'system'), (OUT, 'out'), (ORDINARY, 'ordinary'), (STAKE, 'stake'))
 
     name = models.CharField(max_length=16, blank=True)
 
