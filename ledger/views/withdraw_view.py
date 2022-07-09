@@ -5,7 +5,6 @@ from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.models import VerificationCode
@@ -26,6 +25,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
     network = serializers.CharField(write_only=True, required=False)
     code = serializers.CharField(write_only=True, required=False)
     address = serializers.CharField(write_only=True, required=False)
+    memo = serializers.CharField(write_only=True, required=False)
 
     def validate(self, attrs):
 
@@ -72,6 +72,14 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if asset.symbol == Asset.IRT:
             raise ValidationError('نشانه دارایی اشتباه است.')
 
+        if not network.need_memo:
+            memo = ''
+        else:
+            if 'memo' not in attrs:
+                raise ValidationError('برای این شبکه وارد کرد فیلد memo ضروری است.')
+            else:
+                memo = attrs['memo']
+
         if not api:
             code = attrs['code']
             otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CRYPTO_WITHDRAW)
@@ -98,7 +106,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
         wallet = asset.get_wallet(account)
 
         if not check_withdraw_laundering(wallet=wallet, amount=amount):
-            raise ValidationError('در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید. لطفا احراز هویت سطح ۳ را انجام دهید.')
+            raise ValidationError(
+                'در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید. لطفا احراز هویت سطح ۳ را انجام دهید.')
 
         irt_value = get_trading_price_irt(asset.symbol, BUY, raw_price=False) * amount
 
@@ -115,6 +124,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             'amount': amount,
             'out_address': address,
             'account': account,
+            'memo': memo
         }
 
     def create(self, validated_data):
@@ -123,14 +133,15 @@ class WithdrawSerializer(serializers.ModelSerializer):
                 wallet=validated_data['wallet'],
                 network=validated_data['network'],
                 amount=validated_data['amount'],
-                address=validated_data['out_address']
+                address=validated_data['out_address'],
+                memo=validated_data['memo'],
             )
         except InsufficientBalance:
             raise ValidationError('موجودی کافی نیست.')
 
     class Meta:
         model = Transfer
-        fields = ('amount', 'address', 'coin', 'network', 'code', 'address_book_id')
+        fields = ('amount', 'address', 'coin', 'network', 'code', 'address_book_id', 'memo',)
 
 
 class WithdrawView(CreateAPIView):
@@ -140,7 +151,7 @@ class WithdrawView(CreateAPIView):
     queryset = Transfer.objects.all()
 
     def get_serializer_context(self):
-            ctx = super().get_serializer_context()
-            if self.request.auth:
-                ctx['api'] = 1
-            return ctx
+        ctx = super().get_serializer_context()
+        if self.request.auth:
+            ctx['api'] = 1
+        return ctx
