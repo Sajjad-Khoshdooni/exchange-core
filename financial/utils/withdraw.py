@@ -179,7 +179,7 @@ class PayirChanel(FiatWithdraw):
 
     def get_total_wallet_irt_value(self):
         resp = self.collect_api(
-            path='/api/v2/wallets/'
+            path='/api/v2/wallets'
         )
 
         total_wallet_irt_value = 0
