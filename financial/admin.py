@@ -22,12 +22,16 @@ class GatewayAdmin(admin.ModelAdmin):
     readonly_fields = ('get_total_wallet_irt_value',)
 
     def get_total_wallet_irt_value(self, gateway: Gateway):
+        if not gateway.type:
+            return
+
         channel = FiatWithdraw.get_withdraw_channel(gateway.type)
+
         try:
             return channel.get_total_wallet_irt_value()
         except:
-            return None
-        # pass
+            return
+
     get_total_wallet_irt_value.short_description = 'موجودی'
 
 
