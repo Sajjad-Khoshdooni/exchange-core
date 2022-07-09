@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.db import models
 from rest_framework import serializers
 
+from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.precision import get_precision, get_presentation_amount
@@ -30,12 +31,18 @@ class Asset(models.Model):
     USDT = 'USDT'
     SHIB = 'SHIB'
 
+    HEDGE_NONE = ''
     HEDGE_BINANCE_FUTURE = 'binance-future'
     HEDGE_BINANCE_SPOT = 'binance-spot'
+
+    PRECISION = 8
 
     objects = models.Manager()
     live_objects = LiveAssetManager()
     candid_objects = CandidAssetManager()
+
+    name = models.CharField(max_length=32, blank=True)
+    name_fa = models.CharField(max_length=32, blank=True)
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -48,7 +55,6 @@ class Asset(models.Model):
 
     price_precision_usdt = models.SmallIntegerField(default=2)
     price_precision_irt = models.SmallIntegerField(default=0)
-    precision = models.SmallIntegerField(default=0)
 
     enable = models.BooleanField(default=False)
     order = models.SmallIntegerField(default=0, db_index=True)
@@ -58,8 +64,8 @@ class Asset(models.Model):
 
     trade_enable = models.BooleanField(default=True)
 
-    hedge_method = models.CharField(max_length=16, default=HEDGE_BINANCE_FUTURE, choices=[
-        (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE), (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
+    hedge_method = models.CharField(max_length=16, blank=True, default=HEDGE_BINANCE_FUTURE, choices=[
+        (HEDGE_NONE, 'none'), (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE), (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
     ])
 
     bid_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
@@ -76,22 +82,44 @@ class Asset(models.Model):
 
     margin_enable = models.BooleanField(default=False)
 
+    new_coin = models.BooleanField(default=False)
+
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
 
     def __str__(self):
         return self.symbol
 
+    def get_precision(self):
+        if self.symbol == Asset.IRT:
+            return 0
+        else:
+            return Asset.PRECISION
+
     def get_wallet(self, account: Account, market: str = Wallet.SPOT):
         assert market in Wallet.MARKETS
 
-        account_filter = {'account': account}
-        if type(account) == int:
+        if isinstance(account, int):
             account_filter = {'account_id': account}
+
+            if account == SYSTEM_ACCOUNT_ID:
+                account_type = Account.SYSTEM
+            else:
+                account_type = Account.ORDINARY
+
+        elif isinstance(account, Account):
+            account_filter = {'account': account}
+            account_type = account.type
+        else:
+            raise NotImplementedError
+
         wallet, _ = Wallet.objects.get_or_create(
             asset=self,
             market=market,
-            **account_filter
+            **account_filter,
+            defaults={
+                'check_balance': account_type == Account.ORDINARY
+            }
         )
 
         return wallet
@@ -121,7 +149,7 @@ class Asset(models.Model):
                 amount % self.trade_quantity_step == 0
 
     def get_presentation_amount(self, amount: Decimal) -> str:
-        return get_presentation_amount(amount, self.precision)
+        return get_presentation_amount(amount, self.get_precision())
 
     def get_presentation_price_irt(self, price: Decimal) -> str:
         return get_presentation_amount(price, self.price_precision_irt)
@@ -142,7 +170,7 @@ class Asset(models.Model):
         elif self.hedge_method == self.HEDGE_BINANCE_FUTURE:
             return BinanceFuturesHandler
         else:
-            raise NotImplementedError
+            return
 
 
 class AssetSerializer(serializers.ModelSerializer):
@@ -152,15 +180,18 @@ class AssetSerializer(serializers.ModelSerializer):
 
 
 class AssetSerializerMini(serializers.ModelSerializer):
+    precision = serializers.SerializerMethodField()
+    step_size = serializers.SerializerMethodField()
 
-    trade_precision = serializers.SerializerMethodField()
+    def get_precision(self, asset: Asset):
+        return asset.get_precision()
 
-    def get_trade_precision(self, asset: Asset):
+    def get_step_size(self, asset: Asset):
         return get_precision(asset.trade_quantity_step)
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'trade_precision', 'margin_enable')
+        fields = ('symbol', 'margin_enable', 'precision', 'step_size')
 
 
 class CoinField(serializers.CharField):

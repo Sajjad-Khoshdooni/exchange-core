@@ -2,6 +2,7 @@ from collections import namedtuple
 from decimal import Decimal
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 
 from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
@@ -46,3 +47,6 @@ class PairSymbol(models.Model):
 
     class Meta:
         unique_together = ('asset', 'base_asset')
+        constraints = [
+            CheckConstraint(check=Q(min_trade_quantity__gte=0, max_trade_quantity__gte=0, maker_amount__gte=0), name='check_market_pairsymbol_amounts', ),
+        ]

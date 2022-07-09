@@ -39,3 +39,9 @@ def get_web3_bsc_client() -> Web3:
         _web3 = Web3(Web3.HTTPProvider(bsc))
         _web3.middleware_onion.inject(geth_poa_middleware, layer=0)
     return _web3
+
+
+def validate_bsc_trx(trx_hash):
+    url = 'https://api.bscscan.com/api?module=transaction&action=gettxreceiptstatus&txhash={}&apikey=H78N3ND259DJINGK7A1SNMIWDA8EUMUMFG'
+    resp = requests.get(url.format(trx_hash))
+    return resp.json()['result']['status'] == '1'

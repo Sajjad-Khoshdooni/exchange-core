@@ -26,7 +26,8 @@ class ExternalNotification(models.Model):
     )
     scope = models.CharField(
         max_length=22,
-        choices=SCOPE_CHOICES
+        choices=SCOPE_CHOICES,
+        verbose_name='نوع'
     )
     user = models.ForeignKey(
         to=User,
@@ -38,19 +39,28 @@ class ExternalNotification(models.Model):
     @classmethod
     def send_sms(cls, user: User, scope: str, ):
         from accounts.tasks import send_message_by_sms_ir
-        ExternalNotification.objects.create(phone=user.phone, scope=scope, user=user)
-
         if scope == cls.SCOPE_LEVEL_2_PRIZE:
-            template = '64694'
-            params = {'token': 'پنجاه هزار شیبا هدیه‌ {}'.format(config('BRAND'))}
+            template = '67757'
+
+            params = {
+                'brand': '{} و دریافت سی هزار شیبا،'.format(config('BRAND')),
+                'department': config('RETENTION_URL_VERIFY')
+            }
 
         elif scope == cls.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE:
-            template = '64695'
-            params = {'brand': 'و دریافت هدیه پنجاه هزار شیبا به {}'.format(config('BRAND'))}
+            template = '67758'
+            params = {
+                'name': 'صرافی {}'.format(config('BRAND')),
+                'brand': 'و دریافت هدیه سی هزار شیبا به {}'.format(config('BRAND')),
+                'department': config('RETENTION_URL_DEPOSIT')
+            }
 
         elif scope == cls.SCOPE_TRADE_PRIZE:
-            template = '65788'
-            params = {'token': 'پنجاه هزار شیبا هدیه {}'.format(config('BRAND'))}
+            template = '67764'
+            params = {
+                'name': 'سی هزار شیبا هدیه {}'.format(config('BRAND')),
+                'department': config('RETENTION_URL_TRADE')
+            }
 
         else:
             raise NotImplementedError
@@ -59,12 +69,18 @@ class ExternalNotification(models.Model):
             print('template={},phone={},params={}'.format(template, user.phone, params))
             return
 
-        send_message_by_sms_ir(
+        resp = send_message_by_sms_ir(
             phone=user.phone,
             params=params,
             template=template
         )
 
+        if resp:
+            ExternalNotification.objects.create(phone=user.phone, scope=scope, user=user)
+
     @staticmethod
     def get_users_sent_sms_notif(scope: str):
         return ExternalNotification.objects.filter(scope=scope).values_list('user_id')
+
+    class Meta:
+        verbose_name = verbose_name_plural = 'نوتیف‌های بیرون پنل'

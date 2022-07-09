@@ -1,9 +1,10 @@
 from decimal import Decimal
+from typing import Union
 
 from django.db import models
-from django.db.models import UniqueConstraint, Q, Sum
+from django.db.models import UniqueConstraint, Q
+
 from accounts.models import User
-from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt
 from ledger.utils.price_manager import PriceManager
 
 
@@ -27,7 +28,7 @@ class Account(models.Model):
 
     primary = models.BooleanField(default=True)
 
-    last_margin_warn = models.DateTimeField(null=True, blank=True)
+    margin_alerting = models.BooleanField(default=False)
 
     referred_by = models.ForeignKey(
         to='accounts.Referral',
@@ -78,9 +79,8 @@ class Account(models.Model):
 
         with PriceManager(fetch_all=True):
             for wallet in wallets:
-                balance = wallet.get_free()
-                price = get_trading_price_usdt(wallet.asset.symbol, side, raw_price=True) or Decimal(0)
-                total += balance * price
+                balance = wallet.get_balance_usdt(side)
+                total += balance
 
         return total
 
@@ -93,9 +93,11 @@ class Account(models.Model):
 
         with PriceManager(fetch_all=True):
             for wallet in wallets:
-                balance = wallet.get_free()
-                price = get_trading_price_irt(wallet.asset.symbol, side, raw_price=True) or Decimal(0)
-                total += balance * price
+                if wallet.balance == 0:
+                    continue
+
+                balance = wallet.get_balance_irt(side)
+                total += balance
 
         return total
 
@@ -118,6 +120,14 @@ class Account(models.Model):
 
     def get_invited_count(self):
         return int(Account.objects.filter(referred_by__owner=self).count())
+
+    def airdrop(self, asset, amount: Union[Decimal, int]):
+        wallet = asset.get_wallet(self)
+        wallet.airdrop(amount)
+
+    def has_debt(self) -> bool:
+        from ledger.models import Wallet
+        return Wallet.objects.filter(account=self, market=Wallet.LOAN, balance__lt=0).exists()
 
     class Meta:
         constraints = [

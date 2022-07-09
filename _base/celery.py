@@ -163,14 +163,14 @@ app.conf.beat_schedule = {
         },
     },
 
-    'lock_monitor': {
-        'task': 'ledger.tasks.lock_monitor.lock_monitor',
-        'schedule': crontab(minute=0),
-        'options': {
-            'queue': 'celery',
-            'expire': 3600
-        },
-    },
+    # 'lock_monitor': {
+    #     'task': 'ledger.tasks.lock_monitor.lock_monitor',
+    #     'schedule': crontab(minute=0),
+    #     'options': {
+    #         'queue': 'celery',
+    #         'expire': 3600
+    #     },
+    # },
 
     'check_margin_level': {
         'task': 'ledger.tasks.margin.check_margin_level',
@@ -188,8 +188,17 @@ app.conf.beat_schedule = {
     #         'expire': 3600
     #     }
     # },
+    'send_level_2_prize_notifs': {
+        'task': 'accounts.tasks.send_sms.send_level_2_prize_notifs',
+        'schedule': crontab(hour=4, minute=30),
+        'options': {
+            'queue': 'celery',
+            'expire': 3600
+        }
+    },
+
     'send_first_fiat_deposit_sms': {
-        'task': 'accounts.tasks.send_first_fiat_deposit_notifs',
+        'task': 'accounts.tasks.send_sms.send_first_fiat_deposit_notifs',
         'schedule': crontab(hour=4, minute=30),
         'options': {
             'queue': 'celery',
@@ -198,7 +207,7 @@ app.conf.beat_schedule = {
     },
 
     'send_trade_notifs': {
-        'task': 'accounts.tasks.send_trade_notifs',
+        'task': 'accounts.tasks.send_sms.send_trade_notifs',
         'schedule': crontab(hour=4, minute=30),
         'options': {
             'queue': 'celery',
@@ -206,14 +215,14 @@ app.conf.beat_schedule = {
         }
     },
 
-    'moving_average_trader': {
-        'task': 'trader.tasks.moving_average.update_all_moving_averages',
-        'schedule': 67,
-        'options': {
-            'queue': 'trader-ma',
-            'expire': 67
-        }
-    },
+    # 'moving_average_trader': {
+    #     'task': 'trader.tasks.moving_average.update_all_moving_averages',
+    #     'schedule': 17,
+    #     'options': {
+    #         'queue': 'trader-ma',
+    #         'expire': 17
+    #     }
+    # },
     'update_withdraw_status': {
         'task': 'financial.tasks.withdraw.update_withdraw_status',
         'schedule': 300,
@@ -222,16 +231,24 @@ app.conf.beat_schedule = {
             'expire': 300
         },
     },
-    # 'random_trader': {
-    #     'task': 'trader.tasks.random_trader.random_trader',
-    #     'schedule': 60,
-    #     'options': {
-    #         'queue': 'trader-ma',
-    #         'expire': 60
-    #     }
-    # },
-}
+    'random_trader': {
+        'task': 'trader.tasks.random_trader.random_trader',
+        'schedule': 17,
+        'options': {
+            'queue': 'trader-ma',
+            'expire': 17
+        }
+    },
 
+    'health_alert_pending': {
+            'task': 'health.tasks.alert_pending.alert_pending',
+            'schedule': 600,
+            'options': {
+                'queue': 'celery',
+                'expire': 3600
+            }
+        },
+}
 if settings.DEBUG:
     app.conf.beat_schedule = {
         'coin_market_cap_update': {
@@ -256,14 +273,14 @@ if settings.DEBUG:
                 'expire': 2
             },
         },
-        'moving_average_trader': {
-            'task': 'trader.tasks.moving_average.update_all_moving_averages',
-            'schedule': 67,
-            'options': {
-                'queue': 'trader-ma',
-                'expire': 67
-            }
-        },
+        # 'moving_average_trader': {
+        #     'task': 'trader.tasks.moving_average.update_all_moving_averages',
+        #     'schedule': 67,
+        #     'options': {
+        #         'queue': 'trader-ma',
+        #         'expire': 67
+        #     }
+        # },
         'handle open stop loss': {
             'task': 'market.tasks.stop_loss.handle_stop_loss',
             'schedule': 1,
@@ -271,13 +288,22 @@ if settings.DEBUG:
                 'queue': 'stop_loss',
                 'expire': 1
             },
-        }
-        # 'random_trader': {
-        #     'task': 'trader.tasks.random_trader.random_trader',
-        #     'schedule': 60,
-        #     'options': {
-        #         'queue': 'trader-ma',
-        #         'expire': 60
-        #     }
-        # },
+        },
+        'check_margin_level': {
+            'task': 'ledger.tasks.margin.check_margin_level',
+            'schedule': 5,
+            'options': {
+                'queue': 'margin',
+                'expire': 5
+            },
+        },
+
+        'random_trader': {
+            'task': 'trader.tasks.random_trader.random_trader',
+            'schedule': 17,
+            'options': {
+                'queue': 'trader-ma',
+                'expire': 17
+            }
+        },
     }

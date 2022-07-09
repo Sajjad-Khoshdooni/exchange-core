@@ -1,13 +1,19 @@
 from django.urls import path, include
 from rest_framework import routers
+from rest_framework_simplejwt.views import TokenRefreshView
+
 
 from accounts import views
+from accounts.views.jwt_views import CustomTokenObtainPairView, TokenLogoutView
 from accounts.views.user_view import CreateAuthToken
 
 router = routers.DefaultRouter()
 
 router.register(r'^referrals', views.ReferralViewSet, basename='referral')
 urlpatterns = [
+    path('token/', CustomTokenObtainPairView.as_view(), name='obtain_token'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token/logout/', TokenLogoutView.as_view(), name='token_logout'),
     path('login/', views.LoginView.as_view()),
     path('logout/', views.LogoutView.as_view()),
 
@@ -76,4 +82,6 @@ urlpatterns = [
     })),
 
     path('banner/', views.BannerAlertAPIView.as_view()),
+
+    path('firebase/', views.FirebaseTokenView.as_view()),
 ]

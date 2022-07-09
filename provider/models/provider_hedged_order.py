@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 
 from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
@@ -48,7 +49,10 @@ class ProviderHedgedOrder(models.Model):
 
         future_side = BUY if spot_side == SELL else SELL
 
-        hedge = ProviderOrder.try_hedge_for_new_order(asset=asset, side=future_side, scope=ProviderOrder.WITHDRAW)
+        if asset.hedge_method == Asset.HEDGE_BINANCE_FUTURE:
+            hedge = ProviderOrder.try_hedge_for_new_order(asset=asset, side=future_side, scope=ProviderOrder.WITHDRAW)
+        else:
+            hedge = True
 
         if not hedge:
             logger.error('failed to hedge HedgedOrder in future')
@@ -76,3 +80,6 @@ class ProviderHedgedOrder(models.Model):
             return min_amount
         else:
             return min_amount + step_size - reminder
+
+    class Meta:
+        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_provider_hedged_order_amount', ), ]

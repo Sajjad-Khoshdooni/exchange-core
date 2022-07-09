@@ -4,10 +4,11 @@ from math import log10
 
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import Sum
+from django.db.models import Sum, CheckConstraint, Q
 
 from accounts.models import Account
-from ledger.models import Asset, Trx
+from ledger.exceptions import HedgeError
+from ledger.models import Asset, Wallet
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_trading_price_usdt, SELL, get_binance_trading_symbol
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
@@ -99,17 +100,12 @@ class ProviderOrder(models.Model):
         given binance manual deposit = 0 -> hedge = system + binance manual deposit + binance trades
         """
 
-        received = Trx.objects.filter(
-            receiver__account__type=Account.SYSTEM,
-            receiver__asset=asset
-        ).aggregate(amount=Sum('amount'))['amount'] or 0
-
-        sent = Trx.objects.filter(
-            sender__account__type=Account.SYSTEM,
-            receiver__asset=asset
-        ).aggregate(amount=Sum('amount'))['amount'] or 0
-
-        system_balance = received - sent
+        system_balance = Wallet.objects.filter(
+            account__type=Account.SYSTEM,
+            asset=asset
+        ).aggregate(
+            sum=Sum('balance')
+        )['sum'] or 0
 
         orders = ProviderOrder.objects.filter(asset=asset).values('side').annotate(amount=Sum('amount'))
 
@@ -130,13 +126,14 @@ class ProviderOrder(models.Model):
         return get_binance_trading_symbol(asset.symbol)
 
     @classmethod
-    def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '', dry_run: bool = False) -> bool:
+    def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '',
+                                dry_run: bool = False, raise_exception: bool = False) -> bool:
         # todo: this method should not called more than once at a single time
 
         if settings.DEBUG_OR_TESTING:
             return True
 
-        if asset.symbol == Asset.USDT:
+        if not asset.hedge_method:
             return True
 
         to_buy = amount if side == cls.BUY else -amount
@@ -183,6 +180,10 @@ class ProviderOrder(models.Model):
 
             if not dry_run:
                 order = cls.new_order(asset, side, order_amount, scope, market=market)
+
+                if not order and raise_exception:
+                    raise HedgeError
+
                 return bool(order)
 
             else:
@@ -193,3 +194,6 @@ class ProviderOrder(models.Model):
                 return True
 
         return True
+
+    class Meta:
+        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_provider_order_amount', ), ]

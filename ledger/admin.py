@@ -3,16 +3,17 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
-from ledger.utils.precision import get_presentation_amount
+
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory
+from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
+from ledger.models import Asset, Prize, CoinCategory, DepositAddress
 from ledger.utils.overview import AssetOverview
-from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol
-from provider.exchanges import BinanceFuturesHandler
+from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
+from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol
 from provider.models import ProviderOrder
 
 
@@ -30,15 +31,15 @@ class AssetAdmin(AdvancedAdmin):
     readonly_fields = ('get_calculated_hedge_amount', 'get_hedge_value', 'get_hedge_amount')
 
     list_display = (
-        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount',
+        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calculated_hedge_amount',
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
-        'get_ledger_balance_users', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
+        'get_ledger_balance_users', 'get_users_usdt_value', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
         'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'trade_enable', 'hedge_method',
         # 'bid_diff', 'ask_diff'
-        'candidate', 'margin_enable'
+        'candidate', 'margin_enable', 'new_coin'
     )
     list_filter = ('enable', 'trend', 'candidate', 'margin_enable')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable', 'new_coin')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
 
@@ -46,6 +47,8 @@ class AssetAdmin(AdvancedAdmin):
 
         if not settings.DEBUG:
             self.overview = AssetOverview()
+            account = MARGIN_INSURANCE_ACCOUNT
+
             context = {
                 'binance_initial_margin': round(self.overview.total_initial_margin, 2),
                 'binance_maint_margin': round(self.overview.total_maintenance_margin, 2),
@@ -53,7 +56,11 @@ class AssetAdmin(AdvancedAdmin):
                 'binance_margin_ratio': round(self.overview.margin_ratio, 2),
                 'hedge_value': round(self.overview.get_total_hedge_value(), 2),
                 'binance_spot_usdt': round(self.overview.get_binance_spot_amount(Asset.get(Asset.USDT)), 2),
-                'internal_usdt': round(self.overview.get_internal_usdt_value(), 2)
+                'internal_usdt': round(self.overview.get_internal_usdt_value(), 2),
+                'fiat_irt': round(self.overview.get_fiat_irt(), 0),
+                'total_assets_usdt': round(self.overview.get_all_assets_usdt(), 0),
+                'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
+                'margin_insurance_balance': Asset.get(Asset.USDT).get_wallet(account).balance
             }
         else:
             self.overview = None
@@ -73,6 +80,11 @@ class AssetAdmin(AdvancedAdmin):
         )
 
     get_ledger_balance_users.short_description = 'users'
+
+    def get_users_usdt_value(self, asset: Asset):
+        return self.overview and round(self.overview.get_users_asset_value(asset), 2)
+
+    get_users_usdt_value.short_description = 'usdt_value'
 
     def get_ledger_balance_system(self, asset: Asset):
         return self.overview and asset.get_presentation_amount(self.overview.get_ledger_balance(Account.SYSTEM, asset))
@@ -131,8 +143,11 @@ class AssetAdmin(AdvancedAdmin):
 
     def get_hedge_threshold(self, asset: Asset):
         if asset.enable:
-            symbol = get_binance_trading_symbol(asset.symbol)
-            return asset.get_hedger().get_step_size(symbol)
+            hedger = asset.get_hedger()
+
+            if hedger:
+                symbol = get_binance_trading_symbol(asset.symbol)
+                return hedger.get_step_size(symbol)
 
     get_hedge_threshold.short_description = 'hedge threshold'
 
@@ -150,6 +165,21 @@ class NetworkAdmin(admin.ModelAdmin):
 class NetworkAssetAdmin(admin.ModelAdmin):
     list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'binance_withdraw_enable')
     search_fields = ('network__symbol', 'asset__symbol')
+
+
+class UserFilter(admin.SimpleListFilter):
+    title = 'کاربران'
+    parameter_name = 'user_id'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user_id')
+        if user is not None:
+            return queryset.filter(account_secret__account__user=user)
+        else:
+            return queryset
 
 
 @admin.register(models.DepositAddress)
@@ -215,8 +245,10 @@ class OTCTradeAdmin(admin.ModelAdmin):
 
 @admin.register(models.Trx)
 class TrxAdmin(admin.ModelAdmin):
-    list_display = ('created', 'sender', 'receiver', 'amount', 'group_id')
+    list_display = ('created', 'sender', 'receiver', 'amount', 'scope', 'group_id', 'scope')
     search_fields = ('sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone')
+    readonly_fields = ('sender', 'receiver')
+    list_filter = ('scope', )
 
 
 class WalletUserFilter(SimpleListFilter):
@@ -281,14 +313,7 @@ class TransferAdmin(admin.ModelAdmin):
     list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount', 'deposit', 'status', 'is_fee', 'source')
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
-    readonly_fields = ('deposit_address', 'network', 'wallet', 'lock', 'provider_transfer')
-
-
-@admin.register(models.BalanceLock)
-class BalanceLockAdmin(admin.ModelAdmin):
-    list_display = ('created', 'release_date', 'wallet', 'amount', 'freed')
-    list_filter = ('freed', 'wallet')
-    ordering = ('-created', )
+    readonly_fields = ('deposit_address', 'network', 'wallet', 'provider_transfer')
 
 
 class CryptoAccountTypeFilter(SimpleListFilter):
@@ -355,10 +380,11 @@ class MarginLoanAdmin(admin.ModelAdmin):
     search_fields = ('group_id',)
 
 
-@admin.register(models.MarginLiquidation)
+@admin.register(models.CloseRequest)
 class MarginLiquidationAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'margin_level', 'group_id')
+    list_display = ('created', 'account', 'margin_level', 'group_id', 'status')
     search_fields = ('group_id',)
+    list_filter = ('status', )
 
 
 @admin.register(models.AddressBook)
@@ -370,6 +396,7 @@ class AddressBookAdmin(admin.ModelAdmin):
 @admin.register(models.Prize)
 class PrizeAdmin(admin.ModelAdmin):
     list_display = ('created', 'scope', 'account', 'get_asset_amount')
+    readonly_fields = ('account', 'asset', )
 
     def get_asset_amount(self, prize: Prize):
         return str(get_presentation_amount(prize.amount)) + str(prize.asset)
@@ -381,6 +408,7 @@ class PrizeAdmin(admin.ModelAdmin):
 class CoinCategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'get_coin_count']
 
-    def get_coin_count(self, coincaterogy:CoinCategory):
-        return coincaterogy.coins.count()
+    def get_coin_count(self, coin_category: CoinCategory):
+        return coin_category.coins.count()
+
     get_coin_count.short_description = 'تعداد رمزارز'

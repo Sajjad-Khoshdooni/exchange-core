@@ -16,8 +16,10 @@ brand = config('BRAND')
 SCOPE_WITHDRAW_EMAIL = 'withdraw_email'
 SCOPE_DEPOSIT_EMAIL = 'deposit_email'
 SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw_email'
-SCOPE_CANSEL_FIAT_WITHDRAW = 'cansel_fiat_withdraw_email'
+SCOPE_CANCEL_FIAT_WITHDRAW = 'cancel_fiat_withdraw_email'
 SCOPE_PAYMENT = 'payment_email'
+SCOPE_MARGIN_LIQUIDATED = 'margin_liquidated'
+SCOPE_MARGIN_LIQUIDATION_FINISHED = 'liquidation_finished'
 
 BRAND = config('BRAND')
 
@@ -37,10 +39,10 @@ TEMPLATES = {
         'html': 'accounts/email/successful_fiat_withdraw_email.min.html',
         'text': 'accounts/text/successful_fiat_withdraw_email.txt',
     },
-    'cansel_fiat_withdraw_email': {
+    'cancel_fiat_withdraw_email': {
         'subject': '{} | اطلاع‌رسانی لغو برداشت ریالی '.format(BRAND),
-        'html': 'accounts/email/cansel_fiat_withdraw_email.min.html',
-        'text': 'accounts/text/cansel_fiat_withdraw_email.txt',
+        'html': 'accounts/email/cancel_fiat_withdraw_email.min.html',
+        'text': 'accounts/text/cancel_fiat_withdraw_email.txt',
     },
     'deposit_email': {
         'subject': '{} | اطلاع‌رسانی واریز رمزارزی '.format(BRAND),
@@ -56,6 +58,9 @@ TEMPLATES = {
 
 
 def send_email_by_template(recipient: str, template: str, context: dict = None):
+    if not recipient:
+        return
+
     data = TEMPLATES[template]
 
     body_html = render_to_string(data['html'], context or {})

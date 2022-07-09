@@ -1,17 +1,16 @@
-import math
-
 from django.db import models
+from django.db.models import CheckConstraint, Q
 
 from ledger.consts import BEP20_SYMBOL_TO_SMART_CONTRACT
-from ledger.utils.fields import COMMISSION_MAX_DIGITS, get_amount_field
+from ledger.utils.fields import get_amount_field
 
 
 class NetworkAsset(models.Model):
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)
     network = models.ForeignKey('ledger.Network', on_delete=models.PROTECT)
 
-    withdraw_fee = get_amount_field(max_digits=COMMISSION_MAX_DIGITS)
-    withdraw_min = get_amount_field(max_digits=COMMISSION_MAX_DIGITS)
+    withdraw_fee = get_amount_field()
+    withdraw_min = get_amount_field()
     withdraw_max = get_amount_field()
     withdraw_precision = models.PositiveSmallIntegerField()
 
@@ -23,7 +22,7 @@ class NetworkAsset(models.Model):
         elif self.network.symbol == 'TRX':
             return self.asset.symbol in ('TRX', 'USDT')
         elif self.network.symbol == 'BSC':
-            return self.asset.symbol in BEP20_SYMBOL_TO_SMART_CONTRACT
+            return self.asset.symbol == 'BNB' or self.asset.symbol in BEP20_SYMBOL_TO_SMART_CONTRACT
         else:
             return False
 
@@ -32,3 +31,6 @@ class NetworkAsset(models.Model):
 
     class Meta:
         unique_together = ('asset', 'network')
+        constraints = [
+            CheckConstraint(check=Q(withdraw_fee__gte=0, withdraw_min__gte=0, withdraw_max__gte=0), name='check_ledger_network_amounts', ),
+        ]

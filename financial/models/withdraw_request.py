@@ -1,6 +1,7 @@
 import logging
 
-from django.db import models, transaction
+from django.core.exceptions import ValidationError
+from django.db import models
 from django.utils import timezone
 from yekta_config.config import config
 
@@ -12,17 +13,19 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import BankAccount
-from financial.utils.pay_ir import Payir
-
 from ledger.models import Trx, Asset
-from ledger.utils.fields import DONE, get_group_id_field, get_lock_field, PENDING, CANCELED
+from ledger.utils.fields import DONE, get_group_id_field, PENDING, CANCELED
 from ledger.utils.precision import humanize_number
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
 
 class FiatWithdrawRequest(models.Model):
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
+
+    ZIBAL, PAYIR, ZARINPAL = 'zibal', 'payir', 'zarinpal'
+    CHANEL_CHOICES = ((ZIBAL, ZIBAL), (PAYIR, PAYIR))
 
     FREEZE_TIME = 3 * 60
 
@@ -39,7 +42,6 @@ class FiatWithdrawRequest(models.Model):
         max_length=10,
         choices=[(PROCESSING, 'در حال پردازش'), (PENDING, 'در انتظار'), (DONE, 'انجام شده'), (CANCELED, 'لغو شده')]
     )
-    lock = get_lock_field()
 
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
     ref_doc = models.FileField(verbose_name='رسید انتقال', null=True, blank=True)
@@ -49,11 +51,19 @@ class FiatWithdrawRequest(models.Model):
     withdraw_datetime = models.DateTimeField(null=True, blank=True)
     provider_withdraw_id = models.CharField(max_length=64, blank=True)
 
+    withdraw_channel = models.CharField(max_length=10, choices=CHANEL_CHOICES, default=PAYIR)
+
     @property
     def total_amount(self):
         return self.amount + self.fee_amount
 
-    def build_trx(self):
+    @property
+    def channel_handler(self):
+        from financial.utils.withdraw import FiatWithdraw
+
+        return FiatWithdraw.get_withdraw_channel(self.withdraw_channel)
+
+    def build_trx(self, pipeline: WalletPipeline):
         asset = Asset.get(Asset.IRT)
         out_wallet = asset.get_wallet(Account.out())
 
@@ -61,7 +71,7 @@ class FiatWithdrawRequest(models.Model):
 
         sender, receiver = asset.get_wallet(account), out_wallet
 
-        Trx.transaction(
+        pipeline.new_trx(
             group_id=self.group_id,
             sender=sender,
             receiver=receiver,
@@ -70,7 +80,7 @@ class FiatWithdrawRequest(models.Model):
         )
 
         if self.fee_amount:
-            Trx.transaction(
+            pipeline.new_trx(
                 group_id=self.group_id,
                 sender=sender,
                 receiver=asset.get_wallet(Account.system()),
@@ -78,12 +88,13 @@ class FiatWithdrawRequest(models.Model):
                 scope=Trx.COMMISSION
             )
 
-    def create_withdraw_request_paydotir(self):
+    def create_withdraw_request(self):
         assert not self.provider_withdraw_id
         assert self.status == self.PROCESSING
 
-        wallet_id = config('PAY_IR_WALLET_ID', cast=int)
-        wallet = Payir.get_wallet_data(wallet_id)
+        wallet_id = self.channel_handler.get_wallet_id()
+
+        wallet = self.channel_handler.get_wallet_data(wallet_id)
 
         if wallet.free < self.amount:
             logger.info(f'Not enough wallet balance to full fill bank acc')
@@ -95,42 +106,47 @@ class FiatWithdrawRequest(models.Model):
             )
             return
 
-        self.ref_id = self.provider_withdraw_id = Payir.withdraw(wallet_id, self.bank_account, self.amount, self.id)
+        self.ref_id = self.provider_withdraw_id = self.channel_handler.create_withdraw(
+            wallet_id,
+            self.bank_account,
+            self.amount,
+            self.id
+        )
         self.change_status(FiatWithdrawRequest.PENDING)
         self.withdraw_datetime = timezone.now()
 
         self.save()
 
     def update_status(self):
+        from financial.utils.withdraw import FiatWithdraw
+
         if self.status != self.PENDING:
             return
 
-        status = Payir.get_withdraw_status(self.id)
+        withdraw_handler = FiatWithdraw.get_withdraw_channel(self.withdraw_channel)
+        status = withdraw_handler.get_withdraw_status(self.id, self.provider_withdraw_id)
 
         logger.info(f'FiatRequest {self.id} status: {status}')
 
-        if status == 4:
+        if status == FiatWithdraw.DONE:
             self.change_status(FiatWithdrawRequest.DONE)
 
-        elif status in (5, 3):
+        elif status == FiatWithdraw.CANCELED:
             self.change_status(FiatWithdrawRequest.CANCELED)
 
     def alert_withdraw_verify_status(self):
-        from financial.utils.withdraw_limit import get_fiat_estimate_receive_time
         if self.withdraw_datetime:
             estimated_receive_time = gregorian_to_jalali_datetime_str(
-                get_fiat_estimate_receive_time(
-                    self.withdraw_datetime
-                )
+                self.channel_handler.get_estimated_receive_time(self.withdraw_datetime)
             )
         else:
             estimated_receive_time = None
         user = self.bank_account.user
-        user_email = user.email
 
         if self.status == PENDING:
             title = 'درخواست برداشت شما به بانک ارسال گردید.'
-            description ='وجه درخواستی شما در سیکل بعدی پایا {} به حساب شما واریز خواهد شد.'.format(estimated_receive_time)
+            description = 'وجه درخواستی شما در سیکل بعدی پایا {} به حساب شما واریز خواهد شد.'.format(
+                estimated_receive_time)
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
             email_template = email.SCOPE_SUCCESSFUL_FIAT_WITHDRAW
@@ -140,7 +156,7 @@ class FiatWithdrawRequest(models.Model):
             description = ''
             level = Notification.ERROR
             template = 'withdraw-rejected'
-            email_template = email.SCOPE_CANSEL_FIAT_WITHDRAW
+            email_template = email.SCOPE_CANCEL_FIAT_WITHDRAW
         else:
             return
 
@@ -156,17 +172,16 @@ class FiatWithdrawRequest(models.Model):
             token=humanize_number(self.amount)
         )
 
-        if user_email:
-            email.send_email_by_template(
-                recipient=user_email,
-                template=email_template,
-                context={
-                    'estimated_receive_time': estimated_receive_time or None,
-                    'brand': config('BRAND'),
-                    'panel_url': config('PANEL_URL'),
-                    'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-                }
-            )
+        email.send_email_by_template(
+            recipient=user.email,
+            template=email_template,
+            context={
+                'estimated_receive_time': estimated_receive_time or None,
+                'brand': config('BRAND'),
+                'panel_url': config('PANEL_URL'),
+                'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+            }
+        )
 
     def change_status(self, new_status: str):
         if self.status == new_status:
@@ -174,12 +189,12 @@ class FiatWithdrawRequest(models.Model):
 
         assert self.status not in (CANCELED, self.DONE)
 
-        with transaction.atomic():
-            if new_status == DONE:
-                self.build_trx()
-
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
             if new_status in (self.CANCELED, self.DONE):
-                self.lock.release()
+                pipeline.release_lock(self.group_id)
+
+            if new_status == DONE:
+                self.build_trx(pipeline)
 
             if new_status == self.PENDING:
                 self.withdraw_datetime = timezone.now()
@@ -188,6 +203,19 @@ class FiatWithdrawRequest(models.Model):
             self.save()
 
         self.alert_withdraw_verify_status()
+
+    def clean(self):
+
+        old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
+
+        if old and old.status in (FiatWithdrawRequest.DONE, FiatWithdrawRequest.CANCELED) and\
+                self.status != old.status:
+            raise ValidationError('امکان تغییر وضعیت برای این ترکانش وجود ندارد.')
+
+        if old:
+            old.change_status(self.status)
+
+        # super().save_model(request, fiat_withdraw_request, form, change)
 
     def __str__(self):
         return '%s %s' % (self.bank_account, self.amount)

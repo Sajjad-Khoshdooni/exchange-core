@@ -7,7 +7,7 @@ DEFAULT_COIN_OF_NETWORK = {
 # https://support.binance.org/support/solutions/articles/67000666099-binance-peg-token-list
 BEP20_SYMBOL_TO_SMART_CONTRACT = {
     'ETH': '0x2170ed0880ac9a755fd29b2688956bd959f933f8', 'BTC': '0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c',
-    'USDT': '0x55d398326f99059ff775485246999027b3197955',
+    'USDT': '0x55d398326f99059ff775485246999027b3197955', 'USDC': '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
     'SOL': '0x570a5d26f7765ecb712c0924e4de545b89fd43df', 'SHIB': '0x2859e4544c4bb03966803b044a93563bd2d0dd4d',
     'AAVE': '0xfb6115445bff7b52feb98650c87f44907e58f802', 'UNI': '0xbf5140a22578168fd562dccf235e5d43a02ce9b1',
     'LINK': '0xf8a0bf9cf54bb92f17374d9e9a321e6a111a51bd', 'DOGE': '0xba2ae424d960c26247dd6c32edc70b295c744c43',
@@ -27,7 +27,7 @@ BEP20_SYMBOL_TO_SMART_CONTRACT = {
     '1INCH': '0x111111111117dc0aa78b770fa6a738034120c302', 'ANKR': '0xf307910a4c7bbc79691fd374889b36d8531b08e3',
     'DODO': '0x67ee3cb086f8a16f34bee3ca72fad36f7db929e2', 'ALICE': '0xac51066d7bec65dc4589368da368b212745d63e8',
     'REEF': '0xf21768ccbc73ea5b6fd3c687208a7c2def2d966e', 'CELR': '0x1f9f6a696c6fd109cd3956f45dc709d2b3902163',
-    'GALA': '0x7ddee176f665cd201f93eede625770e2fd911990',
+    'GALA': '0x7ddee176f665cd201f93eede625770e2fd911990', 'BSW': '0x965F527D9159dCe6288a2219DB51fc6Eef120dD1',
 }
 
 # ---------------------------------------------------------------------------------------------------------

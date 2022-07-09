@@ -9,6 +9,7 @@ from rest_framework.exceptions import ValidationError
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet
 from ledger.utils.precision import floor_precision
+from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import StopLoss
 from market.serializers.order_serializer import OrderSerializer
 
@@ -21,26 +22,29 @@ class StopLossSerializer(OrderSerializer):
     completed = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
 
-
     def get_completed(self, stop_loss: StopLoss):
         return stop_loss.filled_amount == stop_loss.amount
 
     def to_representation(self, stop_loss: StopLoss):
         data = super(OrderSerializer, self).to_representation(stop_loss)
         data['amount'] = str(floor_precision(Decimal(data['amount']), stop_loss.symbol.step_size))
-        data['price'] = str(floor_precision(Decimal(data['price']), stop_loss.symbol.tick_size))
+        if data['price']:
+            data['price'] = str(floor_precision(Decimal(data['price']), stop_loss.symbol.tick_size))
+        data['trigger_price'] = str(floor_precision(Decimal(data['trigger_price']), stop_loss.symbol.tick_size))
         data['symbol'] = stop_loss.symbol.name
         return data
 
     def create(self, validated_data):
         symbol, wallet = self.post_validate(validated_data)
-        validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
+        if validated_data['price']:
+            validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
+        validated_data['trigger_price'] = self.post_validate_price(symbol, validated_data['trigger_price'])
         try:
-            with transaction.atomic():
+            with WalletPipeline() as pipeline:
                 instance = super(OrderSerializer, self).create(
                     {**validated_data, 'wallet': wallet, 'symbol': symbol}
                 )
-                instance.acquire_lock()
+                instance.acquire_lock(pipeline)
                 return instance
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
@@ -50,8 +54,8 @@ class StopLossSerializer(OrderSerializer):
 
     class Meta:
         model = StopLoss
-        fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'price', 'side', 'completed',
-                  'market', 'canceled_at')
+        fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'price', 'trigger_price', 'side',
+                  'fill_type', 'completed', 'market', 'canceled_at')
         read_only_fields = ('id', 'created', 'canceled_at')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},
