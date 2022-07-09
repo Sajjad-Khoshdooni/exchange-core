@@ -112,10 +112,10 @@ class Transfer(models.Model):
     def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str):
         if not DepositAddress.objects.filter(address=address).exists():
             return False
-        sender_deposit_address = network.get_deposit_address(sender_wallet.account)
+        sender_deposit_address = DepositAddress.new_deposit_address(account=sender_wallet.account, network=network)
 
-        receiver_account = DepositAddress.objects.filter(address=address).first().account
-        receiver_deposit_address = network.network.get_deposit_address(receiver_account)
+        receiver_account = DepositAddress.objects.filter(address=address).first().address_key.account
+        receiver_deposit_address = DepositAddress.new_deposit_address(account=receiver_account, network=network)
         receiver_wallet = sender_wallet.asset.get_wallet(receiver_account)
 
         group_id = uuid4()
