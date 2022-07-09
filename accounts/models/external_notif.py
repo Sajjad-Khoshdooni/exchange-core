@@ -16,7 +16,8 @@ class ExternalNotification(models.Model):
     SCOPE_CHOICES = (
         (SCOPE_LEVEL_2_PRIZE, SCOPE_LEVEL_2_PRIZE),
         (SCOPE_FIRST_FIAT_DEPOSIT_PRIZE, SCOPE_FIRST_FIAT_DEPOSIT_PRIZE),
-        (SCOPE_TRADE_PRIZE, SCOPE_TRADE_PRIZE)
+        (SCOPE_TRADE_PRIZE, SCOPE_TRADE_PRIZE),
+        (SCOPE_MARGIN_ENABLE, SCOPE_MARGIN_ENABLE)
     )
 
     created = models.DateTimeField(auto_now_add=True)
