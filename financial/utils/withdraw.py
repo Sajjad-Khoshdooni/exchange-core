@@ -183,7 +183,7 @@ class PayirChanel(FiatWithdraw):
         )
 
         total_wallet_irt_value = 0
-        for wallet in resp['wallet']:
+        for wallet in resp['wallets']:
             total_wallet_irt_value += Decimal(wallet['balance'])
 
         return total_wallet_irt_value
