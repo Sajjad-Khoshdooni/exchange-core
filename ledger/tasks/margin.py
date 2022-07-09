@@ -7,6 +7,7 @@ from accounts.models import Account, Notification
 from accounts.tasks import send_message_by_kavenegar
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
+from accounts.utils.email import SCOPE_MARGIN_LIQUIDATION_FINISHED
 from accounts.utils.telegram import send_support_message
 from ledger.margin.margin_info import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD, \
     MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD
@@ -32,8 +33,8 @@ def check_margin_level():
 
         if margin_level <= LIQUIDATION_ML_THRESHOLD:
             CloseRequest.close_margin(account, reason=CloseRequest.LIQUIDATION)
+            alert_liquidation(account)
             status = 2
-
 
         elif not account.margin_alerting and margin_level <= MARGIN_CALL_ML_THRESHOLD:
             logger.warning('Send MARGIN_CALL_ML_THRESHOLD for account = %d' % account.id)
@@ -80,16 +81,11 @@ def alert_liquidation(account: Account):
         recipient=user,
         title='حساب تعهدی شما تسویه خودکار شد.',
         message='حساب تعهدی شما به خاطر افزایش بدهی‌هایتان به صورت خودکار تسویه شد.',
-        level=Notification.ERROR
+        level=Notification.ERROR,
+        link='/wallet/margin'
     )
 
     email.send_email_by_template(
         recipient=user.email,
-        template=email_template,
-        context={
-            'estimated_receive_time': estimated_receive_time or None,
-            'brand': config('BRAND'),
-            'panel_url': config('PANEL_URL'),
-            'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-        }
+        template=SCOPE_MARGIN_LIQUIDATION_FINISHED,
     )
