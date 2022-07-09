@@ -1,7 +1,5 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.core.exceptions import ValidationError
-from django.utils import timezone
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -14,9 +12,7 @@ from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAcc
     FiatWithdrawRequest
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from financial.utils.withdraw import FiatWithdraw
-from ledger.models import Asset
 from ledger.utils.precision import humanize_number
-from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 @admin.register(Gateway)

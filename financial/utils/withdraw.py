@@ -63,7 +63,7 @@ class PayirChanel(FiatWithdraw):
         return config('PAY_IR_WALLET_ID', cast=int)
 
     @classmethod
-    def collect_api(cls, path: str, method: str = 'GET', data: dict = None) -> dict:
+    def collect_api(cls, path: str, method: str = 'GET', data: dict = None, verbose: bool = False) -> dict:
 
         url = 'https://pay.ir' + path
 
@@ -93,6 +93,10 @@ class PayirChanel(FiatWithdraw):
             raise TimeoutError
 
         resp_data = resp.json()
+
+        if verbose:
+            print('status', resp.status_code)
+            print('data', resp_data)
 
         if not resp.ok or not resp_data['success']:
             raise ServerError
