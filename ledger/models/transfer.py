@@ -112,22 +112,16 @@ class Transfer(models.Model):
     def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str):
         if not DepositAddress.objects.filter(address=address).exists():
             return False
-        # sender_address_key = AddressKey.objects.filter(account=sender_wallet.account).first()
         sender_deposit_address = network.get_deposit_address(sender_wallet.account)
 
         receiver_account = DepositAddress.objects.filter(address=address).first().account
         receiver_deposit_address = network.network.get_deposit_address(receiver_account)
-        # receiver_wallet = wallet.asset.get_wallet(receiver_account) ????????????????????/
-
-        # receiver_deposit_address = DepositAddress.objects.filter(address=address).first()
-        # receiver_account = receiver_deposit_address.address_key.account
-
-        # receiver_wallet = Wallet.objects.get(account=receiver_account)
+        receiver_wallet = sender_wallet.asset.get_wallet(receiver_account)
 
         group_id = uuid4()
 
-        with transaction.atomic():
-            trx = Trx.objects.create(
+        with WalletPipeline() as pipeline:
+            pipeline.new_trx(
                 sender=sender_wallet,
                 receiver=receiver_wallet,
                 scope=Trx.TRANSFER,

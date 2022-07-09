@@ -1,6 +1,7 @@
 import requests
 import logging
-from ledger.requester.consts import BLOCKLINK_TOKEN, BLOCKLINK_REGISTER_ADDRESS_URL
+from yekta_config.config import config
+
 from ledger.models.deposit_address import DepositAddress
 
 logger = logging.getLogger(__name__)
@@ -8,9 +9,9 @@ logger = logging.getLogger(__name__)
 
 class RegisterAddress:
     def __init__(self):
-        self.url = BLOCKLINK_REGISTER_ADDRESS_URL
+        self.url = config('BLOCKLINK_REGISTER_ADDRESS_URL')
         self.header = {
-            'Authorization': 'Token ' + BLOCKLINK_TOKEN
+            'Authorization': 'Token ' + config('BLOCKLINK_TOKEN')
         }
 
     def register(self, deposit_address: DepositAddress):
