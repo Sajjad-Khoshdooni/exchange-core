@@ -179,6 +179,16 @@ class ProviderOrder(models.Model):
                 return True
 
             if not dry_run:
+                if market == cls.SPOT and side == cls.SELL:
+                    balance_map = BinanceSpotHandler.get_free_dict()
+                    balance = balance_map[asset.symbol]
+
+                    if balance < order_amount:
+                        diff = order_amount - balance
+
+                        if diff * price < 10:
+                            order_amount = round(balance, round_digits)
+
                 order = cls.new_order(asset, side, order_amount, scope, market=market)
 
                 if not order and raise_exception:
