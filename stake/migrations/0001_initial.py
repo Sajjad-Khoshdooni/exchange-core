@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('ledger', '0105_alter_trx_scope_alter_wallet_market'),
-        ('accounts', '0064_alter_account_type'),
+        ('accounts', '0063_alter_externalnotification_options_and_more'),
     ]
 
     operations = [

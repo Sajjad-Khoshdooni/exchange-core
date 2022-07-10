@@ -37,7 +37,6 @@ class TransferSerializer(serializers.ModelSerializer):
         fields = ('created', 'amount', 'status', 'link', 'out_address', 'coin', 'network', 'trx_hash', 'fee_amount')
 
 
-
 class WithdrawHistoryView(ListAPIView):
 
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
