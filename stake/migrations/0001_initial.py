@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('ledger', '0105_alter_trx_scope_alter_wallet_market'),
+        ('ledger', '0104_network_need_memo_transfer_memo'),
         ('accounts', '0063_alter_externalnotification_options_and_more'),
     ]
 
