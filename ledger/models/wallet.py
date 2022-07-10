@@ -13,7 +13,7 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 
 class Wallet(models.Model):
     SPOT, MARGIN, LOAN, STAKE = 'spot', 'margin', 'loan', 'stake'
-    MARKETS = (SPOT, MARGIN, LOAN)
+    MARKETS = (SPOT, MARGIN, LOAN, STAKE)
     MARKET_CHOICES = ((SPOT, SPOT), (MARGIN, MARGIN), (LOAN, LOAN), (STAKE, STAKE))
 
     created = models.DateTimeField(auto_now_add=True)

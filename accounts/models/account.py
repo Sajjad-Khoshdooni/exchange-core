@@ -15,14 +15,14 @@ class Account(models.Model):
 
     ORDINARY = None
 
-    TYPE_CHOICES = ((SYSTEM, 'system'), (OUT, 'out'), (ORDINARY, 'ordinary'), (STAKE, 'stake'))
+    TYPE_CHOICES = ((SYSTEM, 'system'), (OUT, 'out'), (ORDINARY, 'ordinary'), (STAKE, 'stake'),)
 
     name = models.CharField(max_length=16, blank=True)
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
 
     type = models.CharField(
-        max_length=1,
+        max_length=2,
         choices=TYPE_CHOICES,
         blank=True,
         null=True,
@@ -53,6 +53,10 @@ class Account(models.Model):
     @classmethod
     def system(cls) -> 'Account':
         return Account.objects.get(type=cls.SYSTEM, primary=True)
+
+    @classmethod
+    def stake(cls):
+        return Account.objects.get(type=cls.STAKE)
 
     @classmethod
     def out(cls) -> 'Account':
