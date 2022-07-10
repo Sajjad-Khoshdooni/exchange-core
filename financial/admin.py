@@ -17,8 +17,8 @@ from ledger.utils.precision import humanize_number
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'merchant_id', 'active', 'get_total_wallet_irt_value')
-    list_editable = ('active', )
+    list_display = ('name', 'type', 'merchant_id', 'active', 'active_for_staff', 'get_total_wallet_irt_value')
+    list_editable = ('active', 'active_for_staff')
     readonly_fields = ('get_total_wallet_irt_value',)
 
     def get_total_wallet_irt_value(self, gateway: Gateway):
