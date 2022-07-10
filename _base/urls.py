@@ -37,7 +37,7 @@ urlpatterns = [
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-if config('SHOW_SWAGGER', default=False, cast=bool):
+if config('STAGING', default=False, cast=bool):
     urlpatterns += [
         re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0),
             name='schema-json'),
