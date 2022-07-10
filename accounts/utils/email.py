@@ -18,8 +18,8 @@ SCOPE_DEPOSIT_EMAIL = 'deposit_email'
 SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw_email'
 SCOPE_CANCEL_FIAT_WITHDRAW = 'cancel_fiat_withdraw_email'
 SCOPE_PAYMENT = 'payment_email'
-SCOPE_MARGIN_LIQUIDATED = 'margin_liquidated'
-SCOPE_MARGIN_LIQUIDATION_FINISHED = 'liquidation_finished'
+SCOPE_MARGIN_UNDER_LIQUIDATION = 'margin_under_liquidation'
+SCOPE_MARGIN_LIQUIDATION_FINISHED = 'margin_liquidation_finished'
 
 BRAND = config('BRAND')
 
@@ -53,7 +53,12 @@ TEMPLATES = {
         'subject': '{} | اطلاع‌رسانی واریز ریالی'.format(BRAND),
         'html': 'accounts/email/payment_email.min.html',
         'text': 'accounts/text/payment_email.txt',
-    }
+    },
+    SCOPE_MARGIN_LIQUIDATION_FINISHED: {
+        'subject': '{} | تسویه خودکار حساب تعهدی'.format(BRAND),
+        'html': 'accounts/email/margin_liquidation_finished.min.html',
+        'text': 'accounts/text/margin_liquidation_finished.txt',
+    },
 }
 
 

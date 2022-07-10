@@ -108,6 +108,9 @@ class MarginLoanSerializer(serializers.ModelSerializer):
 
         validated_data['loan_type'] = validated_data.pop('type')
 
+        if validated_data['amount'] <= 0:
+            raise ValidationError('مقداری بزرگتر از صفر انتخاب کنید.')
+
         try:
             return MarginLoan.new_loan(
                 **validated_data

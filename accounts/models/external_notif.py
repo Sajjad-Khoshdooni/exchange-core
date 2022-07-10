@@ -11,11 +11,13 @@ class ExternalNotification(models.Model):
     SCOPE_LEVEL_2_PRIZE = 'level_2_prize'
     SCOPE_FIRST_FIAT_DEPOSIT_PRIZE = 'first_deposit_prize'
     SCOPE_TRADE_PRIZE = 'trade_prize'
+    SCOPE_MARGIN_ENABLE = 'margin_enable'
 
     SCOPE_CHOICES = (
         (SCOPE_LEVEL_2_PRIZE, SCOPE_LEVEL_2_PRIZE),
         (SCOPE_FIRST_FIAT_DEPOSIT_PRIZE, SCOPE_FIRST_FIAT_DEPOSIT_PRIZE),
-        (SCOPE_TRADE_PRIZE, SCOPE_TRADE_PRIZE)
+        (SCOPE_TRADE_PRIZE, SCOPE_TRADE_PRIZE),
+        (SCOPE_MARGIN_ENABLE, SCOPE_MARGIN_ENABLE)
     )
 
     created = models.DateTimeField(auto_now_add=True)
@@ -60,6 +62,12 @@ class ExternalNotification(models.Model):
             params = {
                 'name': 'سی هزار شیبا هدیه {}'.format(config('BRAND')),
                 'department': config('RETENTION_URL_TRADE')
+            }
+
+        elif scope == cls.SCOPE_MARGIN_ENABLE:
+            template = '67896'
+            params = {
+                'brand': 'راستین'
             }
 
         else:
