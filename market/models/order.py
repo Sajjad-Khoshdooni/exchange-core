@@ -37,7 +37,7 @@ class Order(models.Model):
     MIN_USDT_ORDER_SIZE = Decimal(5)
     MAX_ORDER_DEPTH_SIZE_IRT = Decimal('2e7')
     MAX_ORDER_DEPTH_SIZE_USDT = Decimal(1000)
-    MAKER_ORDERS_COUNT = 10 if settings.DEBUG else 50
+    MAKER_ORDERS_COUNT = 10 if settings.DEBUG_OR_TESTING else 50
 
     BUY, SELL = 'buy', 'sell'
     ORDER_CHOICES = [(BUY, BUY), (SELL, SELL)]
