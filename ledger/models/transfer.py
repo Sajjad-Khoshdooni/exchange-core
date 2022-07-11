@@ -7,7 +7,7 @@ from django.db.models import UniqueConstraint, Q, CheckConstraint
 from yekta_config.config import config
 
 from accounts.models import Account, Notification
-from accounts.utils.push_notif import send_push_notif
+from accounts.utils.push_notif import send_push_notif_to_user
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
@@ -187,7 +187,7 @@ class Transfer(models.Model):
                 message=message
             )
 
-            send_push_notif(user=user, title=title, message=message)
+            send_push_notif_to_user(user=user, title=title, message=message)
 
             if user_email:
                 email.send_email_by_template(
