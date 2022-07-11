@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class RegisterAddress:
     def __init__(self):
-        self.url = config('BLOCKLINK_BASE_URL') + config('BLOCKLINK_REGISTER_ADDRESS_URL')
+        self.url = config('BLOCKLINK_BASE_URL') + '/api/v1/tracker/address/'
         self.header = {
             'Authorization': 'Token ' + config('BLOCKLINK_TOKEN')
         }

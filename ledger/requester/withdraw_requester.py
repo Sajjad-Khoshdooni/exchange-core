@@ -17,7 +17,7 @@ class RequestWithdraw:
             'requester_id': requester_id
         }
 
-        url = config('BLOCKLINK_BASE_URL') + config('BLOCKLINK_WITHDRAW_FROM_HOTWALLET')
+        url = config('BLOCKLINK_BASE_URL') + '/api/v1/withdraw/hotwallet/'
 
         response = requests.post(data=data, url=url, headers=self.header).json()
         return response
@@ -32,6 +32,6 @@ class RequestWithdraw:
             'requester_id': requester_id
         }
 
-        url = config('BLOCKLINK_BASE_URL') + config('BLOCKLINK_WITHDRAW')
+        url = config('BLOCKLINK_BASE_URL') + '/api/v1/withdraw/'
         response = requests.post(data=data, url=url, headers=self.header).json()
         return response

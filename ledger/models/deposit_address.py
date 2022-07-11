@@ -22,7 +22,7 @@ class DepositAddress(models.Model):
         if DepositAddress.objects.filter(address_key__account=account, network=network).exists():
             return DepositAddress.objects.get(address_key__account=account, network=network)
 
-        elif not DepositAddress.objects.filter(address_key__account=account).exists():
+        elif not AddressKey.objects.filter(account=account).exists():
             address = AddressRequester().create_wallet()
             address_key = AddressKey.objects.create(
                 account=account,

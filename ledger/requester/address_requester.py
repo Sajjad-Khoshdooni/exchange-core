@@ -13,7 +13,7 @@ class AddressRequester:
         data = {
             'tag': 'tag'
         }
-        url = config('MASTERKEY_BASE_URL') + config('MASTERKEY_WALLET_URL')
+        url = config('MASTERKEY_BASE_URL') + '/api/v1/wallets/'
         res = requests.post(url=url, data=data, headers=self.header)
         response = json.loads(res.content.decode('utf-8'))
         return response['address']
@@ -23,6 +23,6 @@ class AddressRequester:
             "address": address,
             "network": network
         }
-        url = config('MASTERKEY_BASE_URL') + config('MASTERKEY_PUBLIC_ADDRESS_GENERATOR_URL')
+        url = config('MASTERKEY_BASE_URL') + '/api/v1/wallets/public/address/'
         response = requests.get(url=url, data=data, headers=self.header).json()
         return response['public_address']
