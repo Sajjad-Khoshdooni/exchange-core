@@ -10,6 +10,7 @@ from accounts.models import Account
 from ledger.exceptions import HedgeError
 from ledger.models import Asset, Wallet
 from ledger.utils.fields import get_amount_field
+from ledger.utils.precision import floor_precision
 from ledger.utils.price import get_trading_price_usdt, SELL, get_binance_trading_symbol
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
@@ -187,7 +188,10 @@ class ProviderOrder(models.Model):
                         diff = order_amount - balance
 
                         if diff * price < 10:
-                            order_amount = round(balance, round_digits)
+                            order_amount = floor_precision(balance, round_digits)
+
+                        if order_amount * price < 10:
+                            return True
 
                 order = cls.new_order(asset, side, order_amount, scope, market=market)
 
