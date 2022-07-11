@@ -16,6 +16,8 @@ class CoinPriceView(APIView):
             res = get_trading_price_irt(coin=coin, side=side)
         else:
             return Response(404)
-        return Response(res, 200)
+        return Response({
+            'price': res
+        }, 200)
 
 
