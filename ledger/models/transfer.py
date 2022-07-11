@@ -187,7 +187,7 @@ class Transfer(models.Model):
                 message=message
             )
 
-            send_push_notif_to_user(user=user, title=title, message=message)
+            send_push_notif_to_user(user=user, title=title, body=message)
 
             if user_email:
                 email.send_email_by_template(

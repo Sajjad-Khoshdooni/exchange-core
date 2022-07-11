@@ -18,12 +18,12 @@ def _get_access_token():
     return access_token_info.access_token
 
 
-def send_push_notif_to_user(user: User, title: str, message: str, image: str = None, link: str = None):
+def send_push_notif_to_user(user: User, title: str, body: str, image: str = None, link: str = None):
     from accounts.models import FirebaseToken
 
     fire_base_token = FirebaseToken.objects.filter(user=user).last()
 
-    send_push_notif(fire_base_token.token,  title, message, image, link)
+    send_push_notif(fire_base_token.token,  title, body, image, link)
 
 
 def send_push_notif(token: str, title: str, body: str, image: str = None, link: str = None):
@@ -76,7 +76,7 @@ def alert_shib_prize_to_signup(token: str):
     send_push_notif(
         token=token,
         title='تا ۲۰۰,۰۰۰ شیبا هدیه بگیرید',
-        message=to_signup_message.strip(),
+        body=to_signup_message.strip(),
         image=settings.HOST_URL + '/static/ads/shiba-prize.jpeg',
         link='https://raastin.com/auth/register?rewards=true&utm_source=push&utm_medium=push&utm_campaign=signup'
     )
@@ -92,7 +92,7 @@ def alert_shib_prize_to_engagement(user: User):
     send_push_notif_to_user(
         user=user,
         title='تا ۲۰۰,۰۰۰ شیبا هدیه بگیرید',
-        message=to_trade_message.strip(),
+        body=to_trade_message.strip(),
         image=settings.HOST_URL + '/static/ads/shiba-prize.jpeg',
         link='https://raastin.com/trade/market/BTCIRT?utm_source=push&utm_medium=push&utm_campaign=trade'
     )
