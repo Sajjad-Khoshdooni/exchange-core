@@ -71,17 +71,7 @@ def random_buy(symbol: PairSymbol, account: Account):
     ask = get_current_price(symbol, SELL)
     amount = floor_precision(Decimal(amount_value / ask), symbol.step_size)
 
-    # if not is_all_system(symbol, SELL, amount):
-    #     logger.info('buy ignored due to user top')
-    #     return
-
-    price = floor_precision(ask * Decimal('1.03'), symbol.tick_size)
-
-    if amount * price < min_order_value(symbol.base_asset.symbol):
-        logger.info('buy ignored due to small amount')
-        return
-
-    return new_order(symbol, account, amount, price, side=BUY, raise_exception=False, check_balance=False)
+    return new_order(symbol, account, amount, None, side=BUY, fill_type=Order.MARKET, raise_exception=False, check_balance=False)
 
 
 def random_sell(symbol: PairSymbol, account: Account):
@@ -93,17 +83,7 @@ def random_sell(symbol: PairSymbol, account: Account):
     balance = min(balance, random_min_order_value(symbol.base_asset.symbol) / bid)
     amount = floor_precision(balance, symbol.step_size)
 
-    # if not is_all_system(symbol, BUY, amount):
-    #     logger.info('sell ignored due to user top')
-    #     return
-
-    price = floor_precision(bid * Decimal('0.97'), symbol.tick_size)
-
-    if amount * price < min_order_value(symbol.base_asset.symbol):
-        logger.info('sell ignored due to small amount')
-        return
-
-    return new_order(symbol, account, amount, price, side=SELL, raise_exception=False, check_balance=False)
+    return new_order(symbol, account, amount, None, fill_type=Order.MARKET, side=SELL, raise_exception=False, check_balance=False)
 
 
 def balance_tether(account: Account):

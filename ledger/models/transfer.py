@@ -229,7 +229,7 @@ class Transfer(models.Model):
             else:
                 title = 'ارسال شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol)
                 message = 'به ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
-                template = email.SCOPE_WITHDRAW_EMAIL,
+                template = email.SCOPE_WITHDRAW_EMAIL
 
             Notification.send(
                 recipient=self.wallet.account.user,

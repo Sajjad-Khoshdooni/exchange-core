@@ -13,10 +13,11 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from market.models import StopLoss, Trade
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from accounts.views.authentication import CustomTokenAuthentication
+from accounts.views.jwt_views import DelegatedAccountMixin
 from market.models import Order, CancelRequest
+from market.models import StopLoss, Trade
 from market.serializers.cancel_request_serializer import CancelRequestSerializer
 from market.serializers.order_serializer import OrderSerializer
 from market.serializers.order_stoploss_serializer import OrderStopLossSerializer
@@ -44,7 +45,8 @@ class StopLossFilter(django_filters.FilterSet):
 class OrderViewSet(mixins.CreateModelMixin,
                    mixins.RetrieveModelMixin,
                    mixins.ListModelMixin,
-                   GenericViewSet):
+                   GenericViewSet,
+                   DelegatedAccountMixin):
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     pagination_class = LimitOffsetPagination
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
@@ -55,22 +57,14 @@ class OrderViewSet(mixins.CreateModelMixin,
 
     def get_queryset(self):
         return Order.objects.filter(
-            wallet__account=self.request.user.account
+            wallet__account_id=self.get_account(self.request)
         ).select_related('symbol', 'wallet').order_by('-created')
 
     def get_serializer_context(self):
-        trades = {
-            trade['order_id']: (trade['sum_amount'], trade['sum_value']) for trade in
-            Trade.objects.filter(account=self.request.user.account).annotate(
-                value=F('amount') * F('price')
-            ).values('order').annotate(sum_amount=Sum('amount'), sum_value=Sum('value')).values(
-                'order_id', 'sum_amount', 'sum_value'
-            )
-        }
         return {
             **super(OrderViewSet, self).get_serializer_context(),
-            'account': self.request.user.account,
-            'trades': Trade.get_account_orders_filled_price(self.request.user.account),
+            'account': self.get_account(self.request),
+            'trades': Trade.get_account_orders_filled_price(self.get_account(self.request)),
         }
 
 
@@ -94,7 +88,7 @@ class OpenOrderListAPIView(APIView):
         return Response(sorted_results)
 
 
-class CancelOrderAPIView(CreateAPIView):
+class CancelOrderAPIView(CreateAPIView, DelegatedAccountMixin):
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
@@ -104,11 +98,11 @@ class CancelOrderAPIView(CreateAPIView):
     def get_serializer_context(self):
         return {
             **super(CancelOrderAPIView, self).get_serializer_context(),
-            'account': self.request.user.account
+            'account': self.get_account(self.request)
         }
 
 
-class StopLossViewSet(ModelViewSet):
+class StopLossViewSet(ModelViewSet, DelegatedAccountMixin):
     authentication_classes = (SessionAuthentication, JWTAuthentication)
     permission_classes = (IsAuthenticated,)
     pagination_class = LimitOffsetPagination
@@ -119,10 +113,10 @@ class StopLossViewSet(ModelViewSet):
     filter_class = StopLossFilter
 
     def get_queryset(self):
-        return StopLoss.objects.filter(wallet__account=self.request.user.account).order_by('-created')
+        return StopLoss.objects.filter(wallet__account=self.get_account(self.request)).order_by('-created')
 
     def get_serializer_context(self):
         return {
             **super(StopLossViewSet, self).get_serializer_context(),
-            'account': self.request.user.account
+            'account': self.get_account(self.request)
         }

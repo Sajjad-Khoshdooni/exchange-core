@@ -1,7 +1,5 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.core.exceptions import ValidationError
-from django.utils import timezone
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -14,24 +12,26 @@ from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAcc
     FiatWithdrawRequest
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from financial.utils.withdraw import FiatWithdraw
-from ledger.models import Asset
 from ledger.utils.precision import humanize_number
-from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'merchant_id', 'active', 'get_total_wallet_irt_value')
-    list_editable = ('active', )
+    list_display = ('name', 'type', 'merchant_id', 'active', 'active_for_staff', 'get_total_wallet_irt_value')
+    list_editable = ('active', 'active_for_staff')
     readonly_fields = ('get_total_wallet_irt_value',)
 
     def get_total_wallet_irt_value(self, gateway: Gateway):
+        if not gateway.type:
+            return
+
         channel = FiatWithdraw.get_withdraw_channel(gateway.type)
+
         try:
             return channel.get_total_wallet_irt_value()
         except:
-            return None
-        # pass
+            return
+
     get_total_wallet_irt_value.short_description = 'موجودی'
 
 

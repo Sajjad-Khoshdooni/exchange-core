@@ -28,7 +28,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
             raise ValidationError({'card_pan': 'شماره کارت تایید نشده است.'})
 
         from financial.models import Gateway
-        gateway = Gateway.get_active()
+        gateway = Gateway.get_active(user)
 
         try:
             return gateway.create_payment_request(bank_card=bank_card, amount=amount)
