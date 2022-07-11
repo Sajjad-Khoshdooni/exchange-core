@@ -29,7 +29,7 @@ def handle_stop_loss():
 @shared_task(queue='stop_loss')
 def create_needed_stop_loss_orders(symbol_id, side):
     market_top_prices = Order.get_top_prices(symbol_id)
-    symbol_price = market_top_prices[Order.get_opposite_side(side)]
+    symbol_price = market_top_prices[side]
     stop_loss_qs = StopLoss.not_triggered_objects.filter(
         symbol_id=symbol_id, side=side
     ).prefetch_related('wallet__account')
