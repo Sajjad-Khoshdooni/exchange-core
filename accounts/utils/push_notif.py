@@ -48,7 +48,7 @@ def send_push_notif(token: str, title: str, body: str, image: str = None, link: 
         }
 
     resp = requests.post(
-        url=' https://fcm.googleapis.com/v1/projects/glassy-ripsaw-271116/messages:send',
+        url=' https://fcm.googleapis.com/v1/projects/raastin-7203e/messages:send',
         headers={
             'Authorization': 'Bearer ' + _get_access_token(),
             'Content-Type': 'application/json; UTF-8',
