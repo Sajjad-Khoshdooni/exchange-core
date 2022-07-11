@@ -26,7 +26,7 @@ class Network(models.Model):
     need_memo = models.BooleanField(default=False)
 
     def get_deposit_address(self, account: Account) -> DepositAddress:
-        return DepositAddress.new_deposit_address(account=account, network=self.symbol)
+        return DepositAddress.get_deposit_address(account=account, network=self.symbol)
 
     def __str__(self):
         return self.symbol

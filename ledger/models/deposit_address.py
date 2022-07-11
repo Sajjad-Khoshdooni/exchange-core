@@ -16,7 +16,7 @@ class DepositAddress(models.Model):
         return '%s (network= %s)' % (self.address, self.network)
 
     @classmethod
-    def new_deposit_address(cls, account, network):
+    def get_deposit_address(cls, account, network):
         address, address_key = None, None
 
         if DepositAddress.objects.filter(address_key__account=account, network=network).exists():

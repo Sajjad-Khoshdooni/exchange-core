@@ -13,11 +13,11 @@ class FastForwardTestCase(TestCase):
         self.receiver_account = new_account()
         self.network = new_network()
         self.asset = Asset.objects.create(symbol=self.network.symbol)
-        self.sender_deposit_address = DepositAddress.new_deposit_address(
+        self.sender_deposit_address = DepositAddress.get_deposit_address(
             account=self.sender_account,
             network=self.network)
         self.sender_wallet = self.asset.get_wallet(account=self.sender_account)
-        self.receiver_deposit_address = DepositAddress.new_deposit_address(
+        self.receiver_deposit_address = DepositAddress.get_deposit_address(
             account=self.receiver_account,
             network=self.network)
         self.receiver_wallet = self.asset.get_wallet(account=self.receiver_account)
