@@ -36,10 +36,8 @@ def send_push_notif(token: str, title: str, message: str, image: str = None, lin
         message['image'] = image
 
     body = {
-        "message": {
-            "token": token,
-            "notification": message
-        }
+        "token": token,
+        "notification": message
     }
 
     if link:
@@ -55,7 +53,9 @@ def send_push_notif(token: str, title: str, message: str, image: str = None, lin
             'Authorization': 'Bearer ' + _get_access_token(),
             'Content-Type': 'application/json; UTF-8',
         },
-        json=body
+        json={
+            'message': body
+        }
     )
 
     if not resp.ok:
