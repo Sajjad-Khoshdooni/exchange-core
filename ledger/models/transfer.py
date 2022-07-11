@@ -110,47 +110,47 @@ class Transfer(models.Model):
 
     @classmethod
     def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str):
-        if DepositAddress.objects.filter(address=address).exists():
-            sender_address_key = AddressKey.objects.filter(account=sender_wallet.account).first()
-            sender_deposit_address = DepositAddress.objects.filter(address_key=sender_address_key).first()
+        if not DepositAddress.objects.filter(address=address).exists():
+            return False
+        sender_deposit_address = DepositAddress.get_deposit_address(account=sender_wallet.account, network=network)
 
-            receiver_deposit_address = DepositAddress.objects.filter(address=address).first()
-            receiver_account = receiver_deposit_address.address_key.account
-            receiver_wallet = Wallet.objects.get(account=receiver_account)
+        receiver_account = DepositAddress.objects.filter(address=address).first().address_key.account
+        receiver_deposit_address = DepositAddress.get_deposit_address(account=receiver_account, network=network)
+        receiver_wallet = sender_wallet.asset.get_wallet(receiver_account)
 
-            group_id = uuid4()
+        group_id = uuid4()
 
-            with transaction.atomic():
-                trx = Trx.objects.create(
-                    sender=sender_wallet,
-                    receiver=receiver_wallet,
-                    scope=Trx.TRANSFER,
-                    group_id=group_id,
-                    amount=amount
-                )
-                Transfer.objects.create(
-                    status=Transfer.DONE,
-                    deposit_address=sender_deposit_address,
-                    wallet=sender_wallet,
-                    network=network,
-                    amount=amount,
-                    deposit=False,
-                    group_id=group_id,
-                    trx_hash='internal: <%s>' % str(trx.id),
-                    out_address=address
-                )
-                Transfer.objects.create(
-                    status=Transfer.DONE,
-                    deposit_address=receiver_deposit_address,
-                    wallet=receiver_wallet,
-                    network=network,
-                    amount=amount,
-                    deposit=True,
-                    group_id=group_id,
-                    trx_hash='internal: <%s>' % str(trx.id),
-                    out_address=sender_deposit_address.address
-                )
-                return True
+        with WalletPipeline() as pipeline:
+            pipeline.new_trx(
+                sender=sender_wallet,
+                receiver=receiver_wallet,
+                scope=Trx.TRANSFER,
+                group_id=group_id,
+                amount=amount
+            )
+            Transfer.objects.create(
+                status=Transfer.DONE,
+                deposit_address=sender_deposit_address,
+                wallet=sender_wallet,
+                network=network,
+                amount=amount,
+                deposit=False,
+                group_id=group_id,
+                trx_hash='internal: <%s>' % str(group_id),
+                out_address=address
+            )
+            Transfer.objects.create(
+                status=Transfer.DONE,
+                deposit_address=receiver_deposit_address,
+                wallet=receiver_wallet,
+                network=network,
+                amount=amount,
+                deposit=True,
+                group_id=group_id,
+                trx_hash='internal: <%s>' % str(group_id),
+                out_address=sender_deposit_address.address
+            )
+            return True
 
     @classmethod
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str, memo: str = ''):

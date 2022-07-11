@@ -26,8 +26,6 @@ TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
 DEBUG_OR_TESTING = DEBUG or TESTING
 
-DEBUG_FAST_FORWARD = True
-
 HOST_URL = config('HOST_URL')
 
 CELERY_TASK_ALWAYS_EAGER = config('CELERY_ALWAYS_EAGER', default=False)
