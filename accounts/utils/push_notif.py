@@ -49,7 +49,7 @@ def send_push_notif(token: str, title: str, message: str, image: str = None, lin
             }
         }
 
-    requests.post(
+    resp = requests.post(
         url=' https://fcm.googleapis.com/v1/projects/glassy-ripsaw-271116/messages:send',
         headers={
             'Authorization': 'Bearer ' + _get_access_token(),
@@ -58,6 +58,11 @@ def send_push_notif(token: str, title: str, message: str, image: str = None, lin
         json=body
     )
 
+    if not resp.ok:
+        print(resp.status_code)
+        print(resp.json())
+
+    return resp
 
 to_signup_message = """
 همین حالا ثبت‌نام کن و شیبا بگیر.
