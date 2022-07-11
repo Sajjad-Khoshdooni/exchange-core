@@ -1,9 +1,14 @@
-from rest_framework.authentication import TokenAuthentication, get_authorization_header
-from accounts.models import CustomToken
-from rest_framework import exceptions
-from django.utils.translation import gettext_lazy as _
+import logging
 
+from django.utils.translation import activate
+from django.utils.translation import gettext_lazy as _
+from rest_framework import exceptions
+from rest_framework.authentication import TokenAuthentication, get_authorization_header
+
+from accounts.models import CustomToken
 from accounts.utils.ip import get_client_ip
+
+logger = logging.getLogger(__name__)
 
 
 class CustomTokenAuthentication(TokenAuthentication):
@@ -14,6 +19,7 @@ class CustomTokenAuthentication(TokenAuthentication):
 
         if not auth or auth[0].lower() != self.keyword.lower().encode():
             return None
+        activate('en-US')
 
         if len(auth) == 1:
             msg = _('Invalid token header. No credentials provided.')
@@ -37,6 +43,7 @@ class CustomTokenAuthentication(TokenAuthentication):
             token = model.objects.select_related('user').get(key=key, ip_list__contains=[request_ip])
 
         except model.DoesNotExist:
+            logger.info(f'requested ip: {request_ip}')
             raise exceptions.AuthenticationFailed(_('Invalid token.'))
 
         if not token.user.is_active:

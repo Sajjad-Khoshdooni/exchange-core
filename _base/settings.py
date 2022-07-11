@@ -22,9 +22,10 @@ SECRET_KEY = secret('SECRET')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', cast=bool, default=False)
+STAGING = config('STAGING', cast=bool, default=False)
 TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
-DEBUG_OR_TESTING = DEBUG or TESTING
+DEBUG_OR_TESTING = DEBUG or STAGING or TESTING
 
 HOST_URL = config('HOST_URL')
 

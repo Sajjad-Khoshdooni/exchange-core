@@ -14,7 +14,7 @@ from accounts.views.authentication import CustomTokenAuthentication
 
 
 def user_has_delegate_permission(user):
-    return str(user.id) in secret('delegation_permitted_users').split(',')
+    return str(user.id) in secret('delegation_permitted_users', '').split(',')
 
 
 class DelegatedAccountMixin:
