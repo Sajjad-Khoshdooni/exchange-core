@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework import serializers
 
 from ledger.models.transfer import Transfer
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
@@ -18,7 +19,14 @@ class WithdrawSerializer(serializers.ModelSerializer):
         transfer = get_object_or_404(Transfer, id=requester_id)
         transfer.status = status
         transfer.save()
-        return
+
+        if status == 'done':
+            with WalletPipeline() as pipeline:
+                transfer.build_trx(pipeline)
+                pipeline.release_lock(transfer.group_id)
+            transfer.alert_user()
+
+        return transfer
 
 
 class WithdrawTransferUpdateView(UpdateAPIView):

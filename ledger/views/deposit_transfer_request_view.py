@@ -7,6 +7,7 @@ from rest_framework import serializers
 from ledger.models.transfer import Transfer
 from ledger.models import Network, DepositAddress, Asset
 from accounts.models import Account
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class DepositSerializer(serializers.ModelSerializer):
@@ -28,11 +29,13 @@ class DepositSerializer(serializers.ModelSerializer):
         asset = Asset.objects.get(symbol=self.validated_data('coin'))
         wallet = asset.get_wallet(account)
 
-        Transfer.objects.update_or_create(
+        status = self.validated_data('status')
+
+        transfer = Transfer.objects.update_or_create(
             network=network,
             trx_hash=self.validated_data('trx_hash'),
             defaults={
-                'status': self.validated_data('status'),
+                'status': status,
                 'deposit_address': deposit_address,
                 'amount': self.validated_data('amount'),
                 'block_hash': self.validated_data('block_hash'),
@@ -41,6 +44,14 @@ class DepositSerializer(serializers.ModelSerializer):
                 'wallet': wallet,
                 'deposit': self.validated_data('type')
             })
+
+        if status == 'done':
+            with WalletPipeline() as pipeline:
+                transfer.build_trx(pipeline)
+                transfer.save()
+
+            transfer.alert_user()
+        return transfer
 
 
 class DepositTransferUpdateView(UpdateAPIView):
