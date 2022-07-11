@@ -10,8 +10,10 @@ from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import Asset, Wallet, Trx
 from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field, DONE, PENDING
-from ledger.utils.price import SELL, get_trading_price_usdt
+from ledger.utils.price import BUY, SELL, get_trading_price_usdt
 from ledger.utils.wallet_pipeline import WalletPipeline
+from provider.models import ProviderOrder
+
 
 
 class MarginTransfer(models.Model):
@@ -109,6 +111,14 @@ class MarginLoan(models.Model):
 
                 if amount > max_borrowable:
                     raise MaxBorrowableExceeds()
+
+            ProviderOrder.try_hedge_for_new_order(
+                asset=asset,
+                side=BUY if loan_type == cls.BORROW else SELL,
+                amount=amount,
+                scope=ProviderOrder.BORROW,
+                raise_exception=True
+            )
 
             if loan_type == cls.BORROW:
                 sender, receiver = loan.loan_wallet, loan.margin_wallet
