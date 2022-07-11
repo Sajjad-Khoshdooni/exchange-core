@@ -26,18 +26,18 @@ def send_push_notif_to_user(user: User, title: str, message: str, image: str = N
     send_push_notif(fire_base_token.token,  title, message, image, link)
 
 
-def send_push_notif(token: str, title: str, message: str, image: str = None, link: str = None):
-    message = {
-        "body": message,
+def send_push_notif(token: str, title: str, body: str, image: str = None, link: str = None):
+    notification = {
+        "body": body,
         "title": title
     }
 
     if image:
-        message['image'] = image
+        notification['image'] = image
 
     body = {
         "token": token,
-        "notification": message
+        "notification": notification
     }
 
     if link:
@@ -59,10 +59,12 @@ def send_push_notif(token: str, title: str, message: str, image: str = None, lin
     )
 
     if not resp.ok:
+        print(body)
         print(resp.status_code)
         print(resp.json())
 
     return resp
+
 
 to_signup_message = """
 همین حالا ثبت‌نام کن و شیبا بگیر.
