@@ -8,30 +8,16 @@ class RequestWithdraw:
             'Authorization': 'Token ' + config('BLOCKLINK_TOKEN')
         }
 
-    def withdraw_from_hot_wallet(self, receiver_address, amount, network, asset, requester_id):
+    def withdraw_from_hot_wallet(self, receiver_address, amount, network, asset, transfer_id):
         data = {
             'receiver_address': receiver_address,
             'amount': amount,
             'network': network,
             'coin': asset,
-            'requester_id': requester_id
-        }
-
-        url = config('BLOCKLINK_BASE_URL') + '/api/v1/withdraw/hotwallet/'
-
-        response = requests.post(data=data, url=url, headers=self.header).json()
-        return response
-
-    def withdraw_from_address(self, pointer_address, receiver_address, amount, network, asset, requester_id):
-        data = {
-            'pointer_address': pointer_address,
-            'receiver_address': receiver_address,
-            'amount': amount,
-            'network': network,
-            'coin': asset,
-            'requester_id': requester_id
+            'requester_id': transfer_id  # todo: use transfer_id
         }
 
         url = config('BLOCKLINK_BASE_URL') + '/api/v1/withdraw/'
+
         response = requests.post(data=data, url=url, headers=self.header).json()
         return response

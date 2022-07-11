@@ -1,8 +1,9 @@
 from django.db import models
 
 from ledger.requester.address_requester import AddressRequester
+from ledger.requester.register_address_requester import RegisterAddress
 from ledger.models.address_key import AddressKey
-from wallet.utils import get_base58_address
+from ledger.models.network import Network
 
 
 class DepositAddress(models.Model):
@@ -16,7 +17,7 @@ class DepositAddress(models.Model):
         return '%s (network= %s)' % (self.address, self.network)
 
     @classmethod
-    def get_deposit_address(cls, account, network):
+    def get_deposit_address(cls, account, network: Network):
         address, address_key = None, None
 
         if DepositAddress.objects.filter(address_key__account=account, network=network).exists():
@@ -30,13 +31,16 @@ class DepositAddress(models.Model):
             )
         else:
             address_key = AddressKey.objects.get(account=account)
-            address = address_key.address
+            address = AddressRequester().generate_public_address(network=network, address=address_key.address)
 
-        return DepositAddress.objects.create(
+        deposit_address = DepositAddress.objects.create(
             network=network,
             address_key=address_key,
-            address=AddressRequester().generate_public_address(network=network, address=address),
+            address=address,
         )
+        RegisterAddress().register(deposit_address)
+
+        return deposit_address
 
     class Meta:
         unique_together = (
