@@ -54,4 +54,6 @@ urlpatterns = [
 
     path('v1/transfer/deposit/', views.DepositTransferUpdateView.as_view()),
     path('v1/transfer/withdraw/', views.WithdrawTransferUpdateView.as_view()),
+
+    path('api/v1/request/digit/amount/', views.DigitRequestView.as_view())
 ]
