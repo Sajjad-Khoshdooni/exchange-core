@@ -466,6 +466,8 @@ class Order(models.Model):
     @classmethod
     def update_filled_amount(cls, order_ids, match_amount):
         Order.objects.filter(id__in=order_ids).update(filled_amount=F('filled_amount') + match_amount)
+        from market.models import StopLoss
+        StopLoss.objects.filter(order__id__in=order_ids).update(filled_amount=F('filled_amount') + match_amount)
 
     @classmethod
     def get_market_price(cls, symbol, side):

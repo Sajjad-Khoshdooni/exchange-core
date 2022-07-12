@@ -27,12 +27,13 @@ class StopLossManager(models.Manager):
             return super().get_queryset().filter(canceled_at__isnull=True, filled_amount__lt=F('amount')).exclude(
                 fill_type=StopLoss.LIMIT, order__isnull=False
             )
-        return super().get_queryset().filter(canceled_at__isnull=True)
+        return super().get_queryset()
 
 
 class StopLoss(models.Model):
     NEW = 'new'
     TRIGGERED = 'triggered'
+    FILLED = 'filled'
     BUY, SELL = 'buy', 'sell'
     ORDER_CHOICES = [(BUY, BUY), (SELL, SELL)]
     LIMIT, MARKET = 'limit', 'market'
@@ -61,10 +62,7 @@ class StopLoss(models.Model):
     def base_wallet(self):
         return self.symbol.base_asset.get_wallet(self.wallet.account, self.wallet.market)
 
-    def acquire_lock(self, pipeline: WalletPipeline):
-        from market.models import Order
-        lock_wallet = Order.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
-        lock_amount = Order.get_to_lock_amount(self.unfilled_amount, self.price, self.side)
+    def acquire_lock(self, lock_wallet, lock_amount, pipeline: WalletPipeline):
         pipeline.new_lock(key=self.group_id, wallet=lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 
     objects = models.Manager()
