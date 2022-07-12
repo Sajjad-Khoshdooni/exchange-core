@@ -62,7 +62,7 @@ class ZibalGateway(Gateway):
 
         else:
             payment.status = CANCELED
-            payment.ref_status = data['status']
+            payment.ref_status = data.get('status', '')
             payment.save()
 
     class Meta:

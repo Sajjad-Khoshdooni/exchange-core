@@ -23,7 +23,7 @@ def send_push_notif_to_user(user: User, title: str, body: str, image: str = None
 
     fire_base_token = FirebaseToken.objects.filter(user=user).last()
 
-    send_push_notif(fire_base_token.token,  title, body, image, link)
+    return send_push_notif(fire_base_token.token,  title, body, image, link)
 
 
 def send_push_notif(token: str, title: str, body: str, image: str = None, link: str = None):
@@ -70,7 +70,7 @@ def send_push_notif(token: str, title: str, body: str, image: str = None, link: 
         if data['error']['status'] == 'NOT_FOUND':
             FirebaseToken.objects.filter(token=token).delete()
 
-    return resp
+    return resp.ok
 
 
 to_signup_message = """
@@ -80,7 +80,7 @@ to_signup_message = """
 
 
 def alert_shib_prize_to_signup(token: str):
-    send_push_notif(
+    return send_push_notif(
         token=token,
         title='تا ۲۰۰,۰۰۰ شیبا هدیه بگیرید',
         body=to_signup_message.strip(),
@@ -96,7 +96,7 @@ to_trade_message = """
 
 
 def alert_shib_prize_to_engagement(user: User):
-    send_push_notif_to_user(
+    return send_push_notif_to_user(
         user=user,
         title='تا ۲۰۰,۰۰۰ شیبا هدیه بگیرید',
         body=to_trade_message.strip(),
