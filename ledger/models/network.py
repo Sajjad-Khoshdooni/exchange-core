@@ -2,7 +2,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from accounts.models import Account
-from ledger.models import DepositAddress
+from ledger.models.deposit_address import DepositAddress
 
 
 class Network(models.Model):

@@ -12,9 +12,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
     requester_id = serializers.IntegerField()
     status = serializers.CharField(max_length=8)
 
-    def update(self, instance, validated_data):
-        requester_id = validated_data.get('requester_id')
-        status = validated_data.get('status')
+    def update(self, **kwargs):
+        requester_id = self.validated_data.get('requester_id')
+        status = self.validated_data.get('status')
 
         transfer = get_object_or_404(Transfer, id=requester_id)
         transfer.status = status
@@ -33,3 +33,5 @@ class WithdrawTransferUpdateView(UpdateAPIView):
     authentication_classes = [TokenAuthentication]
     serializer_class = WithdrawSerializer
 
+    def get_object(self):
+        return self.request.user

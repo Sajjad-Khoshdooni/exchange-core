@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import serializers
 
 from ledger.models.transfer import Transfer
-from ledger.models import Network, DepositAddress, Asset
+from ledger.models import Network, Asset, DepositAddress
 from accounts.models import Account
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -22,12 +22,16 @@ class DepositSerializer(serializers.ModelSerializer):
         fields = ['status', 'amount', 'trx_hash', 'block_hash', 'type',
                   'block_number', 'network', 'sender_address', 'receiver_address', 'coin']
 
-    def save(self, **kwargs):
-        account = Account.objects.get(user=self.context['request']['user'])
-        network = Network.objects.get(symbol=self.validated_data('network'))
-        deposit_address = network.get_deposit_address(account)
+    def save(self, user, **kwargs):
+        network = self.validated_data('network')
+        receiver_address = self.validated_data('receiver_address')
+
+        deposit_address = DepositAddress.objects.get(
+            address=receiver_address,
+            netwrok=network
+        )
         asset = Asset.objects.get(symbol=self.validated_data('coin'))
-        wallet = asset.get_wallet(account)
+        wallet = asset.get_wallet(deposit_address.address_key.account)
 
         status = self.validated_data('status')
 
@@ -40,7 +44,7 @@ class DepositSerializer(serializers.ModelSerializer):
                 'amount': self.validated_data('amount'),
                 'block_hash': self.validated_data('block_hash'),
                 'block_number': self.validated_data('block_number'),
-                'out_address': self.validated_data('receiver_address'),
+                'out_address': receiver_address,
                 'wallet': wallet,
                 'deposit': self.validated_data('type')
             })
@@ -57,5 +61,8 @@ class DepositSerializer(serializers.ModelSerializer):
 class DepositTransferUpdateView(UpdateAPIView):
     authentication_classes = [TokenAuthentication]
     serializer_class = DepositSerializer
+
+    def get_object(self):
+        return self.request.user
 
 

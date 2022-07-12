@@ -8,7 +8,7 @@ import django.utils.timezone
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0064_alter_customtoken_options_remove_customtoken_created_and_more'),
+        ('accounts', '0064_alter_externalnotification_scope'),
         ('ledger', '0104_network_need_memo_transfer_memo'),
     ]
 

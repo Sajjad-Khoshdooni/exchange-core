@@ -18,7 +18,7 @@ class AddressRequester:
         response = json.loads(res.content.decode('utf-8'))
         return response['address']
 
-    def generate_public_address(self, address, network):
+    def generate_public_address(self, address, network: str):
         data = {
             "address": address,
             "network": network
