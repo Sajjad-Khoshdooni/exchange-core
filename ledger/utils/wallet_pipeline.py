@@ -17,7 +17,7 @@ def sorted_flatten_dict(data: dict) -> list:
 
 
 class WalletPipeline(Atomic):
-    TRADE, WITHDRAW = 'trade', 'withdraw'
+    TRADE, WITHDRAW, STAKE = 'trade', 'withdraw', 'stake'
 
     def __init__(self, verbose: bool = False):
         super(WalletPipeline, self).__init__(using=None, savepoint=True, durable=False)
@@ -58,7 +58,7 @@ class WalletPipeline(Atomic):
 
         allowed_locking = [
             (Wallet.SPOT, self.TRADE), (Wallet.SPOT, self.WITHDRAW),
-            (Wallet.MARGIN, self.TRADE)
+            (Wallet.MARGIN, self.TRADE), (Wallet.SPOT, self.STAKE),
         ]
 
         assert (wallet.market, reason) in allowed_locking

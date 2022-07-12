@@ -14,12 +14,21 @@ email_sender = config('EMAIL_SENDER')
 brand = config('BRAND')
 
 SCOPE_WITHDRAW_EMAIL = 'withdraw_email'
+
 SCOPE_DEPOSIT_EMAIL = 'deposit_email'
+
 SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw_email'
 SCOPE_CANCEL_FIAT_WITHDRAW = 'cancel_fiat_withdraw_email'
+
 SCOPE_PAYMENT = 'payment_email'
+
 SCOPE_MARGIN_LIQUIDATED = 'margin_liquidated'
 SCOPE_MARGIN_LIQUIDATION_FINISHED = 'liquidation_finished'
+
+
+SCOPE_STAKING_DONE = 'staking_done'
+
+SCOPE_STAKING_CANCEL_COMPLETE = 'stake_cancel_complete'
 
 BRAND = config('BRAND')
 

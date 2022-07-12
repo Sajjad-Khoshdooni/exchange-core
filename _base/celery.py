@@ -154,7 +154,7 @@ app.conf.beat_schedule = {
             'expire': 36000
         },
     },
-    'create-stake_revenue': {
+    'create_stake_revenue': {
             'task': 'stake.tasks.stake_revenue.create_stake_revenue',
             'schedule': crontab(hour=1, minute=30),
             'options': {

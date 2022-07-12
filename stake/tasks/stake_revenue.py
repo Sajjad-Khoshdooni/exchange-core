@@ -13,22 +13,21 @@ def create_stake_revenue():
     system = Account.system()
     for stake_request in stake_requests:
         asset = stake_request.stake_option.asset
-        revenue = stake_request.amount * stake_request.stake_option._yield
+        revenue = stake_request.amount * stake_request.stake_option.apr
 
-        with transaction.atomic():
-            try:
+        try:
+            with WalletPipeline() as pipeline:
                 stake_revenue = StakeRevenue.objects.create(
                     stake_request=stake_request,
                     revenue=revenue
                 )
+                pipeline.new_trx(
+                    group_id=stake_revenue.group_id,
+                    sender=asset.get_wallet(system, Wallet.STAKE),
+                    receiver=asset.get_wallet(stake_request.account),
+                    amount=revenue,
+                    scope=Trx.STAKE_REVENUE
+                )
 
-                with WalletPipeline() as pipeline:
-                    pipeline.new_trx(
-                        group_id=stake_revenue.group_id,
-                        sender=asset.get_wallet(system, Wallet.STAKE),
-                        receiver=asset.get_wallet(stake_request.account),
-                        amount=revenue,
-                        scope=Trx.STAKE
-                    )
-            except:
-                print('duplicate stake_revenue')
+        except:
+            print('duplicate stake_revenue')

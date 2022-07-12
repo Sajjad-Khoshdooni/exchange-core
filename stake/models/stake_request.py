@@ -1,20 +1,24 @@
 import uuid
 from uuid import uuid4
 
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from accounts.models import Account
+from accounts.utils import email
+from ledger.models import Wallet, Trx
 from ledger.utils.fields import get_group_id_field
+from ledger.utils.wallet_pipeline import WalletPipeline
 from stake.models import StakeOption
 
 
 class StakeRequest(models.Model):
 
     PROCESS, PENDING, DONE = 'process', 'pending', ' done'
-    CANCEL_PROCESS, CANSEL_PENDING, CANSEL_CANSEL = 'cancel_process', 'cancel_pending', 'cancel_cancel'
+    CANCEL_PROCESS, CANCEL_PENDING, CANCEL_COMPLETE = 'cancel_process', 'cancel_pending', 'cancel_complete'
 
     status_choice = ((PROCESS, PROCESS), (PENDING, PENDING), (DONE, DONE), (CANCEL_PROCESS, CANCEL_PROCESS),
-                     (CANSEL_PENDING, CANSEL_PENDING), (CANSEL_CANSEL, CANSEL_CANSEL))
+                     (CANCEL_PENDING, CANCEL_PENDING), (CANCEL_COMPLETE, CANCEL_COMPLETE))
 
     status = models.CharField(choices=status_choice, max_length=16, default=PROCESS)
 
@@ -30,3 +34,67 @@ class StakeRequest(models.Model):
 
     account = models.ForeignKey(Account, on_delete=models.CASCADE)
 
+    def __str__(self):
+        return self.stake_option.asset.symbol
+
+    def save(self, *args, **kwargs):
+        old = self.id and StakeRequest.objects.get(id=self.id)
+        asset = self.stake_option.asset
+        account = self.account
+        spot_wallet = asset.get_wallet(account)
+        stake_wallet = asset.get_wallet(account=account, market=Wallet.STAKE)
+        user_email = account.user.email
+
+        if old and old.status == StakeRequest.PROCESS and self.status == StakeRequest.CANCEL_PROCESS:
+
+            with WalletPipeline() as pipeline:
+                pipeline.new_trx(
+                    group_id=self.group_id,
+                    sender=stake_wallet,
+                    receiver=spot_wallet,
+                    amount=self.amount,
+                    scope=Trx.STAKE
+                )
+                self.status = StakeRequest.CANCEL_COMPLETE
+
+            if user_email:
+                email.send_email_by_template(
+                    recipient=user_email,
+                    template=email.SCOPE_STAKING_CANCEL_COMPLETE,
+                    context={'asset': self.stake_option.asset.name_fa, 'amount': self.amount},
+                )
+
+        super(StakeRequest, self).save(*args, **kwargs)
+
+    def clean(self):
+        old = self.id and StakeRequest.objects.get(id=self.id)
+        asset = self.stake_option.asset
+        account = self.account
+        spot_wallet = asset.get_wallet(account)
+        stake_wallet = asset.get_wallet(account=account, market=Wallet.STAKE)
+
+        if old and old.status != StakeRequest.PENDING and self.status == StakeRequest.DONE:
+            raise ValidationError('امکان تغییر وضعیت به "انجام شده" وجود ندارد')
+
+        if old and old.status == StakeRequest.CANCEL_PENDING and self.status == StakeRequest.CANCEL_COMPLETE:
+            with WalletPipeline() as pipeline:
+                pipeline.new_trx(
+                    group_id=self.group_id,
+                    sender=stake_wallet,
+                    receiver=spot_wallet,
+                    amount=self.amount,
+                    scope=Trx.STAKE
+                )
+            if account.user_email:
+                email.send_email_by_template(
+                    recipient=account.user.email,
+                    template=email.SCOPE_STAKING_CANCEL_COMPLETE,
+                    context={'asset': self.stake_option.asset.name_fa, 'amount': self.amount},
+                )
+        if old and old.status == StakeRequest.PENDING and self.status == StakeRequest.DONE:
+            if account.user_email:
+                email.send_email_by_template(
+                    recipient=account.user.email,
+                    template=email.SCOPE_STAKING_DONE,
+                    context={'asset': self.stake_option.asset.name_fa, 'amount': self.amount},
+                )
