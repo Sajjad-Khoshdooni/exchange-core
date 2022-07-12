@@ -77,7 +77,7 @@ def alert_shib_prize_to_signup(token: str):
         token=token,
         title='تا ۲۰۰,۰۰۰ شیبا هدیه بگیرید',
         body=to_signup_message.strip(),
-        image=settings.HOST_URL + '/static/ads/shiba-prize.jpeg',
+        image=settings.HOST_URL + '/static/ads/shiba-prize.png',
         link='https://raastin.com/auth/register?rewards=true&utm_source=push&utm_medium=push&utm_campaign=signup'
     )
 
@@ -93,6 +93,6 @@ def alert_shib_prize_to_engagement(user: User):
         user=user,
         title='تا ۲۰۰,۰۰۰ شیبا هدیه بگیرید',
         body=to_trade_message.strip(),
-        image=settings.HOST_URL + '/static/ads/shiba-prize.jpeg',
+        image=settings.HOST_URL + '/static/ads/shiba-prize.png',
         link='https://raastin.com/trade/market/BTCIRT?utm_source=push&utm_medium=push&utm_campaign=trade'
     )
