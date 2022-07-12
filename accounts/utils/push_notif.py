@@ -67,7 +67,7 @@ def send_push_notif(token: str, title: str, body: str, image: str = None, link: 
 
 
 to_signup_message = """
-همین حالا ثبت‌نام کن و شیبا بگیر.
+همین حالا در راستین ثبت‌نام کن و شیبا هدیه بگیر.
 فقط تا آخر هفته
 """
 
@@ -83,7 +83,7 @@ def alert_shib_prize_to_signup(token: str):
 
 
 to_trade_message = """
-همین حالا معامله کن و شیبا بگیر.
+همین حالا در راستین معامله کن و شیبا هدیه بگیر.
 فقط تا آخر هفته
 """
 
