@@ -44,9 +44,10 @@ def update_binance_withdraw():
             transfer.trx_hash = data['txId']
 
         if status % 2 == 1:
-            transfer.status = transfer.CANCELED
-            transfer.lock.release()
-            transfer.save()
+            with WalletPipeline() as pipeline:
+                pipeline.release_lock(transfer.group_id)
+                transfer.status = transfer.CANCELED
+                transfer.save()
             
         elif status == 6:
 
