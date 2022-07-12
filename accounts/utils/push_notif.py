@@ -63,6 +63,13 @@ def send_push_notif(token: str, title: str, body: str, image: str = None, link: 
         print(resp.status_code)
         print(resp.json())
 
+    if resp.status_code == 404:
+        from accounts.models import FirebaseToken
+        data = resp.json()
+
+        if data['error']['status'] == 'NOT_FOUND':
+            FirebaseToken.objects.filter(token=token).delete()
+
     return resp
 
 
