@@ -127,15 +127,15 @@ def retention_leads_to_upgrade_level():
         date_joined__lt=timezone.now() - timedelta(days=10)
     )
 
-    user_1d_trade = user_not_trade.filter(
+    user_3d_trade = user_not_trade.filter(
         ate_joined__lt=timezone.now() - timedelta(days=3),
         date_joined__gt=timezone.now() - timedelta(days=10)
     )
-    user_3d_trade = user_not_trade.filter(
+    user_10d_trade = user_not_trade.filter(
         date_joined__lt=timezone.now() - timedelta(days=10),
         date_joined__gt=timezone.now() - timedelta(days=25)
     )
-    user_7d_trade = user_not_trade.filter(
+    user_25d_trade = user_not_trade.filter(
         date_joined__lt=timezone.now() - timedelta(days=25),
     )
 
@@ -183,10 +183,10 @@ def retention_leads_to_upgrade_level():
     for user in user_10d_deposit:
         check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_DEPOSIT_FOURTH)
 
-    for user in user_1d_trade:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_TRADE_FIRST)
     for user in user_3d_trade:
+        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_TRADE_FIRST)
+    for user in user_10d_trade:
         check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_TRADE_SECOND)
-    for user in user_7d_trade:
+    for user in user_25d_trade:
         check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_TRADE_THIRD)
 
