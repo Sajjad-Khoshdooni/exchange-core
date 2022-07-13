@@ -13,11 +13,34 @@ class ExternalNotification(models.Model):
     SCOPE_TRADE_PRIZE = 'trade_prize'
     SCOPE_MARGIN_ENABLE = 'margin_enable'
 
+    SCOPE_TRIGGER_UPGRADE_LEVEL_FIRST = 'scope_trigger_upgrade_level-first'
+    SCOPE_TRIGGER_UPGRADE_LEVEL_SECOND = 'scope-trigger_upgrade_level_second'
+    SCOPE_TRIGGER_UPGRADE_LEVEL_THIRD = 'scope_trigger_upgrade_level_third'
+
+    SCOPE_TRIGGER_DEPOSIT_FIRST = 'scope_trigger_deposit_first'
+    SCOPE_TRIGGER_DEPOSIT_SECOND = 'scope_trigger_deposit_second'
+    SCOPE_TRIGGER_DEPOSIT_THIRD = 'scope_trigger_deposit_third'
+    SCOPE_TRIGGER_DEPOSIT_FOURTH = 'scope_trigger_deposit_fourth'
+
+    SCOPE_TRIGGER_TRADE_FIRST = 'scope_trigger_trade_first'
+    SCOPE_TRIGGER_TRADE_SECOND = 'scope_trigger_trade_second'
+    SCOPE_TRIGGER_TRADE_THIRD = 'scope_trigger_trade_third'
+
     SCOPE_CHOICES = (
         (SCOPE_LEVEL_2_PRIZE, SCOPE_LEVEL_2_PRIZE),
         (SCOPE_FIRST_FIAT_DEPOSIT_PRIZE, SCOPE_FIRST_FIAT_DEPOSIT_PRIZE),
         (SCOPE_TRADE_PRIZE, SCOPE_TRADE_PRIZE),
-        (SCOPE_MARGIN_ENABLE, SCOPE_MARGIN_ENABLE)
+        (SCOPE_MARGIN_ENABLE, SCOPE_MARGIN_ENABLE),
+        (SCOPE_TRIGGER_UPGRADE_LEVEL_FIRST, SCOPE_TRIGGER_UPGRADE_LEVEL_FIRST),
+        (SCOPE_TRIGGER_UPGRADE_LEVEL_SECOND, SCOPE_TRIGGER_UPGRADE_LEVEL_SECOND),
+        (SCOPE_TRIGGER_UPGRADE_LEVEL_THIRD, SCOPE_TRIGGER_UPGRADE_LEVEL_THIRD),
+        (SCOPE_TRIGGER_DEPOSIT_FIRST, SCOPE_TRIGGER_DEPOSIT_FIRST),
+        (SCOPE_TRIGGER_DEPOSIT_SECOND, SCOPE_TRIGGER_DEPOSIT_SECOND),
+        (SCOPE_TRIGGER_DEPOSIT_THIRD, SCOPE_TRIGGER_DEPOSIT_THIRD),
+        (SCOPE_TRIGGER_DEPOSIT_FOURTH, SCOPE_TRIGGER_DEPOSIT_FOURTH),
+        (SCOPE_TRIGGER_TRADE_FIRST, SCOPE_TRIGGER_TRADE_FIRST),
+        (SCOPE_TRIGGER_TRADE_SECOND, SCOPE_TRIGGER_TRADE_SECOND),
+        (SCOPE_TRIGGER_TRADE_THIRD, SCOPE_TRIGGER_TRADE_THIRD),
     )
 
     created = models.DateTimeField(auto_now_add=True)
@@ -27,7 +50,7 @@ class ExternalNotification(models.Model):
         db_index=True
     )
     scope = models.CharField(
-        max_length=22,
+        max_length=40,
         choices=SCOPE_CHOICES,
         verbose_name='نوع'
     )
