@@ -9,7 +9,8 @@ from accounts.models import User
 def _get_access_token():
     SCOPES = ['https://www.googleapis.com/auth/firebase.messaging']
 
-    file_path = config('FIREBASE_SECRET_FILE_PATH')
+    file_path = ''
+        config('FIREBASE_SECRET_FILE_PATH')
 
     credentials = ServiceAccountCredentials.from_json_keyfile_name(
         file_path, SCOPES)

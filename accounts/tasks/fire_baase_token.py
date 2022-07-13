@@ -18,25 +18,28 @@ def change_token_state_and_send_push():
     )
 
     for token in token_state_1:
-        trigger_token(token.token, token.state)
-        token.state = FirebaseToken.STATE_2
-        token.save()
+        resp = trigger_token(token.token, token.state)
+        if resp:
+            token.state = FirebaseToken.STATE_2
+            token.save()
 
     token_state_2 = tokens.filter(
         state=FirebaseToken.STATE_2,
-        created__gt=timezone.now() - timedelta(days=7),
-        created__lt=timezone.now() - timedelta(days=1)
+        created__lt=timezone.now() - timedelta(days=1),
+        created__gt=timezone.now() - timedelta(days=7)
     )
     for token in token_state_2:
-        trigger_token(token.token, token.state)
-        token.state = FirebaseToken.STATE_3
-        token.save()
+        resp = trigger_token(token.token, token.state)
+        if resp:
+            token.state = FirebaseToken.STATE_3
+            token.save()
 
     token_state_3 = tokens.filter(
         state=FirebaseToken.STATE_3,
         created__lt=timezone.now() - timedelta(days=7)
     )
     for token in token_state_3:
-        trigger_token(token.token, token.state)
-        token.state = FirebaseToken.STATE_4
-        token.save()
+        resp = trigger_token(token.token, token.state)
+        if resp:
+            token.state = FirebaseToken.STATE_4
+            token.save()
