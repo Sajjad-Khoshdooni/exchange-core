@@ -78,6 +78,34 @@ def trigger_token(token: FirebaseToken):
     )
 
 
+def check_condition_and_send_sms(user: User, scope: str):
+    template = {
+        ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL_FIRST: 'trigger_upgrade_level-first',
+        ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL_SECOND: 'trigger_upgrade_level_second',
+        ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL_THIRD: 'trigger_upgrade_level_third',
+
+        ExternalNotification.SCOPE_TRIGGER_DEPOSIT_FIRST: 'trigger_deposit_first',
+        ExternalNotification.SCOPE_TRIGGER_DEPOSIT_SECOND: 'trigger_deposit_second',
+        ExternalNotification.SCOPE_TRIGGER_DEPOSIT_THIRD: 'trigger_deposit_third',
+        ExternalNotification.SCOPE_TRIGGER_DEPOSIT_FOURTH: 'trigger_deposit_fourth',
+
+        ExternalNotification.SCOPE_TRIGGER_TRADE_FIRST: 'trigger_trade_first',
+        ExternalNotification.SCOPE_TRIGGER_TRADE_SECOND: 'trigger_trade_second',
+        ExternalNotification.SCOPE_TRIGGER_TRADE_THIRD: 'trigger_trade_third',
+    }
+
+    if not ExternalNotification.objects.filter(user=user, scope=scope):
+        ExternalNotification.send_sms(
+            user=user,
+            scope=template[scope],
+            )
+        ExternalNotification.objects.create(
+            phone=user.phone,
+            scope=scope,
+            user=user
+        )
+
+
 @shared_task(queue='celery')
 def retention_leads_to_upgrade_level():
     user_level_1 = User.objects.filter(
@@ -139,32 +167,7 @@ def retention_leads_to_upgrade_level():
         date_joined__lt=timezone.now() - timedelta(days=25),
     )
 
-    def check_condition_and_send_sms(user: User, scope: str):
-        template = {
-            ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL_FIRST: 'trigger_upgrade_level-first',
-            ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL_SECOND: 'trigger_upgrade_level_second',
-            ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL_THIRD: 'trigger_upgrade_level_third',
 
-            ExternalNotification.SCOPE_TRIGGER_DEPOSIT_FIRST: 'trigger_deposit_first',
-            ExternalNotification.SCOPE_TRIGGER_DEPOSIT_SECOND: 'trigger_deposit_second',
-            ExternalNotification.SCOPE_TRIGGER_DEPOSIT_THIRD: 'trigger_deposit_third',
-            ExternalNotification.SCOPE_TRIGGER_DEPOSIT_FOURTH: 'trigger_deposit_fourth',
-
-            ExternalNotification.SCOPE_TRIGGER_TRADE_FIRST: 'trigger_trade_first',
-            ExternalNotification.SCOPE_TRIGGER_TRADE_SECOND: 'trigger_trade_second',
-            ExternalNotification.SCOPE_TRIGGER_TRADE_THIRD: 'trigger_trade_third',
-        }
-
-        if not ExternalNotification.objects.filter(user=user, scope=scope):
-            ExternalNotification.send_sms(
-                user=user,
-                scope=template[scope],
-                )
-            ExternalNotification.objects.create(
-                phone=user.phone,
-                scope=scope,
-                user=user
-            )
 
     for user in user_2h_level_1:
         check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL_FIRST)
