@@ -111,19 +111,19 @@ def trigger_token(token: str, state):
     token = token
 
     templates = {
-        '1': {
+        FirebaseToken.STATE_1: {
             'title': '',
             'body': '',
             'image': '',
             'link': '',
         },
-        '2': {
+        FirebaseToken.STATE_2: {
             'title': '',
             'body': '',
             'image': '',
             'link': '',
         },
-        '3': {
+        FirebaseToken.STATE_3: {
             'title': '',
             'body': '',
             'image': '',
