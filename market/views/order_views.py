@@ -56,16 +56,20 @@ class OrderViewSet(mixins.CreateModelMixin,
     filter_class = OrderFilter
 
     def get_queryset(self):
+        account, variant = self.get_account_variant(self.request)
         return Order.objects.filter(
-            wallet__account=self.get_account(self.request),
+            wallet__account=account,
+            wallet__variant=variant,
             stop_loss__isnull=True
         ).select_related('symbol', 'wallet').order_by('-created')
 
     def get_serializer_context(self):
+        account, variant = self.get_account_variant(self.request)
         return {
             **super(OrderViewSet, self).get_serializer_context(),
-            'account': self.get_account(self.request),
-            'trades': Trade.get_account_orders_filled_price(self.get_account(self.request)),
+            'account': account,
+            'trades': Trade.get_account_orders_filled_price(account),
+            'variant': variant,
         }
 
 
@@ -99,7 +103,7 @@ class CancelOrderAPIView(CreateAPIView, DelegatedAccountMixin):
     def get_serializer_context(self):
         return {
             **super(CancelOrderAPIView, self).get_serializer_context(),
-            'account': self.get_account(self.request)
+            'account': self.get_account_variant(self.request)[0]
         }
 
 
@@ -114,10 +118,12 @@ class StopLossViewSet(ModelViewSet, DelegatedAccountMixin):
     filter_class = StopLossFilter
 
     def get_queryset(self):
-        return StopLoss.objects.filter(wallet__account=self.get_account(self.request)).order_by('-created')
+        return StopLoss.objects.filter(wallet__account=self.get_account_variant(self.request)[0]).order_by('-created')
 
     def get_serializer_context(self):
+        account, variant = self.get_account_variant(self.request)
         return {
             **super(StopLossViewSet, self).get_serializer_context(),
-            'account': self.get_account(self.request)
+            'account': account,
+            'variant': variant,
         }

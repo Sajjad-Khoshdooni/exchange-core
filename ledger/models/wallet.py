@@ -1,4 +1,5 @@
 from decimal import Decimal
+from uuid import uuid4
 
 from django.conf import settings
 from django.db import models
@@ -31,12 +32,14 @@ class Wallet(models.Model):
     balance = get_amount_field(default=Decimal(0))
     locked = get_amount_field(default=Decimal(0))
 
+    variant = models.UUIDField(editable=False, null=True, blank=True)
+
     def __str__(self):
         market_verbose = dict(self.MARKET_CHOICES)[self.market]
         return '%s Wallet %s [%s]' % (market_verbose, self.asset, self.account)
 
     class Meta:
-        unique_together = [('account', 'asset', 'market')]
+        unique_together = [('account', 'asset', 'market', 'variant')]
         constraints = [
             CheckConstraint(
                 check=Q(check_balance=False) | (~Q(market='loan') & Q(balance__gte=0) & Q(balance__gte=F('locked'))) |
@@ -142,7 +145,6 @@ class Wallet(models.Model):
         from uuid import uuid4
 
         with WalletPipeline() as pipeline:
-
             pipeline.new_trx(
                 sender=self,
                 receiver=self.asset.get_wallet(Account.system()),
@@ -150,3 +152,67 @@ class Wallet(models.Model):
                 group_id=uuid4(),
                 scope=Trx.SEIZE
             )
+
+    def reserve_funds(self, amount: Decimal):
+        from ledger.models import Trx
+
+        if self.has_balance(amount, raise_exception=True):
+            group_id = uuid4()
+            with WalletPipeline() as pipeline:
+                child_wallet = Wallet.objects.create(
+                    account=self.account,
+                    asset=self.asset,
+                    market=self.market,
+                    variant=group_id,
+                )
+                pipeline.new_trx(
+                    sender=self,
+                    receiver=child_wallet,
+                    amount=amount,
+                    group_id=group_id,
+                    scope=Trx.RESERVE
+                )
+                ReserveWallet.objects.create(
+                    sender=self,
+                    receiver=child_wallet,
+                    amount=amount,
+                    group_id=group_id
+                )
+                return group_id
+
+    def refund(self, refund_wallet, group_id):
+        with WalletPipeline() as pipeline:
+            from ledger.models import Trx
+            pipeline.new_trx(
+                sender=self,
+                receiver=refund_wallet,
+                amount=self.balance,
+                group_id=group_id,
+                scope=Trx.RESERVE
+            )
+            return True
+
+
+class ReserveWallet(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+
+    sender = models.ForeignKey('ledger.Wallet', on_delete=models.PROTECT, related_name='reserve_wallet')
+    receiver = models.ForeignKey('ledger.Wallet', on_delete=models.PROTECT, related_name='reserved_wallet')
+    amount = get_amount_field()
+
+    group_id = models.UUIDField(default=uuid4, db_index=True)
+
+    refund_completed = models.BooleanField(default=False)
+
+    def refund(self):
+        return self.receiver.refund(self.sender, self.group_id)
+
+    class Meta:
+        unique_together = ('group_id', 'sender', 'receiver')
+
+    def save(self, *args, **kwargs):
+        assert self.sender.asset == self.receiver.asset
+        assert self.sender != self.receiver
+        assert self.amount > 0
+
+        return super(ReserveWallet, self).save(*args, **kwargs)

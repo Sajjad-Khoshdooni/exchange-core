@@ -107,7 +107,9 @@ class Order(models.Model):
 
     @property
     def base_wallet(self):
-        return self.symbol.base_asset.get_wallet(self.wallet.account, self.wallet.market)
+        return self.symbol.base_asset.get_wallet(
+            self.wallet.account, self.wallet.market, variant=self.wallet.variant
+        )
 
     @property
     def filled_price(self):
