@@ -31,6 +31,10 @@ class OpenOrderManager(models.Manager):
         return super().get_queryset().filter(status=Order.NEW)
 
 
+class CancelOrder(Exception):
+    pass
+
+
 class Order(models.Model):
     MARKET_BORDER = Decimal('1e-2')
     MIN_IRT_ORDER_SIZE = Decimal('1e5')
