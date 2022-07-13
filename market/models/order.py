@@ -291,7 +291,7 @@ class Order(models.Model):
 
             if trade_source == Trade.SYSTEM_TAKER and not self.wallet.account.primary:
                 if trades_pair.maker.gap_revenue < trades_pair.maker.irt_value * Decimal('0.0015'):
-                    raise Exception('Non primary system is being taker! dangerous.')
+                    raise CancelOrder('Non primary system is being taker! dangerous.')
 
             self.release_lock(pipeline, match_amount)
             matching_order.release_lock(pipeline, match_amount)
