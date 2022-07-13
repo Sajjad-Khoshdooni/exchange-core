@@ -630,6 +630,8 @@ class CustomTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 @admin.register(FirebaseToken)
 class FirebaseTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ['user', 'token']
+    readonly_fields = ('created',)
+    # fields = ('user', 'token', 'user_agent', 'ip', 'state', 'created')
 
 
 @admin.register(ExternalNotification)

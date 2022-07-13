@@ -4,7 +4,7 @@ from celery import shared_task
 from django.utils import timezone
 
 from accounts.models import FirebaseToken
-from accounts.utils.push_notif import trigger_token_level_1, trigger_token_level_2, trigger_token_level_3
+from accounts.utils.push_notif import trigger_token
 
 
 @shared_task(queue='sms')
@@ -18,7 +18,7 @@ def change_token_state_and_send_push():
     )
 
     for token in token_state_1:
-        trigger_token_level_1(token.token)
+        trigger_token(token.token, token.state)
         token.state = FirebaseToken.STATE_2
         token.save()
 
@@ -28,7 +28,7 @@ def change_token_state_and_send_push():
         created__lt=timezone.now() - timedelta(days=1)
     )
     for token in token_state_2:
-        trigger_token_level_2(token.token)
+        trigger_token(token.token, token.state)
         token.state = FirebaseToken.STATE_3
         token.save()
 
@@ -37,6 +37,6 @@ def change_token_state_and_send_push():
         created__lt=timezone.now() - timedelta(days=7)
     )
     for token in token_state_3:
-        trigger_token_level_3(token.token)
+        trigger_token(token.token, token.state)
         token.state = FirebaseToken.STATE_4
         token.save()

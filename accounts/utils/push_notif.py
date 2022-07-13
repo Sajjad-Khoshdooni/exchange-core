@@ -105,13 +105,39 @@ def alert_shib_prize_to_engagement(user: User):
     )
 
 
-def trigger_token_level_1(token: str):
-    pass
+def trigger_token(token: str, state):
+    from accounts.models import FirebaseToken
+    FirebaseToken.STATE_1 = 'state_1'
+    FirebaseToken.STATE_2 = 'state-2'
+    FirebaseToken.STATE_3 = 'state_3'
 
+    token = token
 
-def trigger_token_level_2(token: str):
-    pass
-
-
-def trigger_token_level_3(token: str):
-    pass
+    templates = {
+        'state_1': {
+            'title': '',
+            'body': '',
+            'image': '',
+            'link': '',
+        },
+        'state_2': {
+            'title': '',
+            'body': '',
+            'image': '',
+            'link': '',
+        },
+        'state_3': {
+            'title': '',
+            'body': '',
+            'image': '',
+            'link': '',
+        },
+    }
+    data = templates[state]
+    return send_push_notif(
+        token=token,
+        title=data['title'],
+        body=data['body'],
+        image=data['image'],
+        link=data['link'],
+    )
