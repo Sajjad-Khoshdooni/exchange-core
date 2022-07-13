@@ -26,9 +26,9 @@ SCOPE_MARGIN_LIQUIDATED = 'margin_liquidated'
 SCOPE_MARGIN_LIQUIDATION_FINISHED = 'liquidation_finished'
 
 
-SCOPE_STAKING_DONE = 'staking_done'
+SCOPE_DONE_STAKE = 'done_stake'
 
-SCOPE_STAKING_CANCEL_COMPLETE = 'stake_cancel_complete'
+SCOPE_CANCEL_STAKE = 'cancel_stake'
 
 BRAND = config('BRAND')
 
@@ -62,7 +62,17 @@ TEMPLATES = {
         'subject': '{} | اطلاع‌رسانی واریز ریالی'.format(BRAND),
         'html': 'accounts/email/payment_email.min.html',
         'text': 'accounts/text/payment_email.txt',
-    }
+    },
+    'cancel_stake': {
+        'subject': '{} | اطلاع‌رسانی لغو staking'.format(BRAND),
+        'html': 'accounts/email/cancel_staking_email.min.html',
+        'text': 'accounts/text/cancel_staking.txt',
+    },
+    'done_stake': {
+            'subject': '{} | اطلاع‌رسانی تایید staking'.format(BRAND),
+            'html': 'accounts/email/done_staking_email.min.html',
+            'text': 'accounts/text/done_staking.txt',
+        },
 }
 
 

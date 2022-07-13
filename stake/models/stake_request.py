@@ -10,6 +10,7 @@ from ledger.models import Wallet, Trx
 from ledger.utils.fields import get_group_id_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 from stake.models import StakeOption
+from stake.utils import change_status
 
 
 class StakeRequest(models.Model):
@@ -55,12 +56,11 @@ class StakeRequest(models.Model):
                     amount=self.amount,
                     scope=Trx.STAKE
                 )
-                self.status = StakeRequest.CANCEL_COMPLETE
-
+                self.status = change_status(old.status, StakeRequest.CANCEL_COMPLETE)
             if user_email:
                 email.send_email_by_template(
                     recipient=user_email,
-                    template=email.SCOPE_STAKING_CANCEL_COMPLETE,
+                    template=email.SCOPE_CANCEL_STAKE,
                     context={'asset': self.stake_option.asset.name_fa, 'amount': self.amount},
                 )
 
@@ -73,8 +73,7 @@ class StakeRequest(models.Model):
         spot_wallet = asset.get_wallet(account)
         stake_wallet = asset.get_wallet(account=account, market=Wallet.STAKE)
 
-        if old and old.status != StakeRequest.PENDING and self.status == StakeRequest.DONE:
-            raise ValidationError('امکان تغییر وضعیت به "انجام شده" وجود ندارد')
+        self.status = change_status(old.status, self.status)
 
         if old and old.status == StakeRequest.CANCEL_PENDING and self.status == StakeRequest.CANCEL_COMPLETE:
             with WalletPipeline() as pipeline:
@@ -85,16 +84,16 @@ class StakeRequest(models.Model):
                     amount=self.amount,
                     scope=Trx.STAKE
                 )
-            if account.user_email:
+            if account.user.email:
                 email.send_email_by_template(
                     recipient=account.user.email,
-                    template=email.SCOPE_STAKING_CANCEL_COMPLETE,
+                    template=email.SCOPE_CANCEL_STAKE,
                     context={'asset': self.stake_option.asset.name_fa, 'amount': self.amount},
                 )
         if old and old.status == StakeRequest.PENDING and self.status == StakeRequest.DONE:
-            if account.user_email:
+            if account.user.email:
                 email.send_email_by_template(
                     recipient=account.user.email,
-                    template=email.SCOPE_STAKING_DONE,
+                    template=email.SCOPE_DONE_STAKE,
                     context={'asset': self.stake_option.asset.name_fa, 'amount': self.amount},
                 )

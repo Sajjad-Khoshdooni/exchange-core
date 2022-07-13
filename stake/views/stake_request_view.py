@@ -14,7 +14,6 @@ from stake.views.stake_option_view import StakeOptionSerializer
 class StakeRequestSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
     stake_option = serializers.CharField(write_only=True)
-    group_id = serializers.CharField(read_only=True)
     stake_option_data = serializers.SerializerMethodField()
 
     def get_stake_option_data(self, *args, **kwargs):
@@ -45,7 +44,6 @@ class StakeRequestSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         stake_option = validated_data['stake_option']
         amount = validated_data['amount']
-        wallet = validated_data['wallet']
         user = validated_data['user']
 
         account = user.account
