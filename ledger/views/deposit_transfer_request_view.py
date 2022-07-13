@@ -22,31 +22,34 @@ class DepositSerializer(serializers.ModelSerializer):
         fields = ['status', 'amount', 'trx_hash', 'block_hash', 'type',
                   'block_number', 'network', 'sender_address', 'receiver_address', 'coin']
 
-    def save(self, user, **kwargs):
-        network = self.validated_data('network')
-        receiver_address = self.validated_data('receiver_address')
+    def save(self, **kwargs):
+        network_symbol = self.validated_data.get('network')
+        receiver_address = self.validated_data.get('receiver_address')
+        network = Network.objects.get(symbol=network_symbol)
+
+        print(receiver_address, network_symbol)
 
         deposit_address = DepositAddress.objects.get(
             address=receiver_address,
-            netwrok=network
+            network=network
         )
-        asset = Asset.objects.get(symbol=self.validated_data('coin'))
+        asset = Asset.objects.get(symbol=self.validated_data.get('coin'))
         wallet = asset.get_wallet(deposit_address.address_key.account)
 
-        status = self.validated_data('status')
+        status = self.validated_data.get('status')
 
         transfer = Transfer.objects.update_or_create(
             network=network,
-            trx_hash=self.validated_data('trx_hash'),
+            trx_hash=self.validated_data.get('trx_hash'),
             defaults={
                 'status': status,
                 'deposit_address': deposit_address,
-                'amount': self.validated_data('amount'),
-                'block_hash': self.validated_data('block_hash'),
-                'block_number': self.validated_data('block_number'),
+                'amount': self.validated_data.get('amount'),
+                'block_hash': self.validated_data.get('block_hash'),
+                'block_number': self.validated_data.get('block_number'),
                 'out_address': receiver_address,
                 'wallet': wallet,
-                'deposit': self.validated_data('type')
+                'deposit': self.validated_data.get('type')
             })
 
         if status == 'done':
