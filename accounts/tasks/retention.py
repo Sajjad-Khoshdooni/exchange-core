@@ -128,15 +128,15 @@ def retention_leads_to_upgrade_level():
     )
 
     user_1d_trade = user_not_trade.filter(
-        ate_joined__lt=timezone.now() - timedelta(days=1),
-        date_joined__gt=timezone.now() - timedelta(days=3)
+        ate_joined__lt=timezone.now() - timedelta(days=3),
+        date_joined__gt=timezone.now() - timedelta(days=10)
     )
     user_3d_trade = user_not_trade.filter(
-        date_joined__lt=timezone.now() - timedelta(days=3),
-        date_joined__gt=timezone.now() - timedelta(days=7)
+        date_joined__lt=timezone.now() - timedelta(days=10),
+        date_joined__gt=timezone.now() - timedelta(days=25)
     )
     user_7d_trade = user_not_trade.filter(
-        date_joined__lt=timezone.now() - timedelta(days=7),
+        date_joined__lt=timezone.now() - timedelta(days=25),
     )
 
     def check_condition_and_send_sms(user: User, scope: str):
