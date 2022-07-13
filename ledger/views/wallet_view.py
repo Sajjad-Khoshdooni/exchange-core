@@ -144,6 +144,11 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 
     withdraw_precision = serializers.SerializerMethodField()
 
+    need_memo = serializers.SerializerMethodField()
+
+    def get_need_memo(self, network_asset: NetworkAsset):
+        return network_asset.network.need_memo
+
     def get_network(self, network_asset: NetworkAsset):
         return network_asset.network.symbol
 
@@ -174,7 +179,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('network', 'address', 'can_deposit', 'can_withdraw', 'withdraw_commission', 'min_withdraw',
-                  'network_name', 'address_regex', 'withdraw_precision')
+                  'network_name', 'address_regex', 'withdraw_precision', 'need_memo')
         model = NetworkAsset
 
 

@@ -48,7 +48,7 @@ class AssetMarginInfoView(APIView):
             price = price * Decimal('1.01')
 
         max_borrow = max(margin_info.get_max_borrowable() / price, Decimal(0))
-        max_transfer = max(margin_info.get_max_transferable() / price, Decimal(0))
+        max_transfer = min(margin_wallet.get_free(), max(margin_info.get_max_transferable() / price, Decimal(0)))
 
         return Response({
             'balance': asset.get_presentation_amount(margin_wallet.get_free()),
@@ -107,6 +107,9 @@ class MarginLoanSerializer(serializers.ModelSerializer):
         check_margin_view_permission(user.account, asset)
 
         validated_data['loan_type'] = validated_data.pop('type')
+
+        if validated_data['amount'] <= 0:
+            raise ValidationError('مقداری بزرگتر از صفر انتخاب کنید.')
 
         try:
             return MarginLoan.new_loan(

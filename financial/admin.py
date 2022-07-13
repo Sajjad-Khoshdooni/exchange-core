@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.utils import timezone
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -13,21 +12,26 @@ from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAcc
     FiatWithdrawRequest
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from financial.utils.withdraw import FiatWithdraw
-from ledger.models import Asset
 from ledger.utils.precision import humanize_number
-from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'merchant_id', 'active', 'get_total_wallet_irt_value')
-    list_editable = ('active', )
+    list_display = ('name', 'type', 'merchant_id', 'active', 'active_for_staff', 'get_total_wallet_irt_value')
+    list_editable = ('active', 'active_for_staff')
     readonly_fields = ('get_total_wallet_irt_value',)
 
     def get_total_wallet_irt_value(self, gateway: Gateway):
+        if not gateway.type:
+            return
+
         channel = FiatWithdraw.get_withdraw_channel(gateway.type)
-        return channel.get_total_wallet_irt_value()
-        # pass
+
+        try:
+            return channel.get_total_wallet_irt_value()
+        except:
+            return
+
     get_total_wallet_irt_value.short_description = 'موجودی'
 
 
@@ -74,20 +78,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 
     list_display = ('bank_account', 'created', 'status', 'amount', 'withdraw_channel', 'ref_id')
 
-    def save_model(self, request, fiat_withdraw_request: FiatWithdrawRequest, form, change):
 
-        old = fiat_withdraw_request.id and FiatWithdrawRequest.objects.get(id=fiat_withdraw_request.id)
-
-        if old and old.status == FiatWithdrawRequest.DONE and fiat_withdraw_request.status != FiatWithdrawRequest.DONE:
-            return
-
-        if old and old.status == FiatWithdrawRequest.CANCELED and fiat_withdraw_request != FiatWithdrawRequest.CANCELED:
-            return
-
-        if old:
-            old.change_status(fiat_withdraw_request.status)
-
-        super().save_model(request, fiat_withdraw_request, form, change)
 
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.user.get_full_name()

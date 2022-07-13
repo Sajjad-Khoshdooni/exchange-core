@@ -56,6 +56,9 @@ class FiatWithdraw:
     def get_total_wallet_irt_value(self):
         raise NotImplementedError
 
+    def is_active(self):
+        return True
+
 
 class PayirChanel(FiatWithdraw):
 
@@ -63,7 +66,7 @@ class PayirChanel(FiatWithdraw):
         return config('PAY_IR_WALLET_ID', cast=int)
 
     @classmethod
-    def collect_api(cls, path: str, method: str = 'GET', data: dict = None) -> dict:
+    def collect_api(cls, path: str, method: str = 'GET', data: dict = None, verbose: bool = False) -> dict:
 
         url = 'https://pay.ir' + path
 
@@ -93,6 +96,10 @@ class PayirChanel(FiatWithdraw):
             raise TimeoutError
 
         resp_data = resp.json()
+
+        if verbose:
+            print('status', resp.status_code)
+            print('data', resp_data)
 
         if not resp.ok or not resp_data['success']:
             raise ServerError
@@ -175,11 +182,11 @@ class PayirChanel(FiatWithdraw):
 
     def get_total_wallet_irt_value(self):
         resp = self.collect_api(
-            path='/api/v2/wallets/'
+            path='/api/v2/wallets'
         )
 
         total_wallet_irt_value = 0
-        for wallet in resp['wallet']:
+        for wallet in resp['wallets']:
             total_wallet_irt_value += Decimal(wallet['balance'])
 
         return total_wallet_irt_value
@@ -274,6 +281,9 @@ class ZibalChanel(FiatWithdraw):
         return request_date.replace(microsecond=0, hour=19, minute=30)
 
     def get_total_wallet_irt_value(self):
+        if not self.is_active():
+            return 0
+
         resp = self.collect_api(
             path='/v1/wallet/list'
         )
@@ -283,6 +293,9 @@ class ZibalChanel(FiatWithdraw):
             total_wallet_irt_value += Decimal(wallet['balance'])
 
         return total_wallet_irt_value
+
+    def is_active(self):
+        return bool(config('ZIBAL_TOKEN'))
 
 
 class ZarinpalChanel(FiatWithdraw):

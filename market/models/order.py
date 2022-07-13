@@ -37,7 +37,7 @@ class Order(models.Model):
     MIN_USDT_ORDER_SIZE = Decimal(5)
     MAX_ORDER_DEPTH_SIZE_IRT = Decimal('2e7')
     MAX_ORDER_DEPTH_SIZE_USDT = Decimal(1000)
-    MAKER_ORDERS_COUNT = 10 if settings.DEBUG else 50
+    MAKER_ORDERS_COUNT = 10 if settings.DEBUG_OR_TESTING else 50
 
     BUY, SELL = 'buy', 'sell'
     ORDER_CHOICES = [(BUY, BUY), (SELL, SELL)]
@@ -286,7 +286,7 @@ class Order(models.Model):
                 )
 
             if trade_source == Trade.SYSTEM_TAKER and not self.wallet.account.primary:
-                if trades_pair.maker.gap_revenue < trades_pair.maker.irt_value * 0.0015:
+                if trades_pair.maker.gap_revenue < trades_pair.maker.irt_value * Decimal('0.0015'):
                     raise Exception('Non primary system is being taker! dangerous.')
 
             self.release_lock(pipeline, match_amount)
@@ -466,6 +466,8 @@ class Order(models.Model):
     @classmethod
     def update_filled_amount(cls, order_ids, match_amount):
         Order.objects.filter(id__in=order_ids).update(filled_amount=F('filled_amount') + match_amount)
+        from market.models import StopLoss
+        StopLoss.objects.filter(order__id__in=order_ids).update(filled_amount=F('filled_amount') + match_amount)
 
     @classmethod
     def get_market_price(cls, symbol, side):

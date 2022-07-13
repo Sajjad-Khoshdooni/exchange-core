@@ -40,7 +40,7 @@ class ProviderTransfer(models.Model):
             return
 
         transfer = ProviderTransfer.objects.create(
-            asset=asset, network=network, amount=amount, address=address, caller_id=caller_id, memo=memo,
+            asset=asset, network=network, amount=amount, address=address, caller_id=caller_id, memo=memo or '',
         )
 
         resp = BinanceSpotHandler.withdraw(

@@ -2,6 +2,7 @@ import logging
 
 from django.db import models
 
+from accounts.models import User
 from financial.models import BankCard
 from financial.models import PaymentRequest
 from financial.models.payment import Payment
@@ -28,9 +29,16 @@ class Gateway(models.Model):
     )
     merchant_id = models.CharField(max_length=128)
     active = models.BooleanField(default=False)
+    active_for_staff = models.BooleanField(default=False)
 
     @classmethod
-    def get_active(cls) -> 'Gateway':
+    def get_active(cls, user: User) -> 'Gateway':
+        if user.is_staff:
+            gateway = Gateway.objects.filter(active_for_staff=True).order_by('id').first()
+
+            if gateway:
+                return gateway.get_concrete_gateway()
+
         gateway = Gateway.objects.filter(active=True).order_by('id').first()
 
         if gateway:

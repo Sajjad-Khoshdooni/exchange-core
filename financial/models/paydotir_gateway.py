@@ -23,7 +23,12 @@ class PaydotirGateway(Gateway):
             }
         )
 
-        if not resp.ok or resp.json()['status'] != 1:
+        resp_data = resp.json()
+
+        if not resp.ok or resp_data['status'] != 1:
+            print('status code', resp.status_code)
+            print('body', resp_data)
+
             raise GatewayFailed
 
         authority = resp.json()['token']
@@ -64,7 +69,6 @@ class PaydotirGateway(Gateway):
             payment.status = CANCELED
             payment.ref_status = data['status']
             payment.save()
-
 
     class Meta:
         proxy = True
