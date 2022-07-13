@@ -7,7 +7,7 @@ from accounts.models import FirebaseToken
 from accounts.utils.push_notif import trigger_token
 
 
-@shared_task(queue='sms')
+@shared_task(queue='celery')
 def change_token_state_and_send_push():
     tokens = FirebaseToken.objects.filter(user=None)
 
