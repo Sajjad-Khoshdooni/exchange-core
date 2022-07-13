@@ -116,8 +116,7 @@ class Transfer(models.Model):
 
         commission = network_asset.withdraw_fee
 
-        with WalletPipeline() as pipeline:  # type: Wallet
-
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
             transfer = Transfer.objects.create(
                 wallet=wallet,
                 network=network,
