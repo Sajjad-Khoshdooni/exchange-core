@@ -11,6 +11,8 @@ from ledger.models import Prize
 
 @shared_task(queue='celery')
 def retention_leads_to_signup():
+    from accounts.models import FirebaseToken
+
     tokens = FirebaseToken.objects.filter(user=None)
 
     token_state_1 = tokens.filter(
@@ -47,7 +49,9 @@ def retention_leads_to_signup():
             token.save()
 
 
-def trigger_token(token: FirebaseToken):
+def trigger_token(token):
+    from accounts.models import FirebaseToken
+
     templates = {
         FirebaseToken.STATE_1: {
             'title': 'همین الان در راستین ثبت‌نام کن!',
