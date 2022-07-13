@@ -17,6 +17,7 @@ class RegisterAddress:
             return
 
         data = {
+            'pointer_address': deposit_address.address_key.address,
             'address': deposit_address.address,
             'network': deposit_address.network.symbol
         }
