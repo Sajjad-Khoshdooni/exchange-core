@@ -99,7 +99,9 @@ def retention_leads_to_upgrade_level():
     )
 
     user_2h_level_1 = user_level_1.filter(
-        date_joined__lt=timezone.now() - timedelta(hours=2)
+        date_joined__lt=timezone.now() - timedelta(hours=2),
+        date_joined__gt=timezone.now() - timedelta(days=1)
+
     )
     user_1d_level_1 = user_level_1.filter(
         date_joined__lt=timezone.now() - timedelta(days=1),
@@ -110,7 +112,8 @@ def retention_leads_to_upgrade_level():
     )
 
     user_12h_deposit = user_not_deposit.filter(
-        date_joined__lt=timezone.now() - timedelta(hours=12)
+        date_joined__lt=timezone.now() - timedelta(hours=12),
+        date_joined__gt=timezone.now() - timedelta(days=2)
     )
     user_2d_deposit = user_not_deposit.filter(
         date_joined__lt=timezone.now() - timedelta(days=2),
@@ -125,7 +128,8 @@ def retention_leads_to_upgrade_level():
     )
 
     user_1d_trade = user_not_trade.filter(
-        ate_joined__lt=timezone.now() - timedelta(days=1)
+        ate_joined__lt=timezone.now() - timedelta(days=1),
+        date_joined__gt=timezone.now() - timedelta(days=3)
     )
     user_3d_trade = user_not_trade.filter(
         date_joined__lt=timezone.now() - timedelta(days=3),
