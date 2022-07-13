@@ -3,18 +3,17 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.conf import settings
-from django.db import models, transaction
+from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import UniqueConstraint, Q
 from yekta_config.config import config
 
 from accounts.models import Account, Notification
 from accounts.utils import email
-from accounts.utils.push_notif import send_push_notif
+from accounts.utils.push_notif import send_push_notif_to_user
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
-from ledger.models.address_key import AddressKey
 from ledger.models.crypto_balance import CryptoBalance
 from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
@@ -243,7 +242,7 @@ class Transfer(models.Model):
                 message=message
             )
 
-            send_push_notif(user=user, title=title, message=message)
+            send_push_notif_to_user(user=user, title=title, body=message)
 
             if user_email:
                 email.send_email_by_template(

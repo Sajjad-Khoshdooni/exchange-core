@@ -31,6 +31,10 @@ class OpenOrderManager(models.Manager):
         return super().get_queryset().filter(status=Order.NEW)
 
 
+class CancelOrder(Exception):
+    pass
+
+
 class Order(models.Model):
     MARKET_BORDER = Decimal('1e-2')
     MIN_IRT_ORDER_SIZE = Decimal('1e5')
@@ -287,7 +291,7 @@ class Order(models.Model):
 
             if trade_source == Trade.SYSTEM_TAKER and not self.wallet.account.primary:
                 if trades_pair.maker.gap_revenue < trades_pair.maker.irt_value * Decimal('0.0015'):
-                    raise Exception('Non primary system is being taker! dangerous.')
+                    raise CancelOrder('Non primary system is being taker! dangerous.')
 
             self.release_lock(pipeline, match_amount)
             matching_order.release_lock(pipeline, match_amount)

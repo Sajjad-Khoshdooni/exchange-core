@@ -77,7 +77,7 @@ class Account(models.Model):
 
         total = Decimal('0')
 
-        with PriceManager(fetch_all=True):
+        with PriceManager(coins=list(wallets.values_list('asset__symbol', flat=True))):
             for wallet in wallets:
                 balance = wallet.get_balance_usdt(side)
                 total += balance

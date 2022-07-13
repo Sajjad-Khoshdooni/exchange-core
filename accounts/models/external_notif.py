@@ -45,7 +45,7 @@ class ExternalNotification(models.Model):
             template = '67757'
 
             params = {
-                'brand': '{} و دریافت سی هزار شیبا،'.format(config('BRAND')),
+                'brand': '{} و دریافت هدیه تا ۲۰۰ هزار شیبا،'.format(config('BRAND')),
                 'department': config('RETENTION_URL_VERIFY')
             }
 
@@ -53,15 +53,16 @@ class ExternalNotification(models.Model):
             template = '67758'
             params = {
                 'name': 'صرافی {}'.format(config('BRAND')),
-                'brand': 'و دریافت هدیه سی هزار شیبا به {}'.format(config('BRAND')),
+                'brand': 'و دریافت هدیه تا ۲۰۰ هزار شیبا به {}'.format(config('BRAND')),
                 'department': config('RETENTION_URL_DEPOSIT')
             }
 
         elif scope == cls.SCOPE_TRADE_PRIZE:
             template = '67764'
             params = {
-                'name': 'سی هزار شیبا هدیه {}'.format(config('BRAND')),
-                'department': config('RETENTION_URL_TRADE')
+                'name': 'تا ۲۰۰ هزار شیبا هدیه {}'.format(config('BRAND')),
+                'brand': 'صرافی {}'.format(config('BRAND')),
+                'department': config('RETENTION_URL_TRADE'),
             }
 
         elif scope == cls.SCOPE_MARGIN_ENABLE:

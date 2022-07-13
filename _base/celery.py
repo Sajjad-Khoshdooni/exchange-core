@@ -215,14 +215,15 @@ app.conf.beat_schedule = {
         }
     },
 
-    # 'moving_average_trader': {
-    #     'task': 'trader.tasks.moving_average.update_all_moving_averages',
-    #     'schedule': 17,
-    #     'options': {
-    #         'queue': 'trader-ma',
-    #         'expire': 17
-    #     }
-    # },
+    'retention_leads_to_signup': {
+        'task': 'accounts.tasks.retention.retention_leads_to_signup',
+        'schedule': 3600,
+        'options': {
+            'queue': 'celery',
+            'expire': 3600
+        },
+    },
+
     'update_withdraw_status': {
         'task': 'financial.tasks.withdraw.update_withdraw_status',
         'schedule': 300,

@@ -98,7 +98,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
-        ).aggregate(max_price=Max('price'))['max_price']
+        ).exclude(trade_source=Trade.OTC).aggregate(max_price=Max('price'))['max_price']
         if high_price:
             return str(floor_precision(high_price, symbol.tick_size))
 
@@ -107,7 +107,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
-        ).aggregate(min_price=Min('price'))['min_price']
+        ).exclude(trade_source=Trade.OTC).aggregate(min_price=Min('price'))['min_price']
         if low_price:
             return str(floor_precision(low_price, symbol.tick_size))
 
@@ -116,7 +116,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
-        ).aggregate(total_amount=Sum('amount'))['total_amount']
+        ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum('amount'))['total_amount']
         if total_amount:
             return str(floor_precision(total_amount, symbol.step_size))
 
@@ -125,7 +125,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
-        ).aggregate(total_amount=Sum('base_amount'))['total_amount']
+        ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum('base_amount'))['total_amount']
         if total_amount:
             return str(floor_precision(total_amount))
 
