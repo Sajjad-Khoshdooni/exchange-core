@@ -9,7 +9,8 @@ from accounts.models import User
 def _get_access_token():
     SCOPES = ['https://www.googleapis.com/auth/firebase.messaging']
 
-    file_path = config('FIREBASE_SECRET_FILE_PATH')
+    file_path = '/home/yektanet/Downloads/a.json'
+        # config('FIREBASE_SECRET_FILE_PATH')
 
     credentials = ServiceAccountCredentials.from_json_keyfile_name(
         file_path, SCOPES)
@@ -107,26 +108,23 @@ def alert_shib_prize_to_engagement(user: User):
 
 def trigger_token(token: str, state):
     from accounts.models import FirebaseToken
-    FirebaseToken.STATE_1 = 'state_1'
-    FirebaseToken.STATE_2 = 'state-2'
-    FirebaseToken.STATE_3 = 'state_3'
 
     token = token
 
     templates = {
-        'state_1': {
+        '1': {
             'title': '',
             'body': '',
             'image': '',
             'link': '',
         },
-        'state_2': {
+        '2': {
             'title': '',
             'body': '',
             'image': '',
             'link': '',
         },
-        'state_3': {
+        '3': {
             'title': '',
             'body': '',
             'image': '',
