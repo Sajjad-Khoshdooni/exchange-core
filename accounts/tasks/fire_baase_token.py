@@ -24,7 +24,7 @@ def change_token_state_and_send_push():
 
     token_state_2 = tokens.filter(
         state=FirebaseToken.STATE_2,
-        created__gt=timezone.now() - timedelta(hours=7),
+        created__gt=timezone.now() - timedelta(days=7),
         created__lt=timezone.now() - timedelta(days=1)
     )
     for token in token_state_2:
