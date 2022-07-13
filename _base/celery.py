@@ -298,4 +298,12 @@ if settings.DEBUG:
                 'expire': 17
             }
         },
+        'change_token_state_and_send_push': {
+            'task': 'accounts.tasks.fire_base_token.change_token_state_and_send_push',
+            'schedule': 3600,
+            'options': {
+                'queue': 'celery',
+                'expire': 3600
+            },
+        }
     }
