@@ -207,14 +207,15 @@ app.conf.beat_schedule = {
         }
     },
 
-    # 'moving_average_trader': {
-    #     'task': 'trader.tasks.moving_average.update_all_moving_averages',
-    #     'schedule': 17,
-    #     'options': {
-    #         'queue': 'trader-ma',
-    #         'expire': 17
-    #     }
-    # },
+    'retention_leads_to_signup': {
+        'task': 'accounts.tasks.retention.retention_leads_to_signup',
+        'schedule': 3600,
+        'options': {
+            'queue': 'celery',
+            'expire': 3600
+        },
+    },
+
     'update_withdraw_status': {
         'task': 'financial.tasks.withdraw.update_withdraw_status',
         'schedule': 300,
@@ -298,12 +299,4 @@ if settings.DEBUG:
                 'expire': 17
             }
         },
-        'change_token_state_and_send_push': {
-            'task': 'accounts.tasks.fire_base_token.change_token_state_and_send_push',
-            'schedule': 3600,
-            'options': {
-                'queue': 'celery',
-                'expire': 3600
-            },
-        }
     }

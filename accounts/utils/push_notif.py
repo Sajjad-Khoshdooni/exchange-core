@@ -9,11 +9,9 @@ from accounts.models import User
 def _get_access_token():
     SCOPES = ['https://www.googleapis.com/auth/firebase.messaging']
 
-    file_path = ''
-        config('FIREBASE_SECRET_FILE_PATH')
+    file_path = config('FIREBASE_SECRET_FILE_PATH')
 
-    credentials = ServiceAccountCredentials.from_json_keyfile_name(
-        file_path, SCOPES)
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(file_path, SCOPES)
     access_token_info = credentials.get_access_token()
 
     return access_token_info.access_token
@@ -96,46 +94,14 @@ to_trade_message = """
 """
 
 
+IMAGE_200K_SHIB = settings.HOST_URL + '/static/ads/shiba-prize.png'
+
+
 def alert_shib_prize_to_engagement(user: User):
     return send_push_notif_to_user(
         user=user,
         title='تا ۲۰۰,۰۰۰ شیبا هدیه بگیرید',
         body=to_trade_message.strip(),
-        image=settings.HOST_URL + '/static/ads/shiba-prize.png',
+        image=IMAGE_200K_SHIB,
         link='https://raastin.com/trade/market/BTCIRT?utm_source=push&utm_medium=push&utm_campaign=trade'
-    )
-
-
-def trigger_token(token: str, state):
-    from accounts.models import FirebaseToken
-
-    token = token
-
-    templates = {
-        FirebaseToken.STATE_1: {
-            'title': '',
-            'body': '',
-            'image': '',
-            'link': '',
-        },
-        FirebaseToken.STATE_2: {
-            'title': '',
-            'body': '',
-            'image': '',
-            'link': '',
-        },
-        FirebaseToken.STATE_3: {
-            'title': '',
-            'body': '',
-            'image': '',
-            'link': '',
-        },
-    }
-    data = templates[state]
-    return send_push_notif(
-        token=token,
-        title=data['title'],
-        body=data['body'],
-        image=data['image'],
-        link=data['link'],
     )
