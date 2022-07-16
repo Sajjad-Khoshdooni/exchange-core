@@ -10,7 +10,7 @@ class DepositAddress(models.Model):
     network = models.ForeignKey('ledger.Network', on_delete=models.PROTECT)
     address = models.CharField(max_length=256, blank=True)
     is_registered = models.BooleanField(default=False)
-    address_key = models.OneToOneField('ledger.AddressKey', on_delete=models.PROTECT, unique=True)
+    address_key = models.ForeignKey('ledger.AddressKey', on_delete=models.PROTECT)
 
     def __str__(self):
         return '%s (network= %s)' % (self.address, self.network)

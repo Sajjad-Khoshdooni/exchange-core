@@ -70,7 +70,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='depositaddress',
             name='address_key',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.PROTECT, to='ledger.addresskey', null=True),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='ledger.addresskey', null=True),
             preserve_default=False,
         ),
 
@@ -79,7 +79,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='depositaddress',
             name='address_key',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.PROTECT, to='ledger.addresskey'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='ledger.addresskey'),
             preserve_default=False,
         ),
     ]
