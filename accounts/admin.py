@@ -573,13 +573,13 @@ class AccountAdmin(admin.ModelAdmin):
     def get_total_balance_irt_admin(self, account: Account):
         total_balance_irt = account.get_total_balance_irt(side=BUY)
         
-        return humanize_number(get_presentation_amount(total_balance_irt))
+        return humanize_number(int(total_balance_irt))
 
     get_total_balance_irt_admin.short_description = 'دارایی به تومان'
 
     def get_total_balance_usdt_admin(self, account: Account):
         total_blance_usdt = account.get_total_balance_usdt(market=Wallet.SPOT, side=BUY)
-        return humanize_number(get_presentation_amount(total_blance_usdt))
+        return humanize_number(int(total_blance_usdt))
 
     get_total_balance_usdt_admin.short_description = 'دارایی به تتر'
 
