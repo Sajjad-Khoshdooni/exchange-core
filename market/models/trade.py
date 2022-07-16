@@ -1,12 +1,13 @@
 import logging
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
 from django.db import models
-from django.db.models import F, CheckConstraint, Q, Sum
+from django.db.models import F, CheckConstraint, Q, Sum, Max, Min
+from django.utils import timezone
 
 from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Trx, OTCTrade, Asset
@@ -92,7 +93,8 @@ class Trade(models.Model):
         self.base_amount = trade_trxs.base.amount
         self.fee_amount = trade_trxs.maker_fee.amount if self.is_maker else trade_trxs.taker_fee.amount
 
-    def create_trade_trxs(self, pipeline: WalletPipeline, taker_order: Order, ignore_fee=False, fake_trade: bool = False) -> FillOrderTrxs:
+    def create_trade_trxs(self, pipeline: WalletPipeline, taker_order: Order, ignore_fee=False,
+                          fake_trade: bool = False) -> FillOrderTrxs:
         trade_trx = self._create_trade_trx(pipeline, taker_order, fake=fake_trade)
         base_trx = self._create_base_trx(pipeline, taker_order, fake=fake_trade)
 
@@ -182,7 +184,7 @@ class Trade(models.Model):
         return FakeTrx(**trx_data)
 
     @classmethod
-    def get_last(cls, symbol: 'PairSymbol', max_datetime=None):
+    def get_last(cls, symbol, max_datetime=None):
         qs = cls.objects.filter(symbol=symbol).exclude(trade_source=cls.OTC).order_by('-id')
         if max_datetime:
             qs = qs.filter(created__lte=max_datetime)
@@ -210,6 +212,18 @@ class Trade(models.Model):
                 [interval_in_secs, interval_in_secs, symbol_id, start, end]
             )
         ]
+
+    @staticmethod
+    def get_interval_top_prices(min_datetime=None, symbol_ids=None):
+        min_datetime = min_datetime or (timezone.now() - timedelta(seconds=30))
+        market_top_prices = defaultdict(lambda: Decimal())
+        symbol_filter = {'symbol_id__in': symbol_ids} if symbol_ids else {}
+        for depth in Trade.objects.filter(**symbol_filter, created__gte=min_datetime).values('symbol', 'side').annotate(
+                max_price=Max('price'), min_price=Min('price')):
+            market_top_prices[
+                (depth['symbol'], depth['side'])
+            ] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) or Decimal()
+        return market_top_prices
 
     @classmethod
     def create_for_otc_trade(cls, otc_trade: 'OTCTrade', pipeline: WalletPipeline):
