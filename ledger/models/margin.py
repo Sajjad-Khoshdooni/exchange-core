@@ -21,7 +21,7 @@ class MarginTransfer(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE)
 
-    amount = models.PositiveIntegerField()
+    amount = get_amount_field()
 
     type = models.CharField(
         max_length=2,
