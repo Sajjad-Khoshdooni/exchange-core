@@ -279,7 +279,7 @@ class ZibalChanel(FiatWithdraw):
     def get_estimated_receive_time(self, created: datetime):
         request_date = created.astimezone()
         request_time = request_date.time()
-        receive_time = request_time.replace(microsecond=0)
+        receive_time = request_date.replace(microsecond=0)
 
         if is_holiday(request_date):
             if time_in_range('0:0', '14:30', request_time):
