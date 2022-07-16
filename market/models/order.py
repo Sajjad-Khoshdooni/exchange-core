@@ -279,14 +279,17 @@ class Order(models.Model):
                 Notification.send(
                     recipient=self.wallet.account.user,
                     title='معامله {}'.format(self.symbol),
-                    message=( 'مقدار {symbol} {amount} معامله شد.').format(amount=self.amount, symbol= self.symbol)
+                    message=( 'مقدار {symbol} {amount} معامله شد.').format(amount=match_amount, symbol=self.symbol)
                 )
 
             if not maker_is_system:
                 Notification.send(
                     recipient=matching_order.wallet.account.user,
                     title='معامله {}'.format(matching_order.symbol),
-                    message=('مقدار {symbol} {amount} معامله شد.').format(amount=self.amount, symbol=matching_order.symbol)
+                    message=('مقدار {symbol} {amount} معامله شد.').format(
+                        amount=match_amount,
+                        symbol=matching_order.symbol
+                    )
                 )
 
             if trade_source == Trade.SYSTEM_TAKER and not self.wallet.account.primary:
