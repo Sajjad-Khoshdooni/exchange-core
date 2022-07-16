@@ -46,7 +46,7 @@ class DepositSerializer(serializers.ModelSerializer):
                 'block_number': self.validated_data.get('block_number'),
                 'out_address': receiver_address,
                 'wallet': wallet,
-                'deposit': self.validated_data.get('type')
+                'deposit': True
             })
 
         if status == 'done':
