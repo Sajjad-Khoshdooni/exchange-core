@@ -23,14 +23,16 @@ class DepositAddress(models.Model):
             return DepositAddress.objects.get(address_key__account=account, network=network)
 
         elif not AddressKey.objects.filter(account=account).exists():
-            address = AddressRequester().create_wallet()
+            address = AddressRequester().create_wallet(account)
             address_key = AddressKey.objects.create(
                 account=account,
                 address=address
             )
+
         else:
             address_key = AddressKey.objects.get(account=account)
-            address = AddressRequester().generate_public_address(network=network.symbol, address=address_key.address)
+
+        address = AddressRequester().generate_public_address(network=network.symbol, address=address_key.address)
 
         deposit_address = DepositAddress.objects.create(
             network=network,
