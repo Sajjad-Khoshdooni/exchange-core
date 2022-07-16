@@ -9,9 +9,9 @@ class AddressRequester:
             'Authorization': 'Token ' + config('MASTERKEY_TOKEN')
         }
 
-    def create_wallet(self):
+    def create_wallet(self, account):
         data = {
-            'tag': 'tag'
+            'tag': 'raastin-{}'.format(account.id)
         }
         url = config('MASTERKEY_BASE_URL') + '/api/v1/wallets/'
         res = requests.post(url=url, data=data, headers=self.header)
