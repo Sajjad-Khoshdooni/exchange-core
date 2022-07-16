@@ -315,22 +315,24 @@ class ConvertDust(APIView):
 
     def post(self):
         account = self.request.user.account
-        spot_wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT)
+        spot_wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT, balance__lt='10')
 
         for wallet in spot_wallets:
             if not wallet.balance or wallet.asset.symbol == Asset.IRT:
                 continue
+            free = wallet.get_free()
+            if free:
 
-            request = OTCRequest.new_trade(
-                account=account,
-                market=Wallet.SPOT,
-                from_asset=wallet.asset,
-                to_asset=Asset.get(Asset.USDT),
-                from_amount=wallet.balance,
-                allow_dust=True
-            )
+                request = OTCRequest.new_trade(
+                    account=account,
+                    market=Wallet.SPOT,
+                    from_asset=wallet.asset,
+                    to_asset=Asset.get(Asset.USDT),
+                    from_amount=free,
+                    allow_dust=True
+                )
 
-            OTCTrade.execute_trade(request, force=True)
+                OTCTrade.execute_trade(request, force=True)
 
 
 

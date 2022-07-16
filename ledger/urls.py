@@ -50,5 +50,6 @@ urlpatterns = [
     })),
 
     path('v1/wallet/balance/', views.GetBalanceInformation.as_view()),
-    path('v1/bookmark/assets/', views.BookmarkAssetsAPIView.as_view())
+    path('v1/bookmark/assets/', views.BookmarkAssetsAPIView.as_view()),
+    path('v1/dust/', views.ConvertDust.as_view()),
 ]
