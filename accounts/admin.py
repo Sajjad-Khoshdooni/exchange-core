@@ -384,9 +384,13 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         if not hasattr(user, 'account'):
             return 0
 
-        return user.account.trade_volume_irt
+        return humanize_number(user.account.trade_volume_irt)
 
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
+
+    def get_last_trade(self, user: User):
+        return 1
+    get_last_trade.short_description = 'تاریخ آخرین معامله'
 
     def get_bank_card_link(self, user: User):
         link = url_to_admin_list(BankCard) + '?user={}'.format(user.id)
