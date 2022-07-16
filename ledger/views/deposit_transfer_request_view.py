@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import UpdateAPIView
+from rest_framework.generics import CreateAPIView
 
 from accounts.views.authentication import CustomTokenAuthentication
 from ledger.models import Network, Asset, DepositAddress
@@ -20,10 +20,10 @@ class DepositSerializer(serializers.ModelSerializer):
         fields = ['status', 'amount', 'trx_hash', 'block_hash', 'type',
                   'block_number', 'network', 'sender_address', 'receiver_address', 'coin']
 
-    def save(self, **kwargs):
-        network_symbol = self.validated_data.get('network')
-        sender_address = self.validated_data.get('sender_address')
-        receiver_address = self.validated_data.get('receiver_address')
+    def create(self, validated_data):
+        network_symbol = validated_data.get('network')
+        sender_address = validated_data.get('sender_address')
+        receiver_address = validated_data.get('receiver_address')
         network = Network.objects.get(symbol=network_symbol)
 
         print(receiver_address, network_symbol)
@@ -32,17 +32,17 @@ class DepositSerializer(serializers.ModelSerializer):
             address=receiver_address,
             network=network
         )
-        asset = Asset.objects.get(symbol=self.validated_data.get('coin'))
+        asset = Asset.objects.get(symbol=validated_data.get('coin'))
         wallet = asset.get_wallet(deposit_address.address_key.account)
 
-        status = self.validated_data.get('status')
+        status = validated_data.get('status')
 
         if status not in (Transfer.PENDING, Transfer.DONE, Transfer.CANCELED):
             raise ValidationError({'status': 'invalid status %s' % status})
 
         prev_transfer = Transfer.objects.filter(
             network=network,
-            trx_hash=self.validated_data.get('trx_hash'),
+            trx_hash=validated_data.get('trx_hash'),
             deposit=True
         ).order_by('-created').first()
 
@@ -64,32 +64,28 @@ class DepositSerializer(serializers.ModelSerializer):
             return prev_transfer
 
         else:
-            transfer = Transfer.objects.create(
-                network=network,
-                trx_hash=self.validated_data.get('trx_hash'),
-                deposit=True,
-                status=status,
-                deposit_address=deposit_address,
-                amount=self.validated_data.get('amount'),
-                block_hash=self.validated_data.get('block_hash'),
-                block_number=self.validated_data.get('block_number'),
-                out_address=sender_address,
-                wallet=wallet
-            )
+            with WalletPipeline() as pipeline:
+                transfer = Transfer.objects.create(
+                    network=network,
+                    trx_hash=validated_data.get('trx_hash'),
+                    deposit=True,
+                    status=status,
+                    deposit_address=deposit_address,
+                    amount=validated_data.get('amount'),
+                    block_hash=validated_data.get('block_hash'),
+                    block_number=validated_data.get('block_number'),
+                    out_address=sender_address,
+                    wallet=wallet
+                )
 
-            if status == Transfer.DONE:
-                with WalletPipeline() as pipeline:
+                if status == Transfer.DONE:
                     transfer.build_trx(pipeline)
-                    transfer.save()
 
                 transfer.alert_user()
 
             return transfer
 
 
-class DepositTransferUpdateView(UpdateAPIView):
+class DepositTransferUpdateView(CreateAPIView):
     authentication_classes = [CustomTokenAuthentication]
     serializer_class = DepositSerializer
-
-    def get_object(self):
-        return self.request.user
