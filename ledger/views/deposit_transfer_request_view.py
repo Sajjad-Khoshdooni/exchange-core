@@ -9,10 +9,10 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class DepositSerializer(serializers.ModelSerializer):
-    network = serializers.CharField(max_length=4)
-    sender_address = serializers.CharField(max_length=256)
-    receiver_address = serializers.CharField(max_length=256)
-    coin = serializers.CharField(max_length=8)
+    network = serializers.CharField(max_length=4, read_only=True)
+    sender_address = serializers.CharField(max_length=256, read_only=True)
+    receiver_address = serializers.CharField(max_length=256, read_only=True)
+    coin = serializers.CharField(max_length=8, read_only=True)
 
     class Meta:
         model = Transfer

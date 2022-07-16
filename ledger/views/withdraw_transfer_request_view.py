@@ -8,8 +8,8 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
-    requester_id = serializers.IntegerField()
-    status = serializers.CharField(max_length=8)
+    requester_id = serializers.IntegerField(read_only=True)
+    status = serializers.CharField(max_length=8, read_only=True)
 
     def create(self, validated_data):
         requester_id = validated_data.get('requester_id')
