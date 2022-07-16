@@ -163,8 +163,9 @@ class NetworkAdmin(admin.ModelAdmin):
 
 @admin.register(models.NetworkAsset)
 class NetworkAssetAdmin(admin.ModelAdmin):
-    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'binance_withdraw_enable')
+    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'can_deposit', 'binance_withdraw_enable')
     search_fields = ('network__symbol', 'asset__symbol')
+    list_editable = ('can_deposit', )
 
 
 class UserFilter(admin.SimpleListFilter):

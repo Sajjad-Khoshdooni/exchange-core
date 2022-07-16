@@ -159,7 +159,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return network_asset.network.address_regex
 
     def get_can_deposit(self, network_asset: NetworkAsset):
-        return network_asset.can_deposit()
+        return network_asset.can_deposit_enabled()
 
     def get_can_withdraw(self, network_asset: NetworkAsset):
         return network_asset.network.can_withdraw and network_asset.binance_withdraw_enable
