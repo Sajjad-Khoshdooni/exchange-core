@@ -1,3 +1,4 @@
+import logging
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
@@ -5,6 +6,9 @@ from rest_framework.generics import get_object_or_404, CreateAPIView
 from accounts.views.authentication import CustomTokenAuthentication
 from ledger.models.transfer import Transfer
 from ledger.utils.wallet_pipeline import WalletPipeline
+
+
+logger = logging.getLogger(__name__)
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
@@ -23,6 +27,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
             (Transfer.PROCESSING, Transfer.DONE),
             (Transfer.PROCESSING, Transfer.CANCELED),
         ]
+
+        if transfer.source == Transfer.BINANCE:
+            logger.warning('Update Binance Withdraw')
 
         if transfer.status == status:
             return transfer

@@ -89,7 +89,7 @@ def create_withdraw(transfer_id: int):
         transfer.trx_hash = data
         transfer.save(update_fields=['status', 'trx_hash'])
 
-    elif data == 'BalanceLimitation':
+    elif data == 'BalanceLimitation' or data == 'TRXCreationError':
         transfer.source = Transfer.BINANCE
         transfer.save(['source'])
         create_binance_withdraw(transfer_id=transfer.id)
