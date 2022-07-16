@@ -8,6 +8,8 @@ def populate_address_key(apps, schema_editor):
     AddressKey = apps.get_model('ledger', 'AddressKey')
     DepositAddress = apps.get_model('ledger', 'DepositAddress')
 
+    address_key_map = {}
+
     for deposit_address in DepositAddress.objects.all():
         account_secret = deposit_address.account_secret
 
@@ -19,10 +21,13 @@ def populate_address_key(apps, schema_editor):
         else:
             address_key = address
 
-        deposit_address.address_key = AddressKey.objects.create(
-            account=account_secret.account,
-            address=address_key
-        )
+        if address_key not in address_key_map:
+            address_key_map[address_key] = AddressKey.objects.create(
+                account=account_secret.account,
+                address=address_key
+            )
+
+        deposit_address.address_key = address_key_map[address_key]
         deposit_address.address = address
         deposit_address.save()
 
