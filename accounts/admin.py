@@ -21,6 +21,7 @@ from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
+from ledger.utils.price import BUY
 from market.models import Trade, ReferralTrx, Order
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
@@ -542,9 +543,9 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_deposit_address.short_description = 'آدرس‌های کیف پول'
 
     def get_total_balance_irt_admin(self, user: User):
-        total_balance_irt = user.account.get_total_balance_irt(market=Wallet.SPOT, side='buy') +\
-                            user.account.get_total_balance_irt(market=Wallet.MARGIN, side='buy')
-        return humanize_number(get_presentation_amount(total_balance_irt))
+        total_balance_irt = user.account.get_total_balance_irt(side=BUY)
+        
+        return humanize_number(int(total_balance_irt))
 
     get_total_balance_irt_admin.short_description = 'دارایی به تومان'
 
@@ -570,13 +571,14 @@ class AccountAdmin(admin.ModelAdmin):
     get_wallet.short_description = 'لیست کیف‌ها'
 
     def get_total_balance_irt_admin(self, account: Account):
-        total_balance_irt = account.get_total_balance_irt(market=Wallet.SPOT, side='buy')
+        total_balance_irt = account.get_total_balance_irt(side=BUY)
+        
         return humanize_number(get_presentation_amount(total_balance_irt))
 
     get_total_balance_irt_admin.short_description = 'دارایی به تومان'
 
     def get_total_balance_usdt_admin(self, account: Account):
-        total_blance_usdt = account.get_total_balance_usdt(market=Wallet.SPOT, side='buy')
+        total_blance_usdt = account.get_total_balance_usdt(market=Wallet.SPOT, side=BUY)
         return humanize_number(get_presentation_amount(total_blance_usdt))
 
     get_total_balance_usdt_admin.short_description = 'دارایی به تتر'
