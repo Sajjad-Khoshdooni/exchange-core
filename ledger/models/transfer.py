@@ -175,9 +175,9 @@ class Transfer(models.Model):
             transfer = Transfer.objects.create(
                 wallet=wallet,
                 network=network,
-                amount=amount - commission,
+                amount=amount,
                 fee_amount=commission,
-                source=cls.BINANCE,
+                source=cls.source,
                 out_address=address,
                 deposit=False,
                 memo=memo,
@@ -185,8 +185,8 @@ class Transfer(models.Model):
 
             pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
-        from ledger.tasks import create_binance_withdraw
-        create_binance_withdraw.delay(transfer.id)
+        from ledger.tasks import create_withdraw
+        create_withdraw.delay(transfer.id)
 
         return transfer
 
