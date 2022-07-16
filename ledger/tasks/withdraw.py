@@ -29,6 +29,16 @@ def update_binance_withdraw():
     for transfer in re_handle_transfers:
         create_binance_withdraw.delay(transfer.id)
 
+    re_handle_transfers = Transfer.objects.filter(
+        deposit=False,
+        source=Transfer.Source,
+        status=Transfer.PROCESSING,
+        handling=False
+    )
+
+    for transfer in re_handle_transfers:
+        create_withdraw.delay(transfer.id)
+
     transfers = Transfer.objects.filter(
         deposit=False,
         source=Transfer.BINANCE,
