@@ -64,7 +64,7 @@ app.conf.beat_schedule = {
         'task': 'ledger.tasks.register_address.register_address',
         'schedule': 30,
         'options': {
-            'queue': 'blocklink',
+            'queue': 'celery',
             'expire': 30
         }
     },
