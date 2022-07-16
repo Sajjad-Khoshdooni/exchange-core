@@ -12,12 +12,11 @@ class DepositSerializer(serializers.ModelSerializer):
     network = serializers.CharField(max_length=4)
     sender_address = serializers.CharField(max_length=256)
     receiver_address = serializers.CharField(max_length=256)
-    type = serializers.CharField(max_length=8)
     coin = serializers.CharField(max_length=8)
 
     class Meta:
         model = Transfer
-        fields = ['status', 'amount', 'trx_hash', 'block_hash', 'type',
+        fields = ['status', 'amount', 'trx_hash', 'block_hash',
                   'block_number', 'network', 'sender_address', 'receiver_address', 'coin']
 
     def create(self, validated_data):
