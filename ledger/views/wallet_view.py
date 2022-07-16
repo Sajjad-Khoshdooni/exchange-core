@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.models import Wallet, DepositAddress, NetworkAsset
+from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCTrade
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.precision import get_presentation_amount
@@ -309,3 +309,28 @@ class WalletSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wallet
         fields = ('asset', 'free',)
+
+
+class ConvertDust(APIView):
+
+    def post(self):
+        account = self.request.user.account
+        spot_wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT)
+
+        for wallet in spot_wallets:
+            if not wallet.balance or wallet.asset.symbol == Asset.IRT:
+                continue
+
+            request = OTCRequest.new_trade(
+                account=account,
+                market=Wallet.SPOT,
+                from_asset=wallet.asset,
+                to_asset=Asset.get(Asset.USDT),
+                from_amount=wallet.balance,
+                allow_dust=True
+            )
+
+            OTCTrade.execute_trade(request, force=True)
+
+
+
