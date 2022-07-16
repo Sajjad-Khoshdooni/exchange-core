@@ -72,7 +72,7 @@ def update_withdraw():
 
 
 @shared_task(queue='blocklink')
-def create_withdraw(transfer_id: int):
+def create_withdraw(transfer_id: int):  # todo :handle parallel request to blocklink
     transfer = Transfer.objects.get(id=transfer_id)
 
     from ledger.requester.withdraw_requester import RequestWithdraw
