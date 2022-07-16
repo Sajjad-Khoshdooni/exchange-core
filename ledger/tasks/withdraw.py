@@ -59,3 +59,29 @@ def update_binance_withdraw():
                 transfer.build_trx(pipeline)
 
             transfer.alert_user()
+
+
+@shared_task(queue='blocklink')
+def create_withdraw(transfer_id: int):
+    transfer = Transfer.objects.get(id=transfer_id)
+
+    from ledger.requester.withdraw_requester import RequestWithdraw
+    ok, data = RequestWithdraw().withdraw_from_hot_wallet(
+        receiver_address=transfer.out_address,
+        amount=transfer.amount,
+        network=transfer.network.symbol,
+        asset=transfer.wallet.asset.symbol,
+        transfer_id=transfer.id
+    )
+
+    if ok:
+        transfer.status = Transfer.PENDING
+        transfer.trx_hash = data
+        transfer.save(update_fields=['status', 'trx_hash'])
+
+    elif data == 'BalanceLimitation':
+        transfer.source = Transfer.BINANCE
+        transfer.amount = transfer.amount - transfer.fee_amount
+        transfer.save(['source', 'amount'])
+
+        create_binance_withdraw(transfer_id=transfer.id)
