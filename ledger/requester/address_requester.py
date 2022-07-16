@@ -1,5 +1,6 @@
 import json
 import requests
+from django.conf import settings
 from yekta_config.config import config
 
 
@@ -11,7 +12,10 @@ class AddressRequester:
 
     def create_wallet(self, account):
         data = {
-            'tag': 'raastin-{}'.format(account.id)
+            'tag': '{brand}-base-{account_id}'.format(
+                brand=settings.BRAND_EN.lower(),
+                account_id=account.id,
+            )
         }
         url = config('MASTERKEY_BASE_URL') + '/api/v1/wallets/'
         res = requests.post(url=url, data=data, headers=self.header)
