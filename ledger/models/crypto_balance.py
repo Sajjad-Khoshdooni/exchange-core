@@ -105,7 +105,7 @@ class CryptoBalance(models.Model):
         all_crypto = CryptoBalance.objects.filter(
             amount__gt=0
         ).exclude(
-            deposit_address__account_secret__account=Account.system()
+            deposit_address__address_key__account=Account.system()
         )
 
         for crypto in all_crypto:

@@ -177,7 +177,7 @@ class UserFilter(admin.SimpleListFilter):
     def queryset(self, request, queryset):
         user = request.GET.get('user_id')
         if user is not None:
-            return queryset.filter(account_secret__account__user=user)
+            return queryset.filter(address_key__account__user=user)
         else:
             return queryset
 
@@ -329,7 +329,7 @@ class CryptoAccountTypeFilter(SimpleListFilter):
             if value == 'ord':
                 value = None
 
-            return queryset.filter(deposit_address__account_secret__account__type=value)
+            return queryset.filter(deposit_address__address_key__account__type=value)
         else:
             return queryset
 

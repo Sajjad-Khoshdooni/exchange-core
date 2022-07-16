@@ -16,6 +16,7 @@ class AddressRequester:
         url = config('MASTERKEY_BASE_URL') + '/api/v1/wallets/'
         res = requests.post(url=url, data=data, headers=self.header)
         response = json.loads(res.content.decode('utf-8'))
+
         return response['address']
 
     def generate_public_address(self, address, network: str):
