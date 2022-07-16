@@ -175,9 +175,9 @@ class Transfer(models.Model):
             transfer = Transfer.objects.create(
                 wallet=wallet,
                 network=network,
-                amount=amount,
+                amount=amount-commission,
                 fee_amount=commission,
-                source=cls.source,
+                source=cls.SELF,
                 out_address=address,
                 deposit=False,
                 memo=memo,
