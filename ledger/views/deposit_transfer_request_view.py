@@ -35,7 +35,7 @@ class DepositSerializer(serializers.ModelSerializer):
 
         status = self.validated_data.get('status')
 
-        transfer = Transfer.objects.update_or_create(
+        transfer, _ = Transfer.objects.update_or_create(
             network=network,
             trx_hash=self.validated_data.get('trx_hash'),
             defaults={
@@ -64,5 +64,3 @@ class DepositTransferUpdateView(UpdateAPIView):
 
     def get_object(self):
         return self.request.user
-
-
