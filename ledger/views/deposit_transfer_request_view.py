@@ -1,12 +1,9 @@
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.generics import UpdateAPIView
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import serializers
+from rest_framework.generics import UpdateAPIView
 
-from ledger.models.transfer import Transfer
+from accounts.views.authentication import CustomTokenAuthentication
 from ledger.models import Network, Asset, DepositAddress
-from accounts.models import Account
+from ledger.models.transfer import Transfer
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
@@ -62,7 +59,7 @@ class DepositSerializer(serializers.ModelSerializer):
 
 
 class DepositTransferUpdateView(UpdateAPIView):
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [CustomTokenAuthentication]
     serializer_class = DepositSerializer
 
     def get_object(self):
