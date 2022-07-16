@@ -288,19 +288,19 @@ class ZibalChanel(FiatWithdraw):
                 receive_time += timedelta(days=1)
                 receive_time.replace(hour=5, minute=0, second=0)
         else:
-            if time_in_range('0:0', '2:59', request_time):
+            if time_in_range('0:0', '3:0', request_time):
                 receive_time = receive_time.replace(hour=5, minute=0, second=0)
 
-            if time_in_range('3:0', '9:59', request_time):
+            if time_in_range('3:0', '10:0', request_time):
                 receive_time = receive_time.replace(hour=11, minute=30, second=0)
 
-            elif time_in_range('10:00', '12:59', request_time):
+            elif time_in_range('10:00', '13:0', request_time):
                 receive_time = receive_time.replace(hour=14, minute=30, second=0)
 
-            elif time_in_range('13:00', '17:59', request_time):
+            elif time_in_range('13:00', '18:0', request_time):
                 receive_time = receive_time.replace(hour=19, minute=30, second=0)
 
-            elif time_in_range('18:00', '23:59', request_time):
+            else:
                 receive_time += timedelta(days=1)
                 receive_time = receive_time.replace(hour=5, minute=0, second=0)
 
