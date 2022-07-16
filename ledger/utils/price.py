@@ -217,7 +217,6 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
 
     if coin == IRT:
         return 1 / get_tether_irt_price(get_other_side(side))
-
     # note: commented to decrease performance issues
     # asset = Asset.get(coin)
     #

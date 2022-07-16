@@ -13,7 +13,7 @@ from ledger.models import Asset, Prize, CoinCategory, DepositAddress
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol
+from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol, SELL
 from provider.models import ProviderOrder
 
 
@@ -316,10 +316,16 @@ class TransferUserFilter(SimpleListFilter):
 
 @admin.register(models.Transfer)
 class TransferAdmin(admin.ModelAdmin):
-    list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount', 'deposit', 'status', 'is_fee', 'source')
+    list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount',
+                    'deposit', 'status', 'is_fee', 'source', 'get_total_volume_usdt',
+                    )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
-    readonly_fields = ('deposit_address', 'network', 'wallet', 'provider_transfer')
+    readonly_fields = ('deposit_address', 'network', 'wallet', 'provider_transfer', 'get_total_volume_usdt')
+
+    def get_total_volume_usdt(self, transfer: models.Transfer):
+        return transfer.amount * get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
+    get_total_volume_usdt.short_description = 'ارزش تتری'
 
 
 class CryptoAccountTypeFilter(SimpleListFilter):
@@ -367,6 +373,7 @@ class CryptoBalanceAdmin(admin.ModelAdmin):
         return get_presentation_amount(value)
 
     get_value_usdt.short_description = 'value'
+
 
     @admin.action(description='ارسال به بایننس')
     def collect_asset_action(self, request, queryset):
