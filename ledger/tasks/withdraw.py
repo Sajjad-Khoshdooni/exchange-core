@@ -21,7 +21,7 @@ def update_withdraw():
 
     re_handle_transfers = Transfer.objects.filter(
         deposit=False,
-        source=Transfer.Source,
+        source=Transfer.SELF,
         status=Transfer.PROCESSING,
         handling=False
     )
@@ -93,5 +93,3 @@ def create_withdraw(transfer_id: int):
         transfer.source = Transfer.BINANCE
         transfer.save(['source'])
         create_binance_withdraw(transfer_id=transfer.id)
-
-
