@@ -19,5 +19,4 @@ class RequestWithdraw:
 
         url = config('BLOCKLINK_BASE_URL') + '/api/v1/withdraw/'
 
-        response = requests.post(data=data, url=url, headers=self.header)
-        return response.ok, response.json()['data']
+        return requests.post(data=data, url=url, headers=self.header)
