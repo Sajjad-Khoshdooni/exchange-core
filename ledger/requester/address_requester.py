@@ -25,5 +25,9 @@ class AddressRequester:
             "network": network
         }
         url = config('MASTERKEY_BASE_URL') + '/api/v1/wallets/public/address/'
-        response = requests.get(url=url, data=data, headers=self.header).json()
-        return response['public_address']
+        resp = requests.get(url=url, data=data, headers=self.header)
+
+        if not resp.ok:
+            raise Exception('Failed to generate public address')
+
+        return resp.json()['public_address']
