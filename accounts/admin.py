@@ -215,7 +215,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
-            'get_sum_of_value_buy_sell', 'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit'
+            'get_sum_of_value_buy_sell', 'get_remaining_fiat_withdraw_limit',
+            'get_remaining_crypto_withdraw_limit', 'get_last_trade', 'get_total_balance_irt_admin'
         )}),
         (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)}),
         (_("کدهای دعوت کاربر"), {'fields': (
@@ -242,7 +243,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium',
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
-        'get_login_activity_link',
+        'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin'
     )
     preserve_filters = ('archived', )
 
@@ -389,7 +390,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
 
     def get_last_trade(self, user: User):
-        return 1
+        return gregorian_to_jalali_datetime_str(Trade.objects.filter(account=user.account).last().created)
     get_last_trade.short_description = 'تاریخ آخرین معامله'
 
     def get_bank_card_link(self, user: User):
@@ -539,6 +540,13 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
     get_deposit_address.short_description = 'آدرس‌های کیف پول'
+
+    def get_total_balance_irt_admin(self, user: User):
+        total_balance_irt = user.account.get_total_balance_irt(market=Wallet.SPOT, side='buy') +\
+                            user.account.get_total_balance_irt(market=Wallet.MARGIN, side='buy')
+        return humanize_number(get_presentation_amount(total_balance_irt))
+
+    get_total_balance_irt_admin.short_description = 'دارایی به تومان'
 
 
 @admin.register(Account)
