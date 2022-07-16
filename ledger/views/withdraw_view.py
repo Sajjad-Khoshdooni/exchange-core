@@ -25,7 +25,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
     network = serializers.CharField(write_only=True, required=False)
     code = serializers.CharField(write_only=True, required=False)
     address = serializers.CharField(write_only=True, required=False)
-    memo = serializers.CharField(write_only=True, required=False)
+    memo = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     def validate(self, attrs):
 

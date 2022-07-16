@@ -75,7 +75,7 @@ class SerializerDecimalField(serializers.DecimalField):
         if not isinstance(data, Decimal):
             data = Decimal(str(data).strip())
 
-        return str(normalize_fraction(data))
+        return '{:f}'.format(normalize_fraction(data))
 
 
 @cache_for(time=600)

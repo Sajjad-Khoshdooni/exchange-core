@@ -3,12 +3,13 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 
-from accounts.models import FirebaseToken
 from accounts.utils.push_notif import send_push_notif, IMAGE_200K_SHIB
 
 
 @shared_task(queue='celery')
 def retention_leads_to_signup():
+    from accounts.models import FirebaseToken
+
     tokens = FirebaseToken.objects.filter(user=None)
 
     token_state_1 = tokens.filter(
@@ -45,7 +46,9 @@ def retention_leads_to_signup():
             token.save()
 
 
-def trigger_token(token: FirebaseToken):
+def trigger_token(token):
+    from accounts.models import FirebaseToken
+
     templates = {
         FirebaseToken.STATE_1: {
             'title': 'همین الان در راستین ثبت‌نام کن!',
