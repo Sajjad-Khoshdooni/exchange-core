@@ -313,22 +313,19 @@ class WalletSerializer(serializers.ModelSerializer):
 
 class ConvertDust(APIView):
 
-    def post(self):
+    def post(self, *args):
         account = self.request.user.account
-        spot_wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT, balance__lt='10')
+        spot_wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT)
 
         for wallet in spot_wallets:
-            if not wallet.balance or wallet.asset.symbol == Asset.IRT:
-                continue
-            free = wallet.get_free()
-            if free:
+            if not wallet.asset == Asset.IRT and wallet.free and wallet.get_free_irt() < '10000':
 
                 request = OTCRequest.new_trade(
                     account=account,
                     market=Wallet.SPOT,
                     from_asset=wallet.asset,
                     to_asset=Asset.get(Asset.USDT),
-                    from_amount=free,
+                    from_amount=wallet.get_free(),
                     allow_dust=True
                 )
 
