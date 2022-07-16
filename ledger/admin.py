@@ -9,7 +9,7 @@ from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
-from ledger.models import Asset, Prize, CoinCategory, DepositAddress
+from ledger.models import Asset, Prize, CoinCategory
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
@@ -185,6 +185,7 @@ class UserFilter(admin.SimpleListFilter):
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
     list_display = ('address_key', 'network', 'address')
+    readonly_fields = ('address_key', 'network', 'address')
 
 
 @admin.register(models.OTCRequest)
@@ -412,3 +413,9 @@ class CoinCategoryAdmin(admin.ModelAdmin):
         return coin_category.coins.count()
 
     get_coin_count.short_description = 'تعداد رمزارز'
+
+
+@admin.register(models.AddressKey)
+class AddressKeyAdmin(admin.ModelAdmin):
+    list_display = ('address', )
+    readonly_fields = ('address', )

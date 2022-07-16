@@ -8,3 +8,6 @@ class AddressKey(models.Model):
 
     class Meta:
         unique_together = ('account', 'address')
+
+    def __str__(self):
+        return self.address
