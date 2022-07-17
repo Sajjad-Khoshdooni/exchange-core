@@ -44,7 +44,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             if status == Transfer.DONE:
                 transfer.build_trx(pipeline)
 
-            if status in (Transfer.CANCELED, Transfer.DONE):
+            if status in [Transfer.CANCELED, Transfer.DONE]:
                 pipeline.release_lock(transfer.group_id)
 
             transfer.alert_user()

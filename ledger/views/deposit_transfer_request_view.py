@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, get_object_or_404
 
 from accounts.views.authentication import CustomTokenAuthentication
 from ledger.models import Network, Asset, DepositAddress
@@ -25,9 +25,8 @@ class DepositSerializer(serializers.ModelSerializer):
         receiver_address = validated_data.get('receiver_address')
         network = Network.objects.get(symbol=network_symbol)
 
-        print(receiver_address, network_symbol)
-
-        deposit_address = DepositAddress.objects.get(
+        deposit_address = get_object_or_404(
+            DepositAddress,
             address=receiver_address,
             network=network
         )
