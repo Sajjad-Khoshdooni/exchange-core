@@ -81,6 +81,9 @@ def update_binance_withdraw():
 def create_withdraw(transfer_id: int):
     transfer = Transfer.objects.get(id=transfer_id)
 
+    if not transfer.source != Transfer.SELF:
+        return
+
     from ledger.requester.withdraw_requester import RequestWithdraw
 
     response = RequestWithdraw().withdraw_from_hot_wallet(
@@ -100,7 +103,7 @@ def create_withdraw(transfer_id: int):
 
     elif resp_data.get('type') == 'NotHandled':
         transfer.source = Transfer.BINANCE
-        transfer.save(['source'])
+        transfer.save(update_fields=['source'])
         create_binance_withdraw(transfer_id=transfer.id)
     else:
         logger.warning('Error sending withdraw to blocklink', extra={

@@ -41,6 +41,7 @@ class VerifyOTPView(CreateAPIView):
     serializer_class = VerifyOTPSerializer
     throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
+
 class OTPSerializer(serializers.ModelSerializer):
 
     new_phone = serializers.CharField(required=False)
