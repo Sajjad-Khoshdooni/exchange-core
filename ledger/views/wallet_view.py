@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.conf import settings
-from rest_framework import serializers
+from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
@@ -331,5 +331,5 @@ class ConvertDust(APIView):
                 )
 
                 OTCTrade.execute_trade(request, force=True)
-        return Response({'msg': 'convert_dust success'})
+        return Response({'msg': 'convert_dust success'}, status=status.HTTP_200_OK)
 
