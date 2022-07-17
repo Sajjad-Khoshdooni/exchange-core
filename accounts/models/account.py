@@ -5,6 +5,7 @@ from django.db import models
 from django.db.models import UniqueConstraint, Q
 
 from accounts.models import User
+from ledger.utils.price import BUY
 from ledger.utils.price_manager import PriceManager
 
 
@@ -84,10 +85,13 @@ class Account(models.Model):
 
         return total
 
-    def get_total_balance_irt(self, market: str, side: str):
+    def get_total_balance_irt(self, market: str = None, side: str = BUY):
         from ledger.models import Wallet
 
-        wallets = Wallet.objects.filter(account=self, market=market)
+        wallets = Wallet.objects.filter(account=self)
+
+        if market:
+            wallets = wallets.filter(market=market)
 
         total = Decimal('0')
 

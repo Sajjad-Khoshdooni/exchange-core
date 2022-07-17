@@ -52,13 +52,21 @@ class ProviderOrder(models.Model):
         choices=SCOPE_CHOICES,
     )
 
+    hedge_amount = get_amount_field(default=Decimal(0))
+
     # caller_id = models.PositiveIntegerField(null=True, blank=True)
 
     @classmethod
-    def new_order(cls, asset: Asset, side: str, amount: Decimal, scope: str, market: str = FUTURE) -> 'ProviderOrder':
+    def new_order(cls, asset: Asset, side: str, amount: Decimal, scope: str, market: str = FUTURE,
+                  hedge_amount: Decimal = 0) -> 'ProviderOrder':
         with transaction.atomic():
             order = ProviderOrder.objects.create(
-                asset=asset, amount=amount, side=side, scope=scope, market=market
+                asset=asset,
+                amount=amount,
+                side=side,
+                scope=scope,
+                market=market,
+                hedge_amount=hedge_amount
             )
 
             symbol = cls.get_trading_symbol(asset)
@@ -193,7 +201,7 @@ class ProviderOrder(models.Model):
                         if order_amount * price < 10:
                             return True
 
-                order = cls.new_order(asset, side, order_amount, scope, market=market)
+                order = cls.new_order(asset, side, order_amount, scope, market=market, hedge_amount=hedge_amount)
 
                 if not order and raise_exception:
                     raise HedgeError

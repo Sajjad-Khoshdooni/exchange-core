@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 api_key = secret('ELASTICMAIL_API_KEY')
 email_sender = config('EMAIL_SENDER')
 brand = config('BRAND')
-
+SCOPE_VERIFY_EMAIL = 'verify_email'
 SCOPE_WITHDRAW_EMAIL = 'withdraw_email'
 SCOPE_DEPOSIT_EMAIL = 'deposit_email'
 SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw_email'
@@ -24,32 +24,32 @@ SCOPE_MARGIN_LIQUIDATION_FINISHED = 'margin_liquidation_finished'
 BRAND = config('BRAND')
 
 TEMPLATES = {
-    'verify_email': {
+    SCOPE_VERIFY_EMAIL: {
         'subject':  '{} | کد تایید ایمیل'.format(BRAND),
         'html': 'accounts/email/verify_email.min.html',
         'text': 'accounts/text/verify_email.txt',
     },
-    'withdraw_email': {
+    SCOPE_WITHDRAW_EMAIL: {
         'subject': '{} | اطلاع‌رسانی برداشت رمز ارزی'.format(BRAND),
         'html': 'accounts/email/withdraw_email.min.html',
         'text': 'accounts/text/withdraw_email.txt',
     },
-    'successful_fiat_withdraw_email': {
+    SCOPE_SUCCESSFUL_FIAT_WITHDRAW: {
         'subject': '{} | اطلاع‌رسانی برداشت ریالی'.format(BRAND),
         'html': 'accounts/email/successful_fiat_withdraw_email.min.html',
         'text': 'accounts/text/successful_fiat_withdraw_email.txt',
     },
-    'cancel_fiat_withdraw_email': {
+    SCOPE_CANCEL_FIAT_WITHDRAW: {
         'subject': '{} | اطلاع‌رسانی لغو برداشت ریالی '.format(BRAND),
         'html': 'accounts/email/cancel_fiat_withdraw_email.min.html',
         'text': 'accounts/text/cancel_fiat_withdraw_email.txt',
     },
-    'deposit_email': {
+    SCOPE_DEPOSIT_EMAIL: {
         'subject': '{} | اطلاع‌رسانی واریز رمزارزی '.format(BRAND),
         'html': 'accounts/email/deposit_email.min.html',
         'text': 'accounts/text/deposit_email.txt',
     },
-    'payment_email': {
+    SCOPE_PAYMENT: {
         'subject': '{} | اطلاع‌رسانی واریز ریالی'.format(BRAND),
         'html': 'accounts/email/payment_email.min.html',
         'text': 'accounts/text/payment_email.txt',
