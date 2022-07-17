@@ -13,34 +13,83 @@ class ExternalNotification(models.Model):
     SCOPE_TRADE_PRIZE = 'trade_prize'
     SCOPE_MARGIN_ENABLE = 'margin_enable'
 
-    SCOPE_TRIGGER_UPGRADE_LEVEL_FIRST = 'scope_trigger_upgrade_level-first'
-    SCOPE_TRIGGER_UPGRADE_LEVEL_SECOND = 'scope-trigger_upgrade_level_second'
-    SCOPE_TRIGGER_UPGRADE_LEVEL_THIRD = 'scope_trigger_upgrade_level_third'
+    SCOPE_VERIFY1 = 'scope_verify1'
+    SCOPE_VERIFY2 = 'scope-verify2'
+    SCOPE_VERIFY3 = 'scope_verify3'
 
-    SCOPE_TRIGGER_DEPOSIT_FIRST = 'scope_trigger_deposit_first'
-    SCOPE_TRIGGER_DEPOSIT_SECOND = 'scope_trigger_deposit_second'
-    SCOPE_TRIGGER_DEPOSIT_THIRD = 'scope_trigger_deposit_third'
-    SCOPE_TRIGGER_DEPOSIT_FOURTH = 'scope_trigger_deposit_fourth'
+    SCOPE_DEPOSIT1 = 'scope_deposit1'
+    SCOPE_DEPOSIT2 = 'scope_deposit2'
+    SCOPE_DEPOSIT3 = 'scope_deposit3'
+    SCOPE_DEPOSIT4 = 'scope_deposit4'
 
-    SCOPE_TRIGGER_TRADE_FIRST = 'scope_trigger_trade_first'
-    SCOPE_TRIGGER_TRADE_SECOND = 'scope_trigger_trade_second'
-    SCOPE_TRIGGER_TRADE_THIRD = 'scope_trigger_trade_third'
+    SCOPE_TRADE1 = 'scope_trade1'
+    SCOPE_TRADE2 = 'scope_trade2'
+    SCOPE_TRADE3 = 'scope_trade3'
+
+    TEMPLATES = {
+        SCOPE_VERIFY1: {
+            'template': 0,
+            'params': {}
+        },
+
+        SCOPE_DEPOSIT1: {
+            'template': '67758',
+            'params': {
+                'name': 'صرافی {}'.format(config('BRAND')),
+                'brand': 'و دریافت هدیه تا ۲۰۰ هزار شیبا به {}'.format(config('BRAND')),
+                'department': config('RETENTION_URL_DEPOSIT')
+            }
+        },
+        SCOPE_DEPOSIT2: {
+            'template': '68105',
+            'params': {
+                'name': '{} تنها صرافی با کارمزد صفر.'.format(config('BRAND')),
+                'brand': 'و دریافت هدیه تا ۲۰۰ هزار شیبا به {}'.format(config('BRAND')),
+                'department': config('RETENTION_URL_DEPOSIT')
+            }
+        },
+        SCOPE_DEPOSIT3: {
+            'template': '68106',
+            'params': {
+                'name': 'تا آخر هفته فرصت دارید با',
+                'brand': 'در صرافی {} تا ۲۰۰ هزار شیبا هدیه بگیرید. برای شروع به لینک زیر'.format(config('BRAND')),
+                'department': config('RETENTION_URL_DEPOSIT')
+            }
+        },
+        SCOPE_DEPOSIT4: {
+            'template': '68106',
+            'params': {
+                'name': 'تا امشب فرصت دارید با',
+                'brand': 'در صرافی {} تا ۲۰۰ هزار شیبا هدیه بگیرید. برای شروع به لینک زیر'.format(config('BRAND')),
+                'department': config('RETENTION_URL_DEPOSIT')
+            }
+        },
+
+        SCOPE_TRADE1: {
+            'template': '68107',
+            'params': {
+                'name': 'صرافی {} با کارمزد صفر'.format(config('BRAND')),
+                'brand': 'و تا ۲۰۰ هزار شیبا هدیه بگیرید',
+                'department': config('RETENTION_URL_TRADE')
+            }
+        },
+    }
 
     SCOPE_CHOICES = (
         (SCOPE_LEVEL_2_PRIZE, SCOPE_LEVEL_2_PRIZE),
         (SCOPE_FIRST_FIAT_DEPOSIT_PRIZE, SCOPE_FIRST_FIAT_DEPOSIT_PRIZE),
         (SCOPE_TRADE_PRIZE, SCOPE_TRADE_PRIZE),
         (SCOPE_MARGIN_ENABLE, SCOPE_MARGIN_ENABLE),
-        (SCOPE_TRIGGER_UPGRADE_LEVEL_FIRST, SCOPE_TRIGGER_UPGRADE_LEVEL_FIRST),
-        (SCOPE_TRIGGER_UPGRADE_LEVEL_SECOND, SCOPE_TRIGGER_UPGRADE_LEVEL_SECOND),
-        (SCOPE_TRIGGER_UPGRADE_LEVEL_THIRD, SCOPE_TRIGGER_UPGRADE_LEVEL_THIRD),
-        (SCOPE_TRIGGER_DEPOSIT_FIRST, SCOPE_TRIGGER_DEPOSIT_FIRST),
-        (SCOPE_TRIGGER_DEPOSIT_SECOND, SCOPE_TRIGGER_DEPOSIT_SECOND),
-        (SCOPE_TRIGGER_DEPOSIT_THIRD, SCOPE_TRIGGER_DEPOSIT_THIRD),
-        (SCOPE_TRIGGER_DEPOSIT_FOURTH, SCOPE_TRIGGER_DEPOSIT_FOURTH),
-        (SCOPE_TRIGGER_TRADE_FIRST, SCOPE_TRIGGER_TRADE_FIRST),
-        (SCOPE_TRIGGER_TRADE_SECOND, SCOPE_TRIGGER_TRADE_SECOND),
-        (SCOPE_TRIGGER_TRADE_THIRD, SCOPE_TRIGGER_TRADE_THIRD),
+        (SCOPE_VERIFY1, SCOPE_VERIFY1),
+        (SCOPE_VERIFY2, SCOPE_VERIFY2),
+        (SCOPE_VERIFY3, SCOPE_VERIFY3),
+        (SCOPE_DEPOSIT1, SCOPE_DEPOSIT1),
+        (SCOPE_DEPOSIT2, SCOPE_DEPOSIT2),
+        (SCOPE_DEPOSIT3, SCOPE_DEPOSIT3),
+        (SCOPE_DEPOSIT4, SCOPE_DEPOSIT4),
+        (SCOPE_TRADE1, SCOPE_TRADE1),
+        (SCOPE_TRADE2, SCOPE_TRADE2),
+        (SCOPE_TRADE3, SCOPE_TRADE3),
     )
 
     created = models.DateTimeField(auto_now_add=True)

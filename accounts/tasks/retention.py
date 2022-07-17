@@ -84,18 +84,18 @@ def trigger_token(token):
 
 def check_condition_and_send_sms(user: User, scope: str):
     template = {
-        ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL_FIRST: 'trigger_upgrade_level-first',
-        ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL_SECOND: 'trigger_upgrade_level_second',
-        ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL_THIRD: 'trigger_upgrade_level_third',
+        ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL1: 'trigger_upgrade_level-first',
+        ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL2: 'trigger_upgrade_level_second',
+        ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL3: 'trigger_upgrade_level_third',
 
-        ExternalNotification.SCOPE_TRIGGER_DEPOSIT_FIRST: 'trigger_deposit_first',
-        ExternalNotification.SCOPE_TRIGGER_DEPOSIT_SECOND: 'trigger_deposit_second',
-        ExternalNotification.SCOPE_TRIGGER_DEPOSIT_THIRD: 'trigger_deposit_third',
-        ExternalNotification.SCOPE_TRIGGER_DEPOSIT_FOURTH: 'trigger_deposit_fourth',
+        ExternalNotification.SCOPE_DEPOSIT1: 'trigger_deposit_first',
+        ExternalNotification.SCOPE_DEPOSIT2: 'trigger_deposit_second',
+        ExternalNotification.SCOPE_DEPOSIT3: 'trigger_deposit_third',
+        ExternalNotification.SCOPE_DEPOSIT4: 'trigger_deposit_fourth',
 
-        ExternalNotification.SCOPE_TRIGGER_TRADE_FIRST: 'trigger_trade_first',
-        ExternalNotification.SCOPE_TRIGGER_TRADE_SECOND: 'trigger_trade_second',
-        ExternalNotification.SCOPE_TRIGGER_TRADE_THIRD: 'trigger_trade_third',
+        ExternalNotification.SCOPE_TRADE1: 'trigger_trade_first',
+        ExternalNotification.SCOPE_TRADE2: 'trigger_trade_second',
+        ExternalNotification.SCOPE_TRADE3: 'trigger_trade_third',
     }
 
     if not ExternalNotification.objects.filter(user=user, scope=scope):
@@ -174,26 +174,26 @@ def retention_leads_to_upgrade_level():
 
 
     for user in user_2h_level_1:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL_FIRST)
+        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL1)
     for user in user_1d_level_1:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL_SECOND)
+        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL2)
     for user in user_7d_level_1:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL_THIRD)
+        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL3)
 
 
     for user in user_12h_deposit:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_DEPOSIT_FIRST)
+        check_condition_and_send_sms(user, ExternalNotification.SCOPE_DEPOSIT1)
     for user in user_2d_deposit:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_DEPOSIT_SECOND)
+        check_condition_and_send_sms(user, ExternalNotification.SCOPE_DEPOSIT2)
     for user in user_4d_deposit:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_DEPOSIT_THIRD)
+        check_condition_and_send_sms(user, ExternalNotification.SCOPE_DEPOSIT3)
     for user in user_10d_deposit:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_DEPOSIT_FOURTH)
+        check_condition_and_send_sms(user, ExternalNotification.SCOPE_DEPOSIT4)
 
     for user in user_3d_trade:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_TRADE_FIRST)
+        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRADE1)
     for user in user_10d_trade:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_TRADE_SECOND)
+        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRADE2)
     for user in user_25d_trade:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_TRADE_THIRD)
+        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRADE3)
 
