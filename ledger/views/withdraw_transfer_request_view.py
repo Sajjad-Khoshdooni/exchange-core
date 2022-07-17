@@ -20,7 +20,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         fields = ['status', 'requester_id']
 
     def create(self, validated_data):
-        requester_id = validated_data.get('requester_id')
+        requester_id = validated_data.get('id')
         status = validated_data.get('status')
         transfer = get_object_or_404(Transfer, id=requester_id)
 
