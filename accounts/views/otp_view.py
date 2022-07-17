@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
+
+from accounts.models import User
 from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
 from accounts.models.phone_verification import VerificationCode
 
@@ -22,6 +24,9 @@ class VerifyOTPSerializer(serializers.ModelSerializer):
             raise ValidationError({'code': 'کد نامعتبر است.'})
 
         otp_code.set_code_used()
+
+        if scope == VerificationCode.SCOPE_VERIFY_PHONE and User.objects.filter(phone=phone).exists():
+            return ValidationError({'کاربری با این شماره تماس قبلا ثیت نام کرده است.'})
 
         return otp_code
 
