@@ -25,8 +25,6 @@ class DepositSerializer(serializers.ModelSerializer):
         receiver_address = validated_data.get('receiver_address')
         network = Network.objects.get(symbol=network_symbol)
 
-        print(receiver_address, network_symbol)
-
         deposit_address = DepositAddress.objects.get(
             address=receiver_address,
             network=network
