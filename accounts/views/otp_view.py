@@ -26,7 +26,7 @@ class VerifyOTPSerializer(serializers.ModelSerializer):
         otp_code.set_code_used()
 
         if scope == VerificationCode.SCOPE_VERIFY_PHONE and User.objects.filter(phone=phone).exists():
-            return ValidationError({'scope': 'کاربری با این شماره تماس قبلا ثیت نام کرده است.'})
+            raise ValidationError({'scope': 'کاربری با این شماره تماس قبلا ثیت نام کرده است.'})
 
         return otp_code
 
