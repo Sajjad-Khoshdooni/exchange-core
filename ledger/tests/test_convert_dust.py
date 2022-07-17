@@ -48,7 +48,7 @@ class ConvertDustTestCase(TestCase):
         print('btc balance before dust is {}'.format(self.wallet_btc.balance))
         print('usdt balance before dust is {}'.format(self.wallet_usdt.balance))
 
-        self.client.post('/api/v1/convert/dust/')
+        resp = self.client.post('/api/v1/convert/dust/')
 
         self.wallet_btc.refresh_from_db()
         self.wallet_usdt.refresh_from_db()
@@ -58,7 +58,7 @@ class ConvertDustTestCase(TestCase):
         print('btc{}'.format(self.wallet_btc.balance))
         print('usdt{}'.format(self.wallet_usdt.balance))
 
-        # self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 200)
         self.assertGreater(self.wallet_irt.balance, 0)
         self.assertEqual(self.wallet_usdt.balance, 10)
         self.assertEqual(self.wallet_btc.balance, 0)
