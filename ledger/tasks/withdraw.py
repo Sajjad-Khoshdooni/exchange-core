@@ -81,7 +81,7 @@ def update_binance_withdraw():
 def create_withdraw(transfer_id: int):
     transfer = Transfer.objects.get(id=transfer_id)
 
-    if not transfer.source != Transfer.SELF:
+    if transfer.source != Transfer.SELF:
         return
 
     from ledger.requester.withdraw_requester import RequestWithdraw
