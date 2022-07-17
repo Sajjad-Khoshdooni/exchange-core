@@ -23,6 +23,7 @@ class OrderSerializer(serializers.ModelSerializer):
     symbol = serializers.CharField(source='symbol.name')
     filled_amount = serializers.SerializerMethodField()
     filled_price = serializers.SerializerMethodField()
+    trigger_price = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
 
     def to_representation(self, order: Order):
@@ -126,6 +127,10 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_filled_amount(self, order: Order):
         return str(floor_precision(order.filled_amount, order.symbol.step_size))
+
+    def get_trigger_price(self, instance: Order):
+        if instance.stop_loss:
+            return str(floor_precision(instance.stop_loss.trigger_price, instance.symbol.tick_size))
 
     def get_filled_price(self, order: Order):
         fills_amount, fills_value = self.context['trades'].get(order.id, (0, 0))
