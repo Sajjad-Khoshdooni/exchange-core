@@ -69,6 +69,9 @@ class FinotechRequester:
 
             if request:
 
+                if request.status_code >= 500:
+                    raise ServerError
+
                 if request.status_code not in (200, 201):
                     return
 
