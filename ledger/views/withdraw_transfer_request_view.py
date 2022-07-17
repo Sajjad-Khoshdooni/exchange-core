@@ -12,8 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
-    requester_id = serializers.IntegerField(write_only=True)
+    requester_id = serializers.IntegerField(write_only=True, source='id')
     status = serializers.CharField(max_length=8, write_only=True)
+
+    class Meta:
+        model = Transfer
+        fields = ['status', 'requester_id']
 
     def create(self, validated_data):
         requester_id = validated_data.get('requester_id')
