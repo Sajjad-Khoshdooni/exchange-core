@@ -1,13 +1,12 @@
-from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import serializers
-from rest_framework.authentication import TokenAuthentication
+from rest_framework.views import APIView
 
+from accounts.views.authentication import CustomTokenAuthentication
 from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt
 
 
 class CoinPriceView(APIView):
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [CustomTokenAuthentication]
 
     def get(self, request):
         coin = request.GET['coin']
