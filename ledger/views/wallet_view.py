@@ -1,14 +1,14 @@
 from decimal import Decimal
 
 from django.conf import settings
-from rest_framework import serializers
+from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.models import Wallet, DepositAddress, NetworkAsset
+from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCTrade
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.precision import get_presentation_amount
@@ -309,3 +309,27 @@ class WalletSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wallet
         fields = ('asset', 'free',)
+
+
+class ConvertDust(APIView):
+
+    def post(self, *args):
+        account = self.request.user.account
+        IRT = Asset.get(Asset.IRT)
+        spot_wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT, balance__gt=0).exclude(asset=IRT)
+
+        for wallet in spot_wallets:
+            if Decimal(0) < wallet.get_free_irt() < Decimal('10000'):
+
+                request = OTCRequest.new_trade(
+                    account=account,
+                    market=Wallet.SPOT,
+                    from_asset=wallet.asset,
+                    to_asset=IRT,
+                    from_amount=wallet.get_free(),
+                    allow_dust=True
+                )
+
+                OTCTrade.execute_trade(request, force=True)
+        return Response({'msg': 'convert_dust success'}, status=status.HTTP_200_OK)
+
