@@ -135,6 +135,9 @@ class FinotechRequester:
 
         req_object.save()
 
+        if resp.status_code >= 500:
+            raise ServerError
+
         if not resp.ok:
             logger.error('failed to call finnotech', extra={
                 'path': path,
