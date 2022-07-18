@@ -3,7 +3,9 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 
+from accounts.models import User, ExternalNotification
 from accounts.utils.push_notif import send_push_notif, IMAGE_200K_SHIB
+from ledger.models import Prize
 
 
 @shared_task(queue='celery')
@@ -77,3 +79,54 @@ def trigger_token(token):
         image=data['image'],
         link=data['link'],
     )
+
+
+@shared_task(queue='celery')
+def retention_actions():
+    user_level_1 = User.objects.filter(
+        is_active=True,
+        level=User.LEVEL1,
+    ).exclude(verify_status=User.PENDING)
+
+    user_not_deposit = User.objects.filter(
+        is_active=True,
+        first_fiat_deposit_date=None,
+        level__gte=User.LEVEL2
+    )
+
+    user_not_trade = User.objects.filter(
+        is_active=True,
+        level__gte=User.LEVEL2,
+        first_fiat_deposit_date__isnull=False,
+        account__trade_volume_irt__lt=Prize.TRADE_THRESHOLD_STEP1,
+    )
+
+    now = timezone.now()
+
+    def before(hours: int = 0, days: int = 0):
+        return now - timedelta(days=days, hours=hours)
+
+    candidate = {
+        ExternalNotification.SCOPE_VERIFY1: user_level_1.filter(date_joined__range=(before(days=1), before(hours=3))),
+        ExternalNotification.SCOPE_VERIFY2: user_level_1.filter(date_joined__range=(before(days=2), before(days=1))),
+        ExternalNotification.SCOPE_VERIFY3: user_level_1.filter(date_joined__range=(before(days=10), before(days=3))),
+
+        ExternalNotification.SCOPE_DEPOSIT1: user_not_deposit.filter(date_joined__range=(before(days=2), before(hours=12))),
+        ExternalNotification.SCOPE_DEPOSIT2: user_not_deposit.filter(date_joined__range=(before(days=4), before(days=2))),
+        ExternalNotification.SCOPE_DEPOSIT3: user_not_deposit.filter(date_joined__range=(before(days=8), before(days=5))),
+        ExternalNotification.SCOPE_DEPOSIT4: user_not_deposit.filter(date_joined__range=(before(days=30), before(days=10))),
+
+        ExternalNotification.SCOPE_TRADE1: user_not_trade.filter(date_joined__range=(before(days=5), before(days=3))),
+        ExternalNotification.SCOPE_TRADE2: user_not_trade.filter(date_joined__range=(before(days=18), before(days=9))),
+        ExternalNotification.SCOPE_TRADE3: user_not_trade.filter(date_joined__range=(before(days=40), before(days=21))),
+    }
+
+    for scope, users in candidate.items():
+        sent_users = ExternalNotification.objects.filter(scope=scope).values_list('user_id', flat=True)
+        users = users.exclude(id__in=sent_users)
+
+        for user in users:
+            ExternalNotification.send_sms(
+                user=user,
+                scope=scope,
+            )
