@@ -24,10 +24,19 @@ class MarginInfoView(APIView):
         account = request.user.account
         margin_info = MarginInfo.get(account)
 
+        margin_level = min(margin_info.get_margin_level(), Decimal(999))
+
+        if margin_level > 10:
+            margin_level_precision = 0
+        elif margin_level > 2:
+            margin_level_precision = 1
+        else:
+            margin_level_precision = 3
+
         return Response({
             'total_assets': round(Decimal(margin_info.total_assets), 2),
             'total_debt': round(Decimal(margin_info.total_debt), 2),
-            'margin_level': round(margin_info.get_margin_level(), 3),
+            'margin_level': round(margin_level, margin_level_precision),
             'total_equity': round(Decimal(margin_info.get_total_equity()), 2),
             'has_position': Wallet.objects.filter(account=account, market=Wallet.LOAN, balance__lt=0).exists()
         })
