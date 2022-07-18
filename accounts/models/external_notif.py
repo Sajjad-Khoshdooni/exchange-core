@@ -37,7 +37,7 @@ class ExternalNotification(models.Model):
         SCOPE_VERIFY1: {
             'template': '67757',
             'params': {
-                'brand': 'صرافی {} و دریافت هدیه تا ۲۰۰ هزار شیبا،'.format(config('BRAND')),
+                'brand': 'صرافی {} و دریافت ۲۰۰ هزار شیبا،'.format(config('BRAND')),
                 'department': config('RETENTION_URL_VERIFY')
             }
         },
@@ -45,7 +45,7 @@ class ExternalNotification(models.Model):
         SCOPE_VERIFY2: {
             'template': '67757',
             'params': {
-                'brand': 'صرافی {} و دریافت هدیه تا ۲۰۰ هزار شیبا،'.format(config('BRAND')),
+                'brand': 'صرافی {} و دریافت ۲۰۰ هزار شیبا،'.format(config('BRAND')),
                 'department': config('RETENTION_URL_VERIFY')
             }
         },
@@ -53,7 +53,7 @@ class ExternalNotification(models.Model):
         SCOPE_VERIFY3: {
             'template': '68113',
             'params': {
-                'name': 'تا امشب فرصت دارید برای دریافت تا ۲۰۰ هزار شیبا در {}'.format(config('BRAND')),
+                'name': 'آخرین فرصت دریافت تا ۲۰۰ هزار شیبا در {}.'.format(config('BRAND')),
                 'department': config('RETENTION_URL_VERIFY')
             }
         },
