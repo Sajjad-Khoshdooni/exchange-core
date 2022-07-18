@@ -178,4 +178,3 @@ class ExternalNotification(models.Model):
 
     class Meta:
         verbose_name = verbose_name_plural = 'نوتیف‌های بیرون پنل'
-        unique_together = ('user', 'scope')

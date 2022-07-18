@@ -15,8 +15,4 @@ class Migration(migrations.Migration):
             name='scope',
             field=models.CharField(choices=[('level_2_prize', 'level_2_prize'), ('first_deposit_prize', 'first_deposit_prize'), ('trade_prize', 'trade_prize'), ('margin_enable', 'margin_enable'), ('scope_verify1', 'scope_verify1'), ('scope-verify2', 'scope-verify2'), ('scope_verify3', 'scope_verify3'), ('scope_deposit1', 'scope_deposit1'), ('scope_deposit2', 'scope_deposit2'), ('scope_deposit3', 'scope_deposit3'), ('scope_deposit4', 'scope_deposit4'), ('scope_trade1', 'scope_trade1'), ('scope_trade2', 'scope_trade2'), ('scope_trade3', 'scope_trade3')], max_length=40, verbose_name='نوع'),
         ),
-        migrations.AlterUniqueTogether(
-            name='externalnotification',
-            unique_together={('user', 'scope')},
-        ),
     ]
