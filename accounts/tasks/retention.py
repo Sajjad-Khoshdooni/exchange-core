@@ -3,8 +3,7 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 
-from accounts.models import FirebaseToken, User, ExternalNotification
-from accounts.tasks import send_message_by_kavenegar
+from accounts.models import User, ExternalNotification
 from accounts.utils.push_notif import send_push_notif, IMAGE_200K_SHIB
 from ledger.models import Prize
 
@@ -82,40 +81,12 @@ def trigger_token(token):
     )
 
 
-def check_condition_and_send_sms(user: User, scope: str):
-    template = {
-        ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL1: 'trigger_upgrade_level-first',
-        ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL2: 'trigger_upgrade_level_second',
-        ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL3: 'trigger_upgrade_level_third',
-
-        ExternalNotification.SCOPE_DEPOSIT1: 'trigger_deposit_first',
-        ExternalNotification.SCOPE_DEPOSIT2: 'trigger_deposit_second',
-        ExternalNotification.SCOPE_DEPOSIT3: 'trigger_deposit_third',
-        ExternalNotification.SCOPE_DEPOSIT4: 'trigger_deposit_fourth',
-
-        ExternalNotification.SCOPE_TRADE1: 'trigger_trade_first',
-        ExternalNotification.SCOPE_TRADE2: 'trigger_trade_second',
-        ExternalNotification.SCOPE_TRADE3: 'trigger_trade_third',
-    }
-
-    if not ExternalNotification.objects.filter(user=user, scope=scope):
-        ExternalNotification.send_sms(
-            user=user,
-            scope=template[scope],
-            )
-        ExternalNotification.objects.create(
-            phone=user.phone,
-            scope=scope,
-            user=user
-        )
-
-
 @shared_task(queue='celery')
-def retention_leads_to_upgrade_level():
+def retention_actions():
     user_level_1 = User.objects.filter(
         is_active=True,
-        level=User.LEVEL1
-    )
+        level=User.LEVEL1,
+    ).exclude(verify_status=User.PENDING)
 
     user_not_deposit = User.objects.filter(
         is_active=True,
@@ -130,70 +101,32 @@ def retention_leads_to_upgrade_level():
         account__trade_volume_irt__lt=Prize.TRADE_THRESHOLD_STEP1,
     )
 
-    user_2h_level_1 = user_level_1.filter(
-        date_joined__lt=timezone.now() - timedelta(hours=2),
-        date_joined__gt=timezone.now() - timedelta(days=1)
+    now = timezone.now()
 
-    )
-    user_1d_level_1 = user_level_1.filter(
-        date_joined__lt=timezone.now() - timedelta(days=1),
-        date_joined__gt=timezone.now() - timedelta(days=7)
-    )
-    user_7d_level_1 = user_level_1.filter(
-        date_joined__lt=timezone.now() - timedelta(days=7)
-    )
+    def before(hours: int = 0, days: int = 0):
+        return now - timedelta(days=days, hours=hours)
 
-    user_12h_deposit = user_not_deposit.filter(
-        date_joined__lt=timezone.now() - timedelta(hours=12),
-        date_joined__gt=timezone.now() - timedelta(days=2)
-    )
-    user_2d_deposit = user_not_deposit.filter(
-        date_joined__lt=timezone.now() - timedelta(days=2),
-        date_joined__gt=timezone.now() - timedelta(days=4)
-    )
-    user_4d_deposit = user_not_deposit.filter(
-        date_joined__lt=timezone.now() - timedelta(days=4),
-        date_joined__gt=timezone.now() - timedelta(days=10)
-    )
-    user_10d_deposit = user_not_deposit.filter(
-        date_joined__lt=timezone.now() - timedelta(days=10)
-    )
+    candidate = {
+        ExternalNotification.SCOPE_VERIFY1: user_level_1.filter(date_joined__range=(before(days=1), before(hours=3))),
+        ExternalNotification.SCOPE_VERIFY2: user_level_1.filter(date_joined__range=(before(days=2), before(days=1))),
+        ExternalNotification.SCOPE_VERIFY3: user_level_1.filter(date_joined__range=(before(days=10), before(days=3))),
 
-    user_3d_trade = user_not_trade.filter(
-        ate_joined__lt=timezone.now() - timedelta(days=3),
-        date_joined__gt=timezone.now() - timedelta(days=10)
-    )
-    user_10d_trade = user_not_trade.filter(
-        date_joined__lt=timezone.now() - timedelta(days=10),
-        date_joined__gt=timezone.now() - timedelta(days=25)
-    )
-    user_25d_trade = user_not_trade.filter(
-        date_joined__lt=timezone.now() - timedelta(days=25),
-    )
+        ExternalNotification.SCOPE_DEPOSIT1: user_not_deposit.filter(date_joined__range=(before(days=2), before(hours=12))),
+        ExternalNotification.SCOPE_DEPOSIT2: user_not_deposit.filter(date_joined__range=(before(days=4), before(days=2))),
+        ExternalNotification.SCOPE_DEPOSIT3: user_not_deposit.filter(date_joined__range=(before(days=8), before(days=5))),
+        ExternalNotification.SCOPE_DEPOSIT4: user_not_deposit.filter(date_joined__range=(before(days=30), before(days=10))),
 
+        ExternalNotification.SCOPE_TRADE1: user_not_trade.filter(date_joined__range=(before(days=5), before(days=3))),
+        ExternalNotification.SCOPE_TRADE2: user_not_trade.filter(date_joined__range=(before(days=18), before(days=9))),
+        ExternalNotification.SCOPE_TRADE3: user_not_trade.filter(date_joined__range=(before(days=40), before(days=21))),
+    }
 
+    for scope, users in candidate.items():
+        sent_users = ExternalNotification.objects.filter(scope=scope).values_list('user_id', flat=True)
+        users = users.exclude(id__in=sent_users)
 
-    for user in user_2h_level_1:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL1)
-    for user in user_1d_level_1:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL2)
-    for user in user_7d_level_1:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRIGGER_UPGRADE_LEVEL3)
-
-
-    for user in user_12h_deposit:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_DEPOSIT1)
-    for user in user_2d_deposit:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_DEPOSIT2)
-    for user in user_4d_deposit:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_DEPOSIT3)
-    for user in user_10d_deposit:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_DEPOSIT4)
-
-    for user in user_3d_trade:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRADE1)
-    for user in user_10d_trade:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRADE2)
-    for user in user_25d_trade:
-        check_condition_and_send_sms(user, ExternalNotification.SCOPE_TRADE3)
-
+        for user in users:
+            ExternalNotification.send_sms(
+                user=user,
+                scope=scope,
+            )

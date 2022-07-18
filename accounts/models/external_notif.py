@@ -27,9 +27,35 @@ class ExternalNotification(models.Model):
     SCOPE_TRADE3 = 'scope_trade3'
 
     TEMPLATES = {
+        SCOPE_MARGIN_ENABLE: {
+            'template': '67896',
+            'params': {
+                'brand': config('BRAND'),
+            }
+        },
+
         SCOPE_VERIFY1: {
-            'template': 0,
-            'params': {}
+            'template': '67757',
+            'params': {
+                'brand': 'صرافی {} و دریافت هدیه تا ۲۰۰ هزار شیبا،'.format(config('BRAND')),
+                'department': config('RETENTION_URL_VERIFY')
+            }
+        },
+
+        SCOPE_VERIFY2: {
+            'template': '67757',
+            'params': {
+                'brand': 'صرافی {} و دریافت هدیه تا ۲۰۰ هزار شیبا،'.format(config('BRAND')),
+                'department': config('RETENTION_URL_VERIFY')
+            }
+        },
+
+        SCOPE_VERIFY3: {
+            'template': '68113',
+            'params': {
+                'name': 'تا امشب فرصت دارید برای دریافت تا ۲۰۰ هزار شیبا در {}'.format(config('BRAND')),
+                'department': config('RETENTION_URL_VERIFY')
+            }
         },
 
         SCOPE_DEPOSIT1: {
@@ -69,6 +95,23 @@ class ExternalNotification(models.Model):
             'template': '68107',
             'params': {
                 'name': 'صرافی {} با کارمزد صفر'.format(config('BRAND')),
+                'brand': 'و تا ۲۰۰ هزار شیبا هدیه بگیرید',
+                'department': config('RETENTION_URL_TRADE')
+            }
+        },
+
+        SCOPE_TRADE2: {
+            'template': '68107',
+            'params': {
+                'name': 'صرافی {} تا امشب'.format(config('BRAND')),
+                'brand': 'و تا ۲۰۰ هزار شیبا هدیه بگیرید',
+                'department': config('RETENTION_URL_TRADE')
+            }
+        },
+        SCOPE_TRADE3: {
+            'template': '68107',
+            'params': {
+                'name': 'صرافی {} تا امشب'.format(config('BRAND')),
                 'brand': 'و تا ۲۰۰ هزار شیبا هدیه بگیرید',
                 'department': config('RETENTION_URL_TRADE')
             }
@@ -113,47 +156,17 @@ class ExternalNotification(models.Model):
     @classmethod
     def send_sms(cls, user: User, scope: str, ):
         from accounts.tasks import send_message_by_sms_ir
-        if scope == cls.SCOPE_LEVEL_2_PRIZE:
-            template = '67757'
-
-            params = {
-                'brand': '{} و دریافت هدیه تا ۲۰۰ هزار شیبا،'.format(config('BRAND')),
-                'department': config('RETENTION_URL_VERIFY')
-            }
-
-        elif scope == cls.SCOPE_FIRST_FIAT_DEPOSIT_PRIZE:
-            template = '67758'
-            params = {
-                'name': 'صرافی {}'.format(config('BRAND')),
-                'brand': 'و دریافت هدیه تا ۲۰۰ هزار شیبا به {}'.format(config('BRAND')),
-                'department': config('RETENTION_URL_DEPOSIT')
-            }
-
-        elif scope == cls.SCOPE_TRADE_PRIZE:
-            template = '67764'
-            params = {
-                'name': 'تا ۲۰۰ هزار شیبا هدیه {}'.format(config('BRAND')),
-                'brand': 'صرافی {}'.format(config('BRAND')),
-                'department': config('RETENTION_URL_TRADE'),
-            }
-
-        elif scope == cls.SCOPE_MARGIN_ENABLE:
-            template = '67896'
-            params = {
-                'brand': 'راستین'
-            }
-
-        else:
-            raise NotImplementedError
 
         if settings.DEBUG_OR_TESTING:
-            print('template={},phone={},params={}'.format(template, user.phone, params))
+            print('scope={},phone={}'.format(scope, user.phone))
             return
+
+        data = cls.TEMPLATES[scope]
 
         resp = send_message_by_sms_ir(
             phone=user.phone,
-            params=params,
-            template=template
+            params=data['params'],
+            template=data['template']
         )
 
         if resp:
@@ -165,3 +178,4 @@ class ExternalNotification(models.Model):
 
     class Meta:
         verbose_name = verbose_name_plural = 'نوتیف‌های بیرون پنل'
+        unique_together = ('user', 'scope')

@@ -1,7 +1,6 @@
 import os
 
 from celery import Celery
-
 # Set the default Django settings module for the 'celery' program.
 from celery.schedules import crontab
 from django.conf import settings
@@ -180,35 +179,44 @@ app.conf.beat_schedule = {
     #         'expire': 3600
     #     }
     # },
-    'send_level_2_prize_notifs': {
-        'task': 'accounts.tasks.send_sms.send_level_2_prize_notifs',
-        'schedule': crontab(hour=4, minute=30),
-        'options': {
-            'queue': 'celery',
-            'expire': 3600
-        }
-    },
+    # 'send_level_2_prize_notifs': {
+    #     'task': 'accounts.tasks.send_sms.send_level_2_prize_notifs',
+    #     'schedule': crontab(hour=4, minute=30),
+    #     'options': {
+    #         'queue': 'celery',
+    #         'expire': 3600
+    #     }
+    # },
+    #
+    # 'send_first_fiat_deposit_sms': {
+    #     'task': 'accounts.tasks.send_sms.send_first_fiat_deposit_notifs',
+    #     'schedule': crontab(hour=4, minute=30),
+    #     'options': {
+    #         'queue': 'celery',
+    #         'expire': 3600
+    #     }
+    # },
 
-    'send_first_fiat_deposit_sms': {
-        'task': 'accounts.tasks.send_sms.send_first_fiat_deposit_notifs',
-        'schedule': crontab(hour=4, minute=30),
-        'options': {
-            'queue': 'celery',
-            'expire': 3600
-        }
-    },
-
-    'send_trade_notifs': {
-        'task': 'accounts.tasks.send_sms.send_trade_notifs',
-        'schedule': crontab(hour=4, minute=30),
-        'options': {
-            'queue': 'celery',
-            'expire': 3600
-        }
-    },
+    # 'send_trade_notifs': {
+    #     'task': 'accounts.tasks.send_sms.send_trade_notifs',
+    #     'schedule': crontab(hour=4, minute=30),
+    #     'options': {
+    #         'queue': 'celery',
+    #         'expire': 3600
+    #     }
+    # },
 
     'retention_leads_to_signup': {
         'task': 'accounts.tasks.retention.retention_leads_to_signup',
+        'schedule': 3600,
+        'options': {
+            'queue': 'celery',
+            'expire': 3600
+        },
+    },
+
+    'retention_actions': {
+        'task': 'accounts.tasks.retention.retention_actions',
         'schedule': 3600,
         'options': {
             'queue': 'celery',
