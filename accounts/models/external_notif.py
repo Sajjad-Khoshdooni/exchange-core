@@ -78,7 +78,7 @@ class ExternalNotification(models.Model):
             'template': '68106',
             'params': {
                 'name': 'تا آخر هفته فرصت دارید با',
-                'brand': 'در صرافی {} تا ۲۰۰ هزار شیبا هدیه بگیرید. برای شروع به لینک زیر'.format(config('BRAND')),
+                'brand': 'در صرافی {} تا ۲۰۰ هزار شیبا هدیه بگیرید.'.format(config('BRAND')),
                 'department': config('RETENTION_URL_DEPOSIT')
             }
         },
@@ -86,7 +86,7 @@ class ExternalNotification(models.Model):
             'template': '68106',
             'params': {
                 'name': 'تا امشب فرصت دارید با',
-                'brand': 'در صرافی {} تا ۲۰۰ هزار شیبا هدیه بگیرید. برای شروع به لینک زیر'.format(config('BRAND')),
+                'brand': 'در صرافی {} تا ۲۰۰ هزار شیبا هدیه بگیرید.'.format(config('BRAND')),
                 'department': config('RETENTION_URL_DEPOSIT')
             }
         },
