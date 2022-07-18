@@ -204,3 +204,4 @@ class CoinField(serializers.CharField):
             return
         else:
             return Asset.get(symbol=data)
+

@@ -53,9 +53,10 @@ class Order(models.Model):
     STATUS_CHOICES = [(NEW, NEW), (CANCELED, CANCELED), (FILLED, FILLED)]
 
     DEPTH = 'depth'
+    BOT = 'bot'
     ORDINARY = None
 
-    TYPE_CHOICES = ((DEPTH, 'depth'), (ORDINARY, 'ordinary'))
+    TYPE_CHOICES = ((DEPTH, 'depth'), (BOT, 'bot'), (ORDINARY, 'ordinary'))
 
     type = models.CharField(
         max_length=8,
