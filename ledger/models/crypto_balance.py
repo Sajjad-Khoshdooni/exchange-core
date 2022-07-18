@@ -16,12 +16,10 @@ logger = logging.getLogger(__name__)
 
 class CryptoBalance(models.Model):
     amount = get_amount_field(default=Decimal(0))
-    deposit_address = models.ForeignKey('ledger.DepositAddress', on_delete=models.PROTECT)
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('deposit_address', 'asset')
         constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_ledger_crypto_balance_amount', ), ]
 
     def __str__(self):
