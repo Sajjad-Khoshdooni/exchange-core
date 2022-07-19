@@ -12,15 +12,19 @@ from accounts.models import Notification
 from accounts.utils import email
 from ledger.utils.precision import humanize_number, get_presentation_amount
 from ledger.utils.wallet_pipeline import WalletPipeline
-
+from ledger.utils.fields import DONE, CANCELED
 
 class PaymentRequest(models.Model):
+
+    APP, DESKTOP = 'app', 'desktop'
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
     gateway = models.ForeignKey('financial.Gateway', on_delete=models.PROTECT)
     bank_card = models.ForeignKey('financial.BankCard', on_delete=models.PROTECT)
     amount = models.PositiveIntegerField()
+
+    source = models.CharField(max_length=16, choices=((APP, APP), (DESKTOP, DESKTOP)), default=DESKTOP)
 
     authority = models.CharField(max_length=64, blank=True, db_index=True)
 
@@ -36,9 +40,10 @@ class PaymentRequest(models.Model):
 
 
 class Payment(models.Model):
+    APP_URL = config('APP_URL')
     PANEL_URL = config('PANEL_URL')
-    SUCCESS_URL = PANEL_URL + '/checkout/success'
-    FAIL_URL = PANEL_URL + '/checkout/fail'
+    SUCCESS_URL = '/checkout/success'
+    FAIL_URL = '/checkout/fail'
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -98,3 +103,18 @@ class Payment(models.Model):
             user.save()
 
         self.alert_payment()
+
+    def get_redirect_url(self):
+        source = self.payment_request.source
+        desktop = PaymentRequest.DESKTOP
+
+        if source == desktop:
+            url = self.PANEL_URL
+        else:
+            url = self.APP_URL
+
+        if self.status == DONE:
+            url += self.SUCCESS_URL
+        else:
+            url += self.FAIL_URL
+        return url
