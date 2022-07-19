@@ -3,16 +3,15 @@ from decimal import Decimal
 from django.db import models
 from django.utils import timezone
 from yekta_config.config import config
-
 from accounts.models import Account
 from ledger.models import Trx, Asset
 from ledger.utils.fields import get_group_id_field, get_status_field
-
 from accounts.models import Notification
 from accounts.utils import email
 from ledger.utils.precision import humanize_number, get_presentation_amount
 from ledger.utils.wallet_pipeline import WalletPipeline
 from ledger.utils.fields import DONE, CANCELED
+
 
 class PaymentRequest(models.Model):
 
