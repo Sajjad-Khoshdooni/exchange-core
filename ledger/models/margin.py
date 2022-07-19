@@ -44,7 +44,9 @@ class MarginTransfer(models.Model):
 
             margin_info = MarginInfo.get(self.account)
 
-            if self.amount > margin_info.get_max_transferable():
+            price = get_trading_price_usdt(self.asset.symbol, SELL, raw_price=True)
+
+            if self.amount > margin_info.get_max_transferable() / price:
                 raise InsufficientBalance
         else:
             raise NotImplementedError
