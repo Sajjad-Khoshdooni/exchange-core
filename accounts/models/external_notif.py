@@ -8,10 +8,11 @@ from accounts.utils.validation import PHONE_MAX_LENGTH
 
 class ExternalNotification(models.Model):
 
-    SCOPE_LEVEL_2_PRIZE = 'level_2_prize'
     SCOPE_FIRST_FIAT_DEPOSIT_PRIZE = 'first_deposit_prize'
     SCOPE_TRADE_PRIZE = 'trade_prize'
     SCOPE_MARGIN_ENABLE = 'margin_enable'
+
+    SCOPE_TOP_GAINERS = 'top_gainers'
 
     SCOPE_VERIFY1 = 'scope_verify1'
     SCOPE_VERIFY2 = 'scope-verify2'
@@ -31,6 +32,14 @@ class ExternalNotification(models.Model):
             'template': '67896',
             'params': {
                 'brand': config('BRAND'),
+            }
+        },
+        SCOPE_TOP_GAINERS: {
+            'template': '68120',
+            'params': {
+                'name': '{count} کوین {percent} درصد',
+                'brand': 'و دریافت تا ۲۰۰ هزار شیبا به صرافی {}'.format(config('BRAND')),
+                'department': config('RETENTION_URL_TOP_GAINERS'),
             }
         },
 
@@ -119,9 +128,7 @@ class ExternalNotification(models.Model):
     }
 
     SCOPE_CHOICES = (
-        (SCOPE_LEVEL_2_PRIZE, SCOPE_LEVEL_2_PRIZE),
-        (SCOPE_FIRST_FIAT_DEPOSIT_PRIZE, SCOPE_FIRST_FIAT_DEPOSIT_PRIZE),
-        (SCOPE_TRADE_PRIZE, SCOPE_TRADE_PRIZE),
+        (SCOPE_TOP_GAINERS, SCOPE_TOP_GAINERS),
         (SCOPE_MARGIN_ENABLE, SCOPE_MARGIN_ENABLE),
         (SCOPE_VERIFY1, SCOPE_VERIFY1),
         (SCOPE_VERIFY2, SCOPE_VERIFY2),
@@ -154,7 +161,7 @@ class ExternalNotification(models.Model):
     )
 
     @classmethod
-    def send_sms(cls, user: User, scope: str, ):
+    def send_sms(cls, user: User, scope: str, params_converter=None):
         from accounts.tasks import send_message_by_sms_ir
 
         if settings.DEBUG_OR_TESTING:
@@ -162,10 +169,14 @@ class ExternalNotification(models.Model):
             return
 
         data = cls.TEMPLATES[scope]
+        params = data['params']
+
+        if params_converter:
+            params = params_converter(params)
 
         resp = send_message_by_sms_ir(
             phone=user.phone,
-            params=data['params'],
+            params=params,
             template=data['template']
         )
 
