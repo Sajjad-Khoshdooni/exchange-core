@@ -23,7 +23,7 @@ class PrizeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Prize
-        fields = ('id', 'amount', 'scope', 'coin', 'redeemed')
+        fields = ('id', 'amount', 'scope', 'coin', 'redeemed', 'reason')
         read_only_fields = ('id', 'amount', 'scope', 'coin')
 
     def get_coin(self, prize: Prize):
