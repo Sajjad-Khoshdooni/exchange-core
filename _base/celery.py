@@ -232,7 +232,7 @@ app.conf.beat_schedule = {
             }
         },
 }
-if settings.DEBUG:
+if settings.DEBUG_OR_TESTING:
     app.conf.beat_schedule = {
         'coin_market_cap_update': {
             'task': 'collector.tasks.coin_market_cap.update_coin_market_cap',

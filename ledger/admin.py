@@ -45,7 +45,7 @@ class AssetAdmin(AdvancedAdmin):
 
     def changelist_view(self, request, extra_context=None):
 
-        if not settings.DEBUG:
+        if not settings.DEBUG_OR_TESTING:
             self.overview = AssetOverview()
             account = MARGIN_INSURANCE_ACCOUNT
 
