@@ -2,10 +2,9 @@ import logging
 
 from celery import shared_task
 
-from market.models import Order
+from market.models import Order, Trade
 from market.models.stop_loss import StopLoss
 from market.utils import new_order
-from market.utils.order_utils import get_market_top_prices
 from market.utils.redis import set_top_prices
 
 logger = logging.getLogger(__name__)
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 @shared_task(queue='stop_loss')
 def handle_stop_loss():
     stop_loss_symbols = list(StopLoss.not_triggered_objects.values_list('symbol__id', flat=True).distinct())
-    market_top_prices = get_market_top_prices(stop_loss_symbols)
+    market_top_prices = Trade.get_interval_top_prices(stop_loss_symbols)
 
     for symbol_id in stop_loss_symbols:
         symbol_top_prices = {
@@ -30,13 +29,16 @@ def handle_stop_loss():
 def create_needed_stop_loss_orders(symbol_id, side):
     market_top_prices = Order.get_top_prices(symbol_id)
     symbol_price = market_top_prices[side]
+    if not symbol_price:
+        logger.info(f'Missing trade in last 30 seconds for {symbol_id}')
+        return
     stop_loss_qs = StopLoss.not_triggered_objects.filter(
         symbol_id=symbol_id, side=side
     ).prefetch_related('wallet__account')
     if side == StopLoss.BUY:
-        stop_loss_qs = stop_loss_qs.filter(trigger_price__lte=symbol_price)
-    else:
         stop_loss_qs = stop_loss_qs.filter(trigger_price__gte=symbol_price)
+    else:
+        stop_loss_qs = stop_loss_qs.filter(trigger_price__lte=symbol_price)
 
     for stop_loss in stop_loss_qs:
         if stop_loss.price:
