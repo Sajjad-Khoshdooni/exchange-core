@@ -1,8 +1,10 @@
 import logging
 import time
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
+from django.utils import timezone
 
 from ledger.models import Transfer, Asset
 from ledger.utils.price import BUY, get_price, SELL
@@ -54,6 +56,12 @@ def handle_binance_withdraw(transfer_id: int):
                 raise Exception('insufficient balance in binance spot to full fill withdraw')
 
             if transfer.asset.symbol != Asset.USDT:
+                prev_hedge = ProviderHedgedOrder.objects.filter(caller_id=transfer.id).first()
+
+                if prev_hedge and prev_hedge.created < timezone.now() - timedelta(minutes=5):
+                    prev_hedge.caller_id = prev_hedge.caller_id + 'a'
+                    prev_hedge.save(update_fields=['caller_id'])
+
                 ProviderHedgedOrder.new_hedged_order(
                     asset=transfer.asset,
                     amount=to_buy_amount,
