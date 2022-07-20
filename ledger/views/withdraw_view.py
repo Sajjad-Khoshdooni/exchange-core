@@ -72,13 +72,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if asset.symbol == Asset.IRT:
             raise ValidationError('نشانه دارایی اشتباه است.')
 
-        if not network.need_memo:
+        if 'memo' not in attrs:
             memo = ''
         else:
-            if 'memo' not in attrs:
-                raise ValidationError('برای این شبکه وارد کرد فیلد memo ضروری است.')
-            else:
-                memo = attrs['memo']
+            memo = attrs['memo']
 
         if not api:
             code = attrs['code']
