@@ -51,7 +51,7 @@ class TRXTransactionCreator(TransactionCreator):
         transaction = (
             contract.functions.transfer(transfer.out_address, int(transfer.amount * 10 ** 6))
                 .with_owner(self.wallet.address)
-                .fee_limit(10_000_000)
+                .fee_limit(15_000_000)
                 .build()
                 .sign(self._private_key)
         )
