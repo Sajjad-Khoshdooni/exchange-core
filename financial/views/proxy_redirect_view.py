@@ -8,8 +8,8 @@ class ProxyPaymentRedirectView(TemplateView):
     template_name = 'redirect.html'
 
     def get_context_data(self, **kwargs):
-        gateway = self.GET.get('gateway')
-        authority = self.GET.get('authority')
+        gateway = self.request.GET.get('gateway')
+        authority = self.request.GET.get('authority')
 
         gateway_class = Gateway.get_gateway_class(gateway)
 
