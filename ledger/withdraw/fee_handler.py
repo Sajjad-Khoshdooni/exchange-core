@@ -14,7 +14,7 @@ class FeeHandler:
     NETWORK_ASSET_FEE = {
         'TRX': {
             'TRX': Decimal('1.1'),
-            'USDT': Decimal('15')
+            'USDT': Decimal('10')
         },
         'BSC': {
             'BNB': Decimal('0.000105'),
