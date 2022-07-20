@@ -54,7 +54,7 @@ class AssetMarginInfoView(APIView):
 
         price = get_trading_price_usdt(asset.symbol, SELL, raw_price=True)
         if asset.symbol != Asset.USDT:
-            price = price * Decimal('1.01')
+            price = price * Decimal('1.002')
 
         max_borrow = max(margin_info.get_max_borrowable() / price, Decimal(0))
         max_transfer = min(margin_wallet.get_free(), max(margin_info.get_max_transferable() / price, Decimal(0)))
