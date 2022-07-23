@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Union
 
@@ -9,6 +9,7 @@ from ledger.utils.precision import decimal_to_str
 from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request, \
     spot_send_public_request, futures_send_public_request
 
+
 BINANCE = 'binance'
 
 MARKET, LIMIT = 'MARKET', 'LIMIT'
@@ -16,6 +17,8 @@ SELL, BUY = 'SELL', 'BUY'
 GET, POST = 'GET', 'POST'
 
 HOUR = 3600
+
+SPOT, FUTURES = 'spot', 'futures'
 
 
 class BinanceSpotHandler:
@@ -162,6 +165,104 @@ class BinanceSpotHandler:
     def get_lot_min_quantity(cls, symbol: str) -> Decimal:
         lot_size = cls.get_lot_size_data(symbol)
         return lot_size and Decimal(lot_size['minQty'])
+
+    @classmethod
+    def _create_transfer_history(cls, response: dict, transfer_type: str):
+        from provider.models import BinanceWithdrawDepositHistory
+        status_map = {
+            BinanceWithdrawDepositHistory.WITHDRAW : {
+                0: BinanceWithdrawDepositHistory.PENDING,
+                1: BinanceWithdrawDepositHistory.CANCELED,
+                2: BinanceWithdrawDepositHistory.PENDING,
+                3: BinanceWithdrawDepositHistory.CANCELED,
+                4: BinanceWithdrawDepositHistory.PENDING,
+                5: BinanceWithdrawDepositHistory.CANCELED,
+                6: BinanceWithdrawDepositHistory.DONE,
+            },
+            BinanceWithdrawDepositHistory.DEPOSIT: {
+                0: BinanceWithdrawDepositHistory.PENDING,
+                6: BinanceWithdrawDepositHistory.PENDING,
+                1: BinanceWithdrawDepositHistory.DONE
+            },
+        }
+
+        for element in response:
+            tx_id = element['txId']
+            address = element['address']
+            amount = element['amount']
+            coin = element['coin']
+            network = element['network']
+            status = status_map[transfer_type][element['status']]
+            withdraw_deposit = BinanceWithdrawDepositHistory.objects.filter(tx_id=tx_id)
+            if withdraw_deposit:
+                BinanceWithdrawDepositHistory.objects.update(status=status)
+            else:
+                if transfer_type == BinanceWithdrawDepositHistory.DEPOSIT:
+                    time = datetime.fromtimestamp(element['insertTime']//1000)
+                else:
+                    time = element['applyTime']
+                BinanceWithdrawDepositHistory.objects.create(
+                    tx_id=tx_id,
+                    address=address,
+                    amount=amount,
+                    coin=coin,
+                    date=time,
+                    network=network,
+                    status=status,
+                    type=transfer_type,
+                )
+
+    @classmethod
+    def get_withdraw_history(cls):
+        from provider.models import BinanceWithdrawDepositHistory
+        now = datetime.now()
+        five_days_ago_time_timestamp = datetime.timestamp(now - timedelta(days=5))
+
+        withdraws = cls.collect_api(
+            url='/sapi/v1/capital/withdraw/history',
+            method=GET,
+            data={
+                'startTime': five_days_ago_time_timestamp
+            }
+        )
+
+        cls._create_transfer_history(response=withdraws, transfer_type=BinanceWithdrawDepositHistory.WITHDRAW)
+
+    @classmethod
+    def get_deposit_history(cls):
+        from provider.models import BinanceWithdrawDepositHistory
+        now = datetime.now()
+        five_days_ago_time_timestamp = datetime.timestamp(now - timedelta(days=5))
+
+        deposits = cls.collect_api(
+            url='/sapi/v1/capital/deposit/hisrec',
+            method=GET,
+            data={
+                'startTime': five_days_ago_time_timestamp
+            })
+
+        cls._create_transfer_history(response=deposits, transfer_type=BinanceWithdrawDepositHistory.DEPOSIT)
+
+    @classmethod
+    def get_spot_wallet(cls, wallet_type=SPOT):
+        from provider.models import BinanceWallet
+        resp = cls.collect_api(
+            url='/sapi/v1/accountSnapshot',
+            method=GET,
+            data={
+                'type': wallet_type
+            }
+        )
+        wallets = resp['snapshotVos'][0]['data']['balances']
+        for wallet in wallets:
+            asset = wallet['asset']
+            free = wallet['free']
+            locked = wallet['locked']
+            binance_wallet = BinanceWallet.objects.filter(asset=asset)
+            if binance_wallet:
+                binance_wallet.update(free=free, locked=locked)
+            else:
+                BinanceWallet.objects.create(asset=asset, free=free, locked=locked)
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):
