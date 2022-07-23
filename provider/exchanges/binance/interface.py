@@ -18,8 +18,6 @@ GET, POST = 'GET', 'POST'
 
 HOUR = 3600
 
-SPOT, FUTURES = 'spot', 'futures'
-
 
 class BinanceSpotHandler:
     order_url = '/api/v3/order'

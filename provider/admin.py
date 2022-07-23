@@ -66,8 +66,7 @@ class BinanceWalletAdmin(admin.ModelAdmin):
 
     list_display = ['asset', 'free', 'locked', 'get_usdt_value', 'type']
     search_fields = ['asset']
-    list_filter = ['asset']
-    readonly_fields = ('get_usdt_value',)
+    readonly_fields = ('get_usdt_value','asset', 'free', 'locked', 'get_usdt_value', 'type')
 
     def get_usdt_value(self, binance_wallet: models.BinanceWallet):
         return get_price(coin=binance_wallet.asset, side=BUY) * binance_wallet.free
