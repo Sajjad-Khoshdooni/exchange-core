@@ -244,7 +244,7 @@ class BinanceSpotHandler:
         cls._create_transfer_history(response=deposits, transfer_type=BinanceWithdrawDepositHistory.DEPOSIT)
 
     @classmethod
-    def get_spot_wallet(cls, wallet_type=SPOT):
+    def _get_spot_and_futures_wallet_handler(cls, wallet_type):
         from provider.models import BinanceWallet
         resp = cls.collect_api(
             url='/sapi/v1/accountSnapshot',
@@ -254,15 +254,23 @@ class BinanceSpotHandler:
             }
         )
         wallets = resp['snapshotVos'][0]['data']['balances']
+
         for wallet in wallets:
             asset = wallet['asset']
             free = wallet['free']
             locked = wallet['locked']
             binance_wallet = BinanceWallet.objects.filter(asset=asset)
+
             if binance_wallet:
                 binance_wallet.update(free=free, locked=locked)
             else:
-                BinanceWallet.objects.create(asset=asset, free=free, locked=locked)
+                BinanceWallet.objects.create(asset=asset, free=free, locked=locked, type=wallet_type)
+
+    @classmethod
+    def get_spot_wallets(cls):
+        from provider.models import BinanceWallet
+
+        cls._get_spot_and_futures_wallet_handler(BinanceWallet.SPOT)
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):
@@ -339,3 +347,8 @@ class BinanceFuturesHandler(BinanceSpotHandler):
                 'limit': 1000
             }
         )
+
+    @classmethod
+    def get_futures_wallets(cls):
+        from provider.models import BinanceWallet
+        cls._get_spot_and_futures_wallet_handler(BinanceWallet.FUTURES)
