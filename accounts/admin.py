@@ -636,11 +636,6 @@ class LoginActivityAdmin(admin.ModelAdmin):
     search_fields = ['user__phone', 'ip']
 
 
-@admin.register(CustomToken)
-class CustomTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
-    pass
-
-
 @admin.register(FirebaseToken)
 class FirebaseTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ['user', 'token']
