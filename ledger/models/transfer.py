@@ -189,9 +189,6 @@ class Transfer(models.Model):
 
         return transfer
 
-    def save(self, *args, **kwargs):
-        return super().save(*args, **kwargs)
-
     def alert_user(self):
         user = self.wallet.account.user
 
