@@ -12,3 +12,4 @@ class ManualTransferHistory(models.Model):
     full_fill_amount = get_amount_field(default=Decimal(0))
     reason = models.TextField()
     deposit = models.BooleanField()
+    done = models.BooleanField(default=True)

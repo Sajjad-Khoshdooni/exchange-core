@@ -154,7 +154,7 @@ class AssetOverview:
     def get_promised_value(self):
         promised_value = 0
 
-        for manual in ManualTransferHistory.objects.filter(full_fill_amount__lt=F('amount')):
+        for manual in ManualTransferHistory.objects.filter(done=False):
             value = self.prices[manual.asset.symbol] * max(manual.amount - manual.full_fill_amount, 0)
 
             if manual.deposit:
