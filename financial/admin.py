@@ -258,6 +258,5 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
 @admin.register(ManualTransferHistory)
 class ManualTransferHistoryAdmin(SimpleHistoryAdmin):
-    list_display = ('created', 'asset', 'amount', 'full_fill_amount', 'deposit')
-    list_filter = ('deposit', )
-    list_editable = ('full_fill_amount', )
+    list_display = ('created', 'asset', 'amount', 'full_fill_amount', 'deposit', 'done')
+    list_filter = ('deposit', 'done')
