@@ -1,12 +1,13 @@
 from collections import defaultdict
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import Sum, F
 
 from accounts.models import Account
+from financial.models import ManualTransferHistory
 from financial.utils.stats import get_total_fiat_irt
 from ledger.models import Asset, CryptoBalance, Wallet
-from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, get_binance_trading_symbol
+from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, get_binance_trading_symbol, BUY
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
 
@@ -41,6 +42,7 @@ class AssetOverview:
             coins=list(Asset.candid_objects.values_list('symbol', flat=True)),
             side=SELL
         )
+        self.prices[Asset.IRT] = 1 / get_tether_irt_price(BUY)
 
         self.usdt_irt = get_tether_irt_price(SELL)
 
@@ -120,7 +122,7 @@ class AssetOverview:
 
         return Decimal(self.get_hedge_amount(asset)) * price
 
-    def get_users_asset_value(self, asset: Asset):
+    def get_users_asset_value(self, asset: Asset) -> Decimal:
         balance = self.get_ledger_balance(Account.ORDINARY, asset)
         return balance * (self.prices.get(asset.symbol) or 0)
 
@@ -149,8 +151,22 @@ class AssetOverview:
     def get_fiat_usdt(self) -> float:
         return float(self.get_fiat_irt() / self.usdt_irt)
 
+    def get_promised_value(self):
+        promised_value = 0
+
+        for manual in ManualTransferHistory.objects.filter(full_fill_amount__lt=F('amount')):
+            value = self.prices[manual.asset.symbol] * max(manual.amount - manual.full_fill_amount, 0)
+
+            if manual.deposit:
+                promised_value += value
+            else:
+                promised_value -= value
+
+        return promised_value
+
     def get_all_assets_usdt(self):
-        return float(self.get_binance_spot_total_value()) + self.total_margin_balance + float(self.get_internal_usdt_value()) + self.get_fiat_usdt()
+        return float(self.get_binance_spot_total_value()) + self.total_margin_balance + \
+               float(self.get_internal_usdt_value()) + self.get_fiat_usdt() + float(self.get_promised_value())
 
     def get_exchange_assets_usdt(self):
         return self.get_all_assets_usdt() - float(self.get_all_users_asset_value())

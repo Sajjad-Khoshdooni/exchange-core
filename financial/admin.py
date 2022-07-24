@@ -11,7 +11,7 @@ from accounts.models import User
 from accounts.utils.admin import url_to_admin_list
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
-    FiatWithdrawRequest
+    FiatWithdrawRequest, ManualTransferHistory
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.precision import humanize_number
@@ -254,3 +254,10 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
             if user.level == User.LEVEL1 and user.verify_status == User.PENDING:
                 user.change_status(User.REJECTED)
+
+
+@admin.register(ManualTransferHistory)
+class ManualTransferHistoryAdmin(SimpleHistoryAdmin):
+    list_display = ('created', 'asset', 'amount', 'full_fill_amount', 'deposit')
+    list_filter = ('deposit', )
+    list_editable = ('full_fill_amount', )
