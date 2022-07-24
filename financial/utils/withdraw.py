@@ -191,6 +191,9 @@ class PayirChanel(FiatWithdraw):
 
         return total_wallet_irt_value
 
+    def is_active(self):
+        return bool(config('PAY_IR_TOKEN'))
+
 
 class ZibalChanel(FiatWithdraw):
 
