@@ -14,7 +14,6 @@ from accounts.utils.push_notif import send_push_notif_to_user
 from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
-from ledger.models.crypto_balance import CryptoBalance
 from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -191,34 +190,7 @@ class Transfer(models.Model):
         return transfer
 
     def save(self, *args, **kwargs):
-        if self.source == self.SELF and self.status == self.DONE and not settings.DEBUG:
-            self.update_crypto_balances()
-
         return super().save(*args, **kwargs)
-
-    def update_crypto_balances(self):
-        try:
-            balance, _ = CryptoBalance.objects.get_or_create(
-                deposit_address=self.deposit_address,
-                asset=self.wallet.asset,
-            )
-            balance.update()
-            if DEFAULT_COIN_OF_NETWORK.get(self.network.symbol) != self.wallet.asset.symbol:
-                balance, _ = CryptoBalance.objects.get_or_create(
-                    deposit_address=self.deposit_address,
-                    asset=Asset.objects.get(symbol=DEFAULT_COIN_OF_NETWORK.get(self.network.symbol)),
-                )
-                balance.update()
-
-            if deposit_address := DepositAddress.objects.filter(address=self.out_address).first():
-                balance, _ = CryptoBalance.objects.get_or_create(
-                    deposit_address=deposit_address,
-                    asset=self.wallet.asset,
-                )
-                balance.update()
-
-        except Exception:
-            logger.exception('failed to update crypto balance')
 
     def alert_user(self):
         user = self.wallet.account.user
