@@ -122,8 +122,8 @@ def balance_tether(account: Account):
 def system_top_prices(symbol_ids=None):
     symbol_filter = {'symbol_id__in': symbol_ids} if symbol_ids else {}
     return Order.open_objects.filter(
-        wallet__account__type=Account.SYSTEM, **symbol_filter
-    ).values('symbol', 'side').annotate(max_price=Max('price'), min_price=Min('price'))
+        **symbol_filter
+    ).exclude(type=Order.ORDINARY).values('symbol', 'side').annotate(max_price=Max('price'), min_price=Min('price'))
 
 
 def get_top_prices_exclude_system_orders(symbol_ids=None):
@@ -143,7 +143,7 @@ def get_top_prices_exclude_system_orders(symbol_ids=None):
 def get_time_based_factor(interval):
     # returns one of (1, 2, 3, 5) for interval in seconds
     rounded_time = int(time()) // interval * interval
-    return 1 + (rounded_time * rounded_time) % 7
+    return (1 + (rounded_time * rounded_time) % 7) * 2
 
 
 def place_carrot_order(symbol: PairSymbol, account: Account, side, top_user_price):
