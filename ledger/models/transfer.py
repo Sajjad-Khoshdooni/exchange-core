@@ -1,5 +1,6 @@
 import logging
 from decimal import Decimal
+from typing import Union
 from uuid import uuid4
 
 from django.conf import settings
@@ -107,9 +108,12 @@ class Transfer(models.Model):
             )
 
     @classmethod
-    def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str):
+    def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str) \
+            -> Union['Transfer', None]:
+
         if not DepositAddress.objects.filter(address=address).exists():
-            return False
+            return
+
         sender_deposit_address = DepositAddress.get_deposit_address(
             account=sender_wallet.account,
             network=network
@@ -132,7 +136,7 @@ class Transfer(models.Model):
                 group_id=group_id,
                 amount=amount
             )
-            Transfer.objects.create(
+            transfer = Transfer.objects.create(
                 status=Transfer.DONE,
                 deposit_address=sender_deposit_address,
                 wallet=sender_wallet,
@@ -154,7 +158,8 @@ class Transfer(models.Model):
                 trx_hash='internal: <%s>' % str(group_id),
                 out_address=sender_deposit_address.address
             )
-            return True
+
+        return transfer
 
     @classmethod
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str, memo: str = ''):
@@ -162,8 +167,10 @@ class Transfer(models.Model):
         assert wallet.account.is_ordinary_user()
         wallet.has_balance(amount, raise_exception=True)
 
-        if cls.check_fast_forward(sender_wallet=wallet, network=network, amount=amount, address=address):
-            return
+        fast_forward = cls.check_fast_forward(sender_wallet=wallet, network=network, amount=amount, address=address)
+
+        if fast_forward:
+            return fast_forward
 
         network_asset = NetworkAsset.objects.get(network=network, asset=wallet.asset)
         assert network_asset.withdraw_max >= amount >= max(network_asset.withdraw_min, network_asset.withdraw_fee)
