@@ -166,6 +166,9 @@ class Wallet(models.Model):
             )
 
     def reserve_funds(self, amount: Decimal):
+        assert self.market in (Wallet.SPOT, Wallet.MARGIN)
+        assert self.variant is None  # means its not reserved wallet
+
         from ledger.models import Trx
 
         if self.has_balance(amount, raise_exception=True):
@@ -192,18 +195,6 @@ class Wallet(models.Model):
                 )
                 return group_id
 
-    def refund(self, refund_wallet, group_id):
-        with WalletPipeline() as pipeline:
-            from ledger.models import Trx
-            pipeline.new_trx(
-                sender=self,
-                receiver=refund_wallet,
-                amount=self.balance,
-                group_id=group_id,
-                scope=Trx.RESERVE
-            )
-            return True
-
 
 class ReserveWallet(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -217,7 +208,20 @@ class ReserveWallet(models.Model):
     refund_completed = models.BooleanField(default=False)
 
     def refund(self):
-        return self.receiver.refund(self.sender, self.group_id)
+        if self.refund_completed:
+            raise Exception('Cannot refund already refunded wallet')
+        with WalletPipeline() as pipeline:
+            from ledger.models import Trx
+            pipeline.new_trx(
+                sender=self,
+                receiver=self.sender,
+                amount=self.receiver.balance,
+                group_id=self.group_id,
+                scope=Trx.RESERVE
+            )
+            self.refund_completed = True
+            self.save(update_fields=['refund_completed'])
+            return True
 
     class Meta:
         unique_together = ('group_id', 'sender', 'receiver')

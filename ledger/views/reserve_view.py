@@ -64,12 +64,11 @@ class ReserveWalletCreateAPIView(APIView):
         if not user_has_delegate_permission(request.user):
             raise PermissionDenied({'message': _('You do not have permission to perform this action.'), })
 
-        print(request.data)
         serializer = ReserveWalletSerializer(data={**request.data})
-        if serializer.is_valid(raise_exception=True):
-            return Response({
-                'variant': serializer.create(serializer.data),
-            })
+        serializer.is_valid(raise_exception=True)
+        return Response({
+            'variant': serializer.create(serializer.data),
+        })
 
 
 class ReserveWalletRefundAPIView(APIView):
@@ -81,9 +80,9 @@ class ReserveWalletRefundAPIView(APIView):
             raise PermissionDenied({'message': _('You do not have permission to perform this action.'), })
 
         serializer = RefundWalletSerializer(data={**request.data})
-        if serializer.is_valid(raise_exception=True):
-            if serializer.create(serializer.data):
-                return Response({
-                    'success': True,
-                })
-            raise ValidationError(_('Could not refund reserve wallet.'))
+        serializer.is_valid(raise_exception=True)
+        if serializer.create(serializer.data):
+            return Response({
+                'success': True,
+            })
+        raise ValidationError(_('Could not refund reserve wallet.'))
