@@ -85,6 +85,5 @@ class PaydotirGateway(Gateway):
             payment.ref_status = data['status']
             payment.save()
 
-
     class Meta:
         proxy = True

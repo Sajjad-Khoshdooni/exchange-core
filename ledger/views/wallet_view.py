@@ -1,14 +1,14 @@
 from decimal import Decimal
 
 from django.conf import settings
-from rest_framework import serializers
+from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.models import Wallet, DepositAddress, NetworkAsset
+from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCTrade
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.precision import get_presentation_amount
@@ -111,7 +111,7 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     def get_can_deposit(self, asset: Asset):
         network_asset = NetworkAsset.objects.filter(asset=asset, network__can_deposit=True).first()
-        return network_asset and network_asset.can_deposit()
+        return network_asset and network_asset.can_deposit_enabled()
 
     def get_can_withdraw(self, asset: Asset):
         return NetworkAsset.objects.filter(
@@ -159,7 +159,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return network_asset.network.address_regex
 
     def get_can_deposit(self, network_asset: NetworkAsset):
-        return network_asset.can_deposit()
+        return network_asset.can_deposit_enabled()
 
     def get_can_withdraw(self, network_asset: NetworkAsset):
         return network_asset.network.can_withdraw and network_asset.binance_withdraw_enable
@@ -191,10 +191,10 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
         account = self.context['request'].user.account
 
-        deposit_addresses = DepositAddress.objects.filter(account_secret__account=account)
+        deposit_addresses = DepositAddress.objects.filter(address_key__account=account)
 
         address_mapping = {
-            deposit.network.symbol: deposit.presentation_address for deposit in deposit_addresses
+            deposit.network.symbol: deposit.address for deposit in deposit_addresses
         }
 
         serializer = NetworkAssetSerializer(network_assets, many=True, context={
@@ -309,3 +309,27 @@ class WalletSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wallet
         fields = ('asset', 'free',)
+
+
+class ConvertDust(APIView):
+
+    def post(self, *args):
+        account = self.request.user.account
+        IRT = Asset.get(Asset.IRT)
+        spot_wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT, balance__gt=0).exclude(asset=IRT)
+
+        for wallet in spot_wallets:
+            if Decimal(0) < wallet.get_free_irt() < Decimal('100000'):
+
+                request = OTCRequest.new_trade(
+                    account=account,
+                    market=Wallet.SPOT,
+                    from_asset=wallet.asset,
+                    to_asset=IRT,
+                    from_amount=wallet.get_free(),
+                    allow_dust=True
+                )
+
+                OTCTrade.execute_trade(request, force=True)
+        return Response({'msg': 'convert_dust success'}, status=status.HTTP_200_OK)
+

@@ -57,8 +57,8 @@ class OrderViewSet(mixins.CreateModelMixin,
 
     def get_queryset(self):
         return Order.objects.filter(
-            wallet__account_id=self.get_account(self.request)
-        ).select_related('symbol', 'wallet').order_by('-created')
+            wallet__account=self.get_account(self.request)
+        ).select_related('symbol', 'wallet', 'stop_loss').order_by('-created')
 
     def get_serializer_context(self):
         return {
@@ -76,7 +76,7 @@ class OpenOrderListAPIView(APIView):
         context = {
             'trades': Trade.get_account_orders_filled_price(self.request.user.account),
         }
-        open_orders = Order.open_objects.filter(wallet__account=self.request.user.account)
+        open_orders = Order.open_objects.filter(wallet__account=self.request.user.account, stop_loss__isnull=True)
         open_stop_losses = StopLoss.open_objects.filter(wallet__account=self.request.user.account)
         serialized_orders = OrderStopLossSerializer(open_orders, many=True, context=context)
         serialized_stop_losses = OrderStopLossSerializer(open_stop_losses, many=True, context=context)

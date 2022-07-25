@@ -52,7 +52,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
                 wallet__account=self.context['account'],
                 id=instance_id,
             ).first()
-            if not order:
+            if not order or order.stop_loss:
                 raise NotFound(_('Order not found'))
 
         return self.cancel_order(order, validated_data)

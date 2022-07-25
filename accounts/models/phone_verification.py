@@ -107,23 +107,25 @@ class VerificationCode(models.Model):
             logger.info('[OTP] Ignored sending otp to kavenegar due to blacklist')
             return
 
-        any_recent_code = VerificationCode.objects.filter(
-            phone=phone,
-            created__gte=timezone.now() - timedelta(minutes=2),
-        ).exists()
+        if not settings.DEBUG_OR_TESTING:
 
-        if any_recent_code:
-            logger.info('[OTP] Ignored sending otp to kavenegar because of recent')
-            return
+            any_recent_code = VerificationCode.objects.filter(
+                phone=phone,
+                created__gte=timezone.now() - timedelta(minutes=2),
+            ).exists()
 
-        prev_codes = VerificationCode.objects.filter(
-            phone=phone,
-            created__gte=timezone.now() - timedelta(minutes=15),
-        ).count()
+            if any_recent_code:
+                logger.info('[OTP] Ignored sending otp to kavenegar because of recent')
+                return
 
-        if prev_codes >= 3:
-            logger.info('[OTP] Ignored sending otp to kavenegar because of multiple prev')
-            return
+            prev_codes = VerificationCode.objects.filter(
+                phone=phone,
+                created__gte=timezone.now() - timedelta(minutes=15),
+            ).count()
+
+            if prev_codes >= 3:
+                logger.info('[OTP] Ignored sending otp to kavenegar because of multiple prev')
+                return
 
         if scope == cls.SCOPE_TELEPHONE:
             code_length = 4

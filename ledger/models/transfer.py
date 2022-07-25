@@ -1,20 +1,20 @@
 import logging
 from decimal import Decimal
+from typing import Union
 from uuid import uuid4
 
 from django.db import models
-from django.db.models import UniqueConstraint, Q, CheckConstraint
+from django.db.models import CheckConstraint
+from django.db.models import UniqueConstraint, Q
 from yekta_config.config import config
 
 from accounts.models import Account, Notification
+from accounts.utils import email
 from accounts.utils.push_notif import send_push_notif_to_user
-from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
-from ledger.models.crypto_balance import CryptoBalance
 from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
-from accounts.utils import email
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -106,10 +106,73 @@ class Transfer(models.Model):
             )
 
     @classmethod
+    def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str) \
+            -> Union['Transfer', None]:
+
+        if not DepositAddress.objects.filter(address=address).exists():
+            return
+
+        sender_deposit_address = DepositAddress.get_deposit_address(
+            account=sender_wallet.account,
+            network=network
+        )
+
+        receiver_account = DepositAddress.objects.filter(address=address).first().address_key.account
+        receiver_deposit_address = DepositAddress.get_deposit_address(
+            account=receiver_account,
+            network=network
+        )
+        receiver_wallet = sender_wallet.asset.get_wallet(receiver_account)
+
+        group_id = uuid4()
+
+        with WalletPipeline() as pipeline:
+            pipeline.new_trx(
+                sender=sender_wallet,
+                receiver=receiver_wallet,
+                scope=Trx.TRANSFER,
+                group_id=group_id,
+                amount=amount
+            )
+            sender_transfer = Transfer.objects.create(
+                status=Transfer.DONE,
+                deposit_address=sender_deposit_address,
+                wallet=sender_wallet,
+                network=network,
+                amount=amount,
+                deposit=False,
+                group_id=group_id,
+                trx_hash='internal: <%s>' % str(group_id),
+                out_address=address
+            )
+
+            receiver_transfer = Transfer.objects.create(
+                status=Transfer.DONE,
+                deposit_address=receiver_deposit_address,
+                wallet=receiver_wallet,
+                network=network,
+                amount=amount,
+                deposit=True,
+                group_id=group_id,
+                trx_hash='internal: <%s>' % str(group_id),
+                out_address=sender_deposit_address.address
+            )
+
+        sender_transfer.alert_user()
+        receiver_transfer.alert_user()
+
+        return sender_transfer
+
+    @classmethod
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str, memo: str = ''):
         assert wallet.asset.symbol != Asset.IRT
         assert wallet.account.is_ordinary_user()
         wallet.has_balance(amount, raise_exception=True)
+
+        fast_forward = cls.check_fast_forward(sender_wallet=wallet, network=network, amount=amount, address=address)
+
+        if fast_forward:
+            return fast_forward
 
         network_asset = NetworkAsset.objects.get(network=network, asset=wallet.asset)
         assert network_asset.withdraw_max >= amount >= max(network_asset.withdraw_min, network_asset.withdraw_fee)
@@ -122,7 +185,7 @@ class Transfer(models.Model):
                 network=network,
                 amount=amount - commission,
                 fee_amount=commission,
-                source=cls.BINANCE,
+                source=cls.SELF,
                 out_address=address,
                 deposit=False,
                 memo=memo,
@@ -130,40 +193,10 @@ class Transfer(models.Model):
 
             pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
-        from ledger.tasks import create_binance_withdraw
-        create_binance_withdraw.delay(transfer.id)
+        from ledger.tasks import create_withdraw
+        create_withdraw.delay(transfer.id)
 
         return transfer
-
-    def save(self, *args, **kwargs):
-        if self.source == self.SELF and self.status == self.DONE:
-            self.update_crypto_balances()
-
-        return super().save(*args, **kwargs)
-
-    def update_crypto_balances(self):
-        try:
-            balance, _ = CryptoBalance.objects.get_or_create(
-                deposit_address=self.deposit_address,
-                asset=self.wallet.asset,
-            )
-            balance.update()
-            if DEFAULT_COIN_OF_NETWORK.get(self.network.symbol) != self.wallet.asset.symbol:
-                balance, _ = CryptoBalance.objects.get_or_create(
-                    deposit_address=self.deposit_address,
-                    asset=Asset.objects.get(symbol=DEFAULT_COIN_OF_NETWORK.get(self.network.symbol)),
-                )
-                balance.update()
-
-            if deposit_address := DepositAddress.objects.filter(address=self.out_address).first():
-                balance, _ = CryptoBalance.objects.get_or_create(
-                    deposit_address=deposit_address,
-                    asset=self.wallet.asset,
-                )
-                balance.update()
-
-        except Exception:
-            logger.exception('failed to update crypto balance')
 
     def alert_user(self):
         user = self.wallet.account.user

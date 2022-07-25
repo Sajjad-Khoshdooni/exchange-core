@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 TIMEOUT = 30
 
-if not settings.DEBUG:
+if not settings.DEBUG_OR_TESTING:
     SPOT_BASE_URL = "https://api.binance.com"
     FUTURES_BASE_URL = 'https://fapi.binance.com'
 else:

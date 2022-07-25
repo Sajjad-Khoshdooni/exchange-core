@@ -3,6 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.views.generic import TemplateView
+from yekta_config.config import config
 
 from accounts.views.dashboard import dashboard
 from rest_framework import permissions
@@ -37,7 +38,7 @@ urlpatterns = [
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-if settings.DEBUG:
+if config('STAGING', default=False, cast=bool):
     urlpatterns += [
         re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0),
             name='schema-json'),

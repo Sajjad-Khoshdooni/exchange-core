@@ -40,6 +40,7 @@ if settings.DEBUG_OR_TESTING:
     def set_up_user(self):
         phone = '09355913457'
         user = User.objects.create(username=phone, password='1', phone=phone)
+        return user
 
 
     def generate_otp_code(user, scope) -> VerificationCode:
