@@ -3,7 +3,6 @@ from decimal import Decimal
 from typing import Union
 from uuid import uuid4
 
-from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import UniqueConstraint, Q
@@ -12,7 +11,6 @@ from yekta_config.config import config
 from accounts.models import Account, Notification
 from accounts.utils import email
 from accounts.utils.push_notif import send_push_notif_to_user
-from ledger.consts import DEFAULT_COIN_OF_NETWORK
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
 from ledger.utils.fields import get_amount_field, get_address_field
@@ -136,7 +134,7 @@ class Transfer(models.Model):
                 group_id=group_id,
                 amount=amount
             )
-            transfer = Transfer.objects.create(
+            sender_transfer = Transfer.objects.create(
                 status=Transfer.DONE,
                 deposit_address=sender_deposit_address,
                 wallet=sender_wallet,
@@ -147,7 +145,8 @@ class Transfer(models.Model):
                 trx_hash='internal: <%s>' % str(group_id),
                 out_address=address
             )
-            Transfer.objects.create(
+
+            receiver_transfer = Transfer.objects.create(
                 status=Transfer.DONE,
                 deposit_address=receiver_deposit_address,
                 wallet=receiver_wallet,
@@ -159,7 +158,10 @@ class Transfer(models.Model):
                 out_address=sender_deposit_address.address
             )
 
-        return transfer
+        sender_transfer.alert_user()
+        receiver_transfer.alert_user()
+
+        return sender_transfer
 
     @classmethod
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str, memo: str = ''):
