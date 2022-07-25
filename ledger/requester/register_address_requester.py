@@ -24,9 +24,14 @@ class RegisterAddress:
             'network': deposit_address.network.symbol
         }
 
-        res = requests.post(url=self.url, headers=self.header, data=data)
-        if not res.ok:
-            logger.warning('couldnt register deposit_address: {} in blocklink'.format(deposit_address.address))
+        resp = requests.post(url=self.url, headers=self.header, data=data)
+        if not resp.ok:
+            logger.warning('couldnt register deposit_address', extra={
+                'address': deposit_address.address,
+                'resp': resp.json(),
+                'status': resp.status_code
+            })
+            print(resp.json())
             return
         deposit_address.is_registered = True
         deposit_address.save()
