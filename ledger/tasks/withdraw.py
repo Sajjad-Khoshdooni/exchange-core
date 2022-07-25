@@ -5,14 +5,8 @@ from celery import shared_task
 from ledger.models import Transfer
 from ledger.utils.wallet_pipeline import WalletPipeline
 from ledger.withdraw.binance import handle_binance_withdraw
-from ledger.withdraw.withdraw_handler import WithdrawHandler
 
 logger = logging.getLogger(__name__)
-
-
-@shared_task
-def create_transaction_from_not_broadcasts():
-    WithdrawHandler.create_transaction_from_not_broadcasts()
 
 
 @shared_task(queue='binance')
