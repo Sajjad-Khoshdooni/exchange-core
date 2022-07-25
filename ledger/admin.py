@@ -9,7 +9,7 @@ from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
-from ledger.models import Asset, Prize, CoinCategory, DepositAddress
+from ledger.models import Asset, Prize, CoinCategory
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
@@ -45,7 +45,7 @@ class AssetAdmin(AdvancedAdmin):
 
     def changelist_view(self, request, extra_context=None):
 
-        if not settings.DEBUG:
+        if not settings.DEBUG_OR_TESTING:
             self.overview = AssetOverview()
             account = MARGIN_INSURANCE_ACCOUNT
 
@@ -163,8 +163,9 @@ class NetworkAdmin(admin.ModelAdmin):
 
 @admin.register(models.NetworkAsset)
 class NetworkAssetAdmin(admin.ModelAdmin):
-    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'binance_withdraw_enable')
+    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'can_deposit', 'binance_withdraw_enable')
     search_fields = ('network__symbol', 'asset__symbol')
+    list_editable = ('can_deposit', )
 
 
 class UserFilter(admin.SimpleListFilter):
@@ -177,20 +178,15 @@ class UserFilter(admin.SimpleListFilter):
     def queryset(self, request, queryset):
         user = request.GET.get('user_id')
         if user is not None:
-            return queryset.filter(account_secret__account__user=user)
+            return queryset.filter(address_key__account__user=user)
         else:
             return queryset
 
 
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_filter = (UserFilter, 'network')
-    list_display = ('account_secret', 'network', 'get_address')
-
-    def get_address(self, depositaddress: DepositAddress):
-        return depositaddress.presentation_address
-
-    get_address.short_description = 'آدرس‌ کیف پول‌'
+    list_display = ('address_key', 'network', 'address')
+    readonly_fields = ('address_key', 'network', 'address')
 
 
 @admin.register(models.OTCRequest)
@@ -341,7 +337,7 @@ class CryptoAccountTypeFilter(SimpleListFilter):
             if value == 'ord':
                 value = None
 
-            return queryset.filter(deposit_address__account_secret__account__type=value)
+            return queryset.filter(deposit_address__address_key__account__type=value)
         else:
             return queryset
 
@@ -359,12 +355,12 @@ class CryptoBalanceAdmin(admin.ModelAdmin):
     get_network.short_description = 'network'
 
     def get_address(self, crypto_balance: models.CryptoBalance):
-        return crypto_balance.deposit_address.presentation_address
+        return crypto_balance.deposit_address.address
 
     get_address.short_description = 'address'
 
     def get_owner(self, crypto_balance: models.CryptoBalance):
-        return str(crypto_balance.deposit_address.account_secret.account)
+        return str(crypto_balance.deposit_address.account)
 
     get_owner.short_description = 'owner'
 
@@ -425,3 +421,9 @@ class CoinCategoryAdmin(admin.ModelAdmin):
         return coin_category.coins.count()
 
     get_coin_count.short_description = 'تعداد رمزارز'
+
+
+@admin.register(models.AddressKey)
+class AddressKeyAdmin(admin.ModelAdmin):
+    list_display = ('address', )
+    readonly_fields = ('address', )

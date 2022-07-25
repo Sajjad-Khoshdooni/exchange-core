@@ -59,6 +59,14 @@ app.conf.beat_schedule = {
             'expire': 10
         },
     },
+    'register_address': {
+        'task': 'ledger.tasks.register_address.register_address',
+        'schedule': 30,
+        'options': {
+            'queue': 'celery',
+            'expire': 30
+        }
+    },
     'coin_market_cap_update': {
         'task': 'collector.tasks.coin_market_cap.update_coin_market_cap',
         # 'schedule': crontab(minute=0, hour=2),
@@ -70,6 +78,14 @@ app.conf.beat_schedule = {
         'options': {
             'queue': 'celery',
             'expire': 30 * 60
+        },
+    },
+    'update_withdraws': {
+        'task': 'ledger.tasks.withdraw.update_withdraws',
+        'schedule': 10,
+        'options': {
+            'queue': 'blocklink',
+            'expire': 10
         },
     },
     'update_binance_withdraw': {
@@ -216,7 +232,7 @@ app.conf.beat_schedule = {
             }
         },
 }
-if settings.DEBUG:
+if settings.DEBUG_OR_TESTING:
     app.conf.beat_schedule = {
         'coin_market_cap_update': {
             'task': 'collector.tasks.coin_market_cap.update_coin_market_cap',
