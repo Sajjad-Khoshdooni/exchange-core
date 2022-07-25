@@ -1,4 +1,5 @@
 import logging
+from typing import Type
 
 from django.db import models
 
@@ -44,19 +45,26 @@ class Gateway(models.Model):
         if gateway:
             return gateway.get_concrete_gateway()
 
-    def get_concrete_gateway(self) -> 'Gateway':
+    @classmethod
+    def get_gateway_class(cls, type: str) -> Type['Gateway']:
         from financial.models import ZarinpalGateway, PaydotirGateway, ZibalGateway
         mapping = {
-            self.ZARINPAL: ZarinpalGateway,
-            self.PAYIR: PaydotirGateway,
-            self.ZIBAL: ZibalGateway,
+            cls.ZARINPAL: ZarinpalGateway,
+            cls.PAYIR: PaydotirGateway,
+            cls.ZIBAL: ZibalGateway,
         }
 
-        self.__class__ = mapping[self.type]
+        return mapping.get(type)
 
+    def get_concrete_gateway(self) -> 'Gateway':
+        self.__class__ = self.get_gateway_class(self.type)
         return self
 
-    def get_redirect_url(self, payment_request: PaymentRequest):
+    def get_initial_redirect_url(self, payment_request: PaymentRequest):
+        return self.get_payment_url(payment_request.authority)
+
+    @classmethod
+    def get_payment_url(cls, authority: str):
         raise NotImplementedError
 
     def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:

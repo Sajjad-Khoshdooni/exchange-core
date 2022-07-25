@@ -54,4 +54,9 @@ urlpatterns = [
 
     path('v1/wallet/balance/', views.GetBalanceInformation.as_view()),
     path('v1/bookmark/assets/', views.BookmarkAssetsAPIView.as_view()),
+
+    path('v1/transfer/deposit/', views.DepositTransferUpdateView.as_view()),
+    path('v1/transfer/withdraw/', views.WithdrawTransferUpdateView.as_view()),
+
+    path('v1/convert/dust/', views.ConvertDust.as_view()),
 ]

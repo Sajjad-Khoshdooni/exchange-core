@@ -21,6 +21,7 @@ from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
+from ledger.utils.price import BUY
 from market.models import Trade, ReferralTrx, Order
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
@@ -215,7 +216,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
-            'get_sum_of_value_buy_sell', 'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit'
+            'get_sum_of_value_buy_sell', 'get_remaining_fiat_withdraw_limit',
+            'get_remaining_crypto_withdraw_limit', 'get_last_trade', 'get_total_balance_irt_admin'
         )}),
         (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)}),
         (_("کدهای دعوت کاربر"), {'fields': (
@@ -242,7 +244,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium',
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
-        'get_login_activity_link',
+        'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin'
     )
     preserve_filters = ('archived', )
 
@@ -384,9 +386,13 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         if not hasattr(user, 'account'):
             return 0
 
-        return user.account.trade_volume_irt
+        return humanize_number(user.account.trade_volume_irt)
 
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
+
+    def get_last_trade(self, user: User):
+        return gregorian_to_jalali_datetime_str(Trade.objects.filter(account=user.account).last().created)
+    get_last_trade.short_description = 'تاریخ آخرین معامله'
 
     def get_bank_card_link(self, user: User):
         link = url_to_admin_list(BankCard) + '?user={}'.format(user.id)
@@ -536,6 +542,13 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     get_deposit_address.short_description = 'آدرس‌های کیف پول'
 
+    def get_total_balance_irt_admin(self, user: User):
+        total_balance_irt = user.account.get_total_balance_irt(side=BUY)
+        
+        return humanize_number(int(total_balance_irt))
+
+    get_total_balance_irt_admin.short_description = 'دارایی به تومان'
+
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
@@ -558,14 +571,15 @@ class AccountAdmin(admin.ModelAdmin):
     get_wallet.short_description = 'لیست کیف‌ها'
 
     def get_total_balance_irt_admin(self, account: Account):
-        total_balance_irt = account.get_total_balance_irt(market=Wallet.SPOT, side='buy')
-        return humanize_number(get_presentation_amount(total_balance_irt))
+        total_balance_irt = account.get_total_balance_irt(side=BUY)
+        
+        return humanize_number(int(total_balance_irt))
 
     get_total_balance_irt_admin.short_description = 'دارایی به تومان'
 
     def get_total_balance_usdt_admin(self, account: Account):
-        total_blance_usdt = account.get_total_balance_usdt(market=Wallet.SPOT, side='buy')
-        return humanize_number(get_presentation_amount(total_blance_usdt))
+        total_blance_usdt = account.get_total_balance_usdt(market=Wallet.SPOT, side=BUY)
+        return humanize_number(int(total_blance_usdt))
 
     get_total_balance_usdt_admin.short_description = 'دارایی به تتر'
 
@@ -622,14 +636,10 @@ class LoginActivityAdmin(admin.ModelAdmin):
     search_fields = ['user__phone', 'ip']
 
 
-@admin.register(CustomToken)
-class CustomTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
-    pass
-
-
 @admin.register(FirebaseToken)
 class FirebaseTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ['user', 'token']
+    readonly_fields = ('created',)
 
 
 @admin.register(ExternalNotification)
