@@ -1,13 +1,14 @@
 import json
 import requests
 from django.conf import settings
+from yekta_config import secret
 from yekta_config.config import config
 
 
 class AddressRequester:
     def __init__(self):
         self.header = {
-            'Authorization': 'Token ' + config('MASTERKEY_TOKEN')
+            'Authorization': secret('MASTERKEY_TOKEN')
         }
 
     def create_wallet(self, account):
