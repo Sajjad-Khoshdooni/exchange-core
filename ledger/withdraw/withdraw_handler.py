@@ -24,7 +24,7 @@ class WithdrawHandler:
         print('create transaction...')
         deposit_address: DepositAddress = transfer.network.get_deposit_address(transfer.wallet.account)
         wallet_class = Secret.get_secret_wallet(transfer.network.symbol)
-        wallet = deposit_address.account_secret.secret
+        wallet = deposit_address.address_key.address
         wallet.__class__ = wallet_class
         transaction_creator = TransactionCreatorBuilder(transfer.network, transfer.wallet.asset,
                                                         wallet).build()

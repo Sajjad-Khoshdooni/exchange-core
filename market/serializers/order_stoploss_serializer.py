@@ -35,7 +35,10 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
 
     def get_status(self, instance: Union[Order, StopLoss]):
         if isinstance(instance, StopLoss):
-            return StopLoss.TRIGGERED if instance.order_set.exists() else StopLoss.NEW
+            if not instance.order_set.exists():
+                return StopLoss.NEW
+            else:
+                return StopLoss.FILLED if instance.filled_amount == instance.amount else StopLoss.TRIGGERED
         return instance.status
 
     def get_filled_amount(self, instance: Union[Order, StopLoss]):

@@ -1,7 +1,6 @@
 import logging
 from decimal import Decimal
 
-from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -10,7 +9,7 @@ from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet
 from ledger.utils.precision import floor_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import StopLoss
+from market.models import StopLoss, Order
 from market.serializers.order_serializer import OrderSerializer
 
 logger = logging.getLogger(__name__)
@@ -41,11 +40,17 @@ class StopLossSerializer(OrderSerializer):
         validated_data['trigger_price'] = self.post_validate_price(symbol, validated_data['trigger_price'])
         try:
             with WalletPipeline() as pipeline:
-                instance = super(OrderSerializer, self).create(
-                    {**validated_data, 'wallet': wallet, 'symbol': symbol}
+                lock_amount = Order.get_to_lock_amount(
+                    validated_data['amount'], validated_data['price'], validated_data['side']
                 )
-                instance.acquire_lock(pipeline)
-                return instance
+                base_wallet = symbol.base_asset.get_wallet(wallet.account, wallet.market)
+                lock_wallet = Order.get_to_lock_wallet(wallet, base_wallet, validated_data['side'])
+                if lock_wallet.has_balance(lock_amount, raise_exception=True):
+                    instance = super(OrderSerializer, self).create(
+                        {**validated_data, 'wallet': wallet, 'symbol': symbol}
+                    )
+                    instance.acquire_lock(lock_wallet, lock_amount, pipeline)
+                    return instance
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
 

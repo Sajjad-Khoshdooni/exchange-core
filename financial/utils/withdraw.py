@@ -72,7 +72,7 @@ class PayirChanel(FiatWithdraw):
 
         request_kwargs = {
             'url': url,
-            'timeout': 60,
+            'timeout': 30,
             'headers': {'Authorization': 'Bearer ' + secret('PAY_IR_TOKEN')},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -191,6 +191,9 @@ class PayirChanel(FiatWithdraw):
 
         return total_wallet_irt_value
 
+    def is_active(self):
+        return bool(config('PAY_IR_TOKEN'))
+
 
 class ZibalChanel(FiatWithdraw):
 
@@ -204,7 +207,7 @@ class ZibalChanel(FiatWithdraw):
 
         request_kwargs = {
             'url': url,
-            'timeout': 60,
+            'timeout': 30,
             'headers': {'Authorization': 'Bearer ' + secret('ZIBAL_TOKEN')},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',

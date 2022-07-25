@@ -1,10 +1,17 @@
-from financial.utils.withdraw import ZibalChanel
+from financial.utils.withdraw import ZibalChanel, PayirChanel
 
 
 def get_total_fiat_irt():
-    channel = ZibalChanel()
-    if channel.is_active():
-        wallet = channel.get_wallet_data(channel.get_wallet_id())
-        return wallet.balance
-    else:
-        return 0
+    channels = [ZibalChanel(), PayirChanel()]
+
+    total = 0
+
+    for channel in channels:
+        if channel.is_active():
+            try:
+                wallet = channel.get_wallet_data(channel.get_wallet_id())
+                total += wallet.balance
+            except:
+                continue
+
+    return total

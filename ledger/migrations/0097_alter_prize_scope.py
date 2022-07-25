@@ -8,7 +8,7 @@ def populate_fake_verify_prize(apps, schema_editor):
     Prize = apps.get_model('ledger', 'Prize')
     Asset = apps.get_model('ledger', 'Asset')
 
-    asset = Asset.objects.get(symbol='SHIB')
+    asset, _ = Asset.objects.get_or_create(symbol='SHIB')
 
     prizes = []
 
