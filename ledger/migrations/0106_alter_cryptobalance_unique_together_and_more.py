@@ -12,8 +12,11 @@ def populate_address_key(apps, schema_editor):
     DepositAddress = apps.get_model('ledger', 'DepositAddress')
     AddressKey = apps.get_model('ledger', 'AddressKey')
 
-    with open(tag_to_address_mapping, 'r') as f:
-        tag_mapping = json.load(f)
+    try:
+        with open(tag_to_address_mapping, 'r') as f:
+            tag_mapping = json.load(f)
+    except:
+        return
 
     account_mapping = {}
 
