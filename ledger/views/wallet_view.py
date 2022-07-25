@@ -319,7 +319,7 @@ class ConvertDust(APIView):
         spot_wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT, balance__gt=0).exclude(asset=IRT)
 
         for wallet in spot_wallets:
-            if Decimal(0) < wallet.get_free_irt() < Decimal('10000'):
+            if Decimal(0) < wallet.get_free_irt() < Decimal('100000'):
 
                 request = OTCRequest.new_trade(
                     account=account,
