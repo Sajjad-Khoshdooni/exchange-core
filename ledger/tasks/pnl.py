@@ -6,7 +6,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from ledger.models import PNLHistory, Wallet, Asset
-from ledger.utils.price import get_avg_tether_price_irt_grpc, get_tether_price_irt_grpc, BUY, get_tether_irt_price
+from ledger.utils.price import get_avg_tether_price_irt_grpc, BUY, get_tether_irt_price
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def create_pnl_histories():
     else:
         usdt_price = get_avg_tether_price_irt_grpc(
             today_timestamp - 600_000, today_timestamp
-        ) or get_tether_price_irt_grpc(BUY, today)
+        ) or get_tether_irt_price(BUY)
 
     all_in_out = PNLHistory.get_all_in_out(today - timedelta(days=1), today)
     all_wallets = PNLHistory.get_all_wallets()
@@ -54,11 +54,6 @@ def create_pnl_histories():
             if market == Wallet.SPOT:
                 irt_snapshot = snapshot_balance * usdt_price
                 last_irt_snapshot = last_pnl_histories.get((account, market, Asset.IRT), 0)
-                if last_irt_snapshot:
-                    last_usdt_price = last_usdt_snapshot / last_irt_snapshot
-                    irt_profit = (profit * usdt_price) + (usdt_price - last_usdt_price) * last_usdt_snapshot
-                else:
-                    irt_profit = 0
 
                 to_create_pnl_histories.append(
                     PNLHistory(
@@ -67,7 +62,7 @@ def create_pnl_histories():
                         market=market,
                         base_asset=Asset.IRT,
                         snapshot_balance=irt_snapshot,
-                        profit=irt_profit,
+                        profit=irt_snapshot - last_irt_snapshot if last_irt_snapshot else 0,
                     )
                 )
 

@@ -2,7 +2,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 from django.db import models
-from django.db.models import F
+from django.db.models import F, Sum
 
 from accounts.models import Account
 from ledger.models import Wallet, Asset, Trx
@@ -24,7 +24,10 @@ class PNLHistory(models.Model):
     )
 
     snapshot_balance = get_amount_field(default=Decimal(0))
-    profit = get_amount_field(default=Decimal(0))
+    profit = get_amount_field(default=Decimal(0), validators=())
+
+    class Meta:
+        unique_together = [('date', 'account', 'market', 'base_asset')]
 
     @staticmethod
     def calculate_amounts_in_usdt(account_wallets: dict, account_input_outputs: dict, last_snapshot_balance: Decimal,
@@ -57,8 +60,8 @@ class PNLHistory(models.Model):
         return {
             (wallet['market'], wallet['account'], wallet['asset__symbol']): wallet['balance'] for
             wallet in Wallet.objects.filter(
-                account__type=Account.ORDINARY).values('market', 'account', 'asset__symbol', 'balance')
-            if wallet['balance']
+                account__type=Account.ORDINARY, balance__gt=0
+            ).values('market', 'account', 'asset__symbol', 'balance')
         }
 
     @staticmethod
@@ -69,12 +72,12 @@ class PNLHistory(models.Model):
             scope__in=(Trx.TRANSFER, Trx.MARGIN_TRANSFER, Trx.MARGIN_BORROW),
             **datetime_filter
         ).annotate(asset=F('sender__asset__symbol')).values(
-            'sender__market', 'receiver__market', 'asset', 'sender__account', 'receiver__account', 'amount'
-        )
+            'sender__market', 'receiver__market', 'asset', 'sender__account', 'receiver__account'
+        ).annotate(total_amount=Sum('amount'))
 
         for trx in in_out_trxs:
-            in_out_dict[(trx['sender__market'], trx['sender__account'], trx['asset'])] -= trx['amount']
-            in_out_dict[(trx['receiver__market'], trx['receiver__account'], trx['asset'])] += trx['amount']
+            in_out_dict[(trx['sender__market'], trx['sender__account'], trx['asset'])] -= trx['total_amount']
+            in_out_dict[(trx['receiver__market'], trx['receiver__account'], trx['asset'])] += trx['total_amount']
         return in_out_dict
 
     @classmethod
