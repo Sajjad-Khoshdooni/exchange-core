@@ -1,11 +1,12 @@
 import requests
+from yekta_config import secret
 from yekta_config.config import config
 
 
 class RequestWithdraw:
     def __init__(self):
         self.header = {
-            'Authorization': 'Token ' + config('BLOCKLINK_TOKEN')
+            'Authorization': secret('BLOCKLINK_TOKEN')
         }
 
     def withdraw_from_hot_wallet(self, receiver_address, amount, network, asset, transfer_id):

@@ -1,5 +1,7 @@
 import requests
 import logging
+
+from yekta_config import secret
 from yekta_config.config import config
 
 logger = logging.getLogger(__name__)
@@ -9,7 +11,7 @@ class RegisterAddress:
     def __init__(self):
         self.url = config('BLOCKLINK_BASE_URL') + '/api/v1/tracker/address/'
         self.header = {
-            'Authorization': 'Token ' + config('BLOCKLINK_TOKEN')
+            'Authorization': secret('BLOCKLINK_TOKEN')
         }
 
     def register(self, deposit_address):
