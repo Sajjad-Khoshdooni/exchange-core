@@ -222,6 +222,14 @@ app.conf.beat_schedule = {
             'expire': 17
         }
     },
+    'carrot_trader': {
+        'task': 'trader.tasks.carrot_trader.carrot_trader',
+        'schedule': 7,
+        'options': {
+            'queue': 'carrot_trader',
+            'expire': 7
+        }
+    },
 
     'health_alert_pending': {
             'task': 'health.tasks.alert_pending.alert_pending',
@@ -287,6 +295,14 @@ if settings.DEBUG_OR_TESTING:
             'options': {
                 'queue': 'trader-ma',
                 'expire': 17
+            }
+        },
+        'carrot_trader': {
+            'task': 'trader.tasks.carrot_trader.carrot_trader',
+            'schedule': 7,
+            'options': {
+                'queue': 'carrot_trader',
+                'expire': 7
             }
         },
     }

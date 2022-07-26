@@ -53,9 +53,10 @@ class Order(models.Model):
     STATUS_CHOICES = [(NEW, NEW), (CANCELED, CANCELED), (FILLED, FILLED)]
 
     DEPTH = 'depth'
+    BOT = 'bot'
     ORDINARY = None
 
-    TYPE_CHOICES = ((DEPTH, 'depth'), (ORDINARY, 'ordinary'))
+    TYPE_CHOICES = ((DEPTH, 'depth'), (BOT, 'bot'), (ORDINARY, 'ordinary'))
 
     type = models.CharField(
         max_length=8,
@@ -154,7 +155,7 @@ class Order(models.Model):
         return {'price__lte': price} if side == Order.BUY else {'price__gte': price}
 
     @staticmethod
-    def get_maker_price(symbol: PairSymbol.IdName, side: str, loose_factor=Decimal(1)):
+    def get_maker_price(symbol: PairSymbol.IdName, side: str, loose_factor=Decimal(1), gap=None):
         if symbol.name.endswith(IRT):
             base_symbol = IRT
             get_trading_price = get_trading_price_irt
@@ -165,7 +166,7 @@ class Order(models.Model):
             raise NotImplementedError('Invalid trading symbol')
 
         coin = symbol.name.split(base_symbol)[0]
-        boundary_price = get_trading_price(coin, side)
+        boundary_price = get_trading_price(coin, side, gap=gap)
 
         precision = Order.get_rounding_precision(boundary_price, symbol.tick_size)
         # use bi-direction in roundness to avoid risky bid ask spread
@@ -448,28 +449,26 @@ class Order(models.Model):
             return cls.init_maker_order(symbol, side, maker_price, market)
 
     @classmethod
-    def cancel_invalid_maker_orders(cls, symbol: PairSymbol.IdName, top_prices):
+    def cancel_invalid_maker_orders(cls, symbol: PairSymbol.IdName, top_prices, gap=None, order_type=DEPTH):
         for side in (Order.BUY, Order.SELL):
-            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.001'))
+            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.001'), gap=gap)
             if (side == Order.BUY and Decimal(top_prices[side]) <= price) or (
                     side == Order.SELL and Decimal(top_prices[side]) >= price):
-                logger.info(f'maker {side} ignore cancels with price: {price} top: {top_prices[side]}')
+                logger.info(f'{order_type} {side} ignore cancels with price: {price} top: {top_prices[side]}')
                 continue
 
-            invalid_orders = Order.open_objects.select_for_update().filter(symbol_id=symbol.id, side=side).exclude(
-                type=Order.ORDINARY
+            invalid_orders = Order.open_objects.select_for_update().filter(
+                symbol_id=symbol.id, side=side, type=order_type
             ).exclude(**cls.get_price_filter(price, side))
 
             cls.cancel_orders(invalid_orders)
 
-            logger.info(f'maker {side} cancels with price: {price}')
+            logger.info(f'{order_type} {side} cancels with price: {price}')
 
     @classmethod
     def cancel_waste_maker_orders(cls, symbol: PairSymbol.IdName, open_orders_count):
         for side in (Order.BUY, Order.SELL):
-            wasted_orders = Order.open_objects.filter(symbol_id=symbol.id, side=side).exclude(
-                type=Order.ORDINARY
-            )
+            wasted_orders = Order.open_objects.filter(symbol_id=symbol.id, side=side, type=Order.DEPTH)
             wasted_orders = wasted_orders.order_by('price') if side == Order.BUY else wasted_orders.order_by('-price')
             cancel_count = int(open_orders_count[side]) - Order.MAKER_ORDERS_COUNT
 

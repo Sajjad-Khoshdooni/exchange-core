@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import requests
 from cachetools.func import ttl_cache
@@ -66,7 +66,6 @@ def get_asset_diff_multiplier(coin: str):
 
 
 def get_tether_price_irt_grpc(side: str, now: datetime = None):
-
     coins = 'USDT'
     symbol_to_coins = {
         coins + IRT: coins
@@ -211,7 +210,8 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
     return Decimal(tether_rial / 10)
 
 
-def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0) -> Decimal:
+def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
+                           gap: Union[Decimal, None] = None) -> Decimal:
     # from ledger.models.asset import Asset
 
     if coin == IRT:
@@ -227,8 +227,10 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
     # if ask_diff is None:
     #     ask_diff = Decimal('0.005')
 
-    bid_diff = Decimal('0.0025') * get_asset_diff_multiplier(coin)
-    ask_diff = Decimal('0.0025') * get_asset_diff_multiplier(coin)
+    if gap is None:
+        gap = Decimal('0.0025')
+    bid_diff = gap * get_asset_diff_multiplier(coin)
+    ask_diff = gap * get_asset_diff_multiplier(coin)
 
     diff_multiplier = 1
 
@@ -253,12 +255,13 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
     return price and price * multiplier
 
 
-def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0) -> Decimal:
+def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
+                          gap: Union[Decimal, None] = None) -> Decimal:
     if coin == IRT:
         return Decimal(1)
 
     tether = get_tether_irt_price(side)
-    price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether)
+    price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether, gap=gap)
 
     if price:
         return price * tether
