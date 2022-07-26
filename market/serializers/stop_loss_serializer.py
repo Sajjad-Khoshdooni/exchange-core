@@ -4,12 +4,13 @@ from decimal import Decimal
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
 
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet
 from ledger.utils.precision import floor_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import StopLoss, Order
+from market.models import StopLoss, Order, PairSymbol
 from market.serializers.order_serializer import OrderSerializer
 
 logger = logging.getLogger(__name__)
@@ -36,9 +37,12 @@ class StopLossSerializer(OrderSerializer):
         return data
 
     def create(self, validated_data):
-        symbol, wallet = self.post_validate(validated_data)
-        if validated_data['price']:
+        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
+        if validated_data.get('price'):
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
+        else:
+            validated_data['price'] = validated_data['trigger_price']
+        wallet = self.post_validate(symbol, validated_data)
         validated_data['trigger_price'] = self.post_validate_price(symbol, validated_data['trigger_price'])
         try:
             with WalletPipeline() as pipeline:
