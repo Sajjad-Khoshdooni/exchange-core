@@ -9,7 +9,6 @@ from ledger.utils.precision import decimal_to_str
 from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request, \
     spot_send_public_request, futures_send_public_request
 
-
 BINANCE = 'binance'
 
 MARKET, LIMIT = 'MARKET', 'LIMIT'
@@ -166,41 +165,48 @@ class BinanceSpotHandler:
 
     @classmethod
     def _create_transfer_history(cls, response: dict, transfer_type: str):
-        from provider.models import BinanceWithdrawDepositHistory
+        from provider.models import BinanceTransferHistory
         status_map = {
-            BinanceWithdrawDepositHistory.WITHDRAW : {
-                0: BinanceWithdrawDepositHistory.PENDING,
-                1: BinanceWithdrawDepositHistory.CANCELED,
-                2: BinanceWithdrawDepositHistory.PENDING,
-                3: BinanceWithdrawDepositHistory.CANCELED,
-                4: BinanceWithdrawDepositHistory.PENDING,
-                5: BinanceWithdrawDepositHistory.CANCELED,
-                6: BinanceWithdrawDepositHistory.DONE,
+            BinanceTransferHistory.WITHDRAW: {
+                0: BinanceTransferHistory.PENDING,
+                1: BinanceTransferHistory.CANCELED,
+                2: BinanceTransferHistory.PENDING,
+                3: BinanceTransferHistory.CANCELED,
+                4: BinanceTransferHistory.PENDING,
+                5: BinanceTransferHistory.CANCELED,
+                6: BinanceTransferHistory.DONE,
             },
-            BinanceWithdrawDepositHistory.DEPOSIT: {
-                0: BinanceWithdrawDepositHistory.PENDING,
-                6: BinanceWithdrawDepositHistory.PENDING,
-                1: BinanceWithdrawDepositHistory.DONE
+            BinanceTransferHistory.DEPOSIT: {
+                0: BinanceTransferHistory.PENDING,
+                6: BinanceTransferHistory.PENDING,
+                1: BinanceTransferHistory.DONE
             },
         }
 
         for element in response:
-            tx_id = element['txId']
+            tx_id = element.get('txId', None)
+            binance_id = element.get('Id', None)
             address = element['address']
             amount = element['amount']
             coin = element['coin']
             network = element['network']
             status = status_map[transfer_type][element['status']]
-            withdraw_deposit = BinanceWithdrawDepositHistory.objects.filter(tx_id=tx_id)
-            if withdraw_deposit:
-                BinanceWithdrawDepositHistory.objects.update(status=status)
+
+            if tx_id:
+                withdraw_deposit = BinanceTransferHistory.objects.filter(tx_id=tx_id)
             else:
-                if transfer_type == BinanceWithdrawDepositHistory.DEPOSIT:
+                withdraw_deposit = BinanceTransferHistory.objects.filter(binace_id=binance_id)
+
+            if withdraw_deposit:
+                BinanceTransferHistory.objects.update(status=status, tx_id=tx_id)
+            else:
+                if transfer_type == BinanceTransferHistory.DEPOSIT:
                     time = datetime.fromtimestamp(element['insertTime']//1000)
                 else:
                     time = element['applyTime']
-                BinanceWithdrawDepositHistory.objects.create(
+                BinanceTransferHistory.objects.create(
                     tx_id=tx_id,
+                    biance_id=binance_id,
                     address=address,
                     amount=amount,
                     coin=coin,
@@ -212,7 +218,7 @@ class BinanceSpotHandler:
 
     @classmethod
     def get_withdraw_history(cls):
-        from provider.models import BinanceWithdrawDepositHistory
+        from provider.models import BinanceTransferHistory
         now = datetime.now()
         five_days_ago_time_timestamp = datetime.timestamp(now - timedelta(days=5))
 
@@ -224,11 +230,11 @@ class BinanceSpotHandler:
             }
         )
 
-        cls._create_transfer_history(response=withdraws, transfer_type=BinanceWithdrawDepositHistory.WITHDRAW)
+        cls._create_transfer_history(response=withdraws, transfer_type=BinanceTransferHistory.WITHDRAW)
 
     @classmethod
     def get_deposit_history(cls):
-        from provider.models import BinanceWithdrawDepositHistory
+        from provider.models import BinanceTransferHistory
         now = datetime.now()
         five_days_ago_time_timestamp = datetime.timestamp(now - timedelta(days=5))
 
@@ -239,7 +245,7 @@ class BinanceSpotHandler:
                 'startTime': five_days_ago_time_timestamp
             })
 
-        cls._create_transfer_history(response=deposits, transfer_type=BinanceWithdrawDepositHistory.DEPOSIT)
+        cls._create_transfer_history(response=deposits, transfer_type=BinanceTransferHistory.DEPOSIT)
 
     @classmethod
     def _get_spot_and_futures_wallet_handler(cls, wallet_type):

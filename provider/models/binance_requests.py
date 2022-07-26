@@ -13,12 +13,14 @@ class BinanceRequests(models.Model):
     response = models.JSONField(blank=True, null=True)
 
 
-class BinanceWithdrawDepositHistory(models.Model):
+class BinanceTransferHistory(models.Model):
 
     PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
     WITHDRAW, DEPOSIT = 'withdraw', 'deposit'
 
-    tx_id = models.CharField(max_length=128)
+    tx_id = models.CharField(max_length=128, unique=True, null=True, blank=True)
+    binance_id = models.CharField(max_length=128, unique=True, null=True, blank=True)
+
     address = models.CharField(max_length=256)
     amount = get_amount_field()
     coin = models.CharField(max_length=16)
@@ -34,3 +36,9 @@ class BinanceWallet(models.Model):
     free = get_amount_field()
     locked = get_amount_field()
     type = models.CharField(max_length=16, choices=((SPOT, SPOT), (FUTURES, FUTURES)))
+
+    class Meta:
+        unique_together = [('asset', 'type')]
+
+
+

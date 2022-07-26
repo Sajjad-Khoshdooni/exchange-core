@@ -35,8 +35,8 @@ class BinanceRequestsAdmin(admin.ModelAdmin):
     list_filter = ('status_code', 'method',)
 
 
-@admin.register(models.BinanceWithdrawDepositHistory)
-class BinanceWithdrawDepositHistoryAdmin(admin.ModelAdmin):
+@admin.register(models.BinanceTransferHistory)
+class BinanceTransferHistoryAdmin(admin.ModelAdmin):
     list_display = ['type', 'amount', 'coin', 'status', 'date', 'address', 'tx_id']
     list_filter = ['status', 'type']
     search_fields = ['address', 'coin']
@@ -71,5 +71,3 @@ class BinanceWalletAdmin(admin.ModelAdmin):
     def get_usdt_value(self, binance_wallet: models.BinanceWallet):
         return get_price(coin=binance_wallet.asset, side=BUY) * binance_wallet.free
     get_usdt_value.short_description = 'USDT_Value'
-
-
