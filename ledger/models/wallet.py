@@ -28,7 +28,7 @@ class Wallet(models.Model):
     )
 
     check_balance = models.BooleanField(default=True)
-    balance = get_amount_field(default=Decimal(0))
+    balance = get_amount_field(default=Decimal(0), validators=())
     locked = get_amount_field(default=Decimal(0))
 
     def __str__(self):
