@@ -244,6 +244,8 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
     else:
         spread = get_spread(coin, side, value) / 100
 
+    logger.info('Calculating spread for (%s, %s, %s): %s' % (coin, side, value, spread))
+
     if raw_price:
         multiplier = 1
     else:

@@ -29,7 +29,7 @@ class CategorySpread(models.Model):
 
     spread = get_amount_field(
         default=DEFAULT_SPREAD,
-        validators=(MinValueValidator(Decimal('0.1')), MaxValueValidator(10))
+        validators=(MinValueValidator(Decimal('0.1')), MaxValueValidator(15))
     )
 
     def __str__(self):
