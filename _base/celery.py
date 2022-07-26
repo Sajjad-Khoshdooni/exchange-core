@@ -232,13 +232,21 @@ app.conf.beat_schedule = {
     },
 
     'health_alert_pending': {
-            'task': 'health.tasks.alert_pending.alert_pending',
-            'schedule': 600,
-            'options': {
-                'queue': 'celery',
-                'expire': 3600
-            }
-        },
+        'task': 'health.tasks.alert_pending.alert_pending',
+        'schedule': 600,
+        'options': {
+            'queue': 'celery',
+            'expire': 3600
+        }
+    },
+    'update_accounts_pnl': {
+        'task': 'ledger.tasks.pnl.create_pnl_histories',
+        'schedule': crontab(hour=0, minute=0),
+        'options': {
+            'queue': 'celery',
+            'expire': 60
+        }
+    },
 }
 if settings.DEBUG_OR_TESTING:
     app.conf.beat_schedule = {

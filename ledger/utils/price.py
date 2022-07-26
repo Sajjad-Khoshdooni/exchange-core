@@ -101,6 +101,18 @@ def get_tether_price_irt_grpc(side: str, now: datetime = None):
     return Price(coin='USDT', price=Decimal(orders[0].price), side=side).price
 
 
+def get_avg_tether_price_irt_grpc(start_timestamp, end_timestamp):
+    grpc_client = gRPCClient()
+    response = grpc_client.get_trades_average_price_by_time(
+        min_timestamp=start_timestamp,
+        max_timestamp=end_timestamp,
+        symbol='USDTIRT',
+        exchange=NOBITEX
+    ).value
+    grpc_client.channel.close()
+    return response
+
+
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
                   now: datetime = None) -> List[Price]:
     results = []
