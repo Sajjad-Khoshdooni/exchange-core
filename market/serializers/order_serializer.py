@@ -34,13 +34,14 @@ class OrderSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        symbol, wallet = self.post_validate(validated_data)
+        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
         if validated_data['fill_type'] == Order.LIMIT:
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
         elif validated_data['fill_type'] == Order.MARKET:
             validated_data['price'] = Order.get_market_price(symbol, Order.get_opposite_side(validated_data['side']))
             if not validated_data['price']:
                 raise Exception('Empty order book')
+        wallet = self.post_validate(symbol, validated_data)
 
         try:
             with WalletPipeline() as pipeline:
@@ -59,8 +60,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         return created_order
 
-    def post_validate(self, validated_data):
-        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
+    def post_validate(self, symbol, validated_data):
         if not symbol.enable or not symbol.asset.enable:
             raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
 
