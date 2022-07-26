@@ -43,14 +43,14 @@ app.conf.beat_schedule = {
     #         'expire': 39
     #     },
     # },
-    'add_block_infos': {
-        'task': 'tracker.tasks.add_block_infos',
-        'schedule': 10,
-        'options': {
-            'queue': 'transfer',
-            'expire': 10
-        },
-    },
+    # 'add_block_infos': {
+    #     'task': 'tracker.tasks.add_block_infos',
+    #     'schedule': 10,
+    #     'options': {
+    #         'queue': 'transfer',
+    #         'expire': 10
+    #     },
+    # },
     'create_withdraw_transaction': {
         'task': 'ledger.tasks.withdraw.create_transaction_from_not_broadcasts',
         'schedule': 10,
