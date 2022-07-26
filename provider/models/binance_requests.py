@@ -29,6 +29,9 @@ class BinanceTransferHistory(models.Model):
     status = models.CharField(max_length=16, choices=((PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)))
     type = models.CharField(max_length=16, choices=((WITHDRAW, WITHDRAW), (DEPOSIT, DEPOSIT)))
 
+    def __str__(self):
+        return self.type + ' ' + self.coin
+
 
 class BinanceWallet(models.Model):
     SPOT, FUTURES = 'spot', 'futures'
@@ -39,6 +42,10 @@ class BinanceWallet(models.Model):
 
     class Meta:
         unique_together = [('asset', 'type')]
+
+    def __str__(self):
+        return self.asset + ' ' + self.type
+
 
 
 
