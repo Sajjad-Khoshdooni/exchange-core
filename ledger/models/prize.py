@@ -21,6 +21,13 @@ class Prize(models.Model):
     TRADE_PRIZE_STEP2 = 'trade_s2'
     REFERRAL_TRADE_2M_PRIZE = 'referral_trade_2m'
 
+    VERBOSE = {
+        VERIFY_PRIZE: 'احراز هویت سطح ۲',
+        TRADE_PRIZE_STEP1: 'معامله به حجم ۲ میلیون تومان',
+        TRADE_PRIZE_STEP2: 'معامله به حجم ۲۰ میلیون تومان',
+        REFERRAL_TRADE_2M_PRIZE: 'دعوت از دوستان با حجم ۲ میلیون تومان معامله',
+    }
+
     PRIZE_AMOUNTS = {
         VERIFY_PRIZE: 30_000,
         TRADE_PRIZE_STEP1: 30_000,

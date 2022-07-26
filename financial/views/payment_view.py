@@ -15,7 +15,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
     card_pan = serializers.CharField(write_only=True)
 
     def get_callback(self, payment_request: PaymentRequest):
-        return payment_request.get_gateway().get_redirect_url(payment_request)
+        return payment_request.get_gateway().get_initial_redirect_url(payment_request)
 
     def create(self, validated_data):
         amount = validated_data['amount']

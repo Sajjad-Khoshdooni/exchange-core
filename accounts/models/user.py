@@ -114,7 +114,7 @@ class User(AbstractUser):
 
     margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
 
-    show_margin = models.BooleanField(default=False, verbose_name='امکان مشاهده حساب تعهدی')
+    show_margin = models.BooleanField(default=True, verbose_name='امکان مشاهده حساب تعهدی')
     national_code_duplicated_alert = models.BooleanField(default=False, verbose_name='آیا شماره ملی تکراری است؟')
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')

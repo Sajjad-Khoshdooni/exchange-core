@@ -39,10 +39,10 @@ class ReferralTrx(models.Model):
     @staticmethod
     def get_trade_referrals(pipeline, maker_fee, taker_fee, trade_price, tether_irt, is_buyer_maker: bool):
         irt_asset = Asset.get(symbol=Asset.IRT)
-        maker_referral = ReferralTrx().init_trx(
+        maker_referral = ReferralTrx.init_trx(
             pipeline, maker_fee, trade_price, tether_irt, irt_asset=irt_asset, sell=not is_buyer_maker
         )
-        taker_referral = ReferralTrx().init_trx(
+        taker_referral = ReferralTrx.init_trx(
             pipeline, taker_fee, trade_price, tether_irt, irt_asset=irt_asset, sell=is_buyer_maker
         )
 
@@ -52,9 +52,10 @@ class ReferralTrx(models.Model):
     @staticmethod
     def get_trade_referral(pipeline: WalletPipeline, fee: FakeTrx, trade_price, tether_irt, sell: bool):
         irt_asset = Asset.get(symbol=Asset.IRT)
-        return ReferralTrx().init_trx(pipeline, fee, trade_price, tether_irt, irt_asset=irt_asset, sell=sell)
+        return ReferralTrx.init_trx(pipeline, fee, trade_price, tether_irt, irt_asset=irt_asset, sell=sell)
 
-    def init_trx(self, pipeline, fee_trx: FakeTrx, trade_price: Decimal, tether_factor: Decimal, sell: bool,
+    @classmethod
+    def init_trx(cls, pipeline, fee_trx: FakeTrx, trade_price: Decimal, tether_factor: Decimal, sell: bool,
                  irt_asset=None):
         if not fee_trx or not fee_trx.amount:
             return
@@ -68,18 +69,18 @@ class ReferralTrx(models.Model):
         system_wallet = irt_asset.get_wallet(fee_trx.receiver.account, Wallet.SPOT)
 
         real_fee_amount = fee_trx.amount * (Decimal(100) / (Decimal(100) - (
-                    Decimal(ReferralTrx.REFERRAL_MAX_RETURN_PERCENT) - Decimal(referral.owner_share_percent))))
+                Decimal(ReferralTrx.REFERRAL_MAX_RETURN_PERCENT) - Decimal(referral.owner_share_percent))))
         if sell:
             amount = real_fee_amount * tether_factor
         else:
             amount = real_fee_amount * trade_price * tether_factor
 
         trx_dict = {}
-        for receiver_type in [self.TRADER, self.REFERRER]:
+        for receiver_type in [cls.TRADER, cls.REFERRER]:
             trx_data = {
                 'sender': system_wallet,
-                'receiver': self.get_receiver(irt_asset, fee_trx, receiver_type),
-                'amount': amount * self.get_share_factor(referral, receiver_type),
+                'receiver': cls.get_receiver(irt_asset, fee_trx, receiver_type),
+                'amount': amount * cls.get_share_factor(referral, receiver_type),
                 'group_id': fee_trx.group_id,
                 'scope': Trx.COMMISSION,
             }
@@ -89,13 +90,15 @@ class ReferralTrx(models.Model):
             trx_dict[receiver_type] = FakeTrx(**trx_data)
 
         if trx_dict[ReferralTrx.TRADER]:
-            self.trader = trx_dict[ReferralTrx.TRADER].receiver.account
-            self.referral = trx_dict[ReferralTrx.TRADER].receiver.account.referred_by
-            self.group_id = trx_dict[ReferralTrx.TRADER].group_id
-            self.trader_amount = trx_dict[ReferralTrx.TRADER].amount
-            self.referrer_amount = trx_dict[ReferralTrx.REFERRER].amount
-            if self.trader_amount or self.referrer_amount:
-                return self
+            instance = cls(
+                trader=trx_dict[ReferralTrx.TRADER].receiver.account,
+                referral=trx_dict[ReferralTrx.TRADER].receiver.account.referred_by,
+                group_id=trx_dict[ReferralTrx.TRADER].group_id,
+                trader_amount=trx_dict[ReferralTrx.TRADER].amount,
+                referrer_amount=trx_dict[ReferralTrx.REFERRER].amount,
+            )
+            if instance.trader_amount or instance.referrer_amount:
+                return instance
 
     @staticmethod
     def get_receiver(irt_asset, fee_trx, receiver_type):
@@ -115,5 +118,6 @@ class ReferralTrx(models.Model):
 
     class Meta:
         constraints = [
-            CheckConstraint(check=Q(referrer_amount__gte=0, trader_amount__gte=0), name='check_market_referraltrx_amounts', ),
+            CheckConstraint(check=Q(referrer_amount__gte=0, trader_amount__gte=0),
+                            name='check_market_referraltrx_amounts', ),
         ]

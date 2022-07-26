@@ -72,7 +72,7 @@ class PayirChanel(FiatWithdraw):
 
         request_kwargs = {
             'url': url,
-            'timeout': 60,
+            'timeout': 30,
             'headers': {'Authorization': 'Bearer ' + secret('PAY_IR_TOKEN')},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -191,6 +191,9 @@ class PayirChanel(FiatWithdraw):
 
         return total_wallet_irt_value
 
+    def is_active(self):
+        return bool(config('PAY_IR_TOKEN'))
+
 
 class ZibalChanel(FiatWithdraw):
 
@@ -204,7 +207,7 @@ class ZibalChanel(FiatWithdraw):
 
         request_kwargs = {
             'url': url,
-            'timeout': 60,
+            'timeout': 30,
             'headers': {'Authorization': 'Bearer ' + secret('ZIBAL_TOKEN')},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -277,8 +280,34 @@ class ZibalChanel(FiatWithdraw):
         return mapping_status.get(status, self.PENDING)
 
     def get_estimated_receive_time(self, created: datetime):
-        request_date = created.astimezone() + timedelta(days=1)
-        return request_date.replace(microsecond=0, hour=19, minute=30)
+        request_date = created.astimezone()
+        request_time = request_date.time()
+        receive_time = request_date.replace(microsecond=0)
+
+        if is_holiday(request_date):
+            if time_in_range('0:0', '14:30', request_time):
+                receive_time = receive_time.replace(hour=15, minute=0, second=0)
+            else:
+                receive_time += timedelta(days=1)
+                receive_time.replace(hour=5, minute=0, second=0)
+        else:
+            if time_in_range('0:0', '3:0', request_time):
+                receive_time = receive_time.replace(hour=5, minute=0, second=0)
+
+            if time_in_range('3:0', '10:0', request_time):
+                receive_time = receive_time.replace(hour=11, minute=30, second=0)
+
+            elif time_in_range('10:00', '13:0', request_time):
+                receive_time = receive_time.replace(hour=14, minute=30, second=0)
+
+            elif time_in_range('13:00', '18:0', request_time):
+                receive_time = receive_time.replace(hour=19, minute=30, second=0)
+
+            else:
+                receive_time += timedelta(days=1)
+                receive_time = receive_time.replace(hour=5, minute=0, second=0)
+
+        return receive_time
 
     def get_total_wallet_irt_value(self):
         if not self.is_active():

@@ -7,7 +7,6 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 import raven
 from decouple import Csv
-from django.conf import settings
 from yekta_config import secret
 from yekta_config.config import config
 

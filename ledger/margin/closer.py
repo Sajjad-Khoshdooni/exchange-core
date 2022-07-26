@@ -219,4 +219,4 @@ class MarginCloser:
 
     def cancel_open_orders(self):
         from market.models import Order
-        Order.cancel_orders(Order.open_objects.filter(wallet__account=self.account))
+        Order.cancel_orders(Order.open_objects.filter(wallet__account=self.account, wallet__market=Wallet.MARGIN))
