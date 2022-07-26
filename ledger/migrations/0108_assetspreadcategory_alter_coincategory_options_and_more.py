@@ -6,40 +6,6 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
-def populate_asset_spread(apps, schema_editor):
-    Asset = apps.get_model('ledger', 'Asset')
-    AssetSpreadCategory = apps.get_model('ledger', 'AssetSpreadCategory')
-    CategorySpread = apps.get_model('ledger', 'CategorySpread')
-
-    usdt = AssetSpreadCategory.objects.create(name='tether')
-    stable = AssetSpreadCategory.objects.create('stable-coins')
-    popular = AssetSpreadCategory.objects.create('popular')
-    high_risk = AssetSpreadCategory.objects.create('high-risk')
-
-    coins_category = {
-        usdt: ['USDT'],
-        stable: ['USDC', 'BUSD', 'TUSD', 'TRIBE'],
-        popular: ['BTC', 'ETH', 'BNB', 'TRX', 'DOGE', 'SOL'],
-        high_risk: ['LUNA', 'LUNC']
-    }
-
-    for spread_category, coins in coins_category.items():
-        Asset.objects.filter(symbol__in=coins).update(spread_category=spread_category)
-
-    category_spreads = {
-        usdt: [Decimal('0.25'), Decimal('0.5'), Decimal('1'), Decimal('2'), Decimal('4')],
-        stable: [Decimal('0.25'), Decimal('0.5'), Decimal('1'), Decimal('2'), Decimal('4')],
-        popular: [Decimal('0.25'), Decimal('0.5'), Decimal('1'), Decimal('2'), Decimal('4')],
-        None: [Decimal('0.5'), Decimal('1'), Decimal('2'), Decimal('4'), Decimal('8')],
-        high_risk: [Decimal('1.5'), Decimal('3'), Decimal('6'), Decimal('10'), Decimal('15')],
-    }
-
-    for category, spreads in category_spreads.items():
-        for i, spread in enumerate(spreads):
-            CategorySpread.objects.create(category=category, side='buy', step=i + 1, spread=spread)
-            CategorySpread.objects.create(category=category, side='sell', step=i + 1, spread=spread)
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
