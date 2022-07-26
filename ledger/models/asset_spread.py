@@ -16,7 +16,7 @@ class AssetSpreadCategory(models.Model):
 
 class CategorySpread(models.Model):
     BUY, SELL = 'buy', 'sell'
-    SIDE_CHOICES = [(BUY, BUY), (SELL, SELL)]
+    SIDE_CHOICES = [(BUY, 'bid'), (SELL, 'ask')]
     DEFAULT_SPREAD = Decimal('0.25')
 
     category = models.ForeignKey(AssetSpreadCategory, null=True, blank=True, on_delete=models.CASCADE)
