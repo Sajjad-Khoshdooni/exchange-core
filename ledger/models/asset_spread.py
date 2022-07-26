@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.db.models import UniqueConstraint, Q
 
 from ledger.utils.fields import get_amount_field
 
@@ -36,7 +37,18 @@ class CategorySpread(models.Model):
 
     class Meta:
         unique_together = [
-            ('category', 'side', 'step')
+            ('category', 'side', 'step'),
+        ]
+
+        constraints = [
+            UniqueConstraint(
+                fields=['side', 'step'], condition=Q(category__isnull=True),
+                name='asset_spread_uniqueness_for_null_category',
+            ),
+            UniqueConstraint(
+                fields=['category', 'side', 'step'], condition=Q(category__isnull=False),
+                name='asset_spread_uniqueness_for_non_null_category',
+            ),
         ]
 
     @classmethod
