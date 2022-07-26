@@ -11,7 +11,7 @@ from accounts.models import User
 from accounts.utils.admin import url_to_admin_list
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
-    FiatWithdrawRequest, ManualTransferHistory
+    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.precision import humanize_number
@@ -260,3 +260,15 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 class ManualTransferHistoryAdmin(SimpleHistoryAdmin):
     list_display = ('created', 'asset', 'amount', 'full_fill_amount', 'deposit', 'done')
     list_filter = ('deposit', 'done')
+
+
+@admin.register(MarketingSource)
+class MarketingSourceAdmin(admin.ModelAdmin):
+    list_display = ('utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term')
+    list_filter = ('utm_source', )
+
+
+@admin.register(MarketingCost)
+class MarketingCostAdmin(admin.ModelAdmin):
+    list_display = ('source', 'date', 'cost')
+    search_fields = ('source__utm_source', )
