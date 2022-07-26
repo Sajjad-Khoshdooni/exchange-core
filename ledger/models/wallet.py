@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.db import models
-from django.db.models import CheckConstraint, Q, F
+from django.db.models import CheckConstraint, Q, F, UniqueConstraint
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
@@ -39,8 +39,15 @@ class Wallet(models.Model):
         return '%s Wallet %s [%s]' % (market_verbose, self.asset, self.account)
 
     class Meta:
-        unique_together = [('account', 'asset', 'market', 'variant')]
         constraints = [
+            UniqueConstraint(
+                fields=['account', 'asset', 'market'], condition=Q(variant__isnull=True),
+                name='uniqueness_without_variant_constraint',
+            ),
+            UniqueConstraint(
+                fields=['account', 'asset', 'market', 'variant'], condition=Q(variant__isnull=False),
+                name='uniqueness_with_variant_constraint',
+            ),
             CheckConstraint(
                 check=Q(check_balance=False) | (~Q(market='loan') & Q(balance__gte=0) & Q(balance__gte=F('locked'))) |
                       (Q(market='loan') & Q(balance__lte=0) & Q(locked=0)),
