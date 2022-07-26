@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
     symbol = serializers.CharField(source='symbol.name')
     filled_amount = serializers.SerializerMethodField()
     filled_price = serializers.SerializerMethodField()
@@ -127,6 +128,11 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_filled_amount(self, order: Order):
         return str(floor_precision(order.filled_amount, order.symbol.step_size))
+
+    def get_id(self, instance: Order):
+        if instance.stop_loss:
+            return f'sl-{instance.stop_loss_id}'
+        return str(instance.id)
 
     def get_trigger_price(self, instance: Order):
         if instance.stop_loss:
