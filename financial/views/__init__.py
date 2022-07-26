@@ -5,3 +5,4 @@ from .bank_card_view import BankCardView
 from .withdraw_view import WithdrawRequestView, WithdrawHistoryView
 from .bank_account_view import BankAccountView
 from .zibal_callback_view import ZibalCallbackView
+from .proxy_redirect_view import ProxyPaymentRedirectView

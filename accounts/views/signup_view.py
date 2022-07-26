@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from yekta_config.config import config
 
 from accounts.gamification.gamify import check_prize_achievements
 from accounts.models import User, TrafficSource, Referral
@@ -76,8 +77,12 @@ class SignupSerializer(serializers.Serializer):
         )
 
         with transaction.atomic():
+            if not config('ENABLE_MARGIN_SHOW_TO_ALL', cast=bool, default=True):
+                user.show_margin = False
+
             user.set_password(password)
             user.save()
+
             if validated_data.get('referral_code'):
                 user.account.referred_by = Referral.objects.get(code=validated_data['referral_code'])
                 user.account.save()

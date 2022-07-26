@@ -7,7 +7,6 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 import raven
 from decouple import Csv
-from django.conf import settings
 from yekta_config import secret
 from yekta_config.config import config
 
@@ -34,6 +33,8 @@ CELERY_TASK_ALWAYS_EAGER = config('CELERY_ALWAYS_EAGER', default=False)
 # Application definition
 
 INSTALLED_APPS = [
+    'admin_interface',
+    'colorfield',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -79,6 +80,8 @@ MIDDLEWARE = [
     'hijack.middleware.HijackUserMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
+
+    'utilities.middleware.SetLocaleMiddleware',
 ]
 
 # todo: fix csrf check

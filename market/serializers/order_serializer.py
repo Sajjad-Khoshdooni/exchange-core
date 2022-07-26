@@ -23,6 +23,7 @@ class OrderSerializer(serializers.ModelSerializer):
     symbol = serializers.CharField(source='symbol.name')
     filled_amount = serializers.SerializerMethodField()
     filled_price = serializers.SerializerMethodField()
+    trigger_price = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
 
     def to_representation(self, order: Order):
@@ -71,7 +72,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 raise ValidationError(_('{symbol} is not enable in margin trading').format(symbol=symbol))
 
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
-        wallet = symbol.asset.get_wallet(self.context['account'], market=market)
+        wallet = symbol.asset.get_wallet(self.context['account'], market=market, variant=self.context['variant'])
         min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
         self.validate_order_size(
             validated_data['amount'], validated_data['price'], min_order_size, symbol.base_asset.symbol
@@ -127,6 +128,10 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_filled_amount(self, order: Order):
         return str(floor_precision(order.filled_amount, order.symbol.step_size))
 
+    def get_trigger_price(self, instance: Order):
+        if instance.stop_loss:
+            return str(floor_precision(instance.stop_loss.trigger_price, instance.symbol.tick_size))
+
     def get_filled_price(self, order: Order):
         fills_amount, fills_value = self.context['trades'].get(order.id, (0, 0))
         amount = Decimal((fills_amount or 0))
@@ -138,8 +143,8 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'price', 'filled_price', 'side',
-                  'fill_type', 'status', 'market')
-        read_only_fields = ('id', 'created', 'status',)
+                  'fill_type', 'status', 'market', 'trigger_price')
+        read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},
             'price': {'required': False},

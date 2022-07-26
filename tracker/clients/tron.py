@@ -29,7 +29,12 @@ def get_tron_client(network='mainnet') -> Tron:
                         'd69566b0-4604-49b5-8066-d7441b3210ff',
                         'edaa9d8d-0649-4425-910e-f15a1ca7632c',
                         'c6acfd07-cd72-4e33-bc69-550dcb7d7eba',
-                        '1511f05b-a6cd-4ecd-a050-68c45b063a62']:
+                        '1511f05b-a6cd-4ecd-a050-68c45b063a62',
+
+                        'efb4acbb-2502-4ded-9083-fc9d86c10570',
+                        '580cd15d-52fe-4516-af00-c84a4e176f83',
+                        '8d510db0-a84d-47a1-9ad2-d65154792890'
+                        ]:
             provider = HTTPProvider(endpoint_uri=conf_for_name(network), api_key=api_key,)
             _trons.append(Tron(provider=provider))
         _tron_proxy = TronProxy(_trons)
