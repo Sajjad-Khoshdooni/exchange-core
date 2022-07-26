@@ -77,7 +77,7 @@ class OrderSerializer(serializers.ModelSerializer):
         self.validate_order_size(
             validated_data['amount'], validated_data['price'], min_order_size, symbol.base_asset.symbol
         )
-        return symbol, wallet
+        return wallet
 
     @staticmethod
     def post_validate_amount(symbol: PairSymbol, amount: Decimal):
