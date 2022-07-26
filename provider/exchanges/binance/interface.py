@@ -185,7 +185,7 @@ class BinanceSpotHandler:
 
         for element in response:
             tx_id = element.get('txId', None)
-            binance_id = element.get('Id', None)
+            binance_id = element.get('id', None)
             address = element['address']
             amount = element['amount']
             coin = element['coin']
