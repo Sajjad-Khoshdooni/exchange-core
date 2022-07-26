@@ -13,6 +13,9 @@ class AssetSpreadCategory(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name = verbose_name_plural = 'دسته‌بندی اسپرید'
+
 
 class CategorySpread(models.Model):
     BUY, SELL = 'buy', 'sell'
@@ -36,6 +39,8 @@ class CategorySpread(models.Model):
         return '%s %s step: %s = %s' % (self.category, self.side, self.step, self.spread)
 
     class Meta:
+        verbose_name = verbose_name_plural = 'اسپرید'
+
         unique_together = [
             ('category', 'side', 'step'),
         ]
