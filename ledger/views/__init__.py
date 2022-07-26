@@ -1,5 +1,5 @@
 from .asset_info_view import AssetsViewSet, AssetOverviewAPIView
-from .wallet_view import WalletViewSet, WalletBalanceView, BriefNetworkAssetsView, ConvertDust
+from .wallet_view import WalletViewSet, WalletBalanceView, BriefNetworkAssetsView, ConvertDustView
 from .deposit_address_view import DepositAddressView
 from .otc_trade_view import OTCTradeRequestView, OTCTradeView, OTCInfoView
 from .margin_view import MarginInfoView, AssetMarginInfoView, MarginTransferViewSet, MarginLoanViewSet, \
