@@ -86,6 +86,12 @@ class OrderAdmin(admin.ModelAdmin):
     readonly_fields = ('wallet', 'symbol')
 
 
+@admin.register(CancelRequest)
+class CancelRequestAdmin(admin.ModelAdmin):
+    list_display = ('created', 'order')
+    readonly_fields = ('order',)
+
+
 @admin.register(Trade)
 class TradeAdmin(admin.ModelAdmin):
     list_display = ('created', 'symbol', 'amount', 'price', 'gap_revenue', 'hedge_price', 'side', 'trade_source', 'irt_value', 'account')

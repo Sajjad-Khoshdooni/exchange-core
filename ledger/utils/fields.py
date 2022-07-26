@@ -16,12 +16,13 @@ PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 AMOUNT_PRECISION = 8
 
 
-def get_amount_field(default: Decimal = None, max_digits: int = None, decimal_places: int = None, null: bool = False):
+def get_amount_field(default: Decimal = None, max_digits: int = None, decimal_places: int = None, null: bool = False,
+                     validators: tuple = (MinValueValidator(0), )):
 
     kwargs = {
         'max_digits': max_digits or 30,
         'decimal_places': decimal_places or AMOUNT_PRECISION,
-        'validators': [MinValueValidator(0)],
+        'validators': validators,
         'blank': null,
         'null': null,
     }
@@ -75,7 +76,7 @@ class SerializerDecimalField(serializers.DecimalField):
         if not isinstance(data, Decimal):
             data = Decimal(str(data).strip())
 
-        return str(normalize_fraction(data))
+        return '{:f}'.format(normalize_fraction(data))
 
 
 @cache_for(time=600)

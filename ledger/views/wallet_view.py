@@ -14,6 +14,9 @@ from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.price import get_trading_price_irt, BUY, SELL
 from ledger.utils.price_manager import PriceManager
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AssetListSerializer(serializers.ModelSerializer):
@@ -111,7 +114,7 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     def get_can_deposit(self, asset: Asset):
         network_asset = NetworkAsset.objects.filter(asset=asset, network__can_deposit=True).first()
-        return network_asset and network_asset.can_deposit()
+        return network_asset and network_asset.can_deposit_enabled()
 
     def get_can_withdraw(self, asset: Asset):
         return NetworkAsset.objects.filter(
@@ -159,7 +162,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return network_asset.network.address_regex
 
     def get_can_deposit(self, network_asset: NetworkAsset):
-        return network_asset.can_deposit()
+        return network_asset.can_deposit_enabled()
 
     def get_can_withdraw(self, network_asset: NetworkAsset):
         return network_asset.network.can_withdraw and network_asset.binance_withdraw_enable
@@ -191,10 +194,10 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
         account = self.context['request'].user.account
 
-        deposit_addresses = DepositAddress.objects.filter(account_secret__account=account)
+        deposit_addresses = DepositAddress.objects.filter(address_key__account=account)
 
         address_mapping = {
-            deposit.network.symbol: deposit.presentation_address for deposit in deposit_addresses
+            deposit.network.symbol: deposit.address for deposit in deposit_addresses
         }
 
         serializer = NetworkAssetSerializer(network_assets, many=True, context={
@@ -211,8 +214,7 @@ class WalletViewSet(ModelViewSet):
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-
-        wallets = Wallet.objects.filter(account=self.request.user.account, market=Wallet.SPOT)
+        wallets = Wallet.objects.filter(account=self.request.user.account, market=Wallet.SPOT, variant__isnull=True)
         ctx['asset_to_wallet'] = {wallet.asset_id: wallet for wallet in wallets}
         ctx['enable_irt_market_list'] = get_irt_market_asset_symbols()
         return ctx
@@ -311,7 +313,7 @@ class WalletSerializer(serializers.ModelSerializer):
         fields = ('asset', 'free',)
 
 
-class ConvertDust(APIView):
+class ConvertDustView(APIView):
 
     def post(self, *args):
         account = self.request.user.account
@@ -319,7 +321,8 @@ class ConvertDust(APIView):
         spot_wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT, balance__gt=0).exclude(asset=IRT)
 
         for wallet in spot_wallets:
-            if Decimal(0) < wallet.get_free_irt() < Decimal('10000'):
+            if Decimal(0) < wallet.get_free_irt() < Decimal('100000'):
+                logger.info('Converting dust %s' % wallet)
 
                 request = OTCRequest.new_trade(
                     account=account,
@@ -331,5 +334,6 @@ class ConvertDust(APIView):
                 )
 
                 OTCTrade.execute_trade(request, force=True)
+
         return Response({'msg': 'convert_dust success'}, status=status.HTTP_200_OK)
 

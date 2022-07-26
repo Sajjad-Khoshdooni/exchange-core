@@ -8,6 +8,7 @@ from yekta_config.config import config
 
 from accounts.models import Account
 from market.models import PairSymbol
+from market.models.order import CancelOrder
 from trader.bots.utils import random_buy, random_sell
 
 logger = logging.getLogger(__name__)
@@ -39,4 +40,8 @@ def random_trade(symbol: PairSymbol, account):
     logger.info('random trading %s' % symbol)
 
     random_func = random.choices([random_buy, random_sell])[0]
-    random_func(symbol, account)
+
+    try:
+        random_func(symbol, account)
+    except CancelOrder as e:
+        logger.info(e)

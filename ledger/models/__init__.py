@@ -1,4 +1,4 @@
-from .account_secret import AccountSecret
+from .address_key import AddressKey
 from .balance_lock import BalanceLock
 from .wallet import Wallet
 from .asset import Asset
@@ -14,3 +14,4 @@ from .prize import Prize
 from .address_book import AddressBook
 from .coin_category import CoinCategory
 from .margin import MarginTransfer, MarginLoan, CloseRequest
+from .pnl import PNLHistory

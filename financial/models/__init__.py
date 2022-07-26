@@ -6,3 +6,4 @@ from .zarinpal_gateway import ZarinpalGateway
 from .withdraw_request import FiatWithdrawRequest
 from .paydotir_gateway import PaydotirGateway
 from .zibal_gateway import ZibalGateway
+from .manual_transfer_history import ManualTransferHistory

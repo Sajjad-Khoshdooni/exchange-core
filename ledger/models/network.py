@@ -2,7 +2,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from accounts.models import Account
-from ledger.models import DepositAddress, AccountSecret
+from ledger.models.deposit_address import DepositAddress
 
 
 class Network(models.Model):
@@ -26,12 +26,7 @@ class Network(models.Model):
     need_memo = models.BooleanField(default=False)
 
     def get_deposit_address(self, account: Account) -> DepositAddress:
-        account_secret, _ = AccountSecret.objects.get_or_create(account=account)
-
-        try:
-            return DepositAddress.objects.get(network=self, account_secret=account_secret)
-        except DepositAddress.DoesNotExist:
-            return DepositAddress.new_deposit_address(account=account, network=self)
+        return DepositAddress.get_deposit_address(account=account, network=self)
 
     def __str__(self):
         return self.symbol

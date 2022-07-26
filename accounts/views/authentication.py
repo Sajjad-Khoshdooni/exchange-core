@@ -39,6 +39,8 @@ class CustomTokenAuthentication(TokenAuthentication):
     def authenticate_credentials(self, key, request):
         model = self.get_model()
         request_ip = get_client_ip(request=request)
+        print('request_ip', request_ip)
+
         try:
             token = model.objects.select_related('user').get(key=key, ip_list__contains=[request_ip])
 

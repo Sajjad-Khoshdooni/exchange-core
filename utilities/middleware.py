@@ -12,4 +12,5 @@ class SetLocaleMiddleware:
             activate(settings.LANGUAGE_CODE)
 
         response = self.get_response(request)
+
         return response
