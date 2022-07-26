@@ -439,5 +439,5 @@ class CategorySpreadAdmin(admin.ModelAdmin):
     list_display = ('category', 'side', 'step', 'spread')
     list_editable = ('side', 'step', 'spread')
     ordering = ('category', 'side', 'step')
-    list_filter = ('category', 'buy', 'step')
+    list_filter = ('category', 'side', 'step')
 
