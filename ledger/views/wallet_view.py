@@ -14,6 +14,9 @@ from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.price import get_trading_price_irt, BUY, SELL
 from ledger.utils.price_manager import PriceManager
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AssetListSerializer(serializers.ModelSerializer):
@@ -310,7 +313,7 @@ class WalletSerializer(serializers.ModelSerializer):
         fields = ('asset', 'free',)
 
 
-class ConvertDust(APIView):
+class ConvertDustView(APIView):
 
     def post(self, *args):
         account = self.request.user.account
@@ -319,6 +322,7 @@ class ConvertDust(APIView):
 
         for wallet in spot_wallets:
             if Decimal(0) < wallet.get_free_irt() < Decimal('100000'):
+                logger.info('Converting dust %s' % wallet)
 
                 request = OTCRequest.new_trade(
                     account=account,
@@ -330,5 +334,6 @@ class ConvertDust(APIView):
                 )
 
                 OTCTrade.execute_trade(request, force=True)
+
         return Response({'msg': 'convert_dust success'}, status=status.HTTP_200_OK)
 
