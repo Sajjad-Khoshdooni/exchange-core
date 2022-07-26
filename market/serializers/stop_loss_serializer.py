@@ -16,10 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 class StopLossSerializer(OrderSerializer):
+    id = serializers.IntegerField(read_only=True)
     symbol = serializers.CharField(source='symbol.name')
     filled_amount = serializers.SerializerMethodField()
     completed = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
+    trigger_price = serializers.DecimalField(max_digits=18, decimal_places=0)
 
     def get_completed(self, stop_loss: StopLoss):
         return stop_loss.filled_amount == stop_loss.amount

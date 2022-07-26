@@ -68,19 +68,11 @@ class Asset(models.Model):
         (HEDGE_NONE, 'none'), (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE), (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
     ])
 
-    bid_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
-        MinValueValidator(0),
-        MaxValueValidator(Decimal('0.1')),
-    ], help_text='our bid (taker sell price) = (1 - bid_diff) * binance_bid')
-
-    ask_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
-        MinValueValidator(0),
-        MaxValueValidator(Decimal('0.1')),
-    ], help_text='our ask (taker buy price) = (1 + ask_diff) * binance_ask')
-
     candidate = models.BooleanField(default=False)
 
     margin_enable = models.BooleanField(default=False)
+
+    spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.PROTECT, null=True, blank=True)
 
     new_coin = models.BooleanField(default=False)
 

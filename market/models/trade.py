@@ -230,7 +230,7 @@ class Trade(models.Model):
         config = otc_trade.otc_request.get_trade_config()
         market_symbol = f'{config.coin.symbol}{config.cash.symbol}'.upper()
         symbol = PairSymbol.get_by(name=market_symbol)
-        amount = floor_precision(config.coin_amount, symbol.step_size)
+        amount = config.coin_amount
         price = (config.cash_amount / config.coin_amount).quantize(
             precision_to_step(symbol.tick_size), rounding=ROUND_HALF_UP)
         system_wallet = symbol.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=otc_trade.otc_request.market)
