@@ -211,8 +211,7 @@ class WalletViewSet(ModelViewSet):
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-
-        wallets = Wallet.objects.filter(account=self.request.user.account, market=Wallet.SPOT)
+        wallets = Wallet.objects.filter(account=self.request.user.account, market=Wallet.SPOT, variant__isnull=True)
         ctx['asset_to_wallet'] = {wallet.asset_id: wallet for wallet in wallets}
         ctx['enable_irt_market_list'] = get_irt_market_asset_symbols()
         return ctx

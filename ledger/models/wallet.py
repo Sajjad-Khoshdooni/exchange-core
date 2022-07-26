@@ -1,4 +1,5 @@
 from decimal import Decimal
+from uuid import uuid4
 
 from django.conf import settings
 from django.db import models
@@ -31,12 +32,14 @@ class Wallet(models.Model):
     balance = get_amount_field(default=Decimal(0), validators=())
     locked = get_amount_field(default=Decimal(0))
 
+    variant = models.UUIDField(editable=False, null=True, blank=True)
+
     def __str__(self):
         market_verbose = dict(self.MARKET_CHOICES)[self.market]
         return '%s Wallet %s [%s]' % (market_verbose, self.asset, self.account)
 
     class Meta:
-        unique_together = [('account', 'asset', 'market')]
+        unique_together = [('account', 'asset', 'market', 'variant')]
         constraints = [
             CheckConstraint(
                 check=Q(check_balance=False) | (~Q(market='loan') & Q(balance__gte=0) & Q(balance__gte=F('locked'))) |
@@ -154,7 +157,6 @@ class Wallet(models.Model):
         from uuid import uuid4
 
         with WalletPipeline() as pipeline:
-
             pipeline.new_trx(
                 sender=self,
                 receiver=self.asset.get_wallet(Account.system()),
@@ -162,3 +164,76 @@ class Wallet(models.Model):
                 group_id=uuid4(),
                 scope=Trx.SEIZE
             )
+
+    def reserve_funds(self, amount: Decimal):
+        assert self.market in (Wallet.SPOT, Wallet.MARGIN)
+        assert self.variant is None  # means its not reserved wallet
+
+        from ledger.models import Trx
+
+        if self.has_balance(amount, raise_exception=True):
+            group_id = uuid4()
+            with WalletPipeline() as pipeline:
+                child_wallet = Wallet.objects.create(
+                    account=self.account,
+                    asset=self.asset,
+                    market=self.market,
+                    variant=group_id,
+                )
+                pipeline.new_trx(
+                    sender=self,
+                    receiver=child_wallet,
+                    amount=amount,
+                    group_id=group_id,
+                    scope=Trx.RESERVE
+                )
+                ReserveWallet.objects.create(
+                    sender=self,
+                    receiver=child_wallet,
+                    amount=amount,
+                    group_id=group_id
+                )
+                return group_id
+
+
+class ReserveWallet(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+
+    sender = models.ForeignKey('ledger.Wallet', on_delete=models.PROTECT, related_name='reserve_wallet')
+    receiver = models.ForeignKey('ledger.Wallet', on_delete=models.PROTECT, related_name='reserved_wallet')
+    amount = get_amount_field()
+
+    group_id = models.UUIDField(default=uuid4, db_index=True)
+
+    refund_completed = models.BooleanField(default=False)
+
+    def refund(self):
+        if self.refund_completed:
+            raise Exception('Cannot refund already refunded wallet')
+
+        with WalletPipeline() as pipeline:
+            from ledger.models import Trx
+            for child_wallet in Wallet.objects.filter(variant=self.group_id, balance__gt=0):
+                if child_wallet.locked > 0:
+                    raise Exception(f'Cannot refund wallet with locked balance {child_wallet.id} {child_wallet.locked}')
+                parent_wallet = child_wallet.asset.get_wallet(child_wallet.account, child_wallet.market)
+                pipeline.new_trx(
+                    sender=child_wallet,
+                    receiver=parent_wallet,
+                    amount=child_wallet.balance,
+                    group_id=self.group_id,
+                    scope=Trx.RESERVE
+                )
+            self.refund_completed = True
+            self.save(update_fields=['refund_completed'])
+            return True
+
+    class Meta:
+        unique_together = ('group_id', 'sender', 'receiver')
+
+    def save(self, *args, **kwargs):
+        assert self.sender.asset == self.receiver.asset
+        assert self.sender != self.receiver
+        assert self.amount > 0
+
+        return super(ReserveWallet, self).save(*args, **kwargs)

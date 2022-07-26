@@ -43,14 +43,14 @@ app.conf.beat_schedule = {
     #         'expire': 39
     #     },
     # },
-    'add_block_infos': {
-        'task': 'tracker.tasks.add_block_infos',
-        'schedule': 10,
-        'options': {
-            'queue': 'transfer',
-            'expire': 10
-        },
-    },
+    # 'add_block_infos': {
+    #     'task': 'tracker.tasks.add_block_infos',
+    #     'schedule': 10,
+    #     'options': {
+    #         'queue': 'transfer',
+    #         'expire': 10
+    #     },
+    # },
     'create_withdraw_transaction': {
         'task': 'ledger.tasks.withdraw.create_transaction_from_not_broadcasts',
         'schedule': 10,
@@ -222,6 +222,14 @@ app.conf.beat_schedule = {
             'expire': 17
         }
     },
+    'carrot_trader': {
+        'task': 'trader.tasks.carrot_trader.carrot_trader',
+        'schedule': 7,
+        'options': {
+            'queue': 'carrot_trader',
+            'expire': 7
+        }
+    },
 
     'health_alert_pending': {
         'task': 'health.tasks.alert_pending.alert_pending',
@@ -295,6 +303,14 @@ if settings.DEBUG_OR_TESTING:
             'options': {
                 'queue': 'trader-ma',
                 'expire': 17
+            }
+        },
+        'carrot_trader': {
+            'task': 'trader.tasks.carrot_trader.carrot_trader',
+            'schedule': 7,
+            'options': {
+                'queue': 'carrot_trader',
+                'expire': 7
             }
         },
     }
