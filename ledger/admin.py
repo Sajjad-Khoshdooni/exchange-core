@@ -428,4 +428,4 @@ class CoinCategoryAdmin(admin.ModelAdmin):
 @admin.register(models.AddressKey)
 class AddressKeyAdmin(admin.ModelAdmin):
     list_display = ('address', )
-    # readonly_fields = ('address', )
+    readonly_fields = ('address', )
