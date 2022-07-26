@@ -29,7 +29,7 @@ def populate_asset_spread(apps, schema_editor):
         stable: [Decimal('0.25'), Decimal('0.5'), Decimal('1'), Decimal('2'), Decimal('4')],
         popular: [Decimal('0.25'), Decimal('0.5'), Decimal('1'), Decimal('2'), Decimal('4')],
         None: [Decimal('0.5'), Decimal('1'), Decimal('2'), Decimal('4'), Decimal('8')],
-        high_risk: [Decimal('1.5'), Decimal('3'), Decimal('6'), Decimal('8'), Decimal('15')],
+        high_risk: [Decimal('1.5'), Decimal('3'), Decimal('6'), Decimal('10'), Decimal('15')],
     }
 
     for category, spreads in category_spreads.items():
