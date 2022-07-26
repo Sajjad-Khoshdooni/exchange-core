@@ -90,7 +90,7 @@ class MarginWalletViewSet(ModelViewSet):
         ctx = super().get_serializer_context()
 
         account = self.request.user.account
-        wallets = Wallet.objects.filter(account=account, market=Wallet.MARGIN)
+        wallets = Wallet.objects.filter(account=account, market=Wallet.MARGIN, variant__isnull=True)
         loans = Wallet.objects.filter(account=account, market=Wallet.LOAN)
 
         ctx['asset_to_wallet'] = {wallet.asset_id: wallet for wallet in wallets}

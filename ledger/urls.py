@@ -10,6 +10,9 @@ urlpatterns = [
 
     path('v1/networks/', views.BriefNetworkAssetsView.as_view()),
 
+    path('v1/assets/reserve/', views.ReserveWalletCreateAPIView.as_view()),
+    path('v1/assets/reserve/refund/', views.ReserveWalletRefundAPIView.as_view()),
+
     path('v1/assets/<slug:symbol>/', views.AssetsViewSet.as_view({'get': 'retrieve'})),
 
     path('v1/wallets/', views.WalletViewSet.as_view({'get': 'list'})),
