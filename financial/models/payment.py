@@ -39,7 +39,7 @@ class PaymentRequest(models.Model):
 
 
 class Payment(models.Model):
-    APP_URL = config('APP_URL')
+    APP_DEEP_LINK = config('APP_DEEP_LINK')
     PANEL_URL = config('PANEL_URL')
     SUCCESS_URL = '/checkout/success'
     FAIL_URL = '/checkout/fail'
@@ -110,7 +110,7 @@ class Payment(models.Model):
         if source == desktop:
             url = self.PANEL_URL
         else:
-            url = self.APP_URL
+            url = self.APP_DEEP_LINK
 
         if self.status == DONE:
             url += self.SUCCESS_URL
