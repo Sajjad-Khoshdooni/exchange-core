@@ -24,7 +24,7 @@ IRT = 'IRT'
 BUY, SELL = 'buy', 'sell'
 
 
-@cache_for(300)
+# @cache_for(300)
 def get_spread(coin: str, side: str, value: Decimal = None) -> Decimal:
     from ledger.models import CategorySpread, Asset
 
