@@ -7,13 +7,12 @@ from django.db.models import CheckConstraint, Q, UniqueConstraint
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
-from ledger.margin.liquidation import LiquidationEngine
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import Asset, Wallet, Trx
-from ledger.utils.price import BUY, SELL, get_trading_price_usdt
+from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field, DONE, PENDING
+from ledger.utils.price import SELL, get_trading_price_usdt
 from ledger.utils.wallet_pipeline import WalletPipeline
-from provider.models import ProviderOrder
-from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field, DONE
+
 
 
 class MarginTransfer(models.Model):
@@ -23,7 +22,7 @@ class MarginTransfer(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE)
 
-    amount = models.PositiveIntegerField()
+    amount = get_amount_field()
 
     type = models.CharField(
         max_length=2,
@@ -46,7 +45,9 @@ class MarginTransfer(models.Model):
 
             margin_info = MarginInfo.get(self.account)
 
-            if self.amount > margin_info.get_max_transferable():
+            price = get_trading_price_usdt(self.asset.symbol, SELL, raw_price=True)
+
+            if self.amount > margin_info.get_max_transferable() / price:
                 raise InsufficientBalance
         else:
             raise NotImplementedError
@@ -84,7 +85,7 @@ class MarginLoan(models.Model):
         return self.asset.get_wallet(self.account, Wallet.MARGIN)
 
     @property
-    def borrow_wallet(self) -> 'Wallet':
+    def loan_wallet(self) -> 'Wallet':
         return self.asset.get_wallet(self.account, Wallet.LOAN)
 
     @classmethod
@@ -103,7 +104,7 @@ class MarginLoan(models.Model):
             )
 
             if loan_type == cls.REPAY:
-                loan.borrow_wallet.has_debt(-amount, raise_exception=True)
+                loan.loan_wallet.has_debt(-amount, raise_exception=True)
                 loan.margin_wallet.has_balance(amount, raise_exception=True)
             else:
                 margin_info = MarginInfo.get(account)
@@ -112,18 +113,10 @@ class MarginLoan(models.Model):
                 if amount > max_borrowable:
                     raise MaxBorrowableExceeds()
 
-            ProviderOrder.try_hedge_for_new_order(
-                asset=asset,
-                side=BUY if loan_type == cls.BORROW else SELL,
-                amount=amount,
-                scope=ProviderOrder.BORROW,
-                raise_exception=True
-            )
-
             if loan_type == cls.BORROW:
-                sender, receiver = loan.borrow_wallet, loan.margin_wallet
+                sender, receiver = loan.loan_wallet, loan.margin_wallet
             else:
-                sender, receiver = loan.margin_wallet, loan.borrow_wallet
+                sender, receiver = loan.margin_wallet, loan.loan_wallet
 
             pipeline.new_trx(sender, receiver, amount, Trx.MARGIN_BORROW, loan.group_id)
 
@@ -134,7 +127,6 @@ class MarginLoan(models.Model):
 
 class CloseRequest(models.Model):
     LIQUIDATION, USER = 'liquid', 'user'
-    NEW, DONE = 'new', 'done'
 
     created = get_created_field()
     group_id = get_group_id_field()
@@ -146,19 +138,21 @@ class CloseRequest(models.Model):
         max_length=8, choices=[(LIQUIDATION, LIQUIDATION), (USER, USER)]
     )
 
-    status = models.CharField(
-        max_length=8, choices=[(NEW, NEW), (DONE, DONE)], default=NEW
-    )
+    status = get_status_field()
 
     class Meta:
         constraints = [
             CheckConstraint(check=Q(margin_level__gte=0), name='check_margin_level', ),
-            UniqueConstraint(fields=['account'], condition=Q(status='new'), name='unique_margin_close_request_account'),
+            UniqueConstraint(fields=['account'], condition=Q(status='pending'), name='unique_margin_close_request_account'),
         ]
 
     @classmethod
+    def is_liquidating(cls, account: Account) -> bool:
+        return CloseRequest.objects.filter(account=account, status=PENDING).exists()
+
+    @classmethod
     def close_margin(cls, account: Account, reason: str) -> Union['CloseRequest', None]:
-        if CloseRequest.objects.filter(account=account, status=CloseRequest.NEW):
+        if cls.is_liquidating(account):
             return
 
         margin_info = MarginInfo.get(account)
@@ -167,11 +161,12 @@ class CloseRequest(models.Model):
             account=account,
             margin_level=margin_info.get_margin_level(),
             reason=reason,
-            status=CloseRequest.NEW
+            status=PENDING
         )
 
-        engine = LiquidationEngine(close_request, margin_info)
+        from ledger.margin.closer import MarginCloser
+        engine = MarginCloser(close_request, force_liquidation=reason == cls.LIQUIDATION)
         engine.start()
 
-        close_request.status = cls.DONE
+        close_request.status = DONE
         close_request.save()

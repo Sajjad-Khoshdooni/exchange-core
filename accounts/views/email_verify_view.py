@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from accounts.gamification.gamify import check_prize_achievements
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.validators import email_validator
 from rest_framework.views import APIView
@@ -61,6 +62,8 @@ class EmailOTPVerifySerializer(serializers.ModelSerializer):
 
         user.email = code.email.lower()
         user.save()
+
+        check_prize_achievements(user.account)
 
         return user
 

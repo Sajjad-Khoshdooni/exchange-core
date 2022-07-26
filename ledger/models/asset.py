@@ -50,6 +50,9 @@ class Asset(models.Model):
     live_objects = LiveAssetManager()
     candid_objects = CandidAssetManager()
 
+    name = models.CharField(max_length=32, blank=True)
+    name_fa = models.CharField(max_length=32, blank=True)
+
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
@@ -72,19 +75,13 @@ class Asset(models.Model):
 
     hedge_method = models.CharField(max_length=32, default=HEDGE_BINANCE_FUTURE, choices=HEDGE_METHOD_CHOICE)
 
-    bid_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
-        MinValueValidator(0),
-        MaxValueValidator(Decimal('0.1')),
-    ], help_text='our bid (taker sell price) = (1 - bid_diff) * binance_bid')
-
-    ask_diff = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=4, validators=[
-        MinValueValidator(0),
-        MaxValueValidator(Decimal('0.1')),
-    ], help_text='our ask (taker buy price) = (1 + ask_diff) * binance_ask')
-
     candidate = models.BooleanField(default=False)
 
     margin_enable = models.BooleanField(default=False)
+
+    spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.PROTECT, null=True, blank=True)
+
+    new_coin = models.BooleanField(default=False)
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
@@ -101,7 +98,7 @@ class Asset(models.Model):
     def get_wallet(self, account: Account, market: str = Wallet.SPOT):
         assert market in Wallet.MARKETS
 
-        if type(account) == int:
+        if isinstance(account, int):
             account_filter = {'account_id': account}
 
             if account == SYSTEM_ACCOUNT_ID:
@@ -109,9 +106,11 @@ class Asset(models.Model):
             else:
                 account_type = Account.ORDINARY
 
-        else:
+        elif isinstance(account, Account):
             account_filter = {'account': account}
             account_type = account.type
+        else:
+            raise NotImplementedError
 
         wallet, _ = Wallet.objects.get_or_create(
             asset=self,

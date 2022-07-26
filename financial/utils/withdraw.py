@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 import requests
 from yekta_config import secret
@@ -32,7 +33,8 @@ class FiatWithdraw:
     def get_withdraw_channel(cls, channel) -> 'FiatWithdraw':
         mapping = {
             FiatWithdrawRequest.PAYIR: PayirChanel,
-            FiatWithdrawRequest.ZIBAL: ZibalChanel
+            FiatWithdrawRequest.ZIBAL: ZibalChanel,
+            FiatWithdrawRequest.ZARINPAL: ZarinpalChanel
         }
         return mapping[channel]()
 
@@ -51,6 +53,12 @@ class FiatWithdraw:
     def get_estimated_receive_time(self, created: datetime):
         raise NotImplementedError
 
+    def get_total_wallet_irt_value(self):
+        raise NotImplementedError
+
+    def is_active(self):
+        return True
+
 
 class PayirChanel(FiatWithdraw):
 
@@ -58,13 +66,13 @@ class PayirChanel(FiatWithdraw):
         return config('PAY_IR_WALLET_ID', cast=int)
 
     @classmethod
-    def collect_api(cls, path: str, method: str = 'GET', data: dict = None) -> dict:
+    def collect_api(cls, path: str, method: str = 'GET', data: dict = None, verbose: bool = False) -> dict:
 
         url = 'https://pay.ir' + path
 
         request_kwargs = {
             'url': url,
-            'timeout': 60,
+            'timeout': 30,
             'headers': {'Authorization': 'Bearer ' + secret('PAY_IR_TOKEN')},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -88,6 +96,10 @@ class PayirChanel(FiatWithdraw):
             raise TimeoutError
 
         resp_data = resp.json()
+
+        if verbose:
+            print('status', resp.status_code)
+            print('data', resp_data)
 
         if not resp.ok or not resp_data['success']:
             raise ServerError
@@ -168,6 +180,20 @@ class PayirChanel(FiatWithdraw):
 
         return receive_time
 
+    def get_total_wallet_irt_value(self):
+        resp = self.collect_api(
+            path='/api/v2/wallets'
+        )
+
+        total_wallet_irt_value = 0
+        for wallet in resp['wallets']:
+            total_wallet_irt_value += Decimal(wallet['balance'])
+
+        return total_wallet_irt_value
+
+    def is_active(self):
+        return bool(config('PAY_IR_TOKEN', ''))
+
 
 class ZibalChanel(FiatWithdraw):
 
@@ -181,7 +207,7 @@ class ZibalChanel(FiatWithdraw):
 
         request_kwargs = {
             'url': url,
-            'timeout': 60,
+            'timeout': 30,
             'headers': {'Authorization': 'Bearer ' + secret('ZIBAL_TOKEN')},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -254,5 +280,54 @@ class ZibalChanel(FiatWithdraw):
         return mapping_status.get(status, self.PENDING)
 
     def get_estimated_receive_time(self, created: datetime):
-        request_date = created.astimezone() + timedelta(days=1)
-        return request_date.replace(microsecond=0, hour=19, minute=30)
+        request_date = created.astimezone()
+        request_time = request_date.time()
+        receive_time = request_date.replace(microsecond=0)
+
+        if is_holiday(request_date):
+            if time_in_range('0:0', '14:30', request_time):
+                receive_time = receive_time.replace(hour=15, minute=0, second=0)
+            else:
+                receive_time += timedelta(days=1)
+                receive_time.replace(hour=5, minute=0, second=0)
+        else:
+            if time_in_range('0:0', '3:0', request_time):
+                receive_time = receive_time.replace(hour=5, minute=0, second=0)
+
+            if time_in_range('3:0', '10:0', request_time):
+                receive_time = receive_time.replace(hour=11, minute=30, second=0)
+
+            elif time_in_range('10:00', '13:0', request_time):
+                receive_time = receive_time.replace(hour=14, minute=30, second=0)
+
+            elif time_in_range('13:00', '18:0', request_time):
+                receive_time = receive_time.replace(hour=19, minute=30, second=0)
+
+            else:
+                receive_time += timedelta(days=1)
+                receive_time = receive_time.replace(hour=5, minute=0, second=0)
+
+        return receive_time
+
+    def get_total_wallet_irt_value(self):
+        if not self.is_active():
+            return 0
+
+        resp = self.collect_api(
+            path='/v1/wallet/list'
+        )
+
+        total_wallet_irt_value = 0
+        for wallet in resp:
+            total_wallet_irt_value += Decimal(wallet['balance'])
+
+        return total_wallet_irt_value
+
+    def is_active(self):
+        return bool(config('ZIBAL_TOKEN', ''))
+
+
+class ZarinpalChanel(FiatWithdraw):
+
+    def get_total_wallet_irt_value(self):
+        return 0

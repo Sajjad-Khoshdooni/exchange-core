@@ -10,8 +10,8 @@ from accounts.models import Account
 from ledger.exceptions import HedgeError
 from ledger.models import Asset, Wallet
 from ledger.utils.fields import get_amount_field
+from ledger.utils.precision import floor_precision
 from ledger.utils.price import get_trading_price_usdt, SELL
-
 
 logger = logging.getLogger(__name__)
 
@@ -50,15 +50,24 @@ class ProviderOrder(models.Model):
         choices=SCOPE_CHOICES,
     )
 
+    hedge_amount = get_amount_field(default=Decimal(0))
+
     # caller_id = models.PositiveIntegerField(null=True, blank=True)
 
     @classmethod
-    def new_order(cls, asset: Asset, side: str, amount: Decimal, scope: str, market: str = FUTURE) -> 'ProviderOrder':
-        handler = asset.get_hedger()
+    def new_order(cls, asset: Asset, side: str, amount: Decimal, scope: str, market: str = FUTURE,
+                  hedge_amount: Decimal = 0) -> 'ProviderOrder':
 
+        handler = asset.get_hedger()
         with transaction.atomic():
             order = ProviderOrder.objects.create(
-                asset=asset, amount=amount, side=side, scope=scope, market=market, exchange=asset.hedge_method
+                asset=asset,
+                amount=amount,
+                side=side,
+                scope=scope,
+                market=market,
+                hedge_amount=hedge_amount,
+                exchange=asset.hedge_method
             )
 
             symbol = handler.get_trading_symbol(asset.symbol)
@@ -160,7 +169,20 @@ class ProviderOrder(models.Model):
                 return True
 
             if not dry_run:
-                order = cls.new_order(asset, side, order_amount, scope, market=market)
+                if market == cls.SPOT and side == cls.SELL:
+                    balance_map = handler.get_free_dict()
+                    balance = balance_map[asset.symbol]
+
+                    if balance < order_amount:
+                        diff = order_amount - balance
+
+                        if diff * price < 10:
+                            order_amount = floor_precision(balance, round_digits)
+
+                        if order_amount * price < 10:
+                            return True
+
+                order = cls.new_order(asset, side, order_amount, scope, market=market, hedge_amount=hedge_amount)
 
                 if not order and raise_exception:
                     raise HedgeError

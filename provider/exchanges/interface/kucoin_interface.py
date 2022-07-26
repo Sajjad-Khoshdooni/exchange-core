@@ -58,8 +58,9 @@ class KucoinSpotHandler(ExchangeHandler):
         return self.collect_api(url=self.order_url, data=data) or {}
 
     def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal, fee_amount: Decimal,
-                 address_tag: str = None,
-                 client_id: str = None) -> dict:
+                 address_tag: str = None, client_id: str = None) -> dict:
+
+        # todo: add memo variant
 
         amount = decimal_to_str(Decimal(transfer_amount) + Decimal(fee_amount))
 

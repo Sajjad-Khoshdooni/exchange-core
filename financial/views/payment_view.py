@@ -15,7 +15,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
     card_pan = serializers.CharField(write_only=True)
 
     def get_callback(self, payment_request: PaymentRequest):
-        return payment_request.get_gateway().get_redirect_url(payment_request)
+        return payment_request.get_gateway().get_initial_redirect_url(payment_request)
 
     def create(self, validated_data):
         amount = validated_data['amount']
@@ -28,7 +28,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
             raise ValidationError({'card_pan': 'شماره کارت تایید نشده است.'})
 
         from financial.models import Gateway
-        gateway = Gateway.get_active()
+        gateway = Gateway.get_active(user)
 
         try:
             return gateway.create_payment_request(bank_card=bank_card, amount=amount)

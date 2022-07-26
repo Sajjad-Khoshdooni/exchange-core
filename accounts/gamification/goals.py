@@ -164,3 +164,15 @@ class SetEmailGoal(Goal):
 
     def get_progress(self):
         return bool(self.account.user.email)
+
+
+class RedeemPrize(Goal):
+    type = Goal.BOOL
+    name = 'redeem_prize'
+    title = 'دریافت جایزه'
+    link = '/account/tasks'
+    description = 'جایزه‌ای به شما تعلق گرفت. برای دریافت آن کلیک کنید.'
+    alert_level = Notification.WARNING
+
+    def get_progress(self):
+        return False

@@ -96,7 +96,7 @@ class TransferCreator:
                     Transfer.objects.create(
                         status=Transfer.PENDING,
                         deposit_address=deposit_address,
-                        wallet=trx_data.asset.get_wallet(deposit_address.account_secret.account),
+                        wallet=trx_data.asset.get_wallet(deposit_address.account.account),
                         network=self.network,
                         amount=trx_data.amount,
                         deposit=True,

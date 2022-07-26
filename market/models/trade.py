@@ -1,19 +1,20 @@
 import logging
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
 from django.db import models
-from django.db.models import F, CheckConstraint, Q
+from django.db.models import F, CheckConstraint, Q, Sum, Max, Min
+from django.utils import timezone
 
 from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Trx, OTCTrade, Asset
 from ledger.models.trx import FakeTrx
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, precision_to_step
-from ledger.utils.price import get_tether_irt_price, BUY
+from ledger.utils.price import get_tether_irt_price, BUY, get_trading_price_irt, get_trading_price_usdt, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
 
@@ -29,6 +30,15 @@ class FillOrderTrxs:
 
 
 class Trade(models.Model):
+    OTC = 'otc'
+    SYSTEM = 'system'
+    SYSTEM_MAKER = 'sys-make'
+    SYSTEM_TAKER = 'sys-take'
+    MARKET = 'market'
+
+    SOURCE_CHOICES = ((OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'), (SYSTEM_MAKER, SYSTEM_MAKER),
+                      (SYSTEM_TAKER, SYSTEM_TAKER))
+
     created = models.DateTimeField(auto_now_add=True)
     symbol = models.ForeignKey(PairSymbol, on_delete=models.CASCADE)
 
@@ -47,10 +57,6 @@ class Trade(models.Model):
     fee_amount = get_amount_field()
 
     irt_value = models.PositiveIntegerField()
-    OTC = 'otc'
-    SYSTEM = 'system'
-    MARKET = 'market'
-    SOURCE_CHOICES = ((OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'))
 
     trade_source = models.CharField(
         max_length=8,
@@ -58,6 +64,9 @@ class Trade(models.Model):
         db_index=True,
         default=MARKET
     )
+
+    hedge_price = get_amount_field(null=True)
+    gap_revenue = get_amount_field(null=True, default=Decimal(0))
 
     TradesPair = namedtuple("TradesPair", "maker taker")
 
@@ -84,7 +93,8 @@ class Trade(models.Model):
         self.base_amount = trade_trxs.base.amount
         self.fee_amount = trade_trxs.maker_fee.amount if self.is_maker else trade_trxs.taker_fee.amount
 
-    def create_trade_trxs(self, pipeline: WalletPipeline, taker_order: Order, ignore_fee=False, fake_trade: bool = False) -> FillOrderTrxs:
+    def create_trade_trxs(self, pipeline: WalletPipeline, taker_order: Order, ignore_fee=False,
+                          fake_trade: bool = False) -> FillOrderTrxs:
         trade_trx = self._create_trade_trx(pipeline, taker_order, fake=fake_trade)
         base_trx = self._create_base_trx(pipeline, taker_order, fake=fake_trade)
 
@@ -174,7 +184,7 @@ class Trade(models.Model):
         return FakeTrx(**trx_data)
 
     @classmethod
-    def get_last(cls, symbol: 'PairSymbol', max_datetime=None):
+    def get_last(cls, symbol, max_datetime=None):
         qs = cls.objects.filter(symbol=symbol).exclude(trade_source=cls.OTC).order_by('-id')
         if max_datetime:
             qs = qs.filter(created__lte=max_datetime)
@@ -198,17 +208,29 @@ class Trade(models.Model):
                 "max(price) as high, min(price) as low, "
                 "sum(amount) as volume, "
                 "(date_trunc('seconds', (created - (timestamptz 'epoch' - interval '30 min')) / %s) * %s + (timestamptz 'epoch' - interval '30 min')) as tf "
-                "from market_trade where symbol_id = %s and side = 'buy' and created between %s and %s group by tf order by tf",
+                "from market_trade where symbol_id = %s and side = 'buy' and trade_source != 'otc' and created between %s and %s group by tf order by tf",
                 [interval_in_secs, interval_in_secs, symbol_id, start, end]
             )
         ]
+
+    @staticmethod
+    def get_interval_top_prices(symbol_ids=None, min_datetime=None):
+        min_datetime = min_datetime or (timezone.now() - timedelta(seconds=30))
+        market_top_prices = defaultdict(lambda: Decimal())
+        symbol_filter = {'symbol_id__in': symbol_ids} if symbol_ids else {}
+        for depth in Trade.objects.filter(**symbol_filter, created__gte=min_datetime).values('symbol', 'side').annotate(
+                max_price=Max('price'), min_price=Min('price')):
+            market_top_prices[
+                (depth['symbol'], depth['side'])
+            ] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) or Decimal()
+        return market_top_prices
 
     @classmethod
     def create_for_otc_trade(cls, otc_trade: 'OTCTrade', pipeline: WalletPipeline):
         config = otc_trade.otc_request.get_trade_config()
         market_symbol = f'{config.coin.symbol}{config.cash.symbol}'.upper()
         symbol = PairSymbol.get_by(name=market_symbol)
-        amount = floor_precision(config.coin_amount, symbol.step_size)
+        amount = config.coin_amount
         price = (config.cash_amount / config.coin_amount).quantize(
             precision_to_step(symbol.tick_size), rounding=ROUND_HALF_UP)
         system_wallet = symbol.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=otc_trade.otc_request.market)
@@ -289,19 +311,66 @@ class Trade(models.Model):
             irt_value=irt_value,
             **kwargs
         )
+
+        taker_trade = cls(
+            symbol=symbol,
+            order=taker_order,
+            account=taker_order.wallet.account,
+            side=taker_order.side,
+            is_maker=False,
+            trade_source=trade_source,
+            amount=amount,
+            price=price,
+            irt_value=irt_value,
+            **kwargs
+        )
+
+        maker_trade.set_gap_revenue()
+        taker_trade.set_gap_revenue()
+
         maker_trade.taker_order = taker_order
+
         return cls.TradesPair(
             maker=maker_trade,
-            taker=cls(
-                symbol=symbol,
-                order=taker_order,
-                account=taker_order.wallet.account,
-                side=taker_order.side,
-                is_maker=False,
-                trade_source=trade_source,
-                amount=amount,
-                price=price,
-                irt_value=irt_value,
-                **kwargs
-            )
+            taker=taker_trade,
         )
+
+    def set_gap_revenue(self):
+        self.gap_revenue = 0
+
+        if self.trade_source == self.MARKET or self.order.wallet.account.is_system():
+            return
+
+        reverse_side = BUY if self.side == SELL else SELL
+
+        base_asset = self.order.symbol.base_asset
+
+        if base_asset.symbol == Asset.IRT:
+            get_price = get_trading_price_irt
+        elif base_asset.symbol == Asset.USDT:
+            get_price = get_trading_price_usdt
+        else:
+            raise NotImplementedError
+
+        self.hedge_price = get_price(self.order.symbol.asset.symbol, side=reverse_side, raw_price=True)
+
+        if self.side == BUY:
+            gap_price = self.price - self.hedge_price
+        else:
+            gap_price = self.hedge_price - self.price
+
+        self.gap_revenue = gap_price * self.amount
+
+        if base_asset.symbol == Asset.USDT:
+            self.gap_revenue *= get_tether_irt_price(side=reverse_side)
+
+    @staticmethod
+    def get_account_orders_filled_price(account_id):
+        return {
+            trade['order_id']: (trade['sum_amount'], trade['sum_value']) for trade in
+            Trade.objects.filter(account=account_id).annotate(
+                value=F('amount') * F('price')
+            ).values('order').annotate(sum_amount=Sum('amount'), sum_value=Sum('value')).values(
+                'order_id', 'sum_amount', 'sum_value'
+            )
+        }

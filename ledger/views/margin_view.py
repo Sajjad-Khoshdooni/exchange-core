@@ -15,6 +15,7 @@ from ledger.margin.margin_info import MarginInfo
 from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet, CloseRequest
 from ledger.models.asset import CoinField
 from ledger.utils.fields import get_serializer_amount_field
+from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.price import get_trading_price_usdt, SELL
 
 
@@ -23,11 +24,21 @@ class MarginInfoView(APIView):
         account = request.user.account
         margin_info = MarginInfo.get(account)
 
+        margin_level = min(margin_info.get_margin_level(), Decimal(999))
+
+        if margin_level > 10:
+            margin_level_precision = 0
+        elif margin_level > 2:
+            margin_level_precision = 1
+        else:
+            margin_level_precision = 3
+
         return Response({
             'total_assets': round(Decimal(margin_info.total_assets), 2),
             'total_debt': round(Decimal(margin_info.total_debt), 2),
-            'margin_level': round(margin_info.get_margin_level(), 3),
+            'margin_level': round(margin_level, margin_level_precision),
             'total_equity': round(Decimal(margin_info.get_total_equity()), 2),
+            'has_position': Wallet.objects.filter(account=account, market=Wallet.LOAN, balance__lt=0).exists()
         })
 
 
@@ -43,10 +54,10 @@ class AssetMarginInfoView(APIView):
 
         price = get_trading_price_usdt(asset.symbol, SELL, raw_price=True)
         if asset.symbol != Asset.USDT:
-            price = price * Decimal('1.01')
+            price = price * Decimal('1.002')
 
         max_borrow = max(margin_info.get_max_borrowable() / price, Decimal(0))
-        max_transfer = max(margin_info.get_max_transferable() / price, Decimal(0))
+        max_transfer = min(margin_wallet.get_free(), max(margin_info.get_max_transferable() / price, Decimal(0)))
 
         return Response({
             'balance': asset.get_presentation_amount(margin_wallet.get_free()),
@@ -64,11 +75,8 @@ class MarginTransferSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
 
         asset = validated_data['asset']
-        if not user.show_margin or not asset.margin_enable:
-            raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
 
-        if not user.margin_quiz_pass_date:
-            raise ValidationError('شما باید ابتدا به سوالات معاملات تعهدی پاسخ دهید.')
+        check_margin_view_permission(user.account, asset)
 
         return super(MarginTransferSerializer, self).create(validated_data)
 
@@ -105,13 +113,12 @@ class MarginLoanSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         asset = validated_data['asset']
 
-        if not user.show_margin or not asset.margin_enable:
-            raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
-
-        if not user.margin_quiz_pass_date:
-            raise ValidationError('شما باید ابتدا به سوالات این بخش پاسخ دهید.')
+        check_margin_view_permission(user.account, asset)
 
         validated_data['loan_type'] = validated_data.pop('type')
+
+        if validated_data['amount'] <= 0:
+            raise ValidationError('مقداری بزرگتر از صفر انتخاب کنید.')
 
         try:
             return MarginLoan.new_loan(

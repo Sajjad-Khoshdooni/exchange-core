@@ -12,50 +12,60 @@ logger = logging.getLogger(__name__)
 api_key = secret('ELASTICMAIL_API_KEY')
 email_sender = config('EMAIL_SENDER')
 brand = config('BRAND')
-
+SCOPE_VERIFY_EMAIL = 'verify_email'
 SCOPE_WITHDRAW_EMAIL = 'withdraw_email'
 SCOPE_DEPOSIT_EMAIL = 'deposit_email'
 SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw_email'
-SCOPE_CANSEL_FIAT_WITHDRAW = 'cansel_fiat_withdraw_email'
+SCOPE_CANCEL_FIAT_WITHDRAW = 'cancel_fiat_withdraw_email'
 SCOPE_PAYMENT = 'payment_email'
+SCOPE_MARGIN_UNDER_LIQUIDATION = 'margin_under_liquidation'
+SCOPE_MARGIN_LIQUIDATION_FINISHED = 'margin_liquidation_finished'
 
 BRAND = config('BRAND')
 
 TEMPLATES = {
-    'verify_email': {
+    SCOPE_VERIFY_EMAIL: {
         'subject':  '{} | کد تایید ایمیل'.format(BRAND),
         'html': 'accounts/email/verify_email.min.html',
         'text': 'accounts/text/verify_email.txt',
     },
-    'withdraw_email': {
+    SCOPE_WITHDRAW_EMAIL: {
         'subject': '{} | اطلاع‌رسانی برداشت رمز ارزی'.format(BRAND),
         'html': 'accounts/email/withdraw_email.min.html',
         'text': 'accounts/text/withdraw_email.txt',
     },
-    'successful_fiat_withdraw_email': {
+    SCOPE_SUCCESSFUL_FIAT_WITHDRAW: {
         'subject': '{} | اطلاع‌رسانی برداشت ریالی'.format(BRAND),
         'html': 'accounts/email/successful_fiat_withdraw_email.min.html',
         'text': 'accounts/text/successful_fiat_withdraw_email.txt',
     },
-    'cansel_fiat_withdraw_email': {
+    SCOPE_CANCEL_FIAT_WITHDRAW: {
         'subject': '{} | اطلاع‌رسانی لغو برداشت ریالی '.format(BRAND),
-        'html': 'accounts/email/cansel_fiat_withdraw_email.min.html',
-        'text': 'accounts/text/cansel_fiat_withdraw_email.txt',
+        'html': 'accounts/email/cancel_fiat_withdraw_email.min.html',
+        'text': 'accounts/text/cancel_fiat_withdraw_email.txt',
     },
-    'deposit_email': {
+    SCOPE_DEPOSIT_EMAIL: {
         'subject': '{} | اطلاع‌رسانی واریز رمزارزی '.format(BRAND),
         'html': 'accounts/email/deposit_email.min.html',
         'text': 'accounts/text/deposit_email.txt',
     },
-    'payment_email': {
+    SCOPE_PAYMENT: {
         'subject': '{} | اطلاع‌رسانی واریز ریالی'.format(BRAND),
         'html': 'accounts/email/payment_email.min.html',
         'text': 'accounts/text/payment_email.txt',
-    }
+    },
+    SCOPE_MARGIN_LIQUIDATION_FINISHED: {
+        'subject': '{} | تسویه خودکار حساب تعهدی'.format(BRAND),
+        'html': 'accounts/email/margin_liquidation_finished.min.html',
+        'text': 'accounts/text/margin_liquidation_finished.txt',
+    },
 }
 
 
 def send_email_by_template(recipient: str, template: str, context: dict = None):
+    if not recipient:
+        return
+
     data = TEMPLATES[template]
 
     body_html = render_to_string(data['html'], context or {})

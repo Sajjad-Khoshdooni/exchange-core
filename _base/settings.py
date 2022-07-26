@@ -1,12 +1,12 @@
 import os
 import re
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 import raven
 from decouple import Csv
-from django.conf import settings
 from yekta_config import secret
 from yekta_config.config import config
 
@@ -21,9 +21,10 @@ SECRET_KEY = secret('SECRET')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', cast=bool, default=False)
+STAGING = config('STAGING', cast=bool, default=False)
 TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
-DEBUG_OR_TESTING = DEBUG or TESTING
+DEBUG_OR_TESTING = DEBUG or STAGING or TESTING
 
 HOST_URL = config('HOST_URL')
 
@@ -32,6 +33,8 @@ CELERY_TASK_ALWAYS_EAGER = config('CELERY_ALWAYS_EAGER', default=False)
 # Application definition
 
 INSTALLED_APPS = [
+    'admin_interface',
+    'colorfield',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,6 +44,7 @@ INSTALLED_APPS = [
     'raven.contrib.django.raven_compat',
     'django_admin_listfilter_dropdown',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'hijack',
     'hijack.contrib.admin',
@@ -59,6 +63,7 @@ INSTALLED_APPS = [
     'market',
     'trader',
     'jalali_date',
+    'health',
 ]
 
 MIDDLEWARE = [
@@ -74,6 +79,8 @@ MIDDLEWARE = [
     'hijack.middleware.HijackUserMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
+
+    'utilities.middleware.SetLocaleMiddleware',
 ]
 
 # todo: fix csrf check
@@ -232,6 +239,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         # 'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
 
     'DEFAULT_PERMISSION_CLASSES': [
@@ -248,6 +256,25 @@ REST_FRAMEWORK = {
         'sustained_api': '200000/day',
     }
 }
+
+SIMPLE_JWT = {
+    'ROTATE_REFRESH_TOKENS': False,
+    'AUTH_HEADER_TYPES': ('Bearer', 'JWT'),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+}
+
+if not (DEBUG or TESTING):
+    with open(config('JWT_PRIVATE_KEY_PATH', './jwtRS256.key'), 'r') as fin:
+        JWT_PRIVATE_KEY = fin.read()
+    with open(config('JWT_PUBLIC_KEY_PATH', './jwtRS256.key.pub'), 'r') as fin:
+        JWT_PUBLIC_KEY = fin.read()
+    SIMPLE_JWT = {
+        **SIMPLE_JWT,
+        'ALGORITHM': 'RS256',
+        'SIGNING_KEY': JWT_PRIVATE_KEY,
+        'VERIFYING_KEY': JWT_PUBLIC_KEY,
+        'REFRESH_TOKEN_LIFETIME': timedelta(hours=6),
+    }
 
 AUTH_USER_MODEL = 'accounts.User'
 AUTHENTICATION_BACKENDS = ('accounts.backends.AuthenticationBackend',)

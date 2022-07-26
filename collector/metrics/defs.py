@@ -13,6 +13,9 @@ METRICS = {
 
     'binance_spot_value': prom.gauge('binance_spot_value', 'binance spot value', ['currency']),
     'internal_value': prom.gauge('internal_value', 'internal value', ['currency']),
+    'fiat_irt': prom.gauge('fiat_irt', 'fiat irt', ['currency']),
+    'total_assets': prom.gauge('total_assets', 'total assets', ['currency']),
+    'exchange_assets': prom.gauge('exchange_assets', 'exchange assets', ['currency']),
 
     'binance_price_updates': prom.counter('binance_price_updates', 'binance price updates'),
 

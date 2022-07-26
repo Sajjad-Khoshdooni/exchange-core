@@ -2,9 +2,10 @@ from decimal import Decimal
 from typing import Union
 
 from django.db import models
-from django.db.models import UniqueConstraint, Q, Sum
+from django.db.models import UniqueConstraint, Q
+
 from accounts.models import User
-from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt
+from ledger.utils.price import BUY
 from ledger.utils.price_manager import PriceManager
 
 
@@ -77,22 +78,28 @@ class Account(models.Model):
 
         total = Decimal('0')
 
-        with PriceManager(fetch_all=True):
+        with PriceManager(coins=list(wallets.values_list('asset__symbol', flat=True))):
             for wallet in wallets:
                 balance = wallet.get_balance_usdt(side)
                 total += balance
 
         return total
 
-    def get_total_balance_irt(self, market: str, side: str):
+    def get_total_balance_irt(self, market: str = None, side: str = BUY):
         from ledger.models import Wallet
 
-        wallets = Wallet.objects.filter(account=self, market=market)
+        wallets = Wallet.objects.filter(account=self)
+
+        if market:
+            wallets = wallets.filter(market=market)
 
         total = Decimal('0')
 
         with PriceManager(fetch_all=True):
             for wallet in wallets:
+                if wallet.balance == 0:
+                    continue
+
                 balance = wallet.get_balance_irt(side)
                 total += balance
 

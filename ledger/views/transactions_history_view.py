@@ -3,10 +3,12 @@ from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from accounts.views.authentication import CustomTokenAuthentication
 from ledger.models import Transfer
+from wallet.utils import get_base58_address
 
 
 class TransferSerializer(serializers.ModelSerializer):
@@ -15,6 +17,7 @@ class TransferSerializer(serializers.ModelSerializer):
     fee_amount = serializers.SerializerMethodField()
     network = serializers.SerializerMethodField()
     coin = serializers.SerializerMethodField()
+    out_address = serializers.SerializerMethodField()
 
     def get_link(self, transfer: Transfer):
         return transfer.get_explorer_link()
@@ -31,15 +34,22 @@ class TransferSerializer(serializers.ModelSerializer):
     def get_network(self, transfer: Transfer):
         return transfer.network.symbol
 
+    def get_out_address(self, transfer: Transfer):
+        address = transfer.out_address
+
+        if address.startswith('41'):
+            address = get_base58_address(address)
+
+        return address
+
     class Meta:
         model = Transfer
         fields = ('created', 'amount', 'status', 'link', 'out_address', 'coin', 'network', 'trx_hash', 'fee_amount')
 
 
-
 class WithdrawHistoryView(ListAPIView):
 
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication,)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
 
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 

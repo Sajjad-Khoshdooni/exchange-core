@@ -8,13 +8,14 @@ from yekta_config.config import config
 
 from accounts.models import Account
 from market.models import PairSymbol
-from trader.bots.utils import balance_tether, random_buy, random_sell
+from market.models.order import CancelOrder
+from trader.bots.utils import random_buy, random_sell
 
 logger = logging.getLogger(__name__)
 
 
 TASK_INTERVAL = 17
-PER_PAIR_EXPECTED_TRADES_PER_SECOND = Decimal(1) / 300  # every 5 min we have at least one order
+PER_PAIR_EXPECTED_TRADES_PER_SECOND = Decimal(1) / 180  # every 3 min we have at least one order
 
 
 @shared_task(queue='random_trader')
@@ -39,4 +40,8 @@ def random_trade(symbol: PairSymbol, account):
     logger.info('random trading %s' % symbol)
 
     random_func = random.choices([random_buy, random_sell])[0]
-    random_func(symbol, account)
+
+    try:
+        random_func(symbol, account)
+    except CancelOrder as e:
+        logger.info(e)

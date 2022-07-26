@@ -149,16 +149,20 @@ class BinanceSpotHandler(ExchangeHandler):
         return self.collect_api(self.order_url, data=data, method=POST)
 
     def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal, fee_amount: Decimal,
-                 address_tag: str = None, client_id: str = None,) -> dict:
+                 address_tag: str = None, client_id: str = None, memo: str = None) -> dict:
 
-        return self.collect_api('/sapi/v1/capital/withdraw/apply', method='POST', data={
+        data = {
             'coin': coin,
             'network': network,
             'amount': decimal_to_str(Decimal(transfer_amount) + Decimal(fee_amount)),
             'address': address,
             'addressTag': address_tag,
             'withdrawOrderId': client_id
-        })
+        }
+        if memo:
+            data['addressTag'] = memo
+
+        return self.collect_api('/sapi/v1/capital/withdraw/apply', method='POST', data=data)
 
     def get_account_details(self):
         return self.collect_api('/api/v3/account', method='GET') or {}

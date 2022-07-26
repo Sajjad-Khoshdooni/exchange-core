@@ -1,15 +1,13 @@
 import logging
+from typing import Type
 
-import requests
-from django.conf import settings
-from django.db import models, transaction
-from django.urls import reverse
+from django.db import models
 
+from accounts.models import User
 from financial.models import BankCard
 from financial.models import PaymentRequest
 from financial.models.payment import Payment
-from ledger.utils.fields import DONE, CANCELED
-from ledger.utils.wallet_pipeline import WalletPipeline
+
 
 logger = logging.getLogger(__name__)
 
@@ -22,36 +20,51 @@ class Gateway(models.Model):
     BASE_URL = None
 
     ZARINPAL = 'zarinpal'
-    PAYDOTIR = 'paydotir'
+    PAYIR = 'payir'
     ZIBAL = 'zibal'
 
     name = models.CharField(max_length=128)
     type = models.CharField(
         max_length=8,
-        choices=((ZARINPAL, ZARINPAL), (PAYDOTIR, PAYDOTIR), (ZIBAL, ZIBAL))
+        choices=((ZARINPAL, ZARINPAL), (PAYIR, PAYIR), (ZIBAL, ZIBAL))
     )
     merchant_id = models.CharField(max_length=128)
     active = models.BooleanField(default=False)
+    active_for_staff = models.BooleanField(default=False)
 
     @classmethod
-    def get_active(cls) -> 'Gateway':
+    def get_active(cls, user: User) -> 'Gateway':
+        if user.is_staff:
+            gateway = Gateway.objects.filter(active_for_staff=True).order_by('id').first()
+
+            if gateway:
+                return gateway.get_concrete_gateway()
+
         gateway = Gateway.objects.filter(active=True).order_by('id').first()
 
         if gateway:
             return gateway.get_concrete_gateway()
 
-    def get_concrete_gateway(self) -> 'Gateway':
+    @classmethod
+    def get_gateway_class(cls, type: str) -> Type['Gateway']:
+        from financial.models import ZarinpalGateway, PaydotirGateway, ZibalGateway
         mapping = {
-            self.ZARINPAL: ZarinpalGateway,
-            self.PAYDOTIR: PaydotirGateway,
-            self.ZIBAL: ZibalGateway,
+            cls.ZARINPAL: ZarinpalGateway,
+            cls.PAYIR: PaydotirGateway,
+            cls.ZIBAL: ZibalGateway,
         }
 
-        self.__class__ = mapping[self.type]
+        return mapping.get(type)
 
+    def get_concrete_gateway(self) -> 'Gateway':
+        self.__class__ = self.get_gateway_class(self.type)
         return self
 
-    def get_redirect_url(self, payment_request: PaymentRequest):
+    def get_initial_redirect_url(self, payment_request: PaymentRequest):
+        return self.get_payment_url(payment_request.authority)
+
+    @classmethod
+    def get_payment_url(cls, authority: str):
         raise NotImplementedError
 
     def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:
@@ -64,189 +77,3 @@ class Gateway(models.Model):
         return self.name
 
 
-class ZarinpalGateway(Gateway):
-    BASE_URL = 'https://api.zarinpal.com'
-
-    def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:
-        resp = requests.post(
-            self.BASE_URL + '/pg/v4/payment/request.json',
-            json={
-                'merchant_id': self.merchant_id,
-                'amount': amount,
-                'currency': 'IRT',
-                'description': 'افزایش اعتبار',
-                'callback_url': settings.HOST_URL + reverse('finance:zarinpal-callback'),
-                'metadata': {"card_pan":  bank_card.card_pan}
-            }
-        )
-
-        if not resp.ok or resp.json()['data']['code'] != 100:
-            raise GatewayFailed
-
-        authority = resp.json()['data']['authority']
-
-        return PaymentRequest.objects.create(
-            bank_card=bank_card,
-            amount=amount,
-            gateway=self,
-            authority=authority
-        )
-
-    def get_redirect_url(self, payment_request: PaymentRequest):
-        return 'https://www.zarinpal.com/pg/StartPay/{}'.format(payment_request.authority)
-
-    def verify(self, payment: Payment):
-        payment_request = payment.payment_request
-
-        resp = requests.post(
-            self.BASE_URL + '/pg/v4/payment/verify.json',
-            data={
-                'merchant_id': payment_request.gateway.merchant_id,
-                'amount': payment_request.amount,
-                'authority': payment_request.authority
-            }
-        )
-
-        data = resp.json()['data']
-
-        if data['code'] == 101:
-            logger.warning('duplicate verify!', extra={'payment_id': payment.id})
-
-        if data['code'] in (100, 101):
-            with WalletPipeline() as pipeline:
-                payment.status = DONE
-                payment.ref_id = data.get('ref_id')
-                payment.ref_status = data['code']
-                payment.save()
-
-                payment.accept(pipeline)
-
-        else:
-            payment.status = CANCELED
-            payment.ref_status = data['code']
-            payment.save()
-
-    class Meta:
-        proxy = True
-
-
-class PaydotirGateway(Gateway):
-    BASE_URL = 'https://pay.ir'
-
-    def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:
-        resp = requests.post(
-            self.BASE_URL + '/pg/send',
-            json={
-                'api': self.merchant_id,
-                'amount': amount * 10,
-                'description': 'افزایش اعتبار',
-                'redirect': settings.HOST_URL + reverse('finance:paydotir-callback'),
-                'validCardNumber': bank_card.card_pan
-            }
-        )
-
-        if not resp.ok or resp.json()['status'] != 1:
-            raise GatewayFailed
-
-        authority = resp.json()['token']
-
-        return PaymentRequest.objects.create(
-            bank_card=bank_card,
-            amount=amount,
-            gateway=self,
-            authority=authority
-        )
-
-    def get_redirect_url(self, payment_request: PaymentRequest):
-        return 'https://pay.ir/pg/{}'.format(payment_request.authority)
-
-    def verify(self, payment: Payment):
-        payment_request = payment.payment_request
-
-        resp = requests.post(
-            self.BASE_URL + '/pg/verify',
-            data={
-                'api': payment_request.gateway.merchant_id,
-                'token': payment_request.authority
-            }
-        )
-
-        data = resp.json()
-
-        if data['status'] == 1:
-            with WalletPipeline() as pipeline:
-                payment.status = DONE
-                payment.ref_id = data.get('transId')
-                payment.ref_status = data['status']
-                payment.save()
-
-                payment.accept(pipeline)
-
-        else:
-            payment.status = CANCELED
-            payment.ref_status = data['status']
-            payment.save()
-
-    class Meta:
-        proxy = True
-
-
-class ZibalGateway(Gateway):
-    BASE_URL = 'https://gateway.zibal.ir'
-
-    def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:
-        resp = requests.post(
-            self.BASE_URL + '/v1/request',
-            json={
-                'merchant': self.merchant_id,
-                'amount': amount * 10,
-                'callbackUrl': settings.HOST_URL + reverse('finance:zibal-callback'),
-                'description': 'افزایش اعتبار',
-                'allowedCards': bank_card.card_pan
-            }
-        )
-
-        if resp.json()['result'] != 100:
-            raise GatewayFailed
-
-        authority = resp.json()['trackId']
-
-        return PaymentRequest.objects.create(
-            bank_card=bank_card,
-            amount=amount,
-            gateway=self,
-            authority=authority
-        )
-
-    def get_redirect_url(self, payment_request: PaymentRequest):
-        return 'https://gateway.zibal.ir/start/{}'.format(payment_request.authority)
-
-    def verify(self, payment: Payment):
-        payment_request = payment.payment_request
-
-        resp = requests.post(
-            self.BASE_URL + '/v1/verify',
-            json={
-                'merchant': payment_request.gateway.merchant_id,
-                'trackId': int(payment_request.authority)
-            }
-        )
-
-        data = resp.json()
-
-        if data['result'] == 100:
-            with WalletPipeline() as pipeline:
-                payment.status = DONE
-                payment.ref_id = data.get('refNumber')
-                payment.ref_status = data['status']
-                payment.save()
-
-                payment.accept(pipeline)
-
-        else:
-            payment.status = CANCELED
-            payment.ref_status = data['status']
-            payment.save()
-
-    class Meta:
-        proxy = True

@@ -5,10 +5,10 @@ from django.test import Client
 from django.test import TestCase
 from django.utils import timezone
 
-from accounts.models import Account
-from ledger.models import Asset, Wallet, OTCRequest, OTCTrade
+from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
+from ledger.models import Asset, Wallet, OTCRequest, OTCTrade, Trx
 from ledger.tasks import check_margin_level
-from ledger.utils.price import SELL, BUY
+from ledger.utils.price import BUY
 from ledger.utils.test import new_account, set_price
 from market.models import PairSymbol
 from market.utils import new_order
@@ -46,10 +46,9 @@ class MarginTestCase(TestCase):
 
         set_price(self.usdt, USDT_IRT_PRICE)
         set_price(self.xrp, XRP_USDT_PRICE)
+        set_price(self.btc, int(BTC_USDT_PRICE))
 
         self.btcusdt = PairSymbol.objects.get(name='BTCUSDT')
-        self.btcusdt.taker_fee = 0
-        self.btcusdt.save()
 
         self.xrpusdt = PairSymbol.objects.get(name='ADAUSDT')
         self.xrpusdt.taker_fee = 0
@@ -84,6 +83,14 @@ class MarginTestCase(TestCase):
         })
         print(resp.data)
         print(Asset.get('USDT').margin_enable, self.user.show_margin)
+        self.assertEqual(resp.status_code, check_status)
+
+    def transfer_xrp(self, amount, type: str = 'sm', check_status=201):
+        resp = self.client.post('/api/v1/margin/transfer/', {
+            'amount': amount,
+            'type': type,
+            'coin': 'ADA'
+        })
         self.assertEqual(resp.status_code, check_status)
 
     def loan(self, coin: str, amount, type: str = 'borrow', check_status=201):
@@ -206,7 +213,7 @@ class MarginTestCase(TestCase):
             from_asset=self.usdt,
             to_asset=self.xrp,
             from_amount=Decimal(3 * TO_TRANSFER_USDT),
-            allow_small_trades=True
+            allow_dust=True
         )
 
         OTCTrade.execute_trade(otc_request)
@@ -226,7 +233,8 @@ class MarginTestCase(TestCase):
         self.assertEqual(check_margin_level(), 2)
 
         self.print_wallets(self.account)
-        # self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('1.45'))  # todo: check why fails
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
+        self.assertTrue(Trx.objects.filter(receiver__account=MARGIN_INSURANCE_ACCOUNT).exists())
 
     def test_liquidate_trade_different_loan(self):
         self.pass_quiz()
@@ -243,7 +251,7 @@ class MarginTestCase(TestCase):
             from_asset=self.xrp,
             to_asset=self.usdt,
             from_amount=Decimal(loan_amount / 2),
-            allow_small_trades=True
+            allow_dust=True
         )
 
         OTCTrade.execute_trade(otc_request)
@@ -263,7 +271,8 @@ class MarginTestCase(TestCase):
         self.assertEqual(check_margin_level(), 2)
 
         self.print_wallets(self.account)
-        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('1.45'))
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
+        self.assertTrue(Trx.objects.filter(receiver__account=MARGIN_INSURANCE_ACCOUNT).exists())
 
     def test_liquidate_trade_with_open_order(self):
         self.pass_quiz()
@@ -281,7 +290,7 @@ class MarginTestCase(TestCase):
             from_asset=self.xrp,
             to_asset=self.usdt,
             from_amount=Decimal(loan_amount),
-            allow_small_trades=True
+            allow_dust=True
         )
 
         OTCTrade.execute_trade(otc_request)
@@ -299,3 +308,124 @@ class MarginTestCase(TestCase):
 
         self.assertEqual(check_margin_level(), 2)
         self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('1.5'))
+        self.assertTrue(Trx.objects.filter(receiver__account=MARGIN_INSURANCE_ACCOUNT).exists())
+
+    def test_liquidate_more_below_one(self):
+        self.pass_quiz()
+        self.transfer_usdt(TO_TRANSFER_USDT)
+
+        loan_amount = 2 * TO_TRANSFER_USDT / XRP_USDT_PRICE
+        self.loan(self.xrp.symbol, loan_amount)
+
+        self.assert_margin_info(TO_TRANSFER_USDT, 2 * TO_TRANSFER_USDT, 3 * TO_TRANSFER_USDT, Decimal('1.5'))
+        self.assertEqual(check_margin_level(), 0)
+
+        otc_request = OTCRequest.new_trade(
+            self.account,
+            market=Wallet.MARGIN,
+            from_asset=self.xrp,
+            to_asset=self.usdt,
+            from_amount=Decimal(loan_amount),
+            allow_dust=True
+        )
+
+        OTCTrade.execute_trade(otc_request)
+        usdt_wallet = self.usdt.get_wallet(self.account, market=Wallet.MARGIN)
+
+        self.assertEqual(usdt_wallet.balance, otc_request.to_amount + TO_TRANSFER_USDT)
+
+        new_order(self.btcusdt, self.account, amount=usdt_wallet.balance / BTC_USDT_PRICE, price=BTC_USDT_PRICE, side=BUY, market=Wallet.MARGIN)
+
+        new_equity = usdt_wallet.balance - 2 * TO_TRANSFER_USDT
+
+        self.assert_margin_info(new_equity, 2 * TO_TRANSFER_USDT, new_equity + 2 * TO_TRANSFER_USDT)
+
+        set_price(self.xrp, XRP_USDT_PRICE * 2)
+
+        self.assertEqual(check_margin_level(), 2)
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
+
+        self.assertTrue(Trx.objects.filter(sender__account=MARGIN_INSURANCE_ACCOUNT).exists())
+        self.assertTrue(Trx.objects.filter(receiver__account=MARGIN_INSURANCE_ACCOUNT).exists())
+
+    def test_close_request(self):
+        self.pass_quiz()
+        self.transfer_usdt(TO_TRANSFER_USDT)
+
+        loan_amount = 2 * TO_TRANSFER_USDT / BTC_USDT_PRICE
+        self.loan(self.btc.symbol, loan_amount)
+
+        otc_request = OTCRequest.new_trade(
+            self.account,
+            market=Wallet.MARGIN,
+            from_asset=self.btc,
+            to_asset=self.usdt,
+            from_amount=Decimal(loan_amount),
+            allow_dust=True
+        )
+
+        OTCTrade.execute_trade(otc_request)
+
+        resp = self.client.post('/api/v1/margin/close/')
+        self.assertEqual(resp.status_code, 201)
+
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
+
+    def test_liquidate_more_below_one_transfer_xrp(self):
+        self.pass_quiz()
+        transfer_amount = TO_TRANSFER_USDT
+        self.xrp.get_wallet(self.account).airdrop(transfer_amount)
+        self.transfer_xrp(transfer_amount)
+
+        loan_amount = 2 * transfer_amount
+        self.loan(self.xrp.symbol, loan_amount)
+
+        self.assert_margin_info(transfer_amount * XRP_USDT_PRICE, 2 * transfer_amount * XRP_USDT_PRICE, 3 * transfer_amount * XRP_USDT_PRICE, Decimal('1.5'))
+        self.assertEqual(check_margin_level(), 0)
+
+        otc_request = OTCRequest.new_trade(
+            self.account,
+            market=Wallet.MARGIN,
+            from_asset=self.xrp,
+            to_asset=self.usdt,
+            from_amount=Decimal(transfer_amount * 3),
+            allow_dust=True
+        )
+
+        OTCTrade.execute_trade(otc_request)
+
+        set_price(self.xrp, XRP_USDT_PRICE * 3)
+
+        self.assertEqual(check_margin_level(), 2)
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
+
+        self.assertTrue(Trx.objects.filter(sender__account=MARGIN_INSURANCE_ACCOUNT).exists())
+        self.assertTrue(Trx.objects.filter(receiver__account=MARGIN_INSURANCE_ACCOUNT).exists())
+
+    def test_liquidate_more_below_one_borrow_usdt(self):
+        self.pass_quiz()
+        self.transfer_usdt(TO_TRANSFER_USDT)
+
+        loan_amount = 2 * TO_TRANSFER_USDT
+        self.loan(self.usdt.symbol, loan_amount)
+
+        self.assertEqual(check_margin_level(), 0)
+
+        otc_request = OTCRequest.new_trade(
+            self.account,
+            market=Wallet.MARGIN,
+            from_asset=self.usdt,
+            to_asset=self.xrp,
+            from_amount=Decimal(TO_TRANSFER_USDT * 3),
+            allow_dust=True
+        )
+
+        OTCTrade.execute_trade(otc_request)
+
+        set_price(self.xrp, XRP_USDT_PRICE / 2)
+
+        self.assertEqual(check_margin_level(), 2)
+        self.assertGreaterEqual(self.get_margin_info()['margin_level'], Decimal('2'))
+
+        self.assertTrue(Trx.objects.filter(sender__account=MARGIN_INSURANCE_ACCOUNT).exists())
+        self.assertTrue(Trx.objects.filter(receiver__account=MARGIN_INSURANCE_ACCOUNT).exists())

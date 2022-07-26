@@ -1,5 +1,4 @@
 from decimal import Decimal
-from uuid import UUID
 
 from django.conf import settings
 from django.db import models
@@ -29,7 +28,7 @@ class Wallet(models.Model):
     )
 
     check_balance = models.BooleanField(default=True)
-    balance = get_amount_field(default=Decimal(0))
+    balance = get_amount_field(default=Decimal(0), validators=())
     locked = get_amount_field(default=Decimal(0))
 
     def __str__(self):
@@ -37,7 +36,6 @@ class Wallet(models.Model):
         return '%s Wallet %s [%s]' % (market_verbose, self.asset, self.account)
 
     class Meta:
-        unique_together = [('account', 'asset', 'market')]
         constraints = [
             CheckConstraint(
                 check=Q(check_balance=False) | (~Q(market='loan') & Q(balance__gte=0) & Q(balance__gte=F('locked'))) |
@@ -60,6 +58,9 @@ class Wallet(models.Model):
         return self.balance - self.locked
 
     def get_free_usdt(self, side: str = BUY) -> Decimal:
+        if self.get_free() == 0:
+            return Decimal(0)
+
         if self.asset.symbol == self.asset.IRT:
             tether_irt = get_tether_irt_price(side)
             return self.get_free() / tether_irt
@@ -70,6 +71,9 @@ class Wallet(models.Model):
             return self.get_free() * price
 
     def get_free_irt(self, side: str = BUY):
+        if self.get_free() == 0:
+            return Decimal(0)
+
         if self.asset.symbol == self.asset.IRT:
             return self.get_free()
 
@@ -81,23 +85,29 @@ class Wallet(models.Model):
             return free_usdt * tether_irt
 
     def get_balance_usdt(self, side: str = BUY) -> Decimal:
+        if self.balance == 0:
+            return Decimal(0)
+
         if self.asset.symbol == self.asset.IRT:
             tether_irt = get_tether_irt_price(side)
             return self.get_balance() / tether_irt
 
         price = get_trading_price_usdt(self.asset.symbol, side, raw_price=True)
 
-        if price:
+        if price is not None:
             return self.get_balance() * price
 
     def get_balance_irt(self, side: str = BUY):
+        if self.balance == 0:
+            return Decimal(0)
+
         if self.asset.symbol == self.asset.IRT:
             return self.get_balance()
 
         tether_irt = get_tether_irt_price(side)
         balance_usdt = self.get_balance_usdt()
 
-        if balance_usdt:
+        if balance_usdt is not None:
             return balance_usdt * tether_irt
 
     def has_balance(self, amount: Decimal, raise_exception: bool = False) -> bool:

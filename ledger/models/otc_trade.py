@@ -68,7 +68,7 @@ class OTCTrade(models.Model):
         return 'otc-%s' % self.id
 
     @classmethod
-    def execute_trade(cls, otc_request: OTCRequest) -> 'OTCTrade':
+    def execute_trade(cls, otc_request: OTCRequest, force: bool = False) -> 'OTCTrade':
 
         if otc_request.expired():
             raise TokenExpired()
@@ -78,13 +78,15 @@ class OTCTrade(models.Model):
         from_asset = otc_request.from_asset
         conf = otc_request.get_trade_config()
 
-        conf.coin.is_trade_amount_valid(conf.coin_amount, raise_exception=True)
+        if not force:
+            conf.coin.is_trade_amount_valid(conf.coin_amount, raise_exception=True)
 
         from_wallet = from_asset.get_wallet(account, market=otc_request.market)
         amount = otc_request.from_amount
         from_wallet.has_balance(amount, raise_exception=True)
 
-        cls.check_abrupt_decrease(otc_request)
+        if not force:
+            cls.check_abrupt_decrease(otc_request)
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             otc_trade = OTCTrade.objects.create(
@@ -132,14 +134,15 @@ class OTCTrade(models.Model):
         old_coin_price = otc_request.to_price
         new_coin_price = otc_request.get_to_price()
 
-        threshold = Decimal('0.0035')
+        rate = new_coin_price / old_coin_price - 1
+
+        threshold = Decimal('0.002')
 
         conf = otc_request.get_trade_config()
 
         if conf.side == SELL:
-            old_coin_price = 1 / old_coin_price
-            new_coin_price = 1 / new_coin_price
+            rate = -rate
 
-        if new_coin_price <= old_coin_price * (1 - threshold):
-            logger.error('otc failed because of abrupt decrease!')
+        if rate > threshold:
+            logger.error('otc failed because of abrupt change!')
             raise AbruptDecrease()

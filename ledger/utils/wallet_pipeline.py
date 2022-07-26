@@ -6,6 +6,8 @@ from uuid import UUID
 from django.db.models import F
 from django.db.transaction import Atomic
 
+from ledger.utils.fields import AMOUNT_PRECISION
+
 
 def sorted_flatten_dict(data: dict) -> list:
     if not data:
@@ -113,7 +115,11 @@ class WalletPipeline(Atomic):
         from ledger.models.trx import Trx
         assert sender.asset == receiver.asset
 
-        if amount == 0 or sender == receiver:
+        # ignore system vs system trx
+        if sender.account.is_system() and receiver.account.is_system():
+            return
+
+        if int(amount * 10 ** AMOUNT_PRECISION) == 0 or sender == receiver:
             return
 
         self._trxs.append(Trx(

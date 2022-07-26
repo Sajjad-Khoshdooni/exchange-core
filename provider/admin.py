@@ -5,7 +5,7 @@ from provider import models
 
 @admin.register(models.ProviderOrder)
 class ProviderOrderAdmin(admin.ModelAdmin):
-    list_display = ('created', 'asset', 'side', 'market', 'amount', 'order_id', 'scope')
+    list_display = ('created', 'asset', 'side', 'market', 'amount', 'order_id', 'scope', 'hedge_amount', )
     search_fields = ('asset__symbol', 'order_id')
     list_filter = ('scope', )
 
@@ -25,5 +25,5 @@ class ProviderHedgedOrderAdmin(admin.ModelAdmin):
 @admin.register(models.BinanceRequests)
 class BinanceRequestsAdmin(admin.ModelAdmin):
     list_display = ('created', 'method', 'url', 'data', 'status_code')
-    search_fields = ('url','status_code')
+    search_fields = ('url', 'status_code')
     list_filter = ('status_code', 'method',)

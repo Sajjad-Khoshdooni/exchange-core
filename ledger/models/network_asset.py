@@ -15,16 +15,10 @@ class NetworkAsset(models.Model):
     withdraw_precision = models.PositiveSmallIntegerField()
 
     hedger_withdraw_enable = models.BooleanField(default=True)
+    can_deposit = models.BooleanField(default=False)
 
-    def can_deposit(self):
-        if not self.network.can_deposit:
-            return False
-        elif self.network.symbol == 'TRX':
-            return self.asset.symbol in ('TRX', 'USDT')
-        elif self.network.symbol == 'BSC':
-            return self.asset.symbol in BEP20_SYMBOL_TO_SMART_CONTRACT
-        else:
-            return False
+    def can_deposit_enabled(self) -> bool:
+        return self.network.can_deposit and self.can_deposit
 
     def __str__(self):
         return '%s - %s' % (self.network, self.asset)

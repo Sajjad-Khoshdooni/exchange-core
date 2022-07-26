@@ -114,7 +114,7 @@ class User(AbstractUser):
 
     margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
 
-    show_margin = models.BooleanField(default=False, verbose_name='امکان مشاهده حساب تعهدی')
+    show_margin = models.BooleanField(default=True, verbose_name='امکان مشاهده حساب تعهدی')
     national_code_duplicated_alert = models.BooleanField(default=False, verbose_name='آیا شماره ملی تکراری است؟')
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
@@ -223,6 +223,10 @@ class User(AbstractUser):
     def reject_level2_if_should(self) -> bool:
 
         if self.level == User.LEVEL1 and self.verify_status == self.PENDING:
+            if User.objects.exclude(id=self.id).filter(national_code=self.national_code, level__gt=User.LEVEL1).exists():
+                self.national_code_duplicated_alert = True
+                self.change_status(User.REJECTED)
+
             level2_fields = self.get_level2_verify_fields()
             any_none = list(filter(lambda f: f is None, level2_fields))
 
@@ -258,8 +262,8 @@ class User(AbstractUser):
                     self.change_status(self.REJECTED)
 
         elif self.level == self.LEVEL1 and self.verify_status == self.PENDING:
-            self.verify_level2_if_not()
             self.reject_level2_if_should()
+            self.verify_level2_if_not()
 
         if old and old.selfie_image_verified is None and self.selfie_image_verified is False:
             Notification.send(

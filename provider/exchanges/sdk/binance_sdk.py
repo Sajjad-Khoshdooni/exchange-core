@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 TIMEOUT = 30
 
 
-if not settings.DEBUG:
+if not settings.DEBUG_OR_TESTING:
     BINANCE_SPOT_BASE_URL = "https://api.binance.com"
     BINANCE_FUTURES_BASE_URL = 'https://fapi.binance.com'
 else:
@@ -32,6 +32,14 @@ def create_binance_request_and_log(response, url: str, method: str, data: dict):
         print('resp_data')
         print(resp_data)
 
+        BinanceRequests.objects.create(
+            url=url,
+            data=data,
+            method=method,
+            response=resp_data,
+            status_code=response.status_code
+        )
+
         logger.warning(
             'binance request failed',
             extra={
@@ -43,13 +51,6 @@ def create_binance_request_and_log(response, url: str, method: str, data: dict):
             }
         )
 
-        BinanceRequests.objects.create(
-            url=url,
-            data=data,
-            method=method,
-            response=resp_data,
-            status_code=response.status_code
-        )
         return
     else:
         if method == 'POST':

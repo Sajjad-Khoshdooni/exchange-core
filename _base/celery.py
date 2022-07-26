@@ -1,7 +1,6 @@
 import os
 
 from celery import Celery
-
 # Set the default Django settings module for the 'celery' program.
 from celery.schedules import crontab
 from django.conf import settings
@@ -44,14 +43,14 @@ app.conf.beat_schedule = {
     #         'expire': 39
     #     },
     # },
-    'add_block_infos': {
-        'task': 'tracker.tasks.add_block_infos',
-        'schedule': 10,
-        'options': {
-            'queue': 'transfer',
-            'expire': 10
-        },
-    },
+    # 'add_block_infos': {
+    #     'task': 'tracker.tasks.add_block_infos',
+    #     'schedule': 10,
+    #     'options': {
+    #         'queue': 'transfer',
+    #         'expire': 10
+    #     },
+    # },
     'create_withdraw_transaction': {
         'task': 'ledger.tasks.withdraw.create_transaction_from_not_broadcasts',
         'schedule': 10,
@@ -59,6 +58,14 @@ app.conf.beat_schedule = {
             'queue': 'transfer',
             'expire': 10
         },
+    },
+    'register_address': {
+        'task': 'ledger.tasks.register_address.register_address',
+        'schedule': 30,
+        'options': {
+            'queue': 'blocklink',
+            'expire': 30
+        }
     },
     'coin_market_cap_update': {
         'task': 'collector.tasks.coin_market_cap.update_coin_market_cap',
@@ -81,6 +88,16 @@ app.conf.beat_schedule = {
             'expire': 10
         },
     },
+
+    'update_withdraws': {
+        'task': 'ledger.tasks.withdraw.update_withdraws',
+        'schedule': 10,
+        'options': {
+            'queue': 'blocklink',
+            'expire': 10
+        },
+    },
+
     'inject_tether_to_futures': {
         'task': 'provider.tasks.binance.inject_tether_to_futures',
         'schedule': 1,
@@ -172,40 +189,25 @@ app.conf.beat_schedule = {
             'expire': 5
         },
     },
-    # 'send_level_2_prize_sms': {
-    #     'task': 'accounts.tasks.send_sms.send_level_2_prize_notifs',
-    #     'schedule': crontab(hour=4, minute=30),
-    #     'options': {
-    #         'queue': 'celery',
-    #         'expire': 3600
-    #     }
-    # },
-    'send_first_fiat_deposit_sms': {
-        'task': 'accounts.tasks.send_first_fiat_deposit_notifs',
-        'schedule': crontab(hour=4, minute=30),
+
+    'retention_leads_to_signup': {
+        'task': 'accounts.tasks.retention.retention_leads_to_signup',
+        'schedule': 3600,
         'options': {
             'queue': 'celery',
             'expire': 3600
-        }
+        },
     },
 
-    'send_trade_notifs': {
-        'task': 'accounts.tasks.send_trade_notifs',
-        'schedule': crontab(hour=4, minute=30),
+    'retention_actions': {
+        'task': 'accounts.tasks.retention.retention_actions',
+        'schedule': 3600,
         'options': {
             'queue': 'celery',
             'expire': 3600
-        }
+        },
     },
 
-    # 'moving_average_trader': {
-    #     'task': 'trader.tasks.moving_average.update_all_moving_averages',
-    #     'schedule': 17,
-    #     'options': {
-    #         'queue': 'trader-ma',
-    #         'expire': 17
-    #     }
-    # },
     'update_withdraw_status': {
         'task': 'financial.tasks.withdraw.update_withdraw_status',
         'schedule': 300,
@@ -222,9 +224,17 @@ app.conf.beat_schedule = {
             'expire': 17
         }
     },
-}
 
-if settings.DEBUG:
+    'health_alert_pending': {
+            'task': 'health.tasks.alert_pending.alert_pending',
+            'schedule': 600,
+            'options': {
+                'queue': 'celery',
+                'expire': 3600
+            }
+        },
+}
+if settings.DEBUG_OR_TESTING:
     app.conf.beat_schedule = {
         'coin_market_cap_update': {
             'task': 'collector.tasks.coin_market_cap.update_coin_market_cap',

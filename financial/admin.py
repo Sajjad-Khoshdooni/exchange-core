@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.utils.safestring import mark_safe
@@ -9,15 +11,30 @@ from accounts.models import User
 from accounts.utils.admin import url_to_admin_list
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
-    FiatWithdrawRequest
+    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
+from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.precision import humanize_number
 
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'merchant_id', 'active')
-    list_editable = ('active', )
+    list_display = ('name', 'type', 'merchant_id', 'active', 'active_for_staff', 'get_total_wallet_irt_value')
+    list_editable = ('active', 'active_for_staff')
+    readonly_fields = ('get_total_wallet_irt_value',)
+
+    def get_total_wallet_irt_value(self, gateway: Gateway):
+        if not gateway.type:
+            return
+
+        channel = FiatWithdraw.get_withdraw_channel(gateway.type)
+
+        try:
+            return humanize_number(Decimal(channel.get_total_wallet_irt_value()/10))
+        except:
+            return
+
+    get_total_wallet_irt_value.short_description = 'موجودی'
 
 
 @admin.register(FiatTransaction)
@@ -45,9 +62,10 @@ class UserRialWithdrawRequestFilter(SimpleListFilter):
 
 @admin.register(FiatWithdrawRequest)
 class FiatWithdrawRequestAdmin(admin.ModelAdmin):
+
     fieldsets = (
-        ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'ref_doc',
-                                        'get_withdraw_request_receive_time', 'provider_withdraw_id')}),
+        ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'bank_account',
+         'ref_doc', 'get_withdraw_request_receive_time', 'provider_withdraw_id')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
                                       'get_withdraw_request_user_mobile')}),
         ('نظر', {'fields': ('comment',)})
@@ -55,12 +73,14 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     # list_display = ('bank_account', )
     list_filter = ('status', UserRialWithdrawRequestFilter, )
     ordering = ('-created', )
-    readonly_fields = ('amount', 'fee_amount', 'bank_account', 'created', 'get_withdraw_request_iban',
+    readonly_fields = ('created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount',
                        'get_withdraw_request_user', 'get_withdraw_request_user_mobile', 'withdraw_channel',
                        'get_withdraw_request_receive_time'
                        )
 
     list_display = ('bank_account', 'created', 'status', 'amount', 'withdraw_channel', 'ref_id')
+
+
 
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.user.get_full_name()
@@ -234,3 +254,21 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
             if user.level == User.LEVEL1 and user.verify_status == User.PENDING:
                 user.change_status(User.REJECTED)
+
+
+@admin.register(ManualTransferHistory)
+class ManualTransferHistoryAdmin(SimpleHistoryAdmin):
+    list_display = ('created', 'asset', 'amount', 'full_fill_amount', 'deposit', 'done')
+    list_filter = ('deposit', 'done')
+
+
+@admin.register(MarketingSource)
+class MarketingSourceAdmin(admin.ModelAdmin):
+    list_display = ('utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term')
+    list_filter = ('utm_source', )
+
+
+@admin.register(MarketingCost)
+class MarketingCostAdmin(admin.ModelAdmin):
+    list_display = ('source', 'date', 'cost')
+    search_fields = ('source__utm_source', )

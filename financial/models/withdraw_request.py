@@ -1,5 +1,6 @@
 import logging
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from yekta_config.config import config
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 class FiatWithdrawRequest(models.Model):
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
 
-    ZIBAL, PAYIR = 'zibal', 'payir'
+    ZIBAL, PAYIR, ZARINPAL = 'zibal', 'payir', 'zarinpal'
     CHANEL_CHOICES = ((ZIBAL, ZIBAL), (PAYIR, PAYIR))
 
     FREEZE_TIME = 3 * 60
@@ -141,7 +142,6 @@ class FiatWithdrawRequest(models.Model):
         else:
             estimated_receive_time = None
         user = self.bank_account.user
-        user_email = user.email
 
         if self.status == PENDING:
             title = 'درخواست برداشت شما به بانک ارسال گردید.'
@@ -156,7 +156,7 @@ class FiatWithdrawRequest(models.Model):
             description = ''
             level = Notification.ERROR
             template = 'withdraw-rejected'
-            email_template = email.SCOPE_CANSEL_FIAT_WITHDRAW
+            email_template = email.SCOPE_CANCEL_FIAT_WITHDRAW
         else:
             return
 
@@ -172,17 +172,16 @@ class FiatWithdrawRequest(models.Model):
             token=humanize_number(self.amount)
         )
 
-        if user_email:
-            email.send_email_by_template(
-                recipient=user_email,
-                template=email_template,
-                context={
-                    'estimated_receive_time': estimated_receive_time or None,
-                    'brand': config('BRAND'),
-                    'panel_url': config('PANEL_URL'),
-                    'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-                }
-            )
+        email.send_email_by_template(
+            recipient=user.email,
+            template=email_template,
+            context={
+                'estimated_receive_time': estimated_receive_time or None,
+                'brand': config('BRAND'),
+                'panel_url': config('PANEL_URL'),
+                'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+            }
+        )
 
     def change_status(self, new_status: str):
         if self.status == new_status:
@@ -204,6 +203,19 @@ class FiatWithdrawRequest(models.Model):
             self.save()
 
         self.alert_withdraw_verify_status()
+
+    def clean(self):
+
+        old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
+
+        if old and old.status in (FiatWithdrawRequest.DONE, FiatWithdrawRequest.CANCELED) and\
+                self.status != old.status:
+            raise ValidationError('امکان تغییر وضعیت برای این ترکانش وجود ندارد.')
+
+        if old:
+            old.change_status(self.status)
+
+        # super().save_model(request, fiat_withdraw_request, form, change)
 
     def __str__(self):
         return '%s %s' % (self.bank_account, self.amount)
