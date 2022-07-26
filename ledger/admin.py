@@ -430,13 +430,14 @@ class AddressKeyAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.AssetSpreadCategory)
-class AddressKeyAdmin(admin.ModelAdmin):
+class AssetSpreadCategoryAdmin(admin.ModelAdmin):
     list_display = ('name', )
 
 
 @admin.register(models.CategorySpread)
-class AddressKeyAdmin(admin.ModelAdmin):
+class CategorySpreadAdmin(admin.ModelAdmin):
     list_display = ('category', 'side', 'step', 'spread')
     list_editable = ('side', 'step', 'spread')
     ordering = ('category', 'side', 'step')
+    list_filter = ('category', 'buy', 'step')
 
