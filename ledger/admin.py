@@ -436,7 +436,7 @@ class AssetSpreadCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(models.CategorySpread)
 class CategorySpreadAdmin(admin.ModelAdmin):
-    list_display = ('category', 'side', 'step', 'spread')
+    list_display = ('category', 'step', 'side', 'spread')
     list_editable = ('side', 'step', 'spread')
-    ordering = ('category', 'side', 'step')
+    ordering = ('category', 'step', 'side')
     list_filter = ('category', 'side', 'step')
