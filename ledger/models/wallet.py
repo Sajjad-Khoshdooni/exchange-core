@@ -210,15 +210,20 @@ class ReserveWallet(models.Model):
     def refund(self):
         if self.refund_completed:
             raise Exception('Cannot refund already refunded wallet')
+
         with WalletPipeline() as pipeline:
             from ledger.models import Trx
-            pipeline.new_trx(
-                sender=self,
-                receiver=self.sender,
-                amount=self.receiver.balance,
-                group_id=self.group_id,
-                scope=Trx.RESERVE
-            )
+            for child_wallet in Wallet.objects.filter(variant=self.group_id, balance__gt=0):
+                if child_wallet.locked > 0:
+                    raise Exception(f'Cannot refund wallet with locked balance {child_wallet.id} {child_wallet.locked}')
+                parent_wallet = child_wallet.asset.get_wallet(child_wallet.account, child_wallet.market)
+                pipeline.new_trx(
+                    sender=child_wallet,
+                    receiver=parent_wallet,
+                    amount=child_wallet.balance,
+                    group_id=self.group_id,
+                    scope=Trx.RESERVE
+                )
             self.refund_completed = True
             self.save(update_fields=['refund_completed'])
             return True

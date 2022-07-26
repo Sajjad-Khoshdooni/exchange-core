@@ -51,6 +51,8 @@ class RefundWalletSerializer(serializers.Serializer):
             return reserve_wallet.refund()
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
+        except Exception as exp:
+            raise ValidationError(f'Refund failed with exception: {exp}')
 
     def update(self, instance, validated_data):
         pass
