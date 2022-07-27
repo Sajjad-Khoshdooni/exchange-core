@@ -72,10 +72,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if asset.symbol == Asset.IRT:
             raise ValidationError('نشانه دارایی اشتباه است.')
 
-        if 'memo' not in attrs:
-            memo = ''
-        else:
-            memo = attrs['memo']
+        memo = attrs.get('memo') or ''
 
         if not api:
             code = attrs['code']
