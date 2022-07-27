@@ -9,7 +9,7 @@ class StakeOptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StakeOption
-        fields = '__all__'
+        fields = ('asset', 'apr', 'enable')
 
 
 class StakeOptionAPIView(ListAPIView):
