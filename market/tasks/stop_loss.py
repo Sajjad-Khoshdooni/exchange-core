@@ -20,14 +20,14 @@ def handle_stop_loss():
             Order.BUY: market_top_prices[symbol_id, Order.BUY],
             Order.SELL: market_top_prices[symbol_id, Order.SELL],
         }
-        set_top_prices(symbol_id, symbol_top_prices)
+        set_top_prices(symbol_id, symbol_top_prices, scope='stoploss')
         for side in (Order.BUY, Order.SELL):
             create_needed_stop_loss_orders.apply_async(args=(symbol_id, side,), queue='stop_loss')
 
 
 @shared_task(queue='stop_loss')
 def create_needed_stop_loss_orders(symbol_id, side):
-    market_top_prices = Order.get_top_prices(symbol_id)
+    market_top_prices = Order.get_top_prices(symbol_id, scope='stoploss')
     symbol_price = market_top_prices[side]
     if not symbol_price:
         logger.info(f'Missing trade in last 30 seconds for {symbol_id}')

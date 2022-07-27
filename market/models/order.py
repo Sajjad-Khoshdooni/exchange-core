@@ -500,9 +500,9 @@ class Order(models.Model):
         return market_price
 
     @classmethod
-    def get_top_prices(cls, symbol_id):
+    def get_top_prices(cls, symbol_id, scope=''):
         from market.utils.redis import get_top_prices
-        top_prices = get_top_prices(symbol_id)
+        top_prices = get_top_prices(symbol_id, scope=scope)
         if not top_prices:
             top_prices = defaultdict(lambda: Decimal())
             for depth in Order.open_objects.filter(symbol_id=symbol_id).values('side').annotate(max_price=Max('price'),
