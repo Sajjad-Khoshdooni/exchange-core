@@ -13,7 +13,7 @@ def create_stake_revenue():
     system = Account.system()
     for stake_request in stake_requests:
         asset = stake_request.stake_option.asset
-        revenue = stake_request.amount * stake_request.stake_option.apr
+        revenue = stake_request.amount * stake_request.stake_option.apr / 100 / 365
 
         try:
             with WalletPipeline() as pipeline:

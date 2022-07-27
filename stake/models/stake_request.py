@@ -12,7 +12,6 @@ from ledger.models import Wallet, Trx
 from ledger.utils.fields import get_group_id_field, get_amount_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 from stake.models import StakeOption
-from stake.utils import change_status
 
 
 class StakeRequest(models.Model):
@@ -36,16 +35,6 @@ class StakeRequest(models.Model):
     def __str__(self):
         return self.stake_option.__str__() + ' ' + str(self.account_id)
 
-    def create_trx_for_staking(self, sender: Wallet, receiver: Wallet):
-        with WalletPipeline() as pipeline:
-            pipeline.new_trx(
-                group_id=self.group_id,
-                sender=sender,
-                receiver=receiver,
-                amount=self.amount,
-                scope=Trx.STAKE
-            )
-
     def send_email_for_staking(self, user_email: str, template: str):
         if user_email:
             email.send_email_by_template(
@@ -60,23 +49,28 @@ class StakeRequest(models.Model):
         old_status = self.status
         account = self.account
         asset = self.stake_option.asset
-        spot_wallet = asset.get_wallet(account)
-        stake_wallet = asset.get_wallet(account=account, market=Wallet.STAKE)
         user_email = account.user.email
         valid_change_status = [
             (self.PROCESS, self.PENDING), (self.PROCESS, self.CANCEL_COMPLETE),
             (self.PENDING, self.DONE), (self.PENDING, self.CANCEL_PROCESS),
             (self.DONE, self.CANCEL_PROCESS), (self.CANCEL_PROCESS, self.CANCEL_PENDING),
             (self.CANCEL_PENDING, self.CANCEL_COMPLETE),
-            ]
+        ]
+        valid_cancellation_status = [(self.PROCESS, self.CANCEL_COMPLETE), (self.CANCEL_PENDING, self.CANCEL_COMPLETE)]
 
         assert (old_status, new_status) in valid_change_status, 'invalid change_status'
 
-        if (old_status, new_status) in [(self.PROCESS, self.CANCEL_COMPLETE),
-                                        (self.CANCEL_PENDING, self.CANCEL_COMPLETE)
-                                        ]:
-            with transaction.atomic():
-                self.create_trx_for_staking(sender=stake_wallet, receiver=spot_wallet)
+        if (old_status, new_status) in valid_cancellation_status:
+            spot_wallet = asset.get_wallet(account)
+            stake_wallet = asset.get_wallet(account=account, market=Wallet.STAKE)
+            with WalletPipeline() as pipeline:
+                pipeline.new_trx(
+                    group_id=self.group_id,
+                    sender=stake_wallet,
+                    receiver=spot_wallet,
+                    amount=self.amount,
+                    scope=Trx.STAKE
+                )
                 self.status = new_status
                 self.save()
             self.send_email_for_staking(user_email=user_email, template=email.SCOPE_CANCEL_STAKE)
@@ -97,7 +91,6 @@ class StakeRequest(models.Model):
 
         else:
             self.status = new_status
-
-        self.save()
+            self.save()
 
 

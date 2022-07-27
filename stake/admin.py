@@ -16,7 +16,7 @@ class StakeOptionAdmin(admin.ModelAdmin):
 
 @admin.register(StakeRequest)
 class StakeRequestAdmin(admin.ModelAdmin):
-    list_display = ['get_stake_option_asset', 'amount', 'status', 'id']
+    list_display = ['get_stake_option_asset', 'amount', 'status']
     actions = ('stake_request_processing', 'stake_request_done',
                'stake_request_cancel_processing', 'stake_request_cancel_done',)
     readonly_fields = ('get_stake_option_asset',)
@@ -53,4 +53,4 @@ class StakeRequestAdmin(admin.ModelAdmin):
 @admin.register(StakeRevenue)
 class StakeRevenueAdmin(admin.ModelAdmin):
     list_display = ['revenue', 'stake_request']
-    pass
+

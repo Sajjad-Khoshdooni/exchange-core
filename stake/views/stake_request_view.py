@@ -2,6 +2,7 @@ from django.db import transaction
 from django.db.models import Sum
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
@@ -15,21 +16,16 @@ from stake.views.stake_option_view import StakeOptionSerializer
 
 class StakeRequestSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
-    stake_option = serializers.CharField(write_only=True)
-    stake_option_data = serializers.SerializerMethodField()
+    stake_option_id = serializers.CharField(write_only=True)
+    stake_option = StakeOptionSerializer(read_only=True)
     total_revenue = serializers.SerializerMethodField()
 
-    def get_stake_option_data(self, *args, **kwargs):
-        stake_request = args[0]
-        return StakeOptionSerializer(instance=StakeOption.objects.filter(
-            stakerequest=stake_request), many=True).data
-
-    def get_total_revenue(self, *args):
-        stake_request = args[0]
+    def get_total_revenue(self, stake_request: StakeRequest):
+        stake_request = stake_request
         return StakeRevenue.objects.filter(stake_request=stake_request).aggregate(Sum('revenue'))['revenue__sum']
 
     def validate(self, attrs):
-        stake_option = StakeOption.objects.get(id=attrs['stake_option'])
+        stake_option = StakeOption.objects.get(id=attrs['stake_option_id'])
         amount = attrs['amount']
         user = self.context['request'].user
         asset = stake_option.asset
@@ -85,27 +81,23 @@ class StakeRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StakeRequest
-        fields = ('status', 'stake_option', 'amount', 'stake_option', 'stake_option_data', 'total_revenue')
+        fields = ('status', 'stake_option', 'amount', 'stake_option_id', 'total_revenue')
 
 
 class StakeRequestAPIView(ModelViewSet):
     serializer_class = StakeRequestSerializer
-
 
     def get_queryset(self):
         return StakeRequest.objects.filter(account=self.request.user.account)
 
     def destroy(self, request, *args, **kwargs):
 
-        instance = StakeRequest.objects.get(pk=kwargs['pk'], account=self.request.user.account)
+        instance = get_object_or_404(StakeRequest, pk=kwargs['pk'], account=self.request.user.account)
 
         if instance.status == StakeRequest.PROCESS:
             instance.change_status(new_status=StakeRequest.CANCEL_COMPLETE)
 
         elif instance.status in (StakeRequest.PENDING, StakeRequest.DONE):
             instance.change_status(new_status=StakeRequest.CANCEL_PROCESS)
-
-        else:
-            raise ValidationError('امکان ارسال درخواست لغو وجود ندارد.')
 
         return Response({'msg': 'stake_request canceled'}, status=status.HTTP_204_NO_CONTENT)

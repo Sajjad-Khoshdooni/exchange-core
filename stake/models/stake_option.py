@@ -9,8 +9,7 @@ class StakeOption(models.Model):
     apr = models.DecimalField(max_digits=6, decimal_places=3, blank=True)
     enable = models.BooleanField(default=False)
     max_amount = get_amount_field()
-    min_amont = get_amount_field()
+    min_amount = get_amount_field()
 
     def __str__(self):
         return self.asset.symbol + ' ' + str(self.apr)
-
