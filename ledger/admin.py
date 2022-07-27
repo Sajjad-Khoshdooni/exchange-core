@@ -187,6 +187,8 @@ class UserFilter(admin.SimpleListFilter):
 class DepositAddressAdmin(admin.ModelAdmin):
     list_display = ('address_key', 'network', 'address')
     readonly_fields = ('address_key', 'network', 'address')
+    list_filter = ('network', 'address_key__account__user__id')
+    search_fields = ('address',)
 
 
 @admin.register(models.OTCRequest)
