@@ -427,3 +427,17 @@ class CoinCategoryAdmin(admin.ModelAdmin):
 class AddressKeyAdmin(admin.ModelAdmin):
     list_display = ('address', )
     readonly_fields = ('address', )
+
+
+@admin.register(models.AssetSpreadCategory)
+class AssetSpreadCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', )
+
+
+@admin.register(models.CategorySpread)
+class CategorySpreadAdmin(admin.ModelAdmin):
+    list_display = ('category', 'side', 'step', 'spread')
+    list_editable = ('side', 'step', 'spread')
+    ordering = ('category', 'side', 'step')
+    list_filter = ('category', 'side', 'step')
+

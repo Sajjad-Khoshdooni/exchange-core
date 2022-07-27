@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -11,6 +12,9 @@ from collector.utils.price import price_redis
 from ledger.utils.cache import cache_for
 from ledger.utils.price_manager import PriceManager
 
+logger = logging.getLogger(__name__)
+
+
 BINANCE = 'binance'
 NOBITEX = 'nobitex'
 
@@ -19,11 +23,23 @@ IRT = 'IRT'
 
 BUY, SELL = 'buy', 'sell'
 
-ASSET_DIFF_MULTIPLIER = {
-    'LUNC': 6,
-    'LUNA': 10,
-    'OP': 10,
-}
+
+# @cache_for(300)
+def get_spread(coin: str, side: str, value: Decimal = None) -> Decimal:
+    from ledger.models import CategorySpread, Asset
+
+    asset = Asset.get(coin)
+    step = CategorySpread.get_step(value)
+
+    category = asset.spread_category
+
+    spread = CategorySpread.objects.filter(category=category, step=step, side=side).first()
+
+    if not spread:
+        logger.warning("No category spread defined for %s step = %s, side = %s" % (category, step, side))
+        spread = CategorySpread()
+
+    return spread.spread
 
 
 def get_other_side(side: str):
@@ -59,10 +75,6 @@ def get_binance_trading_symbol(coin: str):
 
 def get_binance_price_stream(coin: str):
     return get_binance_trading_symbol(coin).lower()
-
-
-def get_asset_diff_multiplier(coin: str):
-    return ASSET_DIFF_MULTIPLIER.get(coin, 1)
 
 
 def get_tether_price_irt_grpc(side: str, now: datetime = None):
@@ -224,43 +236,23 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
 
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
                            gap: Union[Decimal, None] = None) -> Decimal:
-    # from ledger.models.asset import Asset
-
     if coin == IRT:
         return 1 / get_tether_irt_price(get_other_side(side))
-    # note: commented to decrease performance issues
-    # asset = Asset.get(coin)
-    #
-    # bid_diff = asset.bid_diff
-    # if bid_diff is None:
-    #     bid_diff = Decimal('0.005')
-    #
-    # ask_diff = asset.ask_diff
-    # if ask_diff is None:
-    #     ask_diff = Decimal('0.005')
 
-    if gap is None:
-        gap = Decimal('0.0025')
-    bid_diff = gap * get_asset_diff_multiplier(coin)
-    ask_diff = gap * get_asset_diff_multiplier(coin)
+    if gap:
+        spread = gap
+    else:
+        spread = get_spread(coin, side, value) / 100
 
-    diff_multiplier = 1
-
-    if value:
-        if value > 1000:
-            diff_multiplier = 8
-        elif value > 10:
-            diff_multiplier = 4
-        elif value > 3:
-            diff_multiplier = 2
+    logger.info('Calculating spread for (%s, %s, %s): %s' % (coin, side, value, spread))
 
     if raw_price:
         multiplier = 1
     else:
         if side == BUY:
-            multiplier = 1 - bid_diff * diff_multiplier
+            multiplier = 1 - spread
         else:
-            multiplier = 1 + ask_diff * diff_multiplier
+            multiplier = 1 + spread
 
     price = get_price(coin, side)
 
