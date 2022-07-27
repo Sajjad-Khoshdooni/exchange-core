@@ -26,7 +26,7 @@ class ProviderOrder(models.Model):
     BUY, SELL = 'buy', 'sell'
     ORDER_CHOICES = [(BUY, BUY), (SELL, SELL)]
 
-    TRADE, BORROW, LIQUIDATION, WITHDRAW, HEDGE, PROVIDE_BASE = 'trade', 'borrow', 'liquid', 'withdraw', 'hedge', 'prov-base'
+    TRADE, BORROW, LIQUIDATION, WITHDRAW, HEDGE, PROVIDE_BASE = 'trade', 'borrow', 'liquid', 'withdraw', 'hedge', 'prv-base'
     SCOPE_CHOICES = ((TRADE, 'trade'), (BORROW, 'borrow'), (LIQUIDATION, 'liquidation'), (WITHDRAW, 'withdraw'),
                      (HEDGE, HEDGE), (PROVIDE_BASE, PROVIDE_BASE))
 
