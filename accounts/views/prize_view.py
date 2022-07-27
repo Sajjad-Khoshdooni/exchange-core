@@ -43,4 +43,4 @@ class PrizeView(ModelViewSet):
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
-        return Prize.objects.filter(account=self.request.user.account)
+        return Prize.objects.filter(account=self.request.user.account, amount__gt=0)
