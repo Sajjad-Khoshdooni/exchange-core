@@ -212,15 +212,15 @@ class ProviderOrder(models.Model):
 
                     if needed_busd > busd_balance:
                         logger.info('providing busd for order')
-                        to_buy_busd = math.ceil((needed_busd - busd_balance) * Decimal('1.01'))
+                        to_buy_busd = max(math.ceil((needed_busd - busd_balance) * Decimal('1.01')), 11)
 
                         cls.new_order(
                             asset=Asset.get('BUSD'),
                             side=BUY,
-                            amount=to_buy_busd,
+                            amount=Decimal(to_buy_busd),
                             scope=ProviderOrder.PROVIDE_BASE,
                             market=ProviderOrder.SPOT,
-                            hedge_amount=hedge_amount
+                            hedge_amount=Decimal(0)
                         )
 
                 order = cls.new_order(asset, side, order_amount, scope, market=market, hedge_amount=hedge_amount)
