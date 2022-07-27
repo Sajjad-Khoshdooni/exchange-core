@@ -5,7 +5,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet, Trx
