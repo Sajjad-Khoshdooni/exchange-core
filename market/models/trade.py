@@ -374,3 +374,11 @@ class Trade(models.Model):
                 'order_id', 'sum_amount', 'sum_value'
             )
         }
+
+    @classmethod
+    def get_top_prices(cls, symbol_id):
+        from market.utils.redis import get_top_prices
+        top_prices = get_top_prices(symbol_id, scope='stoploss')
+        if not top_prices:
+            top_prices = Trade.get_interval_top_prices([symbol_id])
+        return top_prices
