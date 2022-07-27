@@ -1,6 +1,7 @@
 import logging
 
 from celery import shared_task
+from django.conf import settings
 
 from ledger.models import Transfer
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -73,6 +74,9 @@ def update_binance_withdraw():
 
 @shared_task(queue='blocklink')
 def create_withdraw(transfer_id: int):
+    if settings.DEBUG_OR_TESTING:
+        return
+
     transfer = Transfer.objects.get(id=transfer_id)
 
     if transfer.source != Transfer.SELF:

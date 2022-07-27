@@ -9,7 +9,7 @@ from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
-from ledger.models import Asset, Prize, CoinCategory
+from ledger.models import Asset, Prize, CoinCategory, DepositAddress
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
@@ -185,8 +185,9 @@ class UserFilter(admin.SimpleListFilter):
 
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_display = ('address_key', 'network', 'address')
-    readonly_fields = ('address_key', 'network', 'address')
+    list_display = ('address_key', 'network', 'address', 'is_registered',)
+    readonly_fields = ('address_key', 'network', 'address', 'is_registered',)
+    list_filter = ('network', 'is_registered', )
 
 
 @admin.register(models.OTCRequest)
@@ -350,12 +351,11 @@ class CryptoBalanceAdmin(admin.ModelAdmin):
         'get_address',
         'get_owner',
         'amount',
-        'is_registered',
         'get_value_usdt',
         'updated_at',
     )
     search_fields = ('asset__symbol', 'deposit_address__address',)
-    list_filter = (CryptoAccountTypeFilter, 'is_registered',)
+    list_filter = (CryptoAccountTypeFilter,)
 
     def get_network(self, crypto_balance: models.CryptoBalance):
         return crypto_balance.deposit_address.network

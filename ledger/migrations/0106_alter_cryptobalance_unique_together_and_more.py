@@ -4,11 +4,14 @@ import json
 import base58
 import django.utils.timezone
 from django.db import migrations, models
+from django.conf import settings
 
 tag_to_address_mapping = '/tmp/tag-address.json'
 
 
 def populate_address_key(apps, schema_editor):
+    if settings.DEBUG_OR_TESTING:
+        return
     DepositAddress = apps.get_model('ledger', 'DepositAddress')
     AddressKey = apps.get_model('ledger', 'AddressKey')
 
