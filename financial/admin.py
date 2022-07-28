@@ -272,3 +272,4 @@ class MarketingSourceAdmin(admin.ModelAdmin):
 class MarketingCostAdmin(admin.ModelAdmin):
     list_display = ('source', 'date', 'cost')
     search_fields = ('source__utm_source', )
+    fields = ('source', 'date', 'cost')
