@@ -28,7 +28,7 @@ class Wallet(models.Model):
     )
 
     check_balance = models.BooleanField(default=True)
-    balance = get_amount_field(default=Decimal(0))
+    balance = get_amount_field(default=Decimal(0), validators=())
     locked = get_amount_field(default=Decimal(0))
 
     def __str__(self):
@@ -36,7 +36,6 @@ class Wallet(models.Model):
         return '%s Wallet %s [%s]' % (market_verbose, self.asset, self.account)
 
     class Meta:
-        unique_together = [('account', 'asset', 'market')]
         constraints = [
             CheckConstraint(
                 check=Q(check_balance=False) | (~Q(market='loan') & Q(balance__gte=0) & Q(balance__gte=F('locked'))) |

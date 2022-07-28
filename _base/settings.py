@@ -33,6 +33,8 @@ CELERY_TASK_ALWAYS_EAGER = config('CELERY_ALWAYS_EAGER', default=False)
 # Application definition
 
 INSTALLED_APPS = [
+    'admin_interface',
+    'colorfield',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -55,7 +57,6 @@ INSTALLED_APPS = [
     'accounts',
     'ledger',
     'provider',
-    'wallet',
     'collector',
     'market',
     'trader',

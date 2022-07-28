@@ -16,14 +16,19 @@ PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 AMOUNT_PRECISION = 8
 
 
-def get_amount_field(default: Decimal = None, max_digits: int = None, decimal_places: int = None, null: bool = False):
+def get_amount_field(default: Decimal = None, max_digits: int = None, decimal_places: int = None, null: bool = False,
+                     validators: tuple = (MinValueValidator(0), ), verbose_name: str = None):
+
+    if validators is None:
+        validators = [MinValueValidator(0)]
 
     kwargs = {
         'max_digits': max_digits or 30,
         'decimal_places': decimal_places or AMOUNT_PRECISION,
-        'validators': [MinValueValidator(0)],
+        'validators': validators,
         'blank': null,
         'null': null,
+        'verbose_name': verbose_name
     }
 
     if default is not None:

@@ -36,9 +36,9 @@ class AssetAdmin(AdvancedAdmin):
         'get_ledger_balance_users', 'get_users_usdt_value', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
         'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'trade_enable', 'hedge_method',
         # 'bid_diff', 'ask_diff'
-        'candidate', 'margin_enable', 'new_coin'
+        'candidate', 'margin_enable', 'new_coin', 'spread_category'
     )
-    list_filter = ('enable', 'trend', 'candidate', 'margin_enable')
+    list_filter = ('enable', 'trend', 'candidate', 'margin_enable', 'spread_category')
     list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable', 'new_coin')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
@@ -188,6 +188,7 @@ class DepositAddressAdmin(admin.ModelAdmin):
     list_display = ('address_key', 'network', 'address', 'is_registered',)
     readonly_fields = ('address_key', 'network', 'address', 'is_registered',)
     list_filter = ('network', 'is_registered', )
+    search_fields = ('address',)
 
 
 @admin.register(models.OTCRequest)
@@ -343,42 +344,6 @@ class CryptoAccountTypeFilter(SimpleListFilter):
             return queryset
 
 
-@admin.register(models.CryptoBalance)
-class CryptoBalanceAdmin(admin.ModelAdmin):
-    list_display = (
-        'asset',
-        'get_network',
-        'get_address',
-        'get_owner',
-        'amount',
-        'get_value_usdt',
-        'updated_at',
-    )
-    search_fields = ('asset__symbol', 'deposit_address__address',)
-    list_filter = (CryptoAccountTypeFilter,)
-
-    def get_network(self, crypto_balance: models.CryptoBalance):
-        return crypto_balance.deposit_address.network
-
-    get_network.short_description = 'network'
-
-    def get_address(self, crypto_balance: models.CryptoBalance):
-        return crypto_balance.deposit_address.address
-
-    get_address.short_description = 'address'
-
-    def get_owner(self, crypto_balance: models.CryptoBalance):
-        return str(crypto_balance.deposit_address.account)
-
-    get_owner.short_description = 'owner'
-
-    def get_value_usdt(self, crypto_balance: models.CryptoBalance):
-        value = crypto_balance.amount * get_trading_price_usdt(crypto_balance.asset.symbol, BUY, raw_price=True)
-        return get_presentation_amount(value)
-
-    get_value_usdt.short_description = 'value'
-
-
 @admin.register(models.MarginTransfer)
 class MarginTransferAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'amount', 'type', )
@@ -429,3 +394,16 @@ class CoinCategoryAdmin(admin.ModelAdmin):
 class AddressKeyAdmin(admin.ModelAdmin):
     list_display = ('address', )
     readonly_fields = ('address', )
+
+
+@admin.register(models.AssetSpreadCategory)
+class AssetSpreadCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', )
+
+
+@admin.register(models.CategorySpread)
+class CategorySpreadAdmin(admin.ModelAdmin):
+    list_display = ('category', 'step', 'side', 'spread')
+    list_editable = ('side', 'step', 'spread')
+    ordering = ('category', 'step', 'side')
+    list_filter = ('category', 'side', 'step')
