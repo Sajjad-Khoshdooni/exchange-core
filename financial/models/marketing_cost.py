@@ -27,7 +27,7 @@ class MarketingSource(models.Model):
 
 class MarketingCost(models.Model):
     source = models.ForeignKey(to=MarketingSource, on_delete=models.CASCADE)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateField(auto_now_add=True, editable=True)
     cost = models.PositiveIntegerField()
 
     class Meta:
