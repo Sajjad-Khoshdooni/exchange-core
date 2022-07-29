@@ -47,6 +47,7 @@ class Trx(models.Model):
     REVERT = 'r'
     AIRDROP = 'ad'
     SEIZE = 'sz'
+    FIX = 'fx'
 
     created = models.DateTimeField(auto_now_add=True)
 
