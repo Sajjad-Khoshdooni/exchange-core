@@ -110,7 +110,7 @@ class KucoinSpotHandler(ExchangeHandler):
                 'minConfirm': chain.get('confirms'),
                 'unLockConfirm': chain.get('confirms'),
                 'withdrawFee': chain.get('withdrawalMinFee'),
-                'withdrawMin': chain.get('withdrawalMinSize'),
+                'withdrawMin': Decimal(chain.get('withdrawalMinSize')) + Decimal(chain.get('withdrawalMinFee')),
                 'withdrawMax': chain.get('withdrawMax', '10000000000'),
                 'withdrawIntegerMultiple': Decimal('1e-{}'.format(resp.get('precision'), 9)),
                 'withdrawEnable': chain.get('isWithdrawEnabled')
