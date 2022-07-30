@@ -56,4 +56,6 @@ urlpatterns = [
     path('v1/transfer/withdraw/', views.WithdrawTransferUpdateView.as_view()),
 
     path('v1/convert/dust/', views.ConvertDustView.as_view()),
+
+    path('v1/transfer/source/', views.InternalCheckView.as_view())
 ]
