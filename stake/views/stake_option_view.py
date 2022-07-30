@@ -22,7 +22,7 @@ class StakeOptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StakeOption
-        fields = ('asset', 'apr', 'enable', 'max_amount', 'min_amount')
+        fields = ('asset', 'apr', 'enable', 'max_amount', 'min_amount', 'id')
 
 
 class StakeOptionAPIView(ListAPIView):

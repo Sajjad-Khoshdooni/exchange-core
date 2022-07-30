@@ -78,8 +78,8 @@ class OTCTrade(models.Model):
         from_asset = otc_request.from_asset
         conf = otc_request.get_trade_config()
 
-        if not force:
-            conf.coin.is_trade_amount_valid(conf.coin_amount, raise_exception=True)
+        # if not force:
+        #     conf.coin.is_trade_amount_valid(conf.coin_amount, raise_exception=True)
 
         from_wallet = from_asset.get_wallet(account, market=otc_request.market)
         amount = otc_request.from_amount
