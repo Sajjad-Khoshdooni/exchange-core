@@ -1,4 +1,5 @@
 import logging
+import math
 from decimal import Decimal
 from math import log10
 
@@ -11,7 +12,7 @@ from ledger.exceptions import HedgeError
 from ledger.models import Asset, Wallet
 from ledger.utils.fields import get_amount_field
 from ledger.utils.precision import floor_precision
-from ledger.utils.price import get_trading_price_usdt, SELL, get_binance_trading_symbol
+from ledger.utils.price import get_trading_price_usdt, SELL, get_binance_trading_symbol, BUY
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
 logger = logging.getLogger(__name__)
@@ -25,9 +26,9 @@ class ProviderOrder(models.Model):
     BUY, SELL = 'buy', 'sell'
     ORDER_CHOICES = [(BUY, BUY), (SELL, SELL)]
 
-    TRADE, BORROW, LIQUIDATION, WITHDRAW, HEDGE = 'trade', 'borrow', 'liquid', 'withdraw', 'hedge'
+    TRADE, BORROW, LIQUIDATION, WITHDRAW, HEDGE, PROVIDE_BASE = 'trade', 'borrow', 'liquid', 'withdraw', 'hedge', 'prv-base'
     SCOPE_CHOICES = ((TRADE, 'trade'), (BORROW, 'borrow'), (LIQUIDATION, 'liquidation'), (WITHDRAW, 'withdraw'),
-                     (HEDGE, HEDGE))
+                     (HEDGE, HEDGE), (PROVIDE_BASE, PROVIDE_BASE))
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -200,6 +201,27 @@ class ProviderOrder(models.Model):
 
                         if order_amount * price < 10:
                             return True
+
+                symbol = cls.get_trading_symbol(asset)
+
+                if side == BUY and symbol.endswith('BUSD'):
+                    balance_map = BinanceSpotHandler.get_free_dict()
+                    busd_balance = balance_map['BUSD']
+
+                    needed_busd = order_amount * price
+
+                    if needed_busd > busd_balance:
+                        logger.info('providing busd for order')
+                        to_buy_busd = max(math.ceil((needed_busd - busd_balance) * Decimal('1.01')), 11)
+
+                        cls.new_order(
+                            asset=Asset.get('BUSD'),
+                            side=BUY,
+                            amount=Decimal(to_buy_busd),
+                            scope=ProviderOrder.PROVIDE_BASE,
+                            market=ProviderOrder.SPOT,
+                            hedge_amount=Decimal(0)
+                        )
 
                 order = cls.new_order(asset, side, order_amount, scope, market=market, hedge_amount=hedge_amount)
 

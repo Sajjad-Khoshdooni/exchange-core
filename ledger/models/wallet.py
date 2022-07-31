@@ -39,6 +39,8 @@ class Wallet(models.Model):
         return '%s Wallet %s [%s]' % (market_verbose, self.asset, self.account)
 
     class Meta:
+        unique_together = [('account', 'asset', 'market')]
+
         constraints = [
             UniqueConstraint(
                 fields=['account', 'asset', 'market'], condition=Q(variant__isnull=True),

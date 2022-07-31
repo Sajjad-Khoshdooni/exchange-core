@@ -36,9 +36,9 @@ class AssetAdmin(AdvancedAdmin):
         'get_ledger_balance_users', 'get_users_usdt_value', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
         'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'trade_enable', 'hedge_method',
         # 'bid_diff', 'ask_diff'
-        'candidate', 'margin_enable', 'new_coin'
+        'candidate', 'margin_enable', 'new_coin', 'spread_category'
     )
-    list_filter = ('enable', 'trend', 'candidate', 'margin_enable')
+    list_filter = ('enable', 'trend', 'candidate', 'margin_enable', 'spread_category')
     list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable', 'new_coin')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
@@ -187,11 +187,14 @@ class UserFilter(admin.SimpleListFilter):
 class DepositAddressAdmin(admin.ModelAdmin):
     list_display = ('address_key', 'network', 'address')
     readonly_fields = ('address_key', 'network', 'address')
+    list_filter = ('network', 'address_key__account__user__id')
+    search_fields = ('address',)
 
 
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'from_asset', 'to_asset', 'to_price', 'from_amount', 'to_amount', 'token')
+    readonly_fields = ('account', )
 
     def get_from_amount(self, otc_request: models.OTCRequest):
         return humanize_number((otc_request.from_asset.get_presentation_amount(otc_request.from_amount)))
@@ -436,8 +439,7 @@ class AssetSpreadCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(models.CategorySpread)
 class CategorySpreadAdmin(admin.ModelAdmin):
-    list_display = ('category', 'side', 'step', 'spread')
+    list_display = ('category', 'step', 'side', 'spread')
     list_editable = ('side', 'step', 'spread')
-    ordering = ('category', 'side', 'step')
+    ordering = ('category', 'step', 'side')
     list_filter = ('category', 'side', 'step')
-
