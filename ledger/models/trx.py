@@ -50,6 +50,7 @@ class Trx(models.Model):
     RESERVE = 'rs'
     STAKE_REVENUE = 'sr'
     STAKE = 'st'
+    FIX = 'fx'
 
     created = models.DateTimeField(auto_now_add=True)
 

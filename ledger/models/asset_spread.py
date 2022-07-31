@@ -13,10 +13,13 @@ class AssetSpreadCategory(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name = verbose_name_plural = 'دسته‌بندی اسپرید'
+
 
 class CategorySpread(models.Model):
     BUY, SELL = 'buy', 'sell'
-    SIDE_CHOICES = [(BUY, BUY), (SELL, SELL)]
+    SIDE_CHOICES = [(BUY, 'bid'), (SELL, 'ask')]
     DEFAULT_SPREAD = Decimal('0.25')
 
     category = models.ForeignKey(AssetSpreadCategory, null=True, blank=True, on_delete=models.CASCADE)
@@ -36,6 +39,8 @@ class CategorySpread(models.Model):
         return '%s %s step: %s = %s' % (self.category, self.side, self.step, self.spread)
 
     class Meta:
+        verbose_name = verbose_name_plural = 'اسپرید'
+
         unique_together = [
             ('category', 'side', 'step'),
         ]

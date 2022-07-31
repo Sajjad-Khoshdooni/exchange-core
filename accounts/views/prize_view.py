@@ -11,6 +11,7 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 class PrizeSerializer(serializers.ModelSerializer):
     coin = serializers.SerializerMethodField()
     reason = serializers.SerializerMethodField()
+    amount = serializers.SerializerMethodField()
 
     def update(self, prize: Prize, validated_data):
         redeemed = validated_data['redeemed']
@@ -32,6 +33,9 @@ class PrizeSerializer(serializers.ModelSerializer):
     def get_reason(self, prize: Prize):
         return Prize.VERBOSE.get(prize.scope, '')
 
+    def get_amount(self, prize: Prize):
+        return prize.asset.get_presentation_amount(prize.amount)
+
 
 class PrizeView(ModelViewSet):
     authentication_classes = (SessionAuthentication, JWTAuthentication)
@@ -39,4 +43,4 @@ class PrizeView(ModelViewSet):
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
-        return Prize.objects.filter(account=self.request.user.account)
+        return Prize.objects.filter(account=self.request.user.account, amount__gt=0)
