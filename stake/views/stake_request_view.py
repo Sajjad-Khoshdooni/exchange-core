@@ -34,7 +34,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
         if not stake_option.enable:
             raise ValidationError('امکان استفاده از این اپشن در حال حاضر وجود ندارد.')
 
-        if not stake_option.min_amont <= amount <= stake_option.max_amount:
+        if not stake_option.min_amount <= amount <= stake_option.max_amount:
             raise ValidationError('مقدار وارد شده در بازه مجاز نیست.')
 
         if not wallet.has_balance(amount=amount):

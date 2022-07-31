@@ -2,9 +2,11 @@ from rest_framework import serializers
 
 from rest_framework.generics import ListAPIView
 from stake.models import StakeRevenue
+from stake.views.stake_request_view import StakeRequestSerializer
 
 
 class StakeRevenueSerializer(serializers.ModelSerializer):
+    stake_request = StakeRequestSerializer()
 
     class Meta:
         model = StakeRevenue
