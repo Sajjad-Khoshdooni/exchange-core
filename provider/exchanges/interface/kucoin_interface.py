@@ -168,7 +168,7 @@ class KucoinSpotHandler(ExchangeHandler):
     def get_step_size(self, symbol: str) -> Decimal:
         data = self.get_symbol_data(symbol=symbol)
         lot_size = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['filters']))[0]
-        return Decimal(lot_size['minQty'])
+        return Decimal(lot_size['stepSize'])
 
     def get_lot_min_quantity(self, symbol: str) ->Decimal:
         data = self.get_symbol_data(symbol=symbol)
