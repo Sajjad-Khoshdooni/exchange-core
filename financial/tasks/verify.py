@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@shared_task(queue='celery')
+@shared_task(queue='kyc')
 def verify_bank_card_task(bank_card_id: int):
     bank_card = BankCard.live_objects.get(id=bank_card_id)  # type: BankCard
 
@@ -33,7 +33,7 @@ def verify_bank_card_task(bank_card_id: int):
     logger.info('bank card %d verified %s' % (bank_card_id, verified))
 
 
-@shared_task(queue='celery')
+@shared_task(queue='kyc')
 def verify_bank_account_task(bank_account_id: int, silent: bool = False):
     bank_account = BankAccount.live_objects.get(id=bank_account_id)  # type: BankAccount
 
