@@ -120,6 +120,22 @@ app.conf.beat_schedule = {
             'expire': 300
         },
     },
+    'create_transfer_history': {
+        'task': 'provider.tasks.binance.create_transfer_history',
+        'schedule': 300,
+        'option': {
+            'queue': 'binance',
+            'expire': 300,
+        }
+    },
+    'get_binance_wallet': {
+        'task': 'provider.tasks.binance.get_binance_wallet',
+        'schedule': 300,
+        'option': {
+            'queue': 'binance',
+            'expire': 300,
+        }
+    },
     # market tasks
     'create depth orders': {
         'task': 'market.tasks.market_maker.create_depth_orders',
@@ -169,6 +185,14 @@ app.conf.beat_schedule = {
             'expire': 36000
         },
     },
+    'create_stake_revenue': {
+            'task': 'stake.tasks.stake_revenue.create_stake_revenue',
+            'schedule': crontab(hour=19, minute=30),
+            'options': {
+                'queue': 'celery',
+                'expire': 36000
+            },
+        },
 
     # 'lock_monitor': {
     #     'task': 'ledger.tasks.lock_monitor.lock_monitor',

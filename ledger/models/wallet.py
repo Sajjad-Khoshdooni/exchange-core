@@ -13,9 +13,9 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class Wallet(models.Model):
-    SPOT, MARGIN, LOAN = 'spot', 'margin', 'loan'
-    MARKETS = (SPOT, MARGIN, LOAN)
-    MARKET_CHOICES = ((SPOT, SPOT), (MARGIN, MARGIN), (LOAN, LOAN))
+    SPOT, MARGIN, LOAN, STAKE = 'spot', 'margin', 'loan', 'stake'
+    MARKETS = (SPOT, MARGIN, LOAN, STAKE)
+    MARKET_CHOICES = ((SPOT, SPOT), (MARGIN, MARGIN), (LOAN, LOAN), (STAKE, STAKE))
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)

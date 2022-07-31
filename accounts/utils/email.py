@@ -14,12 +14,22 @@ email_sender = config('EMAIL_SENDER')
 brand = config('BRAND')
 SCOPE_VERIFY_EMAIL = 'verify_email'
 SCOPE_WITHDRAW_EMAIL = 'withdraw_email'
+
 SCOPE_DEPOSIT_EMAIL = 'deposit_email'
+
 SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw_email'
 SCOPE_CANCEL_FIAT_WITHDRAW = 'cancel_fiat_withdraw_email'
+
 SCOPE_PAYMENT = 'payment_email'
+
+
 SCOPE_MARGIN_UNDER_LIQUIDATION = 'margin_under_liquidation'
 SCOPE_MARGIN_LIQUIDATION_FINISHED = 'margin_liquidation_finished'
+
+
+SCOPE_DONE_STAKE = 'done_stake'
+
+SCOPE_CANCEL_STAKE = 'cancel_stake'
 
 BRAND = config('BRAND')
 
@@ -59,6 +69,17 @@ TEMPLATES = {
         'html': 'accounts/email/margin_liquidation_finished.min.html',
         'text': 'accounts/text/margin_liquidation_finished.txt',
     },
+
+    'cancel_stake': {
+        'subject': '{} | اطلاع‌رسانی لغو staking'.format(BRAND),
+        'html': 'accounts/email/cancel_staking_email.min.html',
+        'text': 'accounts/text/cancel_staking.txt',
+    },
+    'done_stake': {
+            'subject': '{} | اطلاع‌رسانی تایید staking'.format(BRAND),
+            'html': 'accounts/email/done_staking_email.min.html',
+            'text': 'accounts/text/done_staking.txt',
+        },
 }
 
 

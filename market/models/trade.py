@@ -215,7 +215,7 @@ class Trade(models.Model):
 
     @staticmethod
     def get_interval_top_prices(symbol_ids=None, min_datetime=None):
-        min_datetime = min_datetime or (timezone.now() - timedelta(seconds=30))
+        min_datetime = min_datetime or (timezone.now() - timedelta(seconds=5))
         market_top_prices = defaultdict(lambda: Decimal())
         symbol_filter = {'symbol_id__in': symbol_ids} if symbol_ids else {}
         for depth in Trade.objects.filter(**symbol_filter, created__gte=min_datetime).values('symbol', 'side').annotate(
@@ -374,3 +374,11 @@ class Trade(models.Model):
                 'order_id', 'sum_amount', 'sum_value'
             )
         }
+
+    @classmethod
+    def get_top_prices(cls, symbol_id):
+        from market.utils.redis import get_top_prices
+        top_prices = get_top_prices(symbol_id, scope='stoploss')
+        if not top_prices:
+            top_prices = Trade.get_interval_top_prices([symbol_id])
+        return top_prices

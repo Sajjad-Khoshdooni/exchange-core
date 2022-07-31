@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Union
 
@@ -163,6 +163,119 @@ class BinanceSpotHandler:
         lot_size = cls.get_lot_size_data(symbol)
         return lot_size and Decimal(lot_size['minQty'])
 
+    @classmethod
+    def _create_transfer_history(cls, response: dict, transfer_type: str):
+        from provider.models import BinanceTransferHistory
+        status_map = {
+            BinanceTransferHistory.WITHDRAW: {
+                0: BinanceTransferHistory.PENDING,
+                1: BinanceTransferHistory.CANCELED,
+                2: BinanceTransferHistory.PENDING,
+                3: BinanceTransferHistory.CANCELED,
+                4: BinanceTransferHistory.PENDING,
+                5: BinanceTransferHistory.CANCELED,
+                6: BinanceTransferHistory.DONE,
+            },
+            BinanceTransferHistory.DEPOSIT: {
+                0: BinanceTransferHistory.PENDING,
+                6: BinanceTransferHistory.PENDING,
+                1: BinanceTransferHistory.DONE
+            },
+        }
+
+        for element in response:
+            tx_id = element.get('txId', None)
+            binance_id = element.get('id', None)
+            address = element['address']
+            amount = element['amount']
+            coin = element['coin']
+            network = element['network']
+            status = status_map[transfer_type][element['status']]
+
+            if tx_id:
+                withdraw_deposit = BinanceTransferHistory.objects.filter(tx_id=tx_id)
+            else:
+                withdraw_deposit = BinanceTransferHistory.objects.filter(binace_id=binance_id)
+
+            if withdraw_deposit:
+                BinanceTransferHistory.objects.update(status=status, tx_id=tx_id)
+            else:
+                if transfer_type == BinanceTransferHistory.DEPOSIT:
+                    time = datetime.fromtimestamp(element['insertTime']//1000)
+                else:
+                    time = element['applyTime']
+                BinanceTransferHistory.objects.create(
+                    tx_id=tx_id,
+                    biance_id=binance_id,
+                    address=address,
+                    amount=amount,
+                    coin=coin,
+                    date=time,
+                    network=network,
+                    status=status,
+                    type=transfer_type,
+                )
+
+    @classmethod
+    def get_withdraw_history(cls):
+        from provider.models import BinanceTransferHistory
+        now = datetime.now()
+        five_days_ago_time_timestamp = datetime.timestamp(now - timedelta(days=5))
+
+        withdraws = cls.collect_api(
+            url='/sapi/v1/capital/withdraw/history',
+            method=GET,
+            data={
+                'startTime': five_days_ago_time_timestamp
+            }
+        )
+
+        cls._create_transfer_history(response=withdraws, transfer_type=BinanceTransferHistory.WITHDRAW)
+
+    @classmethod
+    def get_deposit_history(cls):
+        from provider.models import BinanceTransferHistory
+        now = datetime.now()
+        five_days_ago_time_timestamp = datetime.timestamp(now - timedelta(days=5))
+
+        deposits = cls.collect_api(
+            url='/sapi/v1/capital/deposit/hisrec',
+            method=GET,
+            data={
+                'startTime': five_days_ago_time_timestamp
+            })
+
+        cls._create_transfer_history(response=deposits, transfer_type=BinanceTransferHistory.DEPOSIT)
+
+    @classmethod
+    def _get_spot_and_futures_wallet_handler(cls, wallet_type):
+        from provider.models import BinanceWallet
+        resp = cls.collect_api(
+            url='/sapi/v1/accountSnapshot',
+            method=GET,
+            data={
+                'type': wallet_type
+            }
+        )
+        wallets = resp['snapshotVos'][0]['data']['balances']
+
+        for wallet in wallets:
+            asset = wallet['asset']
+            free = wallet['free']
+            locked = wallet['locked']
+            binance_wallet = BinanceWallet.objects.filter(asset=asset)
+
+            if binance_wallet:
+                binance_wallet.update(free=free, locked=locked)
+            else:
+                BinanceWallet.objects.create(asset=asset, free=free, locked=locked, type=wallet_type)
+
+    @classmethod
+    def get_spot_wallets(cls):
+        from provider.models import BinanceWallet
+
+        cls._get_spot_and_futures_wallet_handler(BinanceWallet.SPOT)
+
 
 class BinanceFuturesHandler(BinanceSpotHandler):
     order_url = '/fapi/v1/order'
@@ -238,3 +351,8 @@ class BinanceFuturesHandler(BinanceSpotHandler):
                 'limit': 1000
             }
         )
+
+    @classmethod
+    def get_futures_wallets(cls):
+        from provider.models import BinanceWallet
+        cls._get_spot_and_futures_wallet_handler(BinanceWallet.FUTURES)
