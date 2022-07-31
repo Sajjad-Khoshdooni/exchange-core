@@ -32,6 +32,8 @@ class StakeRequest(models.Model):
 
     account = models.ForeignKey(Account, on_delete=models.CASCADE)
 
+    created = models.DateTimeField(auto_now_add=True)
+
     def __str__(self):
         return self.stake_option.__str__() + ' ' + str(self.account_id)
 
