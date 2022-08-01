@@ -104,9 +104,6 @@ def create_withdraw(transfer_id: int):
         transfer.save(update_fields=['source'])
         create_binance_withdraw(transfer_id=transfer.id)
 
-    elif response.status_code == 400 and resp_data.get('type') == 'Duplicated':
-        return
-
     else:
         transfer.status = Transfer.PENDING
         transfer.save(update_fields=['status'])
