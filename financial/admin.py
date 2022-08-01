@@ -75,12 +75,10 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     ordering = ('-created', )
     readonly_fields = ('created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount',
                        'get_withdraw_request_user', 'get_withdraw_request_user_mobile', 'withdraw_channel',
-                       'get_withdraw_request_receive_time'
+                       'get_withdraw_request_receive_time', 'get_user'
                        )
 
-    list_display = ('bank_account', 'created', 'status', 'amount', 'withdraw_channel', 'ref_id')
-
-
+    list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'withdraw_channel', 'ref_id')
 
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.user.get_full_name()
@@ -94,6 +92,10 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     def get_withdraw_request_iban(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.iban
     get_withdraw_request_iban.short_description = 'شماره شبا'
+
+    def get_user(self, withdraw_request: FiatWithdrawRequest):
+        return withdraw_request.bank_account.user.phone
+    get_user.short_description = 'کاربر'
 
     def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
         if withdraw.withdraw_datetime:

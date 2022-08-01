@@ -48,6 +48,7 @@ def get_sms_ir_token():
 
     resp = requests.post(
         url='https://RestfulSms.com/api/Token',
+        timeout=15,
         data={
             'UserApiKey': config('SMS_IR_API_KEY'),
             'SecretKey': secret('SMS_IR_API_SECRET'),

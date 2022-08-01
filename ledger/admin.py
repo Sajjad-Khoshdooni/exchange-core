@@ -194,6 +194,7 @@ class DepositAddressAdmin(admin.ModelAdmin):
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'from_asset', 'to_asset', 'to_price', 'from_amount', 'to_amount', 'token')
+    readonly_fields = ('account', )
 
     def get_from_amount(self, otc_request: models.OTCRequest):
         return humanize_number((otc_request.from_asset.get_presentation_amount(otc_request.from_amount)))
