@@ -104,6 +104,8 @@ def create_withdraw(transfer_id: int):
         transfer.save(update_fields=['source'])
         create_binance_withdraw(transfer_id=transfer.id)
     else:
+        transfer.status = Transfer.PENDING
+        transfer.save(update_fields=['status'])
         logger.warning('Error sending withdraw to blocklink', extra={
             'transfer_id': transfer_id,
             'resp': resp_data
