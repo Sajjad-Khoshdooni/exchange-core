@@ -34,6 +34,9 @@ class PaymentRequest(models.Model):
     class Meta:
         unique_together = [('authority', 'gateway')]
 
+    def __str__(self):
+        return '%s %s' % (self.gateway, self.bank_card)
+
 
 class Payment(models.Model):
     PANEL_URL = config('PANEL_URL')
