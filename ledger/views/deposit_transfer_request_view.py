@@ -63,11 +63,10 @@ class DepositSerializer(serializers.ModelSerializer):
 
         else:
             with WalletPipeline() as pipeline:
-                transfer = Transfer.objects.create(
+                transfer, _ = Transfer.objects.get_or_create(
                     network=network,
                     trx_hash=validated_data.get('trx_hash'),
                     deposit=True,
-                    status=status,
                     deposit_address=deposit_address,
                     amount=validated_data.get('amount'),
                     block_hash=validated_data.get('block_hash'),
@@ -75,6 +74,9 @@ class DepositSerializer(serializers.ModelSerializer):
                     out_address=sender_address,
                     wallet=wallet
                 )
+
+                transfer.status = status
+                transfer.save(update_fields=['status'])
 
                 if status == Transfer.DONE:
                     transfer.build_trx(pipeline)

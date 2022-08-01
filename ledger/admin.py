@@ -9,7 +9,7 @@ from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
-from ledger.models import Asset, Prize, CoinCategory
+from ledger.models import Asset, Prize, CoinCategory, DepositAddress
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
@@ -185,9 +185,9 @@ class UserFilter(admin.SimpleListFilter):
 
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_display = ('address_key', 'network', 'address')
-    readonly_fields = ('address_key', 'network', 'address')
-    list_filter = ('network', 'address_key__account__user__id')
+    list_display = ('address_key', 'network', 'address', 'is_registered',)
+    readonly_fields = ('address_key', 'network', 'address', 'is_registered',)
+    list_filter = ('network', 'is_registered', )
     search_fields = ('address',)
 
 
@@ -343,41 +343,6 @@ class CryptoAccountTypeFilter(SimpleListFilter):
             return queryset.filter(deposit_address__address_key__account__type=value)
         else:
             return queryset
-
-
-@admin.register(models.CryptoBalance)
-class CryptoBalanceAdmin(admin.ModelAdmin):
-    list_display = ('asset', 'get_network', 'get_address', 'get_owner', 'amount', 'get_value_usdt', 'updated_at', )
-    search_fields = ('asset__symbol', 'deposit_address__address',)
-    list_filter = (CryptoAccountTypeFilter, )
-    actions = ('collect_asset_action', )
-
-    def get_network(self, crypto_balance: models.CryptoBalance):
-        return crypto_balance.deposit_address.network
-
-    get_network.short_description = 'network'
-
-    def get_address(self, crypto_balance: models.CryptoBalance):
-        return crypto_balance.deposit_address.address
-
-    get_address.short_description = 'address'
-
-    def get_owner(self, crypto_balance: models.CryptoBalance):
-        return str(crypto_balance.deposit_address.account)
-
-    get_owner.short_description = 'owner'
-
-    def get_value_usdt(self, crypto_balance: models.CryptoBalance):
-        value = crypto_balance.amount * get_trading_price_usdt(crypto_balance.asset.symbol, BUY, raw_price=True)
-        return get_presentation_amount(value)
-
-    get_value_usdt.short_description = 'value'
-
-
-    @admin.action(description='ارسال به بایننس')
-    def collect_asset_action(self, request, queryset):
-        for crypto in queryset:
-            crypto.collect()
 
 
 @admin.register(models.MarginTransfer)

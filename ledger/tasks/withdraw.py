@@ -1,18 +1,13 @@
 import logging
 
 from celery import shared_task
+from django.conf import settings
 
 from ledger.models import Transfer
 from ledger.utils.wallet_pipeline import WalletPipeline
 from ledger.withdraw.binance import handle_binance_withdraw
-from ledger.withdraw.withdraw_handler import WithdrawHandler
 
 logger = logging.getLogger(__name__)
-
-
-@shared_task
-def create_transaction_from_not_broadcasts():
-    WithdrawHandler.create_transaction_from_not_broadcasts()
 
 
 @shared_task(queue='binance')
@@ -79,6 +74,9 @@ def update_binance_withdraw():
 
 @shared_task(queue='blocklink')
 def create_withdraw(transfer_id: int):
+    if settings.DEBUG_OR_TESTING:
+        return
+
     transfer = Transfer.objects.get(id=transfer_id)
 
     if transfer.source != Transfer.SELF:
@@ -105,7 +103,10 @@ def create_withdraw(transfer_id: int):
         transfer.source = Transfer.BINANCE
         transfer.save(update_fields=['source'])
         create_binance_withdraw(transfer_id=transfer.id)
+
     else:
+        transfer.status = Transfer.PENDING
+        transfer.save(update_fields=['status'])
         logger.warning('Error sending withdraw to blocklink', extra={
             'transfer_id': transfer_id,
             'resp': resp_data

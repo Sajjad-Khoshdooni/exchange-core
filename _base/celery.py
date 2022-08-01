@@ -19,38 +19,6 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    'trx_network_consumer': {
-        'task': 'tracker.tasks.trx_network_consumer',
-        'schedule': 20,
-        'options': {
-            'queue': 'trx_network_consumer',
-            'expire': 20
-        },
-    },
-    'bsc_network_consumer': {
-        'task': 'tracker.tasks.bsc_network_consumer',
-        'schedule': 15,
-        'options': {
-            'queue': 'bsc_network_consumer',
-            'expire': 15
-        },
-    },
-    # 'eth_network_consumer': {
-    #     'task': 'tracker.tasks.eth_network_consumer',
-    #     'schedule': 30,
-    #     'options': {
-    #         'queue': 'eth_network_consumer',
-    #         'expire': 39
-    #     },
-    # },
-    # 'add_block_infos': {
-    #     'task': 'tracker.tasks.add_block_infos',
-    #     'schedule': 10,
-    #     'options': {
-    #         'queue': 'transfer',
-    #         'expire': 10
-    #     },
-    # },
     'create_withdraw_transaction': {
         'task': 'ledger.tasks.withdraw.create_transaction_from_not_broadcasts',
         'schedule': 10,
@@ -143,14 +111,6 @@ app.conf.beat_schedule = {
         'options': {
             'queue': 'stop_loss',
             'expire': 1
-        },
-    },
-    'monitor_blockchain_delays': {
-        'task': 'tracker.tasks.monitor_blockchain_delays',
-        'schedule': 30,
-        'options': {
-            'queue': 'celery',
-            'expire': 30
         },
     },
     'fill_future_binance_income': {
