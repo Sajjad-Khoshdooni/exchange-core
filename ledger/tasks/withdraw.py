@@ -101,7 +101,7 @@ def create_withdraw(transfer_id: int):
         transfer.trx_hash = resp_data['trx_hash']
         transfer.save(update_fields=['status', 'trx_hash'])
 
-    elif resp_data.get('type') == 'NotHandled':
+    elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
         transfer.source = Transfer.BINANCE
         transfer.save(update_fields=['source'])
         create_binance_withdraw(transfer_id=transfer.id)
