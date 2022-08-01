@@ -50,7 +50,7 @@ class DepositSerializer(serializers.ModelSerializer):
         ]
 
         if prev_transfer:
-            if prev_transfer.status == status:
+            if prev_transfer.status == status and status != Transfer.PENDING:
                 return prev_transfer
 
             if (prev_transfer.status, status) not in valid_transitions:
@@ -61,9 +61,8 @@ class DepositSerializer(serializers.ModelSerializer):
 
             return prev_transfer
 
-        else:
-            with WalletPipeline() as pipeline:
-                transfer = Transfer.objects.create(
+        elif status == Transfer.PENDING:
+            Transfer.objects.create(
                     network=network,
                     trx_hash=validated_data.get('trx_hash'),
                     deposit=True,
@@ -75,6 +74,23 @@ class DepositSerializer(serializers.ModelSerializer):
                     out_address=sender_address,
                     wallet=wallet
                 )
+
+        else:
+            with WalletPipeline() as pipeline:
+                transfer, _ = Transfer.objects.get_or_create(
+                    network=network,
+                    trx_hash=validated_data.get('trx_hash'),
+                    deposit=True,
+                    deposit_address=deposit_address,
+                    amount=validated_data.get('amount'),
+                    block_hash=validated_data.get('block_hash'),
+                    block_number=validated_data.get('block_number'),
+                    out_address=sender_address,
+                    wallet=wallet
+                )
+
+                transfer.status = status
+                transfer.save(update_fields=['status'])
 
                 if status == Transfer.DONE:
                     transfer.build_trx(pipeline)
