@@ -20,7 +20,7 @@ def get_ledger_user_type_asset_balances():
 def get_internal_asset_deposits():
     assets = InternalAssetsRequester().get_assets()
     return {
-        asset['coin']: asset['amount'] for asset in assets
+        asset['coin']: Decimal(asset['amount']) for asset in assets
     }
 
 
