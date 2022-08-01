@@ -45,7 +45,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
             'amount': amount,
             'account': user.account,
             'wallet': wallet,
-            'user': user
+            'user': user,
         }
 
     def create(self, validated_data):
@@ -81,7 +81,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StakeRequest
-        fields = ('status', 'stake_option', 'amount', 'stake_option_id', 'total_revenue')
+        fields = ('status', 'stake_option', 'amount', 'stake_option_id', 'total_revenue', 'id', 'created')
 
 
 class StakeRequestAPIView(ModelViewSet):
