@@ -246,3 +246,11 @@ class Transfer(models.Model):
             ),
             CheckConstraint(check=Q(amount__gte=0, fee_amount__gte=0), name='check_ledger_transfer_amounts', ),
         ]
+
+    def __str__(self):
+        if self.deposit:
+            action = 'deposit'
+        else:
+            action = 'withdraw'
+
+        return f'{action} {self.amount} {self.asset}'
