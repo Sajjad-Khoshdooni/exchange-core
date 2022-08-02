@@ -26,7 +26,7 @@ class StakeOption(models.Model):
         filled_cap = StakeRequest.objects.filter(
             stake_option=self,
             status__in=(StakeRequest.PROCESS, StakeRequest.PENDING, StakeRequest.DONE),
-        ).aggregate(Sum('amount'))['amount__sum']
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
 
         return cap - filled_cap
 
@@ -39,8 +39,7 @@ class StakeOption(models.Model):
 
         total_stake_amount = StakeRequest.objects.filter(
             stake_option=self,
-            status__in=(StakeRequest.PROCESS, StakeRequest.PENDING, StakeRequest.DONE),
             account__user=user
-        ).aggregate(Sum('amount'))['amount__sum']
+        ).exclude(status=StakeRequest.CANCEL_COMPLETE).aggregate(Sum('amount'))['amount__sum'] or 0
 
-        return self.user_max_amount - total_stake_amount
+        return self.user_max_amount - total_stake_amount or self.user_max_amount
