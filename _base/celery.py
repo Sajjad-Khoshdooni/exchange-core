@@ -265,7 +265,7 @@ app.conf.beat_schedule = {
     },
     'update_accounts_pnl': {
         'task': 'ledger.tasks.pnl.create_pnl_histories',
-        'schedule': crontab(hour=0, minute=0),
+        'schedule': crontab(hour=20, minute=30),
         'options': {
             'queue': 'celery',
             'expire': 60
