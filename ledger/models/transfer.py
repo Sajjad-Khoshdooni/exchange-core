@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 class Transfer(models.Model):
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
-    SELF, BINANCE = 'self', 'binance'
+    SELF, BINANCE, INTERNAL = 'self', 'binance', 'internal'
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
@@ -51,7 +51,11 @@ class Transfer(models.Model):
 
     is_fee = models.BooleanField(default=False)
 
-    source = models.CharField(max_length=8, default=SELF, choices=((SELF, SELF), (BINANCE, BINANCE)))
+    source = models.CharField(
+        max_length=8,
+        default=SELF,
+        choices=((SELF, SELF), (BINANCE, BINANCE), (INTERNAL, INTERNAL))
+    )
     provider_transfer = models.OneToOneField(to='provider.ProviderTransfer', on_delete=models.PROTECT, null=True,
                                              blank=True)
     handling = models.BooleanField(default=False)
@@ -143,7 +147,8 @@ class Transfer(models.Model):
                 deposit=False,
                 group_id=group_id,
                 trx_hash='internal: <%s>' % str(group_id),
-                out_address=address
+                out_address=address,
+                source=Transfer.INTERNAL
             )
 
             receiver_transfer = Transfer.objects.create(
@@ -155,7 +160,8 @@ class Transfer(models.Model):
                 deposit=True,
                 group_id=group_id,
                 trx_hash='internal: <%s>' % str(group_id),
-                out_address=sender_deposit_address.address
+                out_address=sender_deposit_address.address,
+                source=Transfer.INTERNAL
             )
 
         sender_transfer.alert_user()
