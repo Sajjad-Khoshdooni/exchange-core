@@ -56,8 +56,12 @@ class DepositSerializer(serializers.ModelSerializer):
             if (prev_transfer.status, status) not in valid_transitions:
                 raise ValidationError({'status': 'invalid status transition (%s -> %s)' % (prev_transfer.status, status)})
 
-            prev_transfer.status = status
-            prev_transfer.save(update_fields=['status'])
+            with WalletPipeline() as pipeline:
+                prev_transfer.status = status
+                prev_transfer.save(update_fields=['status'])
+
+                if status == Transfer.DONE:
+                    prev_transfer.build_trx(pipeline)
 
             return prev_transfer
 
