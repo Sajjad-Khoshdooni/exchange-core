@@ -120,6 +120,22 @@ app.conf.beat_schedule = {
             'expire': 300
         },
     },
+    'create_transfer_history': {
+        'task': 'provider.tasks.binance.create_transfer_history',
+        'schedule': 300,
+        'option': {
+            'queue': 'binance',
+            'expire': 300,
+        }
+    },
+    'get_binance_wallet': {
+        'task': 'provider.tasks.binance.get_binance_wallet',
+        'schedule': 300,
+        'option': {
+            'queue': 'binance',
+            'expire': 300,
+        }
+    },
     # market tasks
     'create depth orders': {
         'task': 'market.tasks.market_maker.create_depth_orders',
@@ -169,6 +185,14 @@ app.conf.beat_schedule = {
             'expire': 36000
         },
     },
+    'create_stake_revenue': {
+            'task': 'stake.tasks.stake_revenue.create_stake_revenue',
+            'schedule': crontab(hour=19, minute=30),
+            'options': {
+                'queue': 'celery',
+                'expire': 36000
+            },
+        },
 
     # 'lock_monitor': {
     #     'task': 'ledger.tasks.lock_monitor.lock_monitor',
@@ -222,15 +246,31 @@ app.conf.beat_schedule = {
             'expire': 17
         }
     },
+    'carrot_trader': {
+        'task': 'trader.tasks.carrot_trader.carrot_trader',
+        'schedule': 7,
+        'options': {
+            'queue': 'carrot_trader',
+            'expire': 7
+        }
+    },
 
     'health_alert_pending': {
-            'task': 'health.tasks.alert_pending.alert_pending',
-            'schedule': 600,
-            'options': {
-                'queue': 'celery',
-                'expire': 3600
-            }
-        },
+        'task': 'health.tasks.alert_pending.alert_pending',
+        'schedule': 600,
+        'options': {
+            'queue': 'celery',
+            'expire': 3600
+        }
+    },
+    'update_accounts_pnl': {
+        'task': 'ledger.tasks.pnl.create_pnl_histories',
+        'schedule': crontab(hour=0, minute=0),
+        'options': {
+            'queue': 'celery',
+            'expire': 60
+        }
+    },
 }
 if settings.DEBUG_OR_TESTING:
     app.conf.beat_schedule = {
@@ -287,6 +327,14 @@ if settings.DEBUG_OR_TESTING:
             'options': {
                 'queue': 'trader-ma',
                 'expire': 17
+            }
+        },
+        'carrot_trader': {
+            'task': 'trader.tasks.carrot_trader.carrot_trader',
+            'schedule': 7,
+            'options': {
+                'queue': 'trader-ma',
+                'expire': 7
             }
         },
     }

@@ -60,7 +60,9 @@ class StopLoss(models.Model):
 
     @property
     def base_wallet(self):
-        return self.symbol.base_asset.get_wallet(self.wallet.account, self.wallet.market)
+        return self.symbol.base_asset.get_wallet(
+            self.wallet.account, self.wallet.market, variant=self.wallet.variant
+        )
 
     def acquire_lock(self, lock_wallet, lock_amount, pipeline: WalletPipeline):
         pipeline.new_lock(key=self.group_id, wallet=lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)

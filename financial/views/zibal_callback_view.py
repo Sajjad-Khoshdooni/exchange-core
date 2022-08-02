@@ -37,9 +37,4 @@ class ZibalCallbackView(TemplateView):
             else:
                 payment_request.get_gateway().verify(payment)
 
-        if payment.status == DONE:
-            url = Payment.SUCCESS_URL
-        else:
-            url = Payment.FAIL_URL
-
-        return redirect(url)
+        payment.get_redirect_url()
