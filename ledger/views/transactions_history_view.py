@@ -18,6 +18,7 @@ class TransferSerializer(serializers.ModelSerializer):
     network = serializers.SerializerMethodField()
     coin = serializers.SerializerMethodField()
     out_address = serializers.SerializerMethodField()
+    is_internal = serializers.SerializerMethodField()
 
     def get_link(self, transfer: Transfer):
         return transfer.get_explorer_link()
@@ -42,9 +43,12 @@ class TransferSerializer(serializers.ModelSerializer):
 
         return address
 
+    def get_is_internal(self, transfer: Transfer):
+        return transfer.source == Transfer.INTERNAL
+
     class Meta:
         model = Transfer
-        fields = ('created', 'amount', 'status', 'link', 'out_address', 'coin', 'network', 'trx_hash', 'fee_amount')
+        fields = ('created', 'amount', 'status', 'link', 'out_address', 'coin', 'network', 'trx_hash', 'fee_amount', 'is_internal')
 
 
 class WithdrawHistoryView(ListAPIView):

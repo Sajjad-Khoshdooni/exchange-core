@@ -9,6 +9,7 @@ from rest_framework.viewsets import ModelViewSet
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet, Trx
+from ledger.utils.precision import get_presentation_amount
 from ledger.utils.wallet_pipeline import WalletPipeline
 from stake.models import StakeRequest, StakeOption, StakeRevenue
 from stake.views.stake_option_view import StakeOptionSerializer
@@ -19,6 +20,10 @@ class StakeRequestSerializer(serializers.ModelSerializer):
     stake_option_id = serializers.CharField(write_only=True)
     stake_option = StakeOptionSerializer(read_only=True)
     total_revenue = serializers.SerializerMethodField()
+    presentation_amount = serializers.SerializerMethodField()
+
+    def get_presentation_amount(self, stake_request: StakeRequest):
+        return get_presentation_amount(stake_request.amount)
 
     def get_total_revenue(self, stake_request: StakeRequest):
         stake_request = stake_request
@@ -34,8 +39,14 @@ class StakeRequestSerializer(serializers.ModelSerializer):
         if not stake_option.enable:
             raise ValidationError('امکان استفاده از این اپشن در حال حاضر وجود ندارد.')
 
-        if not stake_option.min_amount <= amount <= stake_option.max_amount:
+        if stake_option.get_free_cap_amount() < amount:
+            raise ValidationError('مقدار درخواست شده برای سرمایه گذاری بیشتر از حجم خالی باقی مانده است.')
+
+        if not stake_option.user_min_amount <= amount <= stake_option.user_max_amount:
             raise ValidationError('مقدار وارد شده در بازه مجاز نیست.')
+
+        if stake_option.get_free_amount_per_user(user=user) < amount:
+            raise ValidationError('مقدار درخواست شده برای سرمایه گذاری بیشتر از حجم مجاز باقی مانده برای شما است.')
 
         if not wallet.has_balance(amount=amount):
             raise ValidationError('مقدار وارد شده از موجودی کیف پول شما بیشتر است.')
@@ -81,7 +92,8 @@ class StakeRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StakeRequest
-        fields = ('id', 'created', 'status', 'stake_option', 'amount', 'stake_option_id', 'total_revenue', )
+        fields = ('id', 'created', 'status', 'stake_option', 'amount', 'presentation_amount',
+                  'stake_option_id', 'total_revenue', )
 
 
 class StakeRequestAPIView(ModelViewSet):
