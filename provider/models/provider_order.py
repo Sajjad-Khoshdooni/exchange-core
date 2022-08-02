@@ -141,9 +141,11 @@ class ProviderOrder(models.Model):
         # todo: this method should not called more than once at a single time
 
         if settings.DEBUG_OR_TESTING:
+            logger.info('ignored due to debug')
             return True
 
         if not asset.hedge_method:
+            logger.info('ignored due to no hedge method')
             return True
 
         to_buy = amount if side == cls.BUY else -amount
@@ -186,6 +188,7 @@ class ProviderOrder(models.Model):
             price = get_trading_price_usdt(asset.symbol, side=SELL, raw_price=True)
 
             if order_amount * price < 10:
+                logger.info('ignored due to small order')
                 return True
 
             if not dry_run:
@@ -200,6 +203,7 @@ class ProviderOrder(models.Model):
                             order_amount = floor_precision(balance, round_digits)
 
                         if order_amount * price < 10:
+                            logger.info('ignored due to small order')
                             return True
 
                 symbol = cls.get_trading_symbol(asset)
