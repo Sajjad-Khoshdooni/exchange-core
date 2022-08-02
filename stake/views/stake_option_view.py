@@ -50,7 +50,7 @@ class StakeOptionAPIView(ListAPIView):
     permission_classes = []
 
     serializer_class = StakeOptionSerializer
-    queryset = StakeOption.objects.filter(enable=True)
+    queryset = StakeOption.objects.filter(enable=True).order_by('-apr')
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
