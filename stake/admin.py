@@ -5,7 +5,8 @@ from .models import StakeRequest, StakeRevenue, StakeOption
 
 @admin.register(StakeOption)
 class StakeOptionAdmin(admin.ModelAdmin):
-    list_display = ['asset', 'apr', 'get_stake_request_number']
+    list_display = ['asset', 'apr', 'get_stake_request_number', 'total_cap', 'enable', 'landing']
+    list_editable = ('enable', 'landing')
 
     readonly_fields = ('get_stake_request_number',)
 
