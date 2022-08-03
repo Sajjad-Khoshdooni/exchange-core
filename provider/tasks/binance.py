@@ -25,3 +25,16 @@ def inject_tether_to_futures():
         )
 
     set_metric('binance_future_margin_ratio', value=futures_margin_ratio)
+
+
+@shared_task()
+def create_transfer_history():
+    BinanceSpotHandler.get_withdraw_history()
+    BinanceSpotHandler.get_deposit_history()
+
+
+@shared_task()
+def get_binance_wallet():
+    BinanceSpotHandler.get_spot_wallets()
+    BinanceFuturesHandler.get_futures_wallets()
+

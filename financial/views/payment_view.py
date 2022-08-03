@@ -37,7 +37,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PaymentRequest
-        fields = ('callback', 'amount', 'card_pan')
+        fields = ('callback', 'amount', 'card_pan', 'source')
 
 
 class PaymentRequestView(CreateAPIView):

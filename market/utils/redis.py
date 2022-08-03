@@ -7,12 +7,12 @@ prefix_orders_count = 'market_orders_count'
 market_redis = Redis.from_url(settings.MARKET_CACHE_LOCATION, decode_responses=True)
 
 
-def set_top_prices(symbol_id, price_dict):
-    set_dict_values(symbol_id, prefix_top_price, price_dict)
+def set_top_prices(symbol_id, price_dict, scope=''):
+    set_dict_values(symbol_id, f'{prefix_top_price}:{scope}', price_dict)
 
 
-def get_top_prices(symbol_id):
-    return get_as_dict(symbol_id, prefix_top_price)
+def get_top_prices(symbol_id, scope=''):
+    return get_as_dict(symbol_id, f'{prefix_top_price}:{scope}')
 
 
 def set_top_depth_prices(symbol_id, price_dict):
