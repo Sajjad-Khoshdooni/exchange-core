@@ -313,6 +313,7 @@ class Order(models.Model):
                 trade.set_amounts(trade_trxs)
                 fee_trx = trade_trxs.maker_fee if trade.is_maker else trade_trxs.taker_fee
                 referrals.append(trade.create_referral(pipeline, fee_trx, tether_irt))
+                trade.set_gap_revenue()
 
             trades.extend(trades_pair)
 
