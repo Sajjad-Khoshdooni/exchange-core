@@ -8,7 +8,6 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from accounts.views.authentication import CustomTokenAuthentication
 from ledger.models import Transfer
-from wallet.utils import get_base58_address
 
 
 class TransferSerializer(serializers.ModelSerializer):
@@ -17,7 +16,7 @@ class TransferSerializer(serializers.ModelSerializer):
     fee_amount = serializers.SerializerMethodField()
     network = serializers.SerializerMethodField()
     coin = serializers.SerializerMethodField()
-    out_address = serializers.SerializerMethodField()
+    is_internal = serializers.SerializerMethodField()
 
     def get_link(self, transfer: Transfer):
         return transfer.get_explorer_link()
@@ -34,17 +33,12 @@ class TransferSerializer(serializers.ModelSerializer):
     def get_network(self, transfer: Transfer):
         return transfer.network.symbol
 
-    def get_out_address(self, transfer: Transfer):
-        address = transfer.out_address
-
-        if address.startswith('41'):
-            address = get_base58_address(address)
-
-        return address
+    def get_is_internal(self, transfer: Transfer):
+        return transfer.source == Transfer.INTERNAL
 
     class Meta:
         model = Transfer
-        fields = ('created', 'amount', 'status', 'link', 'out_address', 'coin', 'network', 'trx_hash', 'fee_amount')
+        fields = ('created', 'amount', 'status', 'link', 'out_address', 'coin', 'network', 'trx_hash', 'fee_amount', 'is_internal')
 
 
 class WithdrawHistoryView(ListAPIView):

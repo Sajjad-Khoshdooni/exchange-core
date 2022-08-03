@@ -34,7 +34,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         user = self.context['request'].user
 
-        if user.level < user.LEVEL2:
+        if user.level < user.LEVEL2 and not user.allow_level1_crypto_withdraw:
             raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
 
         account = user.account

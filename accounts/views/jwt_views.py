@@ -1,3 +1,4 @@
+from django.utils.translation import activate
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -14,19 +15,22 @@ from accounts.views.authentication import CustomTokenAuthentication
 
 
 def user_has_delegate_permission(user):
-    return str(user.id) in secret('delegation_permitted_users', '').split(',')
+    return str(user.id) in secret('DELEGATION_PERMITTED_USERS', '').split(',')
 
 
 class DelegatedAccountMixin:
     @staticmethod
-    def get_account(request):
+    def get_account_variant(request):
         if request.auth and request.user and user_has_delegate_permission(request.user) and \
                 getattr(request.auth, 'token_type', None) == 'access' and \
                 hasattr(request.auth, 'payload') and request.auth.payload.get('account_id'):
-            return Account.objects.get(id=request.auth.payload.get('account_id'))
+            activate('en-US')
+
+            return Account.objects.get(id=request.auth.payload.get('account_id')), request.auth.payload.get('variant')
 
         if request.user:
-            return request.user.account
+            return request.user.account, None
+        return None, None
 
 
 class InternalTokenObtainPairSerializer(serializers.Serializer):
@@ -34,14 +38,16 @@ class InternalTokenObtainPairSerializer(serializers.Serializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['mask'] = serializers.IntegerField(required=True)
+        self.fields['variant'] = serializers.CharField(required=True)
 
     @classmethod
-    def get_token(cls, user, mask=None):
+    def get_token(cls, user, mask=None, variant=None):
         token = RefreshToken.for_user(user)
 
         account = Account.objects.get(user_id=user.pk)
         if mask and user_has_delegate_permission(user):
             token['account_id'] = mask
+            token['variant'] = variant
         else:
             token['account_id'] = account.id
 
@@ -49,9 +55,10 @@ class InternalTokenObtainPairSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         mask = attrs.pop('mask', None)
+        variant = attrs.pop('variant', None)
         data = super().validate(attrs)
 
-        refresh = self.get_token(self.context['user'], mask)
+        refresh = self.get_token(self.context['user'], mask, variant)
 
         data['refresh'] = str(refresh)
         data['access'] = str(refresh.access_token)

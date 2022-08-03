@@ -133,6 +133,8 @@ class UserFilter(SimpleListFilter):
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_payment_amount', 'status', 'ref_id', 'ref_status', 'get_user_bank_card',
                     'get_withdraw_request_user_mobile',)
+    readonly_fields = ('payment_request', )
+
     list_filter = (UserFilter,)
 
     def get_user_bank_card(self, payment: Payment):

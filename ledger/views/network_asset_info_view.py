@@ -1,6 +1,8 @@
 from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView
+from rest_framework.pagination import LimitOffsetPagination
+
 from ledger.models import NetworkAsset
 from ledger.utils.precision import get_presentation_amount
 
@@ -36,6 +38,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 class NetworkAssetView(ListAPIView):
     authentication_classes = []
     permission_classes = []
+    pagination_class = LimitOffsetPagination
 
     serializer_class = NetworkAssetSerializer
 
