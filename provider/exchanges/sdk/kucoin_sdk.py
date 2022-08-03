@@ -11,18 +11,17 @@ from provider.exchanges.sdk.binance_sdk import get_timestamp
 
 if not settings.DEBUG:
     KUCOIN_SPOT_BASE_URL = "https://api.kucoin.com"
-    KUCOIN_FUTURES_BASE_URL = ''
+    KUCOIN_FUTURES_BASE_URL = "https://api-futures.kucoin.com"
 else:
     KUCOIN_SPOT_BASE_URL = "https://api.kucoin.com"
-        # " https://openapi-sandbox.kucoin.com"
-    KUCOIN_FUTURES_BASE_URL = ''
+    KUCOIN_FUTURES_BASE_URL = "https://api-futures.kucoin.com"
 
 
 def kucoin_spot_send_public_request(endpoint, method='POST', **kwargs):
     pass
 
 
-def add_sign_kucoin(params_str, timestamp, http_method):
+def add_sign_kucoin_spot(params_str, timestamp, http_method):
     headers = {}
     _secret_key = config('KUCOIN_SECRET_KEY', default='')
     _secret_passphrase = config('KC-API-PASSPHRASE', default='')
@@ -46,13 +45,39 @@ def add_sign_kucoin(params_str, timestamp, http_method):
     return headers
 
 
+def add_sign_kucoin_futures(params_str, timestamp, http_method):
+    headers = {}
+    _secret_key = config('KUCOIN_SECRET_KEY_FUTURES', default='')
+    _secret_passphrase = config('KC-API-PASSPHRASE-FUTURES', default='')
+
+    headers['KC-API-TIMESTAMP'] = str(timestamp)
+    headers['KC-API-KEY'] = config('KC-API-KEY-FUTURES', default='')
+    headers['KC-API-KEY-VERSION'] = config('KC-API-KEY-VERSION-FUTURES', default='')
+    headers['KC-API-SIGN'] = base64.b64encode(
+        hmac.new(_secret_key.encode('utf-8'),
+                 params_str.encode('utf-8'),
+                 hashlib.sha256).digest()
+    )
+    headers['KC-API-PASSPHRASE'] = base64.b64encode(
+        hmac.new(_secret_key.encode('utf-8'),
+                 _secret_passphrase.encode('utf-8'),
+                 hashlib.sha256).digest())
+
+    if http_method in ['POST']:
+        headers['Content-Type'] = "application/json"
+
+    return headers
+
+
 def kucoin_spot_send_signed_request(http_method, url_path, **kwargs):
     timestamp = get_timestamp()
 
     if kwargs.get('futures'):
         url = KUCOIN_FUTURES_BASE_URL + url_path
+        add_sign_kucoin = add_sign_kucoin_futures()
     else:
         url = KUCOIN_SPOT_BASE_URL + url_path
+        add_sign_kucoin = add_sign_kucoin_spot()
 
     data = kwargs.pop('data', {})
 
