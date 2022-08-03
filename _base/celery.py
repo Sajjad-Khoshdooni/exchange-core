@@ -186,13 +186,13 @@ app.conf.beat_schedule = {
         },
     },
     'create_stake_revenue': {
-            'task': 'stake.tasks.stake_revenue.create_stake_revenue',
-            'schedule': crontab(hour=19, minute=30),
-            'options': {
-                'queue': 'celery',
-                'expire': 36000
-            },
+        'task': 'stake.tasks.stake_revenue.create_stake_revenue',
+        'schedule': crontab(hour=19, minute=30),
+        'options': {
+            'queue': 'celery',
+            'expire': 36000
         },
+    },
 
     # 'lock_monitor': {
     #     'task': 'ledger.tasks.lock_monitor.lock_monitor',
@@ -335,6 +335,14 @@ if settings.DEBUG_OR_TESTING:
             'options': {
                 'queue': 'trader-ma',
                 'expire': 7
+            }
+        },
+        'update_accounts_pnl': {
+            'task': 'ledger.tasks.pnl.create_pnl_histories',
+            'schedule': crontab(hour=20, minute=30),
+            'options': {
+                'queue': 'celery',
+                'expire': 60
             }
         },
     }
