@@ -9,11 +9,11 @@ from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
-from ledger.models import Asset, Prize, CoinCategory, DepositAddress
+from ledger.models import Asset, Prize, CoinCategory
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol, SELL
+from ledger.utils.price import get_trading_price_usdt, get_binance_trading_symbol, SELL
 from provider.models import ProviderOrder
 
 

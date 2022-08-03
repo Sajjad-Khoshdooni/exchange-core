@@ -1,7 +1,7 @@
 from collections import defaultdict
 from decimal import Decimal
 
-from django.db.models import Sum, F
+from django.db.models import Sum
 
 from accounts.models import Account
 from financial.models import ManualTransferHistory
