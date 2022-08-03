@@ -168,15 +168,15 @@ class NetworkAssetAdmin(admin.ModelAdmin):
     list_editable = ('can_deposit', )
 
 
-class UserFilter(admin.SimpleListFilter):
+class DepositAddressUserFilter(admin.SimpleListFilter):
     title = 'کاربران'
-    parameter_name = 'user_id'
+    parameter_name = 'user'
 
     def lookups(self, request, model_admin):
         return [(1, 1)]
 
     def queryset(self, request, queryset):
-        user = request.GET.get('user_id')
+        user = request.GET.get('user')
         if user is not None:
             return queryset.filter(address_key__account__user=user)
         else:
@@ -187,7 +187,7 @@ class UserFilter(admin.SimpleListFilter):
 class DepositAddressAdmin(admin.ModelAdmin):
     list_display = ('address_key', 'network', 'address', 'is_registered',)
     readonly_fields = ('address_key', 'network', 'address', 'is_registered',)
-    list_filter = ('network', 'is_registered', )
+    list_filter = ('network', 'is_registered', DepositAddressUserFilter )
     search_fields = ('address',)
 
 
