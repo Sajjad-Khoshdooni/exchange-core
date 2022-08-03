@@ -3,6 +3,7 @@ from rest_framework import serializers
 from ledger.utils.precision import get_presentation_amount
 from stake.models import StakeOption
 from rest_framework.generics import ListAPIView
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class StakeOptionSerializer(serializers.ModelSerializer):
@@ -43,11 +44,14 @@ class StakeOptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = StakeOption
         fields = ('id', 'asset', 'apr', 'enable', 'user_max_amount', 'user_min_amount', 'user_available_amount',
-                  'total_cap', 'filled_cap_percent')
+                  'total_cap', 'filled_cap_percent', 'landing')
 
 
 class StakeOptionAPIView(ListAPIView):
     permission_classes = []
+
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['landing']
 
     serializer_class = StakeOptionSerializer
     queryset = StakeOption.objects.filter(enable=True).order_by('-apr')
