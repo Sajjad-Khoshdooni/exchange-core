@@ -139,9 +139,9 @@ class TradingFeeView(APIView):
     def get(self, request):
         # taker_fee = Decimal('0.2')
         old_taker_fee = Decimal('0.2')
-        old_maker_fee = Decimal('0.2')
+        old_maker_fee = Decimal('0')
 
-        taker_fee = Decimal('0')
+        taker_fee = Decimal('0.2')
         maker_fee = Decimal('0')
 
         referral_code = request.user.account.referred_by
