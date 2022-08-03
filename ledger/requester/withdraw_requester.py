@@ -1,4 +1,5 @@
 import requests
+from django.conf import settings
 from yekta_config import secret
 from yekta_config.config import config
 
@@ -10,6 +11,9 @@ class RequestWithdraw:
         }
 
     def withdraw_from_hot_wallet(self, receiver_address, amount, network, asset, transfer_id):
+        if settings.DEBUG_OR_TESTING:
+            return
+
         data = {
             'receiver_address': receiver_address,
             'amount': amount,
