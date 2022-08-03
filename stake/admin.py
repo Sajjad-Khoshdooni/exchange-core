@@ -20,7 +20,7 @@ class StakeRequestAdmin(admin.ModelAdmin):
     list_display = ['get_stake_option_asset', 'amount', 'status']
     actions = ('stake_request_processing', 'stake_request_done',
                'stake_request_cancel_processing', 'stake_request_cancel_done',)
-    readonly_fields = ('get_stake_option_asset',)
+    readonly_fields = ('get_stake_option_asset', 'account')
 
     def get_stake_option_asset(self, stake_request: StakeRequest):
         return stake_request.stake_option.asset
