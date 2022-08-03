@@ -56,7 +56,7 @@ class StakeRequest(models.Model):
             (self.PROCESS, self.PENDING), (self.PROCESS, self.CANCEL_COMPLETE),
             (self.PENDING, self.DONE), (self.PENDING, self.CANCEL_PROCESS),
             (self.DONE, self.CANCEL_PROCESS), (self.CANCEL_PROCESS, self.CANCEL_PENDING),
-            (self.CANCEL_PENDING, self.CANCEL_COMPLETE),
+            (self.CANCEL_PENDING, self.CANCEL_COMPLETE), (self.CANCEL_PROCESS, self.CANCEL_COMPLETE)
         ]
         valid_cancellation_status = [(self.PROCESS, self.CANCEL_COMPLETE), (self.CANCEL_PENDING, self.CANCEL_COMPLETE)]
 
