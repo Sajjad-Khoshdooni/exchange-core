@@ -36,4 +36,4 @@ class PaydotirCallbackView(TemplateView):
             else:
                 payment_request.get_gateway().verify(payment)
 
-        payment.get_redirect_url()
+        return redirect(payment.get_redirect_url())
