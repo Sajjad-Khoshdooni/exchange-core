@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.db.models import Sum
 
 from accounts.models import Account
-from financial.models import ManualTransferHistory
+from financial.models import Investment, InvestmentRevenue
 from financial.utils.stats import get_total_fiat_irt
 from ledger.models import Asset, Wallet
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
@@ -51,6 +51,10 @@ class AssetOverview:
 
         self._internal_deposits = get_internal_asset_deposits()
 
+        self._investment = dict(Investment.objects.values('asset').annotate(amount=Sum('amount')).values_list('asset', 'amount'))
+        self._investment_revenue = dict(InvestmentRevenue.objects.values('investment__asset').annotate(
+            amount=Sum('amount')).values_list('investment__asset', 'amount'))
+
     @property
     def total_initial_margin(self):
         return float(self._future['totalInitialMargin'])
@@ -73,7 +77,13 @@ class AssetOverview:
     def get_internal_deposits_balance(self, asset: Asset) -> Decimal:
         return self._internal_deposits.get(asset.symbol, 0)
 
+    def get_futures_available_usdt(self):
+        return self._future['availableBalance']
+
     def get_future_position_amount(self, asset: Asset):
+        if asset.symbol == Asset.USDT:
+            return self._future['availableBalance']
+
         symbol = get_binance_trading_symbol(asset.future_symbol)
         amount = float(self._future_positions.get(symbol, {}).get('positionAmt', 0))
 
@@ -97,11 +107,16 @@ class AssetOverview:
     def get_future_position_value(self, asset: Asset):
         return float(self._future_positions.get(get_binance_trading_symbol(asset.future_symbol), {}).get('notional', 0))
 
+    def get_investment_amount(self, asset: Asset) -> Decimal:
+        return self._investment.get(asset.id, 0) + self._investment_revenue.get(asset.id, 0)
+
     def get_total_assets(self, asset: Asset):
         if asset.symbol == Asset.IRT:
             return get_total_fiat_irt()
         else:
-            return self.get_binance_balance(asset) + self.get_internal_deposits_balance(asset)
+            return self.get_binance_balance(asset) + \
+                   self.get_internal_deposits_balance(asset) + \
+                   self.get_investment_amount(asset)
 
     def get_hedge_amount(self, asset: Asset):
         # Hedge = Real assets - Promised assets to users (user)
@@ -151,22 +166,9 @@ class AssetOverview:
     def get_fiat_usdt(self) -> float:
         return float(self.get_fiat_irt() / self.usdt_irt)
 
-    def get_promised_value(self):
-        promised_value = 0
-
-        for manual in ManualTransferHistory.objects.filter(done=False):
-            value = self.prices[manual.asset.symbol] * max(manual.amount - manual.full_fill_amount, 0)
-
-            if manual.deposit:
-                promised_value += value
-            else:
-                promised_value -= value
-
-        return promised_value
-
     def get_all_assets_usdt(self):
         return float(self.get_binance_spot_total_value()) + self.total_margin_balance + \
-               float(self.get_internal_usdt_value()) + self.get_fiat_usdt() + float(self.get_promised_value())
+               float(self.get_internal_usdt_value()) + self.get_fiat_usdt()
 
     def get_exchange_assets_usdt(self):
         return self.get_all_assets_usdt() - float(self.get_all_users_asset_value())
