@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import requests
 from cachetools.func import ttl_cache
@@ -78,7 +78,6 @@ def get_binance_price_stream(coin: str):
 
 
 def get_tether_price_irt_grpc(side: str, now: datetime = None):
-
     coins = 'USDT'
     symbol_to_coins = {
         coins + IRT: coins
@@ -112,6 +111,18 @@ def get_tether_price_irt_grpc(side: str, now: datetime = None):
     grpc_client.channel.close()
 
     return Price(coin='USDT', price=Decimal(orders[0].price), side=side).price
+
+
+def get_avg_tether_price_irt_grpc(start_timestamp, end_timestamp):
+    grpc_client = gRPCClient()
+    response = grpc_client.get_trades_average_price_by_time(
+        min_timestamp=start_timestamp,
+        max_timestamp=end_timestamp,
+        symbol='USDTIRT',
+        exchange=NOBITEX
+    ).value
+    grpc_client.channel.close()
+    return Decimal(response)
 
 
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
@@ -218,18 +229,20 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
 
     except (TimeoutError, TypeError):
         price = get_tether_price_irt_grpc(side=side, now=now)
-        return price
+        return Decimal(price)
 
     return Decimal(tether_rial / 10)
 
 
-def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0) -> Decimal:
+def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
+                           gap: Union[Decimal, None] = None) -> Decimal:
     if coin == IRT:
         return 1 / get_tether_irt_price(get_other_side(side))
 
-    spread = get_spread(coin, side, value) / 100
-
-    logger.info('Calculating spread for (%s, %s, %s): %s' % (coin, side, value, spread))
+    if gap:
+        spread = gap
+    else:
+        spread = get_spread(coin, side, value) / 100
 
     if raw_price:
         multiplier = 1
@@ -244,12 +257,13 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
     return price and price * multiplier
 
 
-def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0) -> Decimal:
+def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
+                          gap: Union[Decimal, None] = None) -> Decimal:
     if coin == IRT:
         return Decimal(1)
 
     tether = get_tether_irt_price(side)
-    price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether)
+    price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether, gap=gap)
 
     if price:
         return price * tether

@@ -13,7 +13,7 @@ from ledger.models import Asset, Prize, CoinCategory
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol, SELL
+from ledger.utils.price import get_trading_price_usdt, get_binance_trading_symbol, SELL
 from provider.models import ProviderOrder
 
 
@@ -168,15 +168,15 @@ class NetworkAssetAdmin(admin.ModelAdmin):
     list_editable = ('can_deposit', )
 
 
-class UserFilter(admin.SimpleListFilter):
+class DepositAddressUserFilter(admin.SimpleListFilter):
     title = 'کاربران'
-    parameter_name = 'user_id'
+    parameter_name = 'user'
 
     def lookups(self, request, model_admin):
         return [(1, 1)]
 
     def queryset(self, request, queryset):
-        user = request.GET.get('user_id')
+        user = request.GET.get('user')
         if user is not None:
             return queryset.filter(address_key__account__user=user)
         else:
@@ -185,9 +185,9 @@ class UserFilter(admin.SimpleListFilter):
 
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_display = ('address_key', 'network', 'address')
-    readonly_fields = ('address_key', 'network', 'address')
-    list_filter = ('network', 'address_key__account__user__id')
+    list_display = ('address_key', 'network', 'address', 'is_registered',)
+    readonly_fields = ('address_key', 'network', 'address', 'is_registered',)
+    list_filter = ('network', 'is_registered', DepositAddressUserFilter )
     search_fields = ('address',)
 
 
@@ -251,8 +251,8 @@ class OTCTradeAdmin(admin.ModelAdmin):
 @admin.register(models.Trx)
 class TrxAdmin(admin.ModelAdmin):
     list_display = ('created', 'sender', 'receiver', 'amount', 'scope', 'group_id', 'scope')
-    search_fields = ('sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone')
-    readonly_fields = ('sender', 'receiver')
+    search_fields = ('sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone', 'group_id')
+    readonly_fields = ('sender', 'receiver', )
     list_filter = ('scope', )
 
 
@@ -343,41 +343,6 @@ class CryptoAccountTypeFilter(SimpleListFilter):
             return queryset.filter(deposit_address__address_key__account__type=value)
         else:
             return queryset
-
-
-@admin.register(models.CryptoBalance)
-class CryptoBalanceAdmin(admin.ModelAdmin):
-    list_display = ('asset', 'get_network', 'get_address', 'get_owner', 'amount', 'get_value_usdt', 'updated_at', )
-    search_fields = ('asset__symbol', 'deposit_address__address',)
-    list_filter = (CryptoAccountTypeFilter, )
-    actions = ('collect_asset_action', )
-
-    def get_network(self, crypto_balance: models.CryptoBalance):
-        return crypto_balance.deposit_address.network
-
-    get_network.short_description = 'network'
-
-    def get_address(self, crypto_balance: models.CryptoBalance):
-        return crypto_balance.deposit_address.address
-
-    get_address.short_description = 'address'
-
-    def get_owner(self, crypto_balance: models.CryptoBalance):
-        return str(crypto_balance.deposit_address.account)
-
-    get_owner.short_description = 'owner'
-
-    def get_value_usdt(self, crypto_balance: models.CryptoBalance):
-        value = crypto_balance.amount * get_trading_price_usdt(crypto_balance.asset.symbol, BUY, raw_price=True)
-        return get_presentation_amount(value)
-
-    get_value_usdt.short_description = 'value'
-
-
-    @admin.action(description='ارسال به بایننس')
-    def collect_asset_action(self, request, queryset):
-        for crypto in queryset:
-            crypto.collect()
 
 
 @admin.register(models.MarginTransfer)

@@ -11,6 +11,7 @@ from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired, ProcessingError
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.price import SELL
+from market.models.pair_symbol import DEFAULT_TAKER_FEE
 
 
 class OTCInfoView(APIView):
@@ -61,6 +62,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     coin = serializers.SerializerMethodField()
     coin_price = serializers.SerializerMethodField()
     cash = serializers.SerializerMethodField()
+    fee = serializers.SerializerMethodField()
 
     def validate(self, attrs):
         from_symbol = attrs['from_asset']['symbol']
@@ -137,6 +139,9 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         conf = otc_request.get_trade_config()
         return conf.cash.symbol
 
+    def get_fee(self, otc_request: OTCRequest):
+        return DEFAULT_TAKER_FEE
+
     def get_coin_price(self, otc_request: OTCRequest):
         conf = otc_request.get_trade_config()
 
@@ -153,7 +158,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = OTCRequest
         fields = ('from_asset', 'to_asset', 'from_amount', 'to_amount', 'token', 'price', 'expire', 'coin',
-                  'coin_price', 'cash')
+                  'coin_price', 'cash', 'fee')
         read_only_fields = ('token', 'price')
 
 

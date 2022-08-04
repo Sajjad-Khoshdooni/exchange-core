@@ -1,12 +1,13 @@
 from collections import defaultdict
 from decimal import Decimal
 
-from django.db.models import Sum, F
+from django.db.models import Sum
 
 from accounts.models import Account
 from financial.models import ManualTransferHistory
 from financial.utils.stats import get_total_fiat_irt
-from ledger.models import Asset, CryptoBalance, Wallet
+from ledger.models import Asset, Wallet
+from ledger.requester.internal_assets_requester import InternalAssetsRequester
 from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, get_binance_trading_symbol, BUY
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
@@ -17,10 +18,9 @@ def get_ledger_user_type_asset_balances():
 
 
 def get_internal_asset_deposits():
-    deposits = CryptoBalance.objects.values('asset__symbol').annotate(amount=Sum('amount'))
-
+    assets = InternalAssetsRequester().get_assets()
     return {
-        d['asset__symbol']: d['amount'] for d in deposits
+        asset['coin']: Decimal(asset['amount']) for asset in assets
     }
 
 

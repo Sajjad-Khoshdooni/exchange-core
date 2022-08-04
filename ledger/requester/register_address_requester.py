@@ -1,5 +1,6 @@
 import requests
 import logging
+from django.conf import settings
 
 from yekta_config import secret
 from yekta_config.config import config
@@ -15,7 +16,7 @@ class RegisterAddress:
         }
 
     def register(self, deposit_address):
-        if deposit_address.is_registered:
+        if deposit_address.is_registered or settings.DEBUG_OR_TESTING:
             return
 
         data = {

@@ -56,14 +56,13 @@ INSTALLED_APPS = [
     'multimedia',
     'accounts',
     'ledger',
-    'tracker',
     'provider',
-    'wallet',
     'collector',
     'market',
     'trader',
     'jalali_date',
     'health',
+    'stake',
 ]
 
 MIDDLEWARE = [

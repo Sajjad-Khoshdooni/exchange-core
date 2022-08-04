@@ -9,10 +9,3 @@ class Migration(migrations.Migration):
         ('accounts', '0070_alter_externalnotification_scope'),
         ('ledger', '0111_alter_assetspreadcategory_options_and_more'),
     ]
-
-    operations = [
-        migrations.AlterUniqueTogether(
-            name='wallet',
-            unique_together={('account', 'asset', 'market')},
-        ),
-    ]

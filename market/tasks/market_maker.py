@@ -22,9 +22,10 @@ def update_maker_orders():
     market_top_prices = get_market_top_prices()
     top_depth_prices = defaultdict(lambda: Decimal())
 
-    depth_orders = Order.open_objects.filter(type=Order.DEPTH).values('symbol', 'side').annotate(max_price=Max('price'),
-                                                                                                 min_price=Min('price'),
-                                                                                                 count=Count('*'))
+    depth_orders = Order.open_objects.filter(type__in=(Order.DEPTH, Order.BOT)).values('symbol', 'side').annotate(
+        max_price=Max('price'),
+        min_price=Min('price'),
+        count=Count('*'))
     for depth in depth_orders:
         top_depth_prices[
             (depth['symbol'], depth['side'])
@@ -63,10 +64,10 @@ def update_symbol_maker_orders(symbol):
     top_depth_prices = get_top_depth_prices(symbol.id)
     open_depth_orders_count = get_open_orders_count(symbol.id)
 
-    depth_orders = Order.open_objects.filter(symbol_id=symbol.id, type=Order.DEPTH).values('side').annotate(
-        max_price=Max('price'),
-        min_price=Min('price'),
-        count=Count('*')
+    depth_orders = Order.open_objects.filter(
+        symbol_id=symbol.id, type__in=(Order.DEPTH, Order.BOT)
+    ).values('side').annotate(
+        max_price=Max('price'), min_price=Min('price'), count=Count('*')
     )
     if not top_depth_prices:
         top_depth_prices = defaultdict(lambda: Decimal())
@@ -82,6 +83,7 @@ def update_symbol_maker_orders(symbol):
     try:
         with transaction.atomic():
             Order.cancel_invalid_maker_orders(symbol, top_depth_prices)
+            Order.cancel_invalid_maker_orders(symbol, top_depth_prices, gap=Decimal('0.001'), order_type=Order.BOT)
 
         for side in (Order.BUY, Order.SELL):
             logger.info(f'{symbol.name} {side} open count: {open_depth_orders_count[side]}')
