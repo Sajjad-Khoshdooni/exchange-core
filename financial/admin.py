@@ -287,7 +287,7 @@ class InvestmentRevenueInline(admin.TabularInline):
 
 @admin.register(Investment)
 class InvestmentAdmin(admin.ModelAdmin):
-    list_display = ('created', 'asset', 'get_amount', 'get_revenue', 'get_total', 'done')
+    list_display = ('created', 'type', 'asset', 'get_amount', 'get_revenue', 'get_total', 'done')
     inlines = [InvestmentRevenueInline]
 
     @admin.display(description='amount', ordering='amount')

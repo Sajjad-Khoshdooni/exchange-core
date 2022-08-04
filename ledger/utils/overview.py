@@ -77,7 +77,13 @@ class AssetOverview:
     def get_internal_deposits_balance(self, asset: Asset) -> Decimal:
         return self._internal_deposits.get(asset.symbol, 0)
 
+    def get_futures_available_usdt(self):
+        return self._future['availableBalance']
+
     def get_future_position_amount(self, asset: Asset):
+        if asset.symbol == Asset.USDT:
+            return self._future['availableBalance']
+
         symbol = get_binance_trading_symbol(asset.future_symbol)
         amount = float(self._future_positions.get(symbol, {}).get('positionAmt', 0))
 
