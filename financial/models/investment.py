@@ -5,11 +5,13 @@ from ledger.utils.fields import get_amount_field
 
 
 class Investment(models.Model):
+    SELF, TRADE, STAKE = 'self', 'trade', 'stake'
     created = models.DateTimeField(auto_now_add=True)
 
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)
     amount = get_amount_field()
     done = models.BooleanField(default=False)
+    type = models.CharField(max_length=16, default=SELF, choices=((SELF, SELF), (TRADE, TRADE), (STAKE, STAKE)))
 
     description = models.TextField(blank=True)
 
@@ -21,6 +23,9 @@ class Investment(models.Model):
 
     def get_revenue(self):
         return InvestmentRevenue.objects.filter(investment=self).aggregate(revenue=Sum('amount'))['revenue'] or 0
+
+    def get_total_amount(self):
+        return self.amount + self.get_revenue()
 
 
 class InvestmentRevenue(models.Model):

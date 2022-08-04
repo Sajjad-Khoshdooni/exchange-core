@@ -300,4 +300,4 @@ class InvestmentAdmin(admin.ModelAdmin):
 
     @admin.display(description='total')
     def get_total(self, investment: Investment):
-        return get_presentation_amount(investment.get_revenue() + investment.amount)
+        return get_presentation_amount(investment.get_total_amount())
