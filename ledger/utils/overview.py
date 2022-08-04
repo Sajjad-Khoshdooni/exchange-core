@@ -51,9 +51,9 @@ class AssetOverview:
 
         self._internal_deposits = get_internal_asset_deposits()
 
-        self._investment = dict(Investment.objects.values('asset').annotate(amount=Sum('amount')).values_list('asset', 'amount'))
-        self._investment_revenue = dict(InvestmentRevenue.objects.values('investment__asset').annotate(
-            amount=Sum('amount')).values_list('investment__asset', 'amount'))
+        self._investment = dict(Investment.objects.values('asset__symbol').annotate(amount=Sum('amount')).values_list('asset__symbol', 'amount'))
+        self._investment_revenue = dict(InvestmentRevenue.objects.values('investment__asset__symbol').annotate(
+            amount=Sum('amount')).values_list('investment__asset__symbol', 'amount'))
 
     @property
     def total_initial_margin(self):
@@ -108,7 +108,16 @@ class AssetOverview:
         return float(self._future_positions.get(get_binance_trading_symbol(asset.future_symbol), {}).get('notional', 0))
 
     def get_investment_amount(self, asset: Asset) -> Decimal:
-        return self._investment.get(asset.id, 0) + self._investment_revenue.get(asset.id, 0)
+        return self._investment.get(asset.symbol, 0) + self._investment_revenue.get(asset.symbol, 0)
+
+    def get_total_investment(self) -> Decimal:
+        value = Decimal(0)
+
+        for symbol, amount in self._investment.items():
+            if amount > 0:
+                value += Decimal(amount) * (self.prices.get(symbol) or 0)
+
+        return value
 
     def get_total_assets(self, asset: Asset):
         if asset.symbol == Asset.IRT:
@@ -168,7 +177,7 @@ class AssetOverview:
 
     def get_all_assets_usdt(self):
         return float(self.get_binance_spot_total_value()) + self.total_margin_balance + \
-               float(self.get_internal_usdt_value()) + self.get_fiat_usdt()
+               float(self.get_internal_usdt_value()) + self.get_fiat_usdt() + float(self.get_total_investment())
 
     def get_exchange_assets_usdt(self):
         return self.get_all_assets_usdt() - float(self.get_all_users_asset_value())

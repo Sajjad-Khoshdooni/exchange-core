@@ -52,15 +52,19 @@ class AssetAdmin(AdvancedAdmin):
             context = {
                 'binance_initial_margin': round(self.overview.total_initial_margin, 2),
                 'binance_maint_margin': round(self.overview.total_maintenance_margin, 2),
-                'binance_margin_balance': round(self.overview.total_margin_balance, 2),
                 'binance_margin_ratio': round(self.overview.margin_ratio, 2),
                 'hedge_value': round(self.overview.get_total_hedge_value(), 2),
+
+                'binance_margin_balance': round(self.overview.total_margin_balance, 2),
                 'binance_spot_usdt': round(self.overview.get_binance_spot_amount(Asset.get(Asset.USDT)), 2),
                 'internal_usdt': round(self.overview.get_internal_usdt_value(), 2),
-                'fiat_irt': round(self.overview.get_fiat_irt(), 0),
+                'fiat_usdt': round(self.overview.get_fiat_usdt(), 0),
+                'margin_insurance_balance': Asset.get(Asset.USDT).get_wallet(account).balance,
+                'investment': round(self.overview.get_total_investment(), 0),
+
                 'total_assets_usdt': round(self.overview.get_all_assets_usdt(), 0),
                 'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
-                'margin_insurance_balance': Asset.get(Asset.USDT).get_wallet(account).balance
+                'users_usdt': round(self.overview.get_all_users_asset_value(), 0)
             }
         else:
             self.overview = None
