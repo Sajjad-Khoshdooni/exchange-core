@@ -136,8 +136,11 @@ class AssetOverview:
 
         return Decimal(self.get_hedge_amount(asset)) * price
 
+    def get_users_asset_amount(self, asset: Asset) -> Decimal:
+        return self._users_per_asset_balances.get(asset.symbol, 0)
+
     def get_users_asset_value(self, asset: Asset) -> Decimal:
-        balance = self._users_per_asset_balances.get(asset.symbol, 0)
+        balance = self.get_users_asset_amount(asset)
         return balance * (self.prices.get(asset.symbol) or 0)
 
     def get_all_users_asset_value(self) -> Decimal:
