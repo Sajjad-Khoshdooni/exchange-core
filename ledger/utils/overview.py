@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.db.models import Sum
 
 from accounts.models import Account
-from financial.models import Investment, InvestmentRevenue
+from financial.models import Investment, InvestmentRevenue, FiatWithdrawRequest
 from financial.utils.stats import get_total_fiat_irt
 from ledger.models import Asset, Wallet
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
@@ -156,7 +156,11 @@ class AssetOverview:
         for asset in Asset.candid_objects.all():
             value += self.get_users_asset_value(asset)
 
-        return value
+        pending_withdraws = FiatWithdrawRequest.objects.filter(
+            status=FiatWithdrawRequest.PENDING
+        ).aggregate(amount=Sum('amount'))['amount'] or 0
+
+        return value - pending_withdraws / self.usdt_irt
 
     def get_total_hedge_value(self):
         return sum([
