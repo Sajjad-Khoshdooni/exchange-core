@@ -9,7 +9,7 @@ class Investment(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)
-    amount = get_amount_field()
+    amount = get_amount_field(validators=())
     done = models.BooleanField(default=False)
     type = models.CharField(max_length=16, default=SELF, choices=((SELF, SELF), (TRADE, TRADE), (STAKE, STAKE)))
 
