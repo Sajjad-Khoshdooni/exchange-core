@@ -9,7 +9,7 @@ class Investment(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT)
-    amount = get_amount_field(validators=())
+    amount = get_amount_field()
     done = models.BooleanField(default=False)
     type = models.CharField(max_length=16, default=SELF, choices=((SELF, SELF), (TRADE, TRADE), (STAKE, STAKE)))
 
@@ -32,7 +32,7 @@ class InvestmentRevenue(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     investment = models.ForeignKey(Investment, on_delete=models.CASCADE)
-    amount = get_amount_field()
+    amount = get_amount_field(validators=())
     description = models.CharField(blank=True, max_length=256)
 
     class Meta:
