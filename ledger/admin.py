@@ -66,6 +66,7 @@ class AssetAdmin(AdvancedAdmin):
 
                 'total_assets_usdt': round(self.overview.get_all_assets_usdt(), 0),
                 'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
+                'exchange_potential_usdt': round(self.overview.get_exchange_potential_usdt(), 0),
                 'users_usdt': round(self.overview.get_all_users_asset_value(), 0)
             }
         else:

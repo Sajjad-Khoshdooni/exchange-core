@@ -1,4 +1,3 @@
-from collections import defaultdict
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -6,15 +5,10 @@ from django.db.models import Sum
 from accounts.models import Account
 from financial.models import Investment, InvestmentRevenue, FiatWithdrawRequest
 from financial.utils.stats import get_total_fiat_irt
-from ledger.models import Asset, Wallet
+from ledger.models import Asset, Wallet, Transfer
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
 from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, get_binance_trading_symbol, BUY
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
-
-
-def get_ledger_user_type_asset_balances():
-    wallets = Wallet.objects.values('account__type', 'asset__symbol').annotate(amount=Sum('balance'))
-    return {(w['account__type'], w['asset__symbol']): w['amount'] for w in wallets}
 
 
 def get_internal_asset_deposits():
@@ -32,11 +26,8 @@ class AssetOverview:
             pos['symbol']: pos for pos in self._future['positions']
         }
 
-        self._user_type_asset_balances = get_ledger_user_type_asset_balances()
-
-        self._user_type_balances = defaultdict(int)
-        for key, amount in self._user_type_asset_balances.items():
-            self._user_type_balances[key[0]] += amount
+        wallets = Wallet.objects.filter(account__type=Account.ORDINARY).values('asset__symbol').annotate(amount=Sum('balance'))
+        self._users_per_asset_balances = {w['asset__symbol']: w['amount'] for w in wallets}
 
         self.prices = get_prices_dict(
             coins=list(Asset.candid_objects.values_list('symbol', flat=True)),
@@ -70,9 +61,6 @@ class AssetOverview:
     @property
     def margin_ratio(self):
         return self.total_margin_balance / max(self.total_initial_margin, 1e-10)
-
-    def get_ledger_balance(self, user_type: str, asset: Asset):
-        return self._user_type_asset_balances.get((user_type, asset.symbol), 0)
 
     def get_internal_deposits_balance(self, asset: Asset) -> Decimal:
         return self._internal_deposits.get(asset.symbol, 0)
@@ -131,7 +119,7 @@ class AssetOverview:
 
     def get_hedge_amount(self, asset: Asset):
         # Hedge = Real assets - Promised assets to users (user)
-        return self.get_total_assets(asset) - self.get_ledger_balance(Account.ORDINARY, asset)
+        return self.get_total_assets(asset) - self._users_per_asset_balances[asset.symbol]
 
     def get_internal_usdt_value(self) -> Decimal:
         total = Decimal(0)
@@ -149,7 +137,7 @@ class AssetOverview:
         return Decimal(self.get_hedge_amount(asset)) * price
 
     def get_users_asset_value(self, asset: Asset) -> Decimal:
-        balance = self.get_ledger_balance(Account.ORDINARY, asset)
+        balance = self._users_per_asset_balances[asset.symbol]
         return balance * (self.prices.get(asset.symbol) or 0)
 
     def get_all_users_asset_value(self) -> Decimal:
@@ -187,3 +175,25 @@ class AssetOverview:
 
     def get_exchange_assets_usdt(self):
         return self.get_all_assets_usdt() - float(self.get_all_users_asset_value())
+
+    def get_exchange_potential_usdt(self):
+        value = Decimal(0)
+
+        non_deposited = self.get_non_deposited_accounts_per_asset_balance()
+
+        for asset in Asset.candid_objects.all():
+            balance = non_deposited[asset.symbol]
+            value += balance * (self.prices.get(asset.symbol) or 0)
+
+        return self.get_exchange_assets_usdt() + value
+
+    @classmethod
+    def get_non_deposited_accounts_per_asset_balance(cls) -> dict:
+        transferred_accounts = list(Transfer.objects.filter(deposit=True).values_list('wallet__account_id', flat=True))
+
+        non_deposited_wallets = Wallet.objects.filter(
+            account__type=Account.ORDINARY,
+            account__user__first_fiat_deposit_date__isnull=True
+        ).exclude(account__in=transferred_accounts).values('asset__symbol').annotate(amount=Sum('balance'))
+
+        return {w['asset__symbol']: w['amount'] for w in non_deposited_wallets}
