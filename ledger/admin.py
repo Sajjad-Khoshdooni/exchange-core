@@ -83,7 +83,7 @@ class AssetAdmin(AdvancedAdmin):
 
     def get_ledger_balance_users(self, asset: Asset):
         return self.overview and asset.get_presentation_amount(
-            self.overview.get_ledger_balance(Account.ORDINARY, asset)
+            self.overview.get_users_asset_value(asset)
         )
 
     get_ledger_balance_users.short_description = 'users'
@@ -92,16 +92,6 @@ class AssetAdmin(AdvancedAdmin):
         return self.overview and round(self.overview.get_users_asset_value(asset), 2)
 
     get_users_usdt_value.short_description = 'usdt_value'
-
-    def get_ledger_balance_system(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(self.overview.get_ledger_balance(Account.SYSTEM, asset))
-
-    get_ledger_balance_system.short_description = 'system'
-
-    def get_ledger_balance_out(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(self.overview.get_ledger_balance(Account.OUT, asset))
-
-    get_ledger_balance_out.short_description = 'out'
 
     def get_total_asset(self, asset: Asset):
         return self.overview and asset.get_presentation_amount(self.overview.get_total_assets(asset))
