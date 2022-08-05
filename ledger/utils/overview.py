@@ -114,8 +114,10 @@ class AssetOverview:
         value = Decimal(0)
 
         for symbol, amount in self._investment.items():
-            if amount > 0:
-                value += Decimal(amount) * (self.prices.get(symbol) or 0)
+            value += Decimal(amount) * (self.prices.get(symbol) or 0)
+
+        for symbol, amount in self._investment_revenue.items():
+            value += Decimal(amount) * (self.prices.get(symbol) or 0)
 
         return value
 
