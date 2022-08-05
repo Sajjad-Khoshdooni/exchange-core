@@ -119,7 +119,7 @@ class AssetOverview:
 
     def get_hedge_amount(self, asset: Asset):
         # Hedge = Real assets - Promised assets to users (user)
-        return self.get_total_assets(asset) - self._users_per_asset_balances[asset.symbol]
+        return self.get_total_assets(asset) - self._users_per_asset_balances.get(asset.symbol, 0)
 
     def get_internal_usdt_value(self) -> Decimal:
         total = Decimal(0)
@@ -137,7 +137,7 @@ class AssetOverview:
         return Decimal(self.get_hedge_amount(asset)) * price
 
     def get_users_asset_value(self, asset: Asset) -> Decimal:
-        balance = self._users_per_asset_balances[asset.symbol]
+        balance = self._users_per_asset_balances.get(asset.symbol, 0)
         return balance * (self.prices.get(asset.symbol) or 0)
 
     def get_all_users_asset_value(self) -> Decimal:
