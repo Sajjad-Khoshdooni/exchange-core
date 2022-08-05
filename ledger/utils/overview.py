@@ -114,8 +114,7 @@ class AssetOverview:
             return get_total_fiat_irt()
         else:
             return self.get_binance_balance(asset) + \
-                   self.get_internal_deposits_balance(asset) + \
-                   self.get_investment_amount(asset)
+                   self.get_internal_deposits_balance(asset)
 
     def get_hedge_amount(self, asset: Asset):
         # Hedge = Real assets - Promised assets to users (user)
