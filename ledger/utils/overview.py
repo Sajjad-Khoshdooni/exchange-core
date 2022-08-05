@@ -181,9 +181,8 @@ class AssetOverview:
 
         non_deposited = self.get_non_deposited_accounts_per_asset_balance()
 
-        for asset in Asset.candid_objects.all():
-            balance = non_deposited[asset.symbol]
-            value += balance * (self.prices.get(asset.symbol) or 0)
+        for symbol, balance in non_deposited.items():
+            value += balance * (self.prices.get(symbol) or 0)
 
         return self.get_exchange_assets_usdt() + value
 
