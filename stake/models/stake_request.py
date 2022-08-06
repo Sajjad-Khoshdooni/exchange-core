@@ -1,8 +1,4 @@
-import uuid
-from uuid import uuid4
-
-from django.core.exceptions import ValidationError
-from django.db import models, transaction
+from django.db import models
 
 from accounts.models import Account
 from accounts.utils import email
