@@ -212,7 +212,7 @@ class BinanceSpotHandler:
                     address=address,
                     amount=amount,
                     coin=coin,
-                    date=time,
+                    date=time.astimezone(),
                     network=network,
                     status=status,
                     type=transfer_type,
