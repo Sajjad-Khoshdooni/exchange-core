@@ -11,10 +11,10 @@ from accounts.models import User
 from accounts.utils.admin import url_to_admin_list
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
-    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost
+    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost, Investment, InvestmentRevenue
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from financial.utils.withdraw import FiatWithdraw
-from ledger.utils.precision import humanize_number
+from ledger.utils.precision import humanize_number, get_presentation_amount
 
 
 @admin.register(Gateway)
@@ -276,3 +276,28 @@ class MarketingSourceAdmin(admin.ModelAdmin):
 class MarketingCostAdmin(admin.ModelAdmin):
     list_display = ('source', 'date', 'cost')
     search_fields = ('source__utm_source', )
+
+
+class InvestmentRevenueInline(admin.TabularInline):
+    fields = ('created', 'amount', 'description')
+    readonly_fields = ('created', )
+    model = InvestmentRevenue
+    extra = 1
+
+
+@admin.register(Investment)
+class InvestmentAdmin(admin.ModelAdmin):
+    list_display = ('created', 'type', 'asset', 'get_amount', 'get_revenue', 'get_total', 'done')
+    inlines = [InvestmentRevenueInline]
+
+    @admin.display(description='amount', ordering='amount')
+    def get_amount(self, investment: Investment):
+        return get_presentation_amount(investment.amount)
+
+    @admin.display(description='revenue')
+    def get_revenue(self, investment: Investment):
+        return get_presentation_amount(investment.get_revenue())
+
+    @admin.display(description='total')
+    def get_total(self, investment: Investment):
+        return get_presentation_amount(investment.get_total_amount())

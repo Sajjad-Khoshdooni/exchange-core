@@ -91,7 +91,7 @@ app.conf.beat_schedule = {
     'create_transfer_history': {
         'task': 'provider.tasks.binance.create_transfer_history',
         'schedule': 300,
-        'option': {
+        'options': {
             'queue': 'binance',
             'expire': 300,
         }
@@ -99,7 +99,7 @@ app.conf.beat_schedule = {
     'get_binance_wallet': {
         'task': 'provider.tasks.binance.get_binance_wallet',
         'schedule': 300,
-        'option': {
+        'options': {
             'queue': 'binance',
             'expire': 300,
         }
