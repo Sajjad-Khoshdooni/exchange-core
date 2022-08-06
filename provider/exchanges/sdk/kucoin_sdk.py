@@ -74,10 +74,10 @@ def kucoin_spot_send_signed_request(http_method, url_path, **kwargs):
 
     if kwargs.get('futures'):
         url = KUCOIN_FUTURES_BASE_URL + url_path
-        add_sign_kucoin = add_sign_kucoin_futures()
+        add_sign_kucoin = add_sign_kucoin_futures
     else:
         url = KUCOIN_SPOT_BASE_URL + url_path
-        add_sign_kucoin = add_sign_kucoin_spot()
+        add_sign_kucoin = add_sign_kucoin_spot
 
     data = kwargs.pop('data', {})
 
