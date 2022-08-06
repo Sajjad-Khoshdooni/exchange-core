@@ -250,7 +250,7 @@ class BinanceSpotHandler:
         cls._create_transfer_history(response=deposits, transfer_type=BinanceTransferHistory.DEPOSIT)
 
     @classmethod
-    def _get_spot_and_futures_wallet_handler(cls, wallet_type):
+    def update_wallet(cls, wallet_type):
         from provider.models import BinanceWallet
         resp = cls.collect_api(
             url='/sapi/v1/accountSnapshot',

@@ -37,6 +37,6 @@ def create_transfer_history():
 @shared_task()
 def get_binance_wallet():
     from provider.models import BinanceWallet
-    BinanceSpotHandler._get_spot_and_futures_wallet_handler(BinanceWallet.FUTURES)
-    BinanceSpotHandler._get_spot_and_futures_wallet_handler(BinanceWallet.SPOT)
+    BinanceSpotHandler.update_wallet(BinanceWallet.FUTURES)
+    BinanceSpotHandler.update_wallet(BinanceWallet.SPOT)
 
