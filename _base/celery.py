@@ -19,14 +19,6 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    'create_withdraw_transaction': {
-        'task': 'ledger.tasks.withdraw.create_transaction_from_not_broadcasts',
-        'schedule': 10,
-        'options': {
-            'queue': 'transfer',
-            'expire': 10
-        },
-    },
     'register_address': {
         'task': 'ledger.tasks.register_address.register_address',
         'schedule': 30,
