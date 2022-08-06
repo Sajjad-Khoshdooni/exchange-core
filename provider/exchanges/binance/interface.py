@@ -288,7 +288,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
     @classmethod
     def get_account_details(cls):
-        return cls.collect_api('/fapi/v1/account', method='GET')
+        return cls.collect_api('/fapi/v2/account', method='GET')
 
     @classmethod
     def get_order_detail(cls, symbol: str, order_id: str):
