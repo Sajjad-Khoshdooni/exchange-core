@@ -80,22 +80,22 @@ app.conf.beat_schedule = {
             'expire': 300
         },
     },
-    # 'create_transfer_history': {
-    #     'task': 'provider.tasks.binance.create_transfer_history',
-    #     'schedule': 300,
-    #     'options': {
-    #         'queue': 'binance',
-    #         'expire': 300,
-    #     }
-    # },
-    # 'get_binance_wallet': {
-    #     'task': 'provider.tasks.binance.get_binance_wallet',
-    #     'schedule': 300,
-    #     'options': {
-    #         'queue': 'binance',
-    #         'expire': 300,
-    #     }
-    # },
+    'create_transfer_history': {
+        'task': 'provider.tasks.binance.create_transfer_history',
+        'schedule': 300,
+        'options': {
+            'queue': 'binance',
+            'expire': 300,
+        }
+    },
+    'get_binance_wallet': {
+        'task': 'provider.tasks.binance.get_binance_wallet',
+        'schedule': 300,
+        'options': {
+            'queue': 'binance',
+            'expire': 300,
+        }
+    },
     # market tasks
     'create depth orders': {
         'task': 'market.tasks.market_maker.create_depth_orders',
