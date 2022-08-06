@@ -45,7 +45,3 @@ class BinanceWallet(models.Model):
 
     def __str__(self):
         return self.asset + ' ' + self.type
-
-
-
-
