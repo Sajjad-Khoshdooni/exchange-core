@@ -2,7 +2,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 from django.db import models
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Case, When, Value as V
 
 from accounts.models import Account
 from ledger.models import Wallet, Asset, Trx
@@ -60,7 +60,9 @@ class PNLHistory(models.Model):
         return {
             (wallet['market'], wallet['account'], wallet['asset__symbol']): wallet['balance'] for
             wallet in Wallet.objects.filter(
-                account__type=Account.ORDINARY, balance__gt=0
+                account__type=Account.ORDINARY
+            ).exclude(balance=0).annotate(
+                market=Case(When(market=Wallet.LOAN, then=V(Wallet.MARGIN)), default='market')
             ).values('market', 'account', 'asset__symbol', 'balance')
         }
 
@@ -69,8 +71,9 @@ class PNLHistory(models.Model):
         datetime_filter = {'created__range': (start, end)} if start else {}
         in_out_dict = defaultdict(Decimal)
         in_out_trxs = Trx.objects.filter(
-            scope__in=(Trx.TRANSFER, Trx.MARGIN_TRANSFER, Trx.MARGIN_BORROW),
             **datetime_filter
+        ).exclude(
+            scope__in=(Trx.TRADE, Trx.COMMISSION, Trx.PRIZE,)
         ).annotate(asset=F('sender__asset__symbol')).values(
             'sender__market', 'receiver__market', 'asset', 'sender__account', 'receiver__account'
         ).annotate(total_amount=Sum('amount'))
