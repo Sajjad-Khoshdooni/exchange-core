@@ -25,7 +25,7 @@ class PNLOverview(APIView):
             raise ValidationError(_('valid market is required'))
         today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
         profit_info = PNLHistory.objects.filter(
-            account_id=9, date__gt=today - timedelta(days=30), market=market
+            account=self.request.user.account, date__gt=today - timedelta(days=30), market=market
         ).values('base_asset').annotate(
             cumulative_profit_30=Sum('profit'),
             cumulative_profit_7=Sum('profit', filter=Q(date__gt=today - timedelta(days=7))),
