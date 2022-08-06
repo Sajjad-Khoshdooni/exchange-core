@@ -114,4 +114,5 @@ class SignupView(CreateAPIView):
     def perform_create(self, serializer):
         user = serializer.save()
         login(self.request, user)
-        set_login_activity(self.request, user)
+        set_login_activity(self.request, user, is_sign_up=True)
+

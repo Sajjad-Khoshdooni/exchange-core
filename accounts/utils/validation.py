@@ -70,7 +70,7 @@ def parse_positive_int(inp: str, default: int = None):
     return num
 
 
-def set_login_activity(request, user):
+def set_login_activity(request, user, is_sign_up : str = False):
     try:
         os = request.user_agent.os.family
         if request.user_agent.os.version_string:
@@ -83,14 +83,25 @@ def set_login_activity(request, user):
         if request.user_agent.browser.version_string:
             browser += ' ' + request.user_agent.os.version_string
 
+        if request.user_agent.is_mobile:
+            device_type = LoginActivity.MOBILE
+        elif request.user_agent.is_tablet:
+            device_type = LoginActivity.TABLET
+        elif request.user_agent.is_pc:
+            device_type = LoginActivity.PC
+        else:
+            device_type = LoginActivity.UNKNOWN
+
         LoginActivity.objects.create(
             user=user,
             ip=get_client_ip(request),
             user_agent=request.META['HTTP_USER_AGENT'],
             session=Session.objects.get(session_key=request.session.session_key),
+            device_type=device_type,
             device=device,
             os=os,
             browser=browser,
+            is_sign_up=is_sign_up
         )
     except:
         logger.exception('User login activity dos not saved ')
