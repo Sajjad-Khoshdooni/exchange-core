@@ -66,13 +66,13 @@ class PayirChanel(FiatWithdraw):
         return config('PAY_IR_WALLET_ID', cast=int)
 
     @classmethod
-    def collect_api(cls, path: str, method: str = 'GET', data: dict = None, verbose: bool = True) -> dict:
+    def collect_api(cls, path: str, method: str = 'GET', data: dict = None, verbose: bool = True, timeout: float = 30) -> dict:
 
         url = 'https://pay.ir' + path
 
         request_kwargs = {
             'url': url,
-            'timeout': 30,
+            'timeout': timeout,
             'headers': {'Authorization': 'Bearer ' + secret('PAY_IR_TOKEN')},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -182,7 +182,8 @@ class PayirChanel(FiatWithdraw):
 
     def get_total_wallet_irt_value(self):
         resp = self.collect_api(
-            path='/api/v2/wallets'
+            path='/api/v2/wallets',
+            timeout=5
         )
 
         total_wallet_irt_value = 0
@@ -201,13 +202,13 @@ class ZibalChanel(FiatWithdraw):
         return config('ZIBAL_WALLET_ID', cast=int)
 
     @classmethod
-    def collect_api(cls, path: str, method: str = 'GET', data: dict = None) -> dict:
+    def collect_api(cls, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> dict:
 
         url = 'https://api.zibal.ir' + path
 
         request_kwargs = {
             'url': url,
-            'timeout': 30,
+            'timeout': timeout,
             'headers': {'Authorization': 'Bearer ' + secret('ZIBAL_TOKEN')},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -314,7 +315,8 @@ class ZibalChanel(FiatWithdraw):
             return 0
 
         resp = self.collect_api(
-            path='/v1/wallet/list'
+            path='/v1/wallet/list',
+            timeout=5
         )
 
         total_wallet_irt_value = 0
