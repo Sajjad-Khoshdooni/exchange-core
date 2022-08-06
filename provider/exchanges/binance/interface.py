@@ -220,13 +220,13 @@ class BinanceSpotHandler:
     def get_withdraw_history(cls):
         from provider.models import BinanceTransferHistory
         now = datetime.now()
-        five_days_ago_time_timestamp = datetime.timestamp(now - timedelta(days=5))
+        start_time = datetime.timestamp(now - timedelta(days=2))
 
         withdraws = cls.collect_api(
             url='/sapi/v1/capital/withdraw/history',
             method=GET,
             data={
-                'startTime': five_days_ago_time_timestamp
+                'startTime': start_time
             }
         )
 
@@ -236,13 +236,13 @@ class BinanceSpotHandler:
     def get_deposit_history(cls):
         from provider.models import BinanceTransferHistory
         now = datetime.now()
-        five_days_ago_time_timestamp = datetime.timestamp(now - timedelta(days=5))
+        start_time = datetime.timestamp(now - timedelta(days=2))
 
         deposits = cls.collect_api(
             url='/sapi/v1/capital/deposit/hisrec',
             method=GET,
             data={
-                'startTime': five_days_ago_time_timestamp
+                'startTime': start_time
             })
 
         cls._create_transfer_history(response=deposits, transfer_type=BinanceTransferHistory.DEPOSIT)
