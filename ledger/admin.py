@@ -400,6 +400,12 @@ class AssetSpreadCategoryAdmin(admin.ModelAdmin):
     list_display = ('name', )
 
 
+@admin.register(models.PNLHistory)
+class PNLHistoryAdmin(admin.ModelAdmin):
+    list_display = ('date', 'account', 'market', 'base_asset', 'snapshot_balance', 'profit')
+    readonly_fields = ('date', 'account', 'market', 'base_asset', 'snapshot_balance', 'profit')
+
+
 @admin.register(models.CategorySpread)
 class CategorySpreadAdmin(admin.ModelAdmin):
     list_display = ('category', 'step', 'side', 'spread')
