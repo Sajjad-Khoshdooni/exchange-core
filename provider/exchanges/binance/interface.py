@@ -45,7 +45,7 @@ class BinanceSpotHandler:
     @classmethod
     def _collect_api(cls, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
         # if settings.DEBUG_OR_TESTING:
-        #     return {}
+        #      return {}
 
         data = data or {}
 
@@ -222,13 +222,13 @@ class BinanceSpotHandler:
     def get_withdraw_history(cls):
         from provider.models import BinanceTransferHistory
         now = timezone.now()
-        five_days_ago_time = datetime.timestamp(now - timedelta(days=5)) * 1000
+        start_time = int((now - timedelta(days=5)).timestamp() * 1000)
 
         withdraws = cls.collect_api(
             url='/sapi/v1/capital/withdraw/history',
             method=GET,
             data={
-                'startTime': five_days_ago_time
+                'startTime': start_time
             }
         )
 
@@ -238,19 +238,19 @@ class BinanceSpotHandler:
     def get_deposit_history(cls):
         from provider.models import BinanceTransferHistory
         now = timezone.now()
-        five_days_ago_time = datetime.timestamp(now - timedelta(days=5)) * 1000
+        start_time = int((now - timedelta(days=5)).timestamp() * 1000)
 
         deposits = cls.collect_api(
             url='/sapi/v1/capital/deposit/hisrec',
             method=GET,
             data={
-                'startTime': five_days_ago_time
+                'startTime': start_time
             })
 
         cls._create_transfer_history(response=deposits, transfer_type=BinanceTransferHistory.DEPOSIT)
 
     @classmethod
-    def update_wallet(cls, wallet_type):
+    def update_wallet(cls):
         from provider.models import BinanceWallet
         resp = cls.get_account_details()
 
@@ -260,12 +260,12 @@ class BinanceSpotHandler:
             asset = wallet['asset']
             free = wallet['free']
             locked = wallet['locked']
-            binance_wallet = BinanceWallet.objects.filter(asset=asset)
+            binance_wallet = BinanceWallet.objects.filter(asset=asset, type=BinanceWallet.SPOT)
 
             if binance_wallet:
                 binance_wallet.update(free=free, locked=locked)
             else:
-                BinanceWallet.objects.create(asset=asset, free=free, locked=locked, type=wallet_type)
+                BinanceWallet.objects.create(asset=asset, free=free, locked=locked, type=BinanceWallet.SPOT)
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):
@@ -277,8 +277,8 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
     @classmethod
     def _collect_api(cls, url: str, method: str = 'POST', data: dict = None, signed: bool = True):
-        if settings.DEBUG_OR_TESTING:
-            return {}
+        # if settings.DEBUG_OR_TESTING:
+        #     return {}
 
         data = data or {}
 
@@ -356,3 +356,36 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         )[0]
 
         return Decimal(position.get('positionAmt', 0))
+
+    @classmethod
+    def update_wallet(cls):
+        from provider.models import BinanceWallet
+        resp = cls.get_account_details()
+
+        assets = resp['balances']
+
+        for asset in assets:
+            asset = asset['asset']
+            free = assets['walletBalance']
+            locked = 0
+            binance_wallet = BinanceWallet.objects.filter(asset=asset, type=BinanceWallet.FUTURES)
+
+            if binance_wallet:
+                binance_wallet.update(free=free, locked=locked)
+            else:
+                BinanceWallet.objects.create(asset=asset, free=free, locked=locked, type=BinanceWallet.SPOT)
+
+        positions = resp['positions']
+
+        for position in positions:
+            symbol = position['symbol']
+            if symbol.endswith('USDT'):
+                asset = symbol[:-4]
+                free = assets['positionAmt']
+                locked = 0
+                binance_wallet = BinanceWallet.objects.filter(asset=asset, type=BinanceWallet.FUTURES)
+
+                if binance_wallet:
+                    binance_wallet.update(free=free, locked=locked)
+                else:
+                    BinanceWallet.objects.create(asset=asset, free=free, locked=locked, type=BinanceWallet.FUTURES)
