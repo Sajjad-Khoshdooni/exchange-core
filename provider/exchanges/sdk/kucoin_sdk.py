@@ -23,7 +23,7 @@ def kucoin_spot_send_public_request(endpoint, method='POST', **kwargs):
 
 def add_sign_kucoin_spot(params_str, timestamp, http_method):
     headers = {}
-    _secret_key = config('KUCOIN_SECRET_KEY', default='')
+    _secret_key = config('KC-SECRET-KEY', default='')
     _secret_passphrase = config('KC-API-PASSPHRASE', default='')
 
     headers['KC-API-TIMESTAMP'] = str(timestamp)
@@ -47,12 +47,12 @@ def add_sign_kucoin_spot(params_str, timestamp, http_method):
 
 def add_sign_kucoin_futures(params_str, timestamp, http_method):
     headers = {}
-    _secret_key = config('KUCOIN_SECRET_KEY_FUTURES', default='')
-    _secret_passphrase = config('KC-API-PASSPHRASE-FUTURES', default='')
+    _secret_key = config('KC-SECRET-KEY-FUT', default='')
+    _secret_passphrase = config('KC-API-PASSPHRASE-FUT', default='')
 
     headers['KC-API-TIMESTAMP'] = str(timestamp)
-    headers['KC-API-KEY'] = config('KC-API-KEY-FUTURES', default='')
-    headers['KC-API-KEY-VERSION'] = config('KC-API-KEY-VERSION-FUTURES', default='')
+    headers['KC-API-KEY'] = config('KC-API-KEY-FUT', default='')
+    headers['KC-API-KEY-VERSION'] = config('KC-API-KEY-VERSION-FUT', default='')
     headers['KC-API-SIGN'] = base64.b64encode(
         hmac.new(_secret_key.encode('utf-8'),
                  params_str.encode('utf-8'),
