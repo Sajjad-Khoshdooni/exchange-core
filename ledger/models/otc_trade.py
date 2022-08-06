@@ -131,6 +131,7 @@ class OTCTrade(models.Model):
 
     @classmethod
     def check_abrupt_decrease(cls, otc_request: OTCRequest):
+        return
         old_coin_price = otc_request.to_price
         new_coin_price = otc_request.get_to_price()
 

@@ -7,10 +7,8 @@ from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins
 from rest_framework import serializers
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
@@ -86,12 +84,6 @@ class ReferralViewSet(
             'account': self.request.user.account
         }
 
-    def perform_create(self, serializer):
-        if self.request.user.level < User.LEVEL2:
-            raise ValidationError('برای ساخت کد معرف، ابتدا باید احراز هویت سطح دو را انجام دهید.')
-
-        serializer.save()
-
 
 class ReferralOverviewAPIView(APIView):
 
@@ -139,9 +131,9 @@ class TradingFeeView(APIView):
     def get(self, request):
         # taker_fee = Decimal('0.2')
         old_taker_fee = Decimal('0.2')
-        old_maker_fee = Decimal('0.2')
+        old_maker_fee = Decimal('0')
 
-        taker_fee = Decimal('0')
+        taker_fee = Decimal('0.2')
         maker_fee = Decimal('0')
 
         referral_code = request.user.account.referred_by

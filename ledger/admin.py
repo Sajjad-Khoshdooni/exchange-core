@@ -9,11 +9,11 @@ from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
-from ledger.models import Asset, Prize, CoinCategory, DepositAddress
+from ledger.models import Asset, Prize, CoinCategory
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import get_trading_price_usdt, BUY, get_binance_trading_symbol, SELL
+from ledger.utils.price import get_trading_price_usdt, get_binance_trading_symbol, SELL
 from provider.models import ProviderOrder
 
 
@@ -31,11 +31,12 @@ class AssetAdmin(AdvancedAdmin):
     readonly_fields = ('get_calculated_hedge_amount', 'get_hedge_value', 'get_hedge_amount')
 
     list_display = (
-        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calculated_hedge_amount',
+        'symbol', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calculated_hedge_amount',
+        'get_total_asset', 'get_ledger_balance_users',
+
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
-        'get_ledger_balance_users', 'get_users_usdt_value', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
-        'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'trade_enable', 'hedge_method',
-        # 'bid_diff', 'ask_diff'
+        'order', 'trend', 'trade_enable', 'hedge_method',
+
         'candidate', 'margin_enable', 'new_coin', 'spread_category'
     )
     list_filter = ('enable', 'trend', 'candidate', 'margin_enable', 'spread_category')
@@ -52,15 +53,21 @@ class AssetAdmin(AdvancedAdmin):
             context = {
                 'binance_initial_margin': round(self.overview.total_initial_margin, 2),
                 'binance_maint_margin': round(self.overview.total_maintenance_margin, 2),
-                'binance_margin_balance': round(self.overview.total_margin_balance, 2),
                 'binance_margin_ratio': round(self.overview.margin_ratio, 2),
                 'hedge_value': round(self.overview.get_total_hedge_value(), 2),
-                'binance_spot_usdt': round(self.overview.get_binance_spot_amount(Asset.get(Asset.USDT)), 2),
+                'binance_spot_tether_amount': round(self.overview.get_binance_spot_amount(Asset.get(Asset.USDT)), 2),
+
+                'binance_spot_usdt': round(self.overview.get_binance_spot_total_value(), 2),
+                'binance_margin_balance': round(self.overview.total_margin_balance, 2),
                 'internal_usdt': round(self.overview.get_internal_usdt_value(), 2),
-                'fiat_irt': round(self.overview.get_fiat_irt(), 0),
+                'fiat_usdt': round(self.overview.get_fiat_usdt(), 0),
+                'margin_insurance_balance': Asset.get(Asset.USDT).get_wallet(account).balance,
+                'investment': round(self.overview.get_total_investment(), 0),
+
                 'total_assets_usdt': round(self.overview.get_all_assets_usdt(), 0),
                 'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
-                'margin_insurance_balance': Asset.get(Asset.USDT).get_wallet(account).balance
+                'exchange_potential_usdt': round(self.overview.get_exchange_potential_usdt(), 0),
+                'users_usdt': round(self.overview.get_all_users_asset_value(), 0)
             }
         else:
             self.overview = None
@@ -76,7 +83,7 @@ class AssetAdmin(AdvancedAdmin):
 
     def get_ledger_balance_users(self, asset: Asset):
         return self.overview and asset.get_presentation_amount(
-            self.overview.get_ledger_balance(Account.ORDINARY, asset)
+            self.overview.get_users_asset_amount(asset)
         )
 
     get_ledger_balance_users.short_description = 'users'
@@ -85,16 +92,6 @@ class AssetAdmin(AdvancedAdmin):
         return self.overview and round(self.overview.get_users_asset_value(asset), 2)
 
     get_users_usdt_value.short_description = 'usdt_value'
-
-    def get_ledger_balance_system(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(self.overview.get_ledger_balance(Account.SYSTEM, asset))
-
-    get_ledger_balance_system.short_description = 'system'
-
-    def get_ledger_balance_out(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(self.overview.get_ledger_balance(Account.OUT, asset))
-
-    get_ledger_balance_out.short_description = 'out'
 
     def get_total_asset(self, asset: Asset):
         return self.overview and asset.get_presentation_amount(self.overview.get_total_assets(asset))
@@ -168,15 +165,15 @@ class NetworkAssetAdmin(admin.ModelAdmin):
     list_editable = ('can_deposit', )
 
 
-class UserFilter(admin.SimpleListFilter):
+class DepositAddressUserFilter(admin.SimpleListFilter):
     title = 'کاربران'
-    parameter_name = 'user_id'
+    parameter_name = 'user'
 
     def lookups(self, request, model_admin):
         return [(1, 1)]
 
     def queryset(self, request, queryset):
-        user = request.GET.get('user_id')
+        user = request.GET.get('user')
         if user is not None:
             return queryset.filter(address_key__account__user=user)
         else:
@@ -187,7 +184,7 @@ class UserFilter(admin.SimpleListFilter):
 class DepositAddressAdmin(admin.ModelAdmin):
     list_display = ('address_key', 'network', 'address', 'is_registered',)
     readonly_fields = ('address_key', 'network', 'address', 'is_registered',)
-    list_filter = ('network', 'is_registered', )
+    list_filter = ('network', 'is_registered', DepositAddressUserFilter )
     search_fields = ('address',)
 
 
@@ -278,6 +275,7 @@ class WalletAdmin(admin.ModelAdmin):
         ('asset', RelatedDropdownFilter),
         WalletUserFilter
     ]
+    readonly_fields = ('account', 'asset', 'market')
 
     def get_free(self, wallet: models.Wallet):
         return float(wallet.get_free())
@@ -400,6 +398,12 @@ class AddressKeyAdmin(admin.ModelAdmin):
 @admin.register(models.AssetSpreadCategory)
 class AssetSpreadCategoryAdmin(admin.ModelAdmin):
     list_display = ('name', )
+
+
+@admin.register(models.PNLHistory)
+class PNLHistoryAdmin(admin.ModelAdmin):
+    list_display = ('date', 'account', 'market', 'base_asset', 'snapshot_balance', 'profit')
+    readonly_fields = ('date', 'account', 'market', 'base_asset', 'snapshot_balance', 'profit')
 
 
 @admin.register(models.CategorySpread)

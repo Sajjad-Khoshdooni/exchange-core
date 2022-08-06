@@ -307,6 +307,10 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         )
 
     @classmethod
+    def get_correct_symbol(cls, symbol: str) -> str:
+        return cls.renamed_symbols.get(symbol, symbol)
+
+    @classmethod
     def get_symbol_data(cls, symbol: str) -> Union[dict, None]:
         if symbol in cls.renamed_symbols:
             symbol = cls.renamed_symbols[symbol]
@@ -356,3 +360,13 @@ class BinanceFuturesHandler(BinanceSpotHandler):
     def get_futures_wallets(cls):
         from provider.models import BinanceWallet
         cls._get_spot_and_futures_wallet_handler(BinanceWallet.FUTURES)
+
+    @classmethod
+    def get_position_amount(cls, symbol: str) -> Decimal:
+        symbol = cls.get_correct_symbol(symbol)
+
+        position = list(
+            filter(lambda pos: pos['symbol'] == symbol, cls.get_account_details()['positions'])
+        )[0]
+
+        return Decimal(position.get('positionAmt', 0))

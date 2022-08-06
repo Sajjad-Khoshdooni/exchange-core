@@ -17,6 +17,8 @@ class StakeOption(models.Model):
 
     enable = models.BooleanField(default=False)
 
+    landing = models.BooleanField(default=False)
+
     def __str__(self):
         return self.asset.symbol + ' ' + str(self.apr)
 

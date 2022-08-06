@@ -538,7 +538,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_selfie_image_uploaded.short_description = 'زمان آپلود عکس سلفی'
 
     def get_deposit_address(self, user: User):
-        link = url_to_admin_list(DepositAddress) + '?address_key__account__user__id={}'.format(user.id)
+        link = url_to_admin_list(DepositAddress) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
     get_deposit_address.short_description = 'آدرس‌های کیف پول'
@@ -633,8 +633,9 @@ class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
 @admin.register(LoginActivity)
 class LoginActivityAdmin(admin.ModelAdmin):
-    list_display = ['created', 'user', 'ip', 'device', 'os', 'browser']
+    list_display = ['created', 'user', 'ip', 'device', 'os', 'browser', 'device_type', 'is_sign_up']
     search_fields = ['user__phone', 'ip']
+    readonly_fields = ('user', )
 
 
 @admin.register(FirebaseToken)

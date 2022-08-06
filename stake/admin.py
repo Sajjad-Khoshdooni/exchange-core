@@ -5,7 +5,8 @@ from .models import StakeRequest, StakeRevenue, StakeOption
 
 @admin.register(StakeOption)
 class StakeOptionAdmin(admin.ModelAdmin):
-    list_display = ['asset', 'apr', 'get_stake_request_number']
+    list_display = ['asset', 'apr', 'get_stake_request_number', 'total_cap', 'enable', 'landing']
+    list_editable = ('enable', 'landing')
 
     readonly_fields = ('get_stake_request_number',)
 
@@ -19,7 +20,7 @@ class StakeRequestAdmin(admin.ModelAdmin):
     list_display = ['get_stake_option_asset', 'amount', 'status']
     actions = ('stake_request_processing', 'stake_request_done',
                'stake_request_cancel_processing', 'stake_request_cancel_done',)
-    readonly_fields = ('get_stake_option_asset',)
+    readonly_fields = ('get_stake_option_asset', 'account')
 
     def get_stake_option_asset(self, stake_request: StakeRequest):
         return stake_request.stake_option.asset
@@ -33,11 +34,11 @@ class StakeRequestAdmin(admin.ModelAdmin):
 
     @admin.action(description='بردن به حالت انجام شده', permissions=['view'])
     def stake_request_done(self, request, queryset):
-        queryset = queryset.filter(status=StakeRequest.DONE)
+        queryset = queryset.filter(status=StakeRequest.PENDING)
         for stake_request in queryset:
             stake_request.change_status(StakeRequest.DONE)
 
-    @admin.action(description='بردن به حالت لغو در حال پردازش', permissions=['view'])
+    @admin.action(description='بردن به حالت لغو در حال انجام', permissions=['view'])
     def stake_request_cancel_processing(self, request, queryset):
         queryset = queryset.filter(status=StakeRequest.CANCEL_PROCESS)
         for stake_request in queryset:
@@ -45,7 +46,7 @@ class StakeRequestAdmin(admin.ModelAdmin):
 
     @admin.action(description='بردن به حالت لغو تکمیل شده', permissions=['view'])
     def stake_request_cancel_done(self, request, queryset):
-        queryset = queryset.filter(status=StakeRequest.CANCEL_PENDING)
+        queryset = queryset.filter(status__in=(StakeRequest.CANCEL_PENDING, StakeRequest.CANCEL_PROCESS))
         for stake_request in queryset:
             stake_request.change_status(StakeRequest.CANCEL_COMPLETE)
 
