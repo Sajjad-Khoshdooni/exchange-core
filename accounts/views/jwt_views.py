@@ -1,11 +1,12 @@
 from django.utils.translation import activate
 from rest_framework import serializers
 from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from yekta_config import secret
@@ -89,8 +90,30 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
 
+class SessionTokenObtainPairSerializer(CustomTokenObtainPairSerializer):
+    def __init__(self, *args, **kwargs):
+        super(TokenObtainSerializer, self).__init__(*args, **kwargs)
+
+    def validate(self, attrs):
+        refresh = self.get_token(self.context['user'])
+        data = {'access': str(refresh.access_token)}
+        return data
+
+
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+
+class SessionTokenObtainPairView(TokenObtainPairView):
+    authentication_classes = (SessionAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = SessionTokenObtainPairSerializer
+
+    def get_serializer_context(self):
+        return {
+            **super(SessionTokenObtainPairView, self).get_serializer_context(),
+            'user': self.request.user
+        }
 
 
 class TokenLogoutView(APIView):
