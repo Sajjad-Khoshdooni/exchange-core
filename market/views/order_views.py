@@ -24,12 +24,12 @@ from market.serializers.stop_loss_serializer import StopLossSerializer
 
 
 class OrderFilter(django_filters.FilterSet):
-    symbol = django_filters.CharFilter(field_name='symbol__name')
+    symbol = django_filters.CharFilter(field_name='symbol__name', lookup_expr='iexact')
     market = django_filters.CharFilter(field_name='wallet__market')
 
     class Meta:
         model = Order
-        fields = ('symbol', 'status', 'market')
+        fields = ('symbol', 'status', 'market', 'side')
 
 
 class StopLossFilter(django_filters.FilterSet):
@@ -79,8 +79,18 @@ class OpenOrderListAPIView(APIView):
         context = {
             'trades': Trade.get_account_orders_filled_price(self.request.user.account),
         }
-        open_orders = Order.open_objects.filter(wallet__account=self.request.user.account, stop_loss__isnull=True)
-        open_stop_losses = StopLoss.open_objects.filter(wallet__account=self.request.user.account)
+        filters = {}
+        symbol_filter = self.request.query_params.get('symbol')
+        side_filter = self.request.query_params.get('side')
+        if symbol_filter:
+            filters['symbol__name'] = symbol_filter.upper()
+        if side_filter:
+            filters['side'] = side_filter
+
+        open_orders = Order.open_objects.filter(
+            wallet__account=self.request.user.account, stop_loss__isnull=True, **filters
+        )
+        open_stop_losses = StopLoss.open_objects.filter(wallet__account=self.request.user.account, **filters)
         serialized_orders = OrderStopLossSerializer(open_orders, many=True, context=context)
         serialized_stop_losses = OrderStopLossSerializer(open_stop_losses, many=True, context=context)
         DATE_PATTERN = '%Y-%m-%dT%H:%M:%S.%f%z'
