@@ -47,16 +47,21 @@ class BinanceWalletAdmin(admin.ModelAdmin):
 
     def changelist_view(self, request, extra_context=None):
 
-        spot_wallets = BinanceWallet.objects.filter(type=BinanceWallet.SPOT)
-        futures_wallets = BinanceWallet.objects.filter(type=BinanceWallet.FUTURES)
+        spot_wallets = BinanceWallet.objects.filter(type=BinanceWallet.SPOT).filter(free__gt=0)
+        futures_wallets = BinanceWallet.objects.filter(type=BinanceWallet.FUTURES).filter(free__gt=0)
 
         spot_wallets_usdt_value = 0
         futures_wallet_usdt_value = 0
 
         for spot_wallet in spot_wallets:
-            spot_wallets_usdt_value += get_price(spot_wallet.asset, side=BUY) * spot_wallet.free
+            price = get_price(spot_wallet.asset, side=BUY)
+            if price:
+                spot_wallets_usdt_value += price * spot_wallet.free
+
         for futures_wallet in futures_wallets:
-            futures_wallet_usdt_value += get_price(futures_wallet.asset, side=BUY) * futures_wallet.free
+            price = get_price(futures_wallet.asset, side=BUY)
+            if price:
+                futures_wallet_usdt_value += price * futures_wallet.free
 
         context = {
             'spot_wallet': spot_wallets_usdt_value,
