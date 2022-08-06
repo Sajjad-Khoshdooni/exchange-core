@@ -3,6 +3,8 @@ from decimal import Decimal
 from typing import Union
 
 from django.conf import settings
+from django.utils import timezone
+
 
 from ledger.utils.cache import get_cache_func_key, cache
 from ledger.utils.precision import decimal_to_str
@@ -219,14 +221,14 @@ class BinanceSpotHandler:
     @classmethod
     def get_withdraw_history(cls):
         from provider.models import BinanceTransferHistory
-        now = datetime.now()
-        five_days_ago_time_timestamp = datetime.timestamp(now - timedelta(days=5))
+        now = timezone.now()
+        five_days_ago_time = (now - timedelta(days=5)).strftime('%Y-%m-%d %H:%M:%S')
 
         withdraws = cls.collect_api(
             url='/sapi/v1/capital/withdraw/history',
             method=GET,
             data={
-                'startTime': five_days_ago_time_timestamp
+                'startTime': five_days_ago_time
             }
         )
 
@@ -235,14 +237,14 @@ class BinanceSpotHandler:
     @classmethod
     def get_deposit_history(cls):
         from provider.models import BinanceTransferHistory
-        now = datetime.now()
-        five_days_ago_time_timestamp = datetime.timestamp(now - timedelta(days=5))
+        now = timezone.now()
+        five_days_ago_time = (now - timedelta(days=5)).strftime('%Y-%m-%d %H:%M:%S')
 
         deposits = cls.collect_api(
             url='/sapi/v1/capital/deposit/hisrec',
             method=GET,
             data={
-                'startTime': five_days_ago_time_timestamp
+                'startTime': five_days_ago_time
             })
 
         cls._create_transfer_history(response=deposits, transfer_type=BinanceTransferHistory.DEPOSIT)
@@ -254,7 +256,7 @@ class BinanceSpotHandler:
             url='/sapi/v1/accountSnapshot',
             method=GET,
             data={
-                'type': wallet_type
+                'type': wallet_type.upper()
             }
         )
         wallets = resp['snapshotVos'][0]['data']['balances']
