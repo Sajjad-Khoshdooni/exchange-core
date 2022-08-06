@@ -221,14 +221,14 @@ class BinanceSpotHandler:
     @classmethod
     def get_withdraw_history(cls):
         from provider.models import BinanceTransferHistory
-        now = datetime.now()
-        five_days_ago_time_timestamp = datetime.timestamp(now - timedelta(days=5))
+        now = timezone.now()
+        five_days_ago_time = (now - timedelta(days=5)).strftime('%Y-%m-%d %H:%M:%S')
 
         withdraws = cls.collect_api(
             url='/sapi/v1/capital/withdraw/history',
             method=GET,
             data={
-                'startTime': five_days_ago_time_timestamp
+                'startTime': five_days_ago_time
             }
         )
 
