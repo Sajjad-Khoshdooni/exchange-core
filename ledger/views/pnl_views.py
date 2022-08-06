@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from ledger.models import PNLHistory, Wallet
+from ledger.utils.precision import floor_precision
 
 
 class PNLOverview(APIView):
@@ -31,10 +32,18 @@ class PNLOverview(APIView):
             last_profit=Sum('profit', filter=Q(date__gte=today))
         )
 
+        asset_roundness = {
+            'IRT': 0,
+            'USDT': 2,
+        }
+
         return Response({
             pnl['base_asset']: {
-                '1': pnl['last_profit'],
-                '7': pnl['cumulative_profit_7'],
-                '30': pnl['cumulative_profit_30'],
+                '1': floor_precision(pnl['last_profit'], asset_roundness[pnl['base_asset']]) if pnl[
+                    'last_profit'] else None,
+                '7': floor_precision(pnl['cumulative_profit_7'], asset_roundness[pnl['base_asset']]) if pnl[
+                    'cumulative_profit_7'] else None,
+                '30': floor_precision(pnl['cumulative_profit_30'], asset_roundness[pnl['base_asset']]) if pnl[
+                    'cumulative_profit_30'] else None,
             } for pnl in profit_info
         })
