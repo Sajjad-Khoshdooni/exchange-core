@@ -208,7 +208,7 @@ class BinanceSpotHandler:
                     time = element['applyTime']
                 BinanceTransferHistory.objects.create(
                     tx_id=tx_id,
-                    biance_id=binance_id,
+                    binance_id=binance_id,
                     address=address,
                     amount=amount,
                     coin=coin,

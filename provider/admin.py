@@ -1,10 +1,7 @@
-from decimal import Decimal
-
 from django.contrib import admin
-from django.db.models import Sum
 
-from ledger.utils.overview import AssetOverview
-from ledger.utils.price import get_price,BUY
+from ledger.utils.price import get_price, BUY
+from ledger.utils.price_manager import PriceManager
 from provider import models
 from provider.models import BinanceWallet
 
@@ -53,15 +50,17 @@ class BinanceWalletAdmin(admin.ModelAdmin):
         spot_wallets_usdt_value = 0
         futures_wallet_usdt_value = 0
 
-        for spot_wallet in spot_wallets:
-            price = get_price(spot_wallet.asset, side=BUY)
-            if price:
-                spot_wallets_usdt_value += price * spot_wallet.free
+        with PriceManager(fetch_all=True):
 
-        for futures_wallet in futures_wallets:
-            price = get_price(futures_wallet.asset, side=BUY)
-            if price:
-                futures_wallet_usdt_value += price * futures_wallet.free
+            for spot_wallet in spot_wallets:
+                price = get_price(spot_wallet.asset, side=BUY)
+                if price:
+                    spot_wallets_usdt_value += price * spot_wallet.free
+
+            for futures_wallet in futures_wallets:
+                price = get_price(futures_wallet.asset, side=BUY)
+                if price:
+                    futures_wallet_usdt_value += price * futures_wallet.free
 
         context = {
             'spot_wallet': spot_wallets_usdt_value,
