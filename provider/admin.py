@@ -62,16 +62,18 @@ class BinanceWalletAdmin(admin.ModelAdmin):
                 if price:
                     futures_wallet_usdt_value += price * futures_wallet.free
 
-        context = {
-            'spot_wallet': spot_wallets_usdt_value,
-            'futures_wallet': futures_wallet_usdt_value,
-        }
-        return super().changelist_view(request, extra_context=context)
+            context = {
+                'spot_wallet': spot_wallets_usdt_value,
+                'futures_wallet': futures_wallet_usdt_value,
+            }
+            return super().changelist_view(request, extra_context=context)
 
     list_display = ['asset', 'free', 'locked', 'get_usdt_value', 'type']
     search_fields = ['asset']
     readonly_fields = ('get_usdt_value','asset', 'free', 'locked', 'get_usdt_value', 'type')
 
     def get_usdt_value(self, binance_wallet: models.BinanceWallet):
-        return get_price(coin=binance_wallet.asset, side=BUY) * binance_wallet.free
+        price = get_price(coin=binance_wallet.asset, side=BUY)
+        if price:
+            return price * binance_wallet.free
     get_usdt_value.short_description = 'USDT_Value'
