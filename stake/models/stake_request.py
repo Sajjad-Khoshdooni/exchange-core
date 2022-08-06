@@ -16,7 +16,7 @@ from stake.models import StakeOption
 
 class StakeRequest(models.Model):
 
-    PROCESS, PENDING, DONE = 'process', 'pending', ' done'
+    PROCESS, PENDING, DONE = 'process', 'pending', 'done'
     CANCEL_PROCESS, CANCEL_PENDING, CANCEL_COMPLETE = 'cancel_process', 'cancel_pending', 'cancel_complete'
 
     STATUS_CHOICE = ((PROCESS, PROCESS), (PENDING, PENDING), (DONE, DONE), (CANCEL_PROCESS, CANCEL_PROCESS),
