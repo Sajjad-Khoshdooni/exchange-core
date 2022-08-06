@@ -8,6 +8,7 @@ from urllib.parse import urlencode
 import requests
 from django.conf import settings
 from yekta_config import secret
+from yekta_config.config import config
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,10 @@ def create_binance_request_and_log(response, url: str, method: str, data: dict):
 
 
 def hashing(query_string):
-    secret_key = os.environ['BIN_SECRET']
+    if settings.DEBUG_OR_TESTING:
+        secret_key = config('BINANCE_SECRET_KEY')
+    else:
+        secret_key = os.environ['BIN_SECRET']
     return hmac.new(
         secret_key.encode("utf-8"), query_string.encode("utf-8"), hashlib.sha256
     ).hexdigest()
@@ -72,7 +76,11 @@ def get_timestamp():
 
 
 def dispatch_request(http_method):
-    api_key = secret('BINANCE_API_KEY', default='')
+    if settings.DEBUG_OR_TESTING:
+        api_key = config("BINANCE_API_KEY")
+
+    else:
+        api_key = secret('BINANCE_API_KEY', default='')
 
     session = requests.Session()
     session.headers.update(

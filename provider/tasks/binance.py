@@ -7,7 +7,6 @@ from ledger.models import Asset
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
 
-
 @shared_task()
 def inject_tether_to_futures():
     details = BinanceFuturesHandler.get_account_details()
