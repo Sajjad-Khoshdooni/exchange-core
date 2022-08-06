@@ -122,7 +122,7 @@ def get_avg_tether_price_irt_grpc(start_timestamp, end_timestamp):
         exchange=NOBITEX
     ).value
     grpc_client.channel.close()
-    return Decimal(response)
+    return Decimal(response / 10)
 
 
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
