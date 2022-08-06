@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Union
 
-from django.conf import settings
+
 from django.utils import timezone
 
 
@@ -44,8 +44,8 @@ class BinanceSpotHandler:
 
     @classmethod
     def _collect_api(cls, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        # if settings.DEBUG_OR_TESTING:
-        #      return {}
+        if settings.DEBUG_OR_TESTING:
+            return {}
 
         data = data or {}
 
@@ -277,8 +277,8 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
     @classmethod
     def _collect_api(cls, url: str, method: str = 'POST', data: dict = None, signed: bool = True):
-        # if settings.DEBUG_OR_TESTING:
-        #     return {}
+        if settings.DEBUG_OR_TESTING:
+            return {}
 
         data = data or {}
 
@@ -289,7 +289,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
     @classmethod
     def get_account_details(cls):
-        return cls.collect_api('/fapi/v2/account', method='GET')
+        return cls.collect_api('/dapi/v1/account', method='GET')
 
     @classmethod
     def get_order_detail(cls, symbol: str, order_id: str):
@@ -362,18 +362,18 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         from provider.models import BinanceWallet
         resp = cls.get_account_details()
 
-        assets = resp['balances']
+        assets = resp['assets']
 
-        for asset in assets:
-            asset = asset['asset']
-            free = assets['walletBalance']
+        for ass in assets:
+            asset = ass['asset']
+            free = ass['walletBalance']
             locked = 0
             binance_wallet = BinanceWallet.objects.filter(asset=asset, type=BinanceWallet.FUTURES)
 
             if binance_wallet:
                 binance_wallet.update(free=free, locked=locked)
             else:
-                BinanceWallet.objects.create(asset=asset, free=free, locked=locked, type=BinanceWallet.SPOT)
+                BinanceWallet.objects.create(asset=asset, free=free, locked=locked, type=BinanceWallet.FUTURES)
 
         positions = resp['positions']
 

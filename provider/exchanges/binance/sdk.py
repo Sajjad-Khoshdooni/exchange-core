@@ -61,8 +61,7 @@ def create_binance_request_and_log(response, url: str, method: str, data: dict):
 
 
 def hashing(query_string):
-    secret_key = "kqW3vEmJnoJ5jzs0BMNYZrdNiyHIJwUDWXMvCjRcHzbHxnfLzEr2Jn00izmJtVLp"
-    # secret_key = os.environ['BIN_SECRET']
+    secret_key = os.environ['BIN_SECRET']
     return hmac.new(
         secret_key.encode("utf-8"), query_string.encode("utf-8"), hashlib.sha256
     ).hexdigest()
@@ -73,8 +72,7 @@ def get_timestamp():
 
 
 def dispatch_request(http_method):
-    api_key ="1hn7CYHGVLUESB3YUXIpC8BUh6RPpwh65s1gLjDIal3OngWJshRXpJflIPMKB4Gs"
-    # api_key = secret('BINANCE_API_KEY', default='')
+    api_key = secret('BINANCE_API_KEY', default='')
 
     session = requests.Session()
     session.headers.update(
