@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Union
 
-
+from django.conf import settings
 from django.utils import timezone
 
 
@@ -260,12 +260,11 @@ class BinanceSpotHandler:
             asset = wallet['asset']
             free = wallet['free']
             locked = wallet['locked']
-            binance_wallet = BinanceWallet.objects.filter(asset=asset, type=BinanceWallet.SPOT)
-
-            if binance_wallet:
-                binance_wallet.update(free=free, locked=locked)
-            else:
-                BinanceWallet.objects.create(asset=asset, free=free, locked=locked, type=BinanceWallet.SPOT)
+            BinanceWallet.objects.update_or_create(
+                asset=asset,
+                type=BinanceWallet.SPOT,
+                defaults={'free': free, 'locked': locked}
+            )
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):
@@ -289,7 +288,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
     @classmethod
     def get_account_details(cls):
-        return cls.collect_api('/dapi/v1/account', method='GET')
+        return cls.collect_api('/fapi/v1/account', method='GET')
 
     @classmethod
     def get_order_detail(cls, symbol: str, order_id: str):
@@ -364,16 +363,14 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
         assets = resp['assets']
 
-        for ass in assets:
-            asset = ass['asset']
-            free = ass['walletBalance']
+        for asset in assets:
+            free = asset['walletBalance']
             locked = 0
-            binance_wallet = BinanceWallet.objects.filter(asset=asset, type=BinanceWallet.FUTURES)
-
-            if binance_wallet:
-                binance_wallet.update(free=free, locked=locked)
-            else:
-                BinanceWallet.objects.create(asset=asset, free=free, locked=locked, type=BinanceWallet.FUTURES)
+            BinanceWallet.objects.update_or_create(
+                asset=asset['asset'],
+                type=BinanceWallet.FUTURES,
+                defaults={'free': free, 'locked': locked},
+            )
 
         positions = resp['positions']
 
@@ -381,11 +378,12 @@ class BinanceFuturesHandler(BinanceSpotHandler):
             symbol = position['symbol']
             if symbol.endswith('USDT'):
                 asset = symbol[:-4]
-                free = assets['positionAmt']
+                free = position['positionAmt']
                 locked = 0
-                binance_wallet = BinanceWallet.objects.filter(asset=asset, type=BinanceWallet.FUTURES)
+                BinanceWallet.objects.update_or_create(
+                    asset=asset,
+                    type=BinanceWallet.FUTURES,
+                    defaults={'free': free, 'locked': locked},
+                )
 
-                if binance_wallet:
-                    binance_wallet.update(free=free, locked=locked)
-                else:
-                    BinanceWallet.objects.create(asset=asset, free=free, locked=locked, type=BinanceWallet.FUTURES)
+
