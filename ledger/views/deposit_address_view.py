@@ -13,7 +13,7 @@ class InputAddressSerializer(serializers.Serializer):
 
 
 class DepositAddressView(RetrieveAPIView):
-
+    serializer_class = InputAddressSerializer
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
     def retrieve(self, request, *args, **kwargs):
