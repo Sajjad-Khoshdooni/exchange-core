@@ -19,9 +19,20 @@ class TradeFilter(django_filters.FilterSet):
         fields = ('symbol',)
 
 
+class AccountTradeFilter(django_filters.FilterSet):
+    symbol = django_filters.CharFilter(field_name='symbol__name', lookup_expr='iexact')
+
+    class Meta:
+        model = Trade
+        fields = ('symbol', 'side')
+
+
 class AccountTradeHistoryView(ListAPIView):
     authentication_classes = (SessionAuthentication, JWTAuthentication)
     pagination_class = LimitOffsetPagination
+
+    filter_backends = [DjangoFilterBackend]
+    filter_class = AccountTradeFilter
 
     def get_queryset(self):
         market = self.request.query_params.get('market')
