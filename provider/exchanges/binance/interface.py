@@ -44,8 +44,8 @@ class BinanceSpotHandler:
 
     @classmethod
     def _collect_api(cls, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        if settings.DEBUG_OR_TESTING:
-            return {}
+        # if settings.DEBUG_OR_TESTING:
+        #     return {}
 
         data = data or {}
 
@@ -222,7 +222,7 @@ class BinanceSpotHandler:
     def get_withdraw_history(cls):
         from provider.models import BinanceTransferHistory
         now = timezone.now()
-        five_days_ago_time = datetime.timestamp(now - timedelta(days=5)) // 1000
+        five_days_ago_time = datetime.timestamp(now - timedelta(days=5)) * 1000
 
         withdraws = cls.collect_api(
             url='/sapi/v1/capital/withdraw/history',
@@ -238,7 +238,7 @@ class BinanceSpotHandler:
     def get_deposit_history(cls):
         from provider.models import BinanceTransferHistory
         now = timezone.now()
-        five_days_ago_time = datetime.timestamp(now - timedelta(days=5)) // 1000
+        five_days_ago_time = datetime.timestamp(now - timedelta(days=5)) * 1000
 
         deposits = cls.collect_api(
             url='/sapi/v1/capital/deposit/hisrec',
@@ -252,14 +252,9 @@ class BinanceSpotHandler:
     @classmethod
     def update_wallet(cls, wallet_type):
         from provider.models import BinanceWallet
-        resp = cls.collect_api(
-            url='/sapi/v1/accountSnapshot',
-            method=GET,
-            data={
-                'type': wallet_type.upper()
-            }
-        )
-        wallets = resp['snapshotVos'][0]['data']['balances']
+        resp = cls.get_account_details()
+
+        wallets = resp['balances']
 
         for wallet in wallets:
             asset = wallet['asset']
