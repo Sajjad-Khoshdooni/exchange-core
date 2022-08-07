@@ -10,51 +10,40 @@ from yekta_config.config import config
 
 from accounts.models import FinotechRequest
 from accounts.utils.validation import gregorian_to_jalali_date_str
+from accounts.verifiers.finotech import ServerError
 
 logger = logging.getLogger(__name__)
-
 token_cache = caches['token']
 
-
-FINOTECH_TOKEN_KEY = 'finotech-token'
-
-
-class ServerError(Exception):
-    pass
+JIBIT_TOKEN_KEY = 'jibit-token'
 
 
-class FinotechRequester:
+class JibitRequester:
+    BASE_URL = 'https://napi.jibit.ir/ide'
+
     def __init__(self, user):
         self._user = user
 
     def _get_cc_token(self, force_renew: bool = False):
-
         if not force_renew:
-            token = token_cache.get(FINOTECH_TOKEN_KEY)
+            token = token_cache.get(JIBIT_TOKEN_KEY)
             if token:
                 return token
 
-        scopes = ['facility:shahkar:get', 'facility:cc-nid-verification:get', 'kyc:mobile-card-verification:post',
-                  'oak:iban-inquiry:get']
-
         resp = requests.post(
-            url='https://apibeta.finnotech.ir/dev/v2/oauth2/token',
+            url=self.BASE_URL + '/v1/token/generate',
             data={
-                'grant_type': 'client_credentials',
-                'nid': secret('FINOTECH_OWNER_NATIONAL_ID'),
-                'scopes': ','.join(scopes)
+                'apiKey': secret('JIBIT_API_KEY'),
+                'secretKey': secret('JIBIT_API_KEY'),
             },
-            headers={
-                'Authorization': secret('FINOTECH_AUTH_TOKEN')
-            }
         )
 
         if resp.ok:
-            resp_data = resp.json()['result']
-            token = resp_data['value']
-            expire = resp_data['lifeTime'] // 1000
+            resp_data = resp.json()
+            token = resp_data['accessToken']
+            expire = 24 * 3600
 
-            token_cache.set(FINOTECH_TOKEN_KEY, token, expire)
+            token_cache.set(JIBIT_TOKEN_KEY, token, expire)
 
             return token
 
@@ -65,7 +54,7 @@ class FinotechRequester:
             request = FinotechRequest.objects.filter(
                 created__gt=timezone.now() - datetime.timedelta(days=30),
                 search_key=search_key,
-                service=FinotechRequest.FINOTECH
+                service=FinotechRequest.JIBIT
             ).order_by('-created').first()
 
             if request:
@@ -76,24 +65,22 @@ class FinotechRequester:
                 if request.status_code not in (200, 201):
                     return
 
-                return request.response['result']
+                return request.response
 
         token = self._get_cc_token()
 
         if data is None:
             data = {}
 
-        url = 'https://apibeta.finnotech.ir' + path.format(clientId='raastin')
+        url = self.BASE_URL + path
 
         req_object = FinotechRequest.objects.create(
             url=url,
             method=method,
             data=data,
             user=self._user,
-            service=FinotechRequest.FINOTECH
+            service=FinotechRequest.JIBIT
         )
-
-        url += '?trackId=%s' % req_object.track_id
 
         request_kwargs = {
             'url': url,
@@ -117,7 +104,7 @@ class FinotechRequester:
             req_object.status_code = 100
             req_object.save()
 
-            logger.error('finnotech connection error', extra={
+            logger.error('jibit connection error', extra={
                 'path': path,
                 'method': method,
                 'data': data,
@@ -141,7 +128,7 @@ class FinotechRequester:
             raise ServerError
 
         if not resp.ok:
-            logger.error('failed to call finnotech', extra={
+            logger.error('failed to call jibit', extra={
                 'path': path,
                 'method': method,
                 'data': data,
@@ -153,59 +140,32 @@ class FinotechRequester:
 
         return resp_data['result']
 
-    def verify_phone_number_national_code(self, phone_number: str, national_code: str) -> bool:
+    def matching(self, phone_number: str = None, national_code: str = None, full_name: str = None,
+                 birth_date: datetime = None, card_pan: str = None, iban: str = None) -> bool:
+
+        if birth_date:
+            birth_date = gregorian_to_jalali_date_str(birth_date).replace('/', '')
+
+        params = {
+            'mobileNumber': phone_number,
+            'nationalCode': national_code,
+            'birthDate': birth_date,
+            'name': full_name,
+            'cardNumber': card_pan,
+            'iban': iban,
+        }
+
+        key = 'matching-' + '-'.join(map(lambda s: s or '', params.values()))
+
+        params = {k: v for (k, v) in params.items() if v}
+
         resp = self.collect_api(
-            path='/facility/v2/clients/{clientId}/shahkar/verify',
-            data={
-                'mobile': phone_number,
-                'nationalCode': national_code
-            },
-            search_key='shahkar-%s-%s' % (national_code, phone_number)
+            path='/v1/services/matching',
+            data=params,
+            search_key=key
         )
 
         if not resp:
             raise ServerError
 
-        return resp['isValid']
-
-    def get_iban_info(self, iban: str) -> dict:
-        resp = self.collect_api(
-            path='/oak/v2/clients/{clientId}/ibanInquiry',
-            data={
-                'iban': iban,
-            },
-            search_key='iban-%s' % iban
-        )
-
-        return resp
-
-    def verify_card_pan_phone_number(self, phone_number: str, card_pan: str) -> bool:
-        resp = self.collect_api(
-            path='/kyc/v2/clients/{clientId}/mobileCardVerification',
-            method='POST',
-            data={
-                'mobile': phone_number,
-                'card': card_pan
-            },
-            search_key='mobcard-%s-%s' % (phone_number, card_pan)
-        )
-
-        if not resp:
-            raise ServerError
-
-        return resp['isValid']
-
-    def verify_basic_info(self, national_code: str, birth_date: datetime.date, first_name: str, last_name: str, ) -> dict:
-        jalali_date = gregorian_to_jalali_date_str(birth_date)
-
-        resp = self.collect_api(
-            path='/facility/v2/clients/{clientId}/users/%s/cc/nidVerification' % national_code,
-            data={
-                'birthDate': jalali_date,
-                'firstName': first_name,
-                'lastName': last_name,
-            },
-            search_key='nid-%s-%s-%s-%s' % (national_code, jalali_date, first_name, last_name)
-        )
-
-        return resp
+        return resp['matched']

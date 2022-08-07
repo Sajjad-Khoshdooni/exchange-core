@@ -42,14 +42,6 @@ class BankCard(models.Model):
         verbose_name = 'کارت بانکی'
         verbose_name_plural = 'کارت‌های بانکی'
 
-        constraints = [
-            UniqueConstraint(
-                fields=["card_pan"],
-                name="unique_bank_card_card_pan",
-                condition=Q(verified=True, deleted=False),
-            )
-        ]
-
 
 class BankAccount(models.Model):
     ACTIVE, DEPOSITABLE_SUSPENDED, NON_DEPOSITABLE_SUSPENDED, STAGNANT = 'active', 'suspend', 'nsuspend', 'stagnant'
@@ -94,14 +86,6 @@ class BankAccount(models.Model):
     class Meta:
         verbose_name = 'حساب بانکی'
         verbose_name_plural = 'حساب‌های بانکی'
-
-        constraints = [
-            UniqueConstraint(
-                fields=["iban"],
-                name="unique_bank_account_iban",
-                condition=Q(verified=True, deleted=False),
-            )
-        ]
 
 
 class BankCardSerializer(serializers.ModelSerializer):

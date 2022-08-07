@@ -5,7 +5,7 @@ from yekta_config.config import config
 
 from accounts.models import Notification
 from accounts.models import User
-from accounts.verifiers.basic_verify import basic_verify
+from accounts.verifiers.finotech_basic_verify import basic_verify
 from .send_sms import send_message_by_kavenegar
 
 logger = logging.getLogger(__name__)

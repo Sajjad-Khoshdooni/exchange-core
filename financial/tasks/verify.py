@@ -1,7 +1,7 @@
 from celery import shared_task
 
 from accounts.models import Notification
-from accounts.verifiers.basic_verify import verify_bank_card, verify_bank_account
+from accounts.verifiers.finotech_basic_verify import verify_bank_card, verify_bank_account
 from financial.models import BankCard, BankAccount
 import logging
 

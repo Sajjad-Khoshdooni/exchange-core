@@ -28,9 +28,6 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         if user.level > User.LEVEL1:
             raise ValidationError('کاربر تایید شده است.')
 
-        if user.national_code_duplicated_alert:
-            raise ValidationError('کد ملی تکراری است. لطفا به حساب اصلی‌تان وارد شوید.')
-
         date_delta = timezone.now().date() - validated_data['birth_date']
         age = date_delta.days / 365
 
@@ -51,7 +48,6 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             if BankCard.live_objects.filter(user=user, verified=True).exists():
                 raise ValidationError('امکان تغییر شماره کارت تایید شده وجود ندارد.')
 
-            # BankCard.objects.filter(user=user).delete()
             BankCard.objects.create(user=user, card_pan=card_pan)
 
         if not user.national_code_verified:
