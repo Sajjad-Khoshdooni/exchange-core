@@ -99,6 +99,12 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         wallet = asset.get_wallet(account)
 
+        if wallet.market != wallet.SPOT:
+            raise ValidationError('کیف پول نادرستی انتخاب شده است.')
+
+        if not wallet.has_balance(amount):
+            raise ValidationError('موجودی کافی نیست.')
+
         if not check_withdraw_laundering(wallet=wallet, amount=amount):
             raise ValidationError(
                 'در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید. لطفا احراز هویت سطح ۳ را انجام دهید.')
