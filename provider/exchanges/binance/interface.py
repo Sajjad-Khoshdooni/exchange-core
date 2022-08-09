@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
+from datetime import datetime
 from typing import Union
 
 from django.conf import settings
@@ -7,7 +8,8 @@ from django.utils import timezone
 
 
 from ledger.utils.cache import get_cache_func_key, cache
-from ledger.utils.precision import decimal_to_str
+from ledger.utils.price import get_price
+from ledger.utils.price_manager import PriceManager
 from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request, \
     spot_send_public_request, futures_send_public_request
 
@@ -194,29 +196,38 @@ class BinanceSpotHandler:
             network = element['network']
             status = status_map[transfer_type][element['status']]
 
-            if tx_id:
-                withdraw_deposit = BinanceTransferHistory.objects.filter(tx_id=tx_id)
-            else:
-                withdraw_deposit = BinanceTransferHistory.objects.filter(binace_id=binance_id)
-
-            if withdraw_deposit:
-                BinanceTransferHistory.objects.update(status=status, tx_id=tx_id)
-            else:
-                if transfer_type == BinanceTransferHistory.DEPOSIT:
-                    time = datetime.fromtimestamp(element['insertTime']//1000)
-                else:
-                    time = element['applyTime']
-                BinanceTransferHistory.objects.create(
+            if transfer_type == BinanceTransferHistory.DEPOSIT:
+                time = datetime.fromtimestamp(element['insertTime'] // 1000)
+                BinanceTransferHistory.objects.update_or_create(
                     tx_id=tx_id,
-                    binance_id=binance_id,
-                    address=address,
-                    amount=amount,
-                    coin=coin,
-                    date=time.astimezone(),
-                    network=network,
-                    status=status,
-                    type=transfer_type,
+                    defaults={
+                        'binance_id': binance_id,
+                        'address': address,
+                        'amount': amount,
+                        'coin': coin,
+                        'date': time.astimezone(),
+                        'network': network,
+                        'status': status,
+                        'type': transfer_type
+                    }
                 )
+            elif transfer_type == BinanceTransferHistory.WITHDRAW:
+                time = element['applyTime']
+                BinanceTransferHistory.objects.update_or_create(
+                    binance_id=binance_id,
+                    defaults={
+                        'tx_id': tx_id,
+                        'address': address,
+                        'amount': amount,
+                        'coin': coin,
+                        'date': datetime.strptime(time, '%Y-%m-%d %H:%M:%S').astimezone(),
+                        'network': network,
+                        'status': status,
+                        'type': transfer_type
+                    }
+                )
+            else:
+                raise NotImplementedError
 
     @classmethod
     def get_withdraw_history(cls):
@@ -260,10 +271,16 @@ class BinanceSpotHandler:
             asset = wallet['asset']
             free = wallet['free']
             locked = wallet['locked']
+            with PriceManager(fetch_all=True):
+                price = get_price(asset, side=BUY.lower())
+                if price:
+                    usdt_value = Decimal(price) * Decimal(free)
+                else:
+                    usdt_value = Decimal(0)
             BinanceWallet.objects.update_or_create(
                 asset=asset,
                 type=BinanceWallet.SPOT,
-                defaults={'free': free, 'locked': locked}
+                defaults={'free': free, 'locked': locked, 'usdt_value': usdt_value}
             )
 
 
@@ -364,12 +381,20 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         assets = resp['assets']
 
         for asset in assets:
-            free = asset['walletBalance']
+            free = (asset['walletBalance'])
             locked = 0
+
+            with PriceManager(fetch_all=True):
+                price = get_price(asset['asset'], side=BUY.lower())
+                if price:
+                    usdt_value = Decimal(price) * Decimal(free)
+                else:
+                    usdt_value = Decimal(0)
+
             BinanceWallet.objects.update_or_create(
                 asset=asset['asset'],
                 type=BinanceWallet.FUTURES,
-                defaults={'free': free, 'locked': locked},
+                defaults={'free': free, 'locked': locked, 'usdt_value': usdt_value},
             )
 
         positions = resp['positions']
@@ -380,10 +405,18 @@ class BinanceFuturesHandler(BinanceSpotHandler):
                 asset = symbol[:-4]
                 free = position['positionAmt']
                 locked = 0
+
+                with PriceManager(fetch_all=True):
+                    price = get_price(asset, side=BUY.lower())
+                    if price:
+                        usdt_value = Decimal(price) * Decimal(free)
+                    else:
+                        usdt_value = Decimal(0)
+
                 BinanceWallet.objects.update_or_create(
                     asset=asset,
                     type=BinanceWallet.FUTURES,
-                    defaults={'free': free, 'locked': locked},
+                    defaults={'free': free, 'locked': locked, 'usdt_value': usdt_value},
                 )
 
 
