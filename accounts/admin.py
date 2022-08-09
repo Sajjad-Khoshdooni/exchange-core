@@ -647,4 +647,3 @@ class FirebaseTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 @admin.register(ExternalNotification)
 class ExternalNotificationAdmin(admin.ModelAdmin):
     list_display = ['created', 'user', 'phone', 'scope']
-

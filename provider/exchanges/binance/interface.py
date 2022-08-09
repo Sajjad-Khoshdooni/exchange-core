@@ -3,6 +3,8 @@ from decimal import Decimal
 from typing import Union
 
 from django.conf import settings
+from django.utils import timezone
+
 
 from ledger.utils.cache import get_cache_func_key, cache
 from ledger.utils.precision import decimal_to_str
@@ -206,11 +208,11 @@ class BinanceSpotHandler:
                     time = element['applyTime']
                 BinanceTransferHistory.objects.create(
                     tx_id=tx_id,
-                    biance_id=binance_id,
+                    binance_id=binance_id,
                     address=address,
                     amount=amount,
                     coin=coin,
-                    date=time,
+                    date=time.astimezone(),
                     network=network,
                     status=status,
                     type=transfer_type,
@@ -219,14 +221,14 @@ class BinanceSpotHandler:
     @classmethod
     def get_withdraw_history(cls):
         from provider.models import BinanceTransferHistory
-        now = datetime.now()
-        five_days_ago_time_timestamp = datetime.timestamp(now - timedelta(days=5))
+        now = timezone.now()
+        start_time = int((now - timedelta(days=5)).timestamp() * 1000)
 
         withdraws = cls.collect_api(
             url='/sapi/v1/capital/withdraw/history',
             method=GET,
             data={
-                'startTime': five_days_ago_time_timestamp
+                'startTime': start_time
             }
         )
 
@@ -235,46 +237,34 @@ class BinanceSpotHandler:
     @classmethod
     def get_deposit_history(cls):
         from provider.models import BinanceTransferHistory
-        now = datetime.now()
-        five_days_ago_time_timestamp = datetime.timestamp(now - timedelta(days=5))
+        now = timezone.now()
+        start_time = int((now - timedelta(days=5)).timestamp() * 1000)
 
         deposits = cls.collect_api(
             url='/sapi/v1/capital/deposit/hisrec',
             method=GET,
             data={
-                'startTime': five_days_ago_time_timestamp
+                'startTime': start_time
             })
 
         cls._create_transfer_history(response=deposits, transfer_type=BinanceTransferHistory.DEPOSIT)
 
     @classmethod
-    def _get_spot_and_futures_wallet_handler(cls, wallet_type):
+    def update_wallet(cls):
         from provider.models import BinanceWallet
-        resp = cls.collect_api(
-            url='/sapi/v1/accountSnapshot',
-            method=GET,
-            data={
-                'type': wallet_type
-            }
-        )
-        wallets = resp['snapshotVos'][0]['data']['balances']
+        resp = cls.get_account_details()
+
+        wallets = resp['balances']
 
         for wallet in wallets:
             asset = wallet['asset']
             free = wallet['free']
             locked = wallet['locked']
-            binance_wallet = BinanceWallet.objects.filter(asset=asset)
-
-            if binance_wallet:
-                binance_wallet.update(free=free, locked=locked)
-            else:
-                BinanceWallet.objects.create(asset=asset, free=free, locked=locked, type=wallet_type)
-
-    @classmethod
-    def get_spot_wallets(cls):
-        from provider.models import BinanceWallet
-
-        cls._get_spot_and_futures_wallet_handler(BinanceWallet.SPOT)
+            BinanceWallet.objects.update_or_create(
+                asset=asset,
+                type=BinanceWallet.SPOT,
+                defaults={'free': free, 'locked': locked}
+            )
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):
@@ -357,11 +347,6 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         )
 
     @classmethod
-    def get_futures_wallets(cls):
-        from provider.models import BinanceWallet
-        cls._get_spot_and_futures_wallet_handler(BinanceWallet.FUTURES)
-
-    @classmethod
     def get_position_amount(cls, symbol: str) -> Decimal:
         symbol = cls.get_correct_symbol(symbol)
 
@@ -370,3 +355,35 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         )[0]
 
         return Decimal(position.get('positionAmt', 0))
+
+    @classmethod
+    def update_wallet(cls):
+        from provider.models import BinanceWallet
+        resp = cls.get_account_details()
+
+        assets = resp['assets']
+
+        for asset in assets:
+            free = asset['walletBalance']
+            locked = 0
+            BinanceWallet.objects.update_or_create(
+                asset=asset['asset'],
+                type=BinanceWallet.FUTURES,
+                defaults={'free': free, 'locked': locked},
+            )
+
+        positions = resp['positions']
+
+        for position in positions:
+            symbol = position['symbol']
+            if symbol.endswith('USDT'):
+                asset = symbol[:-4]
+                free = position['positionAmt']
+                locked = 0
+                BinanceWallet.objects.update_or_create(
+                    asset=asset,
+                    type=BinanceWallet.FUTURES,
+                    defaults={'free': free, 'locked': locked},
+                )
+
+

@@ -35,6 +35,6 @@ def create_transfer_history():
 
 @shared_task()
 def get_binance_wallet():
-    BinanceSpotHandler.get_spot_wallets()
-    BinanceFuturesHandler.get_futures_wallets()
+    BinanceSpotHandler.update_wallet()
+    BinanceFuturesHandler.update_wallet()
 

@@ -190,7 +190,7 @@ class PayirChanel(FiatWithdraw):
         for wallet in resp['wallets']:
             total_wallet_irt_value += Decimal(wallet['balance'])
 
-        return total_wallet_irt_value
+        return total_wallet_irt_value // 10
 
     def is_active(self):
         return bool(config('PAY_IR_TOKEN', ''))
@@ -323,7 +323,7 @@ class ZibalChanel(FiatWithdraw):
         for wallet in resp:
             total_wallet_irt_value += Decimal(wallet['balance'])
 
-        return total_wallet_irt_value
+        return total_wallet_irt_value // 10
 
     def is_active(self):
         return bool(config('ZIBAL_TOKEN', ''))

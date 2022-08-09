@@ -30,7 +30,7 @@ class GatewayAdmin(admin.ModelAdmin):
         channel = FiatWithdraw.get_withdraw_channel(gateway.type)
 
         try:
-            return humanize_number(Decimal(channel.get_total_wallet_irt_value()/10))
+            return humanize_number(Decimal(channel.get_total_wallet_irt_value()))
         except:
             return
 

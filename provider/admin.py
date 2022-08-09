@@ -1,10 +1,7 @@
-from decimal import Decimal
-
 from django.contrib import admin
-from django.db.models import Sum
 
-from ledger.utils.overview import AssetOverview
-from ledger.utils.price import get_price,BUY
+from ledger.utils.price import get_price, BUY
+from ledger.utils.price_manager import PriceManager
 from provider import models
 from provider.models import BinanceWallet
 
@@ -47,27 +44,36 @@ class BinanceWalletAdmin(admin.ModelAdmin):
 
     def changelist_view(self, request, extra_context=None):
 
-        spot_wallets = BinanceWallet.objects.filter(type=BinanceWallet.SPOT)
-        futures_wallets = BinanceWallet.objects.filter(type=BinanceWallet.FUTURES)
+        spot_wallets = BinanceWallet.objects.filter(type=BinanceWallet.SPOT).filter(free__gt=0)
+        futures_wallets = BinanceWallet.objects.filter(type=BinanceWallet.FUTURES).filter(free__gt=0)
 
         spot_wallets_usdt_value = 0
         futures_wallet_usdt_value = 0
 
-        for spot_wallet in spot_wallets:
-            spot_wallets_usdt_value += get_price(spot_wallet.asset, side=BUY) * spot_wallet.free
-        for futures_wallet in futures_wallets:
-            futures_wallet_usdt_value += get_price(futures_wallet.asset, side=BUY) * futures_wallet.free
+        with PriceManager(fetch_all=True):
 
-        context = {
-            'spot_wallet': spot_wallets_usdt_value,
-            'futures_wallet': futures_wallet_usdt_value,
-        }
-        return super().changelist_view(request, extra_context=context)
+            for spot_wallet in spot_wallets:
+                price = get_price(spot_wallet.asset, side=BUY)
+                if price:
+                    spot_wallets_usdt_value += price * spot_wallet.free
+
+            for futures_wallet in futures_wallets:
+                price = get_price(futures_wallet.asset, side=BUY)
+                if price:
+                    futures_wallet_usdt_value += price * futures_wallet.free
+
+            context = {
+                'spot_wallet': spot_wallets_usdt_value,
+                'futures_wallet': futures_wallet_usdt_value,
+            }
+            return super().changelist_view(request, extra_context=context)
 
     list_display = ['asset', 'free', 'locked', 'get_usdt_value', 'type']
     search_fields = ['asset']
     readonly_fields = ('get_usdt_value','asset', 'free', 'locked', 'get_usdt_value', 'type')
 
     def get_usdt_value(self, binance_wallet: models.BinanceWallet):
-        return get_price(coin=binance_wallet.asset, side=BUY) * binance_wallet.free
+        price = get_price(coin=binance_wallet.asset, side=BUY)
+        if price:
+            return price * binance_wallet.free
     get_usdt_value.short_description = 'USDT_Value'

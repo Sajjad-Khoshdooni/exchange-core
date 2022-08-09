@@ -9,8 +9,7 @@ def get_total_fiat_irt():
     for channel in channels:
         if channel.is_active():
             try:
-                wallet = channel.get_total_wallet_irt_value()
-                total += wallet.balance
+                total += channel.get_total_wallet_irt_value()
             except:
                 continue
 

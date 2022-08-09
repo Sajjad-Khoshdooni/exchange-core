@@ -19,14 +19,6 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    'create_withdraw_transaction': {
-        'task': 'ledger.tasks.withdraw.create_transaction_from_not_broadcasts',
-        'schedule': 10,
-        'options': {
-            'queue': 'transfer',
-            'expire': 10
-        },
-    },
     'register_address': {
         'task': 'ledger.tasks.register_address.register_address',
         'schedule': 30,
@@ -88,22 +80,22 @@ app.conf.beat_schedule = {
             'expire': 300
         },
     },
-    'create_transfer_history': {
-        'task': 'provider.tasks.binance.create_transfer_history',
-        'schedule': 300,
-        'options': {
-            'queue': 'binance',
-            'expire': 300,
-        }
-    },
-    'get_binance_wallet': {
-        'task': 'provider.tasks.binance.get_binance_wallet',
-        'schedule': 300,
-        'options': {
-            'queue': 'binance',
-            'expire': 300,
-        }
-    },
+    # 'create_transfer_history': {
+    #     'task': 'provider.tasks.binance.create_transfer_history',
+    #     'schedule': 300,
+    #     'options': {
+    #         'queue': 'binance',
+    #         'expire': 900,
+    #     }
+    # },
+    # 'get_binance_wallet': {
+    #     'task': 'provider.tasks.binance.get_binance_wallet',
+    #     'schedule': 300,
+    #     'options': {
+    #         'queue': 'binance',
+    #         'expire': 900,
+    #     }
+    # },
     # market tasks
     'create depth orders': {
         'task': 'market.tasks.market_maker.create_depth_orders',
