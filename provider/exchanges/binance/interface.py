@@ -1,14 +1,14 @@
-from datetime import datetime, timedelta
-from decimal import Decimal
 from datetime import datetime
+from datetime import timedelta
+from decimal import Decimal
 from typing import Union
 
 import pytz
 from django.conf import settings
 from django.utils import timezone
 
-
 from ledger.utils.cache import get_cache_func_key, cache
+from ledger.utils.precision import decimal_to_str
 from ledger.utils.price import get_price
 from ledger.utils.price_manager import PriceManager
 from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request, \
@@ -231,10 +231,10 @@ class BinanceSpotHandler:
                 raise NotImplementedError
 
     @classmethod
-    def get_withdraw_history(cls):
+    def get_withdraw_history(cls, days: int = 5):
         from provider.models import BinanceTransferHistory
         now = timezone.now()
-        start_time = int((now - timedelta(days=5)).timestamp() * 1000)
+        start_time = int((now - timedelta(days=days)).timestamp() * 1000)
 
         withdraws = cls.collect_api(
             url='/sapi/v1/capital/withdraw/history',
@@ -247,10 +247,10 @@ class BinanceSpotHandler:
         cls._create_transfer_history(response=withdraws, transfer_type=BinanceTransferHistory.WITHDRAW)
 
     @classmethod
-    def get_deposit_history(cls):
+    def get_deposit_history(cls, days: int = 5):
         from provider.models import BinanceTransferHistory
         now = timezone.now()
-        start_time = int((now - timedelta(days=5)).timestamp() * 1000)
+        start_time = int((now - timedelta(days=days)).timestamp() * 1000)
 
         deposits = cls.collect_api(
             url='/sapi/v1/capital/deposit/hisrec',
@@ -419,5 +419,3 @@ class BinanceFuturesHandler(BinanceSpotHandler):
                     type=BinanceWallet.FUTURES,
                     defaults={'free': free, 'locked': locked, 'usdt_value': usdt_value},
                 )
-
-
