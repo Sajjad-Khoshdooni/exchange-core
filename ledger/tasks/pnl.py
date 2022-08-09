@@ -72,6 +72,8 @@ def create_pnl_histories(self):
 
         PNLHistory.objects.bulk_create(to_create_pnl_histories)
     except Exception as e:
+        print('PNL error %s' % e)
+
         try:
             logger.warning(
                 'Exception on creating pnl histories', extra={
