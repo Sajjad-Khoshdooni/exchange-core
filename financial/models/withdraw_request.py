@@ -120,9 +120,6 @@ class FiatWithdrawRequest(models.Model):
     def update_status(self):
         from financial.utils.withdraw import FiatWithdraw
 
-        if self.status != self.PENDING:
-            return
-
         withdraw_handler = FiatWithdraw.get_withdraw_channel(self.withdraw_channel)
         status = withdraw_handler.get_withdraw_status(self.id, self.provider_withdraw_id)
 
