@@ -3,6 +3,7 @@ from decimal import Decimal
 from datetime import datetime
 from typing import Union
 
+import pytz
 from django.conf import settings
 from django.utils import timezone
 
@@ -205,7 +206,7 @@ class BinanceSpotHandler:
                         'address': address,
                         'amount': amount,
                         'coin': coin,
-                        'date': time.astimezone(),
+                        'date': time.replace(tzinfo=pytz.utc).astimezone(),
                         'network': network,
                         'status': status,
                         'type': transfer_type
@@ -220,7 +221,7 @@ class BinanceSpotHandler:
                         'address': address,
                         'amount': amount,
                         'coin': coin,
-                        'date': datetime.strptime(time, '%Y-%m-%d %H:%M:%S').astimezone(),
+                        'date': datetime.strptime(time, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc).astimezone(),
                         'network': network,
                         'status': status,
                         'type': transfer_type
