@@ -69,7 +69,7 @@ def add_sign_kucoin_futures(params_str, timestamp, http_method):
     return headers
 
 
-def kucoin_spot_send_signed_request(http_method, url_path, **kwargs):
+def kucoin_send_signed_request(http_method, url_path, **kwargs):
     timestamp = get_timestamp()
 
     if kwargs.get('futures'):
