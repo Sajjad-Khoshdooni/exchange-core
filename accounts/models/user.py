@@ -207,7 +207,7 @@ class User(AbstractUser):
             bank_card_verified = False
 
         return [
-            bool(self.national_code), self.national_code_verified,
+            bool(self.national_code),
             bool(self.birth_date), self.birth_date_verified,
             bool(self.first_name), self.first_name_verified,
             bool(self.last_name), self.last_name_verified,

@@ -50,10 +50,6 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
             BankCard.objects.create(user=user, card_pan=card_pan)
 
-        if not user.national_code_verified:
-            user.national_code = validated_data['national_code']
-            user.national_code_verified = None
-
         if not user.first_name_verified:
             user.first_name = validated_data['first_name']
             user.first_name_verified = None
@@ -80,11 +76,11 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'verify_status', 'level', 'first_name', 'last_name', 'birth_date', 'national_code', 'card_pan',
-            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified',
+            'first_name_verified', 'last_name_verified', 'birth_date_verified'
         )
         read_only_fields = (
             'verify_status', 'level',
-            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified',
+            'first_name_verified', 'last_name_verified', 'birth_date_verified'
         )
         extra_kwargs = {
             'first_name': {'required': True},
