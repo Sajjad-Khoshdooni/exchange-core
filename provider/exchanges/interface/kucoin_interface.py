@@ -22,8 +22,8 @@ class KucoinSpotHandler(ExchangeHandler):
     exchange = None
 
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        if settings.DEBUG_OR_TESTING:
-            return {}
+        # if settings.DEBUG_OR_TESTING:
+        #     return {}
 
         data = data or {}
 
@@ -192,6 +192,13 @@ class KucoinSpotHandler(ExchangeHandler):
         }
         resp['status'] = mapping.get(data.get('status'))
         return resp
+
+    def get_public_token_websocket(self):
+        import websocket
+        resp = self.collect_api('/api/v1/bullet-public', method='POST')
+        now = str(int(time.time() * 1000))
+        return websocket.WebSocket().connect(
+            url='wss://push1-v2.kucoin.com/endpoint?token=' + resp['token'] + '&[connectId=4646464465464]')
 
 
 class KucoinFuturesHandler(KucoinSpotHandler):

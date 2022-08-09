@@ -43,7 +43,7 @@ class BinanceConsumer:
 
         self.socket.connect(socket_url, timeout=5)
 
-        self.socket.send(json.dumps({"method": "SUBSCRIBE", "params": streams,"id": 1}))
+        self.socket.send(json.dumps({"method": "SUBSCRIBE", "params": streams, "id": 1}))
 
         while self.loop:
             if self.verbose > 0:
