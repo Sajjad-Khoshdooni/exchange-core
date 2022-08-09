@@ -8,7 +8,6 @@ from django.utils import timezone
 
 
 from ledger.utils.cache import get_cache_func_key, cache
-from ledger.utils.precision import decimal_to_str, get_presentation_amount
 from ledger.utils.price import get_price
 from ledger.utils.price_manager import PriceManager
 from provider.exchanges.binance.sdk import spot_send_signed_request, futures_send_signed_request, \
@@ -385,7 +384,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
             free = (asset['walletBalance'])
             locked = 0
 
-            with PriceManager():
+            with PriceManager(fetch_all=True):
                 price = get_price(asset['asset'], side=BUY.lower())
                 if price:
                     usdt_value = Decimal(price) * Decimal(free)
@@ -407,7 +406,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
                 free = position['positionAmt']
                 locked = 0
 
-                with PriceManager():
+                with PriceManager(fetch_all=True):
                     price = get_price(asset, side=BUY.lower())
                     if price:
                         usdt_value = Decimal(price) * Decimal(free)
