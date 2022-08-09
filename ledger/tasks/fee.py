@@ -22,7 +22,7 @@ def update_network_fees():
 
             if symbol_pair not in [('TRX', 'USDT'), ('TRX', 'TRX'), ('BSC', 'USDT'), ('BNB', 'USDT'), ('SOL', 'USDT')]:
                 withdraw_fee *= 2
-                withdraw_min = max(withdraw_fee, 2 * withdraw_fee)
+                withdraw_min = max(withdraw_min, 2 * withdraw_fee)
 
             if not withdraw_min:
                 withdraw_min = Decimal(info['withdrawIntegerMultiple'])
