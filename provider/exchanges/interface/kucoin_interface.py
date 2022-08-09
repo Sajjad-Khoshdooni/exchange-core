@@ -196,7 +196,7 @@ class KucoinSpotHandler(ExchangeHandler):
     def get_public_token_websocket(self):
         import websocket
         resp = self.collect_api('/api/v1/bullet-public', method='POST')
-        now = str(int(time.time() * 1000))
+
         return websocket.WebSocket().connect(
             url='wss://push1-v2.kucoin.com/endpoint?token=' + resp['token'] + '&[connectId=4646464465464]')
 
