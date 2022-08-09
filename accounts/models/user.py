@@ -197,7 +197,7 @@ class User(AbstractUser):
                and self.birth_date and self.birth_date_verified
 
     def get_level2_verify_fields(self):
-        from financial.models import BankCard, BankAccount
+        from financial.models import BankCard
 
         bank_card_verified = None
 
@@ -255,11 +255,11 @@ class User(AbstractUser):
             Account.objects.create(user=self)
 
         if self.level == self.LEVEL2 and self.verify_status == self.PENDING:
-            if self.telephone_verified and self.selfie_image_verified:
+            if self.national_code_verified and self.selfie_image_verified:
                 self.change_status(self.VERIFIED)
 
             else:
-                fields = [self.telephone_verified, self.selfie_image_verified]
+                fields = [self.national_code_verified, self.selfie_image_verified]
                 # any_none = any(map(lambda f: f is None, fields))
                 any_false = any(map(lambda f: f is False, fields))
 

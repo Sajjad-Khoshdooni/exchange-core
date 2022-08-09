@@ -1,11 +1,11 @@
 
 import logging
+
 from celery import shared_task
-from yekta_config.config import config
 
 from accounts.models import Notification
 from accounts.models import User
-from accounts.verifiers.finotech_basic_verify import basic_verify
+from accounts.verifiers.jibit_basic_verify import basic_verify, verify_national_code_with_phone
 from .send_sms import send_message_by_kavenegar
 
 logger = logging.getLogger(__name__)
@@ -18,6 +18,12 @@ def basic_verify_user(user_id: int):
     basic_verify(user)
 
 
+@shared_task(queue='kyc')
+def verify_user_national_code(user_id: int):
+    user = User.objects.get(id=user_id)  # type: User
+    verify_national_code_with_phone(user)
+
+
 def alert_user_verify_status(user: User):
     if user.verify_status == User.PENDING:
         return
@@ -26,11 +32,7 @@ def alert_user_verify_status(user: User):
 
     if user.level >= User.LEVEL2 or user.verify_status == User.REJECTED:
         if user.verify_status == User.REJECTED:
-            if user.national_code_duplicated_alert:
-                title = 'کد ملی تکراری است. لطفا به حساب اصلی‌تان وارد شوید.'
-                notif_message = 'شما قبلا در {} با شماره موبایل دیگری ثبت‌نام کرده‌اید و احراز هویت‌تان انجام شده است. لطفا از آن حساب استفاده کنید.'.format(config('BRAND'))
-            else:
-                title = 'اطلاعات وارد شده نیاز به بازنگری دارد.'
+            title = 'اطلاعات وارد شده نیاز به بازنگری دارد.'
 
             level = Notification.ERROR
             template = 'levelup-rejected'

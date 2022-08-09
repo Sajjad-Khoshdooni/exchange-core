@@ -1,17 +1,15 @@
 import logging
-from datetime import datetime, timedelta
-
-from django.utils import timezone
 
 from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.similarity import str_similar_rate, clean_persian_name, rotate_words
 from accounts.utils.telegram import send_support_message
-from accounts.verifiers.finotech import FinotechRequester, ServerError
+from accounts.verifiers.finotech import ServerError
 from accounts.verifiers.jibit import JibitRequester
 from financial.models import BankCard, BankAccount
 
 logger = logging.getLogger(__name__)
+
 
 IBAN_NAME_SIMILARITY_THRESHOLD = 0.75
 
@@ -21,94 +19,61 @@ def basic_verify(user: User):
         logger.info('ignoring double verifying user_d = %d' % user.id)
         return
 
-    if not user.national_code_verified:
-        logger.info('verifying national_code for user_d = %d' % user.id)
-
-        if not verify_national_code(user):
-            return
-
-    if not user.primary_data_verified:
-        now = timezone.now().astimezone()
-        hour = now.hour
-
-        if hour >= 23 or hour < 7:
-            if hour >= 23:
-                target = now + timedelta(days=1)
-            else:
-                target = now
-
-            next_valid = datetime(year=target.year, month=target.month, day=target.day, hour=7, minute=10, tzinfo=target.tzinfo)
-            to_pass_seconds = int((next_valid - now).total_seconds())
-
-            from accounts.tasks import basic_verify_user
-            logger.info('rescheduling basic_verify to valid hours for user_id = %d' % user.id)
-            basic_verify_user.s(user.id).apply_async(countdown=to_pass_seconds)
-            return
-
-        logger.info('verifying primary_data for user_d = %d' % user.id)
-
-        if not verify_user_primary_info(user):
-            return
-
-    def get_first_verify_qs(queryset):
-        return queryset.filter(verified=True).first() or queryset.filter(verified=None).first() or \
-                   queryset.filter(verified=False).first()
-
-    bank_card = get_first_verify_qs(user.bankcard_set.all())
+    queryset = user.bankcard_set.all()
+    bank_card = queryset.filter(verified=True).first() or queryset.filter(verified=None).first() or \
+                queryset.filter(verified=False).first()
 
     if not bank_card:
-        user.change_status(User.REJECTED)
-        logger.info('no bank card or account for user_d = %d' % user.id)
+        logger.info('ignoring verify level2 due to no bank_account for user_d = %d' % user.id)
         return
 
-    if not bank_card.verified:
-        logger.info('verifying bank_card for user_d = %d' % user.id)
+    if not user.national_code_verified or not user.birth_date_verified or not bank_card.verified:
+        logger.info('verifying national_code, birth_date, bank_card for user_d = %d' % user.id)
 
-        if verify_bank_card(bank_card) is False:
-            user.change_status(User.REJECTED)
+        if not verify_bank_card_by_national_code(bank_card):
+            return
+
+    if bank_card.verified and (not user.first_name_verified or not user.last_name_verified):
+        logger.info('verifying name, bank_card for user_d = %d' % user.id)
+
+        if not verify_bank_card_by_name(bank_card):
             return
 
     user.verify_level2_if_not()
 
 
-def verify_national_code(user: User, retry: int = 5) -> bool:
+def verify_national_code_with_phone(user: User, retry: int = 5) -> bool:
+    if user.level != User.LEVEL2:
+        return False
+
     if not user.national_code:
         return False
 
-    requester = FinotechRequester(user)
+    requester = JibitRequester(user)
 
     try:
-        verified = requester.verify_phone_number_national_code(user.phone, user.national_code)
+        verified = requester.matching(phone_number=user.phone, national_code=user.national_code)
     except (TimeoutError, ServerError):
         if retry == 0:
-            logger.error('Finotech timeout verify_national_code')
+            logger.error('jibit timeout verify_national_code')
             return
         else:
             logger.info('Retrying verify_national_code...')
-            return verify_national_code(user, retry - 1)
-
-    user.national_code_verified = verified
-    user.save()
+            return verify_national_code_with_phone(user, retry - 1)
 
     if not verified:
         user.change_status(User.REJECTED)
     else:
-        # check duplicated national_code
-        if User.objects.exclude(id=user.id).filter(national_code=user.national_code, level__gt=User.LEVEL1).exists():
-            user.national_code_duplicated_alert = True
-            user.change_status(User.REJECTED)
-            return False
-
-        user.verify_level2_if_not()
+        user.change_status(User.VERIFIED)
 
     return verified
 
 
-def verify_bank_card_by_national_code(user: User, retry: int = 5) -> bool:
-    if user.national_code_verified and user.birth_date_verified and user.bankcard_set.filter(verified=True):
-        return True
+def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 5) -> bool:
+    user = bank_card.user
 
-    bank_card = user.bankcard_set.first()
+    if user.birth_date_verified and user.bankcard_set.filter(verified=True):
+        return True
 
     if not user.national_code or not bank_card or not user.birth_date:
         return False
@@ -123,17 +88,17 @@ def verify_bank_card_by_national_code(user: User, retry: int = 5) -> bool:
         )
     except (TimeoutError, ServerError):
         if retry == 0:
-            logger.error('Finotech timeout user_primary_info')
+            logger.error('jibit timeout user_primary_info')
             return
         else:
             logger.info('Retrying verify_national_code...')
-            return verify_bank_card_by_national_code(user, retry - 1)
+            return verify_bank_card_by_national_code(bank_card, retry - 1)
 
-    user.national_code_verified = user.national_code_verified or matched
-    user.birth_date_verified = user.birth_date_verified or matched
-    bank_card.verified = bank_card.verified or matched
-    user.save()
-    bank_card.save()
+    user.birth_date_verified = matched
+    user.save(update_fields=['birth_date_verified'])
+
+    bank_card.verified = matched
+    bank_card.save(update_fields=['verified'])
 
     if not matched:
         user.change_status(User.REJECTED)
@@ -147,29 +112,43 @@ def verify_bank_card_by_national_code(user: User, retry: int = 5) -> bool:
 def verify_bank_card_by_name(bank_card: BankCard, retry: int = 5) -> bool:
     requester = JibitRequester(bank_card.user)
 
+    if not bank_card.verified:
+        return
+
+    user = bank_card.user
+
+    if user.first_name_verified and user.last_name_verified:
+        return True
+
     try:
-        verified = requester.matching(card_pan=bank_card.card_pan, bank_card.card_pan)
+        matched = requester.matching(card_pan=bank_card.card_pan, full_name=bank_card.user.get_full_name())
     except (TimeoutError, ServerError):
         if retry == 0:
-            logger.error('Finotech timeout bank_card')
+            logger.error('jibit timeout bank_card')
             return
         else:
             logger.info('Retrying verify_national_code...')
-            return verify_bank_card(bank_card, retry - 1)
+            return verify_bank_card_by_name(bank_card, retry - 1)
 
-    bank_card.verified = verified
-    bank_card.save()
+    user.first_name_verified = matched
+    user.last_name_verified = matched
+    user.save(update_fields=['first_name_verified', 'last_name_verified'])
 
-    bank_card.user.verify_level2_if_not()
+    if not matched:
+        user.change_status(User.REJECTED)
+        return False
 
-    return bank_card.verified
+    user.verify_level2_if_not()
+
+    return True
 
 
 DEPOSIT_STATUS_MAP = {
-    2: BankAccount.ACTIVE,
-    3: BankAccount.DEPOSITABLE_SUSPENDED,
-    4: BankAccount.NON_DEPOSITABLE_SUSPENDED,
-    5: BankAccount.STAGNANT,
+    'ACTIVE': BankAccount.ACTIVE,
+    'BLOCK_WITH_DEPOSIT': BankAccount.DEPOSITABLE_SUSPENDED,
+    'BLOCK_WITHOUT_DEPOSIT': BankAccount.NON_DEPOSITABLE_SUSPENDED,
+    'IDLE': BankAccount.STAGNANT,
+    'UNKNOWN': BankAccount.UNKNOWN,
 }
 
 
@@ -180,12 +159,12 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
         bank_account.save()
         return False
 
-    requester = FinotechRequester(bank_account.user)
+    requester = JibitRequester(bank_account.user)
 
     try:
-        data = requester.get_iban_info(bank_account.iban)
+        iban_info = requester.get_iban_info(bank_account.iban)
 
-        if not data:
+        if not iban_info:
             link = url_to_edit_object(bank_account)
             send_support_message(
                 message='تایید شماره شبای کاربر با مشکل مواجه شد. لطفا دستی بررسی شود.',
@@ -195,18 +174,18 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
 
     except (TimeoutError, ServerError):
         if retry == 0:
-            logger.error('Finotech timeout bank_account')
+            logger.error('jibit timeout bank_account')
             return
         else:
             logger.info('Retrying verify_national_code...')
             return verify_bank_account(bank_account, retry - 1)
 
-    bank_account.bank_name = data['bankName']
-    bank_account.deposit_address = data['deposit']
-    bank_account.card_pan = data.get('card', '')
-    bank_account.deposit_status = DEPOSIT_STATUS_MAP.get(int(data['depositStatus']), '')
+    bank_account.bank_name = iban_info['bank']
+    bank_account.deposit_address = iban_info['depositNumber']
+    bank_account.card_pan = ''
+    bank_account.deposit_status = DEPOSIT_STATUS_MAP.get(iban_info['status'], '')
 
-    owners = bank_account.owners = data['depositOwners']
+    owners = bank_account.owners = iban_info['owners']
 
     user = bank_account.user
 
@@ -221,7 +200,6 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
 
         if not verified:
             name1_rotate = rotate_words(name1)
-
             verified = str_similar_rate(name1_rotate, name2) >= IBAN_NAME_SIMILARITY_THRESHOLD
 
     bank_account.verified = verified

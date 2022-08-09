@@ -169,3 +169,22 @@ class JibitRequester:
             raise ServerError
 
         return resp['matched']
+
+    def get_iban_info(self, iban: str) -> dict:
+
+        params = {
+            'value': iban,
+        }
+
+        key = 'iban-%s' % iban
+
+        resp = self.collect_api(
+            path='/v1/iban',
+            data=params,
+            search_key=key
+        )
+
+        if not resp:
+            raise ServerError
+
+        return resp['ibanInfo']
