@@ -185,7 +185,7 @@ class JibitRequester:
         key = 'iban-%s' % iban
 
         resp = self.collect_api(
-            path='/v1/iban',
+            path='/v1/ibans',
             data=params,
             search_key=key
         )
