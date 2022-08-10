@@ -31,14 +31,14 @@ class FullVerificationSerializer(serializers.ModelSerializer):
             user.selfie_image = validated_data['selfie_image']
             user.selfie_image_verified = None
 
-            link = url_to_edit_object(user)
-            send_support_message(
-                message='لطفا کاربر را برای احراز هویت کامل بررسی کنید.',
-                link=link
-            )
+        link = url_to_edit_object(user)
+        send_support_message(
+            message='لطفا کاربر را برای احراز هویت کامل بررسی کنید.',
+            link=link
+        )
 
-        if not user.national_code_verified:
-            verify_user_national_code.s(user.id).apply_async(countdown=60)
+        # if not user.national_code_verified:
+        #     verify_user_national_code.s(user.id).apply_async(countdown=60)
 
         user.change_status(User.PENDING)
 
