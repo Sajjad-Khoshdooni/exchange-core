@@ -74,9 +74,17 @@ class StakeRequest(models.Model):
             self.send_email_for_staking(user_email=user_email, template=email.SCOPE_CANCEL_STAKE)
 
         elif (old_status, new_status) == (self.PENDING, self.DONE):
+            from accounts.tasks import send_message_by_kavenegar
             self.status = new_status
             self.save()
             self.send_email_for_staking(user_email=user_email, template=email.SCOPE_DONE_STAKE)
+
+            send_message_by_kavenegar(
+                phone=account.user.phone,
+                token=asset.name_fa,
+                send_type='sms',
+                template='staking-activated'
+            )
 
         elif (old_status, new_status) in [(self.PENDING, self.CANCEL_PROCESS), (self.DONE, self.CANCEL_PROCESS)]:
             self.status = new_status
