@@ -31,7 +31,7 @@ class BinanceConsumer:
 
     def get_streams(self):
         assets = list(Asset.candid_objects.filter(
-            hedge_method__in=(Asset.HEDGE_BINANCE_SPOT, Asset.HEDGE_BINANCE_FUTURE)
+            hedge_method__in=(Asset.HEDGE_BINANCE_SPOT, Asset.HEDGE_BINANCE_FUTURE, Asset.HEDGE_NONE, None)
         ).values_list('symbol', flat=True))
         return list(map(lambda asset: get_binance_price_stream(asset) + '@depth5', assets))
 
