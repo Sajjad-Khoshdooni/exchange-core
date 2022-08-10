@@ -1,9 +1,4 @@
-import math
 from decimal import Decimal
-
-from django.conf import settings
-
-
 from ledger.utils.precision import decimal_to_str
 from provider.exchanges.interface.binance_interface import ExchangeHandler, SELL, BUY, MARKET, LIMIT, HOUR
 from provider.exchanges.sdk.kucoin_sdk import kucoin_send_signed_request, kucoin_spot_send_public_request
@@ -192,13 +187,6 @@ class KucoinSpotHandler(ExchangeHandler):
         }
         resp['status'] = mapping.get(data.get('status'))
         return resp
-
-    def get_public_token_websocket(self):
-        import websocket
-        resp = self.collect_api('/api/v1/bullet-public', method='POST')
-        print(resp)
-        return websocket.WebSocket().connect(
-            url='wss://ws-api.kucoin.com/endpoint?token=' + resp['token'] + '&[connectId=4646464465464]')
 
 
 class KucoinFuturesHandler(KucoinSpotHandler):

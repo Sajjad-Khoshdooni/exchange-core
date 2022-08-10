@@ -30,7 +30,9 @@ class BinanceConsumer:
         logger.info('Starting Binance Socket...')
 
     def get_streams(self):
-        assets = list(Asset.candid_objects.values_list('symbol', flat=True))
+        assets = list(Asset.candid_objects.filter(
+            hedge_method__in=(Asset.HEDGE_BINANCE_SPOT, Asset.HEDGE_BINANCE_FUTURE)
+        ).values_list('symbol', flat=True))
         return list(map(lambda asset: get_binance_price_stream(asset) + '@depth5', assets))
 
     def consume(self):
