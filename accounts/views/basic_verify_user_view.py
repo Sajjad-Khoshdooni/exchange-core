@@ -20,6 +20,17 @@ class CardPanField(serializers.CharField):
 
 class BasicInfoSerializer(serializers.ModelSerializer):
     card_pan = CardPanField(validators=[bank_card_pan_validator])
+    reason = serializers.SerializerMethodField()
+
+    def get_reason(self, user: User):
+        if user.verify_status == User.REJECTED and user.level == User.LEVEL1:
+
+            if not user.birth_date_verified:
+                return 'کد ملی،‌ شماره کارت و تاریخ تولد متعلق به یک نفر نیستند.'
+
+            if not user.first_name_verified or not user.last_name_verified:
+                return 'نام و نام خانوادگی با دیگر اطلاعات مغایر است.'
+
 
     def update(self, user, validated_data):
         if user and user.verify_status in (User.PENDING, User.VERIFIED):
@@ -76,7 +87,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'verify_status', 'level', 'first_name', 'last_name', 'birth_date', 'national_code', 'card_pan',
-            'first_name_verified', 'last_name_verified', 'birth_date_verified'
+            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'reason'
         )
         read_only_fields = (
             'verify_status', 'level',
