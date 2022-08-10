@@ -49,9 +49,6 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
         card_pan = validated_data.pop('card_pan')
 
-        if BankCard.live_objects.filter(card_pan=card_pan, verified=True).exclude(user=user).exists():
-            raise ValidationError('این شماره کارت قبلا ثبت شده است.')
-
         bank_card = BankCard.live_objects.filter(user=user, card_pan=card_pan).first()
 
         if not bank_card:
