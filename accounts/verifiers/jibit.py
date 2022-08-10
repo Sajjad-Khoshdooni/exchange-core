@@ -31,7 +31,7 @@ class JibitRequester:
                 return token
 
         resp = requests.post(
-            url=self.BASE_URL + '/v1/token/generate',
+            url=self.BASE_URL + '/v1/tokens/generate',
             data={
                 'apiKey': secret('JIBIT_API_KEY'),
                 'secretKey': secret('JIBIT_API_SECRET'),
