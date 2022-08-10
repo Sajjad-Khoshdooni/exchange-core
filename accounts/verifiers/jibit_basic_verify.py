@@ -42,7 +42,7 @@ def basic_verify(user: User):
     user.verify_level2_if_not()
 
 
-def verify_national_code_with_phone(user: User, retry: int = 5) -> bool:
+def verify_national_code_with_phone(user: User, retry: int = 2) -> bool:
     if user.level != User.LEVEL2:
         return False
 
@@ -69,7 +69,7 @@ def verify_national_code_with_phone(user: User, retry: int = 5) -> bool:
     return verified
 
 
-def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 5) -> bool:
+def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> bool:
     user = bank_card.user
 
     if user.birth_date_verified and user.bankcard_set.filter(verified=True):
@@ -109,7 +109,7 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 5) -> bo
     return True
 
 
-def verify_bank_card_by_name(bank_card: BankCard, retry: int = 5) -> bool:
+def verify_bank_card_by_name(bank_card: BankCard, retry: int = 2) -> bool:
     requester = JibitRequester(bank_card.user)
 
     if not bank_card.verified:
@@ -152,26 +152,11 @@ DEPOSIT_STATUS_MAP = {
 }
 
 
-def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
-    if BankAccount.live_objects.filter(iban=bank_account.iban, verified=True).exclude(id=bank_account.id).exists():
-        logger.info('rejecting bank account because of duplication')
-        bank_account.verified = False
-        bank_account.save()
-        return False
-
+def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> bool:
     requester = JibitRequester(bank_account.user)
 
     try:
         iban_info = requester.get_iban_info(bank_account.iban)
-
-        if not iban_info:
-            link = url_to_edit_object(bank_account)
-            send_support_message(
-                message='تایید شماره شبای کاربر با مشکل مواجه شد. لطفا دستی بررسی شود.',
-                link=link
-            )
-            return
-
     except (TimeoutError, ServerError):
         if retry == 0:
             logger.error('jibit timeout bank_account')
@@ -179,6 +164,22 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
         else:
             logger.info('Retrying verify_national_code...')
             return verify_bank_account(bank_account, retry - 1)
+
+    if not iban_info.success:
+        if iban_info.data['code'] == 'iban.not_valid':
+            bank_account.verified = False
+            bank_account.save()
+            return False
+
+        else:
+            link = url_to_edit_object(bank_account)
+            send_support_message(
+                message='تایید شماره شبای کاربر با مشکل مواجه شد. لطفا دستی بررسی شود.',
+                link=link
+            )
+            return
+
+    iban_info = iban_info.data['ibanInfo']
 
     bank_account.bank_name = iban_info['bank']
     bank_account.deposit_address = iban_info['depositNumber']
@@ -190,6 +191,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
     user = bank_account.user
 
     verified = False
+
     if len(owners) >= 1:
         owner = owners[0]
         owner_full_name = owner['firstName'] + ' ' + owner['lastName']
@@ -204,7 +206,5 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 5) -> bool:
 
     bank_account.verified = verified
     bank_account.save()
-
-    bank_account.user.verify_level2_if_not()
 
     return verified

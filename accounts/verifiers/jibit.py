@@ -1,5 +1,6 @@
 import datetime
 import logging
+from dataclasses import dataclass
 
 import requests
 from django.core.cache import caches
@@ -16,6 +17,12 @@ logger = logging.getLogger(__name__)
 token_cache = caches['token']
 
 JIBIT_TOKEN_KEY = 'jibit-token'
+
+
+@dataclass
+class Response:
+    data: dict
+    success: bool = True
 
 
 class JibitRequester:
@@ -54,7 +61,7 @@ class JibitRequester:
             return token
 
     def collect_api(self, path: str, method: str = 'GET', data: dict = None, force_renew_token: bool = False,
-                    search_key: str = None) -> dict:
+                    search_key: str = None) -> Response:
 
         if search_key:
             request = FinotechRequest.objects.filter(
@@ -68,10 +75,7 @@ class JibitRequester:
                 if request.status_code >= 500:
                     raise ServerError
 
-                if request.status_code not in (200, 201):
-                    return
-
-                return request.response
+                return Response(data=request.response, success=request.status_code in (200, 201))
 
         token = self._get_cc_token()
 
@@ -125,15 +129,9 @@ class JibitRequester:
         req_object.response = resp_data
         req_object.status_code = resp.status_code
 
-        if resp.ok or (resp.status_code == 400 and 'nidVerification' in path):
-            req_object.search_key = search_key
-
         req_object.save()
 
         if resp.status_code >= 500:
-            raise ServerError
-
-        if not resp.ok:
             logger.error('failed to call jibit', extra={
                 'path': path,
                 'method': method,
@@ -142,9 +140,10 @@ class JibitRequester:
                 'status': resp.status_code
             })
             print(resp_data)
-            return
 
-        return resp_data
+            raise ServerError
+
+        return Response(data=resp_data, success=resp.ok)
 
     def matching(self, phone_number: str = None, national_code: str = None, full_name: str = None,
                  birth_date: datetime = None, card_pan: str = None, iban: str = None) -> bool:
@@ -171,26 +170,21 @@ class JibitRequester:
             search_key=key
         )
 
-        if not resp:
+        if not resp.success:
             raise ServerError
 
-        return resp['matched']
+        return resp.data['matched']
 
-    def get_iban_info(self, iban: str) -> dict:
-
+    def get_iban_info(self, iban: str) -> Response:
         params = {
             'value': iban,
         }
 
         key = 'iban-%s' % iban
 
-        resp = self.collect_api(
+        return self.collect_api(
             path='/v1/ibans',
             data=params,
             search_key=key
         )
 
-        if not resp:
-            raise ServerError
-
-        return resp['ibanInfo']
