@@ -32,7 +32,7 @@ class JibitRequester:
 
         resp = requests.post(
             url=self.BASE_URL + '/v1/tokens/generate',
-            data={
+            json={
                 'apiKey': secret('JIBIT_API_KEY'),
                 'secretKey': secret('JIBIT_API_SECRET'),
             },
@@ -104,7 +104,7 @@ class JibitRequester:
                 resp = requests.get(params=data, **request_kwargs)
             else:
                 method_prop = getattr(requests, method.lower())
-                resp = method_prop(data=data, **request_kwargs)
+                resp = method_prop(json=data, **request_kwargs)
         except (requests.exceptions.ConnectionError, ReadTimeoutError, requests.exceptions.Timeout):
             req_object.response = 'timeout'
             req_object.status_code = 100
