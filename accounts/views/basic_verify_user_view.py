@@ -31,7 +31,6 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             if not user.first_name_verified or not user.last_name_verified:
                 return 'نام و نام خانوادگی با دیگر اطلاعات مغایر است.'
 
-
     def update(self, user, validated_data):
         if user and user.verify_status in (User.PENDING, User.VERIFIED):
             raise ValidationError('امکان تغییر اطلاعات وجود ندارد.')
