@@ -171,7 +171,11 @@ class JibitRequester:
         )
 
         if not resp.success:
-            raise ServerError
+
+            if resp.data['code'] == 'identity_info.not_found':
+                return False
+            else:
+                raise ServerError
 
         return resp.data['matched']
 
