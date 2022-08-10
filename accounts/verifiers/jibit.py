@@ -171,7 +171,6 @@ class JibitRequester:
         )
 
         if not resp.success:
-
             if resp.data['code'] == 'identity_info.not_found':
                 return False
             else:
