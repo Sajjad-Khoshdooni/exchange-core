@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import ModelViewSet
+from yekta_config.config import config
 
 from accounts.models import User
 from financial.models.bank_card import BankCard, BankCardSerializer
@@ -78,7 +79,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         from accounts.tasks import basic_verify_user
 
         if not settings.DEBUG_OR_TESTING:
-            basic_verify_user.s(user.id).apply_async(countdown=60)
+            basic_verify_user.s(user.id).apply_async(countdown=config('KYC_DELAY', cast=int, default=60))
 
         return user
 
