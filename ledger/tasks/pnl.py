@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True, queue='celery', max_retries=10)
 def create_pnl_histories(self):
     try:
-        today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = timezone.localtime(timezone.now()).replace(hour=0, minute=0, second=0, microsecond=0)
         today_timestamp = int(today.timestamp() * 1000)
 
         if settings.DEBUG:
