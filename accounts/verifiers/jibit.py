@@ -34,8 +34,14 @@ class JibitRequester:
             url=self.BASE_URL + '/v1/token/generate',
             data={
                 'apiKey': secret('JIBIT_API_KEY'),
-                'secretKey': secret('JIBIT_API_KEY'),
+                'secretKey': secret('JIBIT_API_SECRET'),
             },
+            timeout=30,
+            proxies={
+                'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+                'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+                'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            }
         )
 
         if resp.ok:
