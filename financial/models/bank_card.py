@@ -42,6 +42,14 @@ class BankCard(models.Model):
         verbose_name = 'کارت بانکی'
         verbose_name_plural = 'کارت‌های بانکی'
 
+        constraints = [
+            UniqueConstraint(
+                fields=["card_pan", 'user'],
+                name="unique_bank_card_card_pan",
+                condition=Q(deleted=False),
+            )
+        ]
+
 
 class BankAccount(models.Model):
     ACTIVE, DEPOSITABLE_SUSPENDED, NON_DEPOSITABLE_SUSPENDED, STAGNANT, UNKNOWN = 'active', 'suspend', 'nsuspend', 'stagnant', 'unknown'
@@ -87,6 +95,14 @@ class BankAccount(models.Model):
         verbose_name = 'حساب بانکی'
         verbose_name_plural = 'حساب‌های بانکی'
 
+        constraints = [
+            UniqueConstraint(
+                fields=["iban", "user"],
+                name="unique_bank_account_iban",
+                condition=Q(deleted=False),
+            )
+        ]
+
 
 class BankCardSerializer(serializers.ModelSerializer):
 
@@ -99,7 +115,7 @@ class BankCardSerializer(serializers.ModelSerializer):
         user = validated_data['user']
         card_pan = validated_data['card_pan']
 
-        if BankCard.live_objects.filter(Q(user=user) | Q(verified=True), card_pan=card_pan).exists():
+        if BankCard.live_objects.filter(user=user, card_pan=card_pan).exists():
             raise ValidationError('این شماره کارت قبلا ثبت شده است.')
 
         bank_card = super().create(validated_data)
@@ -121,8 +137,8 @@ class BankAccountSerializer(serializers.ModelSerializer):
         user = validated_data['user']
         iban = validated_data['iban']
 
-        if BankAccount.live_objects.filter(Q(user=user) | Q(verified=True), iban=iban).exists():
-            raise ValidationError('این شماره شما قبلا ثبت شده است.')
+        if BankAccount.live_objects.filter(user=user, iban=iban).exists():
+            raise ValidationError('این شماره شبا قبلا ثبت شده است.')
 
         bank_account = super().create(validated_data)
 
