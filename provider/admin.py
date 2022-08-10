@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import Sum
 
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.price import get_price, BUY
@@ -38,6 +39,7 @@ class BinanceTransferHistoryAdmin(admin.ModelAdmin):
     list_display = ['type', 'amount', 'coin', 'status', 'date', 'address', 'tx_id']
     list_filter = ['status', 'type']
     search_fields = ['address', 'coin']
+    ordering = ('-date',)
 
 
 @admin.register(BinanceWallet)
@@ -48,6 +50,21 @@ class BinanceWalletAdmin(admin.ModelAdmin):
     readonly_fields = ('asset', 'get_free', 'get_locked', 'get_usdt_value', 'type')
     ordering = ('-free',)
     list_filter = ('type',)
+
+    def changelist_view(self, request, extra_context=None):
+
+        spot_wallets_usdt_value = BinanceWallet.objects.filter(type=BinanceWallet.SPOT).filter(free__gt=0).aggregate(
+            Sum('usdt_value'))['usdt_value__sum'] or 0
+
+        futures_wallet_usdt_value = BinanceWallet.objects.filter(type=BinanceWallet.FUTURES).filter(free__gt=0).aggregate(
+            Sum('usdt_value'))['usdt_value__sum'] or 0
+
+        context = {
+            'spot_wallet': get_presentation_amount(spot_wallets_usdt_value),
+            'futures_wallet': get_presentation_amount(futures_wallet_usdt_value),
+        }
+
+        return super().changelist_view(request, extra_context=context)
 
     def get_free(self, binance_wallet: BinanceWallet):
         return get_presentation_amount(binance_wallet.free)
