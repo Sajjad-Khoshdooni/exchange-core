@@ -144,7 +144,7 @@ class JibitRequester:
             print(resp_data)
             return
 
-        return resp_data['result']
+        return resp_data
 
     def matching(self, phone_number: str = None, national_code: str = None, full_name: str = None,
                  birth_date: datetime = None, card_pan: str = None, iban: str = None) -> bool:
