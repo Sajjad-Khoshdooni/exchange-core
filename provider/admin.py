@@ -46,6 +46,7 @@ class BinanceTransferHistoryAdmin(admin.ModelAdmin):
 class BinanceWalletAdmin(admin.ModelAdmin):
 
     list_display = ['asset', 'get_free', 'get_usdt_value', 'get_locked',  'type']
+    fieldsets = ((None, {'fields': ('asset', 'get_free', 'get_locked', 'get_usdt_value', 'type')}),)
     search_fields = ['asset']
     readonly_fields = ('asset', 'get_free', 'get_locked', 'get_usdt_value', 'type')
     ordering = ('-free',)
@@ -60,8 +61,8 @@ class BinanceWalletAdmin(admin.ModelAdmin):
             Sum('usdt_value'))['usdt_value__sum'] or 0
 
         context = {
-            'spot_wallet': get_presentation_amount(spot_wallets_usdt_value),
-            'futures_wallet': get_presentation_amount(futures_wallet_usdt_value),
+            'spot_wallet': round(spot_wallets_usdt_value, 2),
+            'futures_wallet': round(futures_wallet_usdt_value, 2),
         }
 
         return super().changelist_view(request, extra_context=context)
