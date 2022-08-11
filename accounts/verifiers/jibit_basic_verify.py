@@ -59,10 +59,8 @@ def verify_national_code_with_phone(user: User, retry: int = 0) -> bool:
             logger.info('Retrying verify_national_code...')
             return verify_national_code_with_phone(user, retry - 1)
 
-    if not verified:
-        user.change_status(User.REJECTED)
-    else:
-        user.change_status(User.VERIFIED)
+    user.national_code_phone_verified = verified
+    user.save()
 
     return verified
 

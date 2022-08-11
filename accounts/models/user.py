@@ -134,8 +134,6 @@ class User(AbstractUser):
         verbose_name_plural = _('users')
 
     def change_status(self, status: str):
-        # from ledger.models import Prize, Asset
-        # from ledger.models.prize import alert_user_prize
         from accounts.tasks.verify_user import alert_user_verify_status
 
         if self.verify_status != self.VERIFIED and status == self.VERIFIED:
@@ -144,18 +142,6 @@ class User(AbstractUser):
             with transaction.atomic():
                 if self.level == User.LEVEL2:
                     self.level_2_verify_datetime = timezone.now()
-
-                    # prize, created = Prize.objects.get_or_create(
-                    #     account=self.account,
-                    #     scope=Prize.LEVEL2_PRIZE,
-                    #     defaults={
-                    #         'amount': Prize.LEVEL2_PRIZE_AMOUNT,
-                    #         'asset': Asset.objects.get(symbol=Asset.SHIB)
-                    #     }
-                    # )
-                    # if created:
-                    #     prize.build_trx()
-                    #     alert_user_prize(self, Prize.LEVEL2_PRIZE)
 
                 elif self.level == User.LEVEL3:
                     self.level_3_verify_datetime = timezone.now()
@@ -243,12 +229,10 @@ class User(AbstractUser):
             Account.objects.create(user=self)
 
         if self.level == self.LEVEL2 and self.verify_status == self.PENDING:
-            if self.national_code_verified and self.selfie_image_verified:
+            if self.national_code_phone_verified and self.selfie_image_verified:
                 self.change_status(self.VERIFIED)
-
             else:
-                fields = [self.national_code_verified, self.selfie_image_verified]
-                # any_none = any(map(lambda f: f is None, fields))
+                fields = [self.national_code_phone_verified, self.selfie_image_verified]
                 any_false = any(map(lambda f: f is False, fields))
 
                 if any_false:

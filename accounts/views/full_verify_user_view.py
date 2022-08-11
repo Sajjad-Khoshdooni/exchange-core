@@ -37,8 +37,8 @@ class FullVerificationSerializer(serializers.ModelSerializer):
             link=link
         )
 
-        # if not user.national_code_verified:
-        #     verify_user_national_code.s(user.id).apply_async(countdown=60)
+        if user.national_code_phone_verified is None:
+            verify_user_national_code.delay(user.id)
 
         user.change_status(User.PENDING)
 
