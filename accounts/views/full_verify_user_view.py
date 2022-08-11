@@ -22,7 +22,7 @@ class FullVerificationSerializer(serializers.ModelSerializer):
         if user.level == User.LEVEL1:
             raise ValidationError('امکان احراز هویت سطح ۳ کاربر وجود ندارد.')
 
-        if user.selfie_image_verified and user.national_code_verified:
+        if user.selfie_image_verified and user.national_code_phone_verified:
             user.change_status(User.VERIFIED)
             alert_user_verify_status(user)
             return user
