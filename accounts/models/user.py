@@ -232,7 +232,7 @@ class User(AbstractUser):
             if self.national_code_phone_verified and self.selfie_image_verified:
                 self.change_status(self.VERIFIED)
             else:
-                fields = [self.national_code_phone_verified, self.selfie_image_verified]
+                fields = [self.selfie_image_verified]
                 any_false = any(map(lambda f: f is False, fields))
 
                 if any_false:
