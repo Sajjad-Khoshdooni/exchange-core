@@ -16,7 +16,7 @@ class CardPanField(serializers.CharField):
             return BankCardSerializer(instance=value).data
 
     def get_attribute(self, user: User):
-        return BankCard.live_objects.filter(user=user).order_by('verified', 'id').first()
+        return user.bankcard_set.filter(kyc=True).order_by('id').last()
 
 
 class BasicInfoSerializer(serializers.ModelSerializer):
@@ -31,6 +31,25 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
             if not user.first_name_verified or not user.last_name_verified:
                 return 'نام و نام خانوادگی با دیگر اطلاعات مغایر است.'
+
+    def update_bank_card(self, user: User, card_pan: str):
+        if BankCard.live_objects.filter(user=user, kyc=True, verified=True).exclude(card_pan=card_pan):
+            raise ValidationError({'card_pan': 'امکان تغییر شماره کارت تایید شده وجود ندارد.'})
+
+        bank_card = BankCard.live_objects.filter(user=user, kyc=True).first()
+
+        if bank_card and bank_card.card_pan != card_pan:
+            BankCard.live_objects.filter(user=user, card_pan=card_pan).update(deleted=True)
+
+            bank_card.card_pan = card_pan
+            bank_card.save()
+
+        elif not bank_card:
+            BankCard.live_objects.update_or_create(user=user, card_pan=card_pan, defaults={'kyc': True})
+
+        if not bank_card.verified:
+            bank_card.verified = None
+            bank_card.save()
 
     def update(self, user, validated_data):
         if user and user.verify_status in (User.PENDING, User.VERIFIED):
@@ -48,15 +67,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             raise ValidationError('تاریخ تولد نامعتبر است.')
 
         card_pan = validated_data.pop('card_pan')
-
-        bank_card = BankCard.live_objects.filter(user=user, card_pan=card_pan).first()
-
-        if not bank_card:
-            # new bank_card
-            if BankCard.live_objects.filter(user=user, verified=True).exists():
-                raise ValidationError('امکان تغییر شماره کارت تایید شده وجود ندارد.')
-
-            BankCard.objects.create(user=user, card_pan=card_pan)
+        self.update_bank_card(user, card_pan)
 
         if not user.first_name_verified:
             user.first_name = validated_data['first_name']

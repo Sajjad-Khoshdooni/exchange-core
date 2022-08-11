@@ -25,6 +25,7 @@ class BankCard(models.Model):
     )
 
     verified = models.BooleanField(null=True, blank=True)
+    kyc = models.BooleanField(default=False)
     deleted = models.BooleanField(default=False)
 
     history = HistoricalRecords()
@@ -44,10 +45,15 @@ class BankCard(models.Model):
 
         constraints = [
             UniqueConstraint(
-                fields=["card_pan", 'user'],
-                name="unique_bank_card_card_pan",
+                fields=['card_pan', 'user'],
+                name='unique_bank_card_card_pan',
                 condition=Q(deleted=False),
-            )
+            ),
+            UniqueConstraint(
+                fields=['user'],
+                name="bank_card_unique_kyc_user",
+                condition=Q(deleted=False, kyc=True),
+            ),
         ]
 
 
