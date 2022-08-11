@@ -143,14 +143,14 @@ def get_top_prices_exclude_system_orders(symbol_ids=None):
 def get_time_based_factor(interval):
     # returns one of (1, 2, 3, 5) for interval in seconds
     rounded_time = int(time()) // interval * interval
-    return (1 + (rounded_time * rounded_time) % 7) * 2
+    return 1 + (rounded_time * rounded_time) % 7
 
 
 def place_carrot_order(symbol: PairSymbol, account: Account, side, top_user_price):
     cancel_orders(Order.open_objects.filter(wallet__account=account, symbol=symbol, side=side))
     one_tick_price = Decimal(f'1e{-symbol.tick_size}')
     new_top_price = top_user_price + one_tick_price if side == Order.BUY else top_user_price - one_tick_price
-    amount = floor_precision(symbol.maker_amount / get_time_based_factor(600), symbol.step_size)
+    amount = floor_precision(symbol.maker_amount / get_time_based_factor(600) / 5, symbol.step_size)
     return new_order(
         symbol, account, amount, new_top_price, side=side, fill_type=Order.LIMIT, raise_exception=False,
         order_type=Order.BOT

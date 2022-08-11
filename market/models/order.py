@@ -423,12 +423,14 @@ class Order(models.Model):
 
         _rand = random()
 
-        if _rand < 0.3:
-            amount_factor = Decimal(randrange(5, 40) / Decimal(100))
+        if _rand < 0.25:
+            amount_factor = Decimal(randrange(5, 30) / Decimal(100))
         elif _rand < 0.8:
-            amount_factor = Decimal(randrange(40, 100) / Decimal(100))
+            amount_factor = Decimal(randrange(30, 100) / Decimal(100))
+        elif _rand < 0.95:
+            amount_factor = Decimal(randrange(100, 200) / Decimal(100))
         else:
-            amount_factor = Decimal(randrange(10, 20) / Decimal(10))
+            amount_factor = Decimal(randrange(200, 300) / Decimal(100))
 
         maker_amount = symbol_instance.maker_amount * amount_factor * Decimal(randrange(80, 120) / Decimal(100))
         precision = Order.get_rounding_precision(maker_amount, symbol_instance.step_size)
