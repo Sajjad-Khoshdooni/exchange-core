@@ -163,6 +163,7 @@ class NetworkAssetAdmin(admin.ModelAdmin):
     list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'can_deposit', 'binance_withdraw_enable')
     search_fields = ('network__symbol', 'asset__symbol')
     list_editable = ('can_deposit', )
+    list_filter = ('network', )
 
 
 class DepositAddressUserFilter(admin.SimpleListFilter):
