@@ -99,7 +99,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'verify_status', 'level', 'first_name', 'last_name', 'birth_date', 'national_code', 'card_pan',
-            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'reason'
+            'national_code_verified', 'first_name_verified', 'last_name_verified', 'birth_date_verified', 'reason'
         )
         read_only_fields = (
             'verify_status', 'level',

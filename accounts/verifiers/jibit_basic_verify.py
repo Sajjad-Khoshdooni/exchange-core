@@ -70,7 +70,7 @@ def verify_national_code_with_phone(user: User, retry: int = 0) -> bool:
 def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 0) -> bool:
     user = bank_card.user
 
-    if user.national_code_verified and user.birth_date_verified and user.bankcard_set.filter(verified=True):
+    if user.national_code_verified and user.birth_date_verified and bank_card.verified:
         return True
 
     if not user.national_code or not bank_card or not user.birth_date:
