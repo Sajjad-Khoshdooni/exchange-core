@@ -194,7 +194,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                                           'last_name_verified', 'national_code_verified', 'national_code_phone_verified',
                                           'birth_date_verified',
                                           'selfie_image_verified', 'selfie_image_verifier',
-                                          'national_code_duplicated_alert', 'selfie_image_discard_text',
+                                          'selfie_image_discard_text',
                                           )}),
         (_('Permissions'), {
             'fields': (
@@ -343,9 +343,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_referrer_user.short_description = 'referrer'
 
     def get_user_reject_reason(self, user: User):
-        if user.national_code_duplicated_alert:
-            return 'کد ملی تکراری'
-
         verify_fields = [
             'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
             'bank_card_verified', 'bank_account_verified', 'national_code_phone_verified', 'selfie_image_verified'

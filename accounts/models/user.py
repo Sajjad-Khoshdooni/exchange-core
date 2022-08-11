@@ -116,7 +116,6 @@ class User(AbstractUser):
     margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
 
     show_margin = models.BooleanField(default=True, verbose_name='امکان مشاهده حساب تعهدی')
-    national_code_duplicated_alert = models.BooleanField(default=False, verbose_name='آیا شماره ملی تکراری است؟')
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
 
@@ -133,14 +132,6 @@ class User(AbstractUser):
     class Meta:
         verbose_name = _('user')
         verbose_name_plural = _('users')
-
-        constraints = [
-            UniqueConstraint(
-                fields=["national_code"],
-                name="unique_verified_national_code",
-                condition=Q(level__gt=1),
-            )
-        ]
 
     def change_status(self, status: str):
         # from ledger.models import Prize, Asset
