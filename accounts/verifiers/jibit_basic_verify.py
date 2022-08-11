@@ -19,9 +19,7 @@ def basic_verify(user: User):
         logger.info('ignoring double verifying user_d = %d' % user.id)
         return
 
-    queryset = user.bankcard_set.all()
-    bank_card = queryset.filter(verified=True).first() or queryset.filter(verified=None).first() or \
-                queryset.filter(verified=False).first()
+    bank_card = user.bankcard_set.filter(kyc=True).first()
 
     if not bank_card:
         logger.info('ignoring verify level2 due to no bank_account for user_d = %d' % user.id)
@@ -72,7 +70,7 @@ def verify_national_code_with_phone(user: User, retry: int = 0) -> bool:
 def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 0) -> bool:
     user = bank_card.user
 
-    if user.birth_date_verified and user.bankcard_set.filter(verified=True):
+    if user.national_code_verified and user.birth_date_verified and user.bankcard_set.filter(verified=True):
         return True
 
     if not user.national_code or not bank_card or not user.birth_date:
@@ -94,8 +92,9 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 0) -> bo
             logger.info('Retrying verify_national_code...')
             return verify_bank_card_by_national_code(bank_card, retry - 1)
 
+    user.national_code_verified = matched
     user.birth_date_verified = matched
-    user.save(update_fields=['birth_date_verified'])
+    user.save(update_fields=['national_code_verified', 'birth_date_verified'])
 
     bank_card.verified = matched
     bank_card.save(update_fields=['verified'])

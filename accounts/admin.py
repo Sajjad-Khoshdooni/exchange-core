@@ -171,6 +171,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'first_name': ~M('first_name_verified'),
         'last_name': ~M('last_name_verified'),
         'national_code': M.superuser | ~M('national_code_verified'),
+        'national_code_phone_verified': M.is_none('national_code_phone_verified'),
         'birth_date': M.superuser | ~M('birth_date_verified'),
         'selfie_image_verified': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
         'selfie_image_discard_text': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
@@ -178,7 +179,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'last_name_verified': M.is_none('last_name_verified'),
         'national_code_verified': M.is_none('national_code_verified'),
         'birth_date_verified': M.is_none('birth_date_verified'),
-        'telephone_verified': M.superuser | M('telephone'),
         'withdraw_before_48h_option': True,
         'allow_level1_crypto_withdraw': True,
     }
@@ -187,12 +187,13 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
 
-                                         'telephone', 'get_selfie_image', 'archived',
+                                         'get_selfie_image', 'archived',
                                          'get_user_reject_reason', 'get_source_medium'
                                          )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'first_name_verified',
-                                          'last_name_verified', 'national_code_verified', 'birth_date_verified',
-                                          'telephone_verified', 'selfie_image_verified', 'selfie_image_verifier',
+                                          'last_name_verified', 'national_code_verified', 'national_code_phone_verified',
+                                          'birth_date_verified',
+                                          'selfie_image_verified', 'selfie_image_verifier',
                                           'national_code_duplicated_alert', 'selfie_image_discard_text',
                                           )}),
         (_('Permissions'), {
@@ -347,7 +348,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
         verify_fields = [
             'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
-            'bank_card_verified', 'bank_account_verified', 'telephone_verified', 'selfie_image_verified'
+            'bank_card_verified', 'bank_account_verified', 'national_code_phone_verified', 'selfie_image_verified'
         ]
 
         for verify_field in verify_fields:

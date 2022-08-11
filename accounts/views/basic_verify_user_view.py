@@ -69,6 +69,10 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         card_pan = validated_data.pop('card_pan')
         self.update_bank_card(user, card_pan)
 
+        if not user.national_code_verified:
+            user.national_code = validated_data['national_code']
+            user.national_code_verified = None
+
         if not user.first_name_verified:
             user.first_name = validated_data['first_name']
             user.first_name_verified = None
