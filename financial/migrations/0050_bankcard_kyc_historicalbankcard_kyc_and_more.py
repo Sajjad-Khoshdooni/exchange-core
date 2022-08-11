@@ -6,7 +6,9 @@ from django.db import migrations, models
 def populate_kyc_field(apps, schema_editor):
     BankCard = apps.get_model('financial', 'BankCard')
 
-    BankCard.objects.filter(deleted=False).order_by('user', '-verified').distinct('user').update(kyc=True)
+    bank_cards = list(BankCard.objects.filter(deleted=False).order_by('user', '-verified').distinct('user').values_list('id', flat=True))
+
+    BankCard.objects.filter(id__in=bank_cards).update(kyc=True)
 
 
 class Migration(migrations.Migration):
