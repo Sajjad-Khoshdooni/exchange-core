@@ -129,6 +129,9 @@ class JibitRequester:
         req_object.response = resp_data
         req_object.status_code = resp.status_code
 
+        if resp.status_code < 500:
+            req_object.search_key = search_key
+
         req_object.save()
 
         if resp.status_code >= 500:
