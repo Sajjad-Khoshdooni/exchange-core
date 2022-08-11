@@ -45,7 +45,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             bank_card.save()
 
         elif not bank_card:
-            BankCard.live_objects.update_or_create(user=user, card_pan=card_pan, defaults={'kyc': True})
+            bank_card, _ = BankCard.live_objects.update_or_create(user=user, card_pan=card_pan, defaults={'kyc': True})
 
         if not bank_card.verified:
             bank_card.verified = None
