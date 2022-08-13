@@ -262,7 +262,7 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
 }
 
-if not (DEBUG or TESTING):
+if not DEBUG_OR_TESTING:
     with open(config('JWT_PRIVATE_KEY_PATH', './jwtRS256.key'), 'r') as fin:
         JWT_PRIVATE_KEY = fin.read()
     with open(config('JWT_PUBLIC_KEY_PATH', './jwtRS256.key.pub'), 'r') as fin:
