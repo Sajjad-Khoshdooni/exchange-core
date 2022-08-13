@@ -345,7 +345,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     def get_user_reject_reason(self, user: User):
         verify_fields = [
             'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
-            'bank_card_verified', 'bank_account_verified', 'national_code_phone_verified', 'selfie_image_verified'
+            'bank_card_verified', 'bank_account_verified', 'selfie_image_verified'
         ]
 
         for verify_field in verify_fields:
