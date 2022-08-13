@@ -11,7 +11,6 @@ from collector.price.grpc_client import gRPCClient
 from collector.utils.price import price_redis
 from ledger.utils.cache import cache_for
 from ledger.utils.price_manager import PriceManager
-from provider.exchanges import BinanceSpotHandler
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +62,7 @@ SIDE_MAP = {
 
 
 def get_binance_price_stream(coin: str):
+    from provider.exchanges import BinanceSpotHandler
     return BinanceSpotHandler().get_trading_symbol(coin).lower()
 
 
