@@ -40,7 +40,7 @@ def basic_verify(user: User):
     user.verify_level2_if_not()
 
 
-def verify_national_code_with_phone(user: User, retry: int = 0) -> bool:
+def verify_national_code_with_phone(user: User, retry: int = 2) -> bool:
     if user.level != User.LEVEL2:
         return False
 
@@ -65,7 +65,7 @@ def verify_national_code_with_phone(user: User, retry: int = 0) -> bool:
     return verified
 
 
-def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 0) -> bool:
+def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> bool:
     user = bank_card.user
 
     if user.national_code_verified and user.birth_date_verified and bank_card.verified:
@@ -106,7 +106,7 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 0) -> bo
     return True
 
 
-def verify_bank_card_by_name(bank_card: BankCard, retry: int = 0) -> bool:
+def verify_bank_card_by_name(bank_card: BankCard, retry: int = 2) -> bool:
     requester = JibitRequester(bank_card.user)
 
     user = bank_card.user
@@ -146,7 +146,7 @@ DEPOSIT_STATUS_MAP = {
 }
 
 
-def verify_bank_account(bank_account: BankAccount, retry: int = 0) -> bool:
+def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> bool:
     requester = JibitRequester(bank_account.user)
 
     try:

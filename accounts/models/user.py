@@ -57,7 +57,7 @@ class User(AbstractUser):
         validators=[national_card_code_validator],
     )
     national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی',)
-    national_code_phone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی و موبایل',)
+    national_code_phone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی و موبایل (شاهکار)',)
 
     birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد',)
     birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد',)
