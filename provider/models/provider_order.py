@@ -80,13 +80,13 @@ class ProviderOrder(models.Model):
                 amount = round(amount / 1000)
 
             if market == cls.FUTURE:
-                if asset.get_hedger().Name == 'kucoin':
+                if asset.get_hedger().NAME == KucoinSpotHandler.NAME:
                     handler = KucoinFuturesHandler
                 else:
                     handler = BinanceFuturesHandler
 
             elif market == cls.SPOT:
-                if asset.get_hedger().Name == 'kucoin':
+                if asset.get_hedger().NAME == KucoinSpotHandler.NAME:
                     handler = KucoinSpotHandler
                 else:
                     handler = BinanceSpotHandler
