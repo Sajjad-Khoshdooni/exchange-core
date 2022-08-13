@@ -7,7 +7,6 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('wallet', '0002_rename_key_secret_encrypted_key'),
         ('accounts', '0004_account_last_margin_warn'),
         ('ledger', '0027_alter_marginloan_lock'),
     ]
@@ -28,7 +27,6 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('account', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='accounts.account', unique=True)),
-                ('secret', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='wallet.secret')),
             ],
         ),
         migrations.AlterUniqueTogether(

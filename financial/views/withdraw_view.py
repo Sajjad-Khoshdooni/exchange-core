@@ -44,7 +44,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         iban = validated_data['iban']
         code = validated_data['code']
 
-        bank_account = get_object_or_404(BankAccount, iban=iban, user=user)
+        bank_account = get_object_or_404(BankAccount, iban=iban, user=user, verified=True, deleted=False)
 
         assert user.account.is_ordinary_user()
 
@@ -65,12 +65,15 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             logger.info('FiatRequest rejected due to small amount. user=%s' % user.id)
             raise ValidationError({'iban': 'مقدار وارد شده کمتر از حد مجاز است.'})
 
+        asset = Asset.get(Asset.IRT)
+        wallet = asset.get_wallet(user.account)
+
+        if not wallet.has_balance(amount):
+            raise ValidationError({'amount': 'موجودی کافی نیست.'})
+
         if user_reached_fiat_withdraw_limit(user, amount):
             logger.info('FiatRequest rejected due to max withdraw limit reached. user=%s' % user.id)
             raise ValidationError({'amount': 'شما به سقف برداشت ریالی خورده اید.'})
-
-        asset = Asset.get(Asset.IRT)
-        wallet = asset.get_wallet(user.account)
 
         # fee_amount = min(4000, int(amount * 0.01))
         fee_amount = 5000

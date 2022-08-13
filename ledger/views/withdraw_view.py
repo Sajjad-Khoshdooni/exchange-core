@@ -34,7 +34,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         user = self.context['request'].user
 
-        if user.level < user.LEVEL2:
+        if user.level < user.LEVEL2 and not user.allow_level1_crypto_withdraw:
             raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
 
         account = user.account
@@ -72,13 +72,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if asset.symbol == Asset.IRT:
             raise ValidationError('نشانه دارایی اشتباه است.')
 
-        if not network.need_memo:
-            memo = ''
-        else:
-            if 'memo' not in attrs:
-                raise ValidationError('برای این شبکه وارد کرد فیلد memo ضروری است.')
-            else:
-                memo = attrs['memo']
+        memo = attrs.get('memo') or ''
 
         if not api:
             code = attrs['code']
@@ -104,6 +98,12 @@ class WithdrawSerializer(serializers.ModelSerializer):
             raise ValidationError('مقدار وارد شده بزرگ است.')
 
         wallet = asset.get_wallet(account)
+
+        if wallet.market != wallet.SPOT:
+            raise ValidationError('کیف پول نادرستی انتخاب شده است.')
+
+        if not wallet.has_balance(amount):
+            raise ValidationError('موجودی کافی نیست.')
 
         if not check_withdraw_laundering(wallet=wallet, amount=amount):
             raise ValidationError(

@@ -215,7 +215,7 @@ class Trade(models.Model):
 
     @staticmethod
     def get_interval_top_prices(symbol_ids=None, min_datetime=None):
-        min_datetime = min_datetime or (timezone.now() - timedelta(seconds=30))
+        min_datetime = min_datetime or (timezone.now() - timedelta(seconds=5))
         market_top_prices = defaultdict(lambda: Decimal())
         symbol_filter = {'symbol_id__in': symbol_ids} if symbol_ids else {}
         for depth in Trade.objects.filter(**symbol_filter, created__gte=min_datetime).values('symbol', 'side').annotate(
@@ -281,6 +281,7 @@ class Trade(models.Model):
             trade.set_amounts(trade_trxs)
             fee_trx = trade_trxs.maker_fee if trade.is_maker else trade_trxs.taker_fee
             referrals.append(trade.create_referral(pipeline, fee_trx, tether_irt))
+            trade.set_gap_revenue()
 
         from market.models import ReferralTrx
         ReferralTrx.objects.bulk_create(list(filter(bool, referrals)))
@@ -325,9 +326,6 @@ class Trade(models.Model):
             **kwargs
         )
 
-        maker_trade.set_gap_revenue()
-        taker_trade.set_gap_revenue()
-
         maker_trade.taker_order = taker_order
 
         return cls.TradesPair(
@@ -335,10 +333,22 @@ class Trade(models.Model):
             taker=taker_trade,
         )
 
+    def get_fee_irt_value(self):
+        if self.order.wallet.account.is_system():
+            return 0
+
+        if self.side == BUY:
+            return self.irt_value * self.fee_amount / self.amount
+        else:
+            return self.irt_value * self.fee_amount / self.base_amount
+
     def set_gap_revenue(self):
         self.gap_revenue = 0
 
+        fee = self.get_fee_irt_value()
+
         if self.trade_source == self.MARKET or self.order.wallet.account.is_system():
+            self.gap_revenue = fee
             return
 
         reverse_side = BUY if self.side == SELL else SELL
@@ -364,6 +374,8 @@ class Trade(models.Model):
         if base_asset.symbol == Asset.USDT:
             self.gap_revenue *= get_tether_irt_price(side=reverse_side)
 
+        self.gap_revenue += fee
+
     @staticmethod
     def get_account_orders_filled_price(account_id):
         return {
@@ -374,3 +386,11 @@ class Trade(models.Model):
                 'order_id', 'sum_amount', 'sum_value'
             )
         }
+
+    @classmethod
+    def get_top_prices(cls, symbol_id):
+        from market.utils.redis import get_top_prices
+        top_prices = get_top_prices(symbol_id, scope='stoploss')
+        if not top_prices:
+            top_prices = Trade.get_interval_top_prices([symbol_id])
+        return top_prices

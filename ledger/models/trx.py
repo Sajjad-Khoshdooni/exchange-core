@@ -47,6 +47,10 @@ class Trx(models.Model):
     REVERT = 'r'
     AIRDROP = 'ad'
     SEIZE = 'sz'
+    RESERVE = 'rs'
+    STAKE_REVENUE = 'sr'
+    STAKE = 'st'
+    FIX = 'fx'
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -60,7 +64,8 @@ class Trx(models.Model):
         max_length=2,
         choices=((TRADE, 'trade'), (TRANSFER, 'transfer'), (MARGIN_TRANSFER, 'margin transfer'),
                  (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (LIQUID, 'liquid'),
-                 (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'), (REVERT, 'revert'), (AIRDROP, 'airdrop'))
+                 (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'), (REVERT, 'revert'), (AIRDROP, 'airdrop'),
+                 (STAKE, 'stake'), (STAKE_REVENUE, 'stake_revenue'), (RESERVE, 'reserve'))
     )
 
     class Meta:

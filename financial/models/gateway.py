@@ -33,8 +33,8 @@ class Gateway(models.Model):
     active_for_staff = models.BooleanField(default=False)
 
     @classmethod
-    def get_active(cls, user: User) -> 'Gateway':
-        if user.is_staff:
+    def get_active(cls, user: User = None) -> 'Gateway':
+        if user and user.is_staff:
             gateway = Gateway.objects.filter(active_for_staff=True).order_by('id').first()
 
             if gateway:

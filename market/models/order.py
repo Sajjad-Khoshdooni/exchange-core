@@ -39,8 +39,8 @@ class Order(models.Model):
     MARKET_BORDER = Decimal('1e-2')
     MIN_IRT_ORDER_SIZE = Decimal('1e5')
     MIN_USDT_ORDER_SIZE = Decimal(5)
-    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('2e7')
-    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(1000)
+    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('9e7')
+    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(2500)
     MAKER_ORDERS_COUNT = 10 if settings.DEBUG_OR_TESTING else 50
 
     BUY, SELL = 'buy', 'sell'
@@ -53,9 +53,10 @@ class Order(models.Model):
     STATUS_CHOICES = [(NEW, NEW), (CANCELED, CANCELED), (FILLED, FILLED)]
 
     DEPTH = 'depth'
+    BOT = 'bot'
     ORDINARY = None
 
-    TYPE_CHOICES = ((DEPTH, 'depth'), (ORDINARY, 'ordinary'))
+    TYPE_CHOICES = ((DEPTH, 'depth'), (BOT, 'bot'), (ORDINARY, 'ordinary'))
 
     type = models.CharField(
         max_length=8,
@@ -111,7 +112,9 @@ class Order(models.Model):
 
     @property
     def base_wallet(self):
-        return self.symbol.base_asset.get_wallet(self.wallet.account, self.wallet.market)
+        return self.symbol.base_asset.get_wallet(
+            self.wallet.account, self.wallet.market, variant=self.wallet.variant
+        )
 
     @property
     def filled_price(self):
@@ -154,7 +157,7 @@ class Order(models.Model):
         return {'price__lte': price} if side == Order.BUY else {'price__gte': price}
 
     @staticmethod
-    def get_maker_price(symbol: PairSymbol.IdName, side: str, loose_factor=Decimal(1)):
+    def get_maker_price(symbol: PairSymbol.IdName, side: str, loose_factor=Decimal(1), gap=None):
         if symbol.name.endswith(IRT):
             base_symbol = IRT
             get_trading_price = get_trading_price_irt
@@ -165,7 +168,7 @@ class Order(models.Model):
             raise NotImplementedError('Invalid trading symbol')
 
         coin = symbol.name.split(base_symbol)[0]
-        boundary_price = get_trading_price(coin, side)
+        boundary_price = get_trading_price(coin, side, gap=gap)
 
         precision = Order.get_rounding_precision(boundary_price, symbol.tick_size)
         # use bi-direction in roundness to avoid risky bid ask spread
@@ -310,6 +313,7 @@ class Order(models.Model):
                 trade.set_amounts(trade_trxs)
                 fee_trx = trade_trxs.maker_fee if trade.is_maker else trade_trxs.taker_fee
                 referrals.append(trade.create_referral(pipeline, fee_trx, tether_irt))
+                trade.set_gap_revenue()
 
             trades.extend(trades_pair)
 
@@ -416,10 +420,18 @@ class Order(models.Model):
     @staticmethod
     def init_maker_order(symbol: PairSymbol.IdName, side, maker_price: Decimal, market=Wallet.SPOT):
         symbol_instance = PairSymbol.objects.get(id=symbol.id)
-        if random() < 0.6:
-            amount_factor = Decimal(randrange(2, 15) / Decimal(100))
+
+        _rand = random()
+
+        if _rand < 0.25:
+            amount_factor = Decimal(randrange(5, 30) / Decimal(100))
+        elif _rand < 0.8:
+            amount_factor = Decimal(randrange(30, 100) / Decimal(100))
+        elif _rand < 0.95:
+            amount_factor = Decimal(randrange(100, 200) / Decimal(100))
         else:
-            amount_factor = Decimal(randrange(10, 20) / Decimal(10))
+            amount_factor = Decimal(randrange(200, 300) / Decimal(100))
+
         maker_amount = symbol_instance.maker_amount * amount_factor * Decimal(randrange(80, 120) / Decimal(100))
         precision = Order.get_rounding_precision(maker_amount, symbol_instance.step_size)
         amount = round_down_to_exponent(maker_amount, precision)
@@ -448,28 +460,26 @@ class Order(models.Model):
             return cls.init_maker_order(symbol, side, maker_price, market)
 
     @classmethod
-    def cancel_invalid_maker_orders(cls, symbol: PairSymbol.IdName, top_prices):
+    def cancel_invalid_maker_orders(cls, symbol: PairSymbol.IdName, top_prices, gap=None, order_type=DEPTH):
         for side in (Order.BUY, Order.SELL):
-            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.001'))
+            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.001'), gap=gap)
             if (side == Order.BUY and Decimal(top_prices[side]) <= price) or (
                     side == Order.SELL and Decimal(top_prices[side]) >= price):
-                logger.info(f'maker {side} ignore cancels with price: {price} top: {top_prices[side]}')
+                logger.info(f'{order_type} {side} ignore cancels with price: {price} top: {top_prices[side]}')
                 continue
 
-            invalid_orders = Order.open_objects.select_for_update().filter(symbol_id=symbol.id, side=side).exclude(
-                type=Order.ORDINARY
+            invalid_orders = Order.open_objects.select_for_update().filter(
+                symbol_id=symbol.id, side=side, type=order_type
             ).exclude(**cls.get_price_filter(price, side))
 
             cls.cancel_orders(invalid_orders)
 
-            logger.info(f'maker {side} cancels with price: {price}')
+            logger.info(f'{order_type} {side} cancels with price: {price}')
 
     @classmethod
     def cancel_waste_maker_orders(cls, symbol: PairSymbol.IdName, open_orders_count):
         for side in (Order.BUY, Order.SELL):
-            wasted_orders = Order.open_objects.filter(symbol_id=symbol.id, side=side).exclude(
-                type=Order.ORDINARY
-            )
+            wasted_orders = Order.open_objects.filter(symbol_id=symbol.id, side=side, type=Order.DEPTH)
             wasted_orders = wasted_orders.order_by('price') if side == Order.BUY else wasted_orders.order_by('-price')
             cancel_count = int(open_orders_count[side]) - Order.MAKER_ORDERS_COUNT
 
@@ -499,9 +509,9 @@ class Order(models.Model):
         return market_price
 
     @classmethod
-    def get_top_prices(cls, symbol_id):
+    def get_top_prices(cls, symbol_id, scope=''):
         from market.utils.redis import get_top_prices
-        top_prices = get_top_prices(symbol_id)
+        top_prices = get_top_prices(symbol_id, scope=scope)
         if not top_prices:
             top_prices = defaultdict(lambda: Decimal())
             for depth in Order.open_objects.filter(symbol_id=symbol_id).values('side').annotate(max_price=Max('price'),

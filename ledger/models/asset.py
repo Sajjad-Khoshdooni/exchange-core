@@ -95,7 +95,7 @@ class Asset(models.Model):
         else:
             return Asset.PRECISION
 
-    def get_wallet(self, account: Account, market: str = Wallet.SPOT):
+    def get_wallet(self, account: Account, market: str = Wallet.SPOT, variant: str = None):
         assert market in Wallet.MARKETS
 
         if isinstance(account, int):
@@ -115,6 +115,7 @@ class Asset(models.Model):
         wallet, _ = Wallet.objects.get_or_create(
             asset=self,
             market=market,
+            variant=variant,
             **account_filter,
             defaults={
                 'check_balance': account_type == Account.ORDINARY
@@ -198,3 +199,4 @@ class CoinField(serializers.CharField):
             return
         else:
             return Asset.get(symbol=data)
+

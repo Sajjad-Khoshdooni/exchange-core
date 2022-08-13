@@ -171,6 +171,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'first_name': ~M('first_name_verified'),
         'last_name': ~M('last_name_verified'),
         'national_code': M.superuser | ~M('national_code_verified'),
+        'national_code_phone_verified': True,
         'birth_date': M.superuser | ~M('birth_date_verified'),
         'selfie_image_verified': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
         'selfie_image_discard_text': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
@@ -178,27 +179,28 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'last_name_verified': M.is_none('last_name_verified'),
         'national_code_verified': M.is_none('national_code_verified'),
         'birth_date_verified': M.is_none('birth_date_verified'),
-        'telephone_verified': M.superuser | M('telephone'),
-        'withdraw_before_48h_option': True
+        'withdraw_before_48h_option': True,
+        'allow_level1_crypto_withdraw': True,
     }
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
 
-                                         'telephone', 'get_selfie_image', 'archived',
+                                         'get_selfie_image', 'archived',
                                          'get_user_reject_reason', 'get_source_medium'
                                          )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'first_name_verified',
-                                          'last_name_verified', 'national_code_verified', 'birth_date_verified',
-                                          'telephone_verified', 'selfie_image_verified', 'selfie_image_verifier',
-                                          'national_code_duplicated_alert', 'selfie_image_discard_text',
+                                          'last_name_verified', 'national_code_verified', 'national_code_phone_verified',
+                                          'birth_date_verified',
+                                          'selfie_image_verified', 'selfie_image_verifier',
+                                          'selfie_image_discard_text',
                                           )}),
         (_('Permissions'), {
             'fields': (
                 'is_active', 'is_staff', 'is_superuser',
                 'groups', 'user_permissions', 'show_margin',
-                'withdraw_before_48h_option',
+                'withdraw_before_48h_option', 'allow_level1_crypto_withdraw'
             ),
         }),
         (_('Important dates'), {'fields': (
@@ -227,7 +229,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
                     'verify_status', 'get_source_medium', 'get_referrer_user')
     list_filter = (
-        'archived', ManualNameVerifyFilter, 'level', 'date_joined', 'verify_status', 'level_2_verify_datetime',
+        'archived', ManualNameVerifyFilter, 'level', 'national_code_phone_verified', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
         'is_staff', 'is_superuser', 'is_active', 'groups', UserReferredFilter
     )
@@ -341,12 +343,9 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_referrer_user.short_description = 'referrer'
 
     def get_user_reject_reason(self, user: User):
-        if user.national_code_duplicated_alert:
-            return 'کد ملی تکراری'
-
         verify_fields = [
             'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
-            'bank_card_verified', 'bank_account_verified', 'telephone_verified', 'selfie_image_verified'
+            'bank_card_verified', 'bank_account_verified', 'selfie_image_verified'
         ]
 
         for verify_field in verify_fields:
@@ -537,7 +536,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_selfie_image_uploaded.short_description = 'زمان آپلود عکس سلفی'
 
     def get_deposit_address(self, user: User):
-        link = url_to_admin_list(DepositAddress) + '?user_id={}'.format(user.id)
+        link = url_to_admin_list(DepositAddress) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
     get_deposit_address.short_description = 'آدرس‌های کیف پول'
@@ -632,8 +631,9 @@ class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
 @admin.register(LoginActivity)
 class LoginActivityAdmin(admin.ModelAdmin):
-    list_display = ['created', 'user', 'ip', 'device', 'os', 'browser']
+    list_display = ['created', 'user', 'ip', 'device', 'os', 'browser', 'device_type', 'is_sign_up']
     search_fields = ['user__phone', 'ip']
+    readonly_fields = ('user', )
 
 
 @admin.register(FirebaseToken)
@@ -645,4 +645,3 @@ class FirebaseTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 @admin.register(ExternalNotification)
 class ExternalNotificationAdmin(admin.ModelAdmin):
     list_display = ['created', 'user', 'phone', 'scope']
-

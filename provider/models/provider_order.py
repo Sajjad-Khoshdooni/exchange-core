@@ -125,13 +125,15 @@ class ProviderOrder(models.Model):
 
     @classmethod
     def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '',
-                                dry_run: bool = False, raise_exception: bool = False) -> bool:
+                                dry_run: bool = False, raise_exception: bool = False, hedge_method: str = None) -> bool:
         # todo: this method should not called more than once at a single time
         handler = asset.get_hedger()
         if settings.DEBUG_OR_TESTING:
+            logger.info('ignored due to debug')
             return True
 
         if not asset.hedge_method:
+            logger.info('ignored due to no hedge method')
             return True
 
         to_buy = amount if side == cls.BUY else -amount
@@ -168,6 +170,7 @@ class ProviderOrder(models.Model):
             price = get_trading_price_usdt(asset.symbol, side=SELL, raw_price=True)
 
             if order_amount * price < 10:
+                logger.info('ignored due to small order')
                 return True
 
             if not dry_run:
@@ -181,8 +184,9 @@ class ProviderOrder(models.Model):
                         if diff * price < 10:
                             order_amount = floor_precision(balance, round_digits)
 
-                        if order_amount * price < 10:
-                            return True
+                            if order_amount * price < 10:
+                                logger.info('ignored due to small order')
+                                return True
 
                 symbol = handler.get_trading_symbol(asset.symbol)
 

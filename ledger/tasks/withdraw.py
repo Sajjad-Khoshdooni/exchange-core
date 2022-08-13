@@ -1,20 +1,15 @@
 import logging
 
 from celery import shared_task
+from django.conf import settings
 from django.db.models import Q
 
 from ledger.models import Transfer
 from ledger.withdraw.exchange import handle_provider_withdraw
 from ledger.utils.wallet_pipeline import WalletPipeline
-from ledger.withdraw.withdraw_handler import WithdrawHandler
 from provider.exchanges.interface.binance_interface import ExchangeHandler
 
 logger = logging.getLogger(__name__)
-
-
-@shared_task
-def create_transaction_from_not_broadcasts():
-    WithdrawHandler.create_transaction_from_not_broadcasts()
 
 
 @shared_task(queue='binance')
@@ -79,6 +74,9 @@ def update_exchange_withdraw():
 
 @shared_task(queue='blocklink')
 def create_withdraw(transfer_id: int):
+    if settings.DEBUG_OR_TESTING:
+        return
+
     transfer = Transfer.objects.get(id=transfer_id)
 
     if transfer.source != Transfer.SELF:
@@ -101,11 +99,13 @@ def create_withdraw(transfer_id: int):
         transfer.trx_hash = resp_data['trx_hash']
         transfer.save(update_fields=['status', 'trx_hash'])
 
-    elif resp_data.get('type') == 'NotHandled':
+    elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
         transfer.source = ExchangeHandler.get_handler(transfer.asset.hedge_method).NAME,
         transfer.save(update_fields=['source'])
         create_provider_withdraw(transfer_id=transfer.id)
     else:
+        transfer.status = Transfer.PENDING
+        transfer.save(update_fields=['status'])
         logger.warning('Error sending withdraw to blocklink', extra={
             'transfer_id': transfer_id,
             'resp': resp_data

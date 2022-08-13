@@ -1,7 +1,6 @@
 from datetime import datetime
 
 import django_filters
-from django.db.models import F, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins
 from rest_framework.authentication import SessionAuthentication
@@ -25,12 +24,12 @@ from market.serializers.stop_loss_serializer import StopLossSerializer
 
 
 class OrderFilter(django_filters.FilterSet):
-    symbol = django_filters.CharFilter(field_name='symbol__name')
+    symbol = django_filters.CharFilter(field_name='symbol__name', lookup_expr='iexact')
     market = django_filters.CharFilter(field_name='wallet__market')
 
     class Meta:
         model = Order
-        fields = ('symbol', 'status', 'market')
+        fields = ('symbol', 'status', 'market', 'side')
 
 
 class StopLossFilter(django_filters.FilterSet):
@@ -56,15 +55,19 @@ class OrderViewSet(mixins.CreateModelMixin,
     filter_class = OrderFilter
 
     def get_queryset(self):
+        account, variant = self.get_account_variant(self.request)
         return Order.objects.filter(
-            wallet__account=self.get_account(self.request)
+            wallet__account=account,
+            wallet__variant=variant
         ).select_related('symbol', 'wallet', 'stop_loss').order_by('-created')
 
     def get_serializer_context(self):
+        account, variant = self.get_account_variant(self.request)
         return {
             **super(OrderViewSet, self).get_serializer_context(),
-            'account': self.get_account(self.request),
-            'trades': Trade.get_account_orders_filled_price(self.get_account(self.request)),
+            'account': account,
+            'trades': Trade.get_account_orders_filled_price(account),
+            'variant': variant,
         }
 
 
@@ -76,8 +79,18 @@ class OpenOrderListAPIView(APIView):
         context = {
             'trades': Trade.get_account_orders_filled_price(self.request.user.account),
         }
-        open_orders = Order.open_objects.filter(wallet__account=self.request.user.account, stop_loss__isnull=True)
-        open_stop_losses = StopLoss.open_objects.filter(wallet__account=self.request.user.account)
+        filters = {}
+        symbol_filter = self.request.query_params.get('symbol')
+        side_filter = self.request.query_params.get('side')
+        if symbol_filter:
+            filters['symbol__name'] = symbol_filter.upper()
+        if side_filter:
+            filters['side'] = side_filter
+
+        open_orders = Order.open_objects.filter(
+            wallet__account=self.request.user.account, stop_loss__isnull=True, **filters
+        )
+        open_stop_losses = StopLoss.open_objects.filter(wallet__account=self.request.user.account, **filters)
         serialized_orders = OrderStopLossSerializer(open_orders, many=True, context=context)
         serialized_stop_losses = OrderStopLossSerializer(open_stop_losses, many=True, context=context)
         DATE_PATTERN = '%Y-%m-%dT%H:%M:%S.%f%z'
@@ -98,7 +111,7 @@ class CancelOrderAPIView(CreateAPIView, DelegatedAccountMixin):
     def get_serializer_context(self):
         return {
             **super(CancelOrderAPIView, self).get_serializer_context(),
-            'account': self.get_account(self.request)
+            'account': self.get_account_variant(self.request)[0]
         }
 
 
@@ -113,10 +126,12 @@ class StopLossViewSet(ModelViewSet, DelegatedAccountMixin):
     filter_class = StopLossFilter
 
     def get_queryset(self):
-        return StopLoss.objects.filter(wallet__account=self.get_account(self.request)).order_by('-created')
+        return StopLoss.objects.filter(wallet__account=self.get_account_variant(self.request)[0]).order_by('-created')
 
     def get_serializer_context(self):
+        account, variant = self.get_account_variant(self.request)
         return {
             **super(StopLossViewSet, self).get_serializer_context(),
-            'account': self.get_account(self.request)
+            'account': account,
+            'variant': variant,
         }

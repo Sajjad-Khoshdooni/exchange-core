@@ -115,22 +115,30 @@ class OTCTrade(models.Model):
         else:
             hedged = True
 
-        with WalletPipeline() as pipeline:  # type: WalletPipeline
-            pipeline.release_lock(self.group_id)
-
-            if hedged:
-                from market.models import Trade
-                self.change_status(self.DONE)
-                self.create_ledger(pipeline)
-                Trade.create_for_otc_trade(self, pipeline)
-            else:
-                self.change_status(self.CANCELED)
+        if hedged:
+            self.accept()
+        else:
+            self.cancel()
 
         if not hedged:
             raise ProcessingError
 
+    def cancel(self):
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
+            pipeline.release_lock(self.group_id)
+            self.change_status(self.CANCELED)
+
+    def accept(self):
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
+            pipeline.release_lock(self.group_id)
+            from market.models import Trade
+            self.change_status(self.DONE)
+            self.create_ledger(pipeline)
+            Trade.create_for_otc_trade(self, pipeline)
+
     @classmethod
     def check_abrupt_decrease(cls, otc_request: OTCRequest):
+        return
         old_coin_price = otc_request.to_price
         new_coin_price = otc_request.get_to_price()
 

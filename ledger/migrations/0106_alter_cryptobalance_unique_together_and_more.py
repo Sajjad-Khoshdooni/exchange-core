@@ -4,6 +4,7 @@ import json
 import base58
 import django.utils.timezone
 from django.db import migrations, models
+from django.conf import settings
 
 tag_to_address_mapping = '/tmp/tag-address.json'
 

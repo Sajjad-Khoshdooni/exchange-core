@@ -25,6 +25,7 @@ class BankCard(models.Model):
     )
 
     verified = models.BooleanField(null=True, blank=True)
+    kyc = models.BooleanField(default=False)
     deleted = models.BooleanField(default=False)
 
     history = HistoricalRecords()
@@ -44,15 +45,20 @@ class BankCard(models.Model):
 
         constraints = [
             UniqueConstraint(
-                fields=["card_pan"],
-                name="unique_bank_card_card_pan",
-                condition=Q(verified=True, deleted=False),
-            )
+                fields=['card_pan', 'user'],
+                name='unique_bank_card_card_pan',
+                condition=Q(deleted=False),
+            ),
+            UniqueConstraint(
+                fields=['user'],
+                name="bank_card_unique_kyc_user",
+                condition=Q(deleted=False, kyc=True),
+            ),
         ]
 
 
 class BankAccount(models.Model):
-    ACTIVE, DEPOSITABLE_SUSPENDED, NON_DEPOSITABLE_SUSPENDED, STAGNANT = 'active', 'suspend', 'nsuspend', 'stagnant'
+    ACTIVE, DEPOSITABLE_SUSPENDED, NON_DEPOSITABLE_SUSPENDED, STAGNANT, UNKNOWN = 'active', 'suspend', 'nsuspend', 'stagnant', 'unknown'
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -97,9 +103,9 @@ class BankAccount(models.Model):
 
         constraints = [
             UniqueConstraint(
-                fields=["iban"],
+                fields=["iban", "user"],
                 name="unique_bank_account_iban",
-                condition=Q(verified=True, deleted=False),
+                condition=Q(deleted=False),
             )
         ]
 
@@ -115,7 +121,7 @@ class BankCardSerializer(serializers.ModelSerializer):
         user = validated_data['user']
         card_pan = validated_data['card_pan']
 
-        if BankCard.live_objects.filter(Q(user=user) | Q(verified=True), card_pan=card_pan).exists():
+        if BankCard.live_objects.filter(user=user, card_pan=card_pan).exists():
             raise ValidationError('این شماره کارت قبلا ثبت شده است.')
 
         bank_card = super().create(validated_data)
@@ -137,8 +143,8 @@ class BankAccountSerializer(serializers.ModelSerializer):
         user = validated_data['user']
         iban = validated_data['iban']
 
-        if BankAccount.live_objects.filter(Q(user=user) | Q(verified=True), iban=iban).exists():
-            raise ValidationError('این شماره شما قبلا ثبت شده است.')
+        if BankAccount.live_objects.filter(user=user, iban=iban).exists():
+            raise ValidationError('این شماره شبا قبلا ثبت شده است.')
 
         bank_account = super().create(validated_data)
 

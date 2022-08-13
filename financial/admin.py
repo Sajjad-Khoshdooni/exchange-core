@@ -11,10 +11,10 @@ from accounts.models import User
 from accounts.utils.admin import url_to_admin_list
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
-    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost
+    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost, Investment, InvestmentRevenue
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from financial.utils.withdraw import FiatWithdraw
-from ledger.utils.precision import humanize_number
+from ledger.utils.precision import humanize_number, get_presentation_amount
 
 
 @admin.register(Gateway)
@@ -30,7 +30,7 @@ class GatewayAdmin(admin.ModelAdmin):
         channel = FiatWithdraw.get_withdraw_channel(gateway.type)
 
         try:
-            return humanize_number(Decimal(channel.get_total_wallet_irt_value()/10))
+            return humanize_number(Decimal(channel.get_total_wallet_irt_value()))
         except:
             return
 
@@ -75,12 +75,10 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     ordering = ('-created', )
     readonly_fields = ('created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount',
                        'get_withdraw_request_user', 'get_withdraw_request_user_mobile', 'withdraw_channel',
-                       'get_withdraw_request_receive_time'
+                       'get_withdraw_request_receive_time', 'get_user'
                        )
 
-    list_display = ('bank_account', 'created', 'status', 'amount', 'withdraw_channel', 'ref_id')
-
-
+    list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'withdraw_channel', 'ref_id')
 
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.user.get_full_name()
@@ -94,6 +92,10 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     def get_withdraw_request_iban(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.iban
     get_withdraw_request_iban.short_description = 'شماره شبا'
+
+    def get_user(self, withdraw_request: FiatWithdrawRequest):
+        return withdraw_request.bank_account.user.phone
+    get_user.short_description = 'کاربر'
 
     def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
         if withdraw.withdraw_datetime:
@@ -131,6 +133,8 @@ class UserFilter(SimpleListFilter):
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_payment_amount', 'status', 'ref_id', 'ref_status', 'get_user_bank_card',
                     'get_withdraw_request_user_mobile',)
+    readonly_fields = ('payment_request', )
+
     list_filter = (UserFilter,)
 
     def get_user_bank_card(self, payment: Payment):
@@ -272,3 +276,28 @@ class MarketingSourceAdmin(admin.ModelAdmin):
 class MarketingCostAdmin(admin.ModelAdmin):
     list_display = ('source', 'date', 'cost')
     search_fields = ('source__utm_source', )
+
+
+class InvestmentRevenueInline(admin.TabularInline):
+    fields = ('created', 'amount', 'description')
+    readonly_fields = ('created', )
+    model = InvestmentRevenue
+    extra = 1
+
+
+@admin.register(Investment)
+class InvestmentAdmin(admin.ModelAdmin):
+    list_display = ('created', 'type', 'asset', 'get_amount', 'get_revenue', 'get_total', 'done')
+    inlines = [InvestmentRevenueInline]
+
+    @admin.display(description='amount', ordering='amount')
+    def get_amount(self, investment: Investment):
+        return get_presentation_amount(investment.amount)
+
+    @admin.display(description='revenue')
+    def get_revenue(self, investment: Investment):
+        return get_presentation_amount(investment.get_revenue())
+
+    @admin.display(description='total')
+    def get_total(self, investment: Investment):
+        return get_presentation_amount(investment.get_total_amount())

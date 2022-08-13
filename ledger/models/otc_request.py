@@ -150,7 +150,7 @@ class OTCRequest(models.Model):
                 from_amount = from_amount - (from_amount % self.from_asset.trade_quantity_step)
 
                 if prev_from_amount != from_amount:
-                    from_amount += self.to_asset.trade_quantity_step
+                    from_amount += self.from_asset.trade_quantity_step
 
                 # to_amount = from_amount / to_price  # re calc cash
 
