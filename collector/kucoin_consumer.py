@@ -69,8 +69,6 @@ class KucoinConsumer:
                 self.socket.send(json.dumps({'id': socket_id, "type": "ping"}))
             self.handle_stream_data(data)
 
-
-
     def handle_stream_data(self, data: dict):
         if 'data' not in data:
 

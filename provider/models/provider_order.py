@@ -13,7 +13,8 @@ from ledger.models import Asset, Wallet
 from ledger.utils.fields import get_amount_field
 from ledger.utils.precision import floor_precision
 from ledger.utils.price import get_trading_price_usdt, SELL, BUY
-from provider.exchanges import BinanceSpotHandler
+from provider.exchanges import BinanceSpotHandler, BinanceFuturesHandler
+from provider.exchanges.interface.kucoin_interface import KucoinFuturesHandler, KucoinSpotHandler
 
 logger = logging.getLogger(__name__)
 
@@ -78,12 +79,31 @@ class ProviderOrder(models.Model):
                 symbol = symbol.replace('SHIB', '1000SHIB')
                 amount = round(amount / 1000)
 
-            resp = handler.place_order(
-                symbol=symbol,
-                side=side,
-                amount=amount,
-                client_order_id=order.id
-            )
+            if market == cls.FUTURE:
+                if asset.get_hedger().Name == 'kucoin':
+                    handler = KucoinFuturesHandler
+                else:
+                    handler = BinanceFuturesHandler
+
+                resp = handler().place_order(
+                    symbol=symbol,
+                    side=side,
+                    amount=amount,
+                    client_order_id=order.id
+                )
+            elif market == cls.SPOT:
+                if asset.get_hedger().Name == 'kucoin':
+                    handler = KucoinSpotHandler
+                else:
+                    handler = BinanceSpotHandler
+                resp = handler().place_order(
+                    symbol=symbol,
+                    side=side,
+                    amount=amount,
+                    client_order_id=order.id
+                )
+            else:
+                raise NotImplementedError
 
             order.order_id = resp['orderId']
             order.save()
@@ -125,7 +145,7 @@ class ProviderOrder(models.Model):
 
     @classmethod
     def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '',
-                                dry_run: bool = False, raise_exception: bool = False, hedge_method: str = None) -> bool:
+                                dry_run: bool = False, raise_exception: bool = False) -> bool:
         # todo: this method should not called more than once at a single time
         handler = asset.get_hedger()
         if settings.DEBUG_OR_TESTING:

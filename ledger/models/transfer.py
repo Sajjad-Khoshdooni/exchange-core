@@ -191,7 +191,7 @@ class Transfer(models.Model):
                 network=network,
                 amount=amount - commission,
                 fee_amount=commission,
-                source=wallet.asset.get_hedger().NAME,
+                source=cls.SELF,
                 out_address=address,
                 deposit=False,
                 memo=memo,
@@ -199,8 +199,8 @@ class Transfer(models.Model):
 
             pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
-        from ledger.tasks import create_provider_withdraw
-        create_provider_withdraw.delay(transfer.id)
+        from ledger.tasks import create_withdraw
+        create_withdraw(transfer.id)
 
         return transfer
 

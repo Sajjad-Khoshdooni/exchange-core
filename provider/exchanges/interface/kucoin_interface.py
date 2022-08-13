@@ -1,4 +1,7 @@
 from decimal import Decimal
+
+from django.conf import settings
+
 from ledger.utils.precision import decimal_to_str
 from provider.exchanges.interface.binance_interface import ExchangeHandler, SELL, BUY, MARKET, LIMIT, HOUR
 from provider.exchanges.sdk.kucoin_sdk import kucoin_send_signed_request, kucoin_spot_send_public_request
@@ -17,8 +20,8 @@ class KucoinSpotHandler(ExchangeHandler):
     exchange = None
 
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        # if settings.DEBUG_OR_TESTING:
-        #     return {}
+        if settings.DEBUG_OR_TESTING:
+            return {}
 
         data = data or {}
 
@@ -191,11 +194,10 @@ class KucoinSpotHandler(ExchangeHandler):
 
 class KucoinFuturesHandler(KucoinSpotHandler):
     order_url = '/api/v1/orders'
-    pass
 
     def _collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True):
-        # if settings.DEBUG_OR_TESTING:
-        #     return {}
+        if settings.DEBUG_OR_TESTING:
+            return {}
         data = data or {}
 
         if signed:

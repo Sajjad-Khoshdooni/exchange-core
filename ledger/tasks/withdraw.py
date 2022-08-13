@@ -31,12 +31,12 @@ def update_withdraws():
 
 
 @shared_task(queue='binance')
-def update_exchange_withdraw():
+def update_provider_withdraw():
     re_handle_transfers = Transfer.objects.filter(
         deposit=False,
         status=Transfer.PROCESSING,
         handling=False
-    ).filter(~Q(source=Transfer.SELF))
+    ).exclude(source=Transfer.SELF)
 
     for transfer in re_handle_transfers:
         create_provider_withdraw.delay(transfer.id)
