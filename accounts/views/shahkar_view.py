@@ -30,7 +30,7 @@ class ShahkarCheckView(FormView):
         national_code = form.cleaned_data['national_code']
         phone = form.cleaned_data['phone']
 
-        user = User.objects.get(national_code=national_code)
+        user = User.objects.filter(national_code=national_code).order_by('id').last()
         requester = JibitRequester(user)
         matched = requester.matching(phone_number=phone, national_code=national_code)
 
