@@ -85,25 +85,21 @@ class ProviderOrder(models.Model):
                 else:
                     handler = BinanceFuturesHandler
 
-                resp = handler().place_order(
-                    symbol=symbol,
-                    side=side,
-                    amount=amount,
-                    client_order_id=order.id
-                )
             elif market == cls.SPOT:
                 if asset.get_hedger().Name == 'kucoin':
                     handler = KucoinSpotHandler
                 else:
                     handler = BinanceSpotHandler
-                resp = handler().place_order(
-                    symbol=symbol,
-                    side=side,
-                    amount=amount,
-                    client_order_id=order.id
-                )
+
             else:
                 raise NotImplementedError
+
+            resp = handler().place_order(
+                symbol=symbol,
+                side=side,
+                amount=amount,
+                client_order_id=order.id
+            )
 
             order.order_id = resp['orderId']
             order.save()
