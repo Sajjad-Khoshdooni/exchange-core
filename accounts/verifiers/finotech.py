@@ -64,7 +64,8 @@ class FinotechRequester:
         if search_key:
             request = FinotechRequest.objects.filter(
                 created__gt=timezone.now() - datetime.timedelta(days=30),
-                search_key=search_key
+                search_key=search_key,
+                service=FinotechRequest.FINOTECH
             ).order_by('-created').first()
 
             if request:
@@ -89,6 +90,7 @@ class FinotechRequester:
             method=method,
             data=data,
             user=self._user,
+            service=FinotechRequest.FINOTECH
         )
 
         url += '?trackId=%s' % req_object.track_id

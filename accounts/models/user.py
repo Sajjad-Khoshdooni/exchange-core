@@ -57,6 +57,7 @@ class User(AbstractUser):
         validators=[national_card_code_validator],
     )
     national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی',)
+    national_code_phone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی و موبایل',)
 
     birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد',)
     birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد',)
@@ -115,7 +116,6 @@ class User(AbstractUser):
     margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
 
     show_margin = models.BooleanField(default=True, verbose_name='امکان مشاهده حساب تعهدی')
-    national_code_duplicated_alert = models.BooleanField(default=False, verbose_name='آیا شماره ملی تکراری است؟')
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
 
@@ -133,17 +133,7 @@ class User(AbstractUser):
         verbose_name = _('user')
         verbose_name_plural = _('users')
 
-        constraints = [
-            UniqueConstraint(
-                fields=["national_code"],
-                name="unique_verified_national_code",
-                condition=Q(level__gt=1),
-            )
-        ]
-
     def change_status(self, status: str):
-        # from ledger.models import Prize, Asset
-        # from ledger.models.prize import alert_user_prize
         from accounts.tasks.verify_user import alert_user_verify_status
 
         if self.verify_status != self.VERIFIED and status == self.VERIFIED:
@@ -152,18 +142,6 @@ class User(AbstractUser):
             with transaction.atomic():
                 if self.level == User.LEVEL2:
                     self.level_2_verify_datetime = timezone.now()
-
-                    # prize, created = Prize.objects.get_or_create(
-                    #     account=self.account,
-                    #     scope=Prize.LEVEL2_PRIZE,
-                    #     defaults={
-                    #         'amount': Prize.LEVEL2_PRIZE_AMOUNT,
-                    #         'asset': Asset.objects.get(symbol=Asset.SHIB)
-                    #     }
-                    # )
-                    # if created:
-                    #     prize.build_trx()
-                    #     alert_user_prize(self, Prize.LEVEL2_PRIZE)
 
                 elif self.level == User.LEVEL3:
                     self.level_3_verify_datetime = timezone.now()
@@ -197,7 +175,7 @@ class User(AbstractUser):
                and self.birth_date and self.birth_date_verified
 
     def get_level2_verify_fields(self):
-        from financial.models import BankCard, BankAccount
+        from financial.models import BankCard
 
         bank_card_verified = None
 
@@ -207,7 +185,7 @@ class User(AbstractUser):
             bank_card_verified = False
 
         return [
-            bool(self.national_code), self.national_code_verified,
+            bool(self.national_code),
             bool(self.birth_date), self.birth_date_verified,
             bool(self.first_name), self.first_name_verified,
             bool(self.last_name), self.last_name_verified,
@@ -228,10 +206,6 @@ class User(AbstractUser):
     def reject_level2_if_should(self) -> bool:
 
         if self.level == User.LEVEL1 and self.verify_status == self.PENDING:
-            if User.objects.exclude(id=self.id).filter(national_code=self.national_code, level__gt=User.LEVEL1).exists():
-                self.national_code_duplicated_alert = True
-                self.change_status(User.REJECTED)
-
             level2_fields = self.get_level2_verify_fields()
             any_none = list(filter(lambda f: f is None, level2_fields))
 
@@ -255,12 +229,10 @@ class User(AbstractUser):
             Account.objects.create(user=self)
 
         if self.level == self.LEVEL2 and self.verify_status == self.PENDING:
-            if self.telephone_verified and self.selfie_image_verified:
+            if self.national_code_phone_verified and self.selfie_image_verified:
                 self.change_status(self.VERIFIED)
-
             else:
-                fields = [self.telephone_verified, self.selfie_image_verified]
-                # any_none = any(map(lambda f: f is None, fields))
+                fields = [self.selfie_image_verified]
                 any_false = any(map(lambda f: f is False, fields))
 
                 if any_false:

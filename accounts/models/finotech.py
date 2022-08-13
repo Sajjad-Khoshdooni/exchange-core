@@ -4,6 +4,8 @@ from django.db import models
 
 
 class FinotechRequest(models.Model):
+    FINOTECH, JIBIT = 'finotech', 'jibit'
+
     created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
 
     track_id = models.UUIDField(
@@ -11,6 +13,8 @@ class FinotechRequest(models.Model):
     )
 
     search_key = models.CharField(max_length=128, db_index=True, null=True, blank=True)
+
+    service = models.CharField(max_length=8, choices=((FINOTECH, FINOTECH), (JIBIT, JIBIT)))
 
     url = models.CharField(max_length=256)
     data = models.JSONField(blank=True, null=True)

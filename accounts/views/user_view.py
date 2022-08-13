@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -9,8 +8,6 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from accounts.models import User, CustomToken
 from accounts.verifiers.legal import possible_time_for_withdraw
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
-from ledger.models import Transfer, Prize
-from market.models import Order
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -36,7 +33,7 @@ class ProfileSerializer(UserSerializer):
         fields = UserSerializer.Meta.fields + (
             'national_code', 'birth_date', 'level',
             'national_code_verified', 'first_name_verified', 'last_name_verified', 'birth_date_verified',
-            'verify_status', 'bank_cards', 'bank_accounts', 'telephone', 'telephone_verified'
+            'verify_status', 'bank_cards', 'bank_accounts'
         )
 
     def get_bank_cards(self, user: User):
