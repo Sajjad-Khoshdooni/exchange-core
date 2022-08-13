@@ -1,3 +1,4 @@
+from django.contrib.admin.views.decorators import staff_member_required
 from django.urls import path, include
 from rest_framework import routers
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -90,4 +91,6 @@ urlpatterns = [
     path('firebase/', views.FirebaseTokenView.as_view()),
 
     path('app/', views.AppStatusView.as_view()),
+
+    path('shahkar/', staff_member_required(views.ShahkarCheckView.as_view())),
 ]

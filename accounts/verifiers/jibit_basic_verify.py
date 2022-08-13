@@ -40,6 +40,11 @@ def basic_verify(user: User):
     user.verify_level2_if_not()
 
 
+def shahkar_check(user: User, phone: str, national_code: str):
+    requester = JibitRequester(user)
+    return requester.matching(phone_number=phone, national_code=national_code)
+
+
 def verify_national_code_with_phone(user: User, retry: int = 2) -> bool:
     if user.level != User.LEVEL2:
         return False

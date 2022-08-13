@@ -23,4 +23,4 @@ class FinotechRequest(models.Model):
     status_code = models.PositiveSmallIntegerField(default=0, verbose_name='وضعیت')
     response = models.JSONField(blank=True, null=True)
 
-    user = models.ForeignKey(to='accounts.User', on_delete=models.CASCADE)
+    user = models.ForeignKey(to='accounts.User', on_delete=models.CASCADE, null=True, blank=True)
