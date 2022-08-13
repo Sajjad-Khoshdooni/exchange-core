@@ -1,16 +1,18 @@
-import math
 from datetime import datetime
+from datetime import timedelta
 from decimal import Decimal
 from typing import Union
 
+import pytz
 from django.conf import settings
+from django.utils import timezone
 
 from ledger.utils.cache import get_cache_func_key, cache
 from ledger.utils.precision import decimal_to_str
-
+from ledger.utils.price import get_price
+from ledger.utils.price_manager import PriceManager
 from provider.exchanges.sdk.binance_sdk import binance_spot_send_signed_request, binance_futures_send_signed_request, \
     binance_futures_send_public_request, binance_spot_send_public_request
-
 
 MARKET, LIMIT = 'MARKET', 'LIMIT'
 SELL, BUY = 'SELL', 'BUY'
@@ -24,7 +26,7 @@ class ExchangeHandler:
     NAME = ''
 
     @classmethod
-    def get_handler(cls, name: str):
+    def get_handler(self, name: str):
         from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler, KucoinFuturesHandler
         from ledger.models.asset import Asset
         mapping = {
@@ -54,50 +56,53 @@ class ExchangeHandler:
 
         return result
 
+    def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
+        raise NotImplementedError
+
     def get_trading_symbol(self, symbol: str) -> str:
-        return NotImplementedError
+        raise NotImplementedError
 
     def place_order(self, symbol: str, side: str, amount: Decimal, order_type: str = MARKET,
                     client_order_id: str = None) -> dict:
-        return NotImplementedError
+        raise NotImplementedError
 
     def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal,
                  fee_amount: Decimal, address_tag: str = None,
                  client_id: str = None) -> dict:
-        return NotImplementedError
+        raise NotImplementedError
 
     def get_account_details(self):
-        return NotImplementedError
+        raise NotImplementedError
 
     def get_free_dict(self):
-        return NotImplementedError
+        raise NotImplementedError
 
     def get_all_coins(self):
-        return NotImplementedError
+        raise NotImplementedError
 
     def get_coin_data(self, coin: str) -> Union[dict, None]:
-        return NotImplementedError
+        raise NotImplementedError
 
     def get_network_info(self, coin: str, network: str) -> Union[dict, None]:
-        return NotImplementedError
+        raise NotImplementedError
 
     def get_withdraw_fee(self, coin: str, network: str) -> Decimal:
-        return NotImplementedError
+        raise NotImplementedError
 
     def transfer(self, asset: str, amount: float, market: str, transfer_type: int):
-        return NotImplementedError
+        raise NotImplementedError
 
     def get_symbol_data(self, symbol: str) -> Union[dict, None]:
-        return NotImplementedError
+        raise NotImplementedError
 
     def get_step_size(self, symbol: str) -> Decimal:
-        return NotImplementedError
+        raise NotImplementedError
 
     def get_lot_min_quantity(self, symbol: str) -> Decimal:
-        return NotImplementedError
+        raise NotImplementedError
 
     def get_withdraw_status(self, withdraw_id: str) -> dict:
-        return NotImplementedError
+        raise NotImplementedError
         
 
 class BinanceSpotHandler(ExchangeHandler):
@@ -237,7 +242,7 @@ class BinanceSpotHandler(ExchangeHandler):
         from ledger.models import Transfer
         data = self.collect_api(
             '/sapi/v1/capital/withdraw/history', 'GET',
-            data={'withdrawOrderId': self.id})
+            data={'withdrawOrderId': withdraw_id})
 
         if not data:
             return
@@ -258,6 +263,123 @@ class BinanceSpotHandler(ExchangeHandler):
         resp['txId'] = data.get('txId')
 
         return resp
+
+    def _create_transfer_history(self, response: dict, transfer_type: str):
+        from provider.models import BinanceTransferHistory
+        status_map = {
+            BinanceTransferHistory.WITHDRAW: {
+                0: BinanceTransferHistory.PENDING,
+                1: BinanceTransferHistory.CANCELED,
+                2: BinanceTransferHistory.PENDING,
+                3: BinanceTransferHistory.CANCELED,
+                4: BinanceTransferHistory.PENDING,
+                5: BinanceTransferHistory.CANCELED,
+                6: BinanceTransferHistory.DONE,
+            },
+            BinanceTransferHistory.DEPOSIT: {
+                0: BinanceTransferHistory.PENDING,
+                6: BinanceTransferHistory.PENDING,
+                1: BinanceTransferHistory.DONE
+            },
+        }
+
+        for element in response:
+            tx_id = element.get('txId', None)
+            binance_id = element.get('id', None)
+            address = element['address']
+            amount = element['amount']
+            coin = element['coin']
+            network = element['network']
+            status = status_map[transfer_type][element['status']]
+
+            if transfer_type == BinanceTransferHistory.DEPOSIT:
+                time = datetime.fromtimestamp(element['insertTime'] // 1000)
+                BinanceTransferHistory.objects.update_or_create(
+                    tx_id=tx_id,
+                    defaults={
+                        'binance_id': binance_id,
+                        'address': address,
+                        'amount': amount,
+                        'coin': coin,
+                        'date': time.replace(tzinfo=pytz.utc).astimezone(),
+                        'network': network,
+                        'status': status,
+                        'type': transfer_type
+                    }
+                )
+            elif transfer_type == BinanceTransferHistory.WITHDRAW:
+                time = element['applyTime']
+                BinanceTransferHistory.objects.update_or_create(
+                    binance_id=binance_id,
+                    defaults={
+                        'tx_id': tx_id,
+                        'address': address,
+                        'amount': amount,
+                        'coin': coin,
+                        'date': datetime.strptime(time, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc).astimezone(),
+                        'network': network,
+                        'status': status,
+                        'type': transfer_type
+                    }
+                )
+            else:
+                raise NotImplementedError
+
+    def get_withdraw_history(self, days: int = 5):
+        from provider.models import BinanceTransferHistory
+        now = timezone.now()
+        start_time = int((now - timedelta(days=days)).timestamp() * 1000)
+
+        withdraws = self.collect_api(
+            url='/sapi/v1/capital/withdraw/history',
+            method=GET,
+            data={
+                'startTime': start_time
+            }
+        )
+
+        self._create_transfer_history(response=withdraws, transfer_type=BinanceTransferHistory.WITHDRAW)
+
+    def get_deposit_history(self, days: int = 5):
+        from provider.models import BinanceTransferHistory
+        now = timezone.now()
+        start_time = int((now - timedelta(days=days)).timestamp() * 1000)
+
+        deposits = self.collect_api(
+            url='/sapi/v1/capital/deposit/hisrec',
+            method=GET,
+            data={
+                'startTime': start_time
+            }
+        )
+
+        self._create_transfer_history(response=deposits, transfer_type=BinanceTransferHistory.DEPOSIT)
+
+    def update_wallet(self):
+        from provider.models import BinanceWallet
+        resp = self.get_account_details()
+
+        wallets = resp['balances']
+
+        for wallet in wallets:
+            asset = wallet['asset']
+            free = wallet['free']
+            locked = wallet['locked']
+            with PriceManager(fetch_all=True):
+                if asset == '1000SHIB':
+                    price = get_price('SHIB', side=BUY.lower()) * 1000
+                else:
+                    price = get_price(asset, side=BUY.lower())
+
+                if price:
+                    usdt_value = Decimal(price) * Decimal(free)
+                else:
+                    usdt_value = Decimal(0)
+            BinanceWallet.objects.update_or_create(
+                asset=asset,
+                type=BinanceWallet.SPOT,
+                defaults={'free': free, 'locked': locked, 'usdt_value': usdt_value}
+            )
 
 
 class BinanceFuturesHandler(BinanceSpotHandler):
@@ -285,6 +407,9 @@ class BinanceFuturesHandler(BinanceSpotHandler):
         return self.collect_api(
             '/fapi/v1/order', method='GET', data={'orderId': order_id, 'symbol': symbol}
         )
+
+    def get_correct_symbol(self, symbol: str) -> str:
+        return self.renamed_symbols.get(symbol, symbol)
 
     def get_symbol_data(self, symbol: str) -> Union[dict, None]:
         if symbol in self.renamed_symbols:
@@ -328,3 +453,57 @@ class BinanceFuturesHandler(BinanceSpotHandler):
                 'limit': 1000
             }
         )
+
+    def get_position_amount(self, symbol: str) -> Decimal:
+        symbol = self.get_correct_symbol(symbol)
+
+        position = list(
+            filter(lambda pos: pos['symbol'] == symbol, self.get_account_details()['positions'])
+        )[0]
+
+        return Decimal(position.get('positionAmt', 0))
+
+    def update_wallet(self):
+        from provider.models import BinanceWallet
+        resp = self.get_account_details()
+
+        assets = resp['assets']
+
+        for asset in assets:
+            free = (asset['walletBalance'])
+            locked = 0
+
+            with PriceManager(fetch_all=True):
+                price = get_price(asset['asset'], side=BUY.lower())
+                if price:
+                    usdt_value = Decimal(price) * Decimal(free)
+                else:
+                    usdt_value = Decimal(0)
+
+            BinanceWallet.objects.update_or_create(
+                asset=asset['asset'],
+                type=BinanceWallet.FUTURES,
+                defaults={'free': free, 'locked': locked, 'usdt_value': usdt_value},
+            )
+
+        positions = resp['positions']
+
+        for position in positions:
+            symbol = position['symbol']
+            if symbol.endswith('USDT'):
+                asset = symbol[:-4]
+                free = position['positionAmt']
+                locked = 0
+
+                with PriceManager(fetch_all=True):
+                    price = get_price(asset, side=BUY.lower())
+                    if price:
+                        usdt_value = Decimal(price) * Decimal(free)
+                    else:
+                        usdt_value = Decimal(0)
+
+                BinanceWallet.objects.update_or_create(
+                    asset=asset,
+                    type=BinanceWallet.FUTURES,
+                    defaults={'free': free, 'locked': locked, 'usdt_value': usdt_value},
+                )
