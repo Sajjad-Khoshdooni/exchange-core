@@ -100,7 +100,7 @@ def create_withdraw(transfer_id: int):
         transfer.save(update_fields=['status', 'trx_hash'])
 
     elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
-        transfer.source = ExchangeHandler.get_handler(transfer.asset.hedge_method).NAME,
+        transfer.source = ExchangeHandler.get_handler(transfer.asset.hedge_method).NAME
         transfer.save(update_fields=['source'])
         create_provider_withdraw(transfer_id=transfer.id)
     else:
