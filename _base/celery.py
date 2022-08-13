@@ -40,6 +40,15 @@ app.conf.beat_schedule = {
             'expire': 30 * 60
         },
     },
+    'update_exchange_withdraw': {
+        'task': 'ledger.tasks.withdraw.update_exchange_withdraw',
+        'schedule': 10,
+        'options': {
+            'queue': 'binance',
+            'expire': 10
+        },
+    },
+
     'update_withdraws': {
         'task': 'ledger.tasks.withdraw.update_withdraws',
         'schedule': 10,
@@ -48,14 +57,7 @@ app.conf.beat_schedule = {
             'expire': 10
         },
     },
-    'update_binance_withdraw': {
-        'task': 'ledger.tasks.withdraw.update_binance_withdraw',
-        'schedule': 10,
-        'options': {
-            'queue': 'binance',
-            'expire': 10
-        },
-    },
+
     'inject_tether_to_futures': {
         'task': 'provider.tasks.binance.inject_tether_to_futures',
         'schedule': 1,

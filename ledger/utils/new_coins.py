@@ -2,29 +2,40 @@ import math
 from decimal import Decimal
 
 from ledger.models import Asset, Network, NetworkAsset
-from ledger.utils.price import get_binance_trading_symbol
 from market.utils.fix import create_missing_symbols
-from provider.exchanges.binance.interface import BinanceSpotHandler, BinanceFuturesHandler
+from provider.exchanges.interface.binance_interface import BinanceSpotHandler, BinanceFuturesHandler
+from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 
 
-def add_candidate_coins(coins: list):
+def add_candidate_coins(coins: list, handler: str):
+    handler = handler.upper()
+
+    handler_mapping = {
+        'binance': BinanceSpotHandler,
+        'kucoin': KucoinSpotHandler,
+    }
+    hedger_mapping = {
+        'binance': Asset.HEDGE_BINANCE_SPOT,
+        'kucoin': Asset.HEDGE_KUCOIN_SPOT
+    }
+
+    exchange_handler = handler_mapping.get(handler)()
 
     order = Asset.objects.order_by('order').last().order
 
     for coin in coins:
         coin = coin.upper()
+        spot_symbol = exchange_handler.get_trading_symbol(coin=coin)
 
-        symbol = get_binance_trading_symbol(coin)
-        spot = BinanceSpotHandler.get_symbol_data(symbol)
+        spot = exchange_handler.get_symbol_data(spot_symbol)
 
-        if not spot or spot['status'] != 'TRADING':
-            print('%s not found or stopped trading in binance spot' % coin)
+        if not spot or spot.get('status') != 'TRADING':
+            print('%s not found or stopped trading in interface spot' % spot_symbol)
             continue
 
-        futures = BinanceFuturesHandler.get_symbol_data(symbol)
-
         asset, created = Asset.objects.get_or_create(symbol=coin)
-        asset.hedge_method = Asset.HEDGE_BINANCE_SPOT
+
+        asset.hedge_method = hedger_mapping[handler]
 
         if created:
             order += 1
@@ -33,11 +44,11 @@ def add_candidate_coins(coins: list):
         if not asset.enable:
             asset.candidate = True
 
-        data = spot
-
-        if futures and futures['status'] == 'TRADING':
-            asset.hedge_method = Asset.HEDGE_BINANCE_FUTURE
-            data = futures
+        if exchange_handler.NAME == BinanceSpotHandler.NAME:
+            futures_symbol = BinanceFuturesHandler().get_trading_symbol(coin=coin)
+            futures = BinanceFuturesHandler().get_symbol_data(futures_symbol)
+            if futures and futures['status'] == 'TRADING':
+                asset.hedge_method = Asset.HEDGE_BINANCE_FUTURE
 
         lot_size = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', spot['filters']))[0]
         price_filter = list(filter(lambda f: f['filterType'] == 'PRICE_FILTER', spot['filters']))[0]
@@ -50,15 +61,15 @@ def add_candidate_coins(coins: list):
         asset.price_precision_irt = max(asset.price_precision_usdt - 3, 0)
 
         if created:
-            update_coin_networks(asset)
+            _update_coin_networks(asset=asset, exchange_handler=exchange_handler)
 
         asset.save()
-
     create_missing_symbols()
 
 
-def update_coin_networks(asset: Asset):
-    coin_data = BinanceSpotHandler.get_coin_data(asset.symbol)
+def _update_coin_networks(asset: Asset, exchange_handler):
+
+    coin_data = exchange_handler.get_coin_data(asset.symbol)
 
     for n in coin_data['networkList']:
         network, _ = Network.objects.get_or_create(symbol=n['network'], defaults={

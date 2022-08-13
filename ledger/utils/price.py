@@ -11,6 +11,7 @@ from collector.price.grpc_client import gRPCClient
 from collector.utils.price import price_redis
 from ledger.utils.cache import cache_for
 from ledger.utils.price_manager import PriceManager
+from provider.exchanges import BinanceSpotHandler
 
 logger = logging.getLogger(__name__)
 
@@ -61,20 +62,8 @@ SIDE_MAP = {
 }
 
 
-def get_binance_trading_symbol(coin: str):
-    if coin == 'LUNC':
-        base = 'BUSD'
-    else:
-        base = 'USDT'
-
-    if coin == 'BTT':
-        coin = 'BTTC'
-
-    return coin + base
-
-
 def get_binance_price_stream(coin: str):
-    return get_binance_trading_symbol(coin).lower()
+    return BinanceSpotHandler().get_trading_symbol(coin).lower()
 
 
 def get_tether_price_irt_grpc(side: str, now: datetime = None):

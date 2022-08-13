@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from rest_framework import serializers
 
@@ -7,9 +8,7 @@ from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.precision import get_precision, get_presentation_amount
-from django.core.validators import MaxValueValidator, MinValueValidator
-
-from provider.exchanges import BinanceSpotHandler, BinanceFuturesHandler
+from provider.exchanges.interface.binance_interface import ExchangeHandler
 
 
 class InvalidAmount(Exception):
@@ -35,6 +34,16 @@ class Asset(models.Model):
     HEDGE_BINANCE_FUTURE = 'binance-future'
     HEDGE_BINANCE_SPOT = 'binance-spot'
 
+    HEDGE_KUCOIN_FUTURE = 'kucoin-future'
+    HEDGE_KUCOIN_SPOT = 'kucoin-spot'
+
+    HEDGE_METHOD_CHOICE = (
+        (HEDGE_KUCOIN_SPOT, HEDGE_KUCOIN_SPOT),
+        (HEDGE_KUCOIN_FUTURE, HEDGE_KUCOIN_FUTURE),
+        (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
+        (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE),
+        (HEDGE_NONE, HEDGE_NONE)
+    )
     PRECISION = 8
 
     objects = models.Manager()
@@ -64,9 +73,7 @@ class Asset(models.Model):
 
     trade_enable = models.BooleanField(default=True)
 
-    hedge_method = models.CharField(max_length=16, blank=True, default=HEDGE_BINANCE_FUTURE, choices=[
-        (HEDGE_NONE, 'none'), (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE), (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
-    ])
+    hedge_method = models.CharField(max_length=32, default=HEDGE_BINANCE_FUTURE, choices=HEDGE_METHOD_CHOICE)
 
     candidate = models.BooleanField(default=False)
 
@@ -157,13 +164,8 @@ class Asset(models.Model):
         else:
             return self.symbol
 
-    def get_hedger(self) -> type(BinanceSpotHandler):
-        if self.hedge_method == self.HEDGE_BINANCE_SPOT:
-            return BinanceSpotHandler
-        elif self.hedge_method == self.HEDGE_BINANCE_FUTURE:
-            return BinanceFuturesHandler
-        else:
-            return
+    def get_hedger(self) -> ExchangeHandler():
+        return ExchangeHandler.get_handler(name=self.hedge_method)
 
 
 class AssetSerializer(serializers.ModelSerializer):

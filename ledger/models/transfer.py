@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 class Transfer(models.Model):
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
-    SELF, BINANCE, INTERNAL = 'self', 'binance', 'internal'
+    SELF, INTERNAL, BINANCE, KUCOIN = 'self', 'internal', 'binance', 'kucoin'
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
@@ -54,7 +54,7 @@ class Transfer(models.Model):
     source = models.CharField(
         max_length=8,
         default=SELF,
-        choices=((SELF, SELF), (BINANCE, BINANCE), (INTERNAL, INTERNAL))
+        choices=((SELF, SELF), (INTERNAL, INTERNAL), (BINANCE, BINANCE), (KUCOIN, KUCOIN))
     )
     provider_transfer = models.OneToOneField(to='provider.ProviderTransfer', on_delete=models.PROTECT, null=True,
                                              blank=True)
@@ -200,7 +200,7 @@ class Transfer(models.Model):
             pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
         from ledger.tasks import create_withdraw
-        create_withdraw.delay(transfer.id)
+        create_withdraw(transfer.id)
 
         return transfer
 

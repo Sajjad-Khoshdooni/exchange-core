@@ -13,7 +13,8 @@ def update_network_fees():
     network_assets = NetworkAsset.objects.all()
 
     for ns in network_assets:
-        info = BinanceSpotHandler.get_network_info(ns.asset.symbol, ns.network.symbol)
+        handler = ns.asset.get_hedger()
+        info = handler.get_network_info(ns.asset.symbol, ns.network.symbol)
 
         if info:
             symbol_pair = (ns.network.symbol, ns.asset.symbol)
@@ -23,9 +24,6 @@ def update_network_fees():
             if symbol_pair not in [('TRX', 'USDT'), ('TRX', 'TRX'), ('BSC', 'USDT'), ('BNB', 'USDT'), ('SOL', 'USDT')]:
                 withdraw_fee *= 2
                 withdraw_min = max(withdraw_min, 2 * withdraw_fee)
-
-            if not withdraw_min:
-                withdraw_min = Decimal(info['withdrawIntegerMultiple'])
 
             price = get_trading_price_usdt(ns.asset.symbol, BUY, raw_price=True)
 
@@ -42,9 +40,9 @@ def update_network_fees():
             ns.withdraw_fee = withdraw_fee
             ns.withdraw_min = withdraw_min
             ns.withdraw_max = info['withdrawMax']
-            ns.binance_withdraw_enable = info['withdrawEnable']
+            ns.hedger_withdraw_enable = info['withdrawEnable']
         else:
-            ns.binance_withdraw_enable = False
+            ns.hedger_withdraw_enable = False
 
     NetworkAsset.objects.bulk_update(network_assets, fields=['withdraw_fee', 'withdraw_min', 'withdraw_max',
-                                                             'binance_withdraw_enable'])
+                                                             'hedger_withdraw_enable'])

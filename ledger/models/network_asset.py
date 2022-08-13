@@ -14,7 +14,7 @@ class NetworkAsset(models.Model):
     withdraw_max = get_amount_field()
     withdraw_precision = models.PositiveSmallIntegerField()
 
-    binance_withdraw_enable = models.BooleanField(default=True)
+    hedger_withdraw_enable = models.BooleanField(default=True)
     can_deposit = models.BooleanField(default=False)
 
     def can_deposit_enabled(self) -> bool:

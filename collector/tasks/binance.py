@@ -28,7 +28,7 @@ def fill_future_binance_income(start: str = None, end: str = None):
         start = end - timedelta(hours=1)
 
     logger.info('Fetching income in range %s and %s' % (start, end))
-    incomes = BinanceFuturesHandler.get_incomes(start, end)
+    incomes = BinanceFuturesHandler().get_incomes(start, end)
 
     if len(incomes) >= 1000:
         logger.warning('Incomes for range %s and %s reached its limit!' % (start, end))

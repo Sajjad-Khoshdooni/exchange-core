@@ -120,7 +120,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         return NetworkAsset.objects.filter(
             asset=asset,
             network__can_withdraw=True,
-            binance_withdraw_enable=True
+            hedger_withdraw_enable=True
         ).exists()
 
     def get_logo(self, asset: Asset):
@@ -165,7 +165,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return network_asset.can_deposit_enabled()
 
     def get_can_withdraw(self, network_asset: NetworkAsset):
-        return network_asset.network.can_withdraw and network_asset.binance_withdraw_enable
+        return network_asset.network.can_withdraw and network_asset.hedger_withdraw_enable
 
     def get_address(self, network_asset: NetworkAsset):
         addresses = self.context['addresses']
@@ -291,7 +291,7 @@ class BriefNetworkAssetsView(ListAPIView):
         if 'symbol' in query_params:
             return query_set.filter(asset__symbol=query_params['symbol'].upper(),
                                     network__can_withdraw=True,
-                                    binance_withdraw_enable=True)
+                                    hedger_withdraw_enable=True)
         else:
             query_set = query_set.distinct('network__symbol')
 
