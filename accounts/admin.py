@@ -254,7 +254,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
-        to_verify_users = queryset.filter(MANUAL_VERIFY_CONDITION).distinct()
+        to_verify_users = queryset.filter(level=User.LEVEL1).exclude(first_name='').exclude(last_name='')
 
         for user in to_verify_users:
             user.first_name_verified = True
@@ -264,10 +264,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     @admin.action(description='شروع احراز هویت پایه کاربر', permissions=['change'])
     def reevaluate_basic_verify(self, request, queryset):
-        to_verify_users = queryset.filter(
-            level=User.LEVEL1,
-            verify_status=User.PENDING
-        )
+        to_verify_users = queryset.filter(level=User.LEVEL1).exclude(first_name='').exclude(last_name='')
 
         for user in to_verify_users:
             basic_verify_user.delay(user.id)
