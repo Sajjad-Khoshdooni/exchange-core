@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import hmac
 import logging
@@ -7,18 +8,21 @@ from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
+
 from yekta_config import secret
+
 
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 30
 
+
 if not settings.DEBUG_OR_TESTING:
-    SPOT_BASE_URL = "https://api.binance.com"
-    FUTURES_BASE_URL = 'https://fapi.binance.com'
+    BINANCE_SPOT_BASE_URL = "https://api.binance.com"
+    BINANCE_FUTURES_BASE_URL = 'https://fapi.binance.com'
 else:
-    SPOT_BASE_URL = 'https://testnet.binance.vision'
-    FUTURES_BASE_URL = "https://testnet.binancefuture.com"
+    BINANCE_SPOT_BASE_URL = 'https://testnet.binance.vision'
+    BINANCE_FUTURES_BASE_URL = "https://testnet.binancefuture.com"
 
 
 def create_binance_request_and_log(response, url: str, method: str, data: dict):
@@ -87,14 +91,15 @@ def dispatch_request(http_method):
 
 
 # used for sending request requires the signature
-def spot_send_signed_request(http_method, url_path, payload: dict):
+def binance_spot_send_signed_request(http_method, url_path, payload: dict):
     query_string = urlencode(payload, True)
+
     if query_string:
         query_string = "{}&recvWindow=60000&timestamp={}".format(query_string, get_timestamp())
     else:
         query_string = "recvWindow=60000&timestamp={}".format(get_timestamp())
     url = (
-        SPOT_BASE_URL + url_path + "?" + query_string + "&signature=" + hashing(query_string)
+        BINANCE_SPOT_BASE_URL + url_path + "?" + query_string + "&signature=" + hashing(query_string)
     )
     print("{} {}".format(http_method, url))
     params = {"url": url, "params": {}, "timeout": TIMEOUT}
@@ -110,9 +115,9 @@ def spot_send_signed_request(http_method, url_path, payload: dict):
 
 
 # used for sending public data request
-def spot_send_public_request(url_path: str, payload: dict):
+def binance_spot_send_public_request(url_path: str, payload: dict):
     query_string = urlencode(payload, True)
-    url = SPOT_BASE_URL + url_path
+    url = BINANCE_SPOT_BASE_URL + url_path
     if query_string:
         url = url + "?" + query_string
     print("{}".format(url))
@@ -126,7 +131,7 @@ def spot_send_public_request(url_path: str, payload: dict):
 
 
 # used for sending request requires the signature
-def futures_send_signed_request(http_method: str, url_path: str, payload: dict):
+def binance_futures_send_signed_request(http_method: str, url_path: str, payload: dict):
     query_string = urlencode(payload)
     query_string = query_string.replace("%27", "%22")
 
@@ -136,7 +141,7 @@ def futures_send_signed_request(http_method: str, url_path: str, payload: dict):
         query_string = "recvWindow=60000&timestamp={}".format(get_timestamp())
 
     url = (
-        FUTURES_BASE_URL + url_path + "?" + query_string + "&signature=" + hashing(query_string)
+        BINANCE_FUTURES_BASE_URL + url_path + "?" + query_string + "&signature=" + hashing(query_string)
     )
     print("{} {}".format(http_method, url))
     params = {"url": url, "params": {}, "timeout": TIMEOUT}
@@ -152,9 +157,9 @@ def futures_send_signed_request(http_method: str, url_path: str, payload: dict):
 
 
 # used for sending public data request
-def futures_send_public_request(url_path, payload: dict):
+def binance_futures_send_public_request(url_path, payload: dict):
     query_string = urlencode(payload, True)
-    url = FUTURES_BASE_URL + url_path
+    url = BINANCE_FUTURES_BASE_URL + url_path
     if query_string:
         url = url + "?" + query_string
 

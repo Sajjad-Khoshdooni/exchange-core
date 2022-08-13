@@ -6,8 +6,7 @@ from django.db.models import CheckConstraint, Q
 
 from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
-from ledger.utils.price import BUY, SELL, get_price, get_binance_trading_symbol
-from provider.exchanges import BinanceSpotHandler
+from ledger.utils.price import BUY, SELL, get_price
 from provider.models import ProviderOrder
 
 logger = logging.getLogger(__name__)
@@ -67,12 +66,13 @@ class ProviderHedgedOrder(models.Model):
     def get_min_trade_amount_to_buy(cls, asset: Asset, amount: Decimal):
         price = get_price(asset.symbol, BUY)
 
-        symbol = get_binance_trading_symbol(asset.symbol)
+        handler = asset.get_hedger()
+        symbol = handler.get_trading_symbol(asset.symbol)
 
         min_notional_amount = 10 / price * Decimal('1.002')
 
-        min_amount = max(amount, min_notional_amount, BinanceSpotHandler.get_lot_min_quantity(symbol))
-        step_size = BinanceSpotHandler.get_step_size(symbol)
+        min_amount = max(amount, min_notional_amount, handler.get_lot_min_quantity(symbol))
+        step_size = handler.get_step_size(symbol)
 
         reminder = min_amount % step_size
 
