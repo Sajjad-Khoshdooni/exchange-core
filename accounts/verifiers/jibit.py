@@ -174,7 +174,7 @@ class JibitRequester:
         )
 
         if not resp.success:
-            if resp.data['code'] == 'identity_info.not_found':
+            if resp.data['code'] in ['identity_info.not_found', 'card.not_valid']:
                 return False
             else:
                 raise ServerError
