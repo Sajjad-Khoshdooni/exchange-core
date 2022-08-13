@@ -94,7 +94,7 @@ class JibitRequester:
 
         request_kwargs = {
             'url': url,
-            'timeout': 10,
+            'timeout': 30,
             'headers': {'Authorization': 'Bearer ' + token},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
