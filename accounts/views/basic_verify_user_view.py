@@ -6,6 +6,7 @@ from rest_framework.viewsets import ModelViewSet
 from yekta_config.config import config
 
 from accounts.models import User
+from accounts.utils.similarity import clean_persian_name
 from financial.models.bank_card import BankCard, BankCardSerializer
 from financial.validators import bank_card_pan_validator
 
@@ -74,11 +75,11 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             user.national_code_verified = None
 
         if not user.first_name_verified:
-            user.first_name = validated_data['first_name']
+            user.first_name = clean_persian_name(validated_data['first_name'])
             user.first_name_verified = None
             
         if not user.last_name_verified:
-            user.last_name = validated_data['last_name']
+            user.last_name = clean_persian_name(validated_data['last_name'])
             user.last_name_verified = None
             
         if not user.birth_date_verified:
