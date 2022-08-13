@@ -11,12 +11,12 @@ def add_candidate_coins(coins: list, handler: str):
     handler = handler.upper()
 
     handler_mapping = {
-        'BINANCE': BinanceSpotHandler,
-        'KUCOIN': KucoinSpotHandler,
+        'binance': BinanceSpotHandler,
+        'kucoin': KucoinSpotHandler,
     }
     hedger_mapping = {
-        'BINANCE': Asset.HEDGE_BINANCE_SPOT,
-        'KUCOIN': Asset.HEDGE_KUCOIN_SPOT
+        'binance': Asset.HEDGE_BINANCE_SPOT,
+        'kucoin': Asset.HEDGE_KUCOIN_SPOT
     }
 
     exchange_handler = handler_mapping.get(handler)()
