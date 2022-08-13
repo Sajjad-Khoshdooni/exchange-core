@@ -109,9 +109,6 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 0) -> bo
 def verify_bank_card_by_name(bank_card: BankCard, retry: int = 0) -> bool:
     requester = JibitRequester(bank_card.user)
 
-    if not bank_card.verified:
-        return
-
     user = bank_card.user
 
     if user.first_name_verified and user.last_name_verified:
