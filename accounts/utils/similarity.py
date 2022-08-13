@@ -5,7 +5,7 @@ whitespace_regex = re.compile(r"\s+")
 
 
 def clean_persian_name(name: str):
-    name = name.replace('ك', 'ک').replace('ي', 'ی').strip()
+    name = name.replace('ك', 'ک').replace('ي', 'ی').replace('أ', 'ا').strip()
     return whitespace_regex.sub(' ', name)
 
 

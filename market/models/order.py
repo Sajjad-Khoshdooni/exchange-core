@@ -39,8 +39,8 @@ class Order(models.Model):
     MARKET_BORDER = Decimal('1e-2')
     MIN_IRT_ORDER_SIZE = Decimal('1e5')
     MIN_USDT_ORDER_SIZE = Decimal(5)
-    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('2e7')
-    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(1000)
+    MAX_ORDER_DEPTH_SIZE_IRT = Decimal('9e7')
+    MAX_ORDER_DEPTH_SIZE_USDT = Decimal(2500)
     MAKER_ORDERS_COUNT = 10 if settings.DEBUG_OR_TESTING else 50
 
     BUY, SELL = 'buy', 'sell'
@@ -420,10 +420,18 @@ class Order(models.Model):
     @staticmethod
     def init_maker_order(symbol: PairSymbol.IdName, side, maker_price: Decimal, market=Wallet.SPOT):
         symbol_instance = PairSymbol.objects.get(id=symbol.id)
-        if random() < 0.6:
-            amount_factor = Decimal(randrange(2, 15) / Decimal(100))
+
+        _rand = random()
+
+        if _rand < 0.25:
+            amount_factor = Decimal(randrange(5, 30) / Decimal(100))
+        elif _rand < 0.8:
+            amount_factor = Decimal(randrange(30, 100) / Decimal(100))
+        elif _rand < 0.95:
+            amount_factor = Decimal(randrange(100, 200) / Decimal(100))
         else:
-            amount_factor = Decimal(randrange(10, 20) / Decimal(10))
+            amount_factor = Decimal(randrange(200, 300) / Decimal(100))
+
         maker_amount = symbol_instance.maker_amount * amount_factor * Decimal(randrange(80, 120) / Decimal(100))
         precision = Order.get_rounding_precision(maker_amount, symbol_instance.step_size)
         amount = round_down_to_exponent(maker_amount, precision)

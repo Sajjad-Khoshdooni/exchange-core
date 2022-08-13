@@ -58,12 +58,12 @@ class PNLHistory(models.Model):
     @staticmethod
     def get_all_wallets():
         return {
-            (wallet['market'], wallet['account'], wallet['asset__symbol']): wallet['balance'] for
+            (wallet['wallet_market'], wallet['account'], wallet['asset__symbol']): wallet['balance'] for
             wallet in Wallet.objects.filter(
                 account__type=Account.ORDINARY
             ).exclude(balance=0).annotate(
-                market=Case(When(market=Wallet.LOAN, then=V(Wallet.MARGIN)), default='market')
-            ).values('market', 'account', 'asset__symbol', 'balance')
+                wallet_market=Case(When(market=Wallet.LOAN, then=V(Wallet.MARGIN)), default='market')
+            ).values('wallet_market', 'account', 'asset__symbol', 'balance')
         }
 
     @staticmethod

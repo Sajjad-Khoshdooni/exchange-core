@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+</head>
+<body>
+    <h1>Account migration confirm</h1>
+    <h2>Source account</h2>
+    <p>account_id: {{ account.code }} ({{ account.type.code }} - {{ account.type.platform.name }})</p>
+    <p>app_id: {{ account.app.code }}</p>
+    <p>app type: {{ account.app.type.name }}</p>
+    <p>app title: {{ account.app.title }}  (url: {{ account.app.url }})</p>
+    <p>owner: {{ account.app.owner.email }} (id = {{ account.app.owner.id }})</p>
+
+    <h2>Destination app</h2>
+    <p>app_id: {{ app.code }}</p>
+    <p>app type: {{ app.type.name }}</p>
+    <p>app title: {{ app.title }}  (url: {{ app.url }})</p>
+    <p>owner: {{ app.owner.email }} (id = {{ app.owner.id }})</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <input type="submit" value="Migrate">
+    </form>
+</body>
+</html>

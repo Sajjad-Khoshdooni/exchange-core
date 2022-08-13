@@ -39,7 +39,7 @@ def get_precision(amount: Decimal) -> int:
 
 
 def decimal_to_str(amount: Decimal):
-    amount = str(amount)
+    amount = '{:f}'.format(amount)
     if '.' in amount:
         amount = amount.rstrip('0').rstrip('.')
     return amount

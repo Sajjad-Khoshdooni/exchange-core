@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 
 from ledger.utils.fields import get_amount_field
@@ -38,6 +40,7 @@ class BinanceWallet(models.Model):
     asset = models.CharField(max_length=16)
     free = get_amount_field()
     locked = get_amount_field()
+    usdt_value = get_amount_field(default=Decimal(0))
     type = models.CharField(max_length=16, choices=((SPOT, SPOT), (FUTURES, FUTURES)))
 
     class Meta:
