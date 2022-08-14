@@ -26,9 +26,10 @@ class ExchangeHandler:
     NAME = ''
 
     @classmethod
-    def get_handler(self, name: str):
+    def get_handler(cls, name: str):
         from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler, KucoinFuturesHandler
         from ledger.models.asset import Asset
+
         mapping = {
             Asset.HEDGE_BINANCE_SPOT: BinanceSpotHandler,
             Asset.HEDGE_BINANCE_FUTURE: BinanceFuturesHandler,
@@ -36,7 +37,7 @@ class ExchangeHandler:
             Asset.HEDGE_KUCOIN_FUTURE: KucoinFuturesHandler
         }
 
-        return mapping[name]()
+        return mapping.get(name, BinanceSpotHandler)()
 
     def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
                     cache_timeout: int = None):
@@ -103,7 +104,10 @@ class ExchangeHandler:
 
     def get_withdraw_status(self, withdraw_id: str) -> dict:
         raise NotImplementedError
-        
+
+    def get_spot_handler(self) -> 'ExchangeHandler':
+        raise NotImplementedError
+
 
 class BinanceSpotHandler(ExchangeHandler):
     order_url = '/api/v3/order'
@@ -242,7 +246,8 @@ class BinanceSpotHandler(ExchangeHandler):
         from ledger.models import Transfer
         data = self.collect_api(
             '/sapi/v1/capital/withdraw/history', 'GET',
-            data={'withdrawOrderId': withdraw_id})
+            data={'withdrawOrderId': withdraw_id}
+        )
 
         if not data:
             return
@@ -381,10 +386,13 @@ class BinanceSpotHandler(ExchangeHandler):
                 defaults={'free': free, 'locked': locked, 'usdt_value': usdt_value}
             )
 
+    def get_spot_handler(self):
+        return self
+
 
 class BinanceFuturesHandler(BinanceSpotHandler):
     order_url = '/fapi/v1/order'
-    MARKET = 'fut'
+    MARKET_TYPE = 'fut'
     renamed_symbols = {
         'SHIBUSDT': '1000SHIBUSDT'
     }
@@ -507,3 +515,6 @@ class BinanceFuturesHandler(BinanceSpotHandler):
                     type=BinanceWallet.FUTURES,
                     defaults={'free': free, 'locked': locked, 'usdt_value': usdt_value},
                 )
+
+    def get_spot_handler(self):
+        return BinanceSpotHandler()

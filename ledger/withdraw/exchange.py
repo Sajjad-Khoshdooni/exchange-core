@@ -20,7 +20,7 @@ def handle_provider_withdraw(transfer_id: int):
     logger.info('withdraw handling transfer_id = %d' % transfer_id)
 
     transfer = Transfer.objects.get(id=transfer_id)
-    handler = transfer.asset.get_hedger()
+    handler = transfer.asset.get_hedger().get_spot_handler()
 
     if transfer.handling:
         logger.info('ignored because of handling flag')
@@ -89,7 +89,7 @@ def provider_withdraw(transfer: Transfer):
 
     assert transfer.source == transfer.asset.get_hedger().NAME
 
-    handler = transfer.asset.get_hedger()
+    handler = transfer.asset.get_hedger().get_spot_handler()
     withdraw_fee = handler.get_withdraw_fee(transfer.wallet.asset.symbol, transfer.network.symbol)
 
     logger.info('withdrawing %s %s in %s network' % (withdraw_fee + transfer.amount, transfer.asset, transfer.network))

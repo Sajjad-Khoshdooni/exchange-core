@@ -5,6 +5,7 @@ import hmac
 import requests
 from django.conf import settings
 from rest_framework.utils import json
+from yekta_config import secret
 from yekta_config.config import config
 
 from provider.exchanges.sdk.binance_sdk import get_timestamp
@@ -23,12 +24,12 @@ def kucoin_spot_send_public_request(endpoint, method='POST', **kwargs):
 
 def add_sign_kucoin_spot(params_str, timestamp, http_method):
     headers = {}
-    _secret_key = config('KC-SECRET-KEY', default='')
-    _secret_passphrase = config('KC-API-PASSPHRASE', default='')
+    _secret_key = secret('KC-SECRET-KEY')
+    _secret_passphrase = secret('KC-API-PASSPHRASE')
 
     headers['KC-API-TIMESTAMP'] = str(timestamp)
-    headers['KC-API-KEY'] = config('KC-API-KEY', default='')
-    headers['KC-API-KEY-VERSION'] = config('KC-API-KEY-VERSION', default='')
+    headers['KC-API-KEY'] = config('KC-API-KEY')
+    headers['KC-API-KEY-VERSION'] = '2'
     headers['KC-API-SIGN'] = base64.b64encode(
         hmac.new(_secret_key.encode('utf-8'),
                  params_str.encode('utf-8'),

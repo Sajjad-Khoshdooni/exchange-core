@@ -164,7 +164,7 @@ class Asset(models.Model):
         else:
             return self.symbol
 
-    def get_hedger(self) -> ExchangeHandler():
+    def get_hedger(self) -> ExchangeHandler:
         return ExchangeHandler.get_handler(name=self.hedge_method)
 
 

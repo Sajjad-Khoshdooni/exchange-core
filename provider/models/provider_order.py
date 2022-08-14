@@ -75,7 +75,7 @@ class ProviderOrder(models.Model):
 
             symbol = handler.get_trading_symbol(asset.symbol)
 
-            if asset.get_hedger() == Asset.HEDGE_BINANCE_FUTURE and market == cls.FUTURE and asset.symbol == 'SHIB':
+            if asset.get_hedger().NAME == BinanceFuturesHandler.NAME and market == cls.FUTURE and asset.symbol == 'SHIB':
                 symbol = symbol.replace('SHIB', '1000SHIB')
                 amount = round(amount / 1000)
 
@@ -191,7 +191,7 @@ class ProviderOrder(models.Model):
 
             if not dry_run:
                 if market == cls.SPOT and side == cls.SELL:
-                    balance_map = handler.get_free_dict()
+                    balance_map = handler.get_spot_handler().get_free_dict()
                     balance = balance_map[asset.symbol]
 
                     if balance < order_amount:

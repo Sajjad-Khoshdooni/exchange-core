@@ -3,7 +3,7 @@ import logging
 from celery import shared_task
 
 from accounts.models import Notification
-from accounts.verifiers.jibit_basic_verify import verify_bank_account, verify_bank_card_by_name
+from accounts.verifiers.jibit_basic_verify import verify_bank_account, verify_bank_card
 from financial.models import BankCard, BankAccount
 
 logger = logging.getLogger(__name__)
@@ -13,9 +13,7 @@ logger = logging.getLogger(__name__)
 def verify_bank_card_task(bank_card_id: int):
     bank_card = BankCard.live_objects.get(id=bank_card_id)  # type: BankCard
 
-    verified = verify_bank_card_by_name(bank_card)
-    bank_card.verified = verified
-    bank_card.save()
+    verified = verify_bank_card(bank_card)
 
     if verified:
         title = 'شماره کارت وارد شده تایید شد.'

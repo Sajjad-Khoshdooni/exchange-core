@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
-from django.db.models import Q, UniqueConstraint
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords

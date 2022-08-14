@@ -2,11 +2,10 @@ import logging
 
 from celery import shared_task
 from django.conf import settings
-from django.db.models import Q
 
 from ledger.models import Transfer
-from ledger.withdraw.exchange import handle_provider_withdraw
 from ledger.utils.wallet_pipeline import WalletPipeline
+from ledger.withdraw.exchange import handle_provider_withdraw
 from provider.exchanges.interface.binance_interface import ExchangeHandler
 
 logger = logging.getLogger(__name__)
@@ -15,19 +14,6 @@ logger = logging.getLogger(__name__)
 @shared_task(queue='binance')
 def create_provider_withdraw(transfer_id: int):
     handle_provider_withdraw(transfer_id)
-
-
-@shared_task(queue='blocklink')
-def update_withdraws():
-
-    re_handle_transfers = Transfer.objects.filter(
-        deposit=False,
-        source=Transfer.SELF,
-        status=Transfer.PROCESSING,
-    )
-
-    for transfer in re_handle_transfers:
-        create_withdraw.delay(transfer.id)
 
 
 @shared_task(queue='binance')
@@ -44,7 +30,7 @@ def update_provider_withdraw():
     transfers = Transfer.objects.filter(
         deposit=False,
         status=Transfer.PENDING
-    ).filter(~Q(source=Transfer.SELF))
+    ).exclude(source=Transfer.SELF)
 
     for transfer in transfers:
         data = transfer.provider_transfer.get_status()
@@ -110,3 +96,17 @@ def create_withdraw(transfer_id: int):
             'transfer_id': transfer_id,
             'resp': resp_data
         })
+
+
+@shared_task(queue='blocklink')
+def update_withdraws():
+
+    re_handle_transfers = Transfer.objects.filter(
+        deposit=False,
+        source=Transfer.SELF,
+        status=Transfer.PROCESSING,
+    )
+
+    for transfer in re_handle_transfers:
+        create_withdraw.delay(transfer.id)
+

@@ -50,7 +50,7 @@ class ProviderTransfer(models.Model):
             memo=memo or ''
         )
 
-        handler = asset.get_hedger()
+        handler = asset.get_hedger().get_spot_handler()
         resp = handler.withdraw(
             coin=asset.symbol,
             network=network.symbol,
@@ -67,8 +67,8 @@ class ProviderTransfer(models.Model):
         return transfer
 
     def get_status(self) -> dict:
-        handler = self.transfer.asset.get_hedger()
-        return handler.get_withdraw_status(self.provider_transfer_id)
+        handler = self.transfer.asset.get_hedger().get_spot_handler()
+        return handler.get_withdraw_status(self.id)
 
     def __str__(self):
         return '%s %s %s' % (self.asset, self.amount, self.network)

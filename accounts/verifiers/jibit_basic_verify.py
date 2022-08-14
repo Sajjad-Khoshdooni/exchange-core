@@ -34,7 +34,7 @@ def basic_verify(user: User):
     if bank_card.verified and (not user.first_name_verified or not user.last_name_verified):
         logger.info('verifying name, bank_card for user_d = %d' % user.id)
 
-        if not verify_bank_card_by_name(bank_card):
+        if not verify_name_by_bank_card(bank_card):
             return
 
     user.verify_level2_if_not()
@@ -111,7 +111,10 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> bo
     return True
 
 
-def verify_bank_card_by_name(bank_card: BankCard, retry: int = 2) -> bool:
+def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> bool:
+    if not bank_card.kyc:
+        return False
+
     requester = JibitRequester(bank_card.user)
 
     user = bank_card.user
@@ -127,19 +130,47 @@ def verify_bank_card_by_name(bank_card: BankCard, retry: int = 2) -> bool:
             return
         else:
             logger.info('Retrying verify_national_code...')
-            return verify_bank_card_by_name(bank_card, retry - 1)
+            return verify_name_by_bank_card(bank_card, retry - 1)
 
-    user.first_name_verified = matched
-    user.last_name_verified = matched
-    user.save(update_fields=['first_name_verified', 'last_name_verified'])
+    if matched:
+        user.first_name_verified = matched
+        user.last_name_verified = matched
+        user.save(update_fields=['first_name_verified', 'last_name_verified'])
 
-    if not matched:
-        user.change_status(User.REJECTED)
+        user.verify_level2_if_not()
+        return True
+    else:
+        link = url_to_edit_object(user)
+        send_support_message(
+            message='اطلاعات نام کاربر مورد تایید قرار نگرفت. لطفا دستی بررسی شود.',
+            link=link
+        )
+
         return False
 
-    user.verify_level2_if_not()
 
-    return True
+def verify_bank_card(bank_card: BankCard, retry: int = 2) -> bool:
+    if bank_card.verified:
+        return True
+
+    requester = JibitRequester(bank_card.user)
+
+    user = bank_card.user
+
+    try:
+        matched = requester.matching(card_pan=bank_card.card_pan, full_name=user.get_full_name())
+    except (TimeoutError, ServerError):
+        if retry == 0:
+            logger.error('jibit timeout bank_card')
+            return
+        else:
+            logger.info('Retrying verify_national_code...')
+            return verify_bank_card(bank_card, retry - 1)
+
+    bank_card.verified = matched
+    bank_card.save()
+
+    return matched
 
 
 DEPOSIT_STATUS_MAP = {
