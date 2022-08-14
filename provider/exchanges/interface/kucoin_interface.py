@@ -20,10 +20,10 @@ class KucoinSpotHandler(ExchangeHandler):
     exchange = None
 
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        if settings.DEBUG_OR_TESTING:
-            return {}
-
-        data = data or {}
+        # if settings.DEBUG_OR_TESTING:
+        #     return {}
+        #
+        # data = data or {}
 
         if signed:
             return kucoin_send_signed_request(method, url, data=data)
