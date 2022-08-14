@@ -67,7 +67,7 @@ class ProviderTransfer(models.Model):
         return transfer
 
     def get_status(self) -> dict:
-        handler = self.transfer.asset.get_hedger()
+        handler = self.transfer.asset.get_hedger().get_spot_handler()
         return handler.get_withdraw_status(self.provider_transfer_id)
 
     def __str__(self):
