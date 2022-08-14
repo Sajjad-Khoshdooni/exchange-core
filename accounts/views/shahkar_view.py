@@ -5,8 +5,7 @@ from django.urls import reverse_lazy
 from django.views.generic import FormView
 
 from accounts.models import User
-from accounts.verifiers.finotech import ServerError
-from accounts.verifiers.jibit import JibitRequester
+from accounts.verifiers.jibit_basic_verify import shahkar_check
 
 
 class ShahkarForm(forms.Form):
@@ -32,10 +31,6 @@ class ShahkarCheckView(FormView):
         phone = form.cleaned_data['phone']
 
         user = User.objects.filter(national_code=national_code).order_by('id').last()
-        requester = JibitRequester(user)
-        try:
-            matched = requester.matching(phone_number=phone, national_code=national_code)
-        except (TimeoutError, ServerError):
-            return HttpResponse("Jibit error")
+        matched = shahkar_check(user, phone=phone, national_code=national_code)
 
         return HttpResponse("Matched: %s" % matched)

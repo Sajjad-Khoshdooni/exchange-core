@@ -149,7 +149,7 @@ class JibitRequester:
         return Response(data=resp_data, success=resp.ok)
 
     def matching(self, phone_number: str = None, national_code: str = None, full_name: str = None,
-                 birth_date: datetime = None, card_pan: str = None, iban: str = None) -> bool:
+                 birth_date: datetime = None, card_pan: str = None, iban: str = None) -> Response:
 
         if birth_date:
             birth_date = gregorian_to_jalali_date_str(birth_date).replace('/', '')
@@ -167,19 +167,11 @@ class JibitRequester:
 
         params = {k: v for (k, v) in params.items() if v}
 
-        resp = self.collect_api(
+        return self.collect_api(
             path='/v1/services/matching',
             data=params,
             search_key=key
         )
-
-        if not resp.success:
-            if resp.data['code'] in ['identity_info.not_found', 'card.not_valid', 'card.owner_not_authorized', 'card.not_active']:
-                return False
-            else:
-                raise ServerError
-
-        return resp.data['matched']
 
     def get_iban_info(self, iban: str) -> Response:
         params = {
@@ -194,3 +186,15 @@ class JibitRequester:
             search_key=key
         )
 
+    def get_card_info(self, card_pan: str) -> Response:
+        params = {
+            'number': card_pan,
+        }
+
+        key = 'card-%s' % card_pan
+
+        return self.collect_api(
+            path='/v1/cards',
+            data=params,
+            search_key=key
+        )

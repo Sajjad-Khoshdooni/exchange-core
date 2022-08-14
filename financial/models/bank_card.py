@@ -26,7 +26,15 @@ class BankCard(models.Model):
 
     verified = models.BooleanField(null=True, blank=True)
     kyc = models.BooleanField(default=False)
+
     deleted = models.BooleanField(default=False)
+
+    bank = models.CharField(blank=True, max_length=64)
+    type = models.CharField(blank=True, max_length=64)
+    owner_name = models.CharField(blank=True, max_length=256)
+    deposit_number = models.CharField(blank=True, max_length=128)
+
+    reject_reason = models.CharField(max_length=128, blank=True)
 
     history = HistoricalRecords()
 

@@ -15,7 +15,10 @@ def verify_bank_card_task(bank_card_id: int):
 
     verified = verify_bank_card(bank_card)
 
-    if verified:
+    if verified is None:
+        logger.info('bank card %d verification failed' % bank_card_id)
+        return
+    elif verified:
         title = 'شماره کارت وارد شده تایید شد.'
         message = 'شماره کارت %s تایید شد.' % bank_card
         level = Notification.SUCCESS

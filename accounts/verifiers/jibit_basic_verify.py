@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
@@ -11,7 +12,7 @@ from financial.models import BankCard, BankAccount
 logger = logging.getLogger(__name__)
 
 
-IBAN_NAME_SIMILARITY_THRESHOLD = 0.75
+NAME_SIMILARITY_THRESHOLD = 0.8
 
 
 def basic_verify(user: User):
@@ -40,25 +41,49 @@ def basic_verify(user: User):
     user.verify_level2_if_not()
 
 
-def shahkar_check(user: User, phone: str, national_code: str):
+def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, None]:
     requester = JibitRequester(user)
-    return requester.matching(phone_number=phone, national_code=national_code)
+    resp = requester.matching(phone_number=phone, national_code=national_code)
+
+    if resp.success:
+        return resp.data['matched']
+    elif resp.data['code'] in ['mobileNumber.not_valid', 'nationalCode.not_valid']:
+        return False
+    else:
+        logger.warning('JIBIT shahkar not succeeded', extra={
+            'user': user,
+            'resp': resp.data['code'],
+            'phone': phone,
+            'national_code': national_code
+        })
+        return
 
 
-def verify_national_code_with_phone(user: User, retry: int = 2) -> bool:
+def update_bank_card_info(bank_card: BankCard, data: dict):
+    info = data['cardInfo']
+    bank_card.bank = info['bank']
+    bank_card.type = info['type']
+    bank_card.owner_name = info['ownerName']
+    bank_card.deposit_number = info['depositNumber']
+    bank_card.save()
+
+
+def verify_national_code_with_phone(user: User, retry: int = 2) -> Union[bool, None]:
     if user.level != User.LEVEL2:
         return False
 
     if not user.national_code:
         return False
 
-    requester = JibitRequester(user)
-
     try:
-        verified = requester.matching(phone_number=user.phone, national_code=user.national_code)
+        verified = shahkar_check(user, user.phone, user.national_code)
+
+        if verified is None:
+            return
+
     except (TimeoutError, ServerError):
         if retry == 0:
-            logger.error('jibit timeout verify_national_code')
+            logger.error('JIBIT timeout verify_national_code')
             return
         else:
             logger.info('Retrying verify_national_code...')
@@ -70,7 +95,7 @@ def verify_national_code_with_phone(user: User, retry: int = 2) -> bool:
     return verified
 
 
-def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> bool:
+def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
     user = bank_card.user
 
     if user.national_code_verified and user.birth_date_verified and bank_card.verified:
@@ -82,27 +107,49 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> bo
     requester = JibitRequester(user)
 
     try:
-        matched = requester.matching(
+        resp = requester.matching(
             national_code=user.national_code,
             birth_date=user.birth_date,
             card_pan=bank_card.card_pan
         )
+
+        if resp.success:
+            card_matched = resp.data['matched']
+            identity_matched = None
+
+            if card_matched:
+                identity_matched = True
+
+        elif resp.data['code'] in ['card.not_valid', 'card.provider_is_not_active']:
+            card_matched = False
+            identity_matched = None
+        elif resp.data['code'] == 'identity_info.not_found':
+            identity_matched = False
+            card_matched = None
+        else:
+            logger.warning('JIBIT card <-> national_code not succeeded', extra={
+                'user': user,
+                'resp': resp.data['code'],
+                'card': bank_card,
+            })
+            return
+
     except (TimeoutError, ServerError):
         if retry == 0:
-            logger.error('jibit timeout user_primary_info')
+            logger.error('JIBIT timeout user_primary_info')
             return
         else:
             logger.info('Retrying verify_national_code...')
             return verify_bank_card_by_national_code(bank_card, retry - 1)
 
-    user.national_code_verified = matched
-    user.birth_date_verified = matched
+    user.national_code_verified = identity_matched
+    user.birth_date_verified = identity_matched
     user.save(update_fields=['national_code_verified', 'birth_date_verified'])
 
-    bank_card.verified = matched
+    bank_card.verified = card_matched
     bank_card.save(update_fields=['verified'])
 
-    if not matched:
+    if identity_matched is False or card_matched is False:
         user.change_status(User.REJECTED)
         return False
 
@@ -111,7 +158,7 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> bo
     return True
 
 
-def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> bool:
+def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
     if not bank_card.kyc:
         return False
 
@@ -123,54 +170,96 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> bool:
         return True
 
     try:
-        matched = requester.matching(card_pan=bank_card.card_pan, full_name=bank_card.user.get_full_name())
+        resp = requester.get_card_info(card_pan=bank_card.card_pan)
+
+        if resp.success:
+            update_bank_card_info(bank_card, resp.data)
+
+            name1, name2 = clean_persian_name(bank_card.user.get_full_name()), clean_persian_name(bank_card.owner_name)
+            verified = str_similar_rate(name1, name2) >= NAME_SIMILARITY_THRESHOLD
+
+            if verified:
+                user.first_name_verified = True
+                user.last_name_verified = True
+                user.save(update_fields=['first_name_verified', 'last_name_verified'])
+
+                user.verify_level2_if_not()
+                return True
+            else:
+                link = url_to_edit_object(user)
+                send_support_message(
+                    message='اطلاعات نام کاربر مورد تایید قرار نگرفت. لطفا دستی بررسی شود.',
+                    link=link
+                )
+                return
+
+        elif resp.data['code'].startswith('card.') and resp.data['code'] != 'card.provider_is_not_active':
+            bank_card.verified = False
+            bank_card.reject_reason = resp.data['code']
+            bank_card.save()
+
+            bank_card.user.change_status(User.REJECTED)
+
+            return False
+        else:
+            logger.warning('JIBIT card verification not succeeded', extra={
+                'bank_card': bank_card,
+                'resp': resp.data['code'],
+            })
+            return
+
     except (TimeoutError, ServerError):
         if retry == 0:
-            logger.error('jibit timeout bank_card')
+            logger.error('JIBIT timeout bank_card')
             return
         else:
             logger.info('Retrying verify_national_code...')
             return verify_name_by_bank_card(bank_card, retry - 1)
 
-    if matched:
-        user.first_name_verified = matched
-        user.last_name_verified = matched
-        user.save(update_fields=['first_name_verified', 'last_name_verified'])
 
-        user.verify_level2_if_not()
-        return True
-    else:
-        link = url_to_edit_object(user)
-        send_support_message(
-            message='اطلاعات نام کاربر مورد تایید قرار نگرفت. لطفا دستی بررسی شود.',
-            link=link
-        )
-
-        return False
-
-
-def verify_bank_card(bank_card: BankCard, retry: int = 2) -> bool:
+def verify_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
     if bank_card.verified:
-        return True
+        return
 
     requester = JibitRequester(bank_card.user)
 
-    user = bank_card.user
-
     try:
-        matched = requester.matching(card_pan=bank_card.card_pan, full_name=user.get_full_name())
+        resp = requester.get_card_info(card_pan=bank_card.card_pan)
+
+        if resp.success:
+            update_bank_card_info(bank_card, resp.data)
+
+            name1, name2 = clean_persian_name(bank_card.user.get_full_name()), clean_persian_name(bank_card.owner_name)
+            verified = str_similar_rate(name1, name2) >= NAME_SIMILARITY_THRESHOLD
+
+            bank_card.verified = verified
+
+            if not verified:
+                bank_card.reject_reason = 'name.mismatch'
+
+            bank_card.save()
+                
+            return verified
+        
+        elif resp.data['code'].startswith('card.') and resp.data['code'] != 'card.provider_is_not_active':
+            bank_card.verified = False
+            bank_card.reject_reason = resp.data['code']
+            bank_card.save()
+
+            return False
+        else:
+            logger.warning('JIBIT card verification not succeeded', extra={
+                'bank_card': bank_card,
+                'resp': resp.data['code'],
+            })
+            return
     except (TimeoutError, ServerError):
         if retry == 0:
-            logger.error('jibit timeout bank_card')
+            logger.error('JIBIT timeout bank_card')
             return
         else:
             logger.info('Retrying verify_national_code...')
             return verify_bank_card(bank_card, retry - 1)
-
-    bank_card.verified = matched
-    bank_card.save()
-
-    return matched
 
 
 DEPOSIT_STATUS_MAP = {
@@ -182,14 +271,14 @@ DEPOSIT_STATUS_MAP = {
 }
 
 
-def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> bool:
+def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool, None]:
     requester = JibitRequester(bank_account.user)
 
     try:
         iban_info = requester.get_iban_info(bank_account.iban)
     except (TimeoutError, ServerError):
         if retry == 0:
-            logger.error('jibit timeout bank_account')
+            logger.error('JIBIT timeout bank_account')
             return
         else:
             logger.info('Retrying verify_national_code...')
@@ -228,11 +317,11 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> bool:
 
         name1, name2 = clean_persian_name(owner_full_name), clean_persian_name(user.get_full_name())
 
-        verified = str_similar_rate(name1, name2) >= IBAN_NAME_SIMILARITY_THRESHOLD
+        verified = str_similar_rate(name1, name2) >= NAME_SIMILARITY_THRESHOLD
 
         if not verified:
             name1_rotate = rotate_words(name1)
-            verified = str_similar_rate(name1_rotate, name2) >= IBAN_NAME_SIMILARITY_THRESHOLD
+            verified = str_similar_rate(name1_rotate, name2) >= NAME_SIMILARITY_THRESHOLD
 
     bank_account.verified = verified
     bank_account.save()
