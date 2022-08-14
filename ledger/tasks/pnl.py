@@ -39,7 +39,7 @@ def create_pnl_histories(self):
                     if market == Wallet.MARGIN and account not in margin_accounts:
                         continue
                     last_usdt_snapshot = last_pnl_histories.get((account, market, Asset.USDT), 0)
-                    snapshot_balance, profit = PNLHistory.calculate_amounts_in_usdt(
+                    snapshot_balance, profit, input_output_amount = PNLHistory.calculate_amounts_in_usdt(
                         PNLHistory.get_for_account_market(account, market, all_wallets.items()),
                         PNLHistory.get_for_account_market(account, market, all_in_out.items()),
                         last_usdt_snapshot,
@@ -57,7 +57,8 @@ def create_pnl_histories(self):
                     )
                     if market == Wallet.SPOT:
                         irt_snapshot = snapshot_balance * usdt_price
-                        last_irt_snapshot = last_pnl_histories.get((account, market, Asset.IRT), 0)
+                        last_irt_snapshot = last_pnl_histories.get((account, market, Asset.IRT), 0) + (
+                                    input_output_amount * usdt_price)
 
                         to_create_pnl_histories.append(
                             PNLHistory(
