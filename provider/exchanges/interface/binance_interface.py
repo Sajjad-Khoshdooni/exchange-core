@@ -518,3 +518,10 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
     def get_spot_handler(self):
         return BinanceSpotHandler()
+
+    def get_free_dict(self):
+        raise NotImplementedError
+
+    def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal, fee_amount: Decimal,
+                 address_tag: str = None, client_id: str = None, memo: str = None) -> dict:
+        raise NotImplementedError

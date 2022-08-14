@@ -191,6 +191,9 @@ class KucoinSpotHandler(ExchangeHandler):
         resp['status'] = mapping.get(data.get('status'))
         return resp
 
+    def get_spot_handler(self) -> 'ExchangeHandler':
+        return self
+
 
 class KucoinFuturesHandler(KucoinSpotHandler):
     order_url = '/api/v1/orders'
@@ -208,4 +211,12 @@ class KucoinFuturesHandler(KucoinSpotHandler):
     def get_account_details(self):
         return self.collect_api(url='/api/v1/account-overview?currency=USDT', method='GET')
 
+    def get_spot_handler(self) -> 'ExchangeHandler':
+        return KucoinSpotHandler()
 
+    def get_free_dict(self):
+        raise NotImplementedError
+
+    def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal, fee_amount: Decimal,
+                 address_tag: str = None, client_id: str = None, memo: str = None) -> dict:
+        raise NotImplementedError
