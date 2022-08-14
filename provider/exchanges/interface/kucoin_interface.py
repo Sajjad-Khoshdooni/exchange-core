@@ -20,8 +20,8 @@ class KucoinSpotHandler(ExchangeHandler):
     exchange = None
 
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        if settings.DEBUG_OR_TESTING:
-            return {}
+        # if settings.DEBUG_OR_TESTING:
+        #     return {}
 
         data = data or {}
 
@@ -55,7 +55,7 @@ class KucoinSpotHandler(ExchangeHandler):
 
         return self.collect_api(url=self.order_url, data=data) or {}
 
-    def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal, fee_amount: Decimal,
+    def withdraw(self, coin: str, network, address: str, transfer_amount: Decimal, fee_amount: Decimal,
                  address_tag: str = None, client_id: str = None, memo: str = None) -> dict:
 
         # todo: add memo variant
@@ -74,7 +74,7 @@ class KucoinSpotHandler(ExchangeHandler):
             'currency': coin,
             'address': address,
             'amount': decimal_to_str(transfer_amount),
-            'network': network,
+            'network': network.kucoin_name,
             'memo': address_tag,
             'withdrawOrderId': client_id
         }
@@ -102,8 +102,9 @@ class KucoinSpotHandler(ExchangeHandler):
         data = {'networkList': []}
         for chain in network_list:
             data['networkList'].append({
-                'network': chain['chainName'],
+                'network': chain['chain'].upper(),
                 'name': chain['chainName'],
+                'kucoin_name': chain['chainName'],
                 'addressRegex': chain.get('address_regex', ''),
                 'minConfirm': chain.get('confirms'),
                 'unLockConfirm': chain.get('confirms'),
@@ -116,14 +117,14 @@ class KucoinSpotHandler(ExchangeHandler):
             })
         return data
 
-    def get_network_info(self, coin: str, network: str):
+    def get_network_info(self, coin: str, network):
         chains = self.get_coin_data(coin=coin).get('networkList')
-        info = list(filter(lambda d: d['name'] == network, chains))
+        info = list(filter(lambda d: d['kucoin_name'] == network.kucoin_name, chains))
         if info:
             return info[0]
         return
 
-    def get_withdraw_fee(self, coin: str, network: str):
+    def get_withdraw_fee(self, coin: str, network):
         info = self.get_network_info(coin, network)
         return Decimal(info.get('withdrawFee'))
 
@@ -217,6 +218,6 @@ class KucoinFuturesHandler(KucoinSpotHandler):
     def get_free_dict(self):
         raise NotImplementedError
 
-    def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal, fee_amount: Decimal,
+    def withdraw(self, coin: str, network, address: str, transfer_amount: Decimal, fee_amount: Decimal,
                  address_tag: str = None, client_id: str = None, memo: str = None) -> dict:
         raise NotImplementedError

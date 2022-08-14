@@ -8,7 +8,6 @@ from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 
 
 def add_candidate_coins(coins: list, handler: str):
-    handler = handler.upper()
 
     handler_mapping = {
         'binance': BinanceSpotHandler,
@@ -60,8 +59,7 @@ def add_candidate_coins(coins: list, handler: str):
         asset.price_precision_usdt = -int(math.log10(Decimal(price_filter['tickSize'])))
         asset.price_precision_irt = max(asset.price_precision_usdt - 3, 0)
 
-        if created:
-            _update_coin_networks(asset=asset, exchange_handler=exchange_handler)
+        _update_coin_networks(asset=asset, exchange_handler=exchange_handler)
 
         asset.save()
     create_missing_symbols()
@@ -69,17 +67,29 @@ def add_candidate_coins(coins: list, handler: str):
 
 def _update_coin_networks(asset: Asset, exchange_handler):
 
-    coin_data = exchange_handler.get_coin_data(asset.symbol)
+    coin_data = exchange_handler.get_spot_handler().get_coin_data(asset.symbol)
 
     for n in coin_data['networkList']:
-        network, _ = Network.objects.get_or_create(symbol=n['network'], defaults={
-            'name': n['name'],
-            'can_withdraw': False,
-            'can_deposit': False,
-            'address_regex': n['addressRegex'],
-            'min_confirm': n['minConfirm'],
-            'unlock_confirm': n['unLockConfirm'],
-        })
+        network = Network.objects.filter(symbol=n['network'])
+        if network:
+            network.update(
+                address_regex=n['addressRegex'],
+                min_confirm=n['minConfirm'],
+                unlock_confirm=n['unLockConfirm'],
+                kucoin_name=n.get('kucoin_name', '')
+            )
+            network = network.first()
+        else:
+            network = Network.objects.create(
+                symbol=n['network'],
+                name=n['name'],
+                kucoin_name=n.get('kucoin_name', ''),
+                can_deposit=False,
+                can_withdraw=False,
+                min_confirm=n['minConfirm'],
+                unlock_confirm=n['unLockConfirm'],
+                address_regex=n['addressRegex'],
+            )
 
         withdraw_integer_multiple = Decimal(n['withdrawIntegerMultiple'])
 
@@ -96,3 +106,4 @@ def _update_coin_networks(asset: Asset, exchange_handler):
                 'withdraw_precision': -int(math.log10(withdraw_integer_multiple))
             }
         )
+        print('alert: have attention to networkasset')
