@@ -29,12 +29,12 @@ def inject_tether_to_futures():
 
 @shared_task()
 def create_transfer_history():
-    BinanceSpotHandler.get_withdraw_history()
-    BinanceSpotHandler.get_deposit_history()
+    BinanceSpotHandler().get_withdraw_history()
+    BinanceSpotHandler().get_deposit_history()
 
 
 @shared_task()
 def get_binance_wallet():
-    BinanceSpotHandler.update_wallet()
-    BinanceFuturesHandler.update_wallet()
+    BinanceSpotHandler().update_wallet()
+    BinanceFuturesHandler().update_wallet()
 
