@@ -46,7 +46,7 @@ class PNLHistory(models.Model):
             lambda coin_amount: Decimal(get_price(coin_amount[0])) * coin_amount[1], account_input_outputs.items()
         ))
         profit = snapshot_balance - last_snapshot_balance - input_output_amount
-        return snapshot_balance, profit
+        return snapshot_balance, profit, input_output_amount
 
     @staticmethod
     def get_for_account_market(account, market, all_items):
@@ -58,12 +58,14 @@ class PNLHistory(models.Model):
     @staticmethod
     def get_all_wallets():
         return {
-            (wallet['wallet_market'], wallet['account'], wallet['asset__symbol']): wallet['balance'] for
+            (wallet['wallet_market'], wallet['account'], wallet['asset__symbol']): wallet['total_balance'] for
             wallet in Wallet.objects.filter(
                 account__type=Account.ORDINARY
             ).exclude(balance=0).annotate(
                 wallet_market=Case(When(market=Wallet.LOAN, then=V(Wallet.MARGIN)), default='market')
-            ).values('wallet_market', 'account', 'asset__symbol', 'balance')
+            ).values('wallet_market', 'account', 'asset__symbol').annotate(total_balance=Sum('balance')).values(
+                'wallet_market', 'account', 'asset__symbol', 'total_balance'
+            )
         }
 
     @staticmethod
@@ -73,7 +75,7 @@ class PNLHistory(models.Model):
         in_out_trxs = Trx.objects.filter(
             **datetime_filter
         ).exclude(
-            scope__in=(Trx.TRADE, Trx.COMMISSION, Trx.PRIZE,)
+            scope__in=(Trx.TRADE, Trx.COMMISSION, Trx.PRIZE, Trx.STAKE_REVENUE)
         ).annotate(asset=F('sender__asset__symbol')).values(
             'sender__market', 'receiver__market', 'asset', 'sender__account', 'receiver__account'
         ).annotate(total_amount=Sum('amount'))
