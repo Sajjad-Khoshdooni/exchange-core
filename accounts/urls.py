@@ -93,4 +93,5 @@ urlpatterns = [
     path('app/', views.AppStatusView.as_view()),
 
     path('shahkar/', staff_member_required(views.ShahkarCheckView.as_view())),
+    path('shahkar/status/', staff_member_required(views.ShahkarStatusView.as_view())),
 ]
