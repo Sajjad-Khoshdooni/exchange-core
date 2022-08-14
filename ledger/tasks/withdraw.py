@@ -31,7 +31,7 @@ def update_provider_withdraw():
     transfers = Transfer.objects.filter(
         deposit=False,
         status=Transfer.PENDING
-    ).filter(~Q(source=Transfer.SELF))
+    ).exclude(source=Transfer.SELF)
 
     for transfer in transfers:
         data = transfer.provider_transfer.get_status()

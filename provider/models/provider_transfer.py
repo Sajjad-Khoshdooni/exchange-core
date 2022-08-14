@@ -50,7 +50,7 @@ class ProviderTransfer(models.Model):
             memo=memo or ''
         )
 
-        handler = asset.get_hedger()
+        handler = asset.get_hedger().get_spot_handler()
         resp = handler.withdraw(
             coin=asset.symbol,
             network=network.symbol,
