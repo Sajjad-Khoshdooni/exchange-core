@@ -191,7 +191,7 @@ class ProviderOrder(models.Model):
 
             if not dry_run:
                 if market == cls.SPOT and side == cls.SELL:
-                    balance_map = handler.get_free_dict()
+                    balance_map = handler.get_spot_handler().get_free_dict()
                     balance = balance_map[asset.symbol]
 
                     if balance < order_amount:
