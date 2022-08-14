@@ -17,19 +17,6 @@ def create_provider_withdraw(transfer_id: int):
     handle_provider_withdraw(transfer_id)
 
 
-@shared_task(queue='blocklink')
-def update_withdraws():
-
-    re_handle_transfers = Transfer.objects.filter(
-        deposit=False,
-        source=Transfer.SELF,
-        status=Transfer.PROCESSING,
-    )
-
-    for transfer in re_handle_transfers:
-        create_withdraw.delay(transfer.id)
-
-
 @shared_task(queue='binance')
 def update_provider_withdraw():
     re_handle_transfers = Transfer.objects.filter(
@@ -110,3 +97,17 @@ def create_withdraw(transfer_id: int):
             'transfer_id': transfer_id,
             'resp': resp_data
         })
+
+
+@shared_task(queue='blocklink')
+def update_withdraws():
+
+    re_handle_transfers = Transfer.objects.filter(
+        deposit=False,
+        source=Transfer.SELF,
+        status=Transfer.PROCESSING,
+    )
+
+    for transfer in re_handle_transfers:
+        create_withdraw.delay(transfer.id)
+
