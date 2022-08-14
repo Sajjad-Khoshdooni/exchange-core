@@ -392,7 +392,7 @@ class BinanceSpotHandler(ExchangeHandler):
 
 class BinanceFuturesHandler(BinanceSpotHandler):
     order_url = '/fapi/v1/order'
-    MARKET = 'fut'
+    MARKET_TYPE = 'fut'
     renamed_symbols = {
         'SHIBUSDT': '1000SHIBUSDT'
     }
