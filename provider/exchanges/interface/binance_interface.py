@@ -26,9 +26,10 @@ class ExchangeHandler:
     NAME = ''
 
     @classmethod
-    def get_handler(self, name: str):
+    def get_handler(cls, name: str):
         from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler, KucoinFuturesHandler
         from ledger.models.asset import Asset
+
         mapping = {
             Asset.HEDGE_BINANCE_SPOT: BinanceSpotHandler,
             Asset.HEDGE_BINANCE_FUTURE: BinanceFuturesHandler,
@@ -103,7 +104,10 @@ class ExchangeHandler:
 
     def get_withdraw_status(self, withdraw_id: str) -> dict:
         raise NotImplementedError
-        
+
+    def get_spot_handler(self) -> 'ExchangeHandler':
+        raise NotImplementedError
+
 
 class BinanceSpotHandler(ExchangeHandler):
     order_url = '/api/v3/order'
@@ -381,6 +385,9 @@ class BinanceSpotHandler(ExchangeHandler):
                 defaults={'free': free, 'locked': locked, 'usdt_value': usdt_value}
             )
 
+    def get_spot_handler(self):
+        return self
+
 
 class BinanceFuturesHandler(BinanceSpotHandler):
     order_url = '/fapi/v1/order'
@@ -507,3 +514,6 @@ class BinanceFuturesHandler(BinanceSpotHandler):
                     type=BinanceWallet.FUTURES,
                     defaults={'free': free, 'locked': locked, 'usdt_value': usdt_value},
                 )
+
+    def get_spot_handler(self):
+        return BinanceSpotHandler()
