@@ -246,7 +246,8 @@ class BinanceSpotHandler(ExchangeHandler):
         from ledger.models import Transfer
         data = self.collect_api(
             '/sapi/v1/capital/withdraw/history', 'GET',
-            data={'withdrawOrderId': withdraw_id})
+            data={'withdrawOrderId': withdraw_id}
+        )
 
         if not data:
             return

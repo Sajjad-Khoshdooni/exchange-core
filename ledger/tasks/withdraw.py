@@ -2,11 +2,10 @@ import logging
 
 from celery import shared_task
 from django.conf import settings
-from django.db.models import Q
 
 from ledger.models import Transfer
-from ledger.withdraw.exchange import handle_provider_withdraw
 from ledger.utils.wallet_pipeline import WalletPipeline
+from ledger.withdraw.exchange import handle_provider_withdraw
 from provider.exchanges.interface.binance_interface import ExchangeHandler
 
 logger = logging.getLogger(__name__)
@@ -34,7 +33,7 @@ def update_provider_withdraw():
     ).exclude(source=Transfer.SELF)
 
     for transfer in transfers:
-        data = transfer.provider_transfer.get_status()
+        data = transfer.provider_transfer.get_status(transfer)
 
         status = data['status']
 

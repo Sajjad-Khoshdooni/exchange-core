@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.db import models
 from django.db.models import CheckConstraint, Q
 
-from ledger.models import Asset, Network
+from ledger.models import Asset, Network, Transfer
 from ledger.utils.fields import get_amount_field
 
 logger = logging.getLogger(__name__)
@@ -66,9 +66,9 @@ class ProviderTransfer(models.Model):
 
         return transfer
 
-    def get_status(self) -> dict:
+    def get_status(self, transfer: Transfer) -> dict:
         handler = self.transfer.asset.get_hedger().get_spot_handler()
-        return handler.get_withdraw_status(self.provider_transfer_id)
+        return handler.get_withdraw_status(transfer.id)
 
     def __str__(self):
         return '%s %s %s' % (self.asset, self.amount, self.network)
