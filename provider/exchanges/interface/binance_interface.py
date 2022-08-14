@@ -42,11 +42,9 @@ class ExchangeHandler:
     def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
                     cache_timeout: int = None):
         cache_key = None
-
         if cache_timeout:
             cache_key = get_cache_func_key(self.__class__, url, method, data, signed)
             result = cache.get(cache_key)
-
             if result is not None:
                 return result
 
@@ -67,7 +65,7 @@ class ExchangeHandler:
                     client_order_id: str = None) -> dict:
         raise NotImplementedError
 
-    def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal,
+    def withdraw(self, coin: str, network, address: str, transfer_amount: Decimal,
                  fee_amount: Decimal, address_tag: str = None,
                  client_id: str = None) -> dict:
         raise NotImplementedError
@@ -84,10 +82,10 @@ class ExchangeHandler:
     def get_coin_data(self, coin: str) -> Union[dict, None]:
         raise NotImplementedError
 
-    def get_network_info(self, coin: str, network: str) -> Union[dict, None]:
+    def get_network_info(self, coin: str, network) -> Union[dict, None]:
         raise NotImplementedError
 
-    def get_withdraw_fee(self, coin: str, network: str) -> Decimal:
+    def get_withdraw_fee(self, coin: str, network) -> Decimal:
         raise NotImplementedError
 
     def transfer(self, asset: str, amount: float, market: str, transfer_type: int):
@@ -157,12 +155,12 @@ class BinanceSpotHandler(ExchangeHandler):
 
         return self.collect_api(self.order_url, data=data, method=POST)
 
-    def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal, fee_amount: Decimal,
+    def withdraw(self, coin: str, network, address: str, transfer_amount: Decimal, fee_amount: Decimal,
                  address_tag: str = None, client_id: str = None, memo: str = None) -> dict:
 
         data = {
             'coin': coin,
-            'network': network,
+            'network': network.symbol,
             'amount': decimal_to_str(Decimal(transfer_amount) + Decimal(fee_amount)),
             'address': address,
             'addressTag': address_tag,
@@ -191,12 +189,12 @@ class BinanceSpotHandler(ExchangeHandler):
 
         return info[0]
 
-    def get_network_info(self, coin: str, network: str) -> Union[dict, None]:
+    def get_network_info(self, coin: str, network) -> Union[dict, None]:
         coin = self.get_coin_data(coin)
         if not coin:
             return
 
-        networks = list(filter(lambda d: d['network'] == network, coin['networkList']))
+        networks = list(filter(lambda d: d['network'] == network.symbol, coin['networkList']))
 
         if not networks:
             return
@@ -208,7 +206,7 @@ class BinanceSpotHandler(ExchangeHandler):
 
         return network
 
-    def get_withdraw_fee(self, coin: str, network: str) -> Decimal:
+    def get_withdraw_fee(self, coin: str, network) -> Decimal:
         info = self.get_network_info(coin, network)
         return Decimal(info['withdrawFee'])
 
@@ -518,3 +516,10 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
     def get_spot_handler(self):
         return BinanceSpotHandler()
+
+    def get_free_dict(self):
+        raise NotImplementedError
+
+    def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal, fee_amount: Decimal,
+                 address_tag: str = None, client_id: str = None, memo: str = None) -> dict:
+        raise NotImplementedError
