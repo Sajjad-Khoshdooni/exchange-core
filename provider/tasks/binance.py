@@ -17,7 +17,7 @@ def inject_tether_to_futures():
         usdt_amount = min(balance_map[Asset.USDT], 2000)
 
         if usdt_amount > 1:
-            BinanceSpotHandler().transfer('USDT', usdt_amount, 'futures', 1)
+            BinanceSpotHandler().transfer('USDT', float(usdt_amount), 'futures', 1)
 
         send_system_message(
             message='small margin ratio = %s' % round(futures_margin_ratio, 3),
