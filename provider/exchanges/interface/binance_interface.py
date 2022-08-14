@@ -36,7 +36,7 @@ class ExchangeHandler:
             Asset.HEDGE_KUCOIN_FUTURE: KucoinFuturesHandler
         }
 
-        return mapping[name]()
+        return mapping.get(name, BinanceSpotHandler)()
 
     def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
                     cache_timeout: int = None):
