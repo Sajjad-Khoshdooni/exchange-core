@@ -207,7 +207,7 @@ class ProviderOrder(models.Model):
                 symbol = handler.get_trading_symbol(asset.symbol)
 
                 if side == BUY and symbol.endswith('BUSD'):
-                    balance_map = BinanceSpotHandler.get_free_dict()
+                    balance_map = BinanceSpotHandler().get_free_dict()
                     busd_balance = balance_map['BUSD']
 
                     needed_busd = order_amount * price
