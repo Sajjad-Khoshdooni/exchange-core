@@ -113,7 +113,7 @@ class BinanceSpotHandler(ExchangeHandler):
     NAME = 'binance'
 
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        if settings.DEBUG_OR_TESTING:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             return {}
 
         data = data or {}
@@ -396,7 +396,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
     }
 
     def _collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True):
-        if settings.DEBUG_OR_TESTING:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             return {}
 
         data = data or {}
