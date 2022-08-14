@@ -7,7 +7,7 @@ from financial.models import Investment, InvestmentRevenue, FiatWithdrawRequest
 from financial.utils.stats import get_total_fiat_irt
 from ledger.models import Asset, Wallet, Transfer
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
-from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, get_binance_trading_symbol, BUY
+from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, BUY
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
 
@@ -20,7 +20,7 @@ def get_internal_asset_deposits():
 
 class AssetOverview:
     def __init__(self):
-        self._future = BinanceFuturesHandler.get_account_details()
+        self._future = BinanceFuturesHandler().get_account_details()
 
         self._future_positions = {
             pos['symbol']: pos for pos in self._future['positions']
@@ -37,7 +37,7 @@ class AssetOverview:
 
         self.usdt_irt = get_tether_irt_price(SELL)
 
-        balances_list = BinanceSpotHandler.get_account_details()['balances']
+        balances_list = BinanceSpotHandler().get_account_details()['balances']
         self._binance_spot_balance_map = {b['asset']: float(b['free']) for b in balances_list}
 
         self._internal_deposits = get_internal_asset_deposits()
@@ -72,7 +72,11 @@ class AssetOverview:
         if asset.symbol == Asset.USDT:
             return self._future['availableBalance']
 
-        symbol = get_binance_trading_symbol(asset.future_symbol)
+        if Asset.hedge_method == Asset.HEDGE_KUCOIN_SPOT:
+            return
+
+        handler = asset.get_hedger()
+        symbol = handler.get_trading_symbol(asset.future_symbol)
         amount = float(self._future_positions.get(symbol, {}).get('positionAmt', 0))
 
         if asset.symbol == Asset.SHIB:
@@ -93,7 +97,8 @@ class AssetOverview:
         return value
 
     def get_future_position_value(self, asset: Asset):
-        return float(self._future_positions.get(get_binance_trading_symbol(asset.future_symbol), {}).get('notional', 0))
+        handler = asset.get_hedger()
+        return float(self._future_positions.get(handler.get_trading_symbol(asset.future_symbol), {}).get('notional', 0))
 
     def get_investment_amount(self, asset: Asset) -> Decimal:
         return self._investment.get(asset.symbol, 0) + self._investment_revenue.get(asset.symbol, 0)

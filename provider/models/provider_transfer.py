@@ -6,7 +6,6 @@ from django.db.models import CheckConstraint, Q
 
 from ledger.models import Asset, Network
 from ledger.utils.fields import get_amount_field
-from provider.exchanges import BinanceSpotHandler
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +15,7 @@ class ProviderTransfer(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
 
-    exchange = models.CharField(max_length=8, default=BINANCE)
+    exchange = models.CharField(max_length=16, default=BINANCE)
 
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     network = models.ForeignKey(Network, on_delete=models.CASCADE)
@@ -32,24 +31,34 @@ class ProviderTransfer(models.Model):
         constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_provider_transfer_amount', ), ]
 
     @classmethod
-    def new_withdraw(cls, asset: Asset, network: Network, amount: Decimal, address: str,
-                     caller_id: str = '',  memo: str = None) -> 'ProviderTransfer':
+    def new_withdraw(cls, asset: Asset, network: Network, transfer_amount: Decimal, withdraw_fee: Decimal, address: str,
+                     caller_id: str = '', exchange: str = BINANCE,  memo: str = None) -> 'ProviderTransfer':
+
+        amount = Decimal(transfer_amount) + Decimal(withdraw_fee)
 
         if ProviderTransfer.objects.filter(provider_transfer_id__isnull=False, caller_id=caller_id).exists():
             logger.warning('transfer ignored due to duplicated caller_id')
             return
 
         transfer = ProviderTransfer.objects.create(
-            asset=asset, network=network, amount=amount, address=address, caller_id=caller_id, memo=memo or '',
+            asset=asset,
+            network=network,
+            amount=amount,
+            address=address,
+            caller_id=caller_id,
+            exchange=exchange,
+            memo=memo or ''
         )
 
-        resp = BinanceSpotHandler.withdraw(
+        handler = asset.get_hedger()
+        resp = handler.withdraw(
             coin=asset.symbol,
             network=network.symbol,
             address=address,
-            amount=amount,
-            client_id=transfer.id,
+            transfer_amount=transfer_amount,
+            fee_amount=withdraw_fee,
             memo=memo,
+            client_id=transfer.id,
         )
 
         transfer.provider_transfer_id = resp['id']
@@ -58,17 +67,8 @@ class ProviderTransfer(models.Model):
         return transfer
 
     def get_status(self) -> dict:
-        data = BinanceSpotHandler.collect_api(
-            '/sapi/v1/capital/withdraw/history', 'GET',
-            data={'withdrawOrderId': self.id}
-        )
-
-        if not data:
-            return
-
-        data = data[0]
-
-        return data
+        handler = self.transfer.asset.get_hedger()
+        return handler.get_withdraw_status(self.provider_transfer_id)
 
     def __str__(self):
         return '%s %s %s' % (self.asset, self.amount, self.network)

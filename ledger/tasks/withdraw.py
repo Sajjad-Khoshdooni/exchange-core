@@ -2,17 +2,19 @@ import logging
 
 from celery import shared_task
 from django.conf import settings
+from django.db.models import Q
 
 from ledger.models import Transfer
+from ledger.withdraw.exchange import handle_provider_withdraw
 from ledger.utils.wallet_pipeline import WalletPipeline
-from ledger.withdraw.binance import handle_binance_withdraw
+from provider.exchanges.interface.binance_interface import ExchangeHandler
 
 logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='binance')
-def create_binance_withdraw(transfer_id: int):
-    handle_binance_withdraw(transfer_id)
+def create_provider_withdraw(transfer_id: int):
+    handle_provider_withdraw(transfer_id)
 
 
 @shared_task(queue='blocklink')
@@ -29,22 +31,20 @@ def update_withdraws():
 
 
 @shared_task(queue='binance')
-def update_binance_withdraw():
+def update_provider_withdraw():
     re_handle_transfers = Transfer.objects.filter(
         deposit=False,
-        source=Transfer.BINANCE,
         status=Transfer.PROCESSING,
         handling=False
-    )
+    ).exclude(source=Transfer.SELF)
 
     for transfer in re_handle_transfers:
-        create_binance_withdraw.delay(transfer.id)
+        create_provider_withdraw.delay(transfer.id)
 
     transfers = Transfer.objects.filter(
         deposit=False,
-        source=Transfer.BINANCE,
         status=Transfer.PENDING
-    )
+    ).filter(~Q(source=Transfer.SELF))
 
     for transfer in transfers:
         data = transfer.provider_transfer.get_status()
@@ -54,13 +54,13 @@ def update_binance_withdraw():
         if 'txId' in data:
             transfer.trx_hash = data['txId']
 
-        if status % 2 == 1:
+        if status == transfer.CANCELED:
             with WalletPipeline() as pipeline:
                 pipeline.release_lock(transfer.group_id)
                 transfer.status = transfer.CANCELED
                 transfer.save()
-            
-        elif status == 6:
+
+        elif status == transfer.DONE:
 
             with WalletPipeline() as pipeline:  # type: WalletPipeline
                 transfer.status = transfer.DONE
@@ -100,10 +100,9 @@ def create_withdraw(transfer_id: int):
         transfer.save(update_fields=['status', 'trx_hash'])
 
     elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
-        transfer.source = Transfer.BINANCE
+        transfer.source = ExchangeHandler.get_handler(transfer.asset.hedge_method).NAME
         transfer.save(update_fields=['source'])
-        create_binance_withdraw(transfer_id=transfer.id)
-
+        create_provider_withdraw(transfer_id=transfer.id)
     else:
         transfer.status = Transfer.PENDING
         transfer.save(update_fields=['status'])

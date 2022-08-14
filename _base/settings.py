@@ -24,7 +24,7 @@ DEBUG = config('DEBUG', cast=bool, default=False)
 STAGING = config('STAGING', cast=bool, default=False)
 TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
-DEBUG_OR_TESTING = DEBUG or STAGING or TESTING
+DEBUG_OR_TESTING = DEBUG or TESTING
 
 HOST_URL = config('HOST_URL')
 
@@ -262,7 +262,7 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
 }
 
-if not (DEBUG or TESTING):
+if not DEBUG_OR_TESTING:
     with open(config('JWT_PRIVATE_KEY_PATH', './jwtRS256.key'), 'r') as fin:
         JWT_PRIVATE_KEY = fin.read()
     with open(config('JWT_PUBLIC_KEY_PATH', './jwtRS256.key.pub'), 'r') as fin:

@@ -8,19 +8,19 @@ from django.utils import timezone
 
 from ledger.models import Transfer, Asset
 from ledger.utils.price import BUY, get_price, SELL
-from provider.exchanges import BinanceSpotHandler
 from provider.models import ProviderTransfer, ProviderHedgedOrder
 
 logger = logging.getLogger(__name__)
 
 
-def handle_binance_withdraw(transfer_id: int):
+def handle_provider_withdraw(transfer_id: int):
     if settings.DEBUG_OR_TESTING:
         return
 
     logger.info('withdraw handling transfer_id = %d' % transfer_id)
 
     transfer = Transfer.objects.get(id=transfer_id)
+    handler = transfer.asset.get_hedger()
 
     if transfer.handling:
         logger.info('ignored because of handling flag')
@@ -31,21 +31,21 @@ def handle_binance_withdraw(transfer_id: int):
         transfer.save()
 
         assert not transfer.deposit
-        assert transfer.source == transfer.BINANCE
+        assert transfer.source == handler.NAME
         assert transfer.status == transfer.PROCESSING
         assert not transfer.provider_transfer
 
-        balance_map = BinanceSpotHandler.get_free_dict()
+        balance_map = handler.get_free_dict()
 
         coin = transfer.asset.symbol
 
-        binance_fee = BinanceSpotHandler.get_withdraw_fee(transfer.asset.symbol, transfer.network.symbol)
-        amount = transfer.amount + binance_fee
+        fee = handler.get_withdraw_fee(transfer.asset.symbol, transfer.network.symbol)
+        amount = transfer.amount + fee
 
         if balance_map[coin] < amount:
             to_buy_amount = amount - balance_map[coin]
 
-            logger.info('not enough %s in binance spot. So buy %s of it!' % (coin, to_buy_amount))
+            logger.info('not enough %s in interface spot. So buy %s of it!' % (coin, to_buy_amount))
 
             if coin != Asset.USDT:
                 to_buy_value = to_buy_amount * get_price(coin, side=SELL) * Decimal('1.002')
@@ -53,7 +53,7 @@ def handle_binance_withdraw(transfer_id: int):
                 to_buy_value = to_buy_amount
 
             if to_buy_value > balance_map[Asset.USDT]:
-                raise Exception('insufficient balance in binance spot to full fill withdraw')
+                raise Exception('insufficient balance in interface spot to full fill withdraw')
 
             if transfer.asset.symbol != Asset.USDT:
                 prev_hedge = ProviderHedgedOrder.objects.filter(caller_id=transfer.id).first()
@@ -72,31 +72,36 @@ def handle_binance_withdraw(transfer_id: int):
                 logger.info('waiting to finish buying...')
                 time.sleep(1)
 
-        balance_map = BinanceSpotHandler.get_free_dict()
+        balance_map = handler.get_free_dict()
 
         if balance_map[coin] < amount:
             logger.info('ignored withdrawing because of insufficient spot balance')
             return
 
-        withdraw(transfer)
+        provider_withdraw(transfer)
 
     finally:
         transfer.handling = False
         transfer.save()
 
 
-def withdraw(transfer: Transfer):
-    binance_fee = BinanceSpotHandler.get_withdraw_fee(transfer.wallet.asset.symbol, transfer.network.symbol)
-    withdraw_amount = transfer.amount + binance_fee
+def provider_withdraw(transfer: Transfer):
 
-    logger.info('withdrawing %s %s in %s network' % (withdraw_amount, transfer.asset, transfer.network))
+    assert transfer.source == transfer.asset.get_hedger().NAME
+
+    handler = transfer.asset.get_hedger()
+    withdraw_fee = handler.get_withdraw_fee(transfer.wallet.asset.symbol, transfer.network.symbol)
+
+    logger.info('withdrawing %s %s in %s network' % (withdraw_fee + transfer.amount, transfer.asset, transfer.network))
 
     provider_transfer = ProviderTransfer.new_withdraw(
-        transfer.asset,
-        transfer.network,
-        withdraw_amount,
-        transfer.out_address,
+        asset=transfer.asset,
+        network=transfer.network,
+        transfer_amount=transfer.amount,
+        withdraw_fee=withdraw_fee,
+        address=transfer.out_address,
         caller_id=str(transfer.id),
+        exchange=transfer.source,
         memo=transfer.memo,
     )
 

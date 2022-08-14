@@ -12,14 +12,14 @@ from ledger.exceptions import HedgeError
 from ledger.models import Asset, Wallet
 from ledger.utils.fields import get_amount_field
 from ledger.utils.precision import floor_precision
-from ledger.utils.price import get_trading_price_usdt, SELL, get_binance_trading_symbol, BUY
-from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
+from ledger.utils.price import get_trading_price_usdt, SELL, BUY
+from provider.exchanges import BinanceSpotHandler, BinanceFuturesHandler
+from provider.exchanges.interface.kucoin_interface import KucoinFuturesHandler, KucoinSpotHandler
 
 logger = logging.getLogger(__name__)
 
 
 class ProviderOrder(models.Model):
-    BINANCE = 'binance'
 
     SPOT, MARGIN, FUTURE = 'spot', 'mar', 'fut'
 
@@ -32,7 +32,7 @@ class ProviderOrder(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
 
-    exchange = models.CharField(max_length=8, default=BINANCE)
+    exchange = models.CharField(max_length=32)
     market = models.CharField(
         max_length=4,
         default=FUTURE,
@@ -60,6 +60,8 @@ class ProviderOrder(models.Model):
     @classmethod
     def new_order(cls, asset: Asset, side: str, amount: Decimal, scope: str, market: str = FUTURE,
                   hedge_amount: Decimal = 0) -> 'ProviderOrder':
+
+        handler = asset.get_hedger()
         with transaction.atomic():
             order = ProviderOrder.objects.create(
                 asset=asset,
@@ -67,31 +69,37 @@ class ProviderOrder(models.Model):
                 side=side,
                 scope=scope,
                 market=market,
-                hedge_amount=hedge_amount
+                hedge_amount=hedge_amount,
+                exchange=asset.hedge_method
             )
 
-            symbol = cls.get_trading_symbol(asset)
+            symbol = handler.get_trading_symbol(asset.symbol)
 
-            if market == cls.FUTURE and asset.symbol == 'SHIB':
+            if asset.get_hedger() == Asset.HEDGE_BINANCE_FUTURE and market == cls.FUTURE and asset.symbol == 'SHIB':
                 symbol = symbol.replace('SHIB', '1000SHIB')
                 amount = round(amount / 1000)
 
             if market == cls.FUTURE:
-                resp = BinanceFuturesHandler.place_order(
-                    symbol=symbol,
-                    side=side,
-                    amount=amount,
-                    client_order_id=order.id
-                )
+                if asset.get_hedger().NAME == KucoinSpotHandler.NAME:
+                    handler = KucoinFuturesHandler
+                else:
+                    handler = BinanceFuturesHandler
+
             elif market == cls.SPOT:
-                resp = BinanceSpotHandler.place_order(
-                    symbol=symbol,
-                    side=side,
-                    amount=amount,
-                    client_order_id=order.id
-                )
+                if asset.get_hedger().NAME == KucoinSpotHandler.NAME:
+                    handler = KucoinSpotHandler
+                else:
+                    handler = BinanceSpotHandler
+
             else:
                 raise NotImplementedError
+
+            resp = handler().place_order(
+                symbol=symbol,
+                side=side,
+                amount=amount,
+                client_order_id=order.id
+            )
 
             order.order_id = resp['orderId']
             order.save()
@@ -132,14 +140,10 @@ class ProviderOrder(models.Model):
         return system_balance + orders_amount
 
     @classmethod
-    def get_trading_symbol(cls, asset: Asset) -> str:
-        return get_binance_trading_symbol(asset.symbol)
-
-    @classmethod
     def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '',
-                                dry_run: bool = False, raise_exception: bool = False, hedge_method: str = None) -> bool:
+                                dry_run: bool = False, raise_exception: bool = False) -> bool:
         # todo: this method should not called more than once at a single time
-
+        handler = asset.get_hedger()
         if settings.DEBUG_OR_TESTING:
             logger.info('ignored due to debug')
             return True
@@ -151,18 +155,10 @@ class ProviderOrder(models.Model):
         to_buy = amount if side == cls.BUY else -amount
         hedge_amount = cls.get_hedge(asset) - to_buy
 
-        symbol = cls.get_trading_symbol(asset)
+        symbol = handler.get_trading_symbol(asset.symbol)
 
-        hedge_method = hedge_method or asset.hedge_method
-
-        if hedge_method == Asset.HEDGE_BINANCE_FUTURE:
-            handler = BinanceFuturesHandler
-            market = cls.FUTURE
-        elif hedge_method == Asset.HEDGE_BINANCE_SPOT:
-            handler = BinanceSpotHandler
-            market = cls.SPOT
-        else:
-            raise NotImplementedError
+        handler = asset.get_hedger()
+        market = handler.MARKET_TYPE
 
         step_size = handler.get_step_size(symbol)
 
@@ -194,10 +190,8 @@ class ProviderOrder(models.Model):
                 return True
 
             if not dry_run:
-                symbol = cls.get_trading_symbol(asset)
-
                 if market == cls.SPOT and side == cls.SELL:
-                    balance_map = BinanceSpotHandler.get_free_dict()
+                    balance_map = handler.get_free_dict()
                     balance = balance_map[asset.symbol]
 
                     if balance < order_amount:
@@ -210,18 +204,7 @@ class ProviderOrder(models.Model):
                                 logger.info('ignored due to small order')
                                 return True
 
-                        else:
-                            if BinanceFuturesHandler.get_position_amount(symbol) >= order_amount:
-                                logger.info('rotating hedge to futures due to insufficient spot balance')
-                                return cls.try_hedge_for_new_order(
-                                    asset=asset,
-                                    scope=scope,
-                                    amount=amount,
-                                    side=side,
-                                    dry_run=dry_run,
-                                    raise_exception=raise_exception,
-                                    hedge_method=Asset.HEDGE_BINANCE_FUTURE
-                                )
+                symbol = handler.get_trading_symbol(asset.symbol)
 
                 if side == BUY and symbol.endswith('BUSD'):
                     balance_map = BinanceSpotHandler.get_free_dict()

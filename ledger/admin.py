@@ -13,7 +13,7 @@ from ledger.models import Asset, Prize, CoinCategory
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import get_trading_price_usdt, get_binance_trading_symbol, SELL
+from ledger.utils.price import get_trading_price_usdt, SELL
 from provider.models import ProviderOrder
 
 
@@ -140,11 +140,11 @@ class AssetAdmin(AdvancedAdmin):
 
     def get_hedge_threshold(self, asset: Asset):
         if asset.enable:
-            hedger = asset.get_hedger()
+            handler = asset.get_hedger()
 
-            if hedger:
-                symbol = get_binance_trading_symbol(asset.symbol)
-                return hedger.get_step_size(symbol)
+            if handler:
+                symbol = handler.get_trading_symbol(coin=asset.symbol)
+                return handler.get_step_size(symbol)
 
     get_hedge_threshold.short_description = 'hedge threshold'
 
@@ -160,7 +160,7 @@ class NetworkAdmin(admin.ModelAdmin):
 
 @admin.register(models.NetworkAsset)
 class NetworkAssetAdmin(admin.ModelAdmin):
-    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'can_deposit', 'binance_withdraw_enable')
+    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'can_deposit', 'hedger_withdraw_enable')
     search_fields = ('asset__symbol', )
     list_editable = ('can_deposit', )
     list_filter = ('network', )
