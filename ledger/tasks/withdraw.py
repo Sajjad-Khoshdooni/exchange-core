@@ -33,7 +33,7 @@ def update_provider_withdraw():
     ).exclude(source=Transfer.SELF)
 
     for transfer in transfers:
-        data = transfer.provider_transfer.get_status(transfer)
+        data = transfer.provider_transfer.get_status()
 
         status = data['status']
 
