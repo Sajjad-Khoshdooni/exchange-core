@@ -1,12 +1,11 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from django.http import HttpResponse
+from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
-from django.views.generic import FormView
+from django.views.generic import FormView, TemplateView
 
 from accounts.models import User
-from accounts.verifiers.finotech import ServerError
-from accounts.verifiers.jibit import JibitRequester
+from accounts.verifiers.jibit_basic_verify import shahkar_check
 
 
 class ShahkarForm(forms.Form):
@@ -32,10 +31,15 @@ class ShahkarCheckView(FormView):
         phone = form.cleaned_data['phone']
 
         user = User.objects.filter(national_code=national_code).order_by('id').last()
-        requester = JibitRequester(user)
-        try:
-            matched = requester.matching(phone_number=phone, national_code=national_code)
-        except (TimeoutError, ServerError):
-            return HttpResponse("Jibit error")
+        matched = shahkar_check(user, phone=phone, national_code=national_code)
 
-        return HttpResponse("Matched: %s" % matched)
+        return HttpResponseRedirect('/api/v1/accounts/shahkar/status/?matched=%s' % matched)
+
+
+class ShahkarStatusView(TemplateView):
+    template_name = 'accounts/shahkar_confirm.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super(ShahkarStatusView, self).get_context_data(**kwargs)
+        ctx['matched'] = self.request.GET.get('matched')
+        return ctx

@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
-from django.db.models import Q
+from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
@@ -29,6 +29,8 @@ class User(AbstractUser):
     USERNAME_FIELD = 'phone'
 
     FIAT, CRYPTO = 'fiat', 'crypto'
+
+    NATIONAL_CODE_DUPLICATED = 'duplicated-national-code'
 
     objects = CustomUserManager()
     history = HistoricalRecords()
@@ -79,6 +81,12 @@ class User(AbstractUser):
         choices=((INIT, INIT), (PENDING, PENDING), (REJECTED, REJECTED), (VERIFIED, VERIFIED)),
         default=INIT,
         verbose_name='وضعیت تایید'
+    )
+
+    reject_reason = models.CharField(
+        max_length=32,
+        blank=True,
+        choices=((NATIONAL_CODE_DUPLICATED, NATIONAL_CODE_DUPLICATED), )
     )
 
     first_fiat_deposit_date = models.DateTimeField(blank=True, null=True, verbose_name='زمان اولین واریز ریالی')
@@ -133,11 +141,26 @@ class User(AbstractUser):
         verbose_name = _('user')
         verbose_name_plural = _('users')
 
-    def change_status(self, status: str):
+        constraints = [
+            UniqueConstraint(
+                fields=["national_code"],
+                name="unique_verified_national_code",
+                condition=Q(level__gt=1),
+            )
+        ]
+
+    def change_status(self, status: str, reason: str = ''):
         from accounts.tasks.verify_user import alert_user_verify_status
 
         if self.verify_status != self.VERIFIED and status == self.VERIFIED:
             self.verify_status = self.INIT
+
+            if self.level == User.LEVEL1:
+                if User.objects.filter(level__gte=User.LEVEL2, national_code=self.national_code).exclude(id=self.id):
+                    self.national_code_verified = False
+                    self.save(update_fields=['national_code_verified'])
+                    return self.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
+
             self.level += 1
             with transaction.atomic():
                 if self.level == User.LEVEL2:
@@ -147,7 +170,7 @@ class User(AbstractUser):
                     self.level_3_verify_datetime = timezone.now()
 
                 self.archived = False
-                self.save()
+                self.save(update_fields=['verify_status', 'level', 'level_2_verify_datetime', 'level_3_verify_datetime', 'archived'])
 
             alert_user_verify_status(self)
 
@@ -160,14 +183,15 @@ class User(AbstractUser):
                 )
 
             self.verify_status = status
-            self.save()
+            self.reject_reason = reason
+            self.save(update_fields=['verify_status', 'reject_reason'])
 
             alert_user_verify_status(self)
 
         else:
             self.verify_status = status
             self.archived = False
-            self.save()
+            self.save(update_fields=['verify_status', 'archived'])
 
     @property
     def primary_data_verified(self) -> bool:

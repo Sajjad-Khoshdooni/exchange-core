@@ -13,6 +13,8 @@ class LiveManager(models.Manager):
 
 
 class BankCard(models.Model):
+    DUPLICATED = 'duplicated'
+
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
@@ -26,7 +28,15 @@ class BankCard(models.Model):
 
     verified = models.BooleanField(null=True, blank=True)
     kyc = models.BooleanField(default=False)
+
     deleted = models.BooleanField(default=False)
+
+    bank = models.CharField(blank=True, max_length=64)
+    type = models.CharField(blank=True, max_length=64)
+    owner_name = models.CharField(blank=True, max_length=256)
+    deposit_number = models.CharField(blank=True, max_length=128)
+
+    reject_reason = models.CharField(max_length=128, blank=True)
 
     history = HistoricalRecords()
 
@@ -54,6 +64,11 @@ class BankCard(models.Model):
                 name="bank_card_unique_kyc_user",
                 condition=Q(deleted=False, kyc=True),
             ),
+            UniqueConstraint(
+                fields=["card_pan"],
+                name="unique_bank_card_verified_card_pan",
+                condition=Q(verified=True, deleted=False),
+            )
         ]
 
 
@@ -106,6 +121,11 @@ class BankAccount(models.Model):
                 fields=["iban", "user"],
                 name="unique_bank_account_iban",
                 condition=Q(deleted=False),
+            ),
+            UniqueConstraint(
+                fields=["iban"],
+                name="unique_bank_account_verified_iban",
+                condition=Q(verified=True, deleted=False),
             )
         ]
 

@@ -5,7 +5,31 @@ whitespace_regex = re.compile(r"\s+")
 
 
 def clean_persian_name(name: str):
-    name = name.replace('ك', 'ک').replace('ي', 'ی').replace('أ', 'ا').replace('ۀ', 'ه').strip()
+    mapping = {
+        'ك': 'ک',
+        'ي': 'ی',
+        'أ': 'ا',
+        'ۀ': 'ه',
+        'ء': '',
+        'ّ': '',
+        'َ': '',
+        'ِ': '',
+        'ُ': '',
+        'ً': '',
+        'ٍ': '',
+        'ٌ': '',
+        'ْ': '',
+        'ؤ': 'و',
+        'ئ': 'ی',
+        'إ': 'ا',
+        'آ': 'ا',
+        'ة': 'ه',
+        'ٓ': '',
+        'ٰ': '',
+        'ٔ': '',
+    }
+
+    name = name.translate(str.maketrans(mapping)).strip()
     return whitespace_regex.sub(' ', name)
 
 

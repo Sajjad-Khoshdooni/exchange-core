@@ -14,11 +14,8 @@ def update_network_fees():
     network_assets = NetworkAsset.objects.all()
 
     for ns in network_assets:
-        coin = ns.asset.symbol
         handler = ns.asset.get_hedger().get_spot_handler()
-        info = handler.get_network_info(backward_rename_coin(coin), ns.network)
-
-        coin_coefficient = get_coin_coefficient(coin)
+        info = handler.get_network_info(ns.asset.symbol, ns.network.symbol)
 
         if info:
             symbol_pair = (ns.network.symbol, ns.asset.symbol)

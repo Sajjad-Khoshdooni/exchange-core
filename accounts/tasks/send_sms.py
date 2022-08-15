@@ -71,8 +71,6 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
         {"Parameter": key, "ParameterValue": value} for (key, value) in params.items()
     ]
 
-    token = get_sms_ir_token()
-
     resp = requests.post(
         url='https://RestfulSms.com/api/UltraFastSend',
         json={
@@ -81,7 +79,7 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
             "TemplateId": template
         },
         headers={
-            'x-sms-ir-secure-token': token
+            'x-sms-ir-secure-token': get_sms_ir_token()
         }
     )
 

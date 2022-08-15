@@ -63,6 +63,8 @@ class DepositSerializer(serializers.ModelSerializer):
                 if status == Transfer.DONE:
                     prev_transfer.build_trx(pipeline)
 
+            prev_transfer.alert_user()
+
             return prev_transfer
 
         else:
