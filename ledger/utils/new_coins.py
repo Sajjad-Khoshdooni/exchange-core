@@ -6,6 +6,8 @@ from market.utils.fix import create_missing_symbols
 from provider.exchanges.interface.binance_interface import BinanceSpotHandler, BinanceFuturesHandler
 from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 
+def get_coin_coefficient()
+    pass
 
 def add_candidate_coins(coins: list, handler: str):
 
@@ -109,6 +111,7 @@ def _update_coin_networks(asset: Asset, exchange_handler):
 
         if withdraw_integer_multiple == 0:
             withdraw_integer_multiple = Decimal('1e-9')
+
 
         NetworkAsset.objects.get_or_create(
             asset=asset,
