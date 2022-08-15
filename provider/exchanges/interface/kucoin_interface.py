@@ -27,7 +27,7 @@ class KucoinSpotHandler(ExchangeHandler):
 
     def rename_big_coin_to_coin(self, coin: str):
         rename_list = {
-            '1MELON': 'ELON'
+            '1M-ELON': 'ELON'
         }
         return rename_list.get(coin, coin)
 
