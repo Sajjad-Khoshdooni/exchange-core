@@ -56,7 +56,7 @@ class Asset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
-    symbol = models.CharField(max_length=8, unique=True, db_index=True)
+    symbol = models.CharField(max_length=16, unique=True, db_index=True)
 
     trade_quantity_step = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
     min_trade_quantity = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')

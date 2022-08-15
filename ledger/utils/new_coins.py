@@ -6,8 +6,28 @@ from market.utils.fix import create_missing_symbols
 from provider.exchanges.interface.binance_interface import BinanceSpotHandler, BinanceFuturesHandler
 from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 
-def get_coin_coefficient()
-    pass
+
+def get_coin_coefficient(coin: str):
+    coin = backward_rename_coin(coin)
+    coin_with_low_price = {
+        'ELON': 1000000
+    }
+    return coin_with_low_price.get(coin, 1)
+
+
+def forward_rename_coin(coin: str):
+    rename_list = {
+        'ELON': '1MELON',
+    }
+    return rename_list.get(coin, coin)
+
+
+def backward_rename_coin(coin: str):
+    rename_list = {
+        '1MELON': 'ELON'
+    }
+    return rename_list.get(coin, coin)
+
 
 def add_candidate_coins(coins: list, handler: str):
 
@@ -20,30 +40,21 @@ def add_candidate_coins(coins: list, handler: str):
         'kucoin': Asset.HEDGE_KUCOIN_SPOT
     }
 
-    shet_coin = {
-        'ELON': 1000000
-    }
-
     exchange_handler = handler_mapping.get(handler)()
 
     order = Asset.objects.order_by('order').last().order
 
     for coin in coins:
-        coin = coin.upper()
+
         spot_symbol = exchange_handler.get_trading_symbol(coin=coin)
 
         spot = exchange_handler.get_symbol_data(spot_symbol)
-
-        if coin in shet_coin:
-            value = shet_coin[coin]
-        else:
-            value = 1
 
         if not spot or spot.get('status') != 'TRADING':
             print('%s not found or stopped trading in interface spot' % spot_symbol)
             continue
 
-        asset, created = Asset.objects.get_or_create(symbol=coin)
+        asset, created = Asset.objects.get_or_create(symbol=forward_rename_coin(coin))
 
         asset.hedge_method = hedger_mapping[handler]
 
@@ -55,7 +66,7 @@ def add_candidate_coins(coins: list, handler: str):
             asset.candidate = True
 
         if exchange_handler.NAME == BinanceSpotHandler.NAME:
-            futures_symbol = BinanceFuturesHandler().get_trading_symbol(coin=coin)
+            futures_symbol = BinanceFuturesHandler().get_trading_symbol(coin=backward_rename_coin(coin))
             futures = BinanceFuturesHandler().get_symbol_data(futures_symbol)
             if futures and futures['status'] == 'TRADING':
                 asset.hedge_method = Asset.HEDGE_BINANCE_FUTURE
@@ -66,15 +77,13 @@ def add_candidate_coins(coins: list, handler: str):
         price_filter = list(filter(lambda f: f['filterType'] == 'PRICE_FILTER', spot['filters']))[0]
 
         asset.trade_quantity_step = lot_size['stepSize']
-        asset.min_trade_quantity = Decimal(lot_size['minQty']) / Decimal(value)
-        asset.max_trade_quantity = Decimal(lot_size['maxQty']) / Decimal(value)
+        asset.min_trade_quantity = Decimal(lot_size['minQty'])
+        asset.max_trade_quantity = Decimal(lot_size['maxQty'])
 
         asset.price_precision_usdt = -int(math.log10(Decimal(price_filter['tickSize'])))
         asset.price_precision_irt = max(asset.price_precision_usdt - 3, 0)
         asset.save()
         _update_coin_networks(asset=asset, exchange_handler=exchange_handler)
-
-
 
         if not created:
             print('disable old networkasset for {}'.format(coin))
@@ -112,15 +121,13 @@ def _update_coin_networks(asset: Asset, exchange_handler):
         if withdraw_integer_multiple == 0:
             withdraw_integer_multiple = Decimal('1e-9')
 
-
         NetworkAsset.objects.get_or_create(
             asset=asset,
             network=network,
             defaults={
-                'withdraw_fee': n['withdrawFee'],
-                'withdraw_min': n['withdrawMin'],
-                'withdraw_max': n['withdrawMax'],
-                'withdraw_precision': -int(math.log10(withdraw_integer_multiple))
+                'withdraw_fee': Decimal(n['withdrawFee']),
+                'withdraw_min': Decimal(n['withdrawMin']),
+                'withdraw_max': Decimal(n['withdrawMax']),
+                'withdraw_precision': -int(math.log10(Decimal(withdraw_integer_multiple)))
             }
         )
-

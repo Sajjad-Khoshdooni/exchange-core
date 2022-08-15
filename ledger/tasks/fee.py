@@ -4,6 +4,7 @@ from decimal import Decimal
 from celery import shared_task
 
 from ledger.models import NetworkAsset
+from ledger.utils.new_coins import backward_rename_coin, get_coin_coefficient
 from ledger.utils.price import get_trading_price_usdt, BUY
 from provider.exchanges import BinanceSpotHandler
 
@@ -13,8 +14,11 @@ def update_network_fees():
     network_assets = NetworkAsset.objects.all()
 
     for ns in network_assets:
+        coin = ns.asset.symbol
         handler = ns.asset.get_hedger().get_spot_handler()
-        info = handler.get_network_info(ns.asset.symbol, ns.network)
+        info = handler.get_network_info(backward_rename_coin(coin), ns.network)
+
+        coin_coefficient = get_coin_coefficient(coin)
 
         if info:
             symbol_pair = (ns.network.symbol, ns.asset.symbol)
@@ -35,11 +39,14 @@ def update_network_fees():
                 multiplier = max(math.ceil(Decimal('0.2') / (price * withdraw_fee)), 1)  # withdraw_fee >= 0.2$
                 withdraw_fee *= multiplier
 
-            withdraw_min = max(withdraw_min, Decimal(info['withdrawMin']) + withdraw_fee - Decimal(info['withdrawFee']))
+            withdraw_min = max(
+                withdraw_min,
+                Decimal(info['withdrawMin']) / coin_coefficient + withdraw_fee - Decimal(info['withdrawFee'])
+            )
 
             ns.withdraw_fee = withdraw_fee
             ns.withdraw_min = withdraw_min
-            ns.withdraw_max = info['withdrawMax']
+            ns.withdraw_max = Decimal(info['withdrawMax'])
             ns.hedger_withdraw_enable = info['withdrawEnable']
         else:
             ns.hedger_withdraw_enable = False
