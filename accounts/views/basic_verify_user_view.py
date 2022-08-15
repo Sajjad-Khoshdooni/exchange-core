@@ -30,13 +30,17 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             if user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
                 return 'کد ملی تکراری است. لطفا به پنل اصلی‌تان وارد شوید. در صورتی که می‌خواهید کد ملی‌تان را عوض کنید با پشتیبانی صحبت کنید.'
 
+            bank_card = user.bankcard_set.filter(kyc=True).first()
+            if bank_card and bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
+                return 'شماره کارت وارد شده تکراری است. لطفا با پشتیبانی صحبت کنید.'
+
             if not user.birth_date_verified:
                 return 'کد ملی،‌ شماره کارت و تاریخ تولد متعلق به یک نفر نیستند.'
 
             if not user.first_name_verified or not user.last_name_verified:
                 return 'نام و نام خانوادگی با دیگر اطلاعات مغایر است.'
 
-    def update_bank_card(self, user: User, card_pan: str):
+    def update_bank_card(self, user: User, card_pan: str) -> BankCard:
         if BankCard.live_objects.filter(user=user, kyc=True, verified=True).exclude(card_pan=card_pan):
             raise ValidationError({'card_pan': 'امکان تغییر شماره کارت تایید شده وجود ندارد.'})
 
@@ -54,6 +58,8 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         if not bank_card.verified:
             bank_card.verified = None
             bank_card.save()
+
+        return bank_card
 
     def update(self, user, validated_data):
         if user and user.verify_status in (User.PENDING, User.VERIFIED):
@@ -74,7 +80,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             raise ValidationError('تاریخ تولد نامعتبر است.')
 
         card_pan = validated_data.pop('card_pan')
-        self.update_bank_card(user, card_pan)
+        bank_card = self.update_bank_card(user, card_pan)
 
         if not user.national_code_verified:
             user.national_code = validated_data['national_code']
@@ -101,11 +107,14 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             user.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
 
             raise ValidationError('کد ملی تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
-        else:
-            from accounts.tasks import basic_verify_user
 
-            if not settings.DEBUG_OR_TESTING:
-                basic_verify_user.s(user.id).apply_async(countdown=config('KYC_DELAY', cast=int, default=60))
+        if bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
+            raise ValidationError('شماره کارت‌تان تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
+
+        from accounts.tasks import basic_verify_user
+
+        if not settings.DEBUG_OR_TESTING:
+            basic_verify_user.s(user.id).apply_async(countdown=config('KYC_DELAY', cast=int, default=60))
 
         return user
 

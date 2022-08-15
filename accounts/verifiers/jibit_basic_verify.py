@@ -106,7 +106,7 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
 
     if BankCard.live_objects.filter(card_pan=bank_card.card_pan, verified=True).exclude(id=bank_card.id).exists():
         logger.info('rejecting bank card because of duplication')
-        bank_card.reject_reason = 'duplicated'
+        bank_card.reject_reason = BankCard.DUPLICATED
         bank_card.verified = False
         bank_card.save()
         user.change_status(User.REJECTED)
@@ -230,7 +230,7 @@ def verify_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
 
     if BankCard.live_objects.filter(card_pan=bank_card.card_pan, verified=True).exclude(id=bank_card.id).exists():
         logger.info('rejecting bank card because of duplication')
-        bank_card.reject_reason = 'duplicated'
+        bank_card.reject_reason = BankCard.DUPLICATED
         bank_card.verified = False
         bank_card.save()
         return False

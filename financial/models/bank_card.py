@@ -13,6 +13,8 @@ class LiveManager(models.Manager):
 
 
 class BankCard(models.Model):
+    DUPLICATED = 'duplicated'
+
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
