@@ -173,11 +173,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'national_code': M.superuser | ~M('national_code_verified'),
         'national_code_phone_verified': True,
         'birth_date': M.superuser | ~M('birth_date_verified'),
-        'selfie_image_verified': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
+        'selfie_image_verified': M.superuser | M('selfie_image'),
         'selfie_image_discard_text': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
         'first_name_verified': M.is_none('first_name_verified'),
         'last_name_verified': M.is_none('last_name_verified'),
-        'national_code_verified': M.is_none('national_code_verified'),
+        'national_code_verified': ~M('national_code_verified'),
         'birth_date_verified': M.is_none('birth_date_verified'),
         'withdraw_before_48h_option': True,
         'allow_level1_crypto_withdraw': True,
@@ -192,7 +192,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                                          )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'national_code_phone_verified',
-                                          'birth_date_verified',
+                                          'birth_date_verified', 'reject_reason',
                                           'selfie_image_verified', 'selfie_image_verifier',
                                           'selfie_image_discard_text',
                                           )}),
@@ -340,6 +340,10 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_referrer_user.short_description = 'referrer'
 
     def get_user_reject_reason(self, user: User):
+        if user.level == User.LEVEL1 and user.verify_status == User.REJECTED and \
+                user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
+            return 'کد ملی تکراری'
+
         verify_fields = [
             'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
             'bank_card_verified', 'bank_account_verified', 'selfie_image_verified'

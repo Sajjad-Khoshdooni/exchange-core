@@ -27,13 +27,20 @@ class BasicInfoSerializer(serializers.ModelSerializer):
     def get_reason(self, user: User):
         if user.verify_status == User.REJECTED and user.level == User.LEVEL1:
 
+            if user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
+                return 'کد ملی تکراری است. لطفا به پنل اصلی‌تان وارد شوید. در صورتی که می‌خواهید کد ملی‌تان را عوض کنید با پشتیبانی صحبت کنید.'
+
+            bank_card = user.bankcard_set.filter(kyc=True).first()
+            if bank_card and bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
+                return 'شماره کارت وارد شده تکراری است. لطفا با پشتیبانی صحبت کنید.'
+
             if not user.birth_date_verified:
                 return 'کد ملی،‌ شماره کارت و تاریخ تولد متعلق به یک نفر نیستند.'
 
             if not user.first_name_verified or not user.last_name_verified:
                 return 'نام و نام خانوادگی با دیگر اطلاعات مغایر است.'
 
-    def update_bank_card(self, user: User, card_pan: str):
+    def get_kyc_bank_card(self, user: User, card_pan: str) -> BankCard:
         if BankCard.live_objects.filter(user=user, kyc=True, verified=True).exclude(card_pan=card_pan):
             raise ValidationError({'card_pan': 'امکان تغییر شماره کارت تایید شده وجود ندارد.'})
 
@@ -48,9 +55,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         elif not bank_card:
             bank_card, _ = BankCard.live_objects.update_or_create(user=user, card_pan=card_pan, defaults={'kyc': True})
 
-        if not bank_card.verified:
-            bank_card.verified = None
-            bank_card.save()
+        return bank_card
 
     def update(self, user, validated_data):
         if user and user.verify_status in (User.PENDING, User.VERIFIED):
@@ -58,6 +63,9 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
         if user.level > User.LEVEL1:
             raise ValidationError('کاربر تایید شده است.')
+
+        if user.national_code_verified is False:
+            raise ValidationError('کد ملی شما رد شده است. برای ارتقای حساب با پشتیبانی صحبت کنید.')
 
         date_delta = timezone.now().date() - validated_data['birth_date']
         age = date_delta.days / 365
@@ -68,7 +76,14 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             raise ValidationError('تاریخ تولد نامعتبر است.')
 
         card_pan = validated_data.pop('card_pan')
-        self.update_bank_card(user, card_pan)
+        bank_card = self.get_kyc_bank_card(user, card_pan)
+
+        if bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
+            raise ValidationError('شماره کارت‌تان تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
+
+        if not bank_card.verified:
+            bank_card.verified = None
+            bank_card.save()
 
         if not user.national_code_verified:
             user.national_code = validated_data['national_code']
@@ -77,17 +92,24 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         if not user.first_name_verified:
             user.first_name = clean_persian_name(validated_data['first_name'])
             user.first_name_verified = None
-            
+
         if not user.last_name_verified:
             user.last_name = clean_persian_name(validated_data['last_name'])
             user.last_name_verified = None
-            
+
         if not user.birth_date_verified:
             user.birth_date = validated_data['birth_date']
             user.birth_date_verified = None
 
         user.save()
         user.change_status(User.PENDING)
+
+        if User.objects.filter(level__gte=User.LEVEL2, national_code=user.national_code).exclude(id=user.id):
+            user.national_code_verified = False
+            user.save(update_fields=['national_code_verified'])
+            user.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
+
+            raise ValidationError('کد ملی تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
 
         from accounts.tasks import basic_verify_user
 
