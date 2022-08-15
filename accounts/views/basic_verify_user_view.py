@@ -99,6 +99,8 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             user.national_code_verified = False
             user.save(update_fields=['national_code_verified'])
             user.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
+
+            raise ValidationError('کد ملی تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
         else:
             from accounts.tasks import basic_verify_user
 
