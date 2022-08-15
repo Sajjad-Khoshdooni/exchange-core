@@ -174,7 +174,7 @@ class KucoinSpotHandler(ExchangeHandler):
                 'currency': asset,
                 'from': _from,
                 'to': to,
-                'amount': amount,
+                'amount': decimal_to_str(amount),
             }
         )
 
@@ -189,7 +189,7 @@ class KucoinSpotHandler(ExchangeHandler):
         resp = {'filters': [
             {
                 'filterType': 'LOT_SIZE',
-                'stepSize': Decimal(coin_data[0].get('baseIncrement')) * symbol_coefficient,
+                'stepSize': Decimal(coin_data[0].get('baseIncrement')) / symbol_coefficient,
                 'minQty': Decimal(coin_data[0].get('baseMinSize')) / symbol_coefficient,
                 'maxQty': Decimal(coin_data[0].get('baseMaxSize')) / symbol_coefficient
             },
