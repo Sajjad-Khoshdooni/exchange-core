@@ -215,6 +215,9 @@ class User(AbstractUser):
         ]
 
     def verify_level2_if_not(self) -> bool:
+        if self.reject_reason == User.NATIONAL_CODE_DUPLICATED:
+            return False
+
         if self.level == User.LEVEL1 and all(self.get_level2_verify_fields()):
             self.change_status(User.VERIFIED)
 
