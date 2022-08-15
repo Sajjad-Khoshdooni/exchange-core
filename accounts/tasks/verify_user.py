@@ -2,6 +2,7 @@
 import logging
 
 from celery import shared_task
+from decouple import config
 
 from accounts.models import Notification
 from accounts.models import User
@@ -31,7 +32,12 @@ def alert_user_verify_status(user: User):
 
     if user.level >= User.LEVEL2 or user.verify_status == User.REJECTED:
         if user.verify_status == User.REJECTED:
-            title = 'اطلاعات وارد شده نیاز به بازنگری دارد.'
+            if user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
+                title = 'کد ملی تکراری است. لطفا به حساب اصلی‌تان وارد شوید.'
+                notif_message = 'شما قبلا در {} با شماره موبایل دیگری ثبت‌نام کرده‌اید و احراز هویت‌تان انجام شده است. لطفا از آن حساب استفاده کنید.'.format(
+                    config('BRAND'))
+            else:
+                title = 'اطلاعات وارد شده نیاز به بازنگری دارد.'
 
             level = Notification.ERROR
             template = 'levelup-rejected'

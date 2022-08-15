@@ -62,6 +62,11 @@ class BankCard(models.Model):
                 name="bank_card_unique_kyc_user",
                 condition=Q(deleted=False, kyc=True),
             ),
+            UniqueConstraint(
+                fields=["card_pan"],
+                name="unique_bank_card_verified_card_pan",
+                condition=Q(verified=True, deleted=False),
+            )
         ]
 
 
@@ -114,6 +119,11 @@ class BankAccount(models.Model):
                 fields=["iban", "user"],
                 name="unique_bank_account_iban",
                 condition=Q(deleted=False),
+            ),
+            UniqueConstraint(
+                fields=["iban"],
+                name="unique_bank_account_verified_iban",
+                condition=Q(verified=True, deleted=False),
             )
         ]
 

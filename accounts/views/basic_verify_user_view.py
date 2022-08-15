@@ -27,6 +27,9 @@ class BasicInfoSerializer(serializers.ModelSerializer):
     def get_reason(self, user: User):
         if user.verify_status == User.REJECTED and user.level == User.LEVEL1:
 
+            if user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
+                return 'کد ملی تکراری است. لطفا به پنل اصلی‌تان وارد شوید. در صورتی که می‌خواهید کد ملی‌تان را عوض کنید با پشتیبانی صحبت کنید.'
+
             if not user.birth_date_verified:
                 return 'کد ملی،‌ شماره کارت و تاریخ تولد متعلق به یک نفر نیستند.'
 
@@ -59,6 +62,9 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         if user.level > User.LEVEL1:
             raise ValidationError('کاربر تایید شده است.')
 
+        if user.verify_status == User.REJECTED and user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
+            raise ValidationError('برای ارتقای حساب با پشتیبانی صحبت کنید.')
+
         date_delta = timezone.now().date() - validated_data['birth_date']
         age = date_delta.days / 365
 
@@ -89,10 +95,13 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         user.save()
         user.change_status(User.PENDING)
 
-        from accounts.tasks import basic_verify_user
+        if User.objects.filter(level__gte=User.LEVEL2, national_code=user.national_code).exclude(id=user.id):
+            user.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
+        else:
+            from accounts.tasks import basic_verify_user
 
-        if not settings.DEBUG_OR_TESTING:
-            basic_verify_user.s(user.id).apply_async(countdown=config('KYC_DELAY', cast=int, default=60))
+            if not settings.DEBUG_OR_TESTING:
+                basic_verify_user.s(user.id).apply_async(countdown=config('KYC_DELAY', cast=int, default=60))
 
         return user
 

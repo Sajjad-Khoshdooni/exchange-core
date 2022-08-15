@@ -104,6 +104,14 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
     if not user.national_code or not bank_card or not user.birth_date:
         return False
 
+    if BankCard.live_objects.filter(card_pan=bank_card.card_pan, verified=True).exclude(id=bank_card.id).exists():
+        logger.info('rejecting bank card because of duplication')
+        bank_card.reject_reason = 'duplicated'
+        bank_card.verified = False
+        bank_card.save()
+        user.change_status(User.REJECTED)
+        return False
+
     requester = JibitRequester(user)
 
     try:
@@ -152,10 +160,9 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
     if identity_matched is False or card_matched is False:
         user.change_status(User.REJECTED)
         return False
-
-    user.verify_level2_if_not()
-
-    return True
+    else:
+        user.verify_level2_if_not()
+        return True
 
 
 def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
@@ -221,6 +228,13 @@ def verify_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
     if bank_card.verified:
         return
 
+    if BankCard.live_objects.filter(card_pan=bank_card.card_pan, verified=True).exclude(id=bank_card.id).exists():
+        logger.info('rejecting bank card because of duplication')
+        bank_card.reject_reason = 'duplicated'
+        bank_card.verified = False
+        bank_card.save()
+        return False
+
     requester = JibitRequester(bank_card.user)
 
     try:
@@ -272,6 +286,12 @@ DEPOSIT_STATUS_MAP = {
 
 
 def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool, None]:
+    if BankAccount.live_objects.filter(iban=bank_account.iban, verified=True).exclude(id=bank_account.id).exists():
+        logger.info('rejecting bank account because of duplication')
+        bank_account.verified = False
+        bank_account.save()
+        return False
+
     requester = JibitRequester(bank_account.user)
 
     try:
