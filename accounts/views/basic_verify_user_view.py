@@ -40,7 +40,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             if not user.first_name_verified or not user.last_name_verified:
                 return 'نام و نام خانوادگی با دیگر اطلاعات مغایر است.'
 
-    def update_bank_card(self, user: User, card_pan: str) -> BankCard:
+    def get_kyc_bank_card(self, user: User, card_pan: str) -> BankCard:
         if BankCard.live_objects.filter(user=user, kyc=True, verified=True).exclude(card_pan=card_pan):
             raise ValidationError({'card_pan': 'امکان تغییر شماره کارت تایید شده وجود ندارد.'})
 
@@ -54,10 +54,6 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
         elif not bank_card:
             bank_card, _ = BankCard.live_objects.update_or_create(user=user, card_pan=card_pan, defaults={'kyc': True})
-
-        if not bank_card.verified:
-            bank_card.verified = None
-            bank_card.save()
 
         return bank_card
 
@@ -80,7 +76,14 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             raise ValidationError('تاریخ تولد نامعتبر است.')
 
         card_pan = validated_data.pop('card_pan')
-        bank_card = self.update_bank_card(user, card_pan)
+        bank_card = self.get_kyc_bank_card(user, card_pan)
+
+        if bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
+            raise ValidationError('شماره کارت‌تان تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
+
+        if not bank_card.verified:
+            bank_card.verified = None
+            bank_card.save()
 
         if not user.national_code_verified:
             user.national_code = validated_data['national_code']
@@ -107,9 +110,6 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             user.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
 
             raise ValidationError('کد ملی تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
-
-        if bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
-            raise ValidationError('شماره کارت‌تان تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
 
         from accounts.tasks import basic_verify_user
 
