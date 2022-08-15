@@ -139,7 +139,8 @@ class TradingFeeView(APIView):
         referral_code = request.user.account.referred_by
 
         if referral_code:
-            taker_fee = taker_fee * (Decimal('1') - referral_code.owner_share_percent/Decimal('100'))
+            referral_percent = ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - referral_code.owner_share_percent
+            taker_fee = taker_fee * (Decimal('1') - referral_percent /Decimal('100'))
 
         return Response({
             'old_taker_fee': str(old_taker_fee),
