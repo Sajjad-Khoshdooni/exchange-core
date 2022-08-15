@@ -19,6 +19,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
     trigger_price = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
+    allow_cancel = serializers.SerializerMethodField()
 
     def to_representation(self, instance: Union[Order, StopLoss]):
         data = super(OrderStopLossSerializer, self).to_representation(instance)
@@ -32,6 +33,11 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
         if isinstance(instance, StopLoss):
             return f'sl-{instance.id}'
         return str(instance.id)
+
+    def get_allow_cancel(self, instance: Union[Order, StopLoss]):
+        if instance.wallet.variant:
+            return False
+        return True
 
     def get_status(self, instance: Union[Order, StopLoss]):
         if isinstance(instance, StopLoss):
@@ -63,4 +69,4 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'price', 'filled_price',
-                  'trigger_price', 'side', 'fill_type', 'status', 'market')
+                  'trigger_price', 'side', 'fill_type', 'status', 'market', 'allow_cancel')
