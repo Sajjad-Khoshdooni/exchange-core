@@ -30,6 +30,7 @@ class FullVerificationSerializer(serializers.ModelSerializer):
         if not user.selfie_image_verified:
             user.selfie_image = validated_data['selfie_image']
             user.selfie_image_verified = None
+            user.save(update_fields=['selfie_image', 'selfie_image_verified'])
 
         link = url_to_edit_object(user)
         send_support_message(
