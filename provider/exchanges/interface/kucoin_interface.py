@@ -19,10 +19,29 @@ class KucoinSpotHandler(ExchangeHandler):
     api_path = None
     exchange = None
 
+    def rename_coin_to_big_coin(self, coin: str):
+        rename_list = {
+            'ELON': '1MELON',
+        }
+        return rename_list.get( coin, coin)
+
+    def rename_big_coin_to_coin(self, coin: str):
+        rename_list = {
+            '1MELON': 'ELON'
+        }
+        return rename_list.get(coin, coin)
+
+    def get_coin_coefficient(self, coin: str):
+        coin = self.rename_big_coin_to_coin(coin)
+        coin_coefficient = {
+            'ELON': Decimal('1000000'),
+            'ELON-USDT': Decimal('1000000')
+        }
+        return coin_coefficient.get(coin, 1)
+
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
         if settings.DEBUG_OR_TESTING:
             return {}
-
         data = data or {}
 
         if signed:
@@ -31,11 +50,13 @@ class KucoinSpotHandler(ExchangeHandler):
             return kucoin_spot_send_public_request(url, data=data)
 
     def get_trading_symbol(self, coin: str) -> str:
-
+        coin = self.rename_big_coin_to_coin(coin)
         return coin + '-' + 'USDT'
 
     def place_order(self, symbol: str, side: str, amount: Decimal, order_type: str = MARKET,
                     client_order_id: str = None) -> dict:
+
+        coin_coefficient = self.get_coin_coefficient(symbol)
 
         side = side.upper()
         order_type = order_type.upper()
@@ -47,7 +68,7 @@ class KucoinSpotHandler(ExchangeHandler):
             'symbol': symbol,
             'side': side.lower(),
             'type': order_type.lower(),
-            'size': decimal_to_str(amount),
+            'size': decimal_to_str(Decimal(amount) * Decimal(coin_coefficient)),
         }
 
         if client_order_id:
@@ -59,8 +80,10 @@ class KucoinSpotHandler(ExchangeHandler):
                  address_tag: str = None, client_id: str = None, memo: str = None) -> dict:
 
         # todo: add memo variant
+        coin = self.rename_big_coin_to_coin(coin)
+        coefficient_coin = self.get_coin_coefficient(coin)
 
-        amount = decimal_to_str(Decimal(transfer_amount) + Decimal(fee_amount))
+        amount = transfer_amount + fee_amount
 
         self.transfer(
             asset=coin,
@@ -73,7 +96,7 @@ class KucoinSpotHandler(ExchangeHandler):
         data = {
             'currency': coin,
             'address': address,
-            'amount': decimal_to_str(transfer_amount),
+            'amount': decimal_to_str(transfer_amount * coefficient_coin),
             'network': network.kucoin_name,
             'memo': address_tag,
             'withdrawOrderId': client_id
@@ -89,13 +112,22 @@ class KucoinSpotHandler(ExchangeHandler):
 
     def get_free_dict(self):
         balances_list = self.get_account_details()
-        return {b['currency']: Decimal(b['available']) for b in balances_list if b['type'] == 'trade'}
+        resp = {}
+        for b in balances_list:
+            if b['type'] == 'trade':
+                coin = self.rename_coin_to_big_coin(b['currency'])
+                coin_coefficient = self.get_coin_coefficient(coin)
+                amount = Decimal(b['available']) / coin_coefficient
+                resp[coin] = amount
+        return resp
 
     def get_all_coins(self):
         return self.collect_api('/api/v1/currencies', method='GET', cache_timeout=HOUR)
 
     def get_coin_data(self, coin: str):
+        coin = self.rename_big_coin_to_coin(coin)
         resp = self.collect_api('/api/v2/currencies/{}'.format(coin), method='GET', cache_timeout=HOUR)
+        coin_coefficient = self.get_coin_coefficient(coin)
 
         network_list = resp.get('chains')
 
@@ -108,9 +140,10 @@ class KucoinSpotHandler(ExchangeHandler):
                 'addressRegex': chain.get('address_regex', ''),
                 'minConfirm': chain.get('confirms'),
                 'unLockConfirm': chain.get('confirms'),
-                'withdrawFee': chain.get('withdrawalMinFee'),
-                'withdrawMin': Decimal(chain.get('withdrawalMinSize')) + Decimal(chain.get('withdrawalMinFee')),
-                'withdrawMax': chain.get('withdrawMax', '10000000000'),
+                'withdrawFee': decimal_to_str(Decimal(chain.get('withdrawalMinFee'))/coin_coefficient),
+                'withdrawMin': decimal_to_str((Decimal((chain.get('withdrawalMinSize'))) + Decimal(chain.get('withdrawalMinFee')))
+                                              / coin_coefficient),
+                'withdrawMax': decimal_to_str(Decimal(chain.get('withdrawMax', '100000000000')) / coin_coefficient),
                 'withdrawIntegerMultiple': Decimal('1e-{}'.format(resp.get('precision'), 9)),
                 'withdrawEnable': chain.get('isWithdrawEnabled')
 
@@ -129,6 +162,9 @@ class KucoinSpotHandler(ExchangeHandler):
         return Decimal(info.get('withdrawFee'))
 
     def transfer(self, asset: str, amount: Decimal, to: str, client_oid: str, _from=TRADE):
+        asset = self.rename_big_coin_to_coin(asset)
+        coefficient_coin = self.get_coin_coefficient(asset)
+        amount = amount * coefficient_coin
         return self.collect_api(
             url='/api/v2/accounts/inner-transfer',
             method='POST',
@@ -137,11 +173,13 @@ class KucoinSpotHandler(ExchangeHandler):
                 'currency': asset,
                 'from': _from,
                 'to': to,
-                'amount': amount,
+                'amount': decimal_to_str(amount),
             }
         )
 
     def get_symbol_data(self, symbol: str):
+        symbol_coefficient = self.get_coin_coefficient(symbol)
+
         data = self.collect_api('/api/v1/symbols', method='GET')
         coin_data = list(filter(lambda d: d['symbol'] == symbol, data))
         if not coin_data:
@@ -150,13 +188,13 @@ class KucoinSpotHandler(ExchangeHandler):
         resp = {'filters': [
             {
                 'filterType': 'LOT_SIZE',
-                'stepSize': coin_data[0].get('baseIncrement'),
-                'minQty': coin_data[0].get('baseMinSize'),
-                'maxQty': coin_data[0].get('baseMaxSize')
+                'stepSize': Decimal(coin_data[0].get('baseIncrement')) / symbol_coefficient,
+                'minQty': Decimal(coin_data[0].get('baseMinSize')) / symbol_coefficient,
+                'maxQty': Decimal(coin_data[0].get('baseMaxSize')) / symbol_coefficient
             },
             {
                 'filterType': 'PRICE_FILTER',
-                'tickSize': coin_data[0].get('priceIncrement')
+                'tickSize': Decimal(coin_data[0].get('priceIncrement')) * symbol_coefficient
             }
         ]}
         if coin_data[0].get('enableTrading'):

@@ -23,7 +23,7 @@ def add_candidate_coins(coins: list, handler: str):
     order = Asset.objects.order_by('order').last().order
 
     for coin in coins:
-        coin = coin.upper()
+
         spot_symbol = exchange_handler.get_trading_symbol(coin=coin)
 
         spot = exchange_handler.get_symbol_data(spot_symbol)
@@ -32,7 +32,7 @@ def add_candidate_coins(coins: list, handler: str):
             print('%s not found or stopped trading in interface spot' % spot_symbol)
             continue
 
-        asset, created = Asset.objects.get_or_create(symbol=coin)
+        asset, created = Asset.objects.get_or_create(symbol=KucoinSpotHandler().rename_coin_to_big_coin(coin))
 
         asset.hedge_method = hedger_mapping[handler]
 
@@ -48,20 +48,23 @@ def add_candidate_coins(coins: list, handler: str):
             futures = BinanceFuturesHandler().get_symbol_data(futures_symbol)
             if futures and futures['status'] == 'TRADING':
                 asset.hedge_method = Asset.HEDGE_BINANCE_FUTURE
+        else:
+            asset.hedge_method = Asset.HEDGE_KUCOIN_SPOT
 
         lot_size = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', spot['filters']))[0]
         price_filter = list(filter(lambda f: f['filterType'] == 'PRICE_FILTER', spot['filters']))[0]
 
         asset.trade_quantity_step = lot_size['stepSize']
-        asset.min_trade_quantity = lot_size['minQty']
-        asset.max_trade_quantity = lot_size['maxQty']
+        asset.min_trade_quantity = Decimal(lot_size['minQty'])
+        asset.max_trade_quantity = Decimal(lot_size['maxQty'])
 
         asset.price_precision_usdt = -int(math.log10(Decimal(price_filter['tickSize'])))
         asset.price_precision_irt = max(asset.price_precision_usdt - 3, 0)
-
+        asset.save()
         _update_coin_networks(asset=asset, exchange_handler=exchange_handler)
 
-        asset.save()
+        if not created:
+            print('disable old networkasset for {}'.format(coin))
     create_missing_symbols()
 
 
@@ -100,10 +103,9 @@ def _update_coin_networks(asset: Asset, exchange_handler):
             asset=asset,
             network=network,
             defaults={
-                'withdraw_fee': n['withdrawFee'],
-                'withdraw_min': n['withdrawMin'],
-                'withdraw_max': n['withdrawMax'],
-                'withdraw_precision': -int(math.log10(withdraw_integer_multiple))
+                'withdraw_fee': Decimal(n['withdrawFee']),
+                'withdraw_min': Decimal(n['withdrawMin']),
+                'withdraw_max': Decimal(n['withdrawMax']),
+                'withdraw_precision': -int(math.log10(Decimal(withdraw_integer_multiple)))
             }
         )
-        print('alert: have attention to networkasset')

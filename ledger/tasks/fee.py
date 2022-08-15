@@ -35,11 +35,14 @@ def update_network_fees():
                 multiplier = max(math.ceil(Decimal('0.2') / (price * withdraw_fee)), 1)  # withdraw_fee >= 0.2$
                 withdraw_fee *= multiplier
 
-            withdraw_min = max(withdraw_min, Decimal(info['withdrawMin']) + withdraw_fee - Decimal(info['withdrawFee']))
+            withdraw_min = max(
+                withdraw_min,
+                Decimal(info['withdrawMin']) + withdraw_fee - Decimal(info['withdrawFee'])
+            )
 
             ns.withdraw_fee = withdraw_fee
             ns.withdraw_min = withdraw_min
-            ns.withdraw_max = info['withdrawMax']
+            ns.withdraw_max = Decimal(info['withdrawMax'])
             ns.hedger_withdraw_enable = info['withdrawEnable']
         else:
             ns.hedger_withdraw_enable = False
