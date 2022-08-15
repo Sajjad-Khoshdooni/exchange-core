@@ -52,18 +52,18 @@ class ZibalGateway(Gateway):
 
         data = resp.json()
 
-        if data['result'] == 100:
+        if data['result'] in (100, 201):
             with WalletPipeline() as pipeline:
                 payment.status = DONE
-                payment.ref_id = data.get('refNumber')
-                payment.ref_status = data['status']
+                payment.ref_id = data.get('refNumber', 0)
+                payment.ref_status = data.get('status', 0)
                 payment.save()
 
                 payment.accept(pipeline)
 
         else:
             payment.status = CANCELED
-            payment.ref_status = data.get('status', '')
+            payment.ref_status = data.get('status', 0)
             payment.save()
 
     class Meta:
