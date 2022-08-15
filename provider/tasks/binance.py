@@ -16,7 +16,7 @@ def inject_tether_to_futures():
     details = BinanceFuturesHandler().get_account_details()
     futures_margin_ratio = float(details.get('totalMarginBalance', 0)) / float(details.get('totalInitialMargin', 1e-10))
 
-    if futures_margin_ratio < 2:
+    if futures_margin_ratio < 1.5:
         logger.info('inject: trying to inject (%s)' % futures_margin_ratio)
         balance_map = BinanceSpotHandler().get_free_dict()
         usdt_amount = min(balance_map[Asset.USDT], 2000)
