@@ -7,28 +7,6 @@ from provider.exchanges.interface.binance_interface import BinanceSpotHandler, B
 from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 
 
-def get_coin_coefficient(coin: str):
-    coin = backward_rename_coin(coin)
-    coin_with_low_price = {
-        'ELON': 1000000
-    }
-    return coin_with_low_price.get(coin, 1)
-
-
-def forward_rename_coin(coin: str):
-    rename_list = {
-        'ELON': '1MELON',
-    }
-    return rename_list.get(coin, coin)
-
-
-def backward_rename_coin(coin: str):
-    rename_list = {
-        '1MELON': 'ELON'
-    }
-    return rename_list.get(coin, coin)
-
-
 def add_candidate_coins(coins: list, handler: str):
 
     handler_mapping = {
@@ -54,7 +32,7 @@ def add_candidate_coins(coins: list, handler: str):
             print('%s not found or stopped trading in interface spot' % spot_symbol)
             continue
 
-        asset, created = Asset.objects.get_or_create(symbol=forward_rename_coin(coin))
+        asset, created = Asset.objects.get_or_create(symbol=KucoinSpotHandler().rename_coin_to_big_coin(coin))
 
         asset.hedge_method = hedger_mapping[handler]
 
@@ -66,7 +44,7 @@ def add_candidate_coins(coins: list, handler: str):
             asset.candidate = True
 
         if exchange_handler.NAME == BinanceSpotHandler.NAME:
-            futures_symbol = BinanceFuturesHandler().get_trading_symbol(coin=backward_rename_coin(coin))
+            futures_symbol = BinanceFuturesHandler().get_trading_symbol(coin=coin)
             futures = BinanceFuturesHandler().get_symbol_data(futures_symbol)
             if futures and futures['status'] == 'TRADING':
                 asset.hedge_method = Asset.HEDGE_BINANCE_FUTURE

@@ -276,7 +276,7 @@ class WalletAdmin(admin.ModelAdmin):
         ('asset', RelatedDropdownFilter),
         WalletUserFilter
     ]
-    # readonly_fields = ('account', 'asset', 'market')
+    readonly_fields = ('account', 'asset', 'market')
 
     def get_free(self, wallet: models.Wallet):
         return float(wallet.get_free())

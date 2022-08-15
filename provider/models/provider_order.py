@@ -144,9 +144,9 @@ class ProviderOrder(models.Model):
                                 dry_run: bool = False, raise_exception: bool = False) -> bool:
         # todo: this method should not called more than once at a single time
         handler = asset.get_hedger()
-        # if settings.DEBUG_OR_TESTING:
-        #     logger.info('ignored due to debug')
-        #     return True
+        if settings.DEBUG_OR_TESTING:
+            logger.info('ignored due to debug')
+            return True
 
         if not asset.hedge_method:
             logger.info('ignored due to no hedge method')
@@ -185,9 +185,9 @@ class ProviderOrder(models.Model):
             # check notional
             price = get_trading_price_usdt(asset.symbol, side=SELL, raw_price=True)
 
-            # if order_amount * price < 10:
-            #     logger.info('ignored due to small order')
-            #     return True
+            if order_amount * price < 10:
+                logger.info('ignored due to small order')
+                return True
 
             if not dry_run:
                 if market == cls.SPOT and side == cls.SELL:

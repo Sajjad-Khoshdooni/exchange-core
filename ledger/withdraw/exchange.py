@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 def handle_provider_withdraw(transfer_id: int):
-    # if settings.DEBUG_OR_TESTING:
-    #     return
+    if settings.DEBUG_OR_TESTING:
+        return
 
     logger.info('withdraw handling transfer_id = %d' % transfer_id)
 

@@ -4,7 +4,6 @@ from decimal import Decimal
 from celery import shared_task
 
 from ledger.models import NetworkAsset
-from ledger.utils.new_coins import backward_rename_coin, get_coin_coefficient
 from ledger.utils.price import get_trading_price_usdt, BUY
 from provider.exchanges import BinanceSpotHandler
 
