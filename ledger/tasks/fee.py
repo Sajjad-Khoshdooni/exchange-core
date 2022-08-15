@@ -15,7 +15,7 @@ def update_network_fees():
 
     for ns in network_assets:
         handler = ns.asset.get_hedger().get_spot_handler()
-        info = handler.get_network_info(ns.asset.symbol, ns.network.symbol)
+        info = handler.get_network_info(ns.asset.symbol, ns.network)
 
         if info:
             symbol_pair = (ns.network.symbol, ns.asset.symbol)
@@ -38,7 +38,7 @@ def update_network_fees():
 
             withdraw_min = max(
                 withdraw_min,
-                Decimal(info['withdrawMin']) / coin_coefficient + withdraw_fee - Decimal(info['withdrawFee'])
+                Decimal(info['withdrawMin']) + withdraw_fee - Decimal(info['withdrawFee'])
             )
 
             ns.withdraw_fee = withdraw_fee
