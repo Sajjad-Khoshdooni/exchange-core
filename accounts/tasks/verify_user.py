@@ -2,7 +2,7 @@
 import logging
 
 from celery import shared_task
-from decouple import config
+from yekta_config import config
 
 from accounts.models import Notification
 from accounts.models import User
