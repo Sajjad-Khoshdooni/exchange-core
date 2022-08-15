@@ -62,8 +62,8 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         if user.level > User.LEVEL1:
             raise ValidationError('کاربر تایید شده است.')
 
-        if user.verify_status == User.REJECTED and user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
-            raise ValidationError('برای ارتقای حساب با پشتیبانی صحبت کنید.')
+        if user.national_code_verified is False:
+            raise ValidationError('کد ملی شما رد شده است. برای ارتقای حساب با پشتیبانی صحبت کنید.')
 
         date_delta = timezone.now().date() - validated_data['birth_date']
         age = date_delta.days / 365
@@ -83,11 +83,11 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         if not user.first_name_verified:
             user.first_name = clean_persian_name(validated_data['first_name'])
             user.first_name_verified = None
-            
+
         if not user.last_name_verified:
             user.last_name = clean_persian_name(validated_data['last_name'])
             user.last_name_verified = None
-            
+
         if not user.birth_date_verified:
             user.birth_date = validated_data['birth_date']
             user.birth_date_verified = None
@@ -96,6 +96,8 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         user.change_status(User.PENDING)
 
         if User.objects.filter(level__gte=User.LEVEL2, national_code=user.national_code).exclude(id=user.id):
+            user.national_code_verified = False
+            user.save(update_fields=['national_code_verified'])
             user.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
         else:
             from accounts.tasks import basic_verify_user

@@ -157,6 +157,8 @@ class User(AbstractUser):
 
             if self.level == User.LEVEL1:
                 if User.objects.filter(level__gte=User.LEVEL2, national_code=self.national_code).exclude(id=self.id):
+                    self.national_code_verified = False
+                    self.save(update_fields=['national_code_verified'])
                     return self.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
 
             self.level += 1
@@ -215,9 +217,6 @@ class User(AbstractUser):
         ]
 
     def verify_level2_if_not(self) -> bool:
-        if self.reject_reason == User.NATIONAL_CODE_DUPLICATED:
-            return False
-
         if self.level == User.LEVEL1 and all(self.get_level2_verify_fields()):
             self.change_status(User.VERIFIED)
 
