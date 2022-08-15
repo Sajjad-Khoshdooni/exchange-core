@@ -12,7 +12,7 @@ from django.utils import timezone
 from collector.metrics import set_metric
 from collector.utils.price import price_redis
 from ledger.models import Asset
-from ledger.utils.new_coins import backward_rename_coin, forward_rename_coin, get_coin_coefficient
+
 from ledger.utils.precision import decimal_to_str
 from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 
