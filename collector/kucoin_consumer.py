@@ -134,5 +134,6 @@ class KucoinConsumer:
             for coin in coins:
                 data = KucoinSpotHandler().get_orderbook(coin)
                 self.handle_stream_data(data)
+                time.sleep(1)
 
 
