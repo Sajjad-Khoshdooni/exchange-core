@@ -137,7 +137,7 @@ class ProviderOrder(models.Model):
 
             orders_amount += amount
 
-        return system_balance + orders_amount / KucoinSpotHandler().get_coin_coefficient(asset.symbol)
+        return system_balance + orders_amount
 
     @classmethod
     def try_hedge_for_new_order(cls, asset: Asset, scope: str, amount: Decimal = 0, side: str = '',
