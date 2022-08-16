@@ -243,7 +243,7 @@ class KucoinSpotHandler(ExchangeHandler):
         return {'data': {'bestAsk': ask, 'bestBid': bid}, 'topic': 'symbol:' + symbol}
 
     def get_min_notional(self):
-        return 0.1
+        return Decimal('0.1')
 
 
 class KucoinFuturesHandler(KucoinSpotHandler):
