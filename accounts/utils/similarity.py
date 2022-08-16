@@ -41,3 +41,18 @@ def rotate_words(s: str) -> str:
     parts = s.split(' ')
     rotated = parts[-1:] + parts[:-1]
     return ' '.join(rotated)
+
+
+NAME_SIMILARITY_THRESHOLD = 0.79
+
+
+def name_similarity(name1, name2):
+    name1, name2 = clean_persian_name(name1), clean_persian_name(name2)
+
+    verified = str_similar_rate(name1, name2) >= NAME_SIMILARITY_THRESHOLD
+
+    if not verified:
+        name1_rotate = rotate_words(name1)
+        verified = str_similar_rate(name1_rotate, name2) >= NAME_SIMILARITY_THRESHOLD
+
+    return verified
