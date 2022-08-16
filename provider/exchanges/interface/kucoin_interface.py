@@ -242,6 +242,9 @@ class KucoinSpotHandler(ExchangeHandler):
         bid = resp['bids'][0][0]
         return {'data': {'bestAsk': ask, 'bestBid': bid}, 'topic': 'symbol:' + symbol}
 
+    def get_min_notional(self):
+        return 0.1
+
 
 class KucoinFuturesHandler(KucoinSpotHandler):
     order_url = '/api/v1/orders'
