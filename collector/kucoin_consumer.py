@@ -126,4 +126,14 @@ class KucoinConsumer:
 
         sys.exit()
 
+    def api_consume(self):
+        coins = self.get_streams()
+        while self.loop:
+
+            logger.info('Now %s' % datetime.now())
+            for coin in coins:
+                data = KucoinSpotHandler().get_orderbook(coin)
+                self.handle_stream_data(data)
+            time.sleep(1)
+
 
