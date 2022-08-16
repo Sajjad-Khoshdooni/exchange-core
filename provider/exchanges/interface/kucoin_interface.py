@@ -21,21 +21,21 @@ class KucoinSpotHandler(ExchangeHandler):
 
     def rename_coin_to_big_coin(self, coin: str):
         rename_list = {
-            'ELON': '1M-ELON',
+            'ELON': '1000ELON',
         }
         return rename_list.get( coin, coin)
 
     def rename_big_coin_to_coin(self, coin: str):
         rename_list = {
-            '1M-ELON': 'ELON'
+            '1000ELON': 'ELON'
         }
         return rename_list.get(coin, coin)
 
     def get_coin_coefficient(self, coin: str):
         coin = self.rename_big_coin_to_coin(coin)
         coin_coefficient = {
-            'ELON': Decimal('1000000'),
-            'ELON-USDT': Decimal('1000000')
+            'ELON': Decimal('1000'),
+            'ELON-USDT': Decimal('1000')
         }
         return coin_coefficient.get(coin, 1)
 
