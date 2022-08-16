@@ -9,3 +9,4 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         consumer = KucoinConsumer()
         consumer.consume()
+        consumer.api_consume()
