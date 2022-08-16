@@ -148,7 +148,10 @@ def get_time_based_factor(interval):
 
 def place_carrot_order(symbol: PairSymbol, account: Account, side, top_user_price):
     cancel_orders(Order.open_objects.filter(wallet__account=account, symbol=symbol, side=side))
-    one_tick_price = Decimal(f'1e{-symbol.tick_size}')
+    min_precision = max(Order.get_rounding_precision(top_user_price, symbol.tick_size), 0)
+    random_precision = random.randint(min_precision, symbol.tick_size)
+
+    one_tick_price = Decimal(f'1e{-random_precision}')
     new_top_price = top_user_price + one_tick_price if side == Order.BUY else top_user_price - one_tick_price
     amount = floor_precision(symbol.maker_amount / get_time_based_factor(600) / 5, symbol.step_size)
     return new_order(
