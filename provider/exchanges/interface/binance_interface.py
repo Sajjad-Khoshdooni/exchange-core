@@ -55,6 +55,9 @@ class ExchangeHandler:
 
         return result
 
+    def get_min_notional(self):
+        return 10
+
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
         raise NotImplementedError
 
