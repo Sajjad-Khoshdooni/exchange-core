@@ -271,7 +271,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     @admin.action(description='رد کردن نام کاربر', permissions=['view'])
     def reject_user_name(self, request, queryset):
-        to_reject_users = queryset.filter(MANUAL_VERIFY_CONDITION).distinct()
+        to_reject_users = queryset.filter(level=User.LEVEL1, verify_status=User.PENDING).distinct()
 
         for user in to_reject_users:
             user.change_status(User.REJECTED)
