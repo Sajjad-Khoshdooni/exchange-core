@@ -113,7 +113,7 @@ class VerificationCode(models.Model):
                 created__gte=timezone.now() - timedelta(minutes=2),
             ).exists()
 
-            if any_recent_code:
+            if not settings.DEBUG_OR_TESTING_OR_STAGING and any_recent_code:
                 logger.info('[OTP] Ignored sending otp to kavenegar because of recent')
                 return
 
@@ -122,7 +122,7 @@ class VerificationCode(models.Model):
                 created__gte=timezone.now() - timedelta(minutes=15),
             ).count()
 
-            if prev_codes >= 3:
+            if not settings.DEBUG_OR_TESTING_OR_STAGING and prev_codes >= 3:
                 logger.info('[OTP] Ignored sending otp to kavenegar because of multiple prev')
                 return
 
