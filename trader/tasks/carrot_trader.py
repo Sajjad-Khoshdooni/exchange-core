@@ -21,7 +21,7 @@ PER_PAIR_EXPECTED_TRADES_PER_SECOND = Decimal(1) / 30  # every 30 seconds we hav
 
 # no offense to dear traders but for more info about the name,
 # see https://imgurl.ir/uploads/t28108_IMG_20220717_162148_191.jpg
-@shared_task(queue='carrot_trader')
+@shared_task(queue='trader-ma')
 def carrot_trader():
     symbols = list(PairSymbol.objects.filter(enable=True, market_maker_enabled=True))
     choices_count = math.ceil(TASK_INTERVAL * PER_PAIR_EXPECTED_TRADES_PER_SECOND * len(symbols) * 2)

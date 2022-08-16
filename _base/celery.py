@@ -204,7 +204,7 @@ app.conf.beat_schedule = {
         'task': 'trader.tasks.carrot_trader.carrot_trader',
         'schedule': 7,
         'options': {
-            'queue': 'carrot_trader',
+            'queue': 'trader-ma',
             'expire': 7
         }
     },
