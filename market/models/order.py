@@ -93,7 +93,8 @@ class Order(models.Model):
         ]
         constraints = [
             CheckConstraint(check=Q(filled_amount__lte=F('amount')), name='check_filled_amount', ),
-            CheckConstraint(check=Q(amount__gte=0, filled_amount__gte=0, price__gte=0), name='check_market_order_amounts', ),
+            CheckConstraint(check=Q(amount__gte=0, filled_amount__gte=0, price__gte=0),
+                            name='check_market_order_amounts', ),
         ]
 
     objects = models.Manager()
@@ -133,8 +134,8 @@ class Order(models.Model):
 
     @staticmethod
     def matching_orders_filter(side, price, op):
-        return(lambda order: order.side == side and order.price >= price) if op == 'gte' else \
-                (lambda order: order.side == side and order.price <= price)
+        return (lambda order: order.side == side and order.price >= price) if op == 'gte' else \
+            (lambda order: order.side == side and order.price <= price)
 
     @staticmethod
     def get_opposite_side(side):
@@ -143,7 +144,7 @@ class Order(models.Model):
     @staticmethod
     def get_order_by(side):
         return (lambda order: (-order.price, order.id)) if side == Order.BUY else \
-                (lambda order: (order.price, order.id))
+            (lambda order: (order.price, order.id))
 
     @classmethod
     def cancel_orders(cls, to_cancel_orders: QuerySet):
@@ -285,7 +286,7 @@ class Order(models.Model):
                 Notification.send(
                     recipient=self.wallet.account.user,
                     title='معامله {}'.format(self.symbol),
-                    message=( 'مقدار {symbol} {amount} معامله شد.').format(amount=match_amount, symbol=self.symbol)
+                    message=('مقدار {symbol} {amount} معامله شد.').format(amount=match_amount, symbol=self.symbol)
                 )
 
             if not maker_is_system:
@@ -370,7 +371,7 @@ class Order(models.Model):
                 account.save(update_fields=['trade_volume_irt'])
                 account.refresh_from_db()
                 check_prize_achievements(account)
-            
+
             cache.delete(key)
             logger.info(log_prefix + 'make match finished.')
 
@@ -509,13 +510,15 @@ class Order(models.Model):
         return market_price
 
     @classmethod
-    def get_top_prices(cls, symbol_id, scope=''):
+    def get_top_prices(cls, symbol_id, scope='', order_type=None):
+        filters = {'type': order_type} if order_type else {}
         from market.utils.redis import get_top_prices
         top_prices = get_top_prices(symbol_id, scope=scope)
         if not top_prices:
             top_prices = defaultdict(lambda: Decimal())
-            for depth in Order.open_objects.filter(symbol_id=symbol_id).values('side').annotate(max_price=Max('price'),
-                                                                                                min_price=Min('price')):
+            for depth in Order.open_objects.filter(symbol_id=symbol_id, **filters).values('side').annotate(
+                    max_price=Max('price'), min_price=Min('price')
+            ):
                 top_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth[
                     'min_price']) or Decimal()
         return top_prices
