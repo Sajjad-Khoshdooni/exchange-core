@@ -17,6 +17,8 @@ class Investment(models.Model):
 
     description = models.TextField(blank=True)
 
+    invested = models.BooleanField(default=False)
+
     class Meta:
         verbose_name = verbose_name_plural = 'سرمایه‌گذاری'
 

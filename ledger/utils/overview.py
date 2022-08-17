@@ -44,7 +44,16 @@ class AssetOverview:
 
         self._investment = dict(
             InvestmentRevenue.objects.filter(
-                investment__exclude_from_total_assets=False
+                investment__exclude_from_total_assets=False,
+                investment__invested=True
+            ).values('investment__asset__symbol').annotate(
+                amount=Sum('amount')
+            ).values_list('investment__asset__symbol', 'amount')
+        )
+        self._cash = dict(
+            InvestmentRevenue.objects.filter(
+                investment__exclude_from_total_assets=False,
+                investment__invested=False
             ).values('investment__asset__symbol').annotate(
                 amount=Sum('amount')
             ).values_list('investment__asset__symbol', 'amount')
@@ -104,8 +113,13 @@ class AssetOverview:
         handler = asset.get_hedger()
         return float(self._future_positions.get(handler.get_trading_symbol(asset.future_symbol), {}).get('notional', 0))
 
-    def get_investment_amount(self, asset: Asset) -> Decimal:
-        return self._investment.get(asset.symbol, 0)
+    def get_total_cash(self) -> Decimal:
+        value = Decimal(0)
+
+        for symbol, amount in self._cash.items():
+            value += Decimal(amount) * (self.prices.get(symbol) or 0)
+
+        return value
 
     def get_total_investment(self) -> Decimal:
         value = Decimal(0)
@@ -179,7 +193,7 @@ class AssetOverview:
 
     def get_all_assets_usdt(self):
         return float(self.get_binance_spot_total_value()) + self.total_margin_balance + \
-               float(self.get_internal_usdt_value()) + self.get_fiat_usdt() + float(self.get_total_investment())
+               float(self.get_internal_usdt_value()) + self.get_fiat_usdt() + float(self.get_total_investment() + self.get_total_cash())
 
     def get_exchange_assets_usdt(self):
         return self.get_all_assets_usdt() - float(self.get_all_users_asset_value())
