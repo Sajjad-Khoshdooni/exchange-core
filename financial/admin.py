@@ -289,6 +289,7 @@ class InvestmentRevenueInline(admin.TabularInline):
 class InvestmentAdmin(admin.ModelAdmin):
     list_display = ('created', 'title', 'asset', 'get_total', 'get_amount', 'get_revenue', 'type')
     inlines = [InvestmentRevenueInline]
+    list_filter = ('type', 'asset', )
 
     @admin.display(description='amount', ordering='amount')
     def get_amount(self, investment: Investment):
