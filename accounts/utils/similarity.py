@@ -1,5 +1,8 @@
+import logging
 import re
 from difflib import SequenceMatcher
+
+logger = logging.getLogger(__name__)
 
 whitespace_regex = re.compile(r"\s+")
 
@@ -50,6 +53,7 @@ def name_similarity(name1, name2):
     name1, name2 = clean_persian_name(name1), clean_persian_name(name2)
 
     verified = str_similar_rate(name1, name2) >= NAME_SIMILARITY_THRESHOLD
+    logger.info('verifying %s and %s is %s' % (name1, name2, verified))
 
     if not verified:
         name1_rotate = rotate_words(name1)
