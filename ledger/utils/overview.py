@@ -42,8 +42,13 @@ class AssetOverview:
 
         self._internal_deposits = get_internal_asset_deposits()
 
-        self._investment = dict(InvestmentRevenue.objects.values('investment__asset__symbol').annotate(
-            amount=Sum('amount')).values_list('investment__asset__symbol', 'amount'))
+        self._investment = dict(
+            InvestmentRevenue.objects.filter(
+                exclude_from_total_assets=False
+            ).values('investment__asset__symbol').annotate(
+                amount=Sum('amount')
+            ).values_list('investment__asset__symbol', 'amount')
+        )
 
     @property
     def total_initial_margin(self):

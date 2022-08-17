@@ -13,6 +13,8 @@ class Investment(models.Model):
     done = models.BooleanField(default=False)
     type = models.CharField(max_length=16, default=SELF, choices=((SELF, SELF), (TRADE, TRADE), (STAKE, STAKE)))
 
+    exclude_from_total_assets = models.BooleanField(default=False)
+
     description = models.TextField(blank=True)
 
     class Meta:
