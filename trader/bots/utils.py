@@ -127,7 +127,7 @@ def system_top_prices(symbol_ids=None):
 
 
 def get_top_prices_exclude_system_orders(symbol_ids=None):
-    no_filter_top_prices = get_market_top_prices(symbol_ids)
+    no_filter_top_prices = get_market_top_prices(symbol_ids=symbol_ids)
     top_ordinary_prices = defaultdict(lambda: Decimal())
 
     excluding_orders = {

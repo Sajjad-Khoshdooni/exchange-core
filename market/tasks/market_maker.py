@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task(queue='market')
 def update_maker_orders():
-    market_top_prices = get_market_top_prices()
+    market_top_prices = get_market_top_prices(order_type=Order.DEPTH)
     top_depth_prices = defaultdict(lambda: Decimal())
 
     depth_orders = Order.open_objects.filter(type__in=(Order.DEPTH, Order.BOT)).values('symbol', 'side').annotate(
@@ -60,7 +60,7 @@ def update_maker_orders():
 @shared_task(queue='market')
 def update_symbol_maker_orders(symbol):
     symbol = PairSymbol.IdName(*symbol)
-    depth_top_prices = Order.get_top_prices(symbol.id, order_type=Order.DEPTH)
+    depth_top_prices = Order.get_top_depth_prices(symbol.id, order_type=Order.DEPTH)
     top_depth_prices = get_top_depth_prices(symbol.id)
     open_depth_orders_count = get_open_orders_count(symbol.id)
 

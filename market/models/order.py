@@ -510,13 +510,12 @@ class Order(models.Model):
         return market_price
 
     @classmethod
-    def get_top_prices(cls, symbol_id, scope='', order_type=None):
-        filters = {'type': order_type} if order_type else {}
+    def get_top_depth_prices(cls, symbol_id, scope=''):
         from market.utils.redis import get_top_prices
         top_prices = get_top_prices(symbol_id, scope=scope)
         if not top_prices:
             top_prices = defaultdict(lambda: Decimal())
-            for depth in Order.open_objects.filter(symbol_id=symbol_id, **filters).values('side').annotate(
+            for depth in Order.open_objects.filter(symbol_id=symbol_id, type=Order.DEPTH).values('side').annotate(
                     max_price=Max('price'), min_price=Min('price')
             ):
                 top_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth[
