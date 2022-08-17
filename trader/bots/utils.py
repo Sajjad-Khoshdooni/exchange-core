@@ -153,8 +153,10 @@ def place_carrot_order(symbol: PairSymbol, account: Account, side, top_user_pric
 
     one_tick_price = Decimal(f'1e{-random_precision}')
     new_top_price = top_user_price + one_tick_price if side == Order.BUY else top_user_price - one_tick_price
-    if (side == Order.BUY and new_top_price >= top_opposite_user_price) or (
-            side == Order.SELL and new_top_price <= top_opposite_user_price):
+    if top_opposite_user_price and (
+            (side == Order.BUY and new_top_price >= top_opposite_user_price) or (
+            side == Order.SELL and new_top_price <= top_opposite_user_price)
+    ):
         logger.info(f'no need to place carrot order on {symbol} {new_top_price} {top_opposite_user_price}')
         return
     amount = floor_precision(symbol.maker_amount / get_time_based_factor(600) / 5, symbol.step_size)
