@@ -185,7 +185,7 @@ class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
     @admin.action(description='تایید خودکار شماره کارت')
     def verify_bank_cards(self, request, queryset):
-        for bank_card in queryset:
+        for bank_card in queryset.filter(kyc=False):
             verify_bank_card_task.delay(bank_card.id)
 
     @admin.action(description='تایید شماره کارت')
