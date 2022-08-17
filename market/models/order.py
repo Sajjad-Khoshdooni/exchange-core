@@ -481,7 +481,7 @@ class Order(models.Model):
         for side in (Order.BUY, Order.SELL):
             wasted_orders = Order.open_objects.filter(symbol_id=symbol.id, side=side, type=Order.DEPTH)
             wasted_orders = wasted_orders.order_by('price') if side == Order.BUY else wasted_orders.order_by('-price')
-            cancel_count = int(open_orders_count[side]) - int(Order.MAKER_ORDERS_COUNT * 0.7)
+            cancel_count = int(open_orders_count[side]) - Order.MAKER_ORDERS_COUNT
 
             logger.info(f'maker {symbol.name} {side}: wasted={len(wasted_orders)} cancels={cancel_count}')
 
