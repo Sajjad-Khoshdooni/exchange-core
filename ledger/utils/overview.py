@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.db.models import Sum
 
 from accounts.models import Account
-from financial.models import Investment, InvestmentRevenue, FiatWithdrawRequest
+from financial.models import InvestmentRevenue, FiatWithdrawRequest
 from financial.utils.stats import get_total_fiat_irt
 from ledger.models import Asset, Wallet, Transfer
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
