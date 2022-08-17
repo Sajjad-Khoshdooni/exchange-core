@@ -60,7 +60,7 @@ def update_maker_orders():
 @shared_task(queue='market')
 def update_symbol_maker_orders(symbol):
     symbol = PairSymbol.IdName(*symbol)
-    market_top_prices = Order.get_top_prices(symbol.id)
+    depth_top_prices = Order.get_top_prices(symbol.id, type=Order.DEPTH)
     top_depth_prices = get_top_depth_prices(symbol.id)
     open_depth_orders_count = get_open_orders_count(symbol.id)
 
@@ -88,7 +88,7 @@ def update_symbol_maker_orders(symbol):
         for side in (Order.BUY, Order.SELL):
             logger.info(f'{symbol.name} {side} open count: {open_depth_orders_count[side]}')
             price = Order.get_maker_price(symbol, side)
-            order = Order.init_top_maker_order(symbol, side, price, Decimal(market_top_prices[side]))
+            order = Order.init_top_maker_order(symbol, side, price, Decimal(depth_top_prices[side]))
             logger.info(f'{symbol.name} {side} maker order created: {bool(order)}')
             if order:
                 if int(open_depth_orders_count[side]) > Order.MAKER_ORDERS_COUNT:
