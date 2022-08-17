@@ -60,7 +60,7 @@ def update_maker_orders():
 @shared_task(queue='market')
 def update_symbol_maker_orders(symbol):
     symbol = PairSymbol.IdName(*symbol)
-    depth_top_prices = Order.get_top_depth_prices(symbol.id, order_type=Order.DEPTH)
+    depth_top_prices = Order.get_top_depth_prices(symbol.id)
     top_depth_prices = get_top_depth_prices(symbol.id)
     open_depth_orders_count = get_open_orders_count(symbol.id)
 
