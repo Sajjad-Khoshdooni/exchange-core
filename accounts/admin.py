@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import CustomToken, FirebaseToken, ExternalNotification
+from accounts.models import FirebaseToken, ExternalNotification
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -19,7 +19,6 @@ from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdra
 from ledger.models import OTCTrade, DepositAddress
 from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
-from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import BUY
 from market.models import Trade, ReferralTrx, Order

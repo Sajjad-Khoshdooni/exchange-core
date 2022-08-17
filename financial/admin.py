@@ -293,12 +293,12 @@ class InvestmentAdmin(admin.ModelAdmin):
 
     @admin.display(description='amount', ordering='amount')
     def get_amount(self, investment: Investment):
-        return get_presentation_amount(investment.get_base_amount())
+        return humanize_number(get_presentation_amount(investment.get_base_amount()))
 
     @admin.display(description='revenue')
     def get_revenue(self, investment: Investment):
-        return get_presentation_amount(investment.get_revenue_amount())
+        return humanize_number(get_presentation_amount(investment.get_revenue_amount()))
 
     @admin.display(description='total')
     def get_total(self, investment: Investment):
-        return get_presentation_amount(investment.get_total_amount())
+        return humanize_number(get_presentation_amount(investment.get_total_amount()))
