@@ -44,7 +44,7 @@ class AssetOverview:
 
         self._investment = dict(
             InvestmentRevenue.objects.filter(
-                exclude_from_total_assets=False
+                investment__exclude_from_total_assets=False
             ).values('investment__asset__symbol').annotate(
                 amount=Sum('amount')
             ).values_list('investment__asset__symbol', 'amount')
