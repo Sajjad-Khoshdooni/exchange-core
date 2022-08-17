@@ -42,8 +42,7 @@ class AssetOverview:
 
         self._internal_deposits = get_internal_asset_deposits()
 
-        self._investment = dict(Investment.objects.values('asset__symbol').annotate(amount=Sum('amount')).values_list('asset__symbol', 'amount'))
-        self._investment_revenue = dict(InvestmentRevenue.objects.values('investment__asset__symbol').annotate(
+        self._investment = dict(InvestmentRevenue.objects.values('investment__asset__symbol').annotate(
             amount=Sum('amount')).values_list('investment__asset__symbol', 'amount'))
 
     @property
@@ -101,15 +100,12 @@ class AssetOverview:
         return float(self._future_positions.get(handler.get_trading_symbol(asset.future_symbol), {}).get('notional', 0))
 
     def get_investment_amount(self, asset: Asset) -> Decimal:
-        return self._investment.get(asset.symbol, 0) + self._investment_revenue.get(asset.symbol, 0)
+        return self._investment.get(asset.symbol, 0)
 
     def get_total_investment(self) -> Decimal:
         value = Decimal(0)
 
         for symbol, amount in self._investment.items():
-            value += Decimal(amount) * (self.prices.get(symbol) or 0)
-
-        for symbol, amount in self._investment_revenue.items():
             value += Decimal(amount) * (self.prices.get(symbol) or 0)
 
         return value

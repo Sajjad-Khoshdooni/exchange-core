@@ -279,7 +279,7 @@ class MarketingCostAdmin(admin.ModelAdmin):
 
 
 class InvestmentRevenueInline(admin.TabularInline):
-    fields = ('created', 'amount', 'description')
+    fields = ('created', 'amount', 'description', 'revenue')
     readonly_fields = ('created', )
     model = InvestmentRevenue
     extra = 1
@@ -287,16 +287,16 @@ class InvestmentRevenueInline(admin.TabularInline):
 
 @admin.register(Investment)
 class InvestmentAdmin(admin.ModelAdmin):
-    list_display = ('created', 'type', 'asset', 'get_amount', 'get_revenue', 'get_total', 'done')
+    list_display = ('created', 'title', 'asset', 'get_total', 'get_amount', 'get_revenue', 'type')
     inlines = [InvestmentRevenueInline]
 
     @admin.display(description='amount', ordering='amount')
     def get_amount(self, investment: Investment):
-        return get_presentation_amount(investment.amount)
+        return get_presentation_amount(investment.get_base_amount())
 
     @admin.display(description='revenue')
     def get_revenue(self, investment: Investment):
-        return get_presentation_amount(investment.get_revenue())
+        return get_presentation_amount(investment.get_revenue_amount())
 
     @admin.display(description='total')
     def get_total(self, investment: Investment):
