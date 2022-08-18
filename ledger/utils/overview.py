@@ -98,7 +98,7 @@ class AssetOverview:
         price = self.prices.get(symbol)
 
         if self._strict and price is None:
-            raise PriceFetchError
+            raise PriceFetchError(symbol)
 
         return price or 0
 
