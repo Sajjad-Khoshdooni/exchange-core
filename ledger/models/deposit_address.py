@@ -43,6 +43,10 @@ class DepositAddress(models.Model):
 
         return deposit_address
 
+    def update_transaction_history(self):
+        from ledger.requester.trx_history_updater import UpdateTrxHistory
+        UpdateTrxHistory().update_history(deposit_address=self)
+
     class Meta:
         unique_together = (
             ('network', 'address'),
