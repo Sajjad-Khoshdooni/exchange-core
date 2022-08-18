@@ -112,6 +112,8 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 @admin.register(PaymentRequest)
 class PaymentRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'gateway', 'bank_card', 'amount', 'authority')
+    search_fields = ('bank_card__card_pan', 'amount')
+    readonly_fields = ('bank_card', )
 
 
 class UserFilter(SimpleListFilter):
@@ -134,8 +136,8 @@ class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_payment_amount', 'status', 'ref_id', 'ref_status', 'get_user_bank_card',
                     'get_withdraw_request_user_mobile',)
     readonly_fields = ('payment_request', )
-
-    list_filter = (UserFilter,)
+    list_filter = (UserFilter, 'status', )
+    search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'payment_request__amount')
 
     def get_user_bank_card(self, payment: Payment):
         return payment.payment_request.bank_card.user
