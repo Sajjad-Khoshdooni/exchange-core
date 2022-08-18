@@ -170,7 +170,7 @@ app.conf.beat_schedule = {
         'task': 'accounts.tasks.retention.retention_leads_to_signup',
         'schedule': 3600,
         'options': {
-            'queue': 'celery',
+            'queue': 'retention',
             'expire': 3600
         },
     },
@@ -179,7 +179,7 @@ app.conf.beat_schedule = {
         'task': 'accounts.tasks.retention.retention_actions',
         'schedule': 3600,
         'options': {
-            'queue': 'celery',
+            'queue': 'retention',
             'expire': 3600
         },
     },

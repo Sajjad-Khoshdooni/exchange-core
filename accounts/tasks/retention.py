@@ -1,3 +1,4 @@
+import logging
 import time
 from datetime import timedelta
 
@@ -9,6 +10,8 @@ from accounts.models import User, ExternalNotification
 from accounts.utils.push_notif import send_push_notif, IMAGE_200K_SHIB
 from collector.models import CoinMarketCap
 from ledger.models import Prize, Asset
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='celery')
@@ -124,15 +127,26 @@ def retention_actions():
         ExternalNotification.SCOPE_TRADE3: user_not_trade.filter(date_joined__range=(before(days=40), before(days=21))),
     }
 
+    missed = 0
+
     for scope, users in candidate.items():
         sent_users = ExternalNotification.objects.filter(scope=scope).values_list('user_id', flat=True)
         users = users.exclude(id__in=sent_users)
 
         for user in users:
-            ExternalNotification.send_sms(
+            sent = ExternalNotification.send_sms(
                 user=user,
                 scope=scope,
             )
+
+            if not sent:
+                missed += 1
+            else:
+                missed = 0
+
+            if missed >= 3:
+                logger.warning('sending retention ignored due to multiple sms.ir failures')
+                return
 
             time.sleep(1)
 
