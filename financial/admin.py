@@ -137,7 +137,7 @@ class PaymentAdmin(admin.ModelAdmin):
                     'get_withdraw_request_user_mobile',)
     readonly_fields = ('payment_request', )
     list_filter = (UserFilter, 'status', )
-    search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'payment_request__amount')
+    search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'payment_request__amount', 'payment_request__authority')
 
     def get_user_bank_card(self, payment: Payment):
         return payment.payment_request.bank_card.user
