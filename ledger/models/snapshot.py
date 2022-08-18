@@ -20,6 +20,9 @@ class AssetSnapshot(models.Model):
     investment_amount = get_amount_field()
     cash_amount = get_amount_field()
 
+    class Meta:
+        verbose_name = verbose_name_plural = 'تاریخچه دارایی'
+
 
 class SystemSnapshot(models.Model):
     created = models.DateTimeField(auto_now_add=True, unique=True, db_index=True)
@@ -41,3 +44,6 @@ class SystemSnapshot(models.Model):
 
     margin_futures_initial_margin = get_amount_field()
     margin_futures_maintenance_margin = get_amount_field()
+
+    class Meta:
+        verbose_name = verbose_name_plural = 'تاریخچه سیستم'
