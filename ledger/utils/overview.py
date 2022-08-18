@@ -5,12 +5,15 @@ from django.db.models import Sum
 from accounts.models import Account
 from financial.models import InvestmentRevenue, FiatWithdrawRequest
 from financial.utils.stats import get_total_fiat_irt
+from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Asset, Wallet, Transfer
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
+from ledger.utils.cache import cache_for
 from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, BUY
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
 
+@cache_for(60)
 def get_internal_asset_deposits():
     assets = InternalAssetsRequester().get_assets()
     return {
@@ -52,6 +55,25 @@ class AssetOverview:
         )
         self._cash = dict(
             InvestmentRevenue.objects.filter(
+                investment__exclude_from_total_assets=False,
+                investment__invested=False
+            ).values('investment__asset__symbol').annotate(
+                amount=Sum('amount')
+            ).values_list('investment__asset__symbol', 'amount')
+        )
+
+        self._hedged_investment = dict(
+            InvestmentRevenue.objects.filter(
+                investment__hedged=True,
+                investment__exclude_from_total_assets=False,
+                investment__invested=True
+            ).values('investment__asset__symbol').annotate(
+                amount=Sum('amount')
+            ).values_list('investment__asset__symbol', 'amount')
+        )
+        self._hedged_cash = dict(
+            InvestmentRevenue.objects.filter(
+                investment__hedged=True,
                 investment__exclude_from_total_assets=False,
                 investment__invested=False
             ).values('investment__asset__symbol').annotate(
@@ -121,6 +143,12 @@ class AssetOverview:
 
         return value
 
+    def get_hedged_investment_amount(self, asset: Asset) -> Decimal:
+        return self._hedged_investment.get(asset.symbol, 0)
+
+    def get_hedged_cash_amount(self, asset: Asset) -> Decimal:
+        return self._hedged_cash.get(asset.symbol, 0)
+
     def get_total_investment(self) -> Decimal:
         value = Decimal(0)
 
@@ -131,10 +159,14 @@ class AssetOverview:
 
     def get_total_assets(self, asset: Asset):
         if asset.symbol == Asset.IRT:
-            return get_total_fiat_irt()
+            assets = get_total_fiat_irt()
         else:
-            return self.get_binance_balance(asset) + \
+            assets = self.get_binance_balance(asset) + \
                    self.get_internal_deposits_balance(asset)
+
+        assets += self.get_hedged_investment_amount(asset) + self.get_hedged_cash_amount(asset)
+
+        return assets
 
     def get_hedge_amount(self, asset: Asset):
         # Hedge = Real assets - Promised assets to users (user)
@@ -218,3 +250,6 @@ class AssetOverview:
         ).exclude(account__in=transferred_accounts).values('asset__symbol').annotate(amount=Sum('balance'))
 
         return {w['asset__symbol']: w['amount'] for w in non_deposited_wallets}
+
+    def get_margin_insurance_balance(self):
+        return Asset.get(Asset.USDT).get_wallet(MARGIN_INSURANCE_ACCOUNT).balance

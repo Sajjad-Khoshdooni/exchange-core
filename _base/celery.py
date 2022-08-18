@@ -224,7 +224,15 @@ app.conf.beat_schedule = {
             'queue': 'history',
         }
     },
+    'create_snapshot': {
+        'task': 'ledger.tasks.snapshot.create_snapshot',
+        'schedule': crontab(minute=30),
+        'options': {
+            'queue': 'history',
+        }
+    },
 }
+
 if settings.DEBUG_OR_TESTING:
     app.conf.beat_schedule = {
         'coin_market_cap_update': {

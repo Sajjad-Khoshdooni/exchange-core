@@ -8,7 +8,6 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Asset, Prize, CoinCategory
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
@@ -48,7 +47,6 @@ class AssetAdmin(AdvancedAdmin):
 
         if not settings.DEBUG_OR_TESTING:
             self.overview = AssetOverview()
-            account = MARGIN_INSURANCE_ACCOUNT
 
             context = {
                 'binance_initial_margin': round(self.overview.total_initial_margin, 2),
@@ -61,7 +59,7 @@ class AssetAdmin(AdvancedAdmin):
                 'binance_margin_balance': round(self.overview.total_margin_balance, 2),
                 'internal_usdt': round(self.overview.get_internal_usdt_value(), 2),
                 'fiat_usdt': round(self.overview.get_fiat_usdt(), 0),
-                'margin_insurance_balance': Asset.get(Asset.USDT).get_wallet(account).balance,
+                'margin_insurance_balance': self.overview.get_margin_insurance_balance(),
                 'investment': round(self.overview.get_total_investment(), 0),
                 'cash': round(self.overview.get_total_cash(), 0),
 
