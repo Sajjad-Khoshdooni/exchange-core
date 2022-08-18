@@ -29,8 +29,11 @@ def create_snapshot():
         cash=overview.get_total_cash(),
         margin_insurance=overview.get_margin_insurance_balance(),
 
-        margin_futures_initial_margin=overview.total_initial_margin,
-        margin_futures_maintenance_margin=overview.total_maintenance_margin,
+        binance_futures_initial_margin=overview.total_initial_margin,
+        binance_futures_maintenance_margin=overview.total_maintenance_margin,
+        binance_futures_margin_balance=overview.total_margin_balance,
+        binance_futures_available_balance=overview.get_futures_available_usdt(),
+        binance_futures_margin_ratio=overview.margin_ratio,
     )
 
     asset_snapshots = []

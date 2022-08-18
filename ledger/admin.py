@@ -142,7 +142,7 @@ class AssetAdmin(AdvancedAdmin):
             handler = asset.get_hedger()
 
             if handler:
-                symbol = handler.get_trading_symbol(coin=asset.symbol)
+                symbol = handler.get_trading_symbol(asset.symbol)
                 return handler.get_step_size(symbol)
 
     get_hedge_threshold.short_description = 'hedge threshold'

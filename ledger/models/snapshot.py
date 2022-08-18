@@ -42,8 +42,13 @@ class SystemSnapshot(models.Model):
     cash = get_amount_field()
     margin_insurance = get_amount_field()
 
-    margin_futures_initial_margin = get_amount_field()
-    margin_futures_maintenance_margin = get_amount_field()
+    binance_futures_initial_margin = get_amount_field()
+    binance_futures_maintenance_margin = get_amount_field()
+    binance_futures_margin_balance = get_amount_field()
+    binance_futures_available_balance = get_amount_field()
+    binance_futures_margin_ratio = get_amount_field()
+
+    hedge = get_amount_field()
 
     class Meta:
         verbose_name = verbose_name_plural = 'تاریخچه سیستم'
