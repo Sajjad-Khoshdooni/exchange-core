@@ -112,7 +112,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 @admin.register(PaymentRequest)
 class PaymentRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'gateway', 'bank_card', 'amount', 'authority')
-    search_fields = ('bank_card__card_pan', 'amount')
+    search_fields = ('bank_card__card_pan', 'amount', 'authority')
     readonly_fields = ('bank_card', )
 
 
