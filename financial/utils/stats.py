@@ -1,6 +1,8 @@
 from financial.utils.withdraw import ZibalChanel, PayirChanel
+from ledger.utils.cache import cache_for
 
 
+@cache_for(time=60)
 def get_total_fiat_irt():
     channels = [ZibalChanel(), PayirChanel()]
 
