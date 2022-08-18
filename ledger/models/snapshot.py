@@ -29,6 +29,9 @@ class SystemSnapshot(models.Model):
 
     usdt_price = get_amount_field()
 
+    hedge = get_amount_field()
+    cumulated_hedge = get_amount_field()
+
     total = get_amount_field()
     users = get_amount_field()
     exchange = get_amount_field()
@@ -41,14 +44,13 @@ class SystemSnapshot(models.Model):
     investment = get_amount_field()
     cash = get_amount_field()
     margin_insurance = get_amount_field()
+    prize = get_amount_field()
 
     binance_futures_initial_margin = get_amount_field()
     binance_futures_maintenance_margin = get_amount_field()
     binance_futures_margin_balance = get_amount_field()
     binance_futures_available_balance = get_amount_field()
     binance_futures_margin_ratio = get_amount_field()
-
-    hedge = get_amount_field()
 
     class Meta:
         verbose_name = verbose_name_plural = 'تاریخچه سیستم'

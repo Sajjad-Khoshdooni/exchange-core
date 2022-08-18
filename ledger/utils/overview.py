@@ -6,7 +6,7 @@ from accounts.models import Account
 from financial.models import InvestmentRevenue, FiatWithdrawRequest
 from financial.utils.stats import get_total_fiat_irt
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
-from ledger.models import Asset, Wallet, Transfer
+from ledger.models import Asset, Wallet, Transfer, Prize
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
 from ledger.utils.cache import cache_for
 from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, BUY, PriceFetchError
@@ -211,10 +211,27 @@ class AssetOverview:
 
         return value - pending_withdraws / self.usdt_irt
 
+    def get_all_prize_value(self) -> Decimal:
+        value = Decimal(0)
+
+        prize_dict = dict(Prize.objects.filter(
+            redeemed=True
+        ).values('asset__symbol').annotate(amount=Sum('amount')).values_list('asset__symbol', 'amount'))
+
+        for coin, amount in prize_dict.items():
+            value += amount * self.get_price(coin)
+
+        return value
+
     def get_total_hedge_value(self):
         return sum([
             abs(self.get_hedge_value(asset) or 0) for asset in Asset.objects.exclude(hedge_method=Asset.HEDGE_NONE)
         ])
+
+    def get_cumulated_hedge_value(self):
+        return abs(sum([
+            self.get_hedge_value(asset) for asset in Asset.objects.exclude(hedge_method=Asset.HEDGE_NONE)
+        ]))
 
     def get_binance_balance(self, asset: Asset) -> Decimal:
         future_amount = Decimal(self.get_future_position_amount(asset))
