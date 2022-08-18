@@ -213,16 +213,9 @@ class AssetOverview:
         return value - pending_withdraws / self.usdt_irt
 
     def get_all_prize_value(self) -> Decimal:
-        value = Decimal(0)
-
-        prize_dict = dict(Prize.objects.filter(
+        return Prize.objects.filter(
             redeemed=True
-        ).values('asset__symbol').annotate(amount=Sum('amount')).values_list('asset__symbol', 'amount'))
-
-        for coin, amount in prize_dict.items():
-            value += amount * self.get_price(coin)
-
-        return value
+        ).aggregate(value=Sum('value'))['value'] or 0
 
     def get_total_hedge_value(self):
         return sum([
