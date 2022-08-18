@@ -134,9 +134,10 @@ class AssetOverview:
     def get_binance_spot_total_value(self) -> Decimal:
         value = Decimal(0)
 
-        for symbol, amount in self._binance_spot_balance_map.items():
-            if amount > 0:
-                value += Decimal(amount) * self.get_price(symbol)
+        for asset in Asset.candid_objects.all():
+            amount = self._binance_spot_balance_map.get(asset.symbol)
+            if amount:
+                value += Decimal(amount) * self.get_price(asset.symbol)
 
         return value
 
