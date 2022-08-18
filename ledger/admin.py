@@ -423,6 +423,11 @@ class SystemSnapshotAdmin(admin.ModelAdmin):
 
 @admin.register(models.AssetSnapshot)
 class AssetSnapshotAdmin(admin.ModelAdmin):
-    list_display = ('created', 'asset', 'total_amount', 'users_amount', 'hedge_amount', 'hedge_value')
+    list_display = ('created', 'asset', 'total_amount', 'users_amount', 'hedge_amount', 'hedge_value', 'get_hedge_diff')
     ordering = ('-created', 'asset__order')
     list_filter = ('asset', )
+
+    def get_hedge_diff(self, asset_snapshot: models.AssetSnapshot):
+        return asset_snapshot.calc_hedge_amount - asset_snapshot.hedge_amount
+
+    get_hedge_diff.short_description = 'hedge diff'
