@@ -15,6 +15,7 @@ def create_snapshot():
     system_snapshot = SystemSnapshot(
         created=now,
         usdt_price=overview.usdt_irt,
+        hedge=overview.get_total_hedge_value(),
 
         total=overview.get_all_assets_usdt(),
         users=overview.get_all_users_asset_value(),
