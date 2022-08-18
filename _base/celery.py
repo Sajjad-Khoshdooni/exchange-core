@@ -221,7 +221,7 @@ app.conf.beat_schedule = {
         'task': 'ledger.tasks.pnl.create_pnl_histories',
         'schedule': crontab(hour=20, minute=30),
         'options': {
-            'queue': 'celery',
+            'queue': 'history',
         }
     },
 }
