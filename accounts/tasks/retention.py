@@ -14,7 +14,7 @@ from ledger.models import Prize, Asset
 logger = logging.getLogger(__name__)
 
 
-@shared_task(queue='celery')
+@shared_task(queue='retention')
 def retention_leads_to_signup():
     from accounts.models import FirebaseToken
 
@@ -87,7 +87,7 @@ def trigger_token(token):
     )
 
 
-@shared_task(queue='celery')
+@shared_task(queue='retention')
 def retention_actions():
     user_level_1 = User.objects.filter(
         is_active=True,
@@ -151,7 +151,7 @@ def retention_actions():
             time.sleep(1)
 
 
-@shared_task(queue='celery')
+@shared_task(queue='retention')
 def retention_missing_users():
 
     all_symbols = list(Asset.objects.filter(enable=True).values_list('symbol', flat=True))
