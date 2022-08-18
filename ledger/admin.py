@@ -412,3 +412,16 @@ class CategorySpreadAdmin(admin.ModelAdmin):
     list_editable = ('side', 'step', 'spread')
     ordering = ('category', 'step', 'side')
     list_filter = ('category', 'side', 'step')
+
+
+@admin.register(models.SystemSnapshot)
+class SystemSnapshotAdmin(admin.ModelAdmin):
+    list_display = ('created', 'total', 'users', 'exchange', 'exchange_potential')
+    ordering = ('-created', )
+
+
+@admin.register(models.AssetSnapshot)
+class AssetSnapshotAdmin(admin.ModelAdmin):
+    list_display = ('created', 'asset', 'total_amount', 'users_amount', 'hedge_amount', 'hedge_value')
+    ordering = ('-created', 'asset__order')
+    list_filter = ('asset', )
