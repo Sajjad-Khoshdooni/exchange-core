@@ -46,7 +46,7 @@ class AssetAdmin(AdvancedAdmin):
     def changelist_view(self, request, extra_context=None):
 
         if not settings.DEBUG_OR_TESTING:
-            self.overview = AssetOverview()
+            self.overview = AssetOverview(strict=False)
 
             context = {
                 'binance_initial_margin': round(self.overview.total_initial_margin, 2),

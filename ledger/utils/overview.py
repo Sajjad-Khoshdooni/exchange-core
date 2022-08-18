@@ -9,7 +9,7 @@ from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Asset, Wallet, Transfer
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
 from ledger.utils.cache import cache_for
-from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, BUY
+from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, BUY, PriceFetchError
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
 
 
@@ -22,7 +22,8 @@ def get_internal_asset_deposits():
 
 
 class AssetOverview:
-    def __init__(self):
+    def __init__(self, strict: bool = True):
+        self._strict = strict
         self._future = BinanceFuturesHandler().get_account_details()
 
         self._future_positions = {
@@ -93,6 +94,14 @@ class AssetOverview:
     def total_margin_balance(self):
         return float(self._future['totalMarginBalance'])
 
+    def get_price(self, symbol: str) -> Decimal:
+        price = self.prices.get(symbol)
+
+        if self._strict and price is None:
+            raise PriceFetchError
+
+        return price or 0
+
     @property
     def margin_ratio(self):
         return self.total_margin_balance / max(self.total_initial_margin, 1e-10)
@@ -127,7 +136,7 @@ class AssetOverview:
 
         for symbol, amount in self._binance_spot_balance_map.items():
             if amount > 0:
-                value += Decimal(amount) * (self.prices.get(symbol) or 0)
+                value += Decimal(amount) * self.get_price(symbol)
 
         return value
 
@@ -139,7 +148,7 @@ class AssetOverview:
         value = Decimal(0)
 
         for symbol, amount in self._cash.items():
-            value += Decimal(amount) * (self.prices.get(symbol) or 0)
+            value += Decimal(amount) * self.get_price(symbol)
 
         return value
 
@@ -153,7 +162,7 @@ class AssetOverview:
         value = Decimal(0)
 
         for symbol, amount in self._investment.items():
-            value += Decimal(amount) * (self.prices.get(symbol) or 0)
+            value += Decimal(amount) * self.get_price(symbol)
 
         return value
 
@@ -176,23 +185,19 @@ class AssetOverview:
         total = Decimal(0)
 
         for symbol, amount in self._internal_deposits.items():
-            total += amount * (self.prices.get(symbol) or 0)
+            total += amount * self.get_price(symbol)
 
         return total
 
     def get_hedge_value(self, asset: Asset):
-        price = self.prices.get(asset.symbol)
-        if price is None:
-            return None
-
-        return Decimal(self.get_hedge_amount(asset)) * price
+        return Decimal(self.get_hedge_amount(asset)) * self.get_price(asset.symbol)
 
     def get_users_asset_amount(self, asset: Asset) -> Decimal:
         return self._users_per_asset_balances.get(asset.symbol, 0)
 
     def get_users_asset_value(self, asset: Asset) -> Decimal:
         balance = self.get_users_asset_amount(asset)
-        return balance * (self.prices.get(asset.symbol) or 0)
+        return balance * self.get_price(asset.symbol)
 
     def get_all_users_asset_value(self) -> Decimal:
         value = Decimal(0)
@@ -225,7 +230,8 @@ class AssetOverview:
 
     def get_all_assets_usdt(self):
         return float(self.get_binance_spot_total_value()) + self.total_margin_balance + \
-               float(self.get_internal_usdt_value()) + self.get_fiat_usdt() + float(self.get_total_investment() + self.get_total_cash())
+               float(self.get_internal_usdt_value()) + self.get_fiat_usdt() + \
+               float(self.get_total_investment() + self.get_total_cash())
 
     def get_exchange_assets_usdt(self):
         return self.get_all_assets_usdt() - float(self.get_all_users_asset_value())
@@ -236,7 +242,7 @@ class AssetOverview:
         non_deposited = self.get_non_deposited_accounts_per_asset_balance()
 
         for symbol, balance in non_deposited.items():
-            value += balance * (self.prices.get(symbol) or 0)
+            value += balance * self.get_price(symbol)
 
         return self.get_exchange_assets_usdt() + float(value)
 
