@@ -6,7 +6,7 @@ from ledger.utils.overview import AssetOverview
 from provider.models import ProviderOrder
 
 
-@shared_task()
+@shared_task(queue='history')
 def create_snapshot():
     now = timezone.now()
 
