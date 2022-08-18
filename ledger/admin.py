@@ -416,8 +416,8 @@ class CategorySpreadAdmin(admin.ModelAdmin):
 
 @admin.register(models.SystemSnapshot)
 class SystemSnapshotAdmin(admin.ModelAdmin):
-    list_display = ('created', 'total', 'users', 'exchange', 'exchange_potential', 'hedge',
-                    'binance_futures', 'binance_spot', 'internal', 'fiat_gateway', 'investment', 'cash')
+    list_display = ('created', 'total', 'users', 'exchange', 'exchange_potential', 'hedge', 'cumulated_hedge',
+                    'binance_futures', 'binance_spot', 'internal', 'fiat_gateway', 'investment', 'cash', 'prize')
     ordering = ('-created', )
 
 
