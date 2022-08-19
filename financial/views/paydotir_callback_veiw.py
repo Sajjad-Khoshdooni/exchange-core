@@ -26,7 +26,7 @@ class PaydotirCallbackView(TemplateView):
 
         if not payment:
             payment = Payment.objects.create(
-                payment_request=payment_request
+                payment_request=p
             )
 
         if payment.status == Payment.PENDING:
