@@ -240,11 +240,11 @@ class AssetOverview:
         return float(self.get_fiat_irt() / self.usdt_irt)
 
     def get_gateway_usdt(self):
-        return get_total_fiat_irt()
+        return get_total_fiat_irt() / self.usdt_irt
 
     def get_all_assets_usdt(self):
         return float(self.get_binance_spot_total_value()) + self.total_margin_balance + \
-               float(self.get_internal_usdt_value()) + self.get_gateway_usdt() + \
+               float(self.get_internal_usdt_value()) + float(self.get_gateway_usdt()) + \
                float(self.get_total_investment() + self.get_total_cash())
 
     def get_exchange_assets_usdt(self):
