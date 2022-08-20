@@ -292,7 +292,7 @@ class AssetOverviewAPIView(APIView):
                 coin['price_irt'] = tether_irt * coin['price_usdt']
             coin['market_irt_enable'] = coin['symbol'] in get_irt_market_asset_symbols()
 
-            coin.update(Asset.objects.filter(symbol=coin['symbol']).values('name', 'name_fa', 'logo')[0])
+            coin.update(AssetSerializerMini(Asset.objects.get(symbol=coin['symbol'])).data)
 
     def get(self, request):
         symbols = Asset.live_objects.exclude(symbol__in=['IRT', 'IOTA'])
