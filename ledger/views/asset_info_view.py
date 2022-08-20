@@ -210,7 +210,8 @@ class AssetsViewSet(ModelViewSet):
             'trend': self.request.query_params.get('trend') == '1',
             'extra_info': self.request.query_params.get('extra_info') == '1',
             'market': self.request.query_params.get('market'),
-            'category': self.request.query_params.get('category')
+            'category': self.request.query_params.get('category'),
+            'name': self.request.query_params.get('name'),
         }
 
         return options[key]
@@ -242,6 +243,9 @@ class AssetsViewSet(ModelViewSet):
 
         if self.get_options('coin'):
             queryset = queryset.exclude(symbol=Asset.IRT)
+
+        if self.get_options('name'):
+            queryset = queryset.filter(name=self.get_options('name'))
 
         return queryset
 
