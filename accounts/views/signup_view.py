@@ -101,6 +101,9 @@ class SignupSerializer(serializers.Serializer):
                     utm_campaign=utm.get('utm_campaign', ''),
                     utm_content=utm.get('utm_content', ''),
                     utm_term=utm.get('utm_term', ''),
+                    gps_adid=utm.get('gps_adid', ''),
+                    ip=get_client_ip(self.context['request']),
+
                 )
 
         return user
@@ -115,4 +118,3 @@ class SignupView(CreateAPIView):
         user = serializer.save()
         login(self.request, user)
         set_login_activity(self.request, user, is_sign_up=True)
-
