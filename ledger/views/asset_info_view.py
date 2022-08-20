@@ -303,14 +303,16 @@ class AssetOverviewAPIView(APIView):
         price = get_prices_dict(coins=list_symbol, side=BUY)
         tether_irt = get_tether_irt_price(BUY)
 
-        high_volume = list(caps.order_by('-volume_24h').values('symbol', 'change_24h',))[:3]
+        asset_fields = ('symbol', 'change_24h', 'name', 'name_fa', 'logo')
+
+        high_volume = list(caps.order_by('-volume_24h').values(*asset_fields))[:3]
         AssetOverviewAPIView.set_price(high_volume, price, tether_irt)
 
-        high_24h_change = list(caps.order_by('-change_24h').values('symbol', 'change_24h',))[:3]
+        high_24h_change = list(caps.order_by('-change_24h').values(*asset_fields))[:3]
 
         AssetOverviewAPIView.set_price(high_24h_change, price, tether_irt)
 
-        new = list(caps.filter(symbol__in=newest_coin).values('symbol', 'change_24h'))[:3]
+        new = list(caps.filter(symbol__in=newest_coin).values(*asset_fields))[:3]
         AssetOverviewAPIView.set_price(new, price, tether_irt)
 
         return Response({
