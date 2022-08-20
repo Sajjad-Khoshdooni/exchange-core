@@ -66,9 +66,6 @@ class AssetAdmin(AdvancedAdmin):
                 'margin_insurance_balance': Asset.get(Asset.USDT).get_wallet(account).balance,
                 'investment': round(self.overview.get_total_investment(), 0),
 
-
-
-
                 'total_assets_usdt': round(self.overview.get_all_assets_usdt(), 0),
                 'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
                 'exchange_potential_usdt': round(self.overview.get_exchange_potential_usdt(), 0),
