@@ -58,7 +58,7 @@ class AssetAdmin(AdvancedAdmin):
                 'binance_spot_usdt': round(self.overview.get_binance_spot_total_value(), 2),
                 'binance_margin_balance': round(self.overview.total_margin_balance, 2),
                 'internal_usdt': round(self.overview.get_internal_usdt_value(), 2),
-                'fiat_usdt': round(self.overview.get_fiat_usdt(), 0),
+                'fiat_usdt': round(self.overview.get_gateway_usdt(), 0),
                 'margin_insurance_balance': self.overview.get_margin_insurance_balance(),
                 'investment': round(self.overview.get_total_investment(), 0),
                 'cash': round(self.overview.get_total_cash(), 0),
