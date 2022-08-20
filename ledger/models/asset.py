@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from rest_framework import serializers
@@ -177,12 +178,16 @@ class AssetSerializer(serializers.ModelSerializer):
 class AssetSerializerMini(serializers.ModelSerializer):
     precision = serializers.SerializerMethodField()
     step_size = serializers.SerializerMethodField()
+    logo = serializers.SerializerMethodField()
 
     def get_precision(self, asset: Asset):
         return asset.get_precision()
 
     def get_step_size(self, asset: Asset):
         return get_precision(asset.trade_quantity_step)
+
+    def get_logo(self, asset: Asset):
+        return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
 
     class Meta:
         model = Asset

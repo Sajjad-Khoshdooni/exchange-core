@@ -1,8 +1,6 @@
 import time
 from decimal import Decimal
 
-from django.conf import settings
-from django.conf.urls import static
 from django.db.models import Min
 from django.http import Http404
 from django.utils.decorators import method_decorator
@@ -45,7 +43,6 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
     name = serializers.CharField()
     name_fa = serializers.CharField()
-    logo = serializers.SerializerMethodField()
 
     class Meta:
         model = Asset
@@ -150,9 +147,6 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
         if cap:
             return int(cap.circulating_supply)
-
-    def get_logo(self, asset: Asset):
-        return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
 
     @classmethod
     def create_serializer(cls,  prices: bool = True, extra_info: bool = True):
