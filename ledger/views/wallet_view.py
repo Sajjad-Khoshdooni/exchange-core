@@ -124,7 +124,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         ).exists()
 
     def get_logo(self, asset: Asset):
-        return settings.HOST_URL + '/static/%s.png' % asset.symbol
+        return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
 
     class Meta:
         model = Asset
