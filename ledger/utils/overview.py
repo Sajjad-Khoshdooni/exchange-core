@@ -189,9 +189,8 @@ class AssetOverview:
         if asset.symbol == Asset.IRT:
             assets = get_total_fiat_irt()
         else:
-            assets = self.get_binance_balance(asset) + \
-                   self.get_internal_deposits_balance(asset) + \
-                   self.get_kucoin_balance(asset)
+            assets = self.get_provider_balance(asset) + \
+                   self.get_internal_deposits_balance(asset)
 
         assets += self.get_hedged_investment_amount(asset) + self.get_hedged_cash_amount(asset)
 
@@ -255,6 +254,9 @@ class AssetOverview:
     def get_kucoin_balance(self, asset: Asset) -> Decimal:
         spot_amount = Decimal(self.get_kucoin_spot_amount(asset))
         return spot_amount
+
+    def get_provider_balance(self, asset: Asset) -> Decimal:
+        return self.get_binance_balance(asset) + self.get_kucoin_balance(asset)
 
     def get_fiat_irt(self):
         return self.get_total_assets(Asset.get(Asset.IRT))
