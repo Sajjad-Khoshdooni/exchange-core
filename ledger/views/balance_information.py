@@ -15,7 +15,7 @@ class BalanceInformationSerializer(serializers.ModelSerializer):
 
     def get_wallet(self, user: User):
         not_zero_wallet = []
-        wallets = user.account.wallet_set.all().select_related('assset')
+        wallets = user.account.wallet_set.all().select_related('asset')
         for wallet in wallets:
             if wallet.get_free() > 0:
                 not_zero_wallet.append(wallet)

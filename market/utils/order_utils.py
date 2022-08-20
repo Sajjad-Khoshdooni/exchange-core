@@ -109,9 +109,11 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
     return order
 
 
-def get_market_top_prices(symbol_ids=None):
+def get_market_top_prices(order_type='all', symbol_ids=None):
     market_top_prices = defaultdict(lambda: Decimal())
     symbol_filter = {'symbol_id__in': symbol_ids} if symbol_ids else {}
+    if order_type != 'all':
+        symbol_filter['type'] = order_type
     for depth in Order.open_objects.filter(**symbol_filter).values('symbol', 'side').annotate(
             max_price=Max('price'), min_price=Min('price')):
         market_top_prices[

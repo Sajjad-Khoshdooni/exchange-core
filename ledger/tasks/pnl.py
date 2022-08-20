@@ -13,7 +13,7 @@ from ledger.utils.price_manager import PriceManager
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, queue='celery', max_retries=10)
+@shared_task(bind=True, queue='history', max_retries=6)
 def create_pnl_histories(self):
     try:
         today = timezone.localtime(timezone.now()).replace(hour=0, minute=0, second=0, microsecond=0)

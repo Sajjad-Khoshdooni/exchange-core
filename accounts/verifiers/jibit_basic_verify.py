@@ -3,16 +3,13 @@ from typing import Union
 
 from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.similarity import str_similar_rate, clean_persian_name, rotate_words
+from accounts.utils.similarity import name_similarity
 from accounts.utils.telegram import send_support_message
 from accounts.verifiers.finotech import ServerError
 from accounts.verifiers.jibit import JibitRequester
 from financial.models import BankCard, BankAccount
 
 logger = logging.getLogger(__name__)
-
-
-NAME_SIMILARITY_THRESHOLD = 0.8
 
 
 def basic_verify(user: User):
@@ -128,7 +125,7 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
             if card_matched:
                 identity_matched = True
 
-        elif resp.data['code'] in ['card.not_valid', 'card.provider_is_not_active']:
+        elif resp.data['code'].startswith('card.') and resp.data['code'] != 'card.provider_is_not_active':
             card_matched = False
             identity_matched = None
         elif resp.data['code'] == 'identity_info.not_found':
@@ -182,8 +179,7 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
         if resp.success:
             update_bank_card_info(bank_card, resp.data)
 
-            name1, name2 = clean_persian_name(bank_card.user.get_full_name()), clean_persian_name(bank_card.owner_name)
-            verified = str_similar_rate(name1, name2) >= NAME_SIMILARITY_THRESHOLD
+            verified = name_similarity(bank_card.user.get_full_name(), bank_card.owner_name)
 
             if verified:
                 user.first_name_verified = True
@@ -243,8 +239,7 @@ def verify_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
         if resp.success:
             update_bank_card_info(bank_card, resp.data)
 
-            name1, name2 = clean_persian_name(bank_card.user.get_full_name()), clean_persian_name(bank_card.owner_name)
-            verified = str_similar_rate(name1, name2) >= NAME_SIMILARITY_THRESHOLD
+            verified = name_similarity(bank_card.user.get_full_name(), bank_card.owner_name)
 
             bank_card.verified = verified
 
@@ -335,13 +330,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
         owner = owners[0]
         owner_full_name = owner['firstName'] + ' ' + owner['lastName']
 
-        name1, name2 = clean_persian_name(owner_full_name), clean_persian_name(user.get_full_name())
-
-        verified = str_similar_rate(name1, name2) >= NAME_SIMILARITY_THRESHOLD
-
-        if not verified:
-            name1_rotate = rotate_words(name1)
-            verified = str_similar_rate(name1_rotate, name2) >= NAME_SIMILARITY_THRESHOLD
+        verified = name_similarity(owner_full_name, user.get_full_name())
 
     bank_account.verified = verified
     bank_account.save()

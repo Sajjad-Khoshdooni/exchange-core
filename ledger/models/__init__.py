@@ -15,3 +15,4 @@ from .address_book import AddressBook
 from .coin_category import CoinCategory
 from .margin import MarginTransfer, MarginLoan, CloseRequest
 from .pnl import PNLHistory
+from .snapshot import AssetSnapshot, SystemSnapshot
