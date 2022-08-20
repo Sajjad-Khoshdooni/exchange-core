@@ -43,7 +43,7 @@ class AssetOverview:
 
         kucoin_balances_list = KucoinSpotHandler().get_account_details()
         self._kucoin_spot_balance_map = {
-            KucoinSpotHandler.rename_coin_to_big_coin(b['currency']):
+            KucoinSpotHandler().rename_coin_to_big_coin(b['currency']):
                 float(Decimal(b['available']) / KucoinSpotHandler().get_coin_coefficient(b['currency']))
             for b in kucoin_balances_list
              }
