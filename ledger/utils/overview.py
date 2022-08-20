@@ -9,6 +9,7 @@ from ledger.models import Asset, Wallet, Transfer
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
 from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, BUY
 from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
+from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 
 
 def get_internal_asset_deposits():
@@ -37,8 +38,15 @@ class AssetOverview:
 
         self.usdt_irt = get_tether_irt_price(SELL)
 
-        balances_list = BinanceSpotHandler().get_account_details()['balances']
-        self._binance_spot_balance_map = {b['asset']: float(b['free']) for b in balances_list}
+        binance_balances_list = BinanceSpotHandler().get_account_details()['balances']
+        self._binance_spot_balance_map = {b['asset']: float(b['free']) for b in binance_balances_list}
+
+        kucoin_balances_list = KucoinSpotHandler().get_account_details()
+        self._kucoin_spot_balance_map = {
+            KucoinSpotHandler.rename_coin_to_big_coin(b['currency']):
+                float(Decimal(b['available']) / KucoinSpotHandler().get_coin_coefficient(b['currency']))
+            for b in kucoin_balances_list
+             }
 
         self._internal_deposits = get_internal_asset_deposits()
 
@@ -87,10 +95,21 @@ class AssetOverview:
     def get_binance_spot_amount(self, asset: Asset) -> float:
         return self._binance_spot_balance_map.get(asset.symbol, 0)
 
+    def get_kucoin_spot_amount(self, asset: Asset) -> float:
+        return self._kucoin_spot_balance_map.get(asset.symbol, 0)
+
     def get_binance_spot_total_value(self) -> Decimal:
         value = Decimal(0)
 
         for symbol, amount in self._binance_spot_balance_map.items():
+            if amount > 0:
+                value += Decimal(amount) * (self.prices.get(symbol) or 0)
+
+        return value
+
+    def get_kucoin_spot_total_value(self) -> Decimal:
+        value = Decimal(0)
+        for symbol, amount in self._kucoin_spot_balance_map.items():
             if amount > 0:
                 value += Decimal(amount) * (self.prices.get(symbol) or 0)
 
@@ -119,7 +138,8 @@ class AssetOverview:
             return get_total_fiat_irt()
         else:
             return self.get_binance_balance(asset) + \
-                   self.get_internal_deposits_balance(asset)
+                   self.get_internal_deposits_balance(asset) + \
+                   self.get_kucoin_balance(asset)
 
     def get_hedge_amount(self, asset: Asset):
         # Hedge = Real assets - Promised assets to users (user)
@@ -170,6 +190,10 @@ class AssetOverview:
 
         return future_amount + spot_amount
 
+    def get_kucoin_balance(self, asset: Asset) -> Decimal:
+        spot_amount = Decimal(self.get_kucoin_spot_amount(asset))
+        return spot_amount
+
     def get_fiat_irt(self):
         return self.get_total_assets(Asset.get(Asset.IRT))
 
@@ -178,7 +202,8 @@ class AssetOverview:
 
     def get_all_assets_usdt(self):
         return float(self.get_binance_spot_total_value()) + self.total_margin_balance + \
-               float(self.get_internal_usdt_value()) + self.get_fiat_usdt() + float(self.get_total_investment())
+               float(self.get_internal_usdt_value()) + self.get_fiat_usdt() + float(self.get_total_investment()) + \
+               float(self.get_kucoin_spot_total_value())
 
     def get_exchange_assets_usdt(self):
         return self.get_all_assets_usdt() - float(self.get_all_users_asset_value())

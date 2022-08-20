@@ -56,13 +56,18 @@ class AssetAdmin(AdvancedAdmin):
                 'binance_margin_ratio': round(self.overview.margin_ratio, 2),
                 'hedge_value': round(self.overview.get_total_hedge_value(), 2),
                 'binance_spot_tether_amount': round(self.overview.get_binance_spot_amount(Asset.get(Asset.USDT)), 2),
+                'kucoin_spot_tether_amount': round(self.overview.get_kucoin_spot_amount(Asset.get(Asset.USDT)), 2),
 
                 'binance_spot_usdt': round(self.overview.get_binance_spot_total_value(), 2),
+                'kucoin_spot_usdt': round(self.overview.get_kucoin_spot_total_value(), 2),
                 'binance_margin_balance': round(self.overview.total_margin_balance, 2),
                 'internal_usdt': round(self.overview.get_internal_usdt_value(), 2),
                 'fiat_usdt': round(self.overview.get_fiat_usdt(), 0),
                 'margin_insurance_balance': Asset.get(Asset.USDT).get_wallet(account).balance,
                 'investment': round(self.overview.get_total_investment(), 0),
+
+
+
 
                 'total_assets_usdt': round(self.overview.get_all_assets_usdt(), 0),
                 'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
