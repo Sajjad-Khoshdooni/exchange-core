@@ -234,6 +234,7 @@ class ZibalChanel(FiatWithdraw):
         resp_data = resp.json()
 
         if not resp_data['result'] == 1:
+            print(resp_data)
             raise ServerError
 
         return resp_data['data']
