@@ -16,7 +16,7 @@ class TransferSerializer(serializers.ModelSerializer):
     amount = serializers.SerializerMethodField()
     fee_amount = serializers.SerializerMethodField()
     network = serializers.SerializerMethodField()
-    asset = AssetSerializerMini(source='wallet__asset', read_only=True)
+    asset = AssetSerializerMini(source='wallet.asset', read_only=True)
     is_internal = serializers.SerializerMethodField()
 
     def get_link(self, transfer: Transfer):
