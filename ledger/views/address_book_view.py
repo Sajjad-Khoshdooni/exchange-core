@@ -11,7 +11,7 @@ from ledger.models import AddressBook, Asset, Network
 from ledger.models.asset import AssetSerializerMini
 
 
-class   AddressBookSerializer(serializers.ModelSerializer):
+class AddressBookSerializer(serializers.ModelSerializer):
     account = serializers.CharField(read_only=True)
     asset = AssetSerializerMini(read_only=True)
     network = serializers.CharField()
