@@ -36,7 +36,8 @@ class TransferSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transfer
-        fields = ('created', 'amount', 'status', 'link', 'out_address', 'coin', 'network', 'trx_hash', 'fee_amount', 'is_internal')
+        fields = ('created', 'amount', 'status', 'link', 'out_address', 'coin', 'asset', 'network', 'trx_hash',
+                  'fee_amount', 'is_internal')
 
 
 class WithdrawHistoryView(ListAPIView):
