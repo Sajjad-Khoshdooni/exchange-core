@@ -627,7 +627,7 @@ class UserCommentAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 @admin.register(TrafficSource)
 class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ['user', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
-    search_fields = ['user__phone']
+    search_fields = ['user__phone', 'gps_adid', 'ip']
     readonly_fields = ('user', )
 
 
