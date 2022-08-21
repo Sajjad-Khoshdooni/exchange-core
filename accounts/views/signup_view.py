@@ -16,6 +16,7 @@ from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
 from accounts.utils.validation import set_login_activity
 from accounts.validators import mobile_number_validator, password_validator
+from financial.models import MarketingSource
 
 
 class InitiateSignupSerializer(serializers.Serializer):
@@ -90,52 +91,54 @@ class SignupSerializer(serializers.Serializer):
 
             otp_code.set_token_used()
 
-            utm = validated_data.get('utm') or {}
-            utm_source = utm.get('utm_source')
-            utm_medium = utm.get('utm_medium', '')
-            utm_campaign = utm.get('utm_campaign', '')
-            utm_content = utm.get('utm_content', '')
-            utm_term = utm.get('utm_term', '')
-            gps_adid = utm.get('gps_adid', '')
-
-            if utm_source:
-                if utm_source == 'pwa_app':
-                    utm_medium = self.get_application_utm_medium(utm_term, gps_adid)
-
-                TrafficSource.objects.create(
-                    user=user,
-                    utm_source=utm_source,
-                    utm_medium=utm_medium,
-                    utm_campaign=utm_campaign,
-                    utm_content=utm_content,
-                    utm_term=utm_term,
-                    gps_adid=gps_adid,
-                    ip=get_client_ip(self.context['request']),
-                    user_agent=self.context['request'].META['HTTP_USER_AGENT'],
-                )
+        utm = validated_data.get('utm') or {}
+        self.create_traffic_source(user, utm)
 
         return user
 
-    @classmethod
-    def get_application_utm_medium(cls, utm_term: str, gps_adid: str) -> str:
-        if utm_term.startswith('gclid'):
-            return 'google_ads'
-        elif 'google-play' in utm_term and 'organic' in utm_term:
-            return 'play_organic'
-        else:
-            from accounts.models import Attribution, AppTrackerCode
+    def create_traffic_source(self, user, utm: dict):
+        utm_source = utm.get('utm_source')
 
-            attribution = Attribution.objects.filter(gps_adid=gps_adid).order_by('created').last()
+        if not utm_source:
+            return
 
-            if not attribution or not attribution.tracker_code:
-                return 'organic'
+        utm_medium = utm.get('utm_medium', '')
+        utm_campaign = utm.get('utm_campaign', '')
+        utm_content = utm.get('utm_content', '')
+        utm_term = utm.get('utm_term', '')
+        gps_adid = utm.get('gps_adid', '')
+
+        if utm_source == 'pwa_app':
+            if utm_term.startswith('gclid'):
+                utm_medium = 'google_ads'
+            elif 'google-play' in utm_term and 'organic' in utm_term:
+                utm_medium = 'play_organic'
+            elif not gps_adid:
+                utm_medium = 'organic'
             else:
-                tracker_code = AppTrackerCode.objects.filter(code=attribution.tracker_code).first()
+                from accounts.models import Attribution
 
-                if not tracker_code:
-                    return 'unknown'
+                attribution = Attribution.objects.filter(gps_adid=gps_adid).order_by('created').last()
+
+                if not attribution or not attribution.tracker_code:
+                    utm_medium = 'organic'
                 else:
-                    return tracker_code.title
+                    utm_medium = attribution.network_name
+                    utm_campaign = attribution.campaign_name
+                    utm_content = attribution.adgroup_name
+                    utm_term = attribution.creative_name
+
+        TrafficSource.objects.create(
+            user=user,
+            utm_source=utm_source,
+            utm_medium=utm_medium,
+            utm_campaign=utm_campaign,
+            utm_content=utm_content,
+            utm_term=utm_term,
+            gps_adid=gps_adid,
+            ip=get_client_ip(self.context['request']),
+            user_agent=self.context['request'].META['HTTP_USER_AGENT'],
+        )
 
 
 class SignupView(CreateAPIView):
