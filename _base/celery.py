@@ -194,7 +194,7 @@ app.conf.beat_schedule = {
 
     'handle_missing_payments': {
         'task': 'financial.tasks.gateway.handle_missing_payments',
-        'schedule': 60,
+        'schedule': 300,
         'options': {
             'queue': 'finance',
             'expire': 60
