@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import FirebaseToken, ExternalNotification, Attribution
+from accounts.models import FirebaseToken, ExternalNotification, Attribution, AppTrackerCode
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -651,3 +651,8 @@ class ExternalNotificationAdmin(admin.ModelAdmin):
 @admin.register(Attribution)
 class AttributionAdmin(admin.ModelAdmin):
     list_display = ['created', 'tracker_code', 'network_name', 'campaign_name', 'adgroup_name', 'gps_adid']
+
+
+@admin.register(AppTrackerCode)
+class AppTrackerCodeAdmin(admin.ModelAdmin):
+    list_display = ['code', 'title']

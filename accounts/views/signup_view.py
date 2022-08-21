@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from yekta_config.config import config
 
 from accounts.gamification.gamify import check_prize_achievements
-from accounts.models import User, TrafficSource, Referral
+from accounts.models import User, TrafficSource, Referral, Attribution, AppTrackerCode
 from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
@@ -92,21 +92,50 @@ class SignupSerializer(serializers.Serializer):
 
             utm = validated_data.get('utm') or {}
             utm_source = utm.get('utm_source')
+            utm_medium = utm.get('utm_medium', '')
+            utm_campaign = utm.get('utm_campaign', '')
+            utm_content = utm.get('utm_content', '')
+            utm_term = utm.get('utm_term', '')
+            gps_adid = utm.get('gps_adid', '')
 
             if utm_source:
+                if utm_source == 'pwa_app':
+                    utm_medium = self.get_application_utm_medium(utm_term, gps_adid)
+
                 TrafficSource.objects.create(
                     user=user,
                     utm_source=utm_source,
-                    utm_medium=utm.get('utm_medium', ''),
-                    utm_campaign=utm.get('utm_campaign', ''),
-                    utm_content=utm.get('utm_content', ''),
-                    utm_term=utm.get('utm_term', ''),
-                    gps_adid=utm.get('gps_adid', ''),
+                    utm_medium=utm_medium,
+                    utm_campaign=utm_campaign,
+                    utm_content=utm_content,
+                    utm_term=utm_term,
+                    gps_adid=gps_adid,
                     ip=get_client_ip(self.context['request']),
-
+                    user_agent=self.context['request'].META['HTTP_USER_AGENT'],
                 )
 
         return user
+
+    def get_application_utm_medium(self, utm_term: str, gps_adid: str) -> str:
+        if utm_term.startswith('gclid'):
+            return 'google_ads'
+        elif 'google-play' in utm_term and 'organic' in utm_term:
+            return 'play_organic'
+        else:
+            attribution = Attribution.objects.filter(gps_adid=gps_adid).order_by('created').last()
+
+            if not attribution:
+                return 'organic'
+            else:
+                if not attribution.tracker_code:
+                    return 'organic'
+                else:
+                    tracker_code = AppTrackerCode.objects.filter(code=attribution.tracker_code).first()
+
+                    if not tracker_code:
+                        return 'unknown'
+                    else:
+                        return tracker_code.title
 
 
 class SignupView(CreateAPIView):
