@@ -127,18 +127,15 @@ class SignupSerializer(serializers.Serializer):
 
             attribution = Attribution.objects.filter(gps_adid=gps_adid).order_by('created').last()
 
-            if not attribution:
+            if not attribution or not attribution.tracker_code:
                 return 'organic'
             else:
-                if not attribution.tracker_code:
-                    return 'organic'
-                else:
-                    tracker_code = AppTrackerCode.objects.filter(code=attribution.tracker_code).first()
+                tracker_code = AppTrackerCode.objects.filter(code=attribution.tracker_code).first()
 
-                    if not tracker_code:
-                        return 'unknown'
-                    else:
-                        return tracker_code.title
+                if not tracker_code:
+                    return 'unknown'
+                else:
+                    return tracker_code.title
 
 
 class SignupView(CreateAPIView):
