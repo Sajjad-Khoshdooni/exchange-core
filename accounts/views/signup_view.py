@@ -112,7 +112,8 @@ class SignupSerializer(serializers.Serializer):
             if utm_term.startswith('gclid'):
                 utm_medium = 'google_ads'
             elif 'google-play' in utm_term and 'organic' in utm_term:
-                utm_medium = 'play_organic'
+                utm_medium = 'organic'
+                utm_content = 'google_play'
             elif not gps_adid:
                 utm_medium = 'organic'
             else:
