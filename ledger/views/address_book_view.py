@@ -8,11 +8,12 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import AddressBook, Asset, Network
+from ledger.models.asset import AssetSerializerMini
 
 
-class AddressBookSerializer(serializers.ModelSerializer):
+class   AddressBookSerializer(serializers.ModelSerializer):
     account = serializers.CharField(read_only=True)
-    asset = serializers.CharField(read_only=True)
+    asset = AssetSerializerMini(read_only=True)
     network = serializers.CharField()
     coin = serializers.CharField(write_only=True, required=False, default=None)
     deleted = serializers.BooleanField(read_only=True)

@@ -1,20 +1,11 @@
-from decimal import Decimal
-
 from rest_framework import serializers
-from rest_framework.generics import get_object_or_404
-from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.models import Wallet, DepositAddress, Transfer, NetworkAsset, Network
-from ledger.models.asset import Asset
-from ledger.utils.precision import get_presentation_amount
-from ledger.utils.price import get_trading_price_irt, BUY, SELL, get_prices_dict
-from ledger.utils.price_manager import PriceManager
-from rest_framework.generics import ListAPIView
+from ledger.models import Wallet
+from ledger.models.asset import Asset, AssetSerializerMini
 
 
-class MarginAssetListSerializer(serializers.ModelSerializer):
+class MarginAssetListSerializer(AssetSerializerMini):
     balance = serializers.SerializerMethodField()
     balance_usdt = serializers.SerializerMethodField()
     free = serializers.SerializerMethodField()
@@ -78,7 +69,7 @@ class MarginAssetListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'free', 'balance', 'balance_usdt', 'borrowed', 'equity')
+        fields = (*AssetSerializerMini.Meta.fields, 'free', 'balance', 'balance_usdt', 'borrowed', 'equity')
         ref_name = 'margin wallets'
 
 

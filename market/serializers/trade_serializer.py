@@ -3,6 +3,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from ledger.models import Asset
+from ledger.models.asset import AssetSerializerMini
 from ledger.utils.precision import floor_precision
 from market.models import Trade, Order
 
@@ -44,6 +45,9 @@ class TradeSerializer(AccountTradeSerializer):
     pair = serializers.CharField(source='symbol.base_asset.symbol')
     pair_amount = serializers.CharField(source='base_amount')
     is_buyer_maker = serializers.SerializerMethodField()
+
+    asset = AssetSerializerMini(source='symbol.asset', read_only=True)
+    base_asset = AssetSerializerMini(source='symbol.base_asset', read_only=True)
 
     @classmethod
     def get_is_buyer_maker(cls, instance: Trade):
