@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from yekta_config.config import config
 
 from accounts.gamification.gamify import check_prize_achievements
-from accounts.models import User, TrafficSource, Referral, Attribution, AppTrackerCode
+from accounts.models import User, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
@@ -116,12 +116,15 @@ class SignupSerializer(serializers.Serializer):
 
         return user
 
-    def get_application_utm_medium(self, utm_term: str, gps_adid: str) -> str:
+    @classmethod
+    def get_application_utm_medium(cls, utm_term: str, gps_adid: str) -> str:
         if utm_term.startswith('gclid'):
             return 'google_ads'
         elif 'google-play' in utm_term and 'organic' in utm_term:
             return 'play_organic'
         else:
+            from accounts.models import Attribution, AppTrackerCode
+
             attribution = Attribution.objects.filter(gps_adid=gps_adid).order_by('created').last()
 
             if not attribution:
