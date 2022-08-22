@@ -151,7 +151,7 @@ class BankCardSerializer(serializers.ModelSerializer):
     info = serializers.SerializerMethodField()
 
     def get_info(self, bank_card: BankCard):
-        bank = get_bank_from_iban(bank_card.card_pan)
+        bank = get_bank_from_card_pan(bank_card.card_pan)
         return bank and bank.as_dict()
 
     class Meta:
