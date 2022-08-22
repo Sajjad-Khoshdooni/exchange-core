@@ -55,4 +55,4 @@ class TradeSerializer(AccountTradeSerializer):
 
     class Meta:
         model = Trade
-        fields = ('created', 'coin', 'pair', 'amount', 'price', 'pair_amount', 'is_buyer_maker')
+        fields = ('created', 'coin', 'pair', 'amount', 'price', 'pair_amount', 'is_buyer_maker', 'asset', 'base_asset')
