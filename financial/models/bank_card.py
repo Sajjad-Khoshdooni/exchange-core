@@ -148,10 +148,15 @@ class BankAccount(models.Model):
 
 
 class BankCardSerializer(serializers.ModelSerializer):
+    info = serializers.SerializerMethodField()
+
+    def get_info(self, bank_card: BankCard):
+        bank = get_bank_from_iban(bank_card.card_pan)
+        return bank and bank.as_dict()
 
     class Meta:
         model = BankCard
-        fields = ('id', 'card_pan', 'verified')
+        fields = ('id', 'card_pan', 'verified', 'info')
         read_only_fields = ('verified', )
 
     def create(self, validated_data: dict):
@@ -171,9 +176,15 @@ class BankCardSerializer(serializers.ModelSerializer):
 
 class BankAccountSerializer(serializers.ModelSerializer):
 
+    info = serializers.SerializerMethodField()
+
+    def get_info(self, bank_account: BankAccount):
+        bank = get_bank_from_iban(bank_account.iban)
+        return bank and bank.as_dict()
+
     class Meta:
         model = BankAccount
-        fields = ('id', 'iban', 'verified')
+        fields = ('id', 'iban', 'verified', 'info')
         read_only_fields = ('verified', )
 
     def create(self, validated_data: dict):

@@ -14,7 +14,7 @@ class Bank:
         return {
             'slug': self.slug,
             'name': self.name,
-            'image': settings.HOST_URL + '/static/bank/%s.png' % self.slug.lower(),
+            'logo': settings.HOST_URL + '/static/bank/%s.png' % self.slug.lower(),
         }
 
 
