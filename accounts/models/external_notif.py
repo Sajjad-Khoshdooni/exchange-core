@@ -161,12 +161,12 @@ class ExternalNotification(models.Model):
     )
 
     @classmethod
-    def send_sms(cls, user: User, scope: str, params_converter=None):
+    def send_sms(cls, user: User, scope: str, params_converter=None) -> bool:
         from accounts.tasks import send_message_by_sms_ir
 
         if settings.DEBUG_OR_TESTING:
             print('scope={},phone={}'.format(scope, user.phone))
-            return
+            return True
 
         data = cls.TEMPLATES[scope]
         params = data['params']
@@ -182,6 +182,8 @@ class ExternalNotification(models.Model):
 
         if resp:
             ExternalNotification.objects.create(phone=user.phone, scope=scope, user=user)
+
+        return bool(resp)
 
     @staticmethod
     def get_users_sent_sms_notif(scope: str):

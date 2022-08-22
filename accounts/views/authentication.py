@@ -19,7 +19,7 @@ class CustomTokenAuthentication(TokenAuthentication):
 
         if not auth or auth[0].lower() != self.keyword.lower().encode():
             return None
-        activate('en-US')
+        # activate('en-US')
 
         if len(auth) == 1:
             msg = _('Invalid token header. No credentials provided.')

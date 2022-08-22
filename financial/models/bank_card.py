@@ -4,6 +4,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from simple_history.models import HistoricalRecords
 
+from financial.utils.bank import get_bank_from_iban, get_bank_from_card_pan
 from financial.validators import iban_validator, bank_card_pan_validator
 
 
@@ -49,6 +50,14 @@ class BankCard(models.Model):
 
         return self.card_pan[:4] + '********' + self.card_pan[-4:]
 
+    def save(self, *args, **kwargs):
+        if not self.id:
+            bank = get_bank_from_card_pan(self.card_pan)
+            if bank:
+                self.bank = bank.slug
+
+        super(BankCard, self).save(*args, **kwargs)
+
     class Meta:
         verbose_name = 'کارت بانکی'
         verbose_name_plural = 'کارت‌های بانکی'
@@ -86,7 +95,7 @@ class BankAccount(models.Model):
         verbose_name='شبا'
     )
 
-    bank_name = models.CharField(max_length=256, blank=True)
+    bank = models.CharField(max_length=256, blank=True)
     deposit_address = models.CharField(max_length=64, blank=True)
     card_pan = models.CharField(max_length=20, blank=True)
 
@@ -111,6 +120,14 @@ class BankAccount(models.Model):
 
     def __str__(self):
         return self.iban[:6] + '********' + self.iban[-4:]
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            bank = get_bank_from_iban(self.iban)
+            if bank:
+                self.bank_name = bank.slug
+
+        super(BankAccount, self).save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'حساب بانکی'

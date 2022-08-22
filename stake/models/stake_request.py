@@ -54,7 +54,7 @@ class StakeRequest(models.Model):
             (self.DONE, self.CANCEL_PROCESS), (self.CANCEL_PROCESS, self.CANCEL_PENDING),
             (self.CANCEL_PENDING, self.CANCEL_COMPLETE), (self.CANCEL_PROCESS, self.CANCEL_COMPLETE)
         ]
-        valid_cancellation_status = [(self.PROCESS, self.CANCEL_COMPLETE), (self.CANCEL_PENDING, self.CANCEL_COMPLETE)]
+        valid_cancellation_status = [(self.CANCEL_PROCESS, self.CANCEL_COMPLETE), (self.CANCEL_PENDING, self.CANCEL_COMPLETE)]
 
         assert (old_status, new_status) in valid_change_status, 'invalid change_status'
 

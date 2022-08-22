@@ -29,7 +29,6 @@ app.conf.beat_schedule = {
     },
     'coin_market_cap_update': {
         'task': 'collector.tasks.coin_market_cap.update_coin_market_cap',
-        # 'schedule': crontab(minute=0, hour=2),
         'schedule': crontab(minute="*/30"),
     },
     'update_network_fee': {
@@ -170,7 +169,7 @@ app.conf.beat_schedule = {
         'task': 'accounts.tasks.retention.retention_leads_to_signup',
         'schedule': 3600,
         'options': {
-            'queue': 'celery',
+            'queue': 'retention',
             'expire': 3600
         },
     },
@@ -179,7 +178,7 @@ app.conf.beat_schedule = {
         'task': 'accounts.tasks.retention.retention_actions',
         'schedule': 3600,
         'options': {
-            'queue': 'celery',
+            'queue': 'retention',
             'expire': 3600
         },
     },
@@ -192,6 +191,16 @@ app.conf.beat_schedule = {
             'expire': 300
         },
     },
+
+    'handle_missing_payments': {
+        'task': 'financial.tasks.gateway.handle_missing_payments',
+        'schedule': 300,
+        'options': {
+            'queue': 'finance',
+            'expire': 60
+        },
+    },
+
     'random_trader': {
         'task': 'trader.tasks.random_trader.random_trader',
         'schedule': 17,
@@ -204,7 +213,7 @@ app.conf.beat_schedule = {
         'task': 'trader.tasks.carrot_trader.carrot_trader',
         'schedule': 7,
         'options': {
-            'queue': 'carrot_trader',
+            'queue': 'trader-ma',
             'expire': 7
         }
     },
@@ -221,10 +230,19 @@ app.conf.beat_schedule = {
         'task': 'ledger.tasks.pnl.create_pnl_histories',
         'schedule': crontab(hour=20, minute=30),
         'options': {
-            'queue': 'celery',
+            'queue': 'history',
+        }
+    },
+    'create_snapshot': {
+        'task': 'ledger.tasks.snapshot.create_snapshot',
+        'schedule': crontab(minute='*/5'),
+        'options': {
+            'queue': 'history',
+            'expire': 200
         }
     },
 }
+
 if settings.DEBUG_OR_TESTING:
     app.conf.beat_schedule = {
         'coin_market_cap_update': {

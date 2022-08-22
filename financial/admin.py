@@ -112,6 +112,8 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 @admin.register(PaymentRequest)
 class PaymentRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'gateway', 'bank_card', 'amount', 'authority')
+    search_fields = ('bank_card__card_pan', 'amount', 'authority')
+    readonly_fields = ('bank_card', )
 
 
 class UserFilter(SimpleListFilter):
@@ -134,8 +136,8 @@ class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_payment_amount', 'status', 'ref_id', 'ref_status', 'get_user_bank_card',
                     'get_withdraw_request_user_mobile',)
     readonly_fields = ('payment_request', )
-
-    list_filter = (UserFilter,)
+    list_filter = (UserFilter, 'status', )
+    search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'payment_request__amount', 'payment_request__authority')
 
     def get_user_bank_card(self, payment: Payment):
         return payment.payment_request.bank_card.user
@@ -176,6 +178,7 @@ class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     list_display = ('created', 'card_pan', 'user', 'verified', 'deleted')
     list_filter = (BankCardUserFilter,)
     search_fields = ('card_pan', )
+    readonly_fields = ('user', )
 
     actions = ['verify_bank_cards', 'verify_bank_cards_manual', 'reject_bank_cards_manual']
 
@@ -185,7 +188,7 @@ class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
     @admin.action(description='تایید خودکار شماره کارت')
     def verify_bank_cards(self, request, queryset):
-        for bank_card in queryset:
+        for bank_card in queryset.filter(kyc=False):
             verify_bank_card_task.delay(bank_card.id)
 
     @admin.action(description='تایید شماره کارت')
@@ -229,6 +232,7 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     list_display = ('created', 'iban', 'user', 'verified', 'deleted')
     list_filter = (BankUserFilter, )
     search_fields = ('iban', )
+    readonly_fields = ('user', )
 
     actions = ['verify_bank_accounts_manual', 'verify_bank_accounts_auto', 'reject_bank_accounts_manual']
 
@@ -279,7 +283,7 @@ class MarketingCostAdmin(admin.ModelAdmin):
 
 
 class InvestmentRevenueInline(admin.TabularInline):
-    fields = ('created', 'amount', 'description')
+    fields = ('created', 'amount', 'description', 'revenue')
     readonly_fields = ('created', )
     model = InvestmentRevenue
     extra = 1
@@ -287,17 +291,18 @@ class InvestmentRevenueInline(admin.TabularInline):
 
 @admin.register(Investment)
 class InvestmentAdmin(admin.ModelAdmin):
-    list_display = ('created', 'type', 'asset', 'get_amount', 'get_revenue', 'get_total', 'done')
+    list_display = ('created', 'title', 'asset', 'get_total', 'get_amount', 'get_revenue', 'type')
     inlines = [InvestmentRevenueInline]
+    list_filter = ('type', 'asset', )
 
     @admin.display(description='amount', ordering='amount')
     def get_amount(self, investment: Investment):
-        return get_presentation_amount(investment.amount)
+        return humanize_number(get_presentation_amount(investment.get_base_amount()))
 
     @admin.display(description='revenue')
     def get_revenue(self, investment: Investment):
-        return get_presentation_amount(investment.get_revenue())
+        return humanize_number(get_presentation_amount(investment.get_revenue_amount()))
 
     @admin.display(description='total')
     def get_total(self, investment: Investment):
-        return get_presentation_amount(investment.get_total_amount())
+        return humanize_number(get_presentation_amount(investment.get_total_amount()))

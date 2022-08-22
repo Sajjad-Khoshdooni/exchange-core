@@ -7,7 +7,7 @@ import requests
 from yekta_config import secret
 from yekta_config.config import config
 
-from financial.models import BankAccount, FiatWithdrawRequest
+from financial.models import BankAccount, FiatWithdrawRequest, Gateway, Payment, PaymentRequest
 from financial.utils.withdraw_limit import is_holiday, time_in_range
 
 logger = logging.getLogger(__name__)
@@ -58,6 +58,9 @@ class FiatWithdraw:
 
     def is_active(self):
         return True
+
+    def update_missing_payments(self, gateway: Gateway):
+        pass
 
 
 class PayirChanel(FiatWithdraw):
@@ -234,6 +237,7 @@ class ZibalChanel(FiatWithdraw):
         resp_data = resp.json()
 
         if not resp_data['result'] == 1:
+            print(resp_data)
             raise ServerError
 
         return resp_data['data']
@@ -321,12 +325,34 @@ class ZibalChanel(FiatWithdraw):
 
         total_wallet_irt_value = 0
         for wallet in resp:
-            total_wallet_irt_value += Decimal(wallet['balance'])
+            total_wallet_irt_value += Decimal(wallet['balance']) + Decimal(wallet.get('pendingPFAmount', 0))
 
         return total_wallet_irt_value // 10
 
     def is_active(self):
         return bool(config('ZIBAL_TOKEN', ''))
+
+    def get_transactions(self, merchant_id: str, status: int):
+        return self.collect_api(
+            path='/v1/gateway/report/transaction',
+            method='POST',
+            data={'merchantId': merchant_id, 'status': status},
+            timeout=120
+        )
+
+    def update_missing_payments(self, gateway: Gateway):
+        transactions = self.get_transactions(gateway.merchant_id, status=2)
+
+        for t in transactions:
+            authority = t['trackId']
+
+            payment_request = PaymentRequest.objects.get(authority=authority)
+
+            payment, _ = Payment.objects.get_or_create(
+                payment_request=payment_request
+            )
+
+            payment_request.get_gateway().verify(payment)
 
 
 class ZarinpalChanel(FiatWithdraw):

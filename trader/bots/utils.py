@@ -127,7 +127,7 @@ def system_top_prices(symbol_ids=None):
 
 
 def get_top_prices_exclude_system_orders(symbol_ids=None):
-    no_filter_top_prices = get_market_top_prices(symbol_ids)
+    no_filter_top_prices = get_market_top_prices(symbol_ids=symbol_ids)
     top_ordinary_prices = defaultdict(lambda: Decimal())
 
     excluding_orders = {
@@ -146,10 +146,19 @@ def get_time_based_factor(interval):
     return 1 + (rounded_time * rounded_time) % 7
 
 
-def place_carrot_order(symbol: PairSymbol, account: Account, side, top_user_price):
+def place_carrot_order(symbol: PairSymbol, account: Account, side, top_user_price, top_opposite_user_price):
     cancel_orders(Order.open_objects.filter(wallet__account=account, symbol=symbol, side=side))
-    one_tick_price = Decimal(f'1e{-symbol.tick_size}')
+    min_precision = Order.get_rounding_precision(top_user_price, symbol.tick_size)
+    random_precision = random.randint(min_precision, symbol.tick_size)
+
+    one_tick_price = Decimal(f'1e{-random_precision}')
     new_top_price = top_user_price + one_tick_price if side == Order.BUY else top_user_price - one_tick_price
+    if top_opposite_user_price and (
+            (side == Order.BUY and new_top_price >= top_opposite_user_price) or (
+            side == Order.SELL and new_top_price <= top_opposite_user_price)
+    ):
+        logger.info(f'no need to place carrot order on {symbol} {new_top_price} {top_opposite_user_price}')
+        return
     amount = floor_precision(symbol.maker_amount / get_time_based_factor(600) / 5, symbol.step_size)
     return new_order(
         symbol, account, amount, new_top_price, side=side, fill_type=Order.LIMIT, raise_exception=False,

@@ -24,7 +24,7 @@ def verify_bank_card_task(bank_card_id: int):
         level = Notification.SUCCESS
     else:
         title = 'شماره کارت وارد شده تایید نشد.'
-        message = 'شماره کارت %s متعلق به کد ملی ثبت شده نیست.' % bank_card
+        message = 'شماره کارت %s معتبر نیست.' % bank_card
         level = Notification.ERROR
 
     Notification.send(

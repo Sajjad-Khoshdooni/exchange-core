@@ -4,6 +4,7 @@ from accounts.models import Account, Notification
 from ledger.models import Prize, Asset
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.precision import humanize_number
+from ledger.utils.price import get_trading_price_usdt, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
@@ -53,6 +54,8 @@ class TradePrizeAchievementStep1(PrizeAchievement):
     scope = Prize.TRADE_PRIZE_STEP1
 
     def achieve_prize(self):
+        price = get_trading_price_usdt(Asset.SHIB, SELL, raw_price=True)
+
         with WalletPipeline() as pipeline:
             prize, _ = Prize.objects.get_or_create(
                 account=self.account,
@@ -60,6 +63,7 @@ class TradePrizeAchievementStep1(PrizeAchievement):
                 defaults={
                     'amount': Prize.PRIZE_AMOUNTS[Prize.TRADE_PRIZE_STEP1],
                     'asset': Asset.get(Asset.SHIB),
+                    'value': Prize.PRIZE_AMOUNTS[Prize.TRADE_PRIZE_STEP1] * price
                 }
             )
 
@@ -77,6 +81,8 @@ class TradePrizeAchievementStep1(PrizeAchievement):
             )
 
             if self.account.referred_by:
+                price = get_trading_price_usdt(Asset.SHIB, SELL, raw_price=True)
+
                 prize, created = Prize.objects.get_or_create(
                     account=self.account.referred_by.owner,
                     scope=Prize.REFERRAL_TRADE_2M_PRIZE,
@@ -84,6 +90,7 @@ class TradePrizeAchievementStep1(PrizeAchievement):
                     defaults={
                         'amount': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE],
                         'asset': Asset.get(Asset.SHIB),
+                        'value': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE] * price
                     }
                 )
 
@@ -95,6 +102,8 @@ class TradePrizeAchievementStep2(PrizeAchievement):
     scope = Prize.TRADE_PRIZE_STEP2
 
     def achieve_prize(self):
+        price = get_trading_price_usdt(Asset.SHIB, SELL, raw_price=True)
+
         with transaction.atomic():
             prize, _ = Prize.objects.get_or_create(
                 account=self.account,
@@ -102,6 +111,7 @@ class TradePrizeAchievementStep2(PrizeAchievement):
                 defaults={
                     'amount': Prize.PRIZE_AMOUNTS[Prize.TRADE_PRIZE_STEP2],
                     'asset': Asset.get(Asset.SHIB),
+                    'value': Prize.PRIZE_AMOUNTS[Prize.TRADE_PRIZE_STEP2] * price
                 }
             )
 
@@ -123,6 +133,8 @@ class VerifyPrizeAchievement(PrizeAchievement):
     scope = Prize.VERIFY_PRIZE
 
     def achieve_prize(self):
+        price = get_trading_price_usdt(Asset.SHIB, SELL, raw_price=True)
+
         with transaction.atomic():
             prize, _ = Prize.objects.get_or_create(
                 account=self.account,
@@ -130,6 +142,7 @@ class VerifyPrizeAchievement(PrizeAchievement):
                 defaults={
                     'amount': Prize.PRIZE_AMOUNTS[Prize.VERIFY_PRIZE],
                     'asset': Asset.get(Asset.SHIB),
+                    'value': Prize.PRIZE_AMOUNTS[Prize.VERIFY_PRIZE] * price
                 }
             )
 

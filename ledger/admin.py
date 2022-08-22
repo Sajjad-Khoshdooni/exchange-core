@@ -8,7 +8,6 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Asset, Prize, CoinCategory
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
@@ -47,8 +46,7 @@ class AssetAdmin(AdvancedAdmin):
     def changelist_view(self, request, extra_context=None):
 
         if not settings.DEBUG_OR_TESTING_OR_STAGING:
-            self.overview = AssetOverview()
-            account = MARGIN_INSURANCE_ACCOUNT
+            self.overview = AssetOverview(strict=False)
 
             context = {
                 'binance_initial_margin': round(self.overview.total_initial_margin, 2),
@@ -60,9 +58,10 @@ class AssetAdmin(AdvancedAdmin):
                 'binance_spot_usdt': round(self.overview.get_binance_spot_total_value(), 2),
                 'binance_margin_balance': round(self.overview.total_margin_balance, 2),
                 'internal_usdt': round(self.overview.get_internal_usdt_value(), 2),
-                'fiat_usdt': round(self.overview.get_fiat_usdt(), 0),
-                'margin_insurance_balance': Asset.get(Asset.USDT).get_wallet(account).balance,
+                'fiat_usdt': round(self.overview.get_gateway_usdt(), 0),
+                'margin_insurance_balance': self.overview.get_margin_insurance_balance(),
                 'investment': round(self.overview.get_total_investment(), 0),
+                'cash': round(self.overview.get_total_cash(), 0),
 
                 'total_assets_usdt': round(self.overview.get_all_assets_usdt(), 0),
                 'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
@@ -143,7 +142,7 @@ class AssetAdmin(AdvancedAdmin):
             handler = asset.get_hedger()
 
             if handler:
-                symbol = handler.get_trading_symbol(coin=asset.symbol)
+                symbol = handler.get_trading_symbol(asset.symbol)
                 return handler.get_step_size(symbol)
 
     get_hedge_threshold.short_description = 'hedge threshold'
@@ -413,3 +412,22 @@ class CategorySpreadAdmin(admin.ModelAdmin):
     list_editable = ('side', 'step', 'spread')
     ordering = ('category', 'step', 'side')
     list_filter = ('category', 'side', 'step')
+
+
+@admin.register(models.SystemSnapshot)
+class SystemSnapshotAdmin(admin.ModelAdmin):
+    list_display = ('created', 'total', 'users', 'exchange', 'exchange_potential', 'hedge', 'cumulated_hedge',
+                    'binance_futures', 'binance_spot', 'internal', 'fiat_gateway', 'investment', 'cash', 'prize')
+    ordering = ('-created', )
+
+
+@admin.register(models.AssetSnapshot)
+class AssetSnapshotAdmin(admin.ModelAdmin):
+    list_display = ('created', 'asset', 'total_amount', 'users_amount', 'hedge_amount', 'hedge_value', 'get_hedge_diff')
+    ordering = ('-created', 'asset__order')
+    list_filter = ('asset', )
+
+    def get_hedge_diff(self, asset_snapshot: models.AssetSnapshot):
+        return asset_snapshot.calc_hedge_amount - asset_snapshot.hedge_amount
+
+    get_hedge_diff.short_description = 'hedge diff'
