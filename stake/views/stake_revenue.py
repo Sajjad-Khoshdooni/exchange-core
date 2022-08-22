@@ -24,4 +24,4 @@ class StakeRevenueAPIView(ListAPIView):
     serializer_class = StakeRevenueSerializer
 
     def get_queryset(self):
-        return StakeRevenue.objects.filter(stake_request__account=self.request.user.account)
+        return StakeRevenue.objects.filter(stake_request__account=self.request.user.account).order_by('-created')
