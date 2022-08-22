@@ -12,7 +12,7 @@ class Attribution(models.Model):
     reinstalled = models.BooleanField(default=False)
     gps_adid = models.CharField(max_length=64, blank=True, db_index=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
-    user_agent = models.CharField(max_length=265, blank=True)
+    user_agent = models.CharField(max_length=512, blank=True)
     tracker_user_id = models.CharField(max_length=64, blank=True)
     clicked_at = models.DateTimeField(null=True, blank=True)
     installed_at = models.DateTimeField(null=True, blank=True)
