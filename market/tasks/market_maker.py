@@ -9,7 +9,7 @@ from django.db import transaction
 from django.db.models import Max, Min, Count
 
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order, PairSymbol
+from market.models import Order, PairSymbol, Trade
 from market.utils.order_utils import get_market_top_prices
 from market.utils.redis import set_top_prices, set_open_orders_count, get_open_orders_count, set_top_depth_prices, \
     get_top_depth_prices
@@ -35,6 +35,11 @@ def update_maker_orders():
     for depth in depth_orders:
         open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
 
+    last_trades_ts = {
+        record['symbol']: record['last'].timestamp() for record in
+        Trade.objects.values('symbol').annotate(last=Max('created'))
+    }
+
     for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True, asset__enable=True):
         symbol_top_prices = {
             Order.BUY: market_top_prices[symbol.id, Order.BUY],
@@ -53,12 +58,15 @@ def update_maker_orders():
         set_open_orders_count(symbol.id, symbol_open_depth_orders_count)
 
         update_symbol_maker_orders.apply_async(
-            args=(PairSymbol.IdName(id=symbol.id, name=symbol.name, tick_size=symbol.tick_size),), queue='market'
+            args=(
+                PairSymbol.IdName(id=symbol.id, name=symbol.name, tick_size=symbol.tick_size),
+                last_trades_ts.get(symbol.id)
+            ), queue='market'
         )
 
 
 @shared_task(queue='market')
-def update_symbol_maker_orders(symbol):
+def update_symbol_maker_orders(symbol, last_trade_ts):
     symbol = PairSymbol.IdName(*symbol)
     depth_top_prices = Order.get_top_depth_prices(symbol.id)
     top_depth_prices = get_top_depth_prices(symbol.id)
@@ -82,12 +90,12 @@ def update_symbol_maker_orders(symbol):
 
     try:
         with transaction.atomic():
-            Order.cancel_invalid_maker_orders(symbol, top_depth_prices)
+            Order.cancel_invalid_maker_orders(symbol, top_depth_prices, last_trade_ts=last_trade_ts)
             Order.cancel_invalid_maker_orders(symbol, top_depth_prices, gap=Decimal('0.001'), order_type=Order.BOT)
 
         for side in (Order.BUY, Order.SELL):
             logger.info(f'{symbol.name} {side} open count: {open_depth_orders_count[side]}')
-            price = Order.get_maker_price(symbol, side)
+            price = Order.get_maker_price(symbol, side, last_trade_ts)
             order = Order.init_top_maker_order(symbol, side, price, Decimal(depth_top_prices[side]))
             logger.info(f'{symbol.name} {side} maker order created: {bool(order)}')
             if order:
