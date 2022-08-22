@@ -197,7 +197,7 @@ class AssetSerializerMini(serializers.ModelSerializer):
 class CoinField(serializers.CharField):
     def to_representation(self, value: Asset):
         if value:
-            return AssetSerializerMini(value).data
+            return value.symbol
 
     def to_internal_value(self, data: str):
         if not data:
