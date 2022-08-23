@@ -315,7 +315,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
 
     iban_info = iban_info.data['ibanInfo']
 
-    bank_account.bank_name = iban_info['bank']
+    bank_account.bank = iban_info['bank']
     bank_account.deposit_address = iban_info['depositNumber']
     bank_account.card_pan = ''
     bank_account.deposit_status = DEPOSIT_STATUS_MAP.get(iban_info['status'], '')

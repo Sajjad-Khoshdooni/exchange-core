@@ -5,11 +5,12 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from ledger.models import Prize
+from ledger.models.asset import AssetSerializerMini
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class PrizeSerializer(serializers.ModelSerializer):
-    coin = serializers.SerializerMethodField()
+    asset = AssetSerializerMini(read_only=True)
     reason = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
 
@@ -24,11 +25,8 @@ class PrizeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Prize
-        fields = ('id', 'amount', 'scope', 'coin', 'redeemed', 'reason', 'created')
+        fields = ('id', 'amount', 'scope', 'asset', 'redeemed', 'reason', 'created')
         read_only_fields = ('id', 'amount', 'scope', 'coin', 'created')
-
-    def get_coin(self, prize: Prize):
-        return prize.asset.symbol
 
     def get_reason(self, prize: Prize):
         return Prize.VERBOSE.get(prize.scope, '')

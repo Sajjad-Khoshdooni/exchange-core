@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
+from yekta_config.config import config
 
 from accounts.utils.validation import generate_random_code, PHONE_MAX_LENGTH, fifteen_minutes_later_datetime, MINUTES
 
@@ -113,7 +114,7 @@ class VerificationCode(models.Model):
                 created__gte=timezone.now() - timedelta(minutes=2),
             ).exists()
 
-            if any_recent_code:
+            if not settings.DEBUG_OR_TESTING_OR_STAGING and any_recent_code:
                 logger.info('[OTP] Ignored sending otp to kavenegar because of recent')
                 return
 
@@ -122,7 +123,7 @@ class VerificationCode(models.Model):
                 created__gte=timezone.now() - timedelta(minutes=15),
             ).count()
 
-            if prev_codes >= 3:
+            if not settings.DEBUG_OR_TESTING_OR_STAGING and prev_codes >= 3:
                 logger.info('[OTP] Ignored sending otp to kavenegar because of multiple prev')
                 return
 
@@ -138,7 +139,7 @@ class VerificationCode(models.Model):
             user=user,
         )
 
-        if settings.DEBUG_OR_TESTING:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             print('[OTP] code for %s is: %s' % (otp_code.phone, otp_code.code))
         else:
             if scope != cls.SCOPE_TELEPHONE:  # is_phone(phone):
@@ -148,13 +149,24 @@ class VerificationCode(models.Model):
                 send_type = 'call'
                 template = 'telephone'
 
-            from accounts.tasks import send_message_by_kavenegar
-            send_message_by_kavenegar(
-                phone=otp_code.phone,
-                token=otp_code.code,
-                send_type=send_type,
-                template=template
-            )
+            if config('OTP_BY_SMS_IR', cast=bool, default=False):
+                from accounts.tasks import send_message_by_sms_ir
+                send_message_by_sms_ir(
+                    phone=phone,
+                    template='69129',
+                    params={
+                        'brand': config('BRAND'),
+                        'code': otp_code.code
+                    }
+                )
+            else:
+                from accounts.tasks import send_message_by_kavenegar
+                send_message_by_kavenegar(
+                    phone=otp_code.phone,
+                    token=otp_code.code,
+                    send_type=send_type,
+                    template=template
+                )
 
         return otp_code
 

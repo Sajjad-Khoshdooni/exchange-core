@@ -45,7 +45,7 @@ class AssetAdmin(AdvancedAdmin):
 
     def changelist_view(self, request, extra_context=None):
 
-        if not settings.DEBUG_OR_TESTING:
+        if not settings.DEBUG_OR_TESTING_OR_STAGING:
             self.overview = AssetOverview(strict=False)
 
             context = {

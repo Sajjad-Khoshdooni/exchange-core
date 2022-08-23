@@ -4,12 +4,13 @@ from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 
 from ledger.models import NetworkAsset
+from ledger.models.asset import AssetSerializerMini
 from ledger.utils.precision import get_presentation_amount
 
 
 class NetworkAssetSerializer(serializers.ModelSerializer):
     network = serializers.SerializerMethodField()
-    coin = serializers.SerializerMethodField()
+    asset = AssetSerializerMini()
     network_name = serializers.SerializerMethodField()
 
     withdraw_commission = serializers.SerializerMethodField()
@@ -31,7 +32,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return get_presentation_amount(network_asset.withdraw_fee)
 
     class Meta:
-        fields = ('coin', 'network', 'network_name', 'withdraw_commission', 'min_withdraw')
+        fields = ('asset', 'network', 'network_name', 'withdraw_commission', 'min_withdraw')
         model = NetworkAsset
 
 

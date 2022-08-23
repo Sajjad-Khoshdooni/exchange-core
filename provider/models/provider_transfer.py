@@ -53,7 +53,7 @@ class ProviderTransfer(models.Model):
         handler = asset.get_hedger().get_spot_handler()
         resp = handler.withdraw(
             coin=asset.symbol,
-            network=network.symbol,
+            network=network,
             address=address,
             transfer_amount=transfer_amount,
             fee_amount=withdraw_fee,

@@ -187,7 +187,9 @@ class ProviderOrder(models.Model):
             # check notional
             price = get_trading_price_usdt(asset.symbol, side=SELL, raw_price=True)
 
-            if order_amount * price < 10:
+            min_hedge_amount = handler.get_min_notional()
+
+            if order_amount * price < min_hedge_amount:
                 logger.info('ignored due to small order')
                 return True
 

@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from rest_framework import serializers
@@ -56,7 +57,7 @@ class Asset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
-    symbol = models.CharField(max_length=8, unique=True, db_index=True)
+    symbol = models.CharField(max_length=16, unique=True, db_index=True)
 
     trade_quantity_step = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
     min_trade_quantity = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
@@ -73,7 +74,7 @@ class Asset(models.Model):
 
     trade_enable = models.BooleanField(default=True)
 
-    hedge_method = models.CharField(max_length=32, default=HEDGE_BINANCE_FUTURE, choices=HEDGE_METHOD_CHOICE)
+    hedge_method = models.CharField(max_length=32, default=HEDGE_BINANCE_FUTURE, choices=HEDGE_METHOD_CHOICE, blank=True)
 
     candidate = models.BooleanField(default=False)
 
@@ -177,6 +178,7 @@ class AssetSerializer(serializers.ModelSerializer):
 class AssetSerializerMini(serializers.ModelSerializer):
     precision = serializers.SerializerMethodField()
     step_size = serializers.SerializerMethodField()
+    logo = serializers.SerializerMethodField()
 
     def get_precision(self, asset: Asset):
         return asset.get_precision()
@@ -184,9 +186,12 @@ class AssetSerializerMini(serializers.ModelSerializer):
     def get_step_size(self, asset: Asset):
         return get_precision(asset.trade_quantity_step)
 
+    def get_logo(self, asset: Asset):
+        return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
+
     class Meta:
         model = Asset
-        fields = ('symbol', 'margin_enable', 'precision', 'step_size')
+        fields = ('symbol', 'margin_enable', 'precision', 'step_size', 'name', 'name_fa', 'logo')
 
 
 class CoinField(serializers.CharField):

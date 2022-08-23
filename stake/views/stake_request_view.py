@@ -100,7 +100,7 @@ class StakeRequestAPIView(ModelViewSet):
     serializer_class = StakeRequestSerializer
 
     def get_queryset(self):
-        return StakeRequest.objects.filter(account=self.request.user.account)
+        return StakeRequest.objects.filter(account=self.request.user.account).order_by('-created')
 
     def destroy(self, request, *args, **kwargs):
 

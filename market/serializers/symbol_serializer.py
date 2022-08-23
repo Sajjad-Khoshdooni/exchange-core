@@ -8,6 +8,7 @@ from rest_framework.generics import get_object_or_404
 
 from accounts.models import Account
 from ledger.models import Asset
+from ledger.models.asset import AssetSerializerMini
 from ledger.utils.precision import get_presentation_amount, floor_precision
 from market.models import PairSymbol, Trade
 
@@ -16,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 class SymbolSerializer(serializers.ModelSerializer):
-    asset = serializers.CharField(source='asset.symbol', read_only=True)
-    base_asset = serializers.CharField(source='base_asset.symbol', read_only=True)
+    asset = AssetSerializerMini(read_only=True)
+    base_asset = AssetSerializerMini(read_only=True)
     bookmark = serializers.SerializerMethodField()
     margin_enable = serializers.SerializerMethodField()
 
@@ -40,8 +41,8 @@ class SymbolSerializer(serializers.ModelSerializer):
 
 
 class SymbolBreifStatsSerializer(serializers.ModelSerializer):
-    asset = serializers.CharField(source='asset.symbol', read_only=True)
-    base_asset = serializers.CharField(source='base_asset.symbol', read_only=True)
+    asset = AssetSerializerMini(read_only=True)
+    base_asset = AssetSerializerMini(read_only=True)
     price = serializers.SerializerMethodField()
     change_percent = serializers.SerializerMethodField()
     bookmark = serializers.SerializerMethodField()

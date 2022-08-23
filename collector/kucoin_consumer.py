@@ -4,6 +4,7 @@ import signal
 import sys
 import time
 from datetime import datetime
+from decimal import Decimal
 
 import websocket
 from django.utils import timezone
@@ -11,6 +12,8 @@ from django.utils import timezone
 from collector.metrics import set_metric
 from collector.utils.price import price_redis
 from ledger.models import Asset
+
+from ledger.utils.precision import decimal_to_str
 from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 
 logger = logging.getLogger(__name__)
@@ -88,10 +91,10 @@ class KucoinConsumer:
 
         symbol = symbol.split('-')
 
-        key = 'bin:' + symbol[0].lower() + symbol[1].lower()
-
+        key = 'bin:' + KucoinSpotHandler().rename_coin_to_big_coin(symbol[0]).lower() + symbol[1].lower()
+        coin_coefficient = KucoinSpotHandler().get_coin_coefficient(symbol[0])
         self.queue[key] = {
-            'a': ask, 'b': bid
+            'a': decimal_to_str(Decimal(ask) * coin_coefficient), 'b': decimal_to_str(Decimal(bid) * coin_coefficient)
         }
         if time.time() - self.last_flush_time > 1:
             self.flush()
@@ -122,5 +125,15 @@ class KucoinConsumer:
         logger.info(f'{self.__class__.__name__} exited gracefully.')
 
         sys.exit()
+
+    def api_consume(self):
+        coins = self.get_streams()
+        while self.loop:
+
+            logger.info('Now %s' % datetime.now())
+            for coin in coins:
+                data = KucoinSpotHandler().get_orderbook(coin)
+                self.handle_stream_data(data)
+            time.sleep(1)
 
 

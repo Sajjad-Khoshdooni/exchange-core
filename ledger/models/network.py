@@ -12,6 +12,7 @@ class Network(models.Model):
 
     symbol = models.CharField(max_length=16, unique=True, db_index=True)
     name = models.CharField(max_length=128, blank=True)
+    kucoin_name = models.CharField(max_length=128, blank=True, default='')
 
     can_withdraw = models.BooleanField(default=True)
     can_deposit = models.BooleanField(default=False)
