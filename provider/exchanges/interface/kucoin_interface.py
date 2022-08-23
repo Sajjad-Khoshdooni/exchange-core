@@ -19,30 +19,10 @@ class KucoinSpotHandler(ExchangeHandler):
     api_path = None
     exchange = None
 
-    def rename_coin_to_big_coin(self, coin: str):
-        rename_list = {
-            'ELON': '1000ELON',
-        }
-        return rename_list.get( coin, coin)
-
-    def rename_big_coin_to_coin(self, coin: str):
-        rename_list = {
-            '1000ELON': 'ELON'
-        }
-        return rename_list.get(coin, coin)
-
-    def get_coin_coefficient(self, coin: str):
-        coin = self.rename_big_coin_to_coin(coin)
-        coin_coefficient = {
-            'ELON': Decimal('1000'),
-            'ELON-USDT': Decimal('1000')
-        }
-        return coin_coefficient.get(coin, 1)
-
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        if settings.DEBUG_OR_TESTING:
-            return {}
-        data = data or {}
+        # if settings.DEBUG_OR_TESTING:
+        #     return {}
+        # data = data or {}
 
         if signed:
             return kucoin_send_signed_request(method, url, data=data)

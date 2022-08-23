@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from ledger.models import Asset, Network, NetworkAsset
 from market.utils.fix import create_missing_symbols
-from provider.exchanges.interface.binance_interface import BinanceSpotHandler, BinanceFuturesHandler
+from provider.exchanges.interface.binance_interface import BinanceSpotHandler, BinanceFuturesHandler, ExchangeHandler
 from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 
 
@@ -32,7 +32,7 @@ def add_candidate_coins(coins: list, handler: str):
             print('%s not found or stopped trading in interface spot' % spot_symbol)
             continue
 
-        asset, created = Asset.objects.get_or_create(symbol=KucoinSpotHandler().rename_coin_to_big_coin(coin))
+        asset, created = Asset.objects.get_or_create(symbol=ExchangeHandler.rename_coin_to_big_coin(coin))
 
         asset.hedge_method = hedger_mapping[handler]
 

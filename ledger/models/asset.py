@@ -38,13 +38,19 @@ class Asset(models.Model):
     HEDGE_KUCOIN_FUTURE = 'kucoin-future'
     HEDGE_KUCOIN_SPOT = 'kucoin-spot'
 
+    HEDGE_MEXC_SPOT = 'mexc-spot'
+    HEDGE_MEXC_FUTURES = 'mexc-futures'
+
     HEDGE_METHOD_CHOICE = (
         (HEDGE_KUCOIN_SPOT, HEDGE_KUCOIN_SPOT),
         (HEDGE_KUCOIN_FUTURE, HEDGE_KUCOIN_FUTURE),
         (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
         (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE),
+        (HEDGE_MEXC_SPOT, HEDGE_MEXC_SPOT),
+        (HEDGE_MEXC_FUTURES, HEDGE_MEXC_FUTURES),
         (HEDGE_NONE, HEDGE_NONE)
     )
+
     PRECISION = 8
 
     objects = models.Manager()

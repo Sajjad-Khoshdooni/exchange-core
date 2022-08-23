@@ -14,6 +14,7 @@ from collector.utils.price import price_redis
 from ledger.models import Asset
 
 from ledger.utils.precision import decimal_to_str
+from provider.exchanges.interface.binance_interface import ExchangeHandler
 from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 
 logger = logging.getLogger(__name__)
@@ -91,8 +92,8 @@ class KucoinConsumer:
 
         symbol = symbol.split('-')
 
-        key = 'bin:' + KucoinSpotHandler().rename_coin_to_big_coin(symbol[0]).lower() + symbol[1].lower()
-        coin_coefficient = KucoinSpotHandler().get_coin_coefficient(symbol[0])
+        key = 'bin:' + ExchangeHandler.rename_coin_to_big_coin(symbol[0]).lower() + symbol[1].lower()
+        coin_coefficient = ExchangeHandler.get_coin_coefficient(symbol[0])
         self.queue[key] = {
             'a': decimal_to_str(Decimal(ask) * coin_coefficient), 'b': decimal_to_str(Decimal(bid) * coin_coefficient)
         }

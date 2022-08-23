@@ -39,6 +39,39 @@ class ExchangeHandler:
 
         return mapping.get(name, BinanceSpotHandler)()
 
+    @classmethod
+    def rename_coin_to_big_coin(cls, coin: str):
+        rename_list = {
+            'ELON': '1000ELON',
+            'BABYDOGE': '1M-BABYDOGE',
+            'FLOKY': '1000FLOKY'
+        }
+        return rename_list.get(coin, coin)
+
+    @classmethod
+    def rename_big_coin_to_coin(cls, coin: str):
+        rename_list = {
+            '1000ELON': 'ELON',
+            '1M-BABYDOGE': 'BABYDOGE',
+            '1000FLOKY': 'FLOKY',
+        }
+        return rename_list.get(coin, coin)
+
+    @classmethod
+    def get_coin_coefficient(cls, coin: str):
+        coin = cls.rename_big_coin_to_coin(coin)
+        coin_coefficient = {
+            'ELON': Decimal('1000'),
+            'ELON-USDT': Decimal('1000'),
+            'ELONUSDT': Decimal('1000'),
+            'BABAYDOGE': Decimal('1000000'),
+            'BABYDOGEUSDT': Decimal('1000000'),
+            'FLOKY': Decimal('1000'),
+            'FLOKYUSDT': Decimal('1000'),
+
+        }
+        return coin_coefficient.get(coin, 1)
+
     def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
                     cache_timeout: int = None):
         cache_key = None
