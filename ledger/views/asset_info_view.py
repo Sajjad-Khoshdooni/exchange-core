@@ -160,7 +160,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
             new_fields = [
                 'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
                 'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
-                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee',
+                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee', 'original_symbol'
             ]
 
         class Serializer(cls):
