@@ -351,7 +351,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             elif not user.first_name_verified or not user.last_name_verified:
                 return 'مغایرت نام'
 
-
         verify_fields = [
             'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
             'bank_card_verified', 'selfie_image_verified', 'national_code_phone_verified'
