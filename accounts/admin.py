@@ -346,6 +346,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                 return 'کد ملی تکراری'
             elif bank_card and bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
                 return 'شماره کارت تکراری'
+            elif not user.birth_date_verified:
+                return 'مغایرت کد ملی،‌ شماره کارت و تاریخ تولد'
+            elif not user.first_name_verified or not user.last_name_verified:
+                return 'مغایرت نام'
+
 
         verify_fields = [
             'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
