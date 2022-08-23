@@ -5,7 +5,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import ModelViewSet
 from yekta_config.config import config
 
-from accounts.models import User
+from accounts.models import User, FinotechRequest
 from accounts.utils.similarity import clean_persian_name
 from financial.models.bank_card import BankCard, BankCardSerializer
 from financial.validators import bank_card_pan_validator
@@ -28,11 +28,11 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         if user.verify_status == User.REJECTED and user.level == User.LEVEL1:
 
             if user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
-                return 'کد ملی تکراری است. لطفا به پنل اصلی‌تان وارد شوید. در صورتی که می‌خواهید کد ملی‌تان را عوض کنید با پشتیبانی صحبت کنید.'
+                return 'کد ملی تکراری است. لطفا به پنل اصلی‌تان وارد شوید.'
 
             bank_card = user.bankcard_set.filter(kyc=True).first()
             if bank_card and bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
-                return 'شماره کارت وارد شده تکراری است. لطفا با پشتیبانی صحبت کنید.'
+                return 'شماره کارت وارد شده تکراری است.'
 
             if not user.birth_date_verified:
                 return 'کد ملی،‌ شماره کارت و تاریخ تولد متعلق به یک نفر نیستند.'
@@ -64,8 +64,11 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         if user.level > User.LEVEL1:
             raise ValidationError('کاربر تایید شده است.')
 
-        if user.national_code_verified is False:
-            raise ValidationError('کد ملی شما رد شده است. برای ارتقای حساب با پشتیبانی صحبت کنید.')
+        if user.get_verify_weight() >= FinotechRequest.MAX_WEIGHT:
+            raise ValidationError('به خاطر تلاش‌های مکرر امکان تایید خودکار وجود ندارد. برای ارتقای حساب با پشتیبانی صحبت کنید.')
+
+        # if user.national_code_verified is False:
+        #     raise ValidationError('کد ملی شما رد شده است. برای ارتقای حساب با پشتیبانی صحبت کنید.')
 
         date_delta = timezone.now().date() - validated_data['birth_date']
         age = date_delta.days / 365
@@ -78,8 +81,8 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         card_pan = validated_data.pop('card_pan')
         bank_card = self.get_kyc_bank_card(user, card_pan)
 
-        if bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
-            raise ValidationError('شماره کارت‌تان تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
+        # if bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
+        #     raise ValidationError('شماره کارت‌تان تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
 
         if not bank_card.verified:
             bank_card.verified = None
@@ -114,7 +117,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         from accounts.tasks import basic_verify_user
 
         if not settings.DEBUG_OR_TESTING:
-            basic_verify_user.s(user.id).apply_async(countdown=config('KYC_DELAY', cast=int, default=60))
+            basic_verify_user.s(user.id).apply_async(countdown=60)
 
         return user
 

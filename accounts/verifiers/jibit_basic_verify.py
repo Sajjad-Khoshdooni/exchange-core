@@ -17,7 +17,7 @@ def basic_verify(user: User):
         logger.info('ignoring double verifying user_d = %d' % user.id)
         return
 
-    bank_card = user.bankcard_set.filter(kyc=True).first()
+    bank_card = user.kyc_bank_card
 
     if not bank_card:
         logger.info('ignoring verify level2 due to no bank_account for user_d = %d' % user.id)

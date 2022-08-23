@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
-from django.db.models import Q, UniqueConstraint
+from django.db.models import Q, UniqueConstraint, Sum
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
@@ -136,6 +136,17 @@ class User(AbstractUser):
         default=False,
         verbose_name='امکان برداشت رمزارز در سطح ۱',
     )
+
+    @property
+    def kyc_bank_card(self):
+        return self.bankcard_set.filter(kyc=True).first()
+
+    def get_verify_weight(self) -> int:
+        from accounts.models import FinotechRequest
+        return FinotechRequest.objects.filter(
+            user=self,
+            search_key__isnull=False
+        ).exclude(search_key='').aggregate(w=Sum('weight'))['w'] or 0
 
     class Meta:
         verbose_name = _('user')
