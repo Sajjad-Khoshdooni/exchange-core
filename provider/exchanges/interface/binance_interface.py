@@ -28,13 +28,16 @@ class ExchangeHandler:
     @classmethod
     def get_handler(cls, name: str):
         from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler, KucoinFuturesHandler
+        from provider.exchanges.interface.mexc_interface import MexcFuturesHandler, MexcSpotHandler
         from ledger.models.asset import Asset
 
         mapping = {
             Asset.HEDGE_BINANCE_SPOT: BinanceSpotHandler,
             Asset.HEDGE_BINANCE_FUTURE: BinanceFuturesHandler,
             Asset.HEDGE_KUCOIN_SPOT: KucoinSpotHandler,
-            Asset.HEDGE_KUCOIN_FUTURE: KucoinFuturesHandler
+            Asset.HEDGE_KUCOIN_FUTURE: KucoinFuturesHandler,
+            Asset.HEDGE_MEXC_SPOT: MexcSpotHandler,
+            Asset.HEDGE_MEXC_FUTURES: MexcFuturesHandler,
         }
 
         return mapping.get(name, BinanceSpotHandler)()
@@ -64,7 +67,7 @@ class ExchangeHandler:
             'ELON': Decimal('1000'),
             'ELON-USDT': Decimal('1000'),
             'ELONUSDT': Decimal('1000'),
-            'BABAYDOGE': Decimal('1000000'),
+            'BABYDOGE': Decimal('1000000'),
             'BABYDOGEUSDT': Decimal('1000000'),
             'FLOKY': Decimal('1000'),
             'FLOKYUSDT': Decimal('1000'),
