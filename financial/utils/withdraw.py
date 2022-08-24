@@ -264,7 +264,7 @@ class ZibalChanel(FiatWithdraw):
         )
 
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
-        if receiver.bank in ['MELLI', 'SAMAN', 'EGHTESAD_NOVIN', 'PARSIAN', 'AYANDEH', 'PASARGAD']:
+        if receiver.bank in ['MELLI', 'SAMAN', 'EGHTESAD_NOVIN', 'PARSIAN', 'AYANDEH']:
             checkout_delay = -1
             status = FiatWithdrawRequest.DONE
         else:
