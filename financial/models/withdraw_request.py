@@ -106,13 +106,14 @@ class FiatWithdrawRequest(models.Model):
             )
             return
 
-        self.ref_id = self.provider_withdraw_id = self.channel_handler.create_withdraw(
+        withdraw = = self.provider_withdraw_id = self.channel_handler.create_withdraw(
             wallet_id,
             self.bank_account,
             self.amount,
             self.id
         )
-        self.change_status(FiatWithdrawRequest.PENDING)
+        self.ref_id = withdraw.tracking_id
+        self.change_status(withdraw.status)
         self.withdraw_datetime = timezone.now()
 
         self.save()
