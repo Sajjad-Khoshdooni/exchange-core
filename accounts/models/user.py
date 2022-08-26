@@ -183,6 +183,10 @@ class User(AbstractUser):
                 self.archived = False
                 self.save(update_fields=['verify_status', 'level', 'level_2_verify_datetime', 'level_3_verify_datetime', 'archived'])
 
+            if self.level == User.LEVEL2:
+                from accounts.gamification.gamify import check_prize_achievements
+                check_prize_achievements(self.account)
+
             alert_user_verify_status(self)
 
         elif self.verify_status != self.REJECTED and status == self.REJECTED:
@@ -230,9 +234,6 @@ class User(AbstractUser):
     def verify_level2_if_not(self) -> bool:
         if self.level == User.LEVEL1 and all(self.get_level2_verify_fields()):
             self.change_status(User.VERIFIED)
-
-            from accounts.gamification.gamify import check_prize_achievements
-            check_prize_achievements(self.account)
 
             return True
 
