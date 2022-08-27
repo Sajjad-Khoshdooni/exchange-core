@@ -25,6 +25,12 @@ class Wallet:
     free: int
 
 
+@dataclass
+class Withdraw:
+    tracking_id: str
+    status: str
+
+
 class FiatWithdraw:
 
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
@@ -44,7 +50,7 @@ class FiatWithdraw:
     def get_wallet_data(self, wallet_id: int):
         raise NotImplementedError
 
-    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> str:
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
         raise NotImplementedError
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
@@ -119,7 +125,7 @@ class PayirChanel(FiatWithdraw):
             free=data['cashoutableAmount'] // 10
         )
 
-    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> str:
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
         data = self.collect_api('/api/v2/cashouts', method='POST', data={
             'walletId': wallet_id,
             'amount': amount * 10,
@@ -128,7 +134,10 @@ class PayirChanel(FiatWithdraw):
             'uid': request_id,
         })
 
-        return str(data['cashout']['id'])
+        return Withdraw(
+            tracking_id=str(data['cashout']['id']),
+            status=FiatWithdrawRequest.PENDING
+        )
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
         data = self.collect_api(f'/api/v2/cashouts/track/{request_id}')
@@ -254,17 +263,27 @@ class ZibalChanel(FiatWithdraw):
             free=data['withdrawableBalance'] // 10
         )
 
-    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> str:
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
+        if receiver.bank in ['MELLI', 'SAMAN', 'EGHTESAD_NOVIN', 'PARSIAN', 'AYANDEH']:
+            checkout_delay = -1
+            status = FiatWithdrawRequest.DONE
+        else:
+            checkout_delay = 0
+            status = FiatWithdrawRequest.PENDING
+
         data = self.collect_api('/v1/wallet/checkout/plus', method='POST', data={
             'id': wallet_id,
             'amount': amount * 10,
             'bankAccount': receiver.iban,
             'uniqueCode': request_id,
             'wageFeeMode': 2,
-            'checkoutDelay': 0,
+            'checkoutDelay': checkout_delay,
         })
 
-        return data['id']
+        return Withdraw(
+            tracking_id=data['id'],
+            status=status
+        )
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
         data = self.collect_api(f'/v1/report/checkout/inquire', method='POST', data={
