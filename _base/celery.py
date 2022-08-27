@@ -108,10 +108,10 @@ app.conf.beat_schedule = {
     },
     'update maker orders': {
         'task': 'market.tasks.market_maker.update_maker_orders',
-        'schedule': 2,
+        'schedule': 5,
         'options': {
             'queue': 'market',
-            'expire': 2
+            'expire': 5
         },
     },
     'handle open stop loss': {
