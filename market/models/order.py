@@ -148,7 +148,7 @@ class Order(models.Model):
 
     @classmethod
     def cancel_orders(cls, to_cancel_orders: QuerySet):
-        to_cancel_orders = list(to_cancel_orders.exclude(status=cls.FILLED))
+        to_cancel_orders = list(to_cancel_orders.select_for_update().exclude(status=cls.FILLED))
 
         for order in to_cancel_orders:
             order.cancel()
@@ -469,7 +469,7 @@ class Order(models.Model):
                 logger.info(f'{order_type} {side} ignore cancels with price: {price} top: {top_prices[side]}')
                 continue
 
-            invalid_orders = Order.open_objects.select_for_update().filter(
+            invalid_orders = Order.open_objects.filter(
                 symbol_id=symbol.id, side=side, type=order_type
             ).exclude(**cls.get_price_filter(price, side))
 
