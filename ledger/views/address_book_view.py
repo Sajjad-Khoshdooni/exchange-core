@@ -9,7 +9,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import AddressBook, Asset, Network, NetworkAsset
 from ledger.models.asset import AssetSerializerMini
-from ledger.views.network_asset_info_view import NetworkAssetSerializer
+from ledger.views.wallet_view import NetworkAssetSerializer
 
 
 class AddressBookSerializer(serializers.ModelSerializer):
