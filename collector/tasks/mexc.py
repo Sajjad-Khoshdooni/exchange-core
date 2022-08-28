@@ -23,8 +23,12 @@ KUCOIN_WSS_URL = 'wss://ws-api.kucoin.com/endpoint?token='
 
 @shared_task(queue='mexc')
 def fetch_mexc_price(coin: str):
-    symbol = MexcSpotHandler().get_trading_symbol(coin=coin)
-    data = MexcSpotHandler().get_orderbook(symbol)
+    while True:
+        symbol = MexcSpotHandler().get_trading_symbol(coin=coin)
+        data = MexcSpotHandler().get_orderbook(symbol)
+        print(data)
+        print('1')
+
     queue = {}
     if not data:
         return

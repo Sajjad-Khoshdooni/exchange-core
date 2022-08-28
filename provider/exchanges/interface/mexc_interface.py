@@ -5,13 +5,14 @@ from decimal import Decimal
 from django.conf import settings
 
 from ledger.utils.precision import decimal_to_str
-from ledger.utils.price import get_trading_price_usdt
+from ledger.utils.price import get_trading_price_usdt, get_spread, get_price, get_other_side
 from provider.exchanges.interface.binance_interface import ExchangeHandler, MARKET, SELL, BUY, LIMIT, HOUR
 from provider.exchanges.sdk.mexc_sdk import mexc_send_sign_request, mexc_send_public_request
 
 
 class MexcSpotHandler(ExchangeHandler):
     NAME = 'mexc'
+    MARKET_TYPE = 'spot'
 
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
         # if settings.DEBUG_OR_TESTING:
@@ -43,10 +44,17 @@ class MexcSpotHandler(ExchangeHandler):
         coin = self.rename_big_coin_to_coin(coin)
         return coin+'USDT'
 
-    def place_order(self, symbol: str, side: str, amount: Decimal, order_type: str = MARKET,
+    def place_order(self, symbol: str, side: str, amount: Decimal, order_type: str = LIMIT,
                     client_order_id: str = None) -> dict:
-        order_url = '/api/v3/order'
+
+        coin = self.rename_coin_to_big_coin(symbol[:-4])
         coin_coefficient = self.get_coin_coefficient(symbol)
+        price_init = get_price(coin=coin, side=side)
+        value = amount * price_init
+        trading_price = decimal_to_str(get_trading_price_usdt(coin=coin, side=get_other_side(side.lower()), value=value)/ coin_coefficient/2)
+
+        order_url = '/api/v3/order'
+
         side = side.upper()
         order_type = order_type.upper()
 
@@ -59,16 +67,12 @@ class MexcSpotHandler(ExchangeHandler):
             'symbol': symbol,
             'side': side,
             'type': order_type,
+            'quantity': size,
+            'price': trading_price
         }
-        if side == BUY:
-            coin = self.rename_coin_to_big_coin(symbol[:-4])
-            price = get_trading_price_usdt(coin=coin, side=SELL.lower(), raw_price=True)
-            quoteOrderQty = price * Decimal(size)
-            data['quoteOrderQty'] =decimal_to_str(quoteOrderQty)
-
-        else:
-            data['quantity'] = size
-        return self._collect_api(url=order_url, method='POST', data=data, signed=True)
+        resp = self._collect_api(url=order_url, method='POST', data=data, signed=True)
+        print(resp)
+        return resp
 
     def get_account_details(self):
         return self.collect_api(url='/api/v3/account', method='GET') or {}
@@ -124,6 +128,10 @@ class MexcSpotHandler(ExchangeHandler):
             return info[0]
         return
 
+    def get_withdraw_fee(self, coin: str, network):
+        info = self.get_network_info(coin, network)
+        return Decimal(info.get('withdrawFee'))
+
     def get_symbol_data(self, symbol: str):
         symbol_coefficient = self.get_coin_coefficient(symbol)
         coin_data = self.collect_api('/api/v3/exchangeInfo?symbol={}'.format(symbol), method='GET', signed=False)
@@ -147,21 +155,31 @@ class MexcSpotHandler(ExchangeHandler):
             resp['status'] = 'TRADING'
         return resp
 
+    def get_step_size(self, symbol: str) -> Decimal:
+        data = self.get_symbol_data(symbol=symbol)
+        lot_size = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['filters']))[0]
+        return Decimal(lot_size['stepSize'])
+
+    def get_lot_min_quantity(self, symbol: str) ->Decimal:
+        return Decimal(0)
+
     def get_orderbook(self, symbol: str):
         data = {
             'symbol': symbol,
-            'limit': 1
         }
-        resp = self.collect_api(url='/api/v3/depth', method='GET', data=data, signed=False)
-        data = {
-            'bestAsk': resp['asks'][0][0],
-            'bestBid': resp['bids'][0][0],
+        resp = self.collect_api(url='/api/v3/ticker/bookTicker', data=data, method='GET', signed=False)
+        resp_data = {
+            'bestAsk': resp['askPrice'],
+            'bestBid': resp['bidPrice'],
             'symbol': symbol,
         }
-        return data
+        return resp_data
 
     def get_spot_handler(self) -> 'ExchangeHandler':
         return self
+
+    def get_min_notional(self):
+        return Decimal(5)
 
 
 class MexcFuturesHandler(MexcSpotHandler):
