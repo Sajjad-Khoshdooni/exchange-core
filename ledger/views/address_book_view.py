@@ -53,7 +53,7 @@ class AddressBookSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AddressBook
-        fields = ('id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted')
+        fields = ('id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'network_info')
 
 
 class AddressBookView(ModelViewSet):
