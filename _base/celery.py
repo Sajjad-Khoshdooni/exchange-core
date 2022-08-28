@@ -108,10 +108,10 @@ app.conf.beat_schedule = {
     },
     'update maker orders': {
         'task': 'market.tasks.market_maker.update_maker_orders',
-        'schedule': 2,
+        'schedule': 10,
         'options': {
             'queue': 'market',
-            'expire': 2
+            'expire': 10
         },
     },
     'handle open stop loss': {
@@ -191,6 +191,16 @@ app.conf.beat_schedule = {
             'expire': 300
         },
     },
+
+    'handle_missing_payments': {
+        'task': 'financial.tasks.gateway.handle_missing_payments',
+        'schedule': 300,
+        'options': {
+            'queue': 'finance',
+            'expire': 60
+        },
+    },
+
     'random_trader': {
         'task': 'trader.tasks.random_trader.random_trader',
         'schedule': 17,

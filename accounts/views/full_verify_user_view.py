@@ -24,7 +24,6 @@ class FullVerificationSerializer(serializers.ModelSerializer):
 
         if user.selfie_image_verified and user.national_code_phone_verified:
             user.change_status(User.VERIFIED)
-            alert_user_verify_status(user)
             return user
 
         if not user.selfie_image_verified:

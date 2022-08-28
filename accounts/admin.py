@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import FirebaseToken, ExternalNotification
+from accounts.models import FirebaseToken, ExternalNotification, Attribution
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -339,24 +339,28 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_referrer_user.short_description = 'referrer'
 
     def get_user_reject_reason(self, user: User):
-        if user.level == User.LEVEL1 and user.verify_status == User.REJECTED and \
-                user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
-            return 'کد ملی تکراری'
+        bank_card = user.kyc_bank_card
+
+        if user.level == User.LEVEL1 and user.verify_status == User.REJECTED:
+            if user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
+                return 'کد ملی تکراری'
+            elif bank_card and bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
+                return 'شماره کارت تکراری'
+            elif not user.birth_date_verified:
+                return 'مغایرت کد ملی،‌ شماره کارت و تاریخ تولد'
+            elif not user.first_name_verified or not user.last_name_verified:
+                return 'مغایرت نام'
 
         verify_fields = [
             'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
-            'bank_card_verified', 'bank_account_verified', 'selfie_image_verified'
+            'bank_card_verified', 'selfie_image_verified', 'national_code_phone_verified'
         ]
 
         for verify_field in verify_fields:
             field = verify_field[:-9]
 
             if field == 'bank_card':
-                bank_card = user.bankcard_set.all().order_by('-verified').first()
                 value = bank_card and bank_card.verified
-            elif field == 'bank_account':
-                bank_account = user.bankaccount_set.all().order_by('-verified').first()
-                value = bank_account and bank_account.verified
             else:
                 value = getattr(user, verify_field)
 
@@ -365,8 +369,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
                 if field == 'bank_card':
                     reason = 'شماره کارت'
-                elif field == 'bank_account':
-                    reason = 'شماره حساب'
+                elif verify_field == 'national_code_phone_verified':
+                    return 'شاهکار'
                 else:
                     reason = getattr(User, field).field.verbose_name
 
@@ -627,7 +631,8 @@ class UserCommentAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 @admin.register(TrafficSource)
 class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ['user', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
-    search_fields = ['user__phone']
+    search_fields = ['user__phone', 'gps_adid', 'ip']
+    readonly_fields = ('user', )
 
 
 @admin.register(LoginActivity)
@@ -646,3 +651,8 @@ class FirebaseTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 @admin.register(ExternalNotification)
 class ExternalNotificationAdmin(admin.ModelAdmin):
     list_display = ['created', 'user', 'phone', 'scope']
+
+
+@admin.register(Attribution)
+class AttributionAdmin(admin.ModelAdmin):
+    list_display = ['created', 'tracker_code', 'network_name', 'campaign_name', 'adgroup_name', 'gps_adid']

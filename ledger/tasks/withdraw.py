@@ -82,8 +82,7 @@ def create_withdraw(transfer_id: int):
 
     if response.ok:
         transfer.status = Transfer.PENDING
-        transfer.trx_hash = resp_data['trx_hash']
-        transfer.save(update_fields=['status', 'trx_hash'])
+        transfer.save(update_fields=['status'])
 
     elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
         transfer.source = ExchangeHandler.get_handler(transfer.asset.hedge_method).NAME

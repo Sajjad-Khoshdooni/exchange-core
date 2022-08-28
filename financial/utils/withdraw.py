@@ -7,7 +7,7 @@ import requests
 from yekta_config import secret
 from yekta_config.config import config
 
-from financial.models import BankAccount, FiatWithdrawRequest
+from financial.models import BankAccount, FiatWithdrawRequest, Gateway, Payment, PaymentRequest
 from financial.utils.withdraw_limit import is_holiday, time_in_range
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,12 @@ class Wallet:
     name: str
     balance: int
     free: int
+
+
+@dataclass
+class Withdraw:
+    tracking_id: str
+    status: str
 
 
 class FiatWithdraw:
@@ -44,7 +50,7 @@ class FiatWithdraw:
     def get_wallet_data(self, wallet_id: int):
         raise NotImplementedError
 
-    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> str:
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
         raise NotImplementedError
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
@@ -58,6 +64,9 @@ class FiatWithdraw:
 
     def is_active(self):
         return True
+
+    def update_missing_payments(self, gateway: Gateway):
+        pass
 
 
 class PayirChanel(FiatWithdraw):
@@ -116,7 +125,7 @@ class PayirChanel(FiatWithdraw):
             free=data['cashoutableAmount'] // 10
         )
 
-    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> str:
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
         data = self.collect_api('/api/v2/cashouts', method='POST', data={
             'walletId': wallet_id,
             'amount': amount * 10,
@@ -125,7 +134,10 @@ class PayirChanel(FiatWithdraw):
             'uid': request_id,
         })
 
-        return str(data['cashout']['id'])
+        return Withdraw(
+            tracking_id=str(data['cashout']['id']),
+            status=FiatWithdrawRequest.PENDING
+        )
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
         data = self.collect_api(f'/api/v2/cashouts/track/{request_id}')
@@ -234,6 +246,7 @@ class ZibalChanel(FiatWithdraw):
         resp_data = resp.json()
 
         if not resp_data['result'] == 1:
+            print(resp_data)
             raise ServerError
 
         return resp_data['data']
@@ -250,17 +263,27 @@ class ZibalChanel(FiatWithdraw):
             free=data['withdrawableBalance'] // 10
         )
 
-    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> str:
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
+        if receiver.bank in ['MELLI', 'SAMAN', 'EGHTESAD_NOVIN', 'PARSIAN', 'AYANDEH']:
+            checkout_delay = -1
+            status = FiatWithdrawRequest.DONE
+        else:
+            checkout_delay = 0
+            status = FiatWithdrawRequest.PENDING
+
         data = self.collect_api('/v1/wallet/checkout/plus', method='POST', data={
             'id': wallet_id,
             'amount': amount * 10,
             'bankAccount': receiver.iban,
             'uniqueCode': request_id,
             'wageFeeMode': 2,
-            'checkoutDelay': 0,
+            'checkoutDelay': checkout_delay,
         })
 
-        return data['id']
+        return Withdraw(
+            tracking_id=data['id'],
+            status=status
+        )
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
         data = self.collect_api(f'/v1/report/checkout/inquire', method='POST', data={
@@ -283,30 +306,30 @@ class ZibalChanel(FiatWithdraw):
     def get_estimated_receive_time(self, created: datetime):
         request_date = created.astimezone()
         request_time = request_date.time()
-        receive_time = request_date.replace(microsecond=0)
+        receive_time = request_date.replace(microsecond=0, second=0, minute=0)
 
         if is_holiday(request_date):
-            if time_in_range('0:0', '14:30', request_time):
-                receive_time = receive_time.replace(hour=15, minute=0, second=0)
-            else:
-                receive_time += timedelta(days=1)
-                receive_time.replace(hour=5, minute=0, second=0)
+            receive_time += timedelta(days=1)
+            receive_time.replace(hour=5, minute=0)
         else:
-            if time_in_range('0:0', '3:0', request_time):
-                receive_time = receive_time.replace(hour=5, minute=0, second=0)
+            if time_in_range('0:0', '3:25', request_time):
+                receive_time = receive_time.replace(hour=11, minute=30)
+            elif time_in_range('3:25', '10:25', request_time):
+                receive_time = receive_time.replace(hour=14, minute=30)
+            elif time_in_range('10:25', '13:25', request_time):
+                receive_time = receive_time.replace(hour=19, minute=30)
+            elif time_in_range('13:25', '18:25', request_time):
+                receive_time += timedelta(days=1)
+                receive_time = receive_time.replace(hour=5, minute=0)
 
-            if time_in_range('3:0', '10:0', request_time):
-                receive_time = receive_time.replace(hour=11, minute=30, second=0)
-
-            elif time_in_range('10:00', '13:0', request_time):
-                receive_time = receive_time.replace(hour=14, minute=30, second=0)
-
-            elif time_in_range('13:00', '18:0', request_time):
-                receive_time = receive_time.replace(hour=19, minute=30, second=0)
-
+                if is_holiday(receive_time):
+                    receive_time += timedelta(days=1)
             else:
                 receive_time += timedelta(days=1)
-                receive_time = receive_time.replace(hour=5, minute=0, second=0)
+                receive_time = receive_time.replace(hour=11, minute=30)
+
+                if is_holiday(receive_time):
+                    receive_time += timedelta(days=1)
 
         return receive_time
 
@@ -321,12 +344,34 @@ class ZibalChanel(FiatWithdraw):
 
         total_wallet_irt_value = 0
         for wallet in resp:
-            total_wallet_irt_value += Decimal(wallet['balance'])
+            total_wallet_irt_value += Decimal(wallet['balance']) + Decimal(wallet.get('pendingPFAmount', 0))
 
         return total_wallet_irt_value // 10
 
     def is_active(self):
         return bool(config('ZIBAL_TOKEN', ''))
+
+    def get_transactions(self, merchant_id: str, status: int):
+        return self.collect_api(
+            path='/v1/gateway/report/transaction',
+            method='POST',
+            data={'merchantId': merchant_id, 'status': status},
+            timeout=120
+        )
+
+    def update_missing_payments(self, gateway: Gateway):
+        transactions = self.get_transactions(gateway.merchant_id, status=2)
+
+        for t in transactions:
+            authority = t['trackId']
+
+            payment_request = PaymentRequest.objects.get(authority=authority)
+
+            payment, _ = Payment.objects.get_or_create(
+                payment_request=payment_request
+            )
+
+            payment_request.get_gateway().verify(payment)
 
 
 class ZarinpalChanel(FiatWithdraw):

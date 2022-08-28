@@ -178,6 +178,7 @@ class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     list_display = ('created', 'card_pan', 'user', 'verified', 'deleted')
     list_filter = (BankCardUserFilter,)
     search_fields = ('card_pan', )
+    readonly_fields = ('user', )
 
     actions = ['verify_bank_cards', 'verify_bank_cards_manual', 'reject_bank_cards_manual']
 
@@ -231,6 +232,7 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     list_display = ('created', 'iban', 'user', 'verified', 'deleted')
     list_filter = (BankUserFilter, )
     search_fields = ('iban', )
+    readonly_fields = ('user', )
 
     actions = ['verify_bank_accounts_manual', 'verify_bank_accounts_auto', 'reject_bank_accounts_manual']
 
