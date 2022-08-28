@@ -13,6 +13,7 @@ class CoinMarketCap(models.Model):
     SYMBOL_TRANSLATION = {
         'MIOTA': 'IOTA',
         'ELON': '1000ELON',
+        'BABYDOGE': '1M-BABYDOGE',
     }
 
     symbol = models.CharField(max_length=64, unique=True)

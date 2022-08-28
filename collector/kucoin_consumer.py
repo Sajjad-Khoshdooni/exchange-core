@@ -127,7 +127,7 @@ class KucoinConsumer:
 
         sys.exit()
 
-    def api_consume(self):
+    def apiconsume(self):
         coins = self.get_streams()
         while self.loop:
 
