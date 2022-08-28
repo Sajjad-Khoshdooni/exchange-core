@@ -28,7 +28,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         transfer = get_object_or_404(Transfer, id=requester_id)
 
         valid_transitions = [
-            (Transfer.PROCESSING, Transfer.PENDING),
+            (Transfer.PENDING, Transfer.PENDING),
             (Transfer.PENDING, Transfer.DONE),
             (Transfer.PENDING, Transfer.CANCELED),
             (Transfer.PROCESSING, Transfer.DONE),
@@ -42,7 +42,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             })
             raise ValidationError({'requester_id': 'invalid transfer source!'})
 
-        if transfer.status == status:
+        if transfer.status == status and status != Transfer.PENDING:
             return transfer
 
         if (transfer.status, status) not in valid_transitions:
