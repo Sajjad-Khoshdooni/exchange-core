@@ -204,5 +204,3 @@ class OTCTradeSerializer(serializers.ModelSerializer):
 
 class OTCTradeView(CreateAPIView):
     serializer_class = OTCTradeSerializer
-
-    queryset = OTCTrade.objects.all()

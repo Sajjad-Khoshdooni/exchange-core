@@ -39,7 +39,7 @@ class Asset(models.Model):
     HEDGE_KUCOIN_SPOT = 'kucoin-spot'
 
     HEDGE_MEXC_SPOT = 'mexc-spot'
-    HEDGE_MEXC_FUTURES = 'mexc-futures'
+    HEDGE_MEXC_FUTURES = 'mexc-future'
 
     HEDGE_METHOD_CHOICE = (
         (HEDGE_KUCOIN_SPOT, HEDGE_KUCOIN_SPOT),
