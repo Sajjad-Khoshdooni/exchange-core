@@ -14,10 +14,13 @@ logger = logging.getLogger(__name__)
 class WithdrawSerializer(serializers.ModelSerializer):
     requester_id = serializers.IntegerField(write_only=True, source='id')
     status = serializers.CharField(max_length=8, write_only=True)
+    trx_hash = serializers.CharField(max_length=128, write_only=True)
+    block_hash = serializers.CharField(max_length=128, write_only=True)
+    block_number = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = Transfer
-        fields = ['status', 'requester_id']
+        fields = ['status', 'requester_id', 'trx_hash', 'block_hash', 'block_number']
 
     def create(self, validated_data):
         requester_id = validated_data.get('id')
@@ -43,7 +46,11 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         with WalletPipeline() as pipeline:
             transfer.status = status
-            transfer.save(update_fields=['status'])
+            transfer.trx_hash = validated_data['trx_hash']
+            transfer.block_hash = validated_data['block_hash']
+            transfer.block_number = validated_data['block_number']
+
+            transfer.save(update_fields=['status', 'trx_hash', 'block_hash', 'block_number'])
 
             if status == Transfer.DONE:
                 transfer.build_trx(pipeline)
