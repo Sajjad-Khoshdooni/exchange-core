@@ -55,7 +55,7 @@ def create_snapshot():
                 total_amount=overview.get_total_assets(asset),
                 users_amount=overview.get_users_asset_amount(asset),
 
-                provider_amount=overview.get_binance_balance(asset),
+                provider_amount=overview.get_provider_balance(asset),
                 internal_amount=overview.get_internal_deposits_balance(asset),
                 investment_amount=overview.get_hedged_investment_amount(asset),
                 cash_amount=overview.get_hedged_cash_amount(asset),
