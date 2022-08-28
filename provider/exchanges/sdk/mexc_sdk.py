@@ -4,10 +4,11 @@ import time
 from urllib.parse import urlencode
 
 import requests
+from yekta_config.config import config
 
 MEXC_SPOT_BASE_URL = 'https://api.mexc.com'
-API_KEY = 'mx00CWsFuhhhG0kzYH'
-SECRET_KEY = 'd9057df474154b89b51eaebd114a0143'
+API_KEY = config('MX-API-KEY')
+SECRET_KEY = config('MX-SECRET-KEY')
 
 
 def get_time_stamp():
