@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from ledger.models.asset import AssetSerializerMini
 from ledger.utils.precision import get_presentation_amount
 from stake.models import StakeOption
 from rest_framework.generics import ListAPIView
@@ -7,7 +8,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 
 class StakeOptionSerializer(serializers.ModelSerializer):
-    asset = serializers.CharField()
+    asset = AssetSerializerMini(read_only=True)
     apr = serializers.SerializerMethodField()
     user_max_amount = serializers.SerializerMethodField()
     user_min_amount = serializers.SerializerMethodField()

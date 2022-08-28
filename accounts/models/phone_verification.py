@@ -114,7 +114,7 @@ class VerificationCode(models.Model):
                 created__gte=timezone.now() - timedelta(minutes=2),
             ).exists()
 
-            if any_recent_code:
+            if not settings.DEBUG_OR_TESTING_OR_STAGING and any_recent_code:
                 logger.info('[OTP] Ignored sending otp to kavenegar because of recent')
                 return
 
@@ -123,7 +123,7 @@ class VerificationCode(models.Model):
                 created__gte=timezone.now() - timedelta(minutes=15),
             ).count()
 
-            if prev_codes >= 3:
+            if not settings.DEBUG_OR_TESTING_OR_STAGING and prev_codes >= 3:
                 logger.info('[OTP] Ignored sending otp to kavenegar because of multiple prev')
                 return
 
@@ -139,7 +139,7 @@ class VerificationCode(models.Model):
             user=user,
         )
 
-        if settings.DEBUG_OR_TESTING:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             print('[OTP] code for %s is: %s' % (otp_code.phone, otp_code.code))
         else:
             if scope != cls.SCOPE_TELEPHONE:  # is_phone(phone):

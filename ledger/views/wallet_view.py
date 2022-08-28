@@ -124,7 +124,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         ).exists()
 
     def get_logo(self, asset: Asset):
-        return settings.HOST_URL + '/static/%s.png' % asset.symbol
+        return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
 
     class Meta:
         model = Asset
@@ -168,7 +168,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return network_asset.network.can_withdraw and network_asset.hedger_withdraw_enable
 
     def get_address(self, network_asset: NetworkAsset):
-        addresses = self.context['addresses']
+        addresses = self.context.get('addresses', {})
         return addresses.get(network_asset.network.symbol)
 
     def get_min_withdraw(self, network_asset: NetworkAsset):
