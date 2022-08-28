@@ -86,6 +86,7 @@ class AddressBookView(ModelViewSet):
         return Response({'msg': 'address book deleted'}, status=status.HTTP_204_NO_CONTENT)
 
     def get_serializer_context(self):
-        return super(AddressBookView, self).get_serializer_context().update({
-            'coin': self.request.query_params.get('coin')
-        })
+        return {
+            **super(AddressBookView, self).get_serializer_context(),
+            'coin': self.request.query_params.get('coin'),
+        }
