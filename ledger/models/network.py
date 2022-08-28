@@ -1,5 +1,6 @@
 from django.core.validators import MinValueValidator
 from django.db import models
+from rest_framework import serializers
 
 from accounts.models import Account
 from ledger.models.deposit_address import DepositAddress
@@ -31,3 +32,10 @@ class Network(models.Model):
 
     def __str__(self):
         return self.symbol
+
+
+class NetworkSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Network
+        fields = ('symbol', 'name', )

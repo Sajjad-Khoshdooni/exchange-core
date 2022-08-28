@@ -206,10 +206,10 @@ class ProviderOrder(models.Model):
                     if balance < order_amount:
                         diff = order_amount - balance
 
-                        if diff * price < 10:
+                        if diff * price < 11:
                             order_amount = floor_precision(balance, round_digits)
 
-                            if order_amount * price < 10:
+                            if order_amount * price < 11:
                                 logger.info('ignored due to small order')
                                 return True
 

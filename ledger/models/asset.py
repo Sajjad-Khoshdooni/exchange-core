@@ -90,6 +90,8 @@ class Asset(models.Model):
 
     new_coin = models.BooleanField(default=False)
 
+    original_symbol = models.CharField(max_length=16, blank=True)
+
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
 

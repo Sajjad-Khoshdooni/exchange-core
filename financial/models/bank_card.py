@@ -125,7 +125,7 @@ class BankAccount(models.Model):
         if not self.id:
             bank = get_bank_from_iban(self.iban)
             if bank:
-                self.bank_name = bank.slug
+                self.bank = bank.slug
 
         super(BankAccount, self).save(*args, **kwargs)
 

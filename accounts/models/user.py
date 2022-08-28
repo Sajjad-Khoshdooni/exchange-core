@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
-from django.db.models import Q, UniqueConstraint
+from django.db.models import Q, UniqueConstraint, Sum
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
@@ -137,6 +137,17 @@ class User(AbstractUser):
         verbose_name='امکان برداشت رمزارز در سطح ۱',
     )
 
+    @property
+    def kyc_bank_card(self):
+        return self.bankcard_set.filter(kyc=True).first()
+
+    def get_verify_weight(self) -> int:
+        from accounts.models import FinotechRequest
+        return FinotechRequest.objects.filter(
+            user=self,
+            search_key__isnull=False
+        ).exclude(search_key='').aggregate(w=Sum('weight'))['w'] or 0
+
     class Meta:
         verbose_name = _('user')
         verbose_name_plural = _('users')
@@ -171,6 +182,10 @@ class User(AbstractUser):
 
                 self.archived = False
                 self.save(update_fields=['verify_status', 'level', 'level_2_verify_datetime', 'level_3_verify_datetime', 'archived'])
+
+            if self.level == User.LEVEL2:
+                from accounts.gamification.gamify import check_prize_achievements
+                check_prize_achievements(self.account)
 
             alert_user_verify_status(self)
 
@@ -219,9 +234,6 @@ class User(AbstractUser):
     def verify_level2_if_not(self) -> bool:
         if self.level == User.LEVEL1 and all(self.get_level2_verify_fields()):
             self.change_status(User.VERIFIED)
-
-            from accounts.gamification.gamify import check_prize_achievements
-            check_prize_achievements(self.account)
 
             return True
 
