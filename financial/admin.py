@@ -287,9 +287,10 @@ class MarketingCostAdmin(admin.ModelAdmin):
 
 @admin.register(FiatHedgeTrx)
 class FiatHedgeTrxAdmin(admin.ModelAdmin):
-    list_display = ('base_amount', 'target_amount', 'price', 'sell', 'source', 'reason')
+    list_display = ('base_amount', 'target_amount', 'price', 'get_side', 'source', 'reason')
     list_filter = ('source', )
 
+    @admin.display(description='side')
     def get_side(self, fiat_hedge: FiatHedgeTrx):
         return BUY if fiat_hedge.target_amount > 0 else SELL
 
