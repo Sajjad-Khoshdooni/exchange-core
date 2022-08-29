@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
+from django.db.models import Sum
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -16,6 +17,7 @@ from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAcc
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.precision import humanize_number, get_presentation_amount
+from ledger.utils.price import get_tether_irt_price, BUY, SELL
 
 
 @admin.register(Gateway)
@@ -285,8 +287,31 @@ class MarketingCostAdmin(admin.ModelAdmin):
 
 @admin.register(FiatHedgeTrx)
 class FiatHedgeTrxAdmin(admin.ModelAdmin):
-    list_display = ('base_amount', 'target_amount', 'price', 'source', 'reason')
+    list_display = ('base_amount', 'target_amount', 'price', 'sell', 'source', 'reason')
     list_filter = ('source', )
+
+    def get_side(self, fiat_hedge: FiatHedgeTrx):
+        return BUY if fiat_hedge.target_amount > 0 else SELL
+
+    def changelist_view(self, request, extra_context=None):
+
+        aggregates = FiatHedgeTrx.objects.aggregate(
+            total_base_amount=Sum('base_amount'),
+            total_target_amount=Sum('target_amount'),
+        )
+
+        total_base = aggregates['total_base_amount'] or 0
+        total_target = aggregates['total_target_amount'] or 0
+
+        usdt_irt = get_tether_irt_price(BUY)
+
+        context = {
+            'irt': round(total_base),
+            'usdt': round(total_target),
+            'total_value': round(total_target + total_base / usdt_irt),
+        }
+
+        return super().changelist_view(request, extra_context=context)
 
 
 class InvestmentRevenueInline(admin.TabularInline):
