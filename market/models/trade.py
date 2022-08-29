@@ -404,8 +404,10 @@ class Trade(models.Model):
                     ((trade.is_maker and trade.trade_source == cls.SYSTEM_TAKER) or
                      (not trade.is_maker and trade.trade_source in [cls.OTC, cls.SYSTEM_MAKER])):
 
+                hedge_price = get_trading_price_usdt(trade.order.symbol.asset.symbol, side=BUY, raw_price=True)
+
                 usdt_price = get_tether_irt_price(BUY)
-                usdt_amount = trade.hedge_price * trade.amount
+                usdt_amount = hedge_price * trade.amount
                 irt_amount = usdt_amount * usdt_price
 
                 if trade.side == BUY:
