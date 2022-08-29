@@ -308,8 +308,8 @@ class FiatHedgeTrxAdmin(admin.ModelAdmin):
 
         context = {
             'irt': round(total_base),
-            'usdt': round(total_target),
-            'total_value': round(total_target + total_base / usdt_irt),
+            'usdt': round(total_target, 2),
+            'total_value': round(total_target + total_base / usdt_irt, 2),
         }
 
         return super().changelist_view(request, extra_context=context)
