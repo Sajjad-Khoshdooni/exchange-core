@@ -190,7 +190,7 @@ class ProviderOrder(models.Model):
             order_amount = round(hedge_amount, round_digits)
 
             # check notional
-            price = get_trading_price_usdt(asset.symbol, side=BUY, raw_price=True)
+            price = get_trading_price_usdt(asset.symbol, side=SELL, raw_price=True)
 
             min_hedge_amount = handler.get_min_notional()
 

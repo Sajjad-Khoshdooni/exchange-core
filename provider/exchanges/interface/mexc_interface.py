@@ -51,7 +51,7 @@ class MexcSpotHandler(ExchangeHandler):
         coin_coefficient = self.get_coin_coefficient(symbol)
         price_init = get_price(coin=coin, side=side)
         value = amount * price_init
-        trading_price = decimal_to_str(get_trading_price_usdt(coin=coin, side=get_other_side(side.lower()), value=value)/ coin_coefficient/2)
+        trading_price = decimal_to_str(get_trading_price_usdt(coin=coin, side=get_other_side(side.lower()), value=value) / coin_coefficient)
 
         order_url = '/api/v3/order'
 

@@ -47,7 +47,10 @@ class ExchangeHandler:
         rename_list = {
             'ELON': '1000ELON',
             'BABYDOGE': '1M-BABYDOGE',
-            'FLOKI': '1000FLOKI'
+            'FLOKI': '1000FLOKI',
+            'QUACK': '1M-QUACK',
+            'STARL': '1000STARL',
+            'SAFEMARS': '1M-SAFEMARS',
         }
         return rename_list.get(coin, coin)
 
@@ -57,6 +60,9 @@ class ExchangeHandler:
             '1000ELON': 'ELON',
             '1M-BABYDOGE': 'BABYDOGE',
             '1000FLOKI': 'FLOKI',
+            '1M-QUACK': 'QUACK',
+            '1000STARL': 'STARL',
+            '1M-SAFEMARS': 'SAFEMARS'
         }
         return rename_list.get(coin, coin)
 
@@ -67,11 +73,21 @@ class ExchangeHandler:
             'ELON': Decimal('1000'),
             'ELON-USDT': Decimal('1000'),
             'ELONUSDT': Decimal('1000'),
+
             'BABYDOGE': Decimal('1000000'),
             'BABYDOGEUSDT': Decimal('1000000'),
+
             'FLOKI': Decimal('1000'),
             'FLOKIUSDT': Decimal('1000'),
 
+            'QUACK': Decimal('1000000'),
+            'QUACKUSDT': Decimal('1000000'),
+
+            'STARL': Decimal('1000'),
+            'STARLUSDT': Decimal('1000'),
+
+            'SAFEMARS': Decimal('1000000'),
+            'SAFEMARSUSDT': Decimal('1000000'),
         }
         return coin_coefficient.get(coin, 1)
 

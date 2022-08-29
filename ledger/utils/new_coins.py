@@ -74,7 +74,7 @@ def _update_coin_networks(asset: Asset, exchange_handler):
     coin_data = exchange_handler.get_spot_handler().get_coin_data(asset.symbol)
 
     for n in coin_data['networkList']:
-        network_symbol = n['network'],
+        network_symbol = n['network']
         network = Network.objects.filter(symbol=network_symbol)
         if network:
             network.update(
