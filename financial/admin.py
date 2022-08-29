@@ -11,7 +11,8 @@ from accounts.models import User
 from accounts.utils.admin import url_to_admin_list
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
-    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost, Investment, InvestmentRevenue
+    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost, Investment, InvestmentRevenue, \
+    FiatHedgeTrx
 from financial.tasks import verify_bank_card_task, verify_bank_account_task
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.precision import humanize_number, get_presentation_amount
@@ -280,6 +281,12 @@ class MarketingSourceAdmin(admin.ModelAdmin):
 class MarketingCostAdmin(admin.ModelAdmin):
     list_display = ('source', 'date', 'cost')
     search_fields = ('source__utm_source', )
+
+
+@admin.register(FiatHedgeTrx)
+class FiatHedgeTrxAdmin(admin.ModelAdmin):
+    list_display = ('base_amount', 'target_amount', 'price', 'source', 'reason')
+    list_filter = ('source', )
 
 
 class InvestmentRevenueInline(admin.TabularInline):

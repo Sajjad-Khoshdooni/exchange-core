@@ -9,3 +9,4 @@ from .zibal_gateway import ZibalGateway
 from .manual_transfer_history import ManualTransferHistory
 from .marketing_cost import MarketingSource, MarketingCost
 from .investment import Investment, InvestmentRevenue
+from .fiat_hedge_trx import FiatHedgeTrx
