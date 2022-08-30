@@ -41,7 +41,7 @@ def get_daily_order_size_factors(symbol_ids):
     if market_redis.exists(prefix_order_size_factor):
         symbol_factors = market_redis.hgetall(prefix_order_size_factor)
 
-        absent_symbols = list(filter(lambda s: int(s) not in symbol_ids, symbol_factors.keys()))
+        absent_symbols = list(filter(lambda s: str(s) not in symbol_factors.keys(), symbol_ids))
         for symbol_id in absent_symbols:
             symbol_factors[symbol_id] = randint(1, 10)
             market_redis.hset(prefix_order_size_factor, symbol_id, symbol_factors[symbol_id])
