@@ -22,7 +22,7 @@ class DepositAddressView(RetrieveAPIView):
 
         data = serializer.data
 
-        network = get_object_or_404(Network, symbol=data['network'])
+        network = get_object_or_404(Network, symbol=data['network'], can_deposit=True)
 
         deposit_address = network.get_deposit_address(request.user.account)
 
