@@ -95,7 +95,7 @@ def update_symbol_maker_orders(symbol, last_trade_ts):
 
         for side in (Order.BUY, Order.SELL):
             logger.info(f'{symbol.name} {side} open count: {open_depth_orders_count[side]}')
-            price = Order.get_maker_price(symbol, side, last_trade_ts)
+            price = Order.get_maker_price(symbol, side, last_trade_ts=last_trade_ts)
             order = Order.init_top_maker_order(symbol, side, price, Decimal(depth_top_prices[side]))
             logger.info(f'{symbol.name} {side} maker order created: {bool(order)}')
             if order:
