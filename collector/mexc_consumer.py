@@ -15,7 +15,6 @@ from ledger.models import Asset
 
 from ledger.utils.precision import decimal_to_str
 from provider.exchanges.interface.binance_interface import ExchangeHandler
-from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 from provider.exchanges.interface.mexc_interface import MexcSpotHandler
 
 logger = logging.getLogger(__name__)

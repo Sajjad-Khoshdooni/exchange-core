@@ -4,12 +4,12 @@ from typing import Type
 from django.db import models
 from rest_framework.exceptions import ValidationError
 
-from accounts.models import User
+from accounts.models import User, Notification
 from financial.models import BankCard
 from financial.models import PaymentRequest
 from financial.models.payment import Payment
 from ledger.exceptions import AbruptDecrease
-from ledger.models import OTCRequest, Asset, Wallet, OTCTrade
+from ledger.models import OTCRequest, Asset, Wallet, OTCTrade, FastBuyToken
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import ProcessingError, TokenExpired
 from ledger.utils.fields import DONE
@@ -82,6 +82,8 @@ class Gateway(models.Model):
     def _verify(self, payment: Payment):
         self.verify(payment=payment)
         fast_buy_token = payment.payment_request.fastbuytoken
+        fast_buy_token.status = FastBuyToken.DEPOSIT
+        fast_buy_token.save()
         if payment.status == DONE and fast_buy_token:
             otc_request = OTCRequest.new_trade(
                 account=fast_buy_token.user.account,
@@ -96,7 +98,17 @@ class Gateway(models.Model):
                 return otc_trade
 
             try:
-                return OTCTrade.execute_trade(otc_request)
+                otc_trade = OTCTrade.execute_trade(otc_request)
+                fast_buy_token.status = FastBuyToken.DONE
+                fast_buy_token.save()
+
+                Notification.send(
+                    recipient=fast_buy_token.user,
+                    title='خرید رمز ارز.',
+                    message='خرید {} {} با موفقیت انجام شد. '.format(fast_buy_token.asset.symbol, fast_buy_token.amount),
+                    level=Notification.SUCCESS
+                )
+                return otc_trade
             except TokenExpired:
                 raise ValidationError({'token': 'سفارش منقضی شده است. لطفا دوباره اقدام کنید.'})
             except InvalidAmount as e:
@@ -105,12 +117,6 @@ class Gateway(models.Model):
                 raise ValidationError('مشکلی در ثبت سفارش رخ داد.')
             except ProcessingError as e:
                 raise ValidationError('مشکلی در پردازش سفارش رخ داد.')
-
-
-
-
-
-
 
     def __str__(self):
         return self.name

@@ -9,7 +9,7 @@ from financial.models import PaymentRequest
 from financial.views.payment_view import PaymentRequestSerializer
 from ledger.models import Asset
 from ledger.models.asset import CoinField
-from ledger.models.fast_by_token import FastBuyToken
+from ledger.models.fast_buy_token import FastBuyToken
 from ledger.utils.price import get_price
 
 
