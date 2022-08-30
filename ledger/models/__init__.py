@@ -16,3 +16,4 @@ from .coin_category import CoinCategory
 from .margin import MarginTransfer, MarginLoan, CloseRequest
 from .pnl import PNLHistory
 from .snapshot import AssetSnapshot, SystemSnapshot
+from .fast_by_token import FastBuyToken
