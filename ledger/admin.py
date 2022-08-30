@@ -3,7 +3,6 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
-from duplicity.globals import dry_run
 
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
@@ -153,7 +152,7 @@ class AssetAdmin(AdvancedAdmin):
     def hedge_asset(self, request, queryset):
         assets = queryset.exclude(hedge_method=Asset.HEDGE_NONE, )
         for asset in assets:
-            ProviderOrder.try_hedge_for_new_order(asset, ProviderOrder.HEDGE, dry_run=dry_run)
+            ProviderOrder.try_hedge_for_new_order(asset, ProviderOrder.HEDGE)
 
 
 @admin.register(models.Network)
