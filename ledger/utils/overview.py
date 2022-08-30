@@ -221,6 +221,9 @@ class AssetOverview:
         total = Decimal(0)
 
         for symbol, amount in self._internal_deposits.items():
+            if not amount:
+                continue
+
             total += amount * self.get_price(symbol)
 
         return total
@@ -228,15 +231,20 @@ class AssetOverview:
     def get_hedge_value(self, asset: Asset) -> Decimal:
         amount = Decimal(self.get_hedge_amount(asset))
 
-        if amount:
-            return amount * self.get_price(asset.symbol)
-        return Decimal(0)
+        if not amount:
+            return Decimal(0)
+
+        return amount * self.get_price(asset.symbol)
 
     def get_users_asset_amount(self, asset: Asset) -> Decimal:
         return self._users_per_asset_balances.get(asset.symbol, 0)
 
     def get_users_asset_value(self, asset: Asset) -> Decimal:
         balance = self.get_users_asset_amount(asset)
+
+        if not balance:
+            return Decimal(0)
+
         return balance * self.get_price(asset.symbol)
 
     def get_all_users_asset_value(self) -> Decimal:
