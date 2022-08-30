@@ -4,6 +4,7 @@ from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
 from random import randrange, random
+from time import time
 from uuid import uuid4
 
 from django.conf import settings
@@ -17,7 +18,8 @@ from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent
-from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
+from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price, \
+    get_spread
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
 from market.models.referral_trx import ReferralTrx
@@ -158,7 +160,7 @@ class Order(models.Model):
         return {'price__lte': price} if side == Order.BUY else {'price__gte': price}
 
     @staticmethod
-    def get_maker_price(symbol: PairSymbol.IdName, side: str, loose_factor=Decimal(1), gap=None):
+    def get_maker_price(symbol: PairSymbol.IdName, side: str, loose_factor=Decimal(1), gap=None, last_trade_ts=None):
         if symbol.name.endswith(IRT):
             base_symbol = IRT
             get_trading_price = get_trading_price_irt
@@ -169,7 +171,14 @@ class Order(models.Model):
             raise NotImplementedError('Invalid trading symbol')
 
         coin = symbol.name.split(base_symbol)[0]
-        boundary_price = get_trading_price(coin, side, gap=gap)
+        if gap is None and last_trade_ts:
+            spread_step = (time() - last_trade_ts) // 600
+            gap = {
+                0: (get_spread(coin, side) / 100), 1: '0.0015', 2: '0.0008'
+            }.get(spread_step, 0)
+            boundary_price = get_trading_price(coin, side, gap=Decimal(gap))
+        else:
+            boundary_price = get_trading_price(coin, side, gap=gap)
 
         precision = Order.get_rounding_precision(boundary_price, symbol.tick_size)
         # use bi-direction in roundness to avoid risky bid ask spread
@@ -461,9 +470,11 @@ class Order(models.Model):
             return cls.init_maker_order(symbol, side, maker_price, market)
 
     @classmethod
-    def cancel_invalid_maker_orders(cls, symbol: PairSymbol.IdName, top_prices, gap=None, order_type=DEPTH):
+    def cancel_invalid_maker_orders(cls, symbol: PairSymbol.IdName, top_prices, gap=None, order_type=DEPTH, last_trade_ts=None):
         for side in (Order.BUY, Order.SELL):
-            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.001'), gap=gap)
+            price = cls.get_maker_price(
+                symbol, side, loose_factor=Decimal('1.001'), gap=gap, last_trade_ts=last_trade_ts
+            )
             if (side == Order.BUY and Decimal(top_prices[side]) <= price) or (
                     side == Order.SELL and Decimal(top_prices[side]) >= price):
                 logger.info(f'{order_type} {side} ignore cancels with price: {price} top: {top_prices[side]}')
