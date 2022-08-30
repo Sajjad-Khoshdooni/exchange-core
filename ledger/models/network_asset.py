@@ -16,9 +16,13 @@ class NetworkAsset(models.Model):
 
     hedger_withdraw_enable = models.BooleanField(default=True)
     can_deposit = models.BooleanField(default=False)
+    can_withdraw = models.BooleanField(default=True)
 
     def can_deposit_enabled(self) -> bool:
         return self.network.can_deposit and self.can_deposit
+
+    def can_withdraw_enabled(self) -> bool:
+        return self.network.can_withdraw and self.can_withdraw and self.hedger_withdraw_enable
 
     def __str__(self):
         return '%s - %s' % (self.network, self.asset)

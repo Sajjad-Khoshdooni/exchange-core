@@ -44,6 +44,6 @@ class NetworkAssetView(ListAPIView):
     serializer_class = NetworkAssetSerializer
 
     queryset = NetworkAsset.objects.filter(
-        Q(network__can_deposit=True) | Q(network__can_withdraw=True),
+        Q(can_deposit=True, network__can_deposit=True) | Q(network__can_withdraw=True, can_withdraw=True),
         asset__enable=True,
     ).order_by('-asset__pin_to_top', '-asset__trend', 'asset__order', 'withdraw_fee').distinct()

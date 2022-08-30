@@ -76,12 +76,12 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return asset.get_presentation_price_irt(price)
 
     def get_min_withdraw_amount(self, asset: Asset):
-        network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True)
+        network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True, can_withdraw=True)
         min_withdraw = network_assets.aggregate(min=Min('withdraw_min'))
         return min_withdraw['min']
 
     def get_min_withdraw_fee(self, asset: Asset):
-        network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True)
+        network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True, can_withdraw=True)
         min_withdraw = network_assets.aggregate(min=Min('withdraw_fee'))
         return min_withdraw['min']
 
