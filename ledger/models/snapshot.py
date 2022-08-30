@@ -39,6 +39,8 @@ class SystemSnapshot(models.Model):
 
     binance_futures = get_amount_field()
     binance_spot = get_amount_field()
+    kucoin_spot = get_amount_field()
+    mexc_spot = get_amount_field()
     internal = get_amount_field()
     fiat_gateway = get_amount_field()
     investment = get_amount_field()

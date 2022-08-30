@@ -39,7 +39,7 @@ def handle_provider_withdraw(transfer_id: int):
 
         coin = transfer.asset.symbol
 
-        fee = handler.get_withdraw_fee(transfer.asset.symbol, transfer.network.symbol)
+        fee = handler.get_withdraw_fee(transfer.asset.symbol, transfer.network)
         amount = transfer.amount + fee
 
         if balance_map[coin] < amount:
@@ -90,7 +90,7 @@ def provider_withdraw(transfer: Transfer):
     assert transfer.source == transfer.asset.get_hedger().NAME
 
     handler = transfer.asset.get_hedger().get_spot_handler()
-    withdraw_fee = handler.get_withdraw_fee(transfer.wallet.asset.symbol, transfer.network.symbol)
+    withdraw_fee = handler.get_withdraw_fee(transfer.wallet.asset.symbol, transfer.network)
 
     logger.info('withdrawing %s %s in %s network' % (withdraw_fee + transfer.amount, transfer.asset, transfer.network))
 

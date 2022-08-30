@@ -1,5 +1,6 @@
 from django.core.validators import MinValueValidator
 from django.db import models
+from rest_framework import serializers
 
 from accounts.models import Account
 from ledger.models.deposit_address import DepositAddress
@@ -12,6 +13,7 @@ class Network(models.Model):
 
     symbol = models.CharField(max_length=16, unique=True, db_index=True)
     name = models.CharField(max_length=128, blank=True)
+    kucoin_name = models.CharField(max_length=128, blank=True, default='')
 
     can_withdraw = models.BooleanField(default=True)
     can_deposit = models.BooleanField(default=False)
@@ -30,3 +32,10 @@ class Network(models.Model):
 
     def __str__(self):
         return self.symbol
+
+
+class NetworkSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Network
+        fields = ('symbol', 'name', )

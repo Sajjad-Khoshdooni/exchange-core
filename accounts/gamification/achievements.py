@@ -2,6 +2,7 @@ from django.db import transaction
 
 from accounts.models import Account, Notification
 from ledger.models import Prize, Asset
+from ledger.models.asset import AssetSerializerMini
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_trading_price_usdt, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -32,12 +33,14 @@ class PrizeAchievement(Achievement):
         else:
             amount = Prize.PRIZE_AMOUNTS[self.scope]
 
+        shib = Asset.get(symbol=Asset.SHIB)
+
         return {
             'type': 'prize',
             'id': prize and prize.id,
             'scope': self.scope,
             'amount': amount,
-            'asset': 'SHIB',
+            'asset': AssetSerializerMini(shib).data,
             'achieved': bool(prize),
             'redeemed': bool(prize) and prize.redeemed,
             'fake': bool(prize) and prize.fake,

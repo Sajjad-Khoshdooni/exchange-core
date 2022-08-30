@@ -60,7 +60,7 @@ def update_provider_withdraw():
 
 @shared_task(queue='blocklink')
 def create_withdraw(transfer_id: int):
-    if settings.DEBUG_OR_TESTING:
+    if settings.DEBUG_OR_TESTING_OR_STAGING:
         return
 
     transfer = Transfer.objects.get(id=transfer_id)

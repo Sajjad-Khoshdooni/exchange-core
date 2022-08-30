@@ -25,6 +25,9 @@ def create_snapshot():
 
         binance_futures=overview.total_margin_balance,
         binance_spot=overview.get_binance_spot_total_value(),
+        kucoin_spot=overview.get_kucoin_spot_total_value(),
+        mexc_spot=overview.get_mexc_spot_amount(),
+
         internal=overview.get_internal_usdt_value(),
         fiat_gateway=overview.get_gateway_usdt(),
         investment=overview.get_total_investment(),
@@ -55,7 +58,7 @@ def create_snapshot():
                 total_amount=overview.get_total_assets(asset),
                 users_amount=overview.get_users_asset_amount(asset),
 
-                provider_amount=overview.get_binance_balance(asset),
+                provider_amount=overview.get_provider_balance(asset),
                 internal_amount=overview.get_internal_deposits_balance(asset),
                 investment_amount=overview.get_hedged_investment_amount(asset),
                 cash_amount=overview.get_hedged_cash_amount(asset),

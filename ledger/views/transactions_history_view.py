@@ -8,6 +8,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from accounts.views.authentication import CustomTokenAuthentication
 from ledger.models import Transfer
+from ledger.models.asset import AssetSerializerMini
 
 
 class TransferSerializer(serializers.ModelSerializer):
@@ -15,7 +16,7 @@ class TransferSerializer(serializers.ModelSerializer):
     amount = serializers.SerializerMethodField()
     fee_amount = serializers.SerializerMethodField()
     network = serializers.SerializerMethodField()
-    coin = serializers.SerializerMethodField()
+    asset = AssetSerializerMini(source='wallet.asset', read_only=True)
     is_internal = serializers.SerializerMethodField()
 
     def get_link(self, transfer: Transfer):
@@ -27,9 +28,6 @@ class TransferSerializer(serializers.ModelSerializer):
     def get_fee_amount(self, transfer: Transfer):
         return transfer.wallet.asset.get_presentation_amount(transfer.fee_amount)
 
-    def get_coin(self, transfer: Transfer):
-        return transfer.wallet.asset.symbol
-
     def get_network(self, transfer: Transfer):
         return transfer.network.symbol
 
@@ -38,7 +36,8 @@ class TransferSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transfer
-        fields = ('created', 'amount', 'status', 'link', 'out_address', 'coin', 'network', 'trx_hash', 'fee_amount', 'is_internal')
+        fields = ('created', 'amount', 'status', 'link', 'out_address', 'asset', 'network', 'trx_hash',
+                  'fee_amount', 'is_internal')
 
 
 class WithdrawHistoryView(ListAPIView):
