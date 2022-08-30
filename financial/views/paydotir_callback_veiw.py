@@ -34,6 +34,6 @@ class PaydotirCallbackView(TemplateView):
                 payment.status = CANCELED
                 payment.save()
             else:
-                payment_request.get_gateway().verify(payment)
+                payment_request.get_gateway()._verify(payment)
 
         return redirect(payment.get_redirect_url())

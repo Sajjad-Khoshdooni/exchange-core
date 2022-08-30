@@ -371,7 +371,7 @@ class ZibalChanel(FiatWithdraw):
                 payment_request=payment_request
             )
 
-            payment_request.get_gateway().verify(payment)
+            payment_request.get_gateway()._verify(payment)
 
 
 class ZarinpalChanel(FiatWithdraw):

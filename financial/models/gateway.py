@@ -2,11 +2,17 @@ import logging
 from typing import Type
 
 from django.db import models
+from rest_framework.exceptions import ValidationError
 
 from accounts.models import User
 from financial.models import BankCard
 from financial.models import PaymentRequest
 from financial.models.payment import Payment
+from ledger.exceptions import AbruptDecrease
+from ledger.models import OTCRequest, Asset, Wallet, OTCTrade
+from ledger.models.asset import InvalidAmount
+from ledger.models.otc_trade import ProcessingError, TokenExpired
+from ledger.utils.fields import DONE
 
 
 logger = logging.getLogger(__name__)
@@ -72,6 +78,39 @@ class Gateway(models.Model):
 
     def verify(self, payment: Payment):
         raise NotImplementedError
+
+    def _verify(self, payment: Payment):
+        self.verify(payment=payment)
+        fast_buy_token = payment.payment_request.fastbuytoken
+        if payment.status == DONE and fast_buy_token:
+            otc_request = OTCRequest.new_trade(
+                account=fast_buy_token.user.account,
+                from_asset=Asset.get('IRT'),
+                to_asset=fast_buy_token.asset,
+                from_amount=fast_buy_token.amount,
+                market=Wallet.SPOT,
+            )
+
+            otc_trade = OTCTrade.objects.filter(otc_request=otc_request).first()
+            if otc_trade:
+                return otc_trade
+
+            try:
+                return OTCTrade.execute_trade(otc_request)
+            except TokenExpired:
+                raise ValidationError({'token': 'سفارش منقضی شده است. لطفا دوباره اقدام کنید.'})
+            except InvalidAmount as e:
+                raise ValidationError(str(e))
+            except AbruptDecrease as e:
+                raise ValidationError('مشکلی در ثبت سفارش رخ داد.')
+            except ProcessingError as e:
+                raise ValidationError('مشکلی در پردازش سفارش رخ داد.')
+
+
+
+
+
+
 
     def __str__(self):
         return self.name

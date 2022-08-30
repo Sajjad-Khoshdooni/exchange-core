@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
@@ -20,6 +21,11 @@ class FastBuyTokenSerializer(serializers.ModelSerializer):
     def get_call_back(self, fast_buy_token: FastBuyToken):
         payment_request = fast_buy_token.payment_request
         return payment_request.get_gateway().get_initial_redirect_url(payment_request)
+
+    def validate(self, attrs):
+        if attrs['amount'] < 300000:
+            raise ValidationError('حداقل مقدار سفارش 300 هزار تومان است.')
+        return attrs
 
     def create(self, validated_data):
         request = self.context['request']
