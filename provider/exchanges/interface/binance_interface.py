@@ -437,7 +437,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
         return coin_data[0]
 
-    def get_lot_size_data(self, symbol: str) -> Union[dict, None]:
+    def _get_lot_size_data(self, symbol: str) -> Union[dict, None]:
         coin_data = self.get_symbol_data(symbol)
         if not coin_data:
             return

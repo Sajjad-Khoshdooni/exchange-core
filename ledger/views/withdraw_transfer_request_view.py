@@ -14,10 +14,13 @@ logger = logging.getLogger(__name__)
 class WithdrawSerializer(serializers.ModelSerializer):
     requester_id = serializers.IntegerField(write_only=True, source='id')
     status = serializers.CharField(max_length=8, write_only=True)
+    trx_hash = serializers.CharField(max_length=128, write_only=True)
+    block_hash = serializers.CharField(max_length=128, write_only=True)
+    block_number = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = Transfer
-        fields = ['status', 'requester_id']
+        fields = ['status', 'requester_id', 'trx_hash', 'block_hash', 'block_number']
 
     def create(self, validated_data):
         requester_id = validated_data.get('id')
@@ -25,7 +28,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         transfer = get_object_or_404(Transfer, id=requester_id)
 
         valid_transitions = [
-            (Transfer.PROCESSING, Transfer.PENDING),
+            (Transfer.PENDING, Transfer.PENDING),
             (Transfer.PENDING, Transfer.DONE),
             (Transfer.PENDING, Transfer.CANCELED),
             (Transfer.PROCESSING, Transfer.DONE),
@@ -33,9 +36,13 @@ class WithdrawSerializer(serializers.ModelSerializer):
         ]
 
         if transfer.source == Transfer.BINANCE:
-            logger.warning('Update Binance Withdraw')
+            logger.error('Update Binance Withdraw', extra={
+                'requester_id': requester_id,
+                'status': status
+            })
+            raise ValidationError({'requester_id': 'invalid transfer source!'})
 
-        if transfer.status == status:
+        if transfer.status == status and status != Transfer.PENDING:
             return transfer
 
         if (transfer.status, status) not in valid_transitions:
@@ -43,7 +50,11 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         with WalletPipeline() as pipeline:
             transfer.status = status
-            transfer.save(update_fields=['status'])
+            transfer.trx_hash = validated_data['trx_hash']
+            transfer.block_hash = validated_data['block_hash']
+            transfer.block_number = validated_data['block_number']
+
+            transfer.save(update_fields=['status', 'trx_hash', 'block_hash', 'block_number'])
 
             if status == Transfer.DONE:
                 transfer.build_trx(pipeline)

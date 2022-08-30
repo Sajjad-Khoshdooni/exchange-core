@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.admin import SimpleListFilter
 from django.utils.safestring import mark_safe
 
 from accounts.models import User
@@ -23,12 +24,29 @@ class StakeOptionAdmin(admin.ModelAdmin):
     get_stake_request_number.short_description = 'تعداد درخواست های ثبت شده'
 
 
+class StakeStatusFilter(SimpleListFilter):
+    title = 'نیازمند بررسی'
+    parameter_name = 'status_is_not_done_or_cancel_complete'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        status_filter = request.GET.get('status_is_not_done_or_cancel_complete')
+        if status_filter is not None:
+            return queryset.exclude(status__in=[StakeRequest.DONE, StakeRequest.CANCEL_COMPLETE])
+        else:
+            return queryset
+
+
 @admin.register(StakeRequest)
 class StakeRequestAdmin(admin.ModelAdmin):
     list_display = ['get_stake_option_asset', 'get_amount', 'get_user','status']
     actions = ('stake_request_processing', 'stake_request_done',
                'stake_request_cancel_processing', 'stake_request_cancel_done',)
     readonly_fields = ('get_stake_option_asset', 'account', 'status', 'stake_option', 'get_amount', 'amount', 'get_user')
+
+    list_filter = ('status', StakeStatusFilter)
 
     def get_stake_option_asset(self, stake_request: StakeRequest):
         return stake_request.stake_option.asset
