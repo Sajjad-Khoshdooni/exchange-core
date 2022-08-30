@@ -7,8 +7,8 @@ import requests
 from yekta_config.config import config
 
 MEXC_SPOT_BASE_URL = 'https://api.mexc.com'
-API_KEY = config('MX-API-KEY')
-SECRET_KEY = config('MX-SECRET-KEY')
+API_KEY = config('MEXC_API_KEY')
+SECRET_KEY = config('MEXC_SECRET_KEY')
 
 
 def get_time_stamp():

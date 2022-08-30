@@ -151,7 +151,7 @@ class ProviderOrder(models.Model):
                                 dry_run: bool = False, raise_exception: bool = False) -> bool:
         # todo: this method should not called more than once at a single time
         handler = asset.get_hedger()
-        if settings.DEBUG_OR_TESTING_OR_STAGING:
+        if settings.DEBUG_OR_TESTING:
             logger.info('ignored due to debug')
             return True
 
