@@ -19,26 +19,6 @@ class KucoinSpotHandler(ExchangeHandler):
     api_path = None
     exchange = None
 
-    def rename_coin_to_big_coin(self, coin: str):
-        rename_list = {
-            'ELON': '1000ELON',
-        }
-        return rename_list.get( coin, coin)
-
-    def rename_big_coin_to_coin(self, coin: str):
-        rename_list = {
-            '1000ELON': 'ELON'
-        }
-        return rename_list.get(coin, coin)
-
-    def get_coin_coefficient(self, coin: str):
-        coin = self.rename_big_coin_to_coin(coin)
-        coin_coefficient = {
-            'ELON': Decimal('1000'),
-            'ELON-USDT': Decimal('1000')
-        }
-        return coin_coefficient.get(coin, 1)
-
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
         if settings.DEBUG_OR_TESTING:
             return {}
@@ -56,7 +36,7 @@ class KucoinSpotHandler(ExchangeHandler):
     def place_order(self, symbol: str, side: str, amount: Decimal, order_type: str = MARKET,
                     client_order_id: str = None) -> dict:
 
-        coin_coefficient = self.get_coin_coefficient(symbol)
+        coin_coefficient = self.get_coin_coefficient(symbol[:-5])
 
         side = side.upper()
         order_type = order_type.upper()
@@ -116,7 +96,7 @@ class KucoinSpotHandler(ExchangeHandler):
         for b in balances_list:
             if b['type'] == 'trade':
                 coin = self.rename_coin_to_big_coin(b['currency'])
-                coin_coefficient = self.get_coin_coefficient(coin)
+                coin_coefficient = self.get_coin_coefficient(b['currency'])
                 amount = Decimal(b['available']) / coin_coefficient
                 resp[coin] = amount
         return resp
@@ -144,7 +124,7 @@ class KucoinSpotHandler(ExchangeHandler):
                 'withdrawMin': decimal_to_str((Decimal((chain.get('withdrawalMinSize'))) + Decimal(chain.get('withdrawalMinFee')))
                                               / coin_coefficient),
                 'withdrawMax': decimal_to_str(Decimal(chain.get('withdrawMax', '100000000000')) / coin_coefficient),
-                'withdrawIntegerMultiple': Decimal('1e-{}'.format(resp.get('precision'), 9)),
+                'withdrawIntegerMultiple': Decimal('1e-{}'.format(resp.get('precision') or '9')),
                 'withdrawEnable': chain.get('isWithdrawEnabled')
 
             })
@@ -178,7 +158,7 @@ class KucoinSpotHandler(ExchangeHandler):
         )
 
     def get_symbol_data(self, symbol: str):
-        symbol_coefficient = self.get_coin_coefficient(symbol)
+        symbol_coefficient = self.get_coin_coefficient(symbol[:-5])
 
         data = self.collect_api('/api/v1/symbols', method='GET')
         coin_data = list(filter(lambda d: d['symbol'] == symbol, data))

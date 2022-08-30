@@ -69,7 +69,7 @@ class ProviderHedgedOrder(models.Model):
         handler = asset.get_hedger().get_spot_handler()
         symbol = handler.get_trading_symbol(asset.symbol)
 
-        min_notional_amount = 10 / price * Decimal('1.002')
+        min_notional_amount = handler.get_min_notional() / price * Decimal('1.002')
 
         min_amount = max(amount, min_notional_amount, handler.get_lot_min_quantity(symbol))
         step_size = handler.get_step_size(symbol)

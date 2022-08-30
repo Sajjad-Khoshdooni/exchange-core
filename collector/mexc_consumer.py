@@ -16,12 +16,13 @@ from ledger.models import Asset
 from ledger.utils.precision import decimal_to_str
 from provider.exchanges.interface.binance_interface import ExchangeHandler
 from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
+from provider.exchanges.interface.mexc_interface import MexcSpotHandler
 
 logger = logging.getLogger(__name__)
-KUCOIN_WSS_URL = 'wss://ws-api.kucoin.com/endpoint?token='
+MEXC_WSS_URL = 'wss://wbs.mexc.com/ws'
 
 
-class KucoinConsumer:
+class MexcConsumer:
     def __init__(self, verbose: int = 0):
         self.loop = True
         self.socket = websocket.WebSocket()
@@ -29,71 +30,32 @@ class KucoinConsumer:
         self.last_flush_time = time.time()
         self.verbose = verbose
 
-        logger.info('Starting kucoin Socket...')
+        logger.info('Starting Mexc Socket...')
 
     def get_streams(self):
         assets = list(Asset.candid_objects.filter(
-            hedge_method__in=(Asset.HEDGE_KUCOIN_SPOT, Asset.HEDGE_KUCOIN_SPOT)
+            hedge_method__in=(Asset.HEDGE_MEXC_SPOT, Asset.HEDGE_MEXC_FUTURES)
         ).values_list('symbol', flat=True))
-        return list(map(lambda asset: KucoinSpotHandler().get_trading_symbol(asset), assets))
-
-    def consume(self):
-        signal.signal(signal.SIGINT, self.exit_gracefully)
-        signal.signal(signal.SIGTERM, self.exit_gracefully)
-        signal.signal(signal.SIGQUIT, self.exit_gracefully)
-
-        streams = self.get_streams()
-        topic = "/market/ticker:" + ','.join(streams)
-
-        token = KucoinSpotHandler().collect_api('/api/v1/bullet-public', method='POST')['token']
-        socket_url = KUCOIN_WSS_URL + token
-
-        self.socket.connect(socket_url, timeout=5)
-
-        socket_id = json.loads(self.socket.recv())['id']
-
-        self.socket.send(json.dumps({
-            'id': socket_id,
-            'type': "subscribe",
-            "topic": topic,
-            'response': True
-        }))
-
-        timestamp = int(timezone.now().timestamp())
-
-        while self.loop:
-            if self.verbose > 0:
-                logger.info('Now %s' % datetime.now())
-
-            data_str = self.socket.recv()
-            data = json.loads(data_str)
-            now = int(time.time())
-            if now - timestamp > 45:
-                timestamp = now
-                self.socket.send(json.dumps({'id': socket_id, "type": "ping"}))
-            self.handle_stream_data(data)
+        return list(map(lambda asset: MexcSpotHandler().get_trading_symbol(asset), assets))
 
     def handle_stream_data(self, data: dict):
-        if 'data' not in data:
-
+        if not data:
             if self.verbose > 0:
                 logger.info('ignoring %s' % data)
 
             return
 
-        stream = data['data']
-        symbol = data['topic'].split(':')[1]
-
-        bid = stream['bestBid']
-        ask = stream['bestAsk']
+        bid = data['bestBid']
+        ask = data['bestAsk']
+        print('ask:{},bid:{}'.format(ask, bid))
+        symbol = data['symbol']
+        coin = symbol[:-4]
 
         if self.verbose > 0:
             logger.info('setting %s ask=%s, bid=%s' % (symbol, ask, bid))
 
-        symbol = symbol.split('-')
-
-        key = 'bin:' + ExchangeHandler.rename_coin_to_big_coin(symbol[0]).lower() + symbol[1].lower()
-        coin_coefficient = ExchangeHandler.get_coin_coefficient(symbol[0])
+        key = 'bin:' + ExchangeHandler.rename_coin_to_big_coin(coin).lower() + 'usdt'
+        coin_coefficient = ExchangeHandler.get_coin_coefficient(coin)
         self.queue[key] = {
             'a': decimal_to_str(Decimal(ask) * coin_coefficient), 'b': decimal_to_str(Decimal(bid) * coin_coefficient)
         }
@@ -133,8 +95,6 @@ class KucoinConsumer:
 
             logger.info('Now %s' % datetime.now())
             for coin in coins:
-                data = KucoinSpotHandler().get_orderbook(coin)
+                data = MexcSpotHandler().get_orderbook(coin)
                 self.handle_stream_data(data)
             time.sleep(1)
-
-

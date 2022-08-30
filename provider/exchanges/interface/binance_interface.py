@@ -28,16 +28,56 @@ class ExchangeHandler:
     @classmethod
     def get_handler(cls, name: str):
         from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler, KucoinFuturesHandler
+        from provider.exchanges.interface.mexc_interface import MexcFuturesHandler, MexcSpotHandler
         from ledger.models.asset import Asset
 
         mapping = {
             Asset.HEDGE_BINANCE_SPOT: BinanceSpotHandler,
             Asset.HEDGE_BINANCE_FUTURE: BinanceFuturesHandler,
             Asset.HEDGE_KUCOIN_SPOT: KucoinSpotHandler,
-            Asset.HEDGE_KUCOIN_FUTURE: KucoinFuturesHandler
+            Asset.HEDGE_KUCOIN_FUTURE: KucoinFuturesHandler,
+            Asset.HEDGE_MEXC_SPOT: MexcSpotHandler,
+            Asset.HEDGE_MEXC_FUTURES: MexcFuturesHandler,
         }
 
         return mapping.get(name, BinanceSpotHandler)()
+
+    @classmethod
+    def rename_coin_to_big_coin(cls, coin: str):
+        rename_list = {
+            'ELON': '1000ELON',
+            'BABYDOGE': '1M-BABYDOGE',
+            'FLOKI': '1000FLOKI',
+            'QUACK': '1M-QUACK',
+            'STARL': '1000STARL',
+            'SAFEMARS': '1M-SAFEMARS',
+        }
+        return rename_list.get(coin, coin)
+
+    @classmethod
+    def rename_big_coin_to_coin(cls, coin: str):
+        rename_list = {
+            '1000ELON': 'ELON',
+            '1M-BABYDOGE': 'BABYDOGE',
+            '1000FLOKI': 'FLOKI',
+            '1M-QUACK': 'QUACK',
+            '1000STARL': 'STARL',
+            '1M-SAFEMARS': 'SAFEMARS'
+        }
+        return rename_list.get(coin, coin)
+
+    @classmethod
+    def get_coin_coefficient(cls, coin: str):
+        coin = cls.rename_big_coin_to_coin(coin)
+        coin_coefficient = {
+            'ELON': Decimal('1000'),
+            'BABYDOGE': Decimal('1000000'),
+            'FLOKI': Decimal('1000'),
+            'QUACK': Decimal('1000000'),
+            'STARL': Decimal('1000'),
+            'SAFEMARS': Decimal('1000000'),
+        }
+        return coin_coefficient.get(coin, 1)
 
     def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
                     cache_timeout: int = None):

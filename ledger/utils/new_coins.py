@@ -3,8 +3,9 @@ from decimal import Decimal
 
 from ledger.models import Asset, Network, NetworkAsset
 from market.utils.fix import create_missing_symbols
-from provider.exchanges.interface.binance_interface import BinanceSpotHandler, BinanceFuturesHandler
+from provider.exchanges.interface.binance_interface import BinanceSpotHandler, BinanceFuturesHandler, ExchangeHandler
 from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
+from provider.exchanges.interface.mexc_interface import MexcSpotHandler
 
 
 def add_candidate_coins(coins: list, handler: str):
@@ -12,10 +13,12 @@ def add_candidate_coins(coins: list, handler: str):
     handler_mapping = {
         'binance': BinanceSpotHandler,
         'kucoin': KucoinSpotHandler,
+        'mexc': MexcSpotHandler,
     }
     hedger_mapping = {
         'binance': Asset.HEDGE_BINANCE_SPOT,
-        'kucoin': Asset.HEDGE_KUCOIN_SPOT
+        'kucoin': Asset.HEDGE_KUCOIN_SPOT,
+        'mexc': Asset.HEDGE_MEXC_SPOT,
     }
 
     exchange_handler = handler_mapping.get(handler)()
@@ -32,7 +35,7 @@ def add_candidate_coins(coins: list, handler: str):
             print('%s not found or stopped trading in interface spot' % spot_symbol)
             continue
 
-        asset, created = Asset.objects.get_or_create(symbol=KucoinSpotHandler().rename_coin_to_big_coin(coin))
+        asset, created = Asset.objects.get_or_create(symbol=ExchangeHandler.rename_coin_to_big_coin(coin))
 
         asset.hedge_method = hedger_mapping[handler]
 
@@ -48,8 +51,6 @@ def add_candidate_coins(coins: list, handler: str):
             futures = BinanceFuturesHandler().get_symbol_data(futures_symbol)
             if futures and futures['status'] == 'TRADING':
                 asset.hedge_method = Asset.HEDGE_BINANCE_FUTURE
-        else:
-            asset.hedge_method = Asset.HEDGE_KUCOIN_SPOT
 
         lot_size = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', spot['filters']))[0]
         price_filter = list(filter(lambda f: f['filterType'] == 'PRICE_FILTER', spot['filters']))[0]
@@ -73,25 +74,26 @@ def _update_coin_networks(asset: Asset, exchange_handler):
     coin_data = exchange_handler.get_spot_handler().get_coin_data(asset.symbol)
 
     for n in coin_data['networkList']:
-        network = Network.objects.filter(symbol=n['network'])
+        network_symbol = n['network']
+        network = Network.objects.filter(symbol=network_symbol)
         if network:
             network.update(
-                address_regex=n['addressRegex'],
+                address_regex=n.get('addressRegex', ''),
                 min_confirm=n['minConfirm'],
-                unlock_confirm=n['unLockConfirm'],
+                unlock_confirm=n.get('unLockConfirm', '0'),
                 kucoin_name=n.get('kucoin_name', '')
             )
             network = network.first()
         else:
             network = Network.objects.create(
-                symbol=n['network'],
+                symbol=network_symbol,
                 name=n['name'],
                 kucoin_name=n.get('kucoin_name', ''),
                 can_deposit=False,
                 can_withdraw=False,
                 min_confirm=n['minConfirm'],
-                unlock_confirm=n['unLockConfirm'],
-                address_regex=n['addressRegex'],
+                unlock_confirm=n.get('unLockConfirm', '0'),
+                address_regex=n.get('addressRegex', '0')
             )
 
         withdraw_integer_multiple = Decimal(n['withdrawIntegerMultiple'])
