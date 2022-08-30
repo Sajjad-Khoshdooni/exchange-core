@@ -106,7 +106,7 @@ def update_symbol_maker_orders(symbol, last_trade_ts):
                     order.save()
                     order.submit(pipeline)
     except Exception as e:
-        if settings.DEBUG:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             raise e
         logger.exception(f'update maker order failed for {symbol}', extra={'exp': e, })
 
@@ -144,6 +144,6 @@ def create_depth_orders(symbol=None, open_depth_orders_count=None):
                             order.save()
                             order.submit(pipeline)
         except Exception as e:
-            if settings.DEBUG:
+            if settings.DEBUG_OR_TESTING_OR_STAGING:
                 raise e
             logger.exception(f'create depth order failed for {symbol.name}', extra={'exp': e, })
