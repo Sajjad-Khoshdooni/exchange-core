@@ -185,9 +185,9 @@ class UserFilter(admin.SimpleListFilter):
 
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_display = ('address_key', 'network', 'address', 'is_registered',)
-    readonly_fields = ('address_key', 'network', 'address', 'is_registered',)
-    list_filter = ('network', 'is_registered', )
+    list_display = ('address_key', 'network', 'address',)
+    readonly_fields = ('address_key', 'network', 'address',)
+    list_filter = ('network', )
     search_fields = ('address',)
 
 

@@ -1,15 +1,13 @@
 from django.db import models
 
 from ledger.requester.address_requester import AddressRequester
-from ledger.models.address_key import AddressKey
-from ledger.requester.register_address_requester import RegisterAddress
+from ledger.models.address_key import AddressKey, ARCHITECTURE_OF_NETWORK
 
 
 class DepositAddress(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     network = models.ForeignKey('ledger.Network', on_delete=models.PROTECT)
     address = models.CharField(max_length=256, blank=True)
-    is_registered = models.BooleanField(default=False)
     address_key = models.ForeignKey('ledger.AddressKey', on_delete=models.PROTECT)
 
     def __str__(self):
@@ -17,29 +15,25 @@ class DepositAddress(models.Model):
 
     @classmethod
     def get_deposit_address(cls, account, network):
-        address, address_key = None, None
-
         if DepositAddress.objects.filter(address_key__account=account, network=network).exists():
             return DepositAddress.objects.get(address_key__account=account, network=network)
 
-        elif not AddressKey.objects.filter(account=account).exists():
-            address = AddressRequester().create_wallet(account)
+        elif not AddressKey.objects.filter(account=account, architecture=ARCHITECTURE_OF_NETWORK.get(network)).exists():
+            address_dictionary = AddressRequester().create_wallet(account)
             address_key = AddressKey.objects.create(
                 account=account,
-                address=address
+                address=address_dictionary.get('pointer_address'),
+                public_address=address_dictionary.get('public_address')
             )
 
         else:
             address_key = AddressKey.objects.get(account=account)
 
-        address = AddressRequester().generate_public_address(network=network.symbol, address=address_key.address)
-
         deposit_address = DepositAddress.objects.create(
             network=network,
             address_key=address_key,
-            address=address,
+            address=address_key.public_address,
         )
-        RegisterAddress().register(deposit_address)
 
         return deposit_address
 
