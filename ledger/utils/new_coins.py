@@ -8,8 +8,6 @@ from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 
 
 def add_candidate_coins(coins: list, handler: str):
-    handler = handler.upper()
-
     handler_mapping = {
         'binance': BinanceSpotHandler,
         'kucoin': KucoinSpotHandler,
