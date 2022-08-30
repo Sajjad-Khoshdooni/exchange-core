@@ -66,10 +66,10 @@ class ProviderHedgedOrder(models.Model):
     def get_min_trade_amount_to_buy(cls, asset: Asset, amount: Decimal):
         price = get_price(asset.symbol, BUY)
 
-        handler = asset.get_hedger()
+        handler = asset.get_hedger().get_spot_handler()
         symbol = handler.get_trading_symbol(asset.symbol)
 
-        min_notional_amount = 10 / price * Decimal('1.002')
+        min_notional_amount = handler.get_min_notional() / price * Decimal('1.002')
 
         min_amount = max(amount, min_notional_amount, handler.get_lot_min_quantity(symbol))
         step_size = handler.get_step_size(symbol)

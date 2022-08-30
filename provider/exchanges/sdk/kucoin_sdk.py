@@ -24,18 +24,18 @@ def kucoin_spot_send_public_request(endpoint, method='POST', **kwargs):
 
 def add_sign_kucoin_spot(params_str, timestamp, http_method):
     headers = {}
-    _secret_key = secret('KC-SECRET-KEY')
-    _secret_passphrase = secret('KC-API-PASSPHRASE')
+    _secret_key = secret('KUCOIN_SECRET_KEY')
+    _secret_passphrase = secret('KUCOIN_PASSPHRASE')
 
     headers['KC-API-TIMESTAMP'] = str(timestamp)
-    headers['KC-API-KEY'] = config('KC-API-KEY')
-    headers['KC-API-KEY-VERSION'] = '2'
+    headers['KUCOIN_API_KEY'] = config('KUCOIN_API_KEY')
+    headers['KUCOIN_API_KEY-VERSION'] = '2'
     headers['KC-API-SIGN'] = base64.b64encode(
         hmac.new(_secret_key.encode('utf-8'),
                  params_str.encode('utf-8'),
                  hashlib.sha256).digest()
     )
-    headers['KC-API-PASSPHRASE'] = base64.b64encode(
+    headers['KUCOIN_PASSPHRASE'] = base64.b64encode(
         hmac.new(_secret_key.encode('utf-8'),
                  _secret_passphrase .encode('utf-8'),
                  hashlib.sha256).digest())
@@ -48,18 +48,18 @@ def add_sign_kucoin_spot(params_str, timestamp, http_method):
 
 def add_sign_kucoin_futures(params_str, timestamp, http_method):
     headers = {}
-    _secret_key = config('KC-SECRET-KEY-FUT', default='')
-    _secret_passphrase = config('KC-API-PASSPHRASE-FUT', default='')
+    _secret_key = config('KUCOIN_FUTURES_SECRET_KEY', default='')
+    _secret_passphrase = config('KUCOIN_FUTURES_PASSPHRASE', default='')
 
     headers['KC-API-TIMESTAMP'] = str(timestamp)
-    headers['KC-API-KEY'] = config('KC-API-KEY-FUT', default='')
-    headers['KC-API-KEY-VERSION'] = config('KC-API-KEY-VERSION-FUT', default='')
+    headers['KUCOIN_API_KEY'] = config('KUCOIN_FUTURES_API_KEY', default='')
+    headers['KUCOIN_API_KEY-VERSION'] = '2'
     headers['KC-API-SIGN'] = base64.b64encode(
         hmac.new(_secret_key.encode('utf-8'),
                  params_str.encode('utf-8'),
                  hashlib.sha256).digest()
     )
-    headers['KC-API-PASSPHRASE'] = base64.b64encode(
+    headers['KUCOIN_PASSPHRASE'] = base64.b64encode(
         hmac.new(_secret_key.encode('utf-8'),
                  _secret_passphrase.encode('utf-8'),
                  hashlib.sha256).digest())

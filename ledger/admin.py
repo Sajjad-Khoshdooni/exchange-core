@@ -42,6 +42,7 @@ class AssetAdmin(AdvancedAdmin):
     list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable', 'new_coin')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
+    actions = ('hedge_asset', )
 
     def changelist_view(self, request, extra_context=None):
 
@@ -54,8 +55,13 @@ class AssetAdmin(AdvancedAdmin):
                 'binance_margin_ratio': round(self.overview.margin_ratio, 2),
                 'hedge_value': round(self.overview.get_total_hedge_value(), 2),
                 'binance_spot_tether_amount': round(self.overview.get_binance_spot_amount(Asset.get(Asset.USDT)), 2),
+                'kucoin_spot_tether_amount': round(self.overview.get_kucoin_spot_amount(Asset.get(Asset.USDT)), 2),
+                'mexc_spot_tether_amount': round(self.overview.get_mexc_spot_amount(Asset.get(Asset.USDT)), 2),
 
                 'binance_spot_usdt': round(self.overview.get_binance_spot_total_value(), 2),
+                'kucoin_spot_usdt': round(self.overview.get_kucoin_spot_total_value(), 2),
+                'mexc_spot_usdt': round(self.overview.get_mexc_spot_total_value(), 2),
+
                 'binance_margin_balance': round(self.overview.total_margin_balance, 2),
                 'internal_usdt': round(self.overview.get_internal_usdt_value(), 2),
                 'fiat_usdt': round(self.overview.get_gateway_usdt(), 0),
@@ -146,6 +152,12 @@ class AssetAdmin(AdvancedAdmin):
                 return handler.get_step_size(symbol)
 
     get_hedge_threshold.short_description = 'hedge threshold'
+
+    @admin.action(description='متعادل سازی رمز ارزها', permissions=['view'])
+    def hedge_asset(self, request, queryset):
+        assets = queryset.exclude(hedge_method=Asset.HEDGE_NONE, )
+        for asset in assets:
+            ProviderOrder.try_hedge_for_new_order(asset, ProviderOrder.HEDGE)
 
 
 @admin.register(models.Network)

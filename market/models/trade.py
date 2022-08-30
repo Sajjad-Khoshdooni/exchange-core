@@ -3,6 +3,7 @@ from collections import namedtuple, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
+from typing import List
 
 from django.conf import settings
 from django.db import models
@@ -257,10 +258,7 @@ class Trade(models.Model):
         base_irt_price = 1
 
         if symbol.base_asset.symbol == Asset.USDT:
-            try:
-                base_irt_price = get_tether_irt_price(BUY)
-            except:
-                base_irt_price = 27000
+            base_irt_price = get_tether_irt_price(BUY)
 
         trades_pair = Trade.init_pair(
             symbol=symbol,
@@ -286,6 +284,7 @@ class Trade(models.Model):
         from market.models import ReferralTrx
         ReferralTrx.objects.bulk_create(list(filter(bool, referrals)))
         Trade.objects.bulk_create([*trades_pair])
+        Trade.create_hedge_fiat_trxs([*trades_pair])
 
         # updating trade_volume_irt of accounts
         accounts = [trades_pair.maker.account, trades_pair.taker.account]
@@ -394,3 +393,35 @@ class Trade(models.Model):
         if not top_prices:
             top_prices = Trade.get_interval_top_prices([symbol_id])
         return top_prices
+
+    @classmethod
+    def create_hedge_fiat_trxs(cls, trades: List['Trade']):
+        from financial.models import FiatHedgeTrx
+        trxs = []
+
+        for trade in trades:
+            if trade.order.symbol.base_asset.symbol == Asset.IRT and \
+                    ((trade.is_maker and trade.trade_source == cls.SYSTEM_TAKER) or
+                     (not trade.is_maker and trade.trade_source in [cls.OTC, cls.SYSTEM_MAKER])):
+
+                hedge_price = get_trading_price_usdt(trade.order.symbol.asset.symbol, side=BUY, raw_price=True)
+
+                usdt_price = get_tether_irt_price(BUY)
+                usdt_amount = hedge_price * trade.amount
+                irt_amount = usdt_amount * usdt_price
+
+                if trade.side == BUY:
+                    usdt_amount = -usdt_amount
+                else:
+                    irt_amount = -irt_amount
+
+                trxs.append(FiatHedgeTrx(
+                    base_amount=irt_amount,
+                    target_amount=usdt_amount,
+                    price=usdt_price,
+                    source=FiatHedgeTrx.TRADE,
+                    reason=str(trade.id)
+                ))
+
+        if trxs:
+            FiatHedgeTrx.objects.bulk_create(trxs)
