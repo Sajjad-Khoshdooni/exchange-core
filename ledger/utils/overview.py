@@ -48,14 +48,14 @@ class AssetOverview:
 
         kucoin_balances_list = KucoinSpotHandler().get_account_details()
 
-
         self._kucoin_spot_balance_map = {
             ExchangeHandler.rename_coin_to_big_coin(b['currency']):
                 float(Decimal(b['available']) / ExchangeHandler.get_coin_coefficient(b['currency']))
             for b in kucoin_balances_list
-             }
+        }
 
         mexc_balance_list = MexcSpotHandler().get_account_details()
+
         self._mexc_spot_balance_map = {
             ExchangeHandler.rename_coin_to_big_coin((b['asset'])):
                 float(Decimal(b['free']) / ExchangeHandler.get_coin_coefficient(b['asset']))
@@ -133,9 +133,6 @@ class AssetOverview:
     def get_future_position_amount(self, asset: Asset):
         if asset.symbol == Asset.USDT:
             return self._future['availableBalance']
-
-        if Asset.hedge_method in [Asset.HEDGE_KUCOIN_SPOT, Asset.HEDGE_MEXC_SPOT]:
-            return
 
         handler = asset.get_hedger()
         symbol = handler.get_trading_symbol(asset.future_symbol)

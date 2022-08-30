@@ -25,6 +25,9 @@ def create_snapshot():
 
         binance_futures=overview.total_margin_balance,
         binance_spot=overview.get_binance_spot_total_value(),
+        kucoin_spot=overview.get_kucoin_spot_total_value(),
+        mexc_spot=overview.get_mexc_spot_amount(),
+
         internal=overview.get_internal_usdt_value(),
         fiat_gateway=overview.get_gateway_usdt(),
         investment=overview.get_total_investment(),

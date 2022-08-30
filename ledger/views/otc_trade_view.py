@@ -166,7 +166,6 @@ class OTCTradeRequestView(CreateAPIView):
     serializer_class = OTCRequestSerializer
 
 
-
 class OTCTradeSerializer(serializers.ModelSerializer):
     token = serializers.CharField(write_only=True)
     value_usdt = serializers.SerializerMethodField()

@@ -48,7 +48,7 @@ class MexcSpotHandler(ExchangeHandler):
                     client_order_id: str = None) -> dict:
 
         coin = self.rename_coin_to_big_coin(symbol[:-4])
-        coin_coefficient = self.get_coin_coefficient(symbol)
+        coin_coefficient = self.get_coin_coefficient(symbol[:-4])
         price_init = get_price(coin=coin, side=side)
         value = amount * price_init
         trading_price = decimal_to_str(get_trading_price_usdt(coin=coin, side=get_other_side(side.lower()), value=value) / coin_coefficient)
@@ -82,7 +82,7 @@ class MexcSpotHandler(ExchangeHandler):
         resp = {}
         for b in balances_list:
             coin = self.rename_coin_to_big_coin(b['asset'])
-            coin_coefficient = self.get_coin_coefficient(coin)
+            coin_coefficient = self.get_coin_coefficient(b['asset'])
             amount = Decimal(b['free']) / coin_coefficient
             resp[coin] = amount
         return resp
@@ -133,7 +133,7 @@ class MexcSpotHandler(ExchangeHandler):
         return Decimal(info.get('withdrawFee'))
 
     def get_symbol_data(self, symbol: str):
-        symbol_coefficient = self.get_coin_coefficient(symbol)
+        symbol_coefficient = self.get_coin_coefficient(symbol[:-4])
         coin_data = self.collect_api('/api/v3/exchangeInfo?symbol={}'.format(symbol), method='GET', signed=False)
         coin_data = coin_data.get('symbols')[0]
         if not coin_data:
