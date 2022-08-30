@@ -59,7 +59,7 @@ class AssetOverview:
         self._mexc_spot_balance_map = {
             ExchangeHandler.rename_coin_to_big_coin((b['asset'])):
                 float(Decimal(b['free']) / ExchangeHandler.get_coin_coefficient(b['asset']))
-            for b in mexc_balance_list['balances']
+            for b in mexc_balance_list.get('balances', [])
         }
 
         self._internal_deposits = get_internal_asset_deposits()
