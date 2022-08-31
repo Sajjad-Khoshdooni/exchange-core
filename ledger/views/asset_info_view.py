@@ -41,9 +41,6 @@ class AssetSerializerBuilder(AssetSerializerMini):
     min_withdraw_fee = serializers.SerializerMethodField()
     market_irt_enable = serializers.SerializerMethodField()
 
-    original_name_fa = serializers.SerializerMethodField()
-    original_symbol = serializers.SerializerMethodField()
-
     class Meta:
         model = Asset
         fields = ()
@@ -148,12 +145,6 @@ class AssetSerializerBuilder(AssetSerializerMini):
         if cap:
             return int(cap.circulating_supply)
 
-    def get_original_symbol(self, asset: Asset):
-        return asset.original_symbol or asset.symbol
-
-    def get_original_name_fa(self, asset: Asset):
-        return asset.original_name_fa or asset.name_fa
-
     @classmethod
     def create_serializer(cls,  prices: bool = True, extra_info: bool = True):
         fields = AssetSerializerMini.Meta.fields
@@ -166,7 +157,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
             new_fields = [
                 'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
                 'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
-                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee', 'original_symbol', 'original_name_fa'
+                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee'
             ]
 
         class Serializer(cls):
