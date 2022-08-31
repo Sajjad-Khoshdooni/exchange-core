@@ -19,7 +19,7 @@ class DepositAddress(models.Model):
             return DepositAddress.objects.get(address_key__account=account, network=network)
 
         elif not AddressKey.objects.filter(account=account, architecture=ARCHITECTURE_OF_NETWORK.get(network)).exists():
-            address_dictionary = AddressRequester().create_wallet(account)
+            address_dictionary = AddressRequester().create_wallet(account, ARCHITECTURE_OF_NETWORK.get(network))
             address_key = AddressKey.objects.create(
                 account=account,
                 address=address_dictionary.get('pointer_address'),
