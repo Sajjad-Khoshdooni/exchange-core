@@ -43,11 +43,4 @@ class Migration(migrations.Migration):
             preserve_default=False,
         ),
         migrations.RunPython(populate_public_address, reverse_code=migrations.RunPython.noop),
-
-        migrations.AlterField(
-            model_name='addresskey',
-            name='public_address',
-            field=models.CharField(max_length=256),
-            preserve_default=False,
-        ),
     ]
