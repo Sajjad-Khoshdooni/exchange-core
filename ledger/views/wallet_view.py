@@ -114,7 +114,7 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     def get_can_deposit(self, asset: Asset):
         network_asset = NetworkAsset.objects.filter(asset=asset, network__can_deposit=True).first()
-        return network_asset and network_asset.can_deposit_enabled()
+        return bool(network_asset and network_asset.can_deposit_enabled())
 
     def get_can_withdraw(self, asset: Asset):
         return NetworkAsset.objects.filter(
