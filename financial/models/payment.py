@@ -46,6 +46,8 @@ class Payment(models.Model):
     PANEL_URL = config('PANEL_URL')
     SUCCESS_URL = '/checkout/success'
     FAIL_URL = '/checkout/fail'
+    APP_SUCCESS_URL = '/Checkout/success'
+    APP_FAIL_URL = '/Checkout/fail'
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -111,12 +113,12 @@ class Payment(models.Model):
         desktop = PaymentRequest.DESKTOP
 
         if source == desktop:
-            url = self.PANEL_URL
+            if self.status == DONE:
+                return self.PANEL_URL + self.SUCCESS_URL
+            else:
+                return self.PANEL_URL + self.FAIL_URL
         else:
-            url = self.APP_DEEP_LINK
-
-        if self.status == DONE:
-            url += self.SUCCESS_URL
-        else:
-            url += self.FAIL_URL
-        return url
+            if self.status == DONE:
+                return self.APP_DEEP_LINK + self.APP_SUCCESS_URL
+            else:
+                return self.APP_DEEP_LINK + self.APP_FAIL_URL
