@@ -3,7 +3,8 @@ from decimal import Decimal
 from django.conf import settings
 
 from ledger.utils.precision import decimal_to_str
-from provider.exchanges.interface.binance_interface import ExchangeHandler, SELL, BUY, MARKET, LIMIT, HOUR
+from provider.exchanges import ExchangeHandler
+from provider.exchanges.interface.binance_interface import SELL, BUY, MARKET, LIMIT, HOUR
 from provider.exchanges.sdk.kucoin_sdk import kucoin_send_signed_request, kucoin_spot_send_public_request
 
 

@@ -1,12 +1,12 @@
 import math
-from abc import ABC
 from decimal import Decimal
 
 from django.conf import settings
 
 from ledger.utils.precision import decimal_to_str
-from ledger.utils.price import get_trading_price_usdt, get_spread, get_price, get_other_side
-from provider.exchanges.interface.binance_interface import ExchangeHandler, MARKET, SELL, BUY, LIMIT, HOUR
+from ledger.utils.price import get_trading_price_usdt, get_price, get_other_side
+from provider.exchanges import ExchangeHandler
+from provider.exchanges.interface.binance_interface import MARKET, SELL, BUY, LIMIT, HOUR
 from provider.exchanges.sdk.mexc_sdk import mexc_send_sign_request, mexc_send_public_request
 
 
