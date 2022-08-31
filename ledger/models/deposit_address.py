@@ -29,7 +29,8 @@ class DepositAddress(models.Model):
             address_key = AddressKey.objects.create(
                 account=account,
                 address=address_dictionary.get('pointer_address'),
-                public_address=address_dictionary.get('public_address')
+                public_address=address_dictionary.get('public_address'),
+                architecture=architecture
             )
 
         deposit_address = DepositAddress.objects.create(
