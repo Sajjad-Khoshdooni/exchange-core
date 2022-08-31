@@ -41,10 +41,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
     min_withdraw_fee = serializers.SerializerMethodField()
     market_irt_enable = serializers.SerializerMethodField()
 
-    name = serializers.CharField()
-    name_fa = serializers.CharField()
-    original_name_fa = serializers.CharField()
-    original_symbol = serializers.CharField()
+    original_name_fa = serializers.SerializerMethodField()
+    original_symbol = serializers.SerializerMethodField()
 
     class Meta:
         model = Asset
