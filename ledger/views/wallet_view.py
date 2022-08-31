@@ -113,10 +113,16 @@ class AssetListSerializer(serializers.ModelSerializer):
         return asset.get_presentation_price_irt(price)
 
     def get_can_deposit(self, asset: Asset):
+        if asset.symbol == Asset.IRT:
+            return True
+
         network_asset = NetworkAsset.objects.filter(asset=asset, network__can_deposit=True).first()
         return bool(network_asset and network_asset.can_deposit_enabled())
 
     def get_can_withdraw(self, asset: Asset):
+        if asset.symbol == Asset.IRT:
+            return True
+
         return NetworkAsset.objects.filter(
             asset=asset,
             network__can_withdraw=True,
