@@ -1,7 +1,8 @@
 from django.db import models
 
 from ledger.requester.address_requester import AddressRequester
-from ledger.models.address_key import AddressKey, ARCHITECTURE_OF_NETWORK
+from ledger.models.address_key import AddressKey
+from ledger.requester.architecture_requester import ArchitectureRequester
 
 
 class DepositAddress(models.Model):
@@ -15,19 +16,21 @@ class DepositAddress(models.Model):
 
     @classmethod
     def get_deposit_address(cls, account, network):
-        if DepositAddress.objects.filter(address_key__account=account, network=network).exists():
-            return DepositAddress.objects.get(address_key__account=account, network=network)
+        architecture = ArchitectureRequester.request_architecture(network=network)
 
-        elif not AddressKey.objects.filter(account=account, architecture=ARCHITECTURE_OF_NETWORK.get(network)).exists():
-            address_dictionary = AddressRequester().create_wallet(account, ARCHITECTURE_OF_NETWORK.get(network))
+        deposit_address = DepositAddress.objects.filter(address_key__account=account, network=network).first()
+        address_key = AddressKey.objects.filter(account=account, architecture=architecture).first()
+
+        if deposit_address:
+            return deposit_address
+
+        elif not address_key:
+            address_dictionary = AddressRequester().create_wallet(account, architecture)
             address_key = AddressKey.objects.create(
                 account=account,
                 address=address_dictionary.get('pointer_address'),
                 public_address=address_dictionary.get('public_address')
             )
-
-        else:
-            address_key = AddressKey.objects.get(account=account)
 
         deposit_address = DepositAddress.objects.create(
             network=network,

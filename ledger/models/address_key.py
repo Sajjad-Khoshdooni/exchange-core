@@ -1,13 +1,5 @@
 from django.db import models
 
-ARCHITECTURE_OF_NETWORK = {
-    'ETH': 'ETH',
-    'BSC': 'ETH',
-    'TRX': 'TRX',
-    'BTC': 'BTC',
-    'SOL': 'SOL'
-}
-
 
 class AddressKey(models.Model):
     account = models.ForeignKey('accounts.account', on_delete=models.PROTECT)

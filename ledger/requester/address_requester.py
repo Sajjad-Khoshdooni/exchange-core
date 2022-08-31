@@ -19,19 +19,3 @@ class AddressRequester:
             'Authorization': secret('BLOCKLINK_TOKEN')
         }
         return requests.post(url=url, data=data, headers=header).json()
-
-    def generate_public_address(self, address, network: str):
-        data = {
-            "address": address,
-            "network": network
-        }
-        url = config('MASTERKEY_BASE_URL') + '/api/v1/wallets/public/address/'
-        header = {
-            'Authorization': secret('MASTERKEY_TOKEN')
-        }
-        resp = requests.get(url=url, data=data, headers=header)
-
-        if not resp.ok:
-            raise Exception('Failed to generate public address')
-
-        return resp.json()['public_address']
