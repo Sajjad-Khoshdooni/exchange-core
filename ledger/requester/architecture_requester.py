@@ -18,4 +18,4 @@ class ArchitectureRequester:
         header = {
             'Authorization': secret('BLOCKLINK_TOKEN')
         }
-        return requests.get(url=url, params=data, headers=header).json()
+        return requests.get(url=url, params=data, headers=header).json().get('architecture')
