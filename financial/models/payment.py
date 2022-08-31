@@ -131,7 +131,6 @@ class Payment(models.Model):
         if url.startswith('http'):
             return redirect(url)
         else:
-            return 'intent://Checkout/fail/#Intent;scheme=raastin;package=com.raastinappts;end'
             response = HttpResponse("", status=302)
-            response['Location'] = url
+            response['Location'] = 'intent://Checkout/fail/#Intent;scheme=raastin;package=com.raastinappts;end'
             return response
