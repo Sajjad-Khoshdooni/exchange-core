@@ -68,7 +68,7 @@ class KucoinConsumer:
             data_str = self.socket.recv()
             data = json.loads(data_str)
             now = int(time.time())
-            if now - timestamp > 45:
+            if now - timestamp > 15:
                 timestamp = now
                 self.socket.send(json.dumps({'id': socket_id, "type": "ping"}))
             self.handle_stream_data(data)
@@ -136,5 +136,3 @@ class KucoinConsumer:
                 data = KucoinSpotHandler().get_orderbook(coin)
                 self.handle_stream_data(data)
             time.sleep(1)
-
-
