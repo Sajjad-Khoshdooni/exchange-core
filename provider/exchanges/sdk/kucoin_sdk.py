@@ -8,7 +8,8 @@ from rest_framework.utils import json
 from yekta_config import secret
 from yekta_config.config import config
 
-from provider.exchanges.sdk.binance_sdk import get_timestamp
+from provider.exchanges.sdk.binance_sdk import get_timestamp, create_provider_request_and_log
+from provider.models import ProviderRequest
 
 if not settings.DEBUG:
     KUCOIN_SPOT_BASE_URL = "https://api.kucoin.com"
@@ -19,7 +20,7 @@ else:
 
 
 def kucoin_spot_send_public_request(endpoint, method='POST', **kwargs):
-    pass
+    raise NotImplementedError
 
 
 def add_sign_kucoin_spot(params_str, timestamp, http_method):
@@ -87,11 +88,18 @@ def kucoin_send_signed_request(http_method, url_path, **kwargs):
 
     if http_method in ('GET', 'DELETE'):
         headers = add_sign_kucoin(str_to_sign, timestamp, http_method)
-        response = requests.request('get', url, headers=headers)
-        return response.json().get('data')
-    if http_method in ('POST', 'PUT'):
+        response = requests.request('GET', url, headers=headers)
+    elif http_method in ('POST', 'PUT'):
         str_to_sign += data_json
         headers = add_sign_kucoin(str_to_sign, timestamp, http_method)
         response = requests.request(http_method, url, headers=headers, json=data, data=data_json)
-        return response.json().get('data')
+    else:
+        raise NotImplementedError
 
+    return create_provider_request_and_log(
+        name=ProviderRequest.KUCOIN,
+        response=response,
+        url=url_path,
+        method=http_method,
+        data=data
+    ).get('data')

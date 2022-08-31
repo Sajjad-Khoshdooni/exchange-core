@@ -9,7 +9,6 @@ from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.precision import get_precision, get_presentation_amount
-from provider.exchanges.interface.binance_interface import ExchangeHandler
 
 
 class InvalidAmount(Exception):
@@ -174,7 +173,8 @@ class Asset(models.Model):
         else:
             return self.symbol
 
-    def get_hedger(self) -> ExchangeHandler:
+    def get_hedger(self):
+        from provider.exchanges import ExchangeHandler
         return ExchangeHandler.get_handler(name=self.hedge_method)
 
 
