@@ -43,6 +43,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
     name = serializers.CharField()
     name_fa = serializers.CharField()
+    original_name_fa = serializers.CharField()
+    original_symbol = serializers.CharField()
 
     class Meta:
         model = Asset
@@ -147,6 +149,12 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
         if cap:
             return int(cap.circulating_supply)
+
+    def get_original_symbol(self, asset: Asset):
+        return asset.original_symbol or asset.symbol
+
+    def get_original_name_fa(self, asset: Asset):
+        return asset.original_name_fa or asset.name_fa
 
     @classmethod
     def create_serializer(cls,  prices: bool = True, extra_info: bool = True):
