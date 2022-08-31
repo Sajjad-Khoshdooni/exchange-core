@@ -12,6 +12,16 @@ from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 
 class UserSerializer(serializers.ModelSerializer):
     possible_time_for_withdraw = serializers.SerializerMethodField()
+    chat_uuid = serializers.CharField()
+
+    def get_chat_uuid(self, user: User):
+        request = self.context['request']
+        hijack_history = request.session.get('hijack_history')
+        if hijack_history:
+            return ''
+        else:
+            return user.chat_uuid
+
 
     class Meta:
         model = User
