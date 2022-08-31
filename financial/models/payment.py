@@ -121,9 +121,9 @@ class Payment(models.Model):
                 return self.PANEL_URL + self.FAIL_URL
         else:
             if self.status == DONE:
-                return self.APP_DEEP_LINK + self.APP_SUCCESS_URL
+                return 'intent://Checkout/success/#Intent;scheme=raastin;package=com.raastinappts;end'
             else:
-                return self.APP_DEEP_LINK + self.APP_FAIL_URL
+                return 'intent://Checkout/fail/#Intent;scheme=raastin;package=com.raastinappts;end'
 
     def redirect_to_app(self):
         url = self.get_redirect_url()
@@ -132,5 +132,5 @@ class Payment(models.Model):
             return redirect(url)
         else:
             response = HttpResponse("", status=302)
-            response['Location'] = 'intent://Checkout/fail/#Intent;scheme=raastin;package=com.raastinappts;end'
+            response['Location'] = url
             return response
