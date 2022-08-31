@@ -1,3 +1,4 @@
+from collections import defaultdict
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -47,11 +48,16 @@ class AssetOverview:
         self._binance_spot_balance_map = {b['asset']: float(b['free']) for b in binance_balances_list}
 
         kucoin_balances_list = KucoinSpotHandler().get_account_details()
+        kucoin_spot_balances = defaultdict(Decimal)
+
+        for b in kucoin_balances_list:
+            if b['type'] in ['trade', 'main']:
+                kucoin_spot_balances[b['currency']] += Decimal(b['balance'])
 
         self._kucoin_spot_balance_map = {
-            ExchangeHandler.rename_coin_to_big_coin(b['currency']):
-                float(Decimal(b['available']) / ExchangeHandler.get_coin_coefficient(b['currency']))
-            for b in kucoin_balances_list
+            ExchangeHandler.rename_coin_to_big_coin(symbol):
+                amount / ExchangeHandler.get_coin_coefficient(symbol)
+            for symbol, amount in kucoin_spot_balances.items()
         }
 
         mexc_balance_list = MexcSpotHandler().get_account_details()
