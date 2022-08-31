@@ -20,9 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 class AssetListSerializer(serializers.ModelSerializer):
-
-    name = serializers.CharField()
-    name_fa = serializers.CharField()
     logo = serializers.SerializerMethodField()
 
     balance = serializers.SerializerMethodField()
@@ -42,6 +39,9 @@ class AssetListSerializer(serializers.ModelSerializer):
     precision = serializers.SerializerMethodField()
 
     market_irt_enable = serializers.SerializerMethodField()
+
+    original_name_fa = serializers.SerializerMethodField()
+    original_symbol = serializers.SerializerMethodField()
 
     def get_market_irt_enable(self, asset: Asset):
         return asset.symbol in self.context['enable_irt_market_list']
@@ -114,7 +114,7 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     def get_can_deposit(self, asset: Asset):
         network_asset = NetworkAsset.objects.filter(asset=asset, network__can_deposit=True).first()
-        return network_asset and network_asset.can_deposit_enabled()
+        return bool(network_asset and network_asset.can_deposit_enabled())
 
     def get_can_withdraw(self, asset: Asset):
         return NetworkAsset.objects.filter(
@@ -127,11 +127,17 @@ class AssetListSerializer(serializers.ModelSerializer):
     def get_logo(self, asset: Asset):
         return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
 
+    def get_original_symbol(self, asset: Asset):
+        return asset.original_symbol or asset.symbol
+
+    def get_original_name_fa(self, asset: Asset):
+        return asset.original_name_fa or asset.name_fa
+
     class Meta:
         model = Asset
         fields = ('symbol', 'precision', 'free', 'free_irt', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt',
                   'buy_price_irt', 'can_deposit', 'can_withdraw', 'trade_enable', 'pin_to_top', 'market_irt_enable',
-                  'name', 'name_fa', 'logo')
+                  'name', 'name_fa', 'logo', 'original_symbol', 'original_name_fa')
         ref_name = 'ledger asset'
 
 
