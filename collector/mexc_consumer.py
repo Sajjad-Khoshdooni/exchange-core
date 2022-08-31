@@ -54,7 +54,7 @@ class MexcConsumer:
         if self.verbose > 0:
             logger.info('setting %s ask=%s, bid=%s' % (symbol, ask, bid))
 
-        key = 'bin:' + ExchangeHandler.rename_coin_to_big_coin(coin).lower() + 'usdt'
+        key = 'bin:' + ExchangeHandler.rename_original_coin_to_internal(coin).lower() + 'usdt'
         coin_coefficient = ExchangeHandler.get_coin_coefficient(coin)
         self.queue[key] = {
             'a': decimal_to_str(Decimal(ask) * coin_coefficient), 'b': decimal_to_str(Decimal(bid) * coin_coefficient)

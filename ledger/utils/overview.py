@@ -55,7 +55,7 @@ class AssetOverview:
                 kucoin_spot_balances[b['currency']] += Decimal(b['balance'])
 
         self._kucoin_spot_balance_map = {
-            ExchangeHandler.rename_coin_to_big_coin(symbol):
+            ExchangeHandler.rename_original_coin_to_internal(symbol):
                 amount / ExchangeHandler.get_coin_coefficient(symbol)
             for symbol, amount in kucoin_spot_balances.items()
         }
@@ -63,7 +63,7 @@ class AssetOverview:
         mexc_balance_list = MexcSpotHandler().get_account_details()
 
         self._mexc_spot_balance_map = {
-            ExchangeHandler.rename_coin_to_big_coin((b['asset'])):
+            ExchangeHandler.rename_original_coin_to_internal((b['asset'])):
                 float(Decimal(b['free']) / ExchangeHandler.get_coin_coefficient(b['asset']))
             for b in mexc_balance_list.get('balances', [])
         }

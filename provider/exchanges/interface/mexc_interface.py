@@ -41,13 +41,13 @@ class MexcSpotHandler(ExchangeHandler):
         return rename_list.get(network_symbol, network_symbol)
 
     def get_trading_symbol(self, coin: str):
-        coin = self.rename_big_coin_to_coin(coin)
+        coin = self.rename_internal_coin_to_original(coin)
         return coin+'USDT'
 
     def place_order(self, symbol: str, side: str, amount: Decimal, order_type: str = LIMIT,
                     client_order_id: str = None) -> dict:
 
-        coin = self.rename_coin_to_big_coin(symbol[:-4])
+        coin = self.rename_original_coin_to_internal(symbol[:-4])
         coin_coefficient = self.get_coin_coefficient(symbol[:-4])
         price_init = get_price(coin=coin, side=side)
         value = amount * price_init
@@ -81,7 +81,7 @@ class MexcSpotHandler(ExchangeHandler):
         balances_list = self.get_account_details()['balances']
         resp = {}
         for b in balances_list:
-            coin = self.rename_coin_to_big_coin(b['asset'])
+            coin = self.rename_original_coin_to_internal(b['asset'])
             coin_coefficient = self.get_coin_coefficient(b['asset'])
             amount = Decimal(b['free']) / coin_coefficient
             resp[coin] = amount
@@ -92,7 +92,7 @@ class MexcSpotHandler(ExchangeHandler):
 
     def get_coin_data(self, coin: str):
 
-        coin = self.rename_big_coin_to_coin(coin)
+        coin = self.rename_internal_coin_to_original(coin)
         info = list(filter(lambda d: d['coin'] == coin, self.get_all_coins()))
         coin_coefficient = self.get_coin_coefficient(coin)
         if not info:

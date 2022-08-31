@@ -15,6 +15,25 @@ class ExchangeHandler:
     MARKET_TYPE = ''
     NAME = ''
 
+    SYMBOL_MAPPING = {
+        'ELON': '1000ELON',
+        'BABYDOGE': '1M-BABYDOGE',
+        'FLOKI': '1000FLOKI',
+        'QUACK': '1M-QUACK',
+        'STARL': '1000STARL',
+        'SAFEMARS': '1M-SAFEMARS',
+        'R': 'REV',
+    }
+
+    COIN_COEFFICIENTS = {
+        'ELON': Decimal('1000'),
+        'BABYDOGE': Decimal('1000000'),
+        'FLOKI': Decimal('1000'),
+        'QUACK': Decimal('1000000'),
+        'STARL': Decimal('1000'),
+        'SAFEMARS': Decimal('1000000'),
+    }
+
     @classmethod
     def get_handler(cls, name: str):
         from provider.exchanges import BinanceSpotHandler, BinanceFuturesHandler, KucoinSpotHandler, KucoinFuturesHandler, MexcFuturesHandler, MexcSpotHandler
@@ -32,41 +51,18 @@ class ExchangeHandler:
         return mapping.get(name, BinanceSpotHandler)()
 
     @classmethod
-    def rename_coin_to_big_coin(cls, coin: str):
-        rename_list = {
-            'ELON': '1000ELON',
-            'BABYDOGE': '1M-BABYDOGE',
-            'FLOKI': '1000FLOKI',
-            'QUACK': '1M-QUACK',
-            'STARL': '1000STARL',
-            'SAFEMARS': '1M-SAFEMARS',
-        }
-        return rename_list.get(coin, coin)
+    def rename_original_coin_to_internal(cls, coin: str):
+        return cls.SYMBOL_MAPPING.get(coin, coin)
 
     @classmethod
-    def rename_big_coin_to_coin(cls, coin: str):
-        rename_list = {
-            '1000ELON': 'ELON',
-            '1M-BABYDOGE': 'BABYDOGE',
-            '1000FLOKI': 'FLOKI',
-            '1M-QUACK': 'QUACK',
-            '1000STARL': 'STARL',
-            '1M-SAFEMARS': 'SAFEMARS'
-        }
-        return rename_list.get(coin, coin)
+    def rename_internal_coin_to_original(cls, coin: str):
+        reversed_mapping = {v: k for (k, v) in cls.SYMBOL_MAPPING.items()}
+        return reversed_mapping.get(coin, coin)
 
     @classmethod
     def get_coin_coefficient(cls, coin: str):
-        coin = cls.rename_big_coin_to_coin(coin)
-        coin_coefficient = {
-            'ELON': Decimal('1000'),
-            'BABYDOGE': Decimal('1000000'),
-            'FLOKI': Decimal('1000'),
-            'QUACK': Decimal('1000000'),
-            'STARL': Decimal('1000'),
-            'SAFEMARS': Decimal('1000000'),
-        }
-        return coin_coefficient.get(coin, 1)
+        coin = cls.rename_internal_coin_to_original(coin)
+        return cls.COIN_COEFFICIENTS.get(coin, 1)
 
     def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
                     cache_timeout: int = None):
