@@ -67,7 +67,7 @@ class Gateway(models.Model):
     def get_payment_url(cls, authority: str):
         raise NotImplementedError
 
-    def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:
+    def create_payment_request(self, bank_card: BankCard, amount: int, source : str) -> PaymentRequest:
         raise NotImplementedError
 
     def verify(self, payment: Payment):
