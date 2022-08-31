@@ -1,6 +1,8 @@
 from decimal import Decimal
 
 from django.db import models
+from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.utils import timezone
 from yekta_config.config import config
 from accounts.models import Account
@@ -108,7 +110,7 @@ class Payment(models.Model):
 
         self.alert_payment()
 
-    def get_redirect_url(self):
+    def get_redirect_url(self) -> str:
         source = self.payment_request.source
         desktop = PaymentRequest.DESKTOP
 
@@ -122,3 +124,13 @@ class Payment(models.Model):
                 return self.APP_DEEP_LINK + self.APP_SUCCESS_URL
             else:
                 return self.APP_DEEP_LINK + self.APP_FAIL_URL
+
+    def redirect_to_app(self):
+        url = self.get_redirect_url()
+
+        if url.startswith('http'):
+            return redirect(url)
+        else:
+            response = HttpResponse("", status=302)
+            response['Location'] = url
+            return response

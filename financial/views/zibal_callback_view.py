@@ -39,4 +39,4 @@ class ZibalCallbackView(TemplateView):
 
         print('REDIRECTING', payment.get_redirect_url())
 
-        return redirect(payment.get_redirect_url())
+        return payment.redirect_to_app()
