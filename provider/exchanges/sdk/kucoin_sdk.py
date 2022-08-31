@@ -96,10 +96,12 @@ def kucoin_send_signed_request(http_method, url_path, **kwargs):
     else:
         raise NotImplementedError
 
-    return create_provider_request_and_log(
+    resp_data = create_provider_request_and_log(
         name=ProviderRequest.KUCOIN,
         response=response,
         url=url_path,
         method=http_method,
         data=data
-    ).get('data')
+    )
+
+    return resp_data and resp_data.get('data')
