@@ -44,7 +44,7 @@ def create_provider_request_and_log(name: str, response, url: str, method: str, 
         logger.warning(
             'provider request failed',
             extra={
-                'name': name,
+                'provider_name': name,
                 'url': url,
                 'method': method,
                 'payload': data,
