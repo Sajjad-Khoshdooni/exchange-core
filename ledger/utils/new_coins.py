@@ -2,7 +2,7 @@ import math
 from decimal import Decimal
 
 from ledger.models import Asset, Network, NetworkAsset
-from market.utils.fix import create_missing_symbols
+from market.utils.fix import create_symbols_for_asset
 from provider.exchanges.interface.binance_interface import BinanceSpotHandler, BinanceFuturesHandler, ExchangeHandler
 from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 from provider.exchanges.interface.mexc_interface import MexcSpotHandler
@@ -67,7 +67,7 @@ def add_candidate_coins(coins: list, handler: str):
         if not created:
             print('disable old network assets for {}'.format(coin))
 
-    create_missing_symbols()
+        create_symbols_for_asset(asset)
 
 
 def _update_coin_networks(asset: Asset, exchange_handler):
@@ -79,9 +79,6 @@ def _update_coin_networks(asset: Asset, exchange_handler):
         network = Network.objects.filter(symbol=network_symbol)
         if network:
             network.update(
-                address_regex=n.get('addressRegex', ''),
-                min_confirm=n['minConfirm'],
-                unlock_confirm=n.get('unLockConfirm', '0'),
                 kucoin_name=n.get('kucoin_name', '')
             )
             network = network.first()

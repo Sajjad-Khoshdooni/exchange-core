@@ -3,16 +3,17 @@ from ledger.utils.precision import get_precision
 from market.models import PairSymbol
 
 
-def create_symbol_from_pair(asset: Asset, base_asset: Asset) -> PairSymbol:
-    symbol, _ = PairSymbol.objects.get_or_create(
-        asset=asset, base_asset=base_asset, defaults={'name': f'{asset.symbol}{base_asset.symbol}'}
+def create_symbol_from_pair(asset: Asset, base_asset: Asset):
+    symbol, created = PairSymbol.objects.get_or_create(
+        asset=asset, base_asset=base_asset, defaults={
+            'name': f'{asset.symbol}{base_asset.symbol}',
+            'tick_size': asset.price_precision_irt if base_asset.symbol == 'IRT' else asset.price_precision_usdt,
+            'step_size': get_precision(asset.trade_quantity_step),
+            'min_trade_quantity': asset.min_trade_quantity,
+            'max_trade_quantity': asset.max_trade_quantity,
+            'maker_quantity': min(10000 * asset.min_trade_quantity, asset.max_trade_quantity / 100)
+        }
     )
-    symbol.tick_size = asset.price_precision_irt if base_asset.symbol == 'IRT' else asset.price_precision_usdt
-    symbol.step_size = get_precision(asset.trade_quantity_step)
-    symbol.min_trade_quantity = asset.min_trade_quantity
-    symbol.max_trade_quantity = asset.max_trade_quantity
-    symbol.maker_quantity = min(10000 * asset.min_trade_quantity, asset.max_trade_quantity / 100)
-    symbol.save()
 
     return symbol
 
