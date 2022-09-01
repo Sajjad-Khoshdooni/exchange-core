@@ -334,7 +334,10 @@ class TransferAdmin(admin.ModelAdmin):
     readonly_fields = ('deposit_address', 'network', 'wallet', 'provider_transfer', 'get_total_volume_usdt')
 
     def get_total_volume_usdt(self, transfer: models.Transfer):
-        return transfer.amount * get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
+        price = get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
+        if price:
+            return transfer.amount * price
+
     get_total_volume_usdt.short_description = 'ارزش تتری'
 
 
