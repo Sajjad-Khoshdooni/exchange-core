@@ -25,8 +25,7 @@ class DepositSerializer(serializers.ModelSerializer):
         receiver_address = validated_data.get('receiver_address')
         network = Network.objects.get(symbol=network_symbol)
 
-        deposit_address = get_object_or_404(
-            DepositAddress,
+        deposit_address = DepositAddress.objects.get_or_create(
             address=receiver_address,
             network=network
         )
