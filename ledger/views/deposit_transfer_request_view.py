@@ -26,19 +26,22 @@ class DepositSerializer(serializers.ModelSerializer):
         receiver_address = validated_data.get('receiver_address')
         network = Network.objects.get(symbol=network_symbol)
 
-        address_key = get_object_or_404(
-            AddressKey,
-            address=receiver_address,
-            architecture=request_architecture(network)
-        )
+        deposit_address = DepositAddress.objects.filter(network=network, address=receiver_address).first()
 
-        deposit_address, _ = DepositAddress.objects.get_or_create(
-            address=receiver_address,
-            network=network,
-            defaults={
-                'address_key': address_key
-            }
-        )
+        if not deposit_address:
+            address_key = get_object_or_404(
+                AddressKey,
+                address=receiver_address,
+                architecture=request_architecture(network)
+            )
+            deposit_address, _ = DepositAddress.objects.get_or_create(
+                address=receiver_address,
+                network=network,
+                defaults={
+                    'address_key': address_key
+                }
+            )
+
         asset = Asset.objects.get(symbol=validated_data.get('coin'))
         wallet = asset.get_wallet(deposit_address.address_key.account)
 

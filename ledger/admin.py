@@ -409,6 +409,8 @@ class CoinCategoryAdmin(admin.ModelAdmin):
 class AddressKeyAdmin(admin.ModelAdmin):
     list_display = ('address', )
     readonly_fields = ('address', 'account')
+    search_fields = ('address', 'public_address')
+    list_filter = ('architecture', )
 
 
 @admin.register(models.AssetSpreadCategory)
