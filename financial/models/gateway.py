@@ -105,7 +105,7 @@ class Gateway(models.Model):
                 Notification.send(
                     recipient=fast_buy_token.user,
                     title='خرید رمز ارز.',
-                    message='خرید {} {} با موفقیت انجام شد. '.format(fast_buy_token.asset.symbol, fast_buy_token.amount),
+                    message='خرید {} تومان {} با موفقیت انجام شد.'.format(fast_buy_token.asset.symbol, fast_buy_token.amount),
                     level=Notification.SUCCESS
                 )
                 return otc_trade
