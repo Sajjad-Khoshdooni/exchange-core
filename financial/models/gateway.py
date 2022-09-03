@@ -110,8 +110,10 @@ class Gateway(models.Model):
                     level=Notification.SUCCESS
                 )
                 return otc_trade
-            except :
-                pass
+            except Exception as exp:
+                logger.exception('Error in create otc_trade for fast_buy', extra={
+                    'exp': exp
+                })
 
     def _verify(self, payment: Payment):
         raise NotImplementedError
