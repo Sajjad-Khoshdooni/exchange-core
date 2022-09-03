@@ -12,4 +12,5 @@ class SimilarityTestCase(TestCase):
         self.assertTrue(name_similarity('علی امیرآبادی', 'امیرآبادی علی'))
         self.assertTrue(name_similarity('نرگس خاتون عباسي اميري', 'عباسي اميري نرگس خاتون'))
 
-        self.assertTrue(name_similarity('علی عباسی', 'علی عباسیان'))
+        self.assertFalse(name_similarity('علی عباسی', 'علی عباس زاده'))
+        self.assertFalse(name_similarity('علیرضا حسینی', 'علی رضایی'))
