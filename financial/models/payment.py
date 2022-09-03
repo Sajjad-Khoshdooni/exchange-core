@@ -4,7 +4,7 @@ from django.db import models
 from django.utils import timezone
 from yekta_config.config import config
 from accounts.models import Account
-from ledger.models import Trx, Asset
+from ledger.models import Trx, Asset, FastBuyToken
 from ledger.utils.fields import get_group_id_field, get_status_field
 from accounts.models import Notification
 from accounts.utils import email
@@ -46,6 +46,7 @@ class Payment(models.Model):
     PANEL_URL = config('PANEL_URL')
     SUCCESS_URL = '/checkout/success'
     FAIL_URL = '/checkout/fail'
+    SUCCESS_PAYMENT_FAIL_FAST_bUY = ''
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -109,6 +110,7 @@ class Payment(models.Model):
     def get_redirect_url(self):
         source = self.payment_request.source
         desktop = PaymentRequest.DESKTOP
+        fast_by_token = FastBuyToken.objects.filter(payment_request=self.payment_request).last()
 
         if source == desktop:
             url = self.PANEL_URL
@@ -116,7 +118,10 @@ class Payment(models.Model):
             url = self.APP_DEEP_LINK
 
         if self.status == DONE:
-            url += self.SUCCESS_URL
+            if fast_by_token and fast_by_token.status != FastBuyToken.DONE:
+                url += self.SUCCESS_PAYMENT_FAIL_FAST_bUY
+            else:
+                url += self.SUCCESS_URL
         else:
             url += self.FAIL_URL
         return url

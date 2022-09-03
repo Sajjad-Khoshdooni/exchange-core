@@ -15,15 +15,15 @@ from ledger.utils.price import get_price
 
 class FastBuyTokenSerializer(serializers.ModelSerializer):
     coin = CoinField(source='asset')
-    card_pan_id = serializers.CharField(write_only=True)
-    call_back = serializers.SerializerMethodField(read_only=True)
+    bank_card_id = serializers.IntegerField(source='payment_request.bank_card_id')
+    callback = serializers.SerializerMethodField(read_only=True)
 
-    def get_call_back(self, fast_buy_token: FastBuyToken):
+    def get_callback(self, fast_buy_token: FastBuyToken):
         payment_request = fast_buy_token.payment_request
         return payment_request.get_gateway().get_initial_redirect_url(payment_request)
 
     def validate(self, attrs):
-        if attrs['amount'] < 300000:
+        if attrs['amount'] < FastBuyToken.MIN_ADMISSIBLE_VALUE:
             raise ValidationError('حداقل مقدار سفارش 300 هزار تومان است.')
         return attrs
 
@@ -31,17 +31,17 @@ class FastBuyTokenSerializer(serializers.ModelSerializer):
         request = self.context['request']
         payment_request_serializer = PaymentRequestSerializer()
         payment_request_serializer.context['request'] = request
-        validated_data['card_pan'] = BankCard.objects.get(id=validated_data['card_pan_id']).card_pan
+        card_pan = BankCard.objects.get(id=validated_data['payment_request']['bank_card_id']).card_pan
+        validated_data['card_pan'] = card_pan
         validated_data['payment_request'] = payment_request_serializer.create(validated_data)
         validated_data['user'] = request.user
-        validated_data.pop('card_pan_id')
         validated_data.pop('card_pan')
         validated_data['price'] = get_price(coin=validated_data['asset'].symbol, side='sell') or 0
         return super().create(validated_data)
 
     class Meta:
         model = FastBuyToken
-        fields = ('coin', 'amount', 'card_pan_id', 'call_back')
+        fields = ('coin', 'amount', 'bank_card_id', 'call_back')
 
 
 class FastBuyTokenAPI(CreateAPIView):

@@ -5,6 +5,7 @@ from ledger.utils.precision import get_presentation_amount
 
 class FastBuyToken(models.Model):
     PROCESS, DEPOSIT, DONE = 'process', 'deposit', 'done'
+    MIN_ADMISSIBLE_VALUE = 300000
 
     CHOICE_STATUS = ((PROCESS, PROCESS), (DEPOSIT, DEPOSIT), (DONE, DONE))
 
@@ -13,6 +14,7 @@ class FastBuyToken(models.Model):
     amount = get_amount_field()
     price = get_amount_field()
     payment_request = models.OneToOneField('financial.PaymentRequest', on_delete=models.CASCADE)
+    otc_request = models.OneToOneField('OTCRequest', on_delete=models.CASCADE, null=True)
     created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
     status = models.CharField(max_length=16, choices=CHOICE_STATUS, default=PROCESS)
 

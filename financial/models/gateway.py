@@ -77,13 +77,15 @@ class Gateway(models.Model):
         raise NotImplementedError
 
     def verify(self, payment: Payment):
-        raise NotImplementedError
+        self._verify(payment=payment)
+        fast_buy_token = FastBuyToken.objects.filter(payment_request=payment.payment_request).last()
+        if fast_buy_token:
+            self.otc_creator_for_fast_buy_token(fast_buy_token=fast_buy_token, payment=payment)
 
-    def _verify(self, payment: Payment):
-        self.verify(payment=payment)
-        fast_buy_token = payment.payment_request.fastbuytoken
+    def otc_creator_for_fast_buy_token(self, fast_buy_token: FastBuyToken, payment: Payment):
+
         fast_buy_token.status = FastBuyToken.DEPOSIT
-        fast_buy_token.save()
+        fast_buy_token.save(update_fields=['status'])
         if payment.status == DONE and fast_buy_token:
             otc_request = OTCRequest.new_trade(
                 account=fast_buy_token.user.account,
@@ -92,6 +94,8 @@ class Gateway(models.Model):
                 from_amount=fast_buy_token.amount,
                 market=Wallet.SPOT,
             )
+            fast_buy_token.otc_request = otc_request
+            fast_buy_token.save(update_fields=['status'])
 
             otc_trade = OTCTrade.objects.filter(otc_request=otc_request).first()
             if otc_trade:
@@ -100,23 +104,21 @@ class Gateway(models.Model):
             try:
                 otc_trade = OTCTrade.execute_trade(otc_request)
                 fast_buy_token.status = FastBuyToken.DONE
-                fast_buy_token.save()
+                fast_buy_token.save(update_fields=['status'])
 
                 Notification.send(
                     recipient=fast_buy_token.user,
                     title='خرید رمز ارز.',
-                    message='خرید {} تومان {} با موفقیت انجام شد.'.format(fast_buy_token.asset.symbol, fast_buy_token.amount),
+                    message='خرید {} تومان {} با موفقیت انجام شد.'.format(fast_buy_token.asset.symbol,
+                                                                          fast_buy_token.amount),
                     level=Notification.SUCCESS
                 )
                 return otc_trade
-            except TokenExpired:
-                raise ValidationError({'token': 'سفارش منقضی شده است. لطفا دوباره اقدام کنید.'})
-            except InvalidAmount as e:
-                raise ValidationError(str(e))
-            except AbruptDecrease as e:
-                raise ValidationError('مشکلی در ثبت سفارش رخ داد.')
-            except ProcessingError as e:
-                raise ValidationError('مشکلی در پردازش سفارش رخ داد.')
+            except :
+                pass
+
+    def _verify(self, payment: Payment):
+        raise NotImplementedError
 
     def __str__(self):
         return self.name
