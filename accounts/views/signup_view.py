@@ -16,7 +16,6 @@ from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
 from accounts.utils.validation import set_login_activity
 from accounts.validators import mobile_number_validator, password_validator
-from financial.models import MarketingSource
 
 
 class InitiateSignupSerializer(serializers.Serializer):
