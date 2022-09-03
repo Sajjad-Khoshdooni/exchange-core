@@ -195,9 +195,9 @@ class DepositAddressUserFilter(admin.SimpleListFilter):
 
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_display = ('address_key', 'network', 'address', 'is_registered',)
-    readonly_fields = ('address_key', 'network', 'address', 'is_registered',)
-    list_filter = ('network', 'is_registered', DepositAddressUserFilter )
+    list_display = ('address_key', 'network', 'address',)
+    readonly_fields = ('address_key', 'network', 'address',)
+    list_filter = ('network', DepositAddressUserFilter)
     search_fields = ('address',)
 
 
@@ -334,7 +334,10 @@ class TransferAdmin(admin.ModelAdmin):
     readonly_fields = ('deposit_address', 'network', 'wallet', 'provider_transfer', 'get_total_volume_usdt')
 
     def get_total_volume_usdt(self, transfer: models.Transfer):
-        return transfer.amount * get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
+        price = get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
+        if price:
+            return transfer.amount * price
+
     get_total_volume_usdt.short_description = 'ارزش تتری'
 
 
@@ -406,6 +409,8 @@ class CoinCategoryAdmin(admin.ModelAdmin):
 class AddressKeyAdmin(admin.ModelAdmin):
     list_display = ('address', )
     readonly_fields = ('address', 'account')
+    search_fields = ('address', 'public_address')
+    list_filter = ('architecture', )
 
 
 @admin.register(models.AssetSpreadCategory)
@@ -430,8 +435,18 @@ class CategorySpreadAdmin(admin.ModelAdmin):
 @admin.register(models.SystemSnapshot)
 class SystemSnapshotAdmin(admin.ModelAdmin):
     list_display = ('created', 'total', 'users', 'exchange', 'exchange_potential', 'hedge', 'cumulated_hedge',
-                    'binance_futures', 'binance_spot', 'internal', 'fiat_gateway', 'investment', 'cash', 'prize')
+                    'binance_futures', 'binance_spot', 'kucoin_spot', 'mexc_spot', 'internal', 'fiat_gateway',
+                    'investment', 'cash', 'prize', 'verified')
     ordering = ('-created', )
+    actions = ('reject_histories', 'verify_histories')
+
+    @admin.action(description='رد', permissions=['change'])
+    def reject_histories(self, request, queryset):
+        queryset.update(verified=False)
+
+    @admin.action(description='تایید', permissions=['change'])
+    def verify_histories(self, request, queryset):
+        queryset.update(verified=True)
 
 
 @admin.register(models.AssetSnapshot)

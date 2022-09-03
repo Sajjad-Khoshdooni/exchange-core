@@ -20,6 +20,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         amount = validated_data['amount']
         card_pan = validated_data['card_pan']
+        source = validated_data.get('source', PaymentRequest.DESKTOP)
 
         user = self.context['request'].user
         bank_card = get_object_or_404(BankCard, card_pan=card_pan, user=user, verified=True, deleted=False)
@@ -31,7 +32,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
         gateway = Gateway.get_active(user)
 
         try:
-            return gateway.create_payment_request(bank_card=bank_card, amount=amount)
+            return gateway.create_payment_request(bank_card=bank_card, amount=amount, source=source)
         except GatewayFailed:
             raise ValidationError('مشکلی در ارتباط با درگاه بانک به وجود آمد.')
 

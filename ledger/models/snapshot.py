@@ -54,5 +54,7 @@ class SystemSnapshot(models.Model):
     binance_futures_available_balance = get_amount_field()
     binance_futures_margin_ratio = get_amount_field()
 
+    verified = models.BooleanField(default=True)
+
     class Meta:
         verbose_name = verbose_name_plural = 'تاریخچه سیستم'
