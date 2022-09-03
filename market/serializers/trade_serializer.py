@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from ledger.models import Asset
 from ledger.models.asset import AssetSerializerMini
-from ledger.utils.precision import floor_precision
+from ledger.utils.precision import floor_precision, decimal_to_str
 from market.models import Trade, Order
 
 
@@ -23,8 +23,8 @@ class AccountTradeSerializer(serializers.ModelSerializer):
         if not amount:
             amount = floor_precision(trade.symbol.min_trade_quantity, trade.symbol.step_size)
         data['amount'] = str(amount)
-        data['price'] = str(floor_precision(Decimal(data['price']), trade.symbol.tick_size))
-        data['pair_amount'] = str(floor_precision(Decimal(data['pair_amount']), trade.symbol.tick_size))
+        data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), trade.symbol.tick_size))
+        data['pair_amount'] = decimal_to_str(floor_precision(Decimal(data['pair_amount']), trade.symbol.tick_size))
         if 'fee_amount' in data:
             if data['side'] == Order.BUY:
                 data['fee_amount'] = trade.symbol.asset.get_presentation_amount(data['fee_amount'])

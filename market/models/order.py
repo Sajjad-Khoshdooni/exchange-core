@@ -16,7 +16,7 @@ from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_group_id_field
-from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent
+from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent, decimal_to_str
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
@@ -389,10 +389,10 @@ class Order(models.Model):
         grouped_by_price = [(i[0], list(i[1])) for i in groupby(sorted(orders, key=key_func), key=key_func)]
         return [{
             'price': str(price),
-            'amount': str(floor_precision(sum(map(lambda i: i['unfilled_amount'], price_orders)), symbol.step_size)),
+            'amount': decimal_to_str(floor_precision(sum(map(lambda i: i['unfilled_amount'], price_orders)), symbol.step_size)),
             'depth': Order.get_depth_value(sum(map(lambda i: i['unfilled_amount'], price_orders)), price,
                                            symbol.base_asset.symbol),
-            'total': str(floor_precision(sum(map(lambda i: i['unfilled_amount'] * price, price_orders)), 0))
+            'total': decimal_to_str(floor_precision(sum(map(lambda i: i['unfilled_amount'] * price, price_orders)), 0))
         } for price, price_orders in grouped_by_price]
 
     @staticmethod

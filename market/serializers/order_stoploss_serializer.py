@@ -5,7 +5,7 @@ from typing import Union
 from rest_framework import serializers
 
 from ledger.models import Wallet
-from ledger.utils.precision import floor_precision
+from ledger.utils.precision import floor_precision, decimal_to_str
 from market.models import Order, StopLoss
 
 logger = logging.getLogger(__name__)
@@ -22,9 +22,9 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance: Union[Order, StopLoss]):
         data = super(OrderStopLossSerializer, self).to_representation(instance)
-        data['amount'] = str(floor_precision(Decimal(data['amount']), instance.symbol.step_size))
+        data['amount'] = decimal_to_str(floor_precision(Decimal(data['amount']), instance.symbol.step_size))
         if data['price']:
-            data['price'] = str(floor_precision(Decimal(data['price']), instance.symbol.tick_size))
+            data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), instance.symbol.tick_size))
         data['symbol'] = instance.symbol.name
         return data
 
@@ -42,12 +42,12 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
         return instance.status
 
     def get_filled_amount(self, instance: Union[Order, StopLoss]):
-        return str(floor_precision(instance.filled_amount, instance.symbol.step_size))
+        return decimal_to_str(floor_precision(instance.filled_amount, instance.symbol.step_size))
 
     def get_trigger_price(self, instance: Union[Order, StopLoss]):
         if isinstance(instance, Order):
             return None
-        return str(floor_precision(instance.trigger_price, instance.symbol.tick_size))
+        return decimal_to_str(floor_precision(instance.trigger_price, instance.symbol.tick_size))
 
     def get_filled_price(self, instance: Union[Order, StopLoss]):
         order = instance if isinstance(instance, Order) else instance.order_set.first()
@@ -58,7 +58,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
         if not amount:
             return None
         price = Decimal((fills_value or 0)) / amount
-        return str(floor_precision(price, order.symbol.tick_size))
+        return decimal_to_str(floor_precision(price, order.symbol.tick_size))
 
     class Meta:
         model = Order
