@@ -19,14 +19,6 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    'register_address': {
-        'task': 'ledger.tasks.register_address.register_address',
-        'schedule': 30,
-        'options': {
-            'queue': 'blocklink',
-            'expire': 30
-        }
-    },
     'coin_market_cap_update': {
         'task': 'collector.tasks.coin_market_cap.update_coin_market_cap',
         'schedule': crontab(minute="*/30"),

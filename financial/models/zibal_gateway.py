@@ -11,7 +11,7 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 class ZibalGateway(Gateway):
     BASE_URL = 'https://gateway.zibal.ir'
 
-    def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:
+    def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
         resp = requests.post(
             self.BASE_URL + '/v1/request',
             json={
@@ -32,7 +32,8 @@ class ZibalGateway(Gateway):
             bank_card=bank_card,
             amount=amount,
             gateway=self,
-            authority=authority
+            authority=authority,
+            source=source,
         )
 
     @classmethod

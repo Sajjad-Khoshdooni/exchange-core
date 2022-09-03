@@ -73,20 +73,20 @@ class Gateway(models.Model):
     def get_payment_url(cls, authority: str):
         raise NotImplementedError
 
-    def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:
+    def create_payment_request(self, bank_card: BankCard, amount: int, source : str) -> PaymentRequest:
         raise NotImplementedError
 
     def verify(self, payment: Payment):
         self._verify(payment=payment)
         fast_buy_token = FastBuyToken.objects.filter(payment_request=payment.payment_request).last()
         if fast_buy_token:
-            self.otc_creator_for_fast_buy_token(fast_buy_token=fast_buy_token, payment=payment)
+            self.create_otc_for_fast_buy_token(fast_buy_token=fast_buy_token, payment=payment)
 
-    def otc_creator_for_fast_buy_token(self, fast_buy_token: FastBuyToken, payment: Payment):
+    def create_otc_for_fast_buy_token(self, fast_buy_token: FastBuyToken, payment: Payment):
 
         fast_buy_token.status = FastBuyToken.DEPOSIT
         fast_buy_token.save(update_fields=['status'])
-        if payment.status == DONE and fast_buy_token:
+        if payment.status == DONE:
             otc_request = OTCRequest.new_trade(
                 account=fast_buy_token.user.account,
                 from_asset=Asset.get('IRT'),
@@ -95,9 +95,7 @@ class Gateway(models.Model):
                 market=Wallet.SPOT,
             )
             fast_buy_token.otc_request = otc_request
-            fast_buy_token.save(update_fields=['status'])
-
-            otc_trade = OTCTrade.objects.filter(otc_request=otc_request).first()
+            fast_buy_token.save(update_fields=['otc_request'])
 
             try:
                 otc_trade = OTCTrade.execute_trade(otc_request)

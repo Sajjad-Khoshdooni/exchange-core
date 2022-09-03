@@ -41,7 +41,7 @@ class FastBuyTokenSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FastBuyToken
-        fields = ('coin', 'amount', 'bank_card_id', 'call_back')
+        fields = ('coin', 'amount', 'bank_card_id', 'callback')
 
 
 class FastBuyTokenAPI(CreateAPIView):

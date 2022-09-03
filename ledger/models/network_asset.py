@@ -1,7 +1,6 @@
 from django.db import models
 from django.db.models import CheckConstraint, Q
 
-from ledger.consts import BEP20_SYMBOL_TO_SMART_CONTRACT
 from ledger.utils.fields import get_amount_field
 
 
