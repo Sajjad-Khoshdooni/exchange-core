@@ -8,7 +8,7 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory
+from ledger.models import Asset, Prize, CoinCategory, FastBuyToken
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
@@ -459,3 +459,14 @@ class AssetSnapshotAdmin(admin.ModelAdmin):
         return asset_snapshot.calc_hedge_amount - asset_snapshot.hedge_amount
 
     get_hedge_diff.short_description = 'hedge diff'
+
+
+@admin.register(models.FastBuyToken)
+class FastBuyTokenAdmin(admin.ModelAdmin):
+    list_display = ['user', 'asset', 'get_amount', 'status', 'created', ]
+    readonly_fields = ('get_amount',)
+    list_filter = ('status', )
+
+    def get_amount(self, fast_buy_token: FastBuyToken):
+        return get_presentation_amount(fast_buy_token.amount)
+    get_amount.short_description = 'مقدار'

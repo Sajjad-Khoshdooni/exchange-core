@@ -59,7 +59,7 @@ class PaydotirGateway(Gateway):
     def get_payment_url(cls, authority: str):
         return 'https://pay.ir/pg/{}'.format(authority)
 
-    def verify(self, payment: Payment):
+    def _verify(self, payment: Payment):
         payment_request = payment.payment_request
 
         resp = requests.post(

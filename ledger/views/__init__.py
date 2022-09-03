@@ -15,3 +15,4 @@ from .deposit_transfer_request_view import DepositTransferUpdateView
 from .withdraw_transfer_request_view import WithdrawTransferUpdateView
 from .pnl_views import PNLOverview
 from .reserve_view import ReserveWalletCreateAPIView, ReserveWalletRefundAPIView
+from .fast_buy_token_view import FastBuyTokenAPI

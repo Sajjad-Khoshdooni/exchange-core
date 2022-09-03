@@ -6,7 +6,7 @@ from django.shortcuts import redirect
 from django.utils import timezone
 from yekta_config.config import config
 from accounts.models import Account
-from ledger.models import Trx, Asset
+from ledger.models import Trx, Asset, FastBuyToken
 from ledger.utils.fields import get_group_id_field, get_status_field
 from accounts.models import Notification
 from accounts.utils import email
@@ -48,8 +48,7 @@ class Payment(models.Model):
     PANEL_URL = config('PANEL_URL')
     SUCCESS_URL = '/checkout/success'
     FAIL_URL = '/checkout/fail'
-    APP_SUCCESS_URL = '/Checkout/success'
-    APP_FAIL_URL = '/Checkout/fail'
+    SUCCESS_PAYMENT_FAIL_FAST_bUY = '/checkout/fail_trade'
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -113,15 +112,22 @@ class Payment(models.Model):
     def get_redirect_url(self) -> str:
         source = self.payment_request.source
         desktop = PaymentRequest.DESKTOP
+        fast_by_token = FastBuyToken.objects.filter(payment_request=self.payment_request).last()
 
         if source == desktop:
             if self.status == DONE:
-                return self.PANEL_URL + self.SUCCESS_URL
+                if fast_by_token and fast_by_token.status != FastBuyToken.DONE:
+                    return self.PANEL_URL + self.SUCCESS_PAYMENT_FAIL_FAST_bUY
+                else:
+                    return self.PANEL_URL + self.SUCCESS_URL
             else:
                 return self.PANEL_URL + self.FAIL_URL
         else:
             if self.status == DONE:
-                return 'intent://Checkout/success/#Intent;scheme=raastin;package=com.raastinappts;end'
+                if fast_by_token and fast_by_token.status != FastBuyToken.DONE:
+                    return 'intent://Checkout/success/#Intent;scheme=raastin;package=com.raastinappts;end'
+                else:
+                    return 'intent://Checkout/success/#Intent;scheme=raastin;package=com.raastinappts;end'
             else:
                 return 'intent://Checkout/fail/#Intent;scheme=raastin;package=com.raastinappts;end'
 
