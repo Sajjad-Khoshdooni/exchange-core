@@ -435,8 +435,18 @@ class CategorySpreadAdmin(admin.ModelAdmin):
 @admin.register(models.SystemSnapshot)
 class SystemSnapshotAdmin(admin.ModelAdmin):
     list_display = ('created', 'total', 'users', 'exchange', 'exchange_potential', 'hedge', 'cumulated_hedge',
-                    'binance_futures', 'binance_spot', 'internal', 'fiat_gateway', 'investment', 'cash', 'prize')
+                    'binance_futures', 'binance_spot', 'kucoin_spot', 'mexc_spot', 'internal', 'fiat_gateway',
+                    'investment', 'cash', 'prize', 'verified')
     ordering = ('-created', )
+    actions = ('reject_histories', 'verify_histories')
+
+    @admin.action(description='رد', permissions=['change'])
+    def reject_histories(self, request, queryset):
+        queryset.update(verified=False)
+
+    @admin.action(description='تایید', permissions=['change'])
+    def verify_histories(self, request, queryset):
+        queryset.update(verified=True)
 
 
 @admin.register(models.AssetSnapshot)
