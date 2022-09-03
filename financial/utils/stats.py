@@ -3,7 +3,7 @@ from ledger.utils.cache import cache_for
 
 
 @cache_for(time=60)
-def get_total_fiat_irt():
+def get_total_fiat_irt(strict: bool = False):
     channels = [ZibalChannel(), PayirChannel()]
 
     total = 0
@@ -13,6 +13,9 @@ def get_total_fiat_irt():
             try:
                 total += channel.get_total_wallet_irt_value()
             except:
+                if strict:
+                    raise
+
                 continue
 
     return total

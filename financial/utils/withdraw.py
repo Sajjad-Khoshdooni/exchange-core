@@ -209,7 +209,6 @@ class PayirChannel(FiatWithdraw):
 
 
 class ZibalChannel(FiatWithdraw):
-
     def get_wallet_id(self):
         return config('ZIBAL_WALLET_ID', cast=int)
 
