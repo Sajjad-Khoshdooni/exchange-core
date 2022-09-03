@@ -32,7 +32,7 @@ class DepositSerializer(serializers.ModelSerializer):
             architecture=request_architecture(network)
         )
 
-        deposit_address = DepositAddress.objects.get_or_create(
+        deposit_address, _ = DepositAddress.objects.get_or_create(
             address=receiver_address,
             network=network,
             defaults={
