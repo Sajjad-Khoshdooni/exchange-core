@@ -13,3 +13,16 @@ class Image(models.Model):
 
     def __str__(self):
         return self.get_absolute_image_url()
+
+
+class Banner(models.Model):
+    title = models.CharField(max_length=64)
+    image = models.ImageField()
+    link = models.URLField()
+    active = models.BooleanField(default=True)
+
+    def get_absolute_image_url(self):
+        return settings.HOST_URL + self.image.url
+
+    def __str__(self):
+        return self.get_absolute_image_url()
