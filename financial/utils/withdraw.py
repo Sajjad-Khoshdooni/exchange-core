@@ -38,9 +38,9 @@ class FiatWithdraw:
     @classmethod
     def get_withdraw_channel(cls, channel) -> 'FiatWithdraw':
         mapping = {
-            FiatWithdrawRequest.PAYIR: PayirChanel,
-            FiatWithdrawRequest.ZIBAL: ZibalChanel,
-            FiatWithdrawRequest.ZARINPAL: ZarinpalChanel
+            FiatWithdrawRequest.PAYIR: PayirChannel,
+            FiatWithdrawRequest.ZIBAL: ZibalChannel,
+            FiatWithdrawRequest.ZARINPAL: ZarinpalChannel
         }
         return mapping[channel]()
 
@@ -69,7 +69,7 @@ class FiatWithdraw:
         pass
 
 
-class PayirChanel(FiatWithdraw):
+class PayirChannel(FiatWithdraw):
 
     def get_wallet_id(self):
         return config('PAY_IR_WALLET_ID', cast=int)
@@ -208,7 +208,7 @@ class PayirChanel(FiatWithdraw):
         return bool(config('PAY_IR_TOKEN', ''))
 
 
-class ZibalChanel(FiatWithdraw):
+class ZibalChannel(FiatWithdraw):
 
     def get_wallet_id(self):
         return config('ZIBAL_WALLET_ID', cast=int)
@@ -278,7 +278,11 @@ class ZibalChanel(FiatWithdraw):
             'uniqueCode': request_id,
             'wageFeeMode': 2,
             'checkoutDelay': checkout_delay,
+            'showTime': True
         })
+
+        print('zibal withdraw')
+        print(data)
 
         return Withdraw(
             tracking_id=data['id'],
@@ -374,7 +378,7 @@ class ZibalChanel(FiatWithdraw):
             payment_request.get_gateway().verify(payment)
 
 
-class ZarinpalChanel(FiatWithdraw):
+class ZarinpalChannel(FiatWithdraw):
 
     def get_total_wallet_irt_value(self):
         return 0

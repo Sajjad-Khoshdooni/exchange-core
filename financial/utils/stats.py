@@ -1,10 +1,10 @@
-from financial.utils.withdraw import ZibalChanel, PayirChanel
+from financial.utils.withdraw import ZibalChannel, PayirChannel
 from ledger.utils.cache import cache_for
 
 
 @cache_for(time=60)
 def get_total_fiat_irt():
-    channels = [ZibalChanel(), PayirChanel()]
+    channels = [ZibalChannel(), PayirChannel()]
 
     total = 0
 
