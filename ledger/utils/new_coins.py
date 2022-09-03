@@ -35,7 +35,7 @@ def add_candidate_coins(coins: list, handler: str):
             print('%s not found or stopped trading in interface spot' % spot_symbol)
             continue
 
-        asset, created = Asset.objects.get_or_create(symbol=ExchangeHandler.rename_coin_to_big_coin(coin))
+        asset, created = Asset.objects.get_or_create(symbol=ExchangeHandler.rename_original_coin_to_internal(coin))
 
         asset.hedge_method = hedger_mapping[handler]
 
@@ -65,7 +65,8 @@ def add_candidate_coins(coins: list, handler: str):
         _update_coin_networks(asset=asset, exchange_handler=exchange_handler)
 
         if not created:
-            print('disable old networkasset for {}'.format(coin))
+            print('disable old network assets for {}'.format(coin))
+
     create_missing_symbols()
 
 

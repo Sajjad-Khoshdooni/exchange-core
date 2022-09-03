@@ -27,8 +27,8 @@ class ProviderHedgedOrderAdmin(admin.ModelAdmin):
     search_fields = ('asset__symbol', 'caller_id')
 
 
-@admin.register(models.BinanceRequests)
-class BinanceRequestsAdmin(admin.ModelAdmin):
+@admin.register(models.ProviderRequest)
+class ProviderRequestsAdmin(admin.ModelAdmin):
     list_display = ('created', 'method', 'url', 'data', 'status_code')
     search_fields = ('url', 'status_code')
     list_filter = ('status_code', 'method',)

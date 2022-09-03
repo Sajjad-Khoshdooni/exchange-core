@@ -3,7 +3,8 @@ from decimal import Decimal
 from django.conf import settings
 
 from ledger.utils.precision import decimal_to_str
-from provider.exchanges.interface.binance_interface import ExchangeHandler, SELL, BUY, MARKET, LIMIT, HOUR
+from provider.exchanges import ExchangeHandler
+from provider.exchanges.interface.binance_interface import SELL, BUY, MARKET, LIMIT, HOUR
 from provider.exchanges.sdk.kucoin_sdk import kucoin_send_signed_request, kucoin_spot_send_public_request
 
 
@@ -30,7 +31,7 @@ class KucoinSpotHandler(ExchangeHandler):
             return kucoin_spot_send_public_request(url, data=data)
 
     def get_trading_symbol(self, coin: str) -> str:
-        coin = self.rename_big_coin_to_coin(coin)
+        coin = self.rename_internal_coin_to_original(coin)
         return coin + '-' + 'USDT'
 
     def place_order(self, symbol: str, side: str, amount: Decimal, order_type: str = MARKET,
@@ -60,7 +61,7 @@ class KucoinSpotHandler(ExchangeHandler):
                  address_tag: str = None, client_id: str = None, memo: str = None) -> dict:
 
         # todo: add memo variant
-        coin = self.rename_big_coin_to_coin(coin)
+        coin = self.rename_internal_coin_to_original(coin)
         coefficient_coin = self.get_coin_coefficient(coin)
 
         amount = transfer_amount + fee_amount
@@ -95,7 +96,7 @@ class KucoinSpotHandler(ExchangeHandler):
         resp = {}
         for b in balances_list:
             if b['type'] == 'trade':
-                coin = self.rename_coin_to_big_coin(b['currency'])
+                coin = self.rename_original_coin_to_internal(b['currency'])
                 coin_coefficient = self.get_coin_coefficient(b['currency'])
                 amount = Decimal(b['available']) / coin_coefficient
                 resp[coin] = amount
@@ -105,7 +106,7 @@ class KucoinSpotHandler(ExchangeHandler):
         return self.collect_api('/api/v1/currencies', method='GET', cache_timeout=HOUR)
 
     def get_coin_data(self, coin: str):
-        coin = self.rename_big_coin_to_coin(coin)
+        coin = self.rename_internal_coin_to_original(coin)
         resp = self.collect_api('/api/v2/currencies/{}'.format(coin), method='GET', cache_timeout=HOUR)
         coin_coefficient = self.get_coin_coefficient(coin)
 
@@ -142,7 +143,7 @@ class KucoinSpotHandler(ExchangeHandler):
         return Decimal(info.get('withdrawFee'))
 
     def transfer(self, asset: str, amount: Decimal, to: str, client_oid: str, _from=TRADE):
-        asset = self.rename_big_coin_to_coin(asset)
+        asset = self.rename_internal_coin_to_original(asset)
         coefficient_coin = self.get_coin_coefficient(asset)
         amount = amount * coefficient_coin
         return self.collect_api(

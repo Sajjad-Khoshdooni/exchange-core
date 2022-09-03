@@ -1,3 +1,4 @@
+from collections import defaultdict
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -47,17 +48,22 @@ class AssetOverview:
         self._binance_spot_balance_map = {b['asset']: float(b['free']) for b in binance_balances_list}
 
         kucoin_balances_list = KucoinSpotHandler().get_account_details()
+        kucoin_spot_balances = defaultdict(Decimal)
+
+        for b in kucoin_balances_list:
+            if b['type'] in ['trade', 'main']:
+                kucoin_spot_balances[b['currency']] += Decimal(b['balance'])
 
         self._kucoin_spot_balance_map = {
-            ExchangeHandler.rename_coin_to_big_coin(b['currency']):
-                float(Decimal(b['available']) / ExchangeHandler.get_coin_coefficient(b['currency']))
-            for b in kucoin_balances_list
+            ExchangeHandler.rename_original_coin_to_internal(symbol):
+                amount / ExchangeHandler.get_coin_coefficient(symbol)
+            for symbol, amount in kucoin_spot_balances.items()
         }
 
         mexc_balance_list = MexcSpotHandler().get_account_details()
 
         self._mexc_spot_balance_map = {
-            ExchangeHandler.rename_coin_to_big_coin((b['asset'])):
+            ExchangeHandler.rename_original_coin_to_internal((b['asset'])):
                 float(Decimal(b['free']) / ExchangeHandler.get_coin_coefficient(b['asset']))
             for b in mexc_balance_list.get('balances', [])
         }
@@ -221,18 +227,30 @@ class AssetOverview:
         total = Decimal(0)
 
         for symbol, amount in self._internal_deposits.items():
+            if not amount:
+                continue
+
             total += amount * self.get_price(symbol)
 
         return total
 
-    def get_hedge_value(self, asset: Asset):
-        return Decimal(self.get_hedge_amount(asset)) * self.get_price(asset.symbol)
+    def get_hedge_value(self, asset: Asset) -> Decimal:
+        amount = Decimal(self.get_hedge_amount(asset))
+
+        if not amount:
+            return Decimal(0)
+
+        return amount * self.get_price(asset.symbol)
 
     def get_users_asset_amount(self, asset: Asset) -> Decimal:
         return self._users_per_asset_balances.get(asset.symbol, 0)
 
     def get_users_asset_value(self, asset: Asset) -> Decimal:
         balance = self.get_users_asset_amount(asset)
+
+        if not balance:
+            return Decimal(0)
+
         return balance * self.get_price(asset.symbol)
 
     def get_all_users_asset_value(self) -> Decimal:

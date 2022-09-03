@@ -68,7 +68,7 @@ class KucoinConsumer:
             data_str = self.socket.recv()
             data = json.loads(data_str)
             now = int(time.time())
-            if now - timestamp > 45:
+            if now - timestamp > 15:
                 timestamp = now
                 self.socket.send(json.dumps({'id': socket_id, "type": "ping"}))
             self.handle_stream_data(data)
@@ -92,7 +92,7 @@ class KucoinConsumer:
 
         symbol = symbol.split('-')
 
-        key = 'bin:' + ExchangeHandler.rename_coin_to_big_coin(symbol[0]).lower() + symbol[1].lower()
+        key = 'bin:' + ExchangeHandler.rename_original_coin_to_internal(symbol[0]).lower() + symbol[1].lower()
         coin_coefficient = ExchangeHandler.get_coin_coefficient(symbol[0])
         self.queue[key] = {
             'a': decimal_to_str(Decimal(ask) * coin_coefficient), 'b': decimal_to_str(Decimal(bid) * coin_coefficient)
@@ -136,5 +136,3 @@ class KucoinConsumer:
                 data = KucoinSpotHandler().get_orderbook(coin)
                 self.handle_stream_data(data)
             time.sleep(1)
-
-
