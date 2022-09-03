@@ -37,12 +37,17 @@ goal_groups = [
 ]
 
 
+def move_first(arr: list, index: int) -> list:
+    return arr[index: index + 1] + arr[:index] + arr[index + 1:]
+
+
 def get_groups_data(account, only_active=False):
     groups = []
 
     activated = False
+    active_index = None
 
-    for group in goal_groups:
+    for i, group in enumerate(goal_groups):
         data = group.as_dict(account)
 
         if not list(filter(lambda achievement: achievement['fake'], data['achievements'])):
@@ -50,6 +55,7 @@ def get_groups_data(account, only_active=False):
 
             if data['active']:
                 activated = True
+                active_index = i
 
                 if only_active:
                     return data
@@ -59,7 +65,7 @@ def get_groups_data(account, only_active=False):
     if only_active:
         return
 
-    return groups
+    return move_first(groups, active_index)
 
 
 def check_prize_achievements(account: Account):
