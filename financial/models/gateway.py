@@ -98,8 +98,6 @@ class Gateway(models.Model):
             fast_buy_token.save(update_fields=['status'])
 
             otc_trade = OTCTrade.objects.filter(otc_request=otc_request).first()
-            if otc_trade:
-                return otc_trade
 
             try:
                 otc_trade = OTCTrade.execute_trade(otc_request)
