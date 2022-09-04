@@ -18,7 +18,7 @@ class Image(models.Model):
 class Banner(models.Model):
     title = models.CharField(max_length=64)
     image = models.ImageField()
-    link = models.URLField()
+    link = models.CharField(max_length=256)
     active = models.BooleanField(default=True)
     order = models.PositiveSmallIntegerField()
 

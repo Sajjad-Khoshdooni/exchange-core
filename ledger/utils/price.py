@@ -171,9 +171,7 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
             name = 'bin:' + get_binance_price_stream(c) + ':stale'
             price_dict = price_redis.hgetall(name)
 
-            logger.error('coin price fallback to stale', extra={
-                'coin': c
-            })
+            logger.error('{} price fallback to stale'.format(c))
 
         for s in sides:
             price = price_dict.get(SIDE_MAP[s])
