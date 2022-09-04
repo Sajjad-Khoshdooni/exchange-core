@@ -24,6 +24,7 @@ class BinanceConsumer:
         self.loop = True
         self.socket = websocket.WebSocket()
         self.queue = {}
+        self.stale_queue = {}
         self.last_flush_time = time.time()
         self.last_stale_flush_time = 0
         self.verbose = verbose
@@ -78,6 +79,9 @@ class BinanceConsumer:
         self.queue[key] = {
             'a': ask, 'b': bid
         }
+        self.stale_queue[key + ':stale'] = {
+            'a': ask, 'b': bid
+        }
 
         _now = time.time()
 
@@ -98,10 +102,12 @@ class BinanceConsumer:
             pipe.hset(name=name, mapping=data)
             pipe.expire(name, 30)  # todo: reduce this to 10 for volatile coins
 
-            if stale:
-                stale_name = name + ':stale'
-                pipe.hset(name=stale_name, mapping=data)
-                pipe.expire(stale_name, DAY)
+        if stale:
+            for (name, data) in self.stale_queue.items():
+                pipe.hset(name=name, mapping=data)
+                pipe.expire(name, DAY)
+
+            self.stale_queue = {}
 
         pipe.execute()
 
