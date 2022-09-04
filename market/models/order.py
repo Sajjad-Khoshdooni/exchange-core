@@ -175,8 +175,10 @@ class Order(models.Model):
             spread_step = (time() - last_trade_ts) // 600
             gap = {
                 0: (get_spread(coin, side) / 100), 1: '0.0015', 2: '0.0008'
-            }.get(spread_step, 0)
+            }.get(spread_step, '0.0008')
             boundary_price = get_trading_price(coin, side, gap=Decimal(gap))
+            if spread_step != 0:
+                logger.info(f'override boundary_price gap with {gap}')
         else:
             boundary_price = get_trading_price(coin, side, gap=gap)
 
