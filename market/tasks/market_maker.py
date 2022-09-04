@@ -101,7 +101,8 @@ def update_symbol_maker_orders(symbol, last_trade_ts):
 
             if order:
                 if int(open_depth_orders_count[side]) > Order.MAKER_ORDERS_COUNT:
-                    Order.cancel_waste_maker_orders(symbol, open_depth_orders_count)
+                    with transaction.atomic():
+                        Order.cancel_waste_maker_orders(symbol, open_depth_orders_count)
 
                 with WalletPipeline() as pipeline:
                     order.save()
