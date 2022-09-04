@@ -178,7 +178,7 @@ class Order(models.Model):
             }.get(spread_step, '0.0008')
             boundary_price = get_trading_price(coin, side, gap=Decimal(gap))
             if spread_step != 0:
-                logger.info(f'override boundary_price gap with {gap}')
+                logger.info(f'override {coin} boundary_price gap with {gap}')
         else:
             boundary_price = get_trading_price(coin, side, gap=gap)
 
