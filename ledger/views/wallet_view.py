@@ -11,7 +11,7 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCTrade
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.precision import get_presentation_amount, get_precision
 from ledger.utils.price import get_trading_price_irt, BUY, SELL
 from ledger.utils.price_manager import PriceManager
 import logging
@@ -42,6 +42,8 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     original_name_fa = serializers.SerializerMethodField()
     original_symbol = serializers.SerializerMethodField()
+
+    step_size = serializers.SerializerMethodField()
 
     def get_market_irt_enable(self, asset: Asset):
         return asset.symbol in self.context['enable_irt_market_list']
@@ -102,14 +104,14 @@ class AssetListSerializer(serializers.ModelSerializer):
         if asset.symbol == asset.IRT:
             return ''
 
-        price = get_trading_price_irt(asset.symbol, SELL)
+        price = get_trading_price_irt(asset.symbol, SELL, allow_stale=True)
         return asset.get_presentation_price_irt(price)
 
     def get_buy_price_irt(self, asset: Asset):
         if asset.symbol == asset.IRT:
             return ''
 
-        price = get_trading_price_irt(asset.symbol, BUY)
+        price = get_trading_price_irt(asset.symbol, BUY, allow_stale=True)
         return asset.get_presentation_price_irt(price)
 
     def get_can_deposit(self, asset: Asset):
@@ -139,11 +141,14 @@ class AssetListSerializer(serializers.ModelSerializer):
     def get_original_name_fa(self, asset: Asset):
         return asset.original_name_fa or asset.name_fa
 
+    def get_step_size(self, asset: Asset):
+        return get_precision(asset.trade_quantity_step)
+
     class Meta:
         model = Asset
         fields = ('symbol', 'precision', 'free', 'free_irt', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt',
                   'buy_price_irt', 'can_deposit', 'can_withdraw', 'trade_enable', 'pin_to_top', 'market_irt_enable',
-                  'name', 'name_fa', 'logo', 'original_symbol', 'original_name_fa')
+                  'name', 'name_fa', 'logo', 'original_symbol', 'original_name_fa', 'step_size')
         ref_name = 'ledger asset'
 
 
@@ -248,7 +253,7 @@ class WalletViewSet(ModelViewSet):
             return Asset.live_objects.all()
 
     def list(self, request, *args, **kwargs):
-        with PriceManager(fetch_all=True):
+        with PriceManager(fetch_all=True, allow_stale=True):
             queryset = self.get_queryset()
 
             serializer = self.get_serializer(queryset, many=True)
