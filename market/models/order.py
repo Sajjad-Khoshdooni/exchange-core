@@ -263,10 +263,7 @@ class Order(models.Model):
             base_irt_price = 1
 
             if self.symbol.base_asset.symbol == Asset.USDT:
-                try:
-                    base_irt_price = get_tether_irt_price(self.side)
-                except:
-                    base_irt_price = 27000
+                base_irt_price = get_tether_irt_price(self.side)
 
             taker_is_system = self.wallet.account.is_system()
             maker_is_system = matching_order.wallet.account.is_system()
@@ -371,6 +368,8 @@ class Order(models.Model):
 
         ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referrals))
         Trade.objects.bulk_create(trades)
+
+        Trade.create_hedge_fiat_trxs(trades)
 
         # updating trade_volume_irt of accounts
         for trade in trades:
@@ -498,9 +497,7 @@ class Order(models.Model):
             logger.info(f'maker {symbol.name} {side}: wasted={len(wasted_orders)} cancels={cancel_count}')
 
             if cancel_count > 0:
-                cls.cancel_orders(
-                    Order.objects.filter(id__in=wasted_orders.values_list('id', flat=True)[:cancel_count])
-                )
+                cls.cancel_orders(wasted_orders[:cancel_count])
                 logger.info(f'maker {side} cancel wastes')
 
     @classmethod
@@ -529,6 +526,6 @@ class Order(models.Model):
             for depth in Order.open_objects.filter(symbol_id=symbol_id, type=Order.DEPTH).values('side').annotate(
                     max_price=Max('price'), min_price=Min('price')
             ):
-                top_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth[
-                    'min_price']) or Decimal()
+                top_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) \
+                                            or Decimal()
         return top_prices

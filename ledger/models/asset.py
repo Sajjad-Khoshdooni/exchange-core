@@ -9,7 +9,6 @@ from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.precision import get_precision, get_presentation_amount
-from provider.exchanges.interface.binance_interface import ExchangeHandler
 
 
 class InvalidAmount(Exception):
@@ -38,13 +37,19 @@ class Asset(models.Model):
     HEDGE_KUCOIN_FUTURE = 'kucoin-future'
     HEDGE_KUCOIN_SPOT = 'kucoin-spot'
 
+    HEDGE_MEXC_SPOT = 'mexc-spot'
+    HEDGE_MEXC_FUTURES = 'mexc-future'
+
     HEDGE_METHOD_CHOICE = (
         (HEDGE_KUCOIN_SPOT, HEDGE_KUCOIN_SPOT),
         (HEDGE_KUCOIN_FUTURE, HEDGE_KUCOIN_FUTURE),
         (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
         (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE),
+        (HEDGE_MEXC_SPOT, HEDGE_MEXC_SPOT),
+        (HEDGE_MEXC_FUTURES, HEDGE_MEXC_FUTURES),
         (HEDGE_NONE, HEDGE_NONE)
     )
+
     PRECISION = 8
 
     objects = models.Manager()
@@ -53,6 +58,7 @@ class Asset(models.Model):
 
     name = models.CharField(max_length=32, blank=True)
     name_fa = models.CharField(max_length=32, blank=True)
+    original_name_fa = models.CharField(max_length=32, blank=True)
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -167,7 +173,8 @@ class Asset(models.Model):
         else:
             return self.symbol
 
-    def get_hedger(self) -> ExchangeHandler:
+    def get_hedger(self):
+        from provider.exchanges import ExchangeHandler
         return ExchangeHandler.get_handler(name=self.hedge_method)
 
 
@@ -181,6 +188,8 @@ class AssetSerializerMini(serializers.ModelSerializer):
     precision = serializers.SerializerMethodField()
     step_size = serializers.SerializerMethodField()
     logo = serializers.SerializerMethodField()
+    original_name_fa = serializers.SerializerMethodField()
+    original_symbol = serializers.SerializerMethodField()
 
     def get_precision(self, asset: Asset):
         return asset.get_precision()
@@ -191,9 +200,16 @@ class AssetSerializerMini(serializers.ModelSerializer):
     def get_logo(self, asset: Asset):
         return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
 
+    def get_original_symbol(self, asset: Asset):
+        return asset.original_symbol or asset.symbol
+
+    def get_original_name_fa(self, asset: Asset):
+        return asset.original_name_fa or asset.name_fa
+
     class Meta:
         model = Asset
-        fields = ('symbol', 'margin_enable', 'precision', 'step_size', 'name', 'name_fa', 'logo')
+        fields = ('symbol', 'margin_enable', 'precision', 'step_size', 'name', 'name_fa', 'logo', 'original_symbol',
+                  'original_name_fa')
 
 
 class CoinField(serializers.CharField):

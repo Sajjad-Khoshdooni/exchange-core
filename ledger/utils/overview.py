@@ -1,3 +1,4 @@
+from collections import defaultdict
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -10,7 +11,9 @@ from ledger.models import Asset, Wallet, Transfer, Prize
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
 from ledger.utils.cache import cache_for
 from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, BUY, PriceFetchError
-from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler
+from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler, ExchangeHandler
+from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
+from provider.exchanges.interface.mexc_interface import MexcSpotHandler
 
 
 @cache_for(60)
@@ -41,8 +44,29 @@ class AssetOverview:
 
         self.usdt_irt = get_tether_irt_price(SELL)
 
-        balances_list = BinanceSpotHandler().get_account_details()['balances']
-        self._binance_spot_balance_map = {b['asset']: float(b['free']) for b in balances_list}
+        binance_balances_list = BinanceSpotHandler().get_account_details()['balances']
+        self._binance_spot_balance_map = {b['asset']: float(b['free']) for b in binance_balances_list}
+
+        kucoin_balances_list = KucoinSpotHandler().get_account_details()
+        kucoin_spot_balances = defaultdict(Decimal)
+
+        for b in kucoin_balances_list:
+            if b['type'] in ['trade', 'main']:
+                kucoin_spot_balances[b['currency']] += Decimal(b['balance'])
+
+        self._kucoin_spot_balance_map = {
+            ExchangeHandler.rename_original_coin_to_internal(symbol):
+                amount / ExchangeHandler.get_coin_coefficient(symbol)
+            for symbol, amount in kucoin_spot_balances.items()
+        }
+
+        mexc_balance_list = MexcSpotHandler().get_account_details()
+
+        self._mexc_spot_balance_map = {
+            ExchangeHandler.rename_original_coin_to_internal((b['asset'])):
+                float(Decimal(b['free']) / ExchangeHandler.get_coin_coefficient(b['asset']))
+            for b in mexc_balance_list.get('balances', [])
+        }
 
         self._internal_deposits = get_internal_asset_deposits()
 
@@ -116,9 +140,6 @@ class AssetOverview:
         if asset.symbol == Asset.USDT:
             return self._future['availableBalance']
 
-        if Asset.hedge_method == Asset.HEDGE_KUCOIN_SPOT:
-            return
-
         handler = asset.get_hedger()
         symbol = handler.get_trading_symbol(asset.future_symbol)
         amount = float(self._future_positions.get(symbol, {}).get('positionAmt', 0))
@@ -131,14 +152,34 @@ class AssetOverview:
     def get_binance_spot_amount(self, asset: Asset) -> float:
         return self._binance_spot_balance_map.get(asset.symbol, 0)
 
+    def get_kucoin_spot_amount(self, asset: Asset) -> float:
+        return self._kucoin_spot_balance_map.get(asset.symbol, 0)
+
+    def get_mexc_spot_amount(self, asset: Asset) ->float:
+        return self._mexc_spot_balance_map.get(asset.symbol, 0)
+
     def get_binance_spot_total_value(self) -> Decimal:
         value = Decimal(0)
 
-        for asset in Asset.candid_objects.all():
-            amount = self._binance_spot_balance_map.get(asset.symbol)
-            if amount:
-                value += Decimal(amount) * self.get_price(asset.symbol)
+        for symbol, amount in self._binance_spot_balance_map.items():
+            if amount > 0:
+                value += Decimal(amount) * (self.prices.get(symbol) or 0)
 
+        return value
+
+    def get_kucoin_spot_total_value(self) -> Decimal:
+        value = Decimal(0)
+        for symbol, amount in self._kucoin_spot_balance_map.items():
+            if amount > 0:
+                value += Decimal(amount) * (self.prices.get(symbol) or 0)
+
+        return value
+
+    def get_mexc_spot_total_value(self) -> Decimal:
+        value = Decimal(0)
+        for symbol, amount in self._mexc_spot_balance_map.items():
+            if amount > 0:
+                value += Decimal(amount) * (self.prices.get(symbol) or 0)
         return value
 
     def get_future_position_value(self, asset: Asset):
@@ -171,7 +212,7 @@ class AssetOverview:
         if asset.symbol == Asset.IRT:
             assets = get_total_fiat_irt()
         else:
-            assets = self.get_binance_balance(asset) + \
+            assets = self.get_provider_balance(asset) + \
                    self.get_internal_deposits_balance(asset)
 
         assets += self.get_hedged_investment_amount(asset) + self.get_hedged_cash_amount(asset)
@@ -186,18 +227,30 @@ class AssetOverview:
         total = Decimal(0)
 
         for symbol, amount in self._internal_deposits.items():
+            if not amount:
+                continue
+
             total += amount * self.get_price(symbol)
 
         return total
 
-    def get_hedge_value(self, asset: Asset):
-        return Decimal(self.get_hedge_amount(asset)) * self.get_price(asset.symbol)
+    def get_hedge_value(self, asset: Asset) -> Decimal:
+        amount = Decimal(self.get_hedge_amount(asset))
+
+        if not amount:
+            return Decimal(0)
+
+        return amount * self.get_price(asset.symbol)
 
     def get_users_asset_amount(self, asset: Asset) -> Decimal:
         return self._users_per_asset_balances.get(asset.symbol, 0)
 
     def get_users_asset_value(self, asset: Asset) -> Decimal:
         balance = self.get_users_asset_amount(asset)
+
+        if not balance:
+            return Decimal(0)
+
         return balance * self.get_price(asset.symbol)
 
     def get_all_users_asset_value(self) -> Decimal:
@@ -233,6 +286,17 @@ class AssetOverview:
 
         return future_amount + spot_amount
 
+    def get_kucoin_balance(self, asset: Asset) -> Decimal:
+        spot_amount = Decimal(self.get_kucoin_spot_amount(asset))
+        return spot_amount
+
+    def get_mexc_balance(self, asset: Asset) -> Decimal:
+        sot_amount = Decimal(self.get_mexc_spot_amount(asset))
+        return sot_amount
+
+    def get_provider_balance(self, asset: Asset) -> Decimal:
+        return self.get_binance_balance(asset) + self.get_kucoin_balance(asset) + self.get_mexc_balance(asset)
+
     def get_fiat_irt(self):
         return self.get_total_assets(Asset.get(Asset.IRT))
 
@@ -240,12 +304,14 @@ class AssetOverview:
         return float(self.get_fiat_irt() / self.usdt_irt)
 
     def get_gateway_usdt(self):
-        return get_total_fiat_irt() / self.usdt_irt
+        return get_total_fiat_irt(self._strict) / self.usdt_irt
 
     def get_all_assets_usdt(self):
         return float(self.get_binance_spot_total_value()) + self.total_margin_balance + \
                float(self.get_internal_usdt_value()) + float(self.get_gateway_usdt()) + \
-               float(self.get_total_investment() + self.get_total_cash())
+               float(self.get_total_investment() + self.get_total_cash()) + \
+               float(self.get_kucoin_spot_total_value()) + \
+               float(self.get_mexc_spot_total_value())
 
     def get_exchange_assets_usdt(self):
         return self.get_all_assets_usdt() - float(self.get_all_users_asset_value())

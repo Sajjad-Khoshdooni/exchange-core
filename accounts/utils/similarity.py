@@ -52,14 +52,16 @@ NAME_SIMILARITY_THRESHOLD = 0.79
 def name_similarity(name1, name2):
     name1, name2 = clean_persian_name(name1), clean_persian_name(name2)
 
-    verified = str_similar_rate(name1, name2) >= NAME_SIMILARITY_THRESHOLD
+    words1 = len(name1.split(' '))
 
-    if not verified:
-        verified = str_similar_rate(rotate_words(name1), name2) >= NAME_SIMILARITY_THRESHOLD
+    for i in range(words1):
+        verified = str_similar_rate(name1, name2) >= NAME_SIMILARITY_THRESHOLD
 
-        if not verified:
-            verified = str_similar_rate(rotate_words(name2), name1) >= NAME_SIMILARITY_THRESHOLD
+        if verified:
+            return True
 
-    logger.info('verifying %s and %s is %s' % (name1, name2, verified))
+        name1 = rotate_words(name1)
 
-    return verified
+    logger.info('verifying %s and %s is %s' % (name1, name2, False))
+
+    return False

@@ -98,13 +98,15 @@ def update_symbol_maker_orders(symbol, last_trade_ts):
             price = Order.get_maker_price(symbol, side, last_trade_ts=last_trade_ts)
             order = Order.init_top_maker_order(symbol, side, price, Decimal(depth_top_prices[side]))
             logger.info(f'{symbol.name} {side} maker order created: {bool(order)}')
+
             if order:
                 if int(open_depth_orders_count[side]) > Order.MAKER_ORDERS_COUNT:
-                    with transaction.atomic():
-                        Order.cancel_waste_maker_orders(symbol, open_depth_orders_count)
+                    Order.cancel_waste_maker_orders(symbol, open_depth_orders_count)
+
                 with WalletPipeline() as pipeline:
                     order.save()
                     order.submit(pipeline)
+
     except Exception as e:
         if settings.DEBUG_OR_TESTING_OR_STAGING:
             raise e

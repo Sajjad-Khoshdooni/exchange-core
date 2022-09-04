@@ -38,9 +38,9 @@ class FiatWithdraw:
     @classmethod
     def get_withdraw_channel(cls, channel) -> 'FiatWithdraw':
         mapping = {
-            FiatWithdrawRequest.PAYIR: PayirChanel,
-            FiatWithdrawRequest.ZIBAL: ZibalChanel,
-            FiatWithdrawRequest.ZARINPAL: ZarinpalChanel
+            FiatWithdrawRequest.PAYIR: PayirChannel,
+            FiatWithdrawRequest.ZIBAL: ZibalChannel,
+            FiatWithdrawRequest.ZARINPAL: ZarinpalChannel
         }
         return mapping[channel]()
 
@@ -69,7 +69,7 @@ class FiatWithdraw:
         pass
 
 
-class PayirChanel(FiatWithdraw):
+class PayirChannel(FiatWithdraw):
 
     def get_wallet_id(self):
         return config('PAY_IR_WALLET_ID', cast=int)
@@ -208,8 +208,7 @@ class PayirChanel(FiatWithdraw):
         return bool(config('PAY_IR_TOKEN', ''))
 
 
-class ZibalChanel(FiatWithdraw):
-
+class ZibalChannel(FiatWithdraw):
     def get_wallet_id(self):
         return config('ZIBAL_WALLET_ID', cast=int)
 
@@ -278,7 +277,11 @@ class ZibalChanel(FiatWithdraw):
             'uniqueCode': request_id,
             'wageFeeMode': 2,
             'checkoutDelay': checkout_delay,
+            'showTime': True
         })
+
+        print('zibal withdraw')
+        print(data)
 
         return Withdraw(
             tracking_id=data['id'],
@@ -306,30 +309,30 @@ class ZibalChanel(FiatWithdraw):
     def get_estimated_receive_time(self, created: datetime):
         request_date = created.astimezone()
         request_time = request_date.time()
-        receive_time = request_date.replace(microsecond=0)
+        receive_time = request_date.replace(microsecond=0, second=0, minute=0)
 
         if is_holiday(request_date):
-            if time_in_range('0:0', '14:30', request_time):
-                receive_time = receive_time.replace(hour=15, minute=0, second=0)
-            else:
-                receive_time += timedelta(days=1)
-                receive_time.replace(hour=5, minute=0, second=0)
+            receive_time += timedelta(days=1)
+            receive_time.replace(hour=5, minute=0)
         else:
-            if time_in_range('0:0', '3:0', request_time):
-                receive_time = receive_time.replace(hour=5, minute=0, second=0)
+            if time_in_range('0:0', '3:25', request_time):
+                receive_time = receive_time.replace(hour=11, minute=30)
+            elif time_in_range('3:25', '10:25', request_time):
+                receive_time = receive_time.replace(hour=14, minute=30)
+            elif time_in_range('10:25', '13:25', request_time):
+                receive_time = receive_time.replace(hour=19, minute=30)
+            elif time_in_range('13:25', '18:25', request_time):
+                receive_time += timedelta(days=1)
+                receive_time = receive_time.replace(hour=5, minute=0)
 
-            if time_in_range('3:0', '10:0', request_time):
-                receive_time = receive_time.replace(hour=11, minute=30, second=0)
-
-            elif time_in_range('10:00', '13:0', request_time):
-                receive_time = receive_time.replace(hour=14, minute=30, second=0)
-
-            elif time_in_range('13:00', '18:0', request_time):
-                receive_time = receive_time.replace(hour=19, minute=30, second=0)
-
+                if is_holiday(receive_time):
+                    receive_time += timedelta(days=1)
             else:
                 receive_time += timedelta(days=1)
-                receive_time = receive_time.replace(hour=5, minute=0, second=0)
+                receive_time = receive_time.replace(hour=11, minute=30)
+
+                if is_holiday(receive_time):
+                    receive_time += timedelta(days=1)
 
         return receive_time
 
@@ -374,7 +377,7 @@ class ZibalChanel(FiatWithdraw):
             payment_request.get_gateway().verify(payment)
 
 
-class ZarinpalChanel(FiatWithdraw):
+class ZarinpalChannel(FiatWithdraw):
 
     def get_total_wallet_irt_value(self):
         return 0

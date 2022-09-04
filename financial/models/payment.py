@@ -1,10 +1,12 @@
 from decimal import Decimal
 
 from django.db import models
+from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.utils import timezone
 from yekta_config.config import config
 from accounts.models import Account
-from ledger.models import Trx, Asset
+from ledger.models import Trx, Asset, FastBuyToken
 from ledger.utils.fields import get_group_id_field, get_status_field
 from accounts.models import Notification
 from accounts.utils import email
@@ -46,6 +48,7 @@ class Payment(models.Model):
     PANEL_URL = config('PANEL_URL')
     SUCCESS_URL = '/checkout/success'
     FAIL_URL = '/checkout/fail'
+    SUCCESS_PAYMENT_FAIL_FAST_bUY = '/checkout/fail_trade'
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -106,17 +109,34 @@ class Payment(models.Model):
 
         self.alert_payment()
 
-    def get_redirect_url(self):
+    def get_redirect_url(self) -> str:
         source = self.payment_request.source
         desktop = PaymentRequest.DESKTOP
+        fast_by_token = FastBuyToken.objects.filter(payment_request=self.payment_request).last()
 
         if source == desktop:
-            url = self.PANEL_URL
+            if self.status == DONE:
+                if fast_by_token and fast_by_token.status != FastBuyToken.DONE:
+                    return self.PANEL_URL + self.SUCCESS_PAYMENT_FAIL_FAST_bUY
+                else:
+                    return self.PANEL_URL + self.SUCCESS_URL
+            else:
+                return self.PANEL_URL + self.FAIL_URL
         else:
-            url = self.APP_DEEP_LINK
+            if self.status == DONE:
+                if fast_by_token and fast_by_token.status != FastBuyToken.DONE:
+                    return 'intent://Checkout/success/#Intent;scheme=raastin;package=com.raastinappts;end'
+                else:
+                    return 'intent://Checkout/success/#Intent;scheme=raastin;package=com.raastinappts;end'
+            else:
+                return 'intent://Checkout/fail/#Intent;scheme=raastin;package=com.raastinappts;end'
 
-        if self.status == DONE:
-            url += self.SUCCESS_URL
+    def redirect_to_app(self):
+        url = self.get_redirect_url()
+
+        if url.startswith('http'):
+            return redirect(url)
         else:
-            url += self.FAIL_URL
-        return url
+            response = HttpResponse("", status=302)
+            response['Location'] = url
+            return response

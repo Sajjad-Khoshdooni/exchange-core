@@ -2,11 +2,17 @@ import logging
 from typing import Type
 
 from django.db import models
+from rest_framework.exceptions import ValidationError
 
-from accounts.models import User
+from accounts.models import User, Notification
 from financial.models import BankCard
 from financial.models import PaymentRequest
 from financial.models.payment import Payment
+from ledger.exceptions import AbruptDecrease
+from ledger.models import OTCRequest, Asset, Wallet, OTCTrade, FastBuyToken
+from ledger.models.asset import InvalidAmount
+from ledger.models.otc_trade import ProcessingError, TokenExpired
+from ledger.utils.fields import DONE
 
 
 logger = logging.getLogger(__name__)
@@ -67,10 +73,49 @@ class Gateway(models.Model):
     def get_payment_url(cls, authority: str):
         raise NotImplementedError
 
-    def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:
+    def create_payment_request(self, bank_card: BankCard, amount: int, source : str) -> PaymentRequest:
         raise NotImplementedError
 
     def verify(self, payment: Payment):
+        self._verify(payment=payment)
+        fast_buy_token = FastBuyToken.objects.filter(payment_request=payment.payment_request).last()
+        if fast_buy_token:
+            self.create_otc_for_fast_buy_token(fast_buy_token=fast_buy_token, payment=payment)
+
+    def create_otc_for_fast_buy_token(self, fast_buy_token: FastBuyToken, payment: Payment):
+
+        fast_buy_token.status = FastBuyToken.DEPOSIT
+        fast_buy_token.save(update_fields=['status'])
+        if payment.status == DONE:
+            otc_request = OTCRequest.new_trade(
+                account=fast_buy_token.user.account,
+                from_asset=Asset.get('IRT'),
+                to_asset=fast_buy_token.asset,
+                from_amount=fast_buy_token.amount,
+                market=Wallet.SPOT,
+            )
+            fast_buy_token.otc_request = otc_request
+            fast_buy_token.save(update_fields=['otc_request'])
+
+            try:
+                otc_trade = OTCTrade.execute_trade(otc_request)
+                fast_buy_token.status = FastBuyToken.DONE
+                fast_buy_token.save(update_fields=['status'])
+
+                Notification.send(
+                    recipient=fast_buy_token.user,
+                    title='خرید رمز ارز.',
+                    message='خرید {} تومان {} با موفقیت انجام شد.'.format(fast_buy_token.asset.symbol,
+                                                                          fast_buy_token.amount),
+                    level=Notification.SUCCESS
+                )
+                return otc_trade
+            except Exception as exp:
+                logger.exception('Error in create otc_trade for fast_buy', extra={
+                    'exp': exp
+                })
+
+    def _verify(self, payment: Payment):
         raise NotImplementedError
 
     def __str__(self):

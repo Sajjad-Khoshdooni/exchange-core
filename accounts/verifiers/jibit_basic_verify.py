@@ -128,7 +128,7 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
         elif resp.data['code'].startswith('card.') and resp.data['code'] != 'card.provider_is_not_active':
             card_matched = False
             identity_matched = None
-        elif resp.data['code'] in ('identity_info.not_found', 'nationalCode.not_valid'):
+        elif resp.data['code'] in ('identity_info.not_found', 'nationalCode.not_valid', 'matching.unknown'):
             identity_matched = False
             card_matched = None
         else:
