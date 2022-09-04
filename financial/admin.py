@@ -1,8 +1,10 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Sum
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -83,6 +85,8 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'withdraw_channel', 'ref_id')
 
+    actions = ('resend_withdraw_request', )
+
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.user.get_full_name()
     get_withdraw_request_user.short_description = 'نام و نام خانوادگی'
@@ -110,6 +114,16 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
             ))
 
     get_withdraw_request_receive_time.short_description = 'زمان تقریبی واریز'
+
+    @admin.action(description='ارسال مجدد درخواست', permissions=['view'])
+    def resend_withdraw_request(self, request, queryset):
+        valid_qs = queryset.filter(
+            status=FiatWithdrawRequest.PROCESSING,
+            created__lt=timezone.now() - timedelta(seconds=FiatWithdrawRequest.FREEZE_TIME)
+        )
+
+        for fiat_withdraw in valid_qs:
+            fiat_withdraw.create_withdraw_request()
 
 
 @admin.register(PaymentRequest)

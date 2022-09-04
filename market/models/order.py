@@ -148,7 +148,7 @@ class Order(models.Model):
 
     @classmethod
     def cancel_orders(cls, to_cancel_orders: QuerySet):
-        to_cancel_orders = list(to_cancel_orders.select_for_update().exclude(status=cls.FILLED))
+        to_cancel_orders = list(to_cancel_orders.select_for_update())
 
         for order in to_cancel_orders:
             order.cancel()
@@ -483,7 +483,7 @@ class Order(models.Model):
             wasted_orders = wasted_orders.order_by('price') if side == Order.BUY else wasted_orders.order_by('-price')
             cancel_count = int(open_orders_count[side]) - Order.MAKER_ORDERS_COUNT
 
-            logger.info(f'maker {symbol.name} {side}: wasted={len(wasted_orders)} cancels={cancel_count}')
+            logger.info(f'maker {symbol.name} {side}: wasted={wasted_orders.count()} cancels={cancel_count}')
 
             if cancel_count > 0:
                 cls.cancel_orders(wasted_orders[:cancel_count])
