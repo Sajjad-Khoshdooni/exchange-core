@@ -111,7 +111,7 @@ def get_tether_price_irt_grpc(side: str, now: datetime = None, delay: int = 600)
     if not orders:
         return
 
-    return Price(coin='USDT', price=Decimal(orders[0].price), side=side).price
+    return Decimal(Price(coin='USDT', price=Decimal(orders[0].price), side=side).price) // 10
 
 
 def get_avg_tether_price_irt_grpc(start_timestamp, end_timestamp):
@@ -228,14 +228,14 @@ def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = Fa
         data = get_price_tether_irt_nobitex()
         if data['status'] != 'ok':
             raise TypeError
-        tether_rial = Decimal(data['price'][side])
+        price = Decimal(data['price'][side]) // 10
 
     except (requests.exceptions.ConnectionError, TimeoutError, TypeError, JSONDecodeError, KeyError):
         try:
-            tether_rial = get_tether_price_irt_grpc(side=side, now=now)
+            price = get_tether_price_irt_grpc(side=side, now=now)
 
-            if allow_stale and not tether_rial:
-                tether_rial = get_tether_price_irt_grpc(side=side, now=now, delay=DAY)
+            if allow_stale and not price:
+                return get_tether_price_irt_grpc(side=side, now=now, delay=DAY)
         except:
             if allow_stale:
                 price = price_redis.hget('usdtirt:stale', get_redis_side(side))
@@ -246,8 +246,6 @@ def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = Fa
                     raise
             else:
                 raise
-
-    price = Decimal(tether_rial // 10)
 
     pipe = price_redis.pipeline(transaction=False)
     pipe.hset(name='usdtirt', mapping={get_redis_side(side): str(price)})
