@@ -11,11 +11,10 @@ from django.utils import timezone
 from collector.metrics import set_metric
 from collector.utils.price import price_redis
 from ledger.models import Asset
-from ledger.utils.price import get_binance_price_stream
+from ledger.utils.price import get_binance_price_stream, DAY
 
 logger = logging.getLogger(__name__)
 
-DAY = 24 * 3600
 
 BINANCE_WSS_URL = 'wss://stream.binance.com:9443/stream?streams='
 

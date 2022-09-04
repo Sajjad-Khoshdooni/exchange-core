@@ -297,8 +297,8 @@ class AssetOverviewAPIView(APIView):
 
         caps = CoinMarketCap.objects.filter(symbol__in=list_symbol)
 
-        price = get_prices_dict(coins=list_symbol, side=BUY)
-        tether_irt = get_tether_irt_price(BUY)
+        price = get_prices_dict(coins=list_symbol, side=BUY, allow_stale=True)
+        tether_irt = get_tether_irt_price(BUY, allow_stale=True)
 
         high_volume = list(caps.order_by('-volume_24h').values('symbol', 'change_24h'))[:3]
         AssetOverviewAPIView.set_price(high_volume, price, tether_irt)

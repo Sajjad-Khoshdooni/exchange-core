@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from json import JSONDecodeError
 from typing import Dict, List, Union
 
 import requests
@@ -22,9 +23,16 @@ IRT = 'IRT'
 
 BUY, SELL = 'buy', 'sell'
 
+DAY = 24 * 3600
+
 
 class PriceFetchError(Exception):
     pass
+
+
+def get_redis_side(side: str):
+    assert side in (BUY, SELL)
+    return 'a' if side == SELL else 'b'
 
 
 @cache_for(300)
@@ -69,7 +77,7 @@ def get_binance_price_stream(coin: str):
     return BinanceSpotHandler().get_trading_symbol(coin).lower()
 
 
-def get_tether_price_irt_grpc(side: str, now: datetime = None):
+def get_tether_price_irt_grpc(side: str, now: datetime = None, delay: int = 600):
     coins = 'USDT'
     symbol_to_coins = {
         coins + IRT: coins
@@ -80,10 +88,8 @@ def get_tether_price_irt_grpc(side: str, now: datetime = None):
     else:
         _now = now
 
-    delay = 600_000
-
     grpc_client = gRPCClient()
-    timestamp = int(_now.timestamp() * 1000) - delay
+    timestamp = int((_now.timestamp() - delay) * 1000)
 
     order_by = ('symbol', '-timestamp')
     distinct = ('symbol',)
@@ -101,6 +107,9 @@ def get_tether_price_irt_grpc(side: str, now: datetime = None):
     ).orders
 
     grpc_client.channel.close()
+
+    if not orders:
+        return
 
     return Price(coin='USDT', price=Decimal(orders[0].price), side=side).price
 
@@ -201,7 +210,6 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
         return Decimal(0)
 
 
-@cache_for(time=2)
 def get_price_tether_irt_nobitex():
     resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=2)
     data = resp.json()
@@ -212,8 +220,8 @@ def get_price_tether_irt_nobitex():
 
 
 @cache_for(time=5)
-def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
-    price = price_redis.hget('nob:usdtirt', SIDE_MAP[side])
+def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = False) -> Decimal:
+    price = price_redis.hget('usdtirt', SIDE_MAP[side])
     if price:
         return Decimal(price)
 
@@ -223,11 +231,28 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
             raise TypeError
         tether_rial = Decimal(data['price'][side])
 
-    except (TimeoutError, TypeError):
-        price = get_tether_price_irt_grpc(side=side, now=now)
-        return Decimal(price)
+    except (requests.exceptions.ConnectionError, TimeoutError, TypeError, JSONDecodeError, KeyError):
+        try:
+            tether_rial = get_tether_price_irt_grpc(side=side, now=now)
 
-    return Decimal(tether_rial / 10)
+            if allow_stale and not tether_rial:
+                tether_rial = get_tether_price_irt_grpc(side=side, now=now, delay=DAY)
+        except:
+            if allow_stale:
+                price = price_redis.hget('usdtirt:stale', get_redis_side(side))
+
+                if price:
+                    return Decimal(price)
+                else:
+                    raise
+            else:
+                raise
+
+    price = Decimal(tether_rial // 10)
+
+    price_redis.hset(name='usdtirt:stale', mapping={get_redis_side(side): str(price)})
+
+    return price
 
 
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
