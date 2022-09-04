@@ -119,7 +119,7 @@ def get_avg_tether_price_irt_grpc(start_timestamp, end_timestamp):
 
 
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
-                  now: datetime = None) -> List[Price]:
+                  now: datetime = None, allow_stale: bool = False) -> List[Price]:
     results = []
 
     if side:
@@ -159,8 +159,13 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
     for i, c in enumerate(coins):
         price_dict = prices[i] or {}
 
+        if allow_stale and not price_dict:
+            name = 'bin:' + get_binance_price_stream(c) + ':stale'
+            price_dict = price_redis.hgetall(name)
+
         for s in sides:
             price = price_dict.get(SIDE_MAP[s])
+
             if price is not None:
                 price = Decimal(price)
 
@@ -172,8 +177,8 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
 
 
 def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
-                    now: datetime = None) -> Dict[str, Decimal]:
-    results = _fetch_prices(coins, side, exchange, now)
+                    now: datetime = None, allow_dust: bool = False) -> Dict[str, Decimal]:
+    results = _fetch_prices(coins, side, exchange, now, allow_stale=allow_dust)
 
     if PriceManager.active():
         for r in results:
