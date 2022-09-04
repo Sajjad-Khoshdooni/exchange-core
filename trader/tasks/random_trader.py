@@ -44,7 +44,7 @@ def get_account():
 
 
 def random_trade(symbol: PairSymbol, account, top_amounts, daily_factor: int):
-    logger.info(f'random trading {symbol} ({top_amounts})')
+    logger.info(f'random trading {symbol} ({top_amounts}) {daily_factor}')
 
     random_func, max_amount = \
         random.choices([(random_buy, top_amounts[Order.SELL]), (random_sell, top_amounts[Order.BUY])])[0]
