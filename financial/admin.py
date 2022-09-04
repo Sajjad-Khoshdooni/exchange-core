@@ -119,7 +119,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     def resend_withdraw_request(self, request, queryset):
         valid_qs = queryset.filter(
             status=FiatWithdrawRequest.PROCESSING,
-            created__gt=timezone.now() - timedelta(seconds=FiatWithdrawRequest.FREEZE_TIME)
+            created__lt=timezone.now() - timedelta(seconds=FiatWithdrawRequest.FREEZE_TIME)
         )
 
         for fiat_withdraw in valid_qs:
