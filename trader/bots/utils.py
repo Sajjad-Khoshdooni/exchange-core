@@ -71,8 +71,8 @@ def is_all_system(symbol: PairSymbol, side: str, amount: Decimal):
     return False
 
 
-def random_buy(symbol: PairSymbol, account: Account, daily_factor: int):
-    amount_value = random_min_order_value(symbol, daily_factor)
+def random_buy(symbol: PairSymbol, account: Account, max_amount, daily_factor: int):
+    amount_value = min(max_amount, random_min_order_value(symbol, daily_factor))
     ask = get_current_price(symbol, SELL)
     amount = floor_precision(Decimal(amount_value / ask), symbol.step_size)
 
@@ -81,13 +81,13 @@ def random_buy(symbol: PairSymbol, account: Account, daily_factor: int):
     )
 
 
-def random_sell(symbol: PairSymbol, account: Account, daily_factor: int):
+def random_sell(symbol: PairSymbol, account: Account, max_amount, daily_factor: int):
     wallet = symbol.asset.get_wallet(account)
     balance = wallet.get_free()
 
     bid = get_current_price(symbol, BUY)
 
-    balance = min(balance, random_min_order_value(symbol, daily_factor) / bid)
+    balance = min(balance, min(max_amount, random_min_order_value(symbol, daily_factor)) / bid)
     amount = floor_precision(balance, symbol.step_size)
 
     return new_order(
