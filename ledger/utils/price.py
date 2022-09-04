@@ -219,7 +219,6 @@ def get_price_tether_irt_nobitex():
     return data
 
 
-@cache_for(time=5)
 def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = False) -> Decimal:
     price = price_redis.hget('usdtirt', SIDE_MAP[side])
     if price:
@@ -250,7 +249,13 @@ def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = Fa
 
     price = Decimal(tether_rial // 10)
 
-    price_redis.hset(name='usdtirt:stale', mapping={get_redis_side(side): str(price)})
+    pipe = price_redis.pipeline(transaction=False)
+    pipe.hset(name='usdtirt', mapping={get_redis_side(side): str(price)})
+    pipe.hset(name='usdtirt:stale', mapping={get_redis_side(side): str(price)})
+    pipe.expire('usdtirt', 10)
+    pipe.expire('usdtirt:stale', DAY)
+
+    pipe.execute()
 
     return price
 
