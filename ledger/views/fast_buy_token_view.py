@@ -11,6 +11,7 @@ from ledger.models import Asset
 from ledger.models.asset import CoinField
 from ledger.models.fast_buy_token import FastBuyToken
 from ledger.utils.price import get_price
+from provider.exchanges.interface.base import SELL
 
 
 class FastBuyTokenSerializer(serializers.ModelSerializer):
@@ -34,9 +35,8 @@ class FastBuyTokenSerializer(serializers.ModelSerializer):
         card_pan = BankCard.objects.get(id=validated_data['payment_request']['bank_card_id']).card_pan
         validated_data['card_pan'] = card_pan
         validated_data['payment_request'] = payment_request_serializer.create(validated_data)
-        validated_data['user'] = request.user
         validated_data.pop('card_pan')
-        validated_data['price'] = get_price(coin=validated_data['asset'].symbol, side='sell') or 0
+        validated_data['price'] = get_price(coin=validated_data['asset'].symbol, side=SELL) or 0
         return super().create(validated_data)
 
     class Meta:

@@ -463,10 +463,11 @@ class AssetSnapshotAdmin(admin.ModelAdmin):
 
 @admin.register(models.FastBuyToken)
 class FastBuyTokenAdmin(admin.ModelAdmin):
-    list_display = ['user', 'asset', 'get_amount', 'status', 'created', ]
+    list_display = ['created', 'asset', 'get_amount', 'status', ]
     readonly_fields = ('get_amount',)
     list_filter = ('status', )
 
     def get_amount(self, fast_buy_token: FastBuyToken):
-        return get_presentation_amount(fast_buy_token.amount)
+        return humanize_number(fast_buy_token.amount)
+
     get_amount.short_description = 'مقدار'
