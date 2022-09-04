@@ -253,7 +253,7 @@ class WalletViewSet(ModelViewSet):
             return Asset.live_objects.all()
 
     def list(self, request, *args, **kwargs):
-        with PriceManager(fetch_all=True):
+        with PriceManager(fetch_all=True, allow_dust=True):
             queryset = self.get_queryset()
 
             serializer = self.get_serializer(queryset, many=True)
