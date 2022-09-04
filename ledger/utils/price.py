@@ -5,7 +5,6 @@ from decimal import Decimal
 from typing import Dict, List, Union
 
 import requests
-from cachetools.func import ttl_cache
 
 from collector.price.grpc_client import gRPCClient
 from collector.utils.price import price_redis
@@ -177,8 +176,8 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
 
 
 def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
-                    now: datetime = None, allow_dust: bool = False) -> Dict[str, Decimal]:
-    results = _fetch_prices(coins, side, exchange, now, allow_stale=allow_dust)
+                    now: datetime = None, allow_stale: bool = False) -> Dict[str, Decimal]:
+    results = _fetch_prices(coins, side, exchange, now, allow_stale=allow_stale)
 
     if PriceManager.active():
         for r in results:
@@ -187,7 +186,6 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
     return {r.coin: r.price for r in results}
 
 
-@ttl_cache(maxsize=1000, ttl=0.5)
 def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
               now: datetime = None) -> Decimal:
     if PriceManager.active():

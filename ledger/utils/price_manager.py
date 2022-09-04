@@ -5,7 +5,7 @@ from ledger.utils.cache import cache_for
 
 
 @cache_for(time=20)
-def prefetch_all_prices(side: str, allow_dust: bool=False):
+def prefetch_all_prices(side: str, allow_stale: bool = False):
     from ledger.utils.price import get_prices_dict
     from ledger.models import Asset
 
@@ -14,14 +14,14 @@ def prefetch_all_prices(side: str, allow_dust: bool=False):
     return get_prices_dict(
         coins=coins,
         side=side,
-        allow_dust=allow_dust
+        allow_stale=allow_stale
     )
 
 
 class PriceManager:
     _prices = None
 
-    def __init__(self, fetch_all: bool = False, side: str = None, coins: list = None, allow_dust: bool = False):
+    def __init__(self, fetch_all: bool = False, side: str = None, coins: list = None, allow_stale: bool = True):
         self._default_prices = {}
 
         if fetch_all or coins:
@@ -29,12 +29,12 @@ class PriceManager:
             from ledger.models import Asset
 
             if fetch_all:
-                self._default_prices = prefetch_all_prices(side, allow_dust=allow_dust)
+                self._default_prices = prefetch_all_prices(side, allow_stale=allow_stale)
             else:
                 self._default_prices = get_prices_dict(
                     coins=coins,
                     side=side,
-                    allow_dust=allow_dust
+                    allow_stale=allow_stale
                 )
 
     def __enter__(self):

@@ -276,6 +276,7 @@ class BinanceSpotHandler(ExchangeHandler):
             asset = wallet['asset']
             free = wallet['free']
             locked = wallet['locked']
+
             with PriceManager(fetch_all=True):
                 if asset == '1000SHIB':
                     price = get_price('SHIB', side=BUY.lower()) * 1000
@@ -286,6 +287,7 @@ class BinanceSpotHandler(ExchangeHandler):
                     usdt_value = Decimal(price) * Decimal(free)
                 else:
                     usdt_value = Decimal(0)
+
             BinanceWallet.objects.update_or_create(
                 asset=asset,
                 type=BinanceWallet.SPOT,

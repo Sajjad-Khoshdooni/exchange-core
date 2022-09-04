@@ -195,7 +195,7 @@ class AssetsViewSet(ModelViewSet):
             caps = CoinMarketCap.objects.filter(symbol__in=to_search_symbols)
             ctx['cap_info'] = {CoinMarketCap.SYMBOL_TRANSLATION.get(cap.symbol, cap.symbol): cap for cap in caps}
 
-            ctx['prices'] = get_prices_dict(coins=symbols, side=BUY, allow_dust=True)
+            ctx['prices'] = get_prices_dict(coins=symbols, side=BUY, allow_stale=True)
             ctx['tether_irt'] = get_tether_irt_price(BUY)
 
         return ctx
