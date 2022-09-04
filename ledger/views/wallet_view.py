@@ -104,14 +104,14 @@ class AssetListSerializer(serializers.ModelSerializer):
         if asset.symbol == asset.IRT:
             return ''
 
-        price = get_trading_price_irt(asset.symbol, SELL)
+        price = get_trading_price_irt(asset.symbol, SELL, allow_stale=True)
         return asset.get_presentation_price_irt(price)
 
     def get_buy_price_irt(self, asset: Asset):
         if asset.symbol == asset.IRT:
             return ''
 
-        price = get_trading_price_irt(asset.symbol, BUY)
+        price = get_trading_price_irt(asset.symbol, BUY, allow_stale=True)
         return asset.get_presentation_price_irt(price)
 
     def get_can_deposit(self, asset: Asset):

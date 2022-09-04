@@ -196,13 +196,13 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
 
 
 def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
-              now: datetime = None) -> Decimal:
+              now: datetime = None, allow_stale: bool = False) -> Decimal:
     if PriceManager.active():
         price = PriceManager.get_price(coin, side, exchange, market_symbol, now)
         if price is not None:
             return price
 
-    prices = get_prices_dict([coin], side, exchange, market_symbol, now)
+    prices = get_prices_dict([coin], side, exchange, market_symbol, now, allow_stale=allow_stale)
 
     if prices:
         return prices[coin]
@@ -261,9 +261,9 @@ def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = Fa
 
 
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
-                           gap: Union[Decimal, None] = None) -> Decimal:
+                           gap: Union[Decimal, None] = None, allow_stale: bool = False) -> Decimal:
     if coin == IRT:
-        return 1 / get_tether_irt_price(get_other_side(side))
+        return 1 / get_tether_irt_price(get_other_side(side), allow_stale=allow_stale)
 
     if gap:
         spread = gap
@@ -278,18 +278,19 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
         else:
             multiplier = 1 + spread
 
-    price = get_price(coin, side)
+    price = get_price(coin, side, allow_stale=allow_stale)
 
     return price and price * multiplier
 
 
 def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
-                          gap: Union[Decimal, None] = None) -> Decimal:
+                          gap: Union[Decimal, None] = None, allow_stale: bool = False) -> Decimal:
     if coin == IRT:
         return Decimal(1)
 
     tether = get_tether_irt_price(side)
-    price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether, gap=gap)
+    price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether, gap=gap,
+                                   allow_stale=allow_stale)
 
     if price:
         return price * tether
