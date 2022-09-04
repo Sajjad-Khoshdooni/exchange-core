@@ -119,7 +119,9 @@ class KucoinConsumer:
             pipe.expire(name, 30)  # todo: reduce this to 10 for volatile coins
 
             if stale:
-                pipe.expire(name + ':stale', DAY)
+                stale_name = name + ':stale'
+                pipe.hset(name=stale_name, mapping=data)
+                pipe.expire(stale_name, DAY)
 
         pipe.execute()
 
