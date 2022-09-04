@@ -238,8 +238,11 @@ def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = Fa
         try:
             price = get_tether_price_irt_grpc(side=side, now=now)
 
-            if allow_stale and not price:
-                return get_tether_price_irt_grpc(side=side, now=now, delay=DAY)
+            if not price:
+                if allow_stale:
+                    return get_tether_price_irt_grpc(side=side, now=now, delay=DAY)
+                else:
+                    raise
         except:
             if allow_stale:
                 price = price_redis.hget('usdtirt:stale', get_redis_side(side))
