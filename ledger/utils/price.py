@@ -171,6 +171,10 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
             name = 'bin:' + get_binance_price_stream(c) + ':stale'
             price_dict = price_redis.hgetall(name)
 
+            logger.error('coin price fallback to stale', extra={
+                'coin': c
+            })
+
         for s in sides:
             price = price_dict.get(SIDE_MAP[s])
 
@@ -239,6 +243,7 @@ def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = Fa
         except:
             if allow_stale:
                 price = price_redis.hget('usdtirt:stale', get_redis_side(side))
+                logger.error('usdt irt price fallback to stale')
 
                 if price:
                     return Decimal(price)

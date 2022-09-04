@@ -38,7 +38,8 @@ class AssetOverview:
 
         self.prices = get_prices_dict(
             coins=list(Asset.candid_objects.values_list('symbol', flat=True)),
-            side=SELL
+            side=SELL,
+            allow_stale=True
         )
         self.prices[Asset.IRT] = 1 / get_tether_irt_price(BUY)
 
