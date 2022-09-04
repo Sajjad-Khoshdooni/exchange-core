@@ -38,6 +38,9 @@ goal_groups = [
 
 
 def move_first(arr: list, index: int) -> list:
+    if not index:
+        return arr
+
     return arr[index: index + 1] + arr[:index] + arr[index + 1:]
 
 
