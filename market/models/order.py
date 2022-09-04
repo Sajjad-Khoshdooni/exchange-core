@@ -148,7 +148,7 @@ class Order(models.Model):
 
     @classmethod
     def cancel_orders(cls, to_cancel_orders: QuerySet):
-        to_cancel_orders = list(to_cancel_orders.select_for_update().exclude(status=cls.FILLED))
+        to_cancel_orders = list(to_cancel_orders.select_for_update())
 
         for order in to_cancel_orders:
             order.cancel()
