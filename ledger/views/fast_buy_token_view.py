@@ -10,8 +10,7 @@ from financial.views.payment_view import PaymentRequestSerializer
 from ledger.models import Asset
 from ledger.models.asset import CoinField
 from ledger.models.fast_buy_token import FastBuyToken
-from ledger.utils.price import get_price
-from provider.exchanges.interface.base import SELL
+from ledger.utils.price import get_price, SELL
 
 
 class FastBuyTokenSerializer(serializers.ModelSerializer):
