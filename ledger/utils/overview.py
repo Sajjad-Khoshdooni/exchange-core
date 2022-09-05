@@ -38,7 +38,8 @@ class AssetOverview:
 
         self.prices = get_prices_dict(
             coins=list(Asset.candid_objects.values_list('symbol', flat=True)),
-            side=SELL
+            side=SELL,
+            allow_stale=True
         )
         self.prices[Asset.IRT] = 1 / get_tether_irt_price(BUY)
 
@@ -304,7 +305,7 @@ class AssetOverview:
         return float(self.get_fiat_irt() / self.usdt_irt)
 
     def get_gateway_usdt(self):
-        return get_total_fiat_irt() / self.usdt_irt
+        return get_total_fiat_irt(self._strict) / self.usdt_irt
 
     def get_all_assets_usdt(self):
         return float(self.get_binance_spot_total_value()) + self.total_margin_balance + \

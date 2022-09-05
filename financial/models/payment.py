@@ -48,8 +48,7 @@ class Payment(models.Model):
     PANEL_URL = config('PANEL_URL')
     SUCCESS_URL = '/checkout/success'
     FAIL_URL = '/checkout/fail'
-    APP_SUCCESS_URL = '/Checkout/success'
-    APP_FAIL_URL = '/Checkout/fail'
+    SUCCESS_PAYMENT_FAIL_FAST_bUY = '/checkout/fail_trade'
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -111,17 +110,26 @@ class Payment(models.Model):
         self.alert_payment()
 
     def get_redirect_url(self) -> str:
+        from ledger.models import FastBuyToken
+
         source = self.payment_request.source
         desktop = PaymentRequest.DESKTOP
+        fast_by_token = FastBuyToken.objects.filter(payment_request=self.payment_request).last()
 
         if source == desktop:
             if self.status == DONE:
-                return self.PANEL_URL + self.SUCCESS_URL
+                if fast_by_token and fast_by_token.status != FastBuyToken.DONE:
+                    return self.PANEL_URL + self.SUCCESS_PAYMENT_FAIL_FAST_bUY
+                else:
+                    return self.PANEL_URL + self.SUCCESS_URL
             else:
                 return self.PANEL_URL + self.FAIL_URL
         else:
             if self.status == DONE:
-                return 'intent://Checkout/success/#Intent;scheme=raastin;package=com.raastinappts;end'
+                if fast_by_token and fast_by_token.status != FastBuyToken.DONE:
+                    return 'intent://Checkout/success/#Intent;scheme=raastin;package=com.raastinappts;end'
+                else:
+                    return 'intent://Checkout/success/#Intent;scheme=raastin;package=com.raastinappts;end'
             else:
                 return 'intent://Checkout/fail/#Intent;scheme=raastin;package=com.raastinappts;end'
 

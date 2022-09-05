@@ -195,7 +195,7 @@ class AssetsViewSet(ModelViewSet):
             caps = CoinMarketCap.objects.filter(symbol__in=to_search_symbols)
             ctx['cap_info'] = {CoinMarketCap.SYMBOL_TRANSLATION.get(cap.symbol, cap.symbol): cap for cap in caps}
 
-            ctx['prices'] = get_prices_dict(coins=symbols, side=BUY)
+            ctx['prices'] = get_prices_dict(coins=symbols, side=BUY, allow_stale=True)
             ctx['tether_irt'] = get_tether_irt_price(BUY)
 
         return ctx
@@ -297,8 +297,8 @@ class AssetOverviewAPIView(APIView):
 
         caps = CoinMarketCap.objects.filter(symbol__in=list_symbol)
 
-        price = get_prices_dict(coins=list_symbol, side=BUY)
-        tether_irt = get_tether_irt_price(BUY)
+        price = get_prices_dict(coins=list_symbol, side=BUY, allow_stale=True)
+        tether_irt = get_tether_irt_price(BUY, allow_stale=True)
 
         high_volume = list(caps.order_by('-volume_24h').values('symbol', 'change_24h'))[:3]
         AssetOverviewAPIView.set_price(high_volume, price, tether_irt)

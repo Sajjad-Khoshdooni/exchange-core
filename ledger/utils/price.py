@@ -2,10 +2,10 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from json import JSONDecodeError
 from typing import Dict, List, Union
 
 import requests
-from cachetools.func import ttl_cache
 
 from collector.price.grpc_client import gRPCClient
 from collector.utils.price import price_redis
@@ -23,9 +23,16 @@ IRT = 'IRT'
 
 BUY, SELL = 'buy', 'sell'
 
+DAY = 24 * 3600
+
 
 class PriceFetchError(Exception):
     pass
+
+
+def get_redis_side(side: str):
+    assert side in (BUY, SELL)
+    return 'a' if side == SELL else 'b'
 
 
 @cache_for(300)
@@ -70,7 +77,7 @@ def get_binance_price_stream(coin: str):
     return BinanceSpotHandler().get_trading_symbol(coin).lower()
 
 
-def get_tether_price_irt_grpc(side: str, now: datetime = None):
+def get_tether_price_irt_grpc(side: str, now: datetime = None, delay: int = 600):
     coins = 'USDT'
     symbol_to_coins = {
         coins + IRT: coins
@@ -81,10 +88,8 @@ def get_tether_price_irt_grpc(side: str, now: datetime = None):
     else:
         _now = now
 
-    delay = 600_000
-
     grpc_client = gRPCClient()
-    timestamp = int(_now.timestamp() * 1000) - delay
+    timestamp = int((_now.timestamp() - delay) * 1000)
 
     order_by = ('symbol', '-timestamp')
     distinct = ('symbol',)
@@ -103,7 +108,10 @@ def get_tether_price_irt_grpc(side: str, now: datetime = None):
 
     grpc_client.channel.close()
 
-    return Price(coin='USDT', price=Decimal(orders[0].price), side=side).price
+    if not orders:
+        return
+
+    return Decimal(Price(coin='USDT', price=Decimal(orders[0].price), side=side).price) // 10
 
 
 def get_avg_tether_price_irt_grpc(start_timestamp, end_timestamp):
@@ -119,7 +127,7 @@ def get_avg_tether_price_irt_grpc(start_timestamp, end_timestamp):
 
 
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
-                  now: datetime = None) -> List[Price]:
+                  now: datetime = None, allow_stale: bool = False) -> List[Price]:
     results = []
 
     if side:
@@ -159,8 +167,15 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
     for i, c in enumerate(coins):
         price_dict = prices[i] or {}
 
+        if allow_stale and not price_dict:
+            name = 'bin:' + get_binance_price_stream(c) + ':stale'
+            price_dict = price_redis.hgetall(name)
+
+            # logger.error('{} price fallback to stale'.format(c))
+
         for s in sides:
             price = price_dict.get(SIDE_MAP[s])
+
             if price is not None:
                 price = Decimal(price)
 
@@ -172,8 +187,8 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
 
 
 def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
-                    now: datetime = None) -> Dict[str, Decimal]:
-    results = _fetch_prices(coins, side, exchange, now)
+                    now: datetime = None, allow_stale: bool = False) -> Dict[str, Decimal]:
+    results = _fetch_prices(coins, side, exchange, now, allow_stale=allow_stale)
 
     if PriceManager.active():
         for r in results:
@@ -182,15 +197,14 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
     return {r.coin: r.price for r in results}
 
 
-@ttl_cache(maxsize=1000, ttl=0.5)
 def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
-              now: datetime = None) -> Decimal:
+              now: datetime = None, allow_stale: bool = False) -> Decimal:
     if PriceManager.active():
         price = PriceManager.get_price(coin, side, exchange, market_symbol, now)
         if price is not None:
             return price
 
-    prices = get_prices_dict([coin], side, exchange, market_symbol, now)
+    prices = get_prices_dict([coin], side, exchange, market_symbol, now, allow_stale=allow_stale)
 
     if prices:
         return prices[coin]
@@ -198,7 +212,6 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
         return Decimal(0)
 
 
-@cache_for(time=2)
 def get_price_tether_irt_nobitex():
     resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=2)
     data = resp.json()
@@ -208,9 +221,8 @@ def get_price_tether_irt_nobitex():
     return data
 
 
-@cache_for(time=5)
-def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
-    price = price_redis.hget('nob:usdtirt', SIDE_MAP[side])
+def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = False) -> Decimal:
+    price = price_redis.hget('usdtirt', SIDE_MAP[side])
     if price:
         return Decimal(price)
 
@@ -218,19 +230,44 @@ def get_tether_irt_price(side: str, now: datetime = None) -> Decimal:
         data = get_price_tether_irt_nobitex()
         if data['status'] != 'ok':
             raise TypeError
-        tether_rial = Decimal(data['price'][side])
+        price = Decimal(data['price'][side]) // 10
 
-    except (TimeoutError, TypeError):
-        price = get_tether_price_irt_grpc(side=side, now=now)
-        return Decimal(price)
+    except (requests.exceptions.ConnectionError, TimeoutError, TypeError, JSONDecodeError, KeyError):
+        try:
+            price = get_tether_price_irt_grpc(side=side, now=now)
 
-    return Decimal(tether_rial / 10)
+            if not price:
+                if allow_stale:
+                    return get_tether_price_irt_grpc(side=side, now=now, delay=DAY)
+                else:
+                    raise
+        except:
+            if allow_stale:
+                price = price_redis.hget('usdtirt:stale', get_redis_side(side))
+                logger.error('usdt irt price fallback to stale')
+
+                if price:
+                    return Decimal(price)
+                else:
+                    raise
+            else:
+                raise
+
+    pipe = price_redis.pipeline(transaction=False)
+    pipe.hset(name='usdtirt', mapping={get_redis_side(side): str(price)})
+    pipe.hset(name='usdtirt:stale', mapping={get_redis_side(side): str(price)})
+    pipe.expire('usdtirt', 10)
+    pipe.expire('usdtirt:stale', DAY)
+
+    pipe.execute()
+
+    return price
 
 
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
-                           gap: Union[Decimal, None] = None) -> Decimal:
+                           gap: Union[Decimal, None] = None, allow_stale: bool = False) -> Decimal:
     if coin == IRT:
-        return 1 / get_tether_irt_price(get_other_side(side))
+        return 1 / get_tether_irt_price(get_other_side(side), allow_stale=allow_stale)
 
     if gap:
         spread = gap
@@ -245,18 +282,19 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
         else:
             multiplier = 1 + spread
 
-    price = get_price(coin, side)
+    price = get_price(coin, side, allow_stale=allow_stale)
 
     return price and price * multiplier
 
 
 def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
-                          gap: Union[Decimal, None] = None) -> Decimal:
+                          gap: Union[Decimal, None] = None, allow_stale: bool = False) -> Decimal:
     if coin == IRT:
         return Decimal(1)
 
     tether = get_tether_irt_price(side)
-    price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether, gap=gap)
+    price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether, gap=gap,
+                                   allow_stale=allow_stale)
 
     if price:
         return price * tether

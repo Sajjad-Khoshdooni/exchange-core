@@ -8,7 +8,7 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory
+from ledger.models import Asset, Prize, CoinCategory, FastBuyToken
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
@@ -409,6 +409,8 @@ class CoinCategoryAdmin(admin.ModelAdmin):
 class AddressKeyAdmin(admin.ModelAdmin):
     list_display = ('address', )
     readonly_fields = ('address', 'account')
+    search_fields = ('address', 'public_address')
+    list_filter = ('architecture', )
 
 
 @admin.register(models.AssetSpreadCategory)
@@ -433,8 +435,18 @@ class CategorySpreadAdmin(admin.ModelAdmin):
 @admin.register(models.SystemSnapshot)
 class SystemSnapshotAdmin(admin.ModelAdmin):
     list_display = ('created', 'total', 'users', 'exchange', 'exchange_potential', 'hedge', 'cumulated_hedge',
-                    'binance_futures', 'binance_spot', 'internal', 'fiat_gateway', 'investment', 'cash', 'prize')
+                    'binance_futures', 'binance_spot', 'kucoin_spot', 'mexc_spot', 'internal', 'fiat_gateway',
+                    'investment', 'cash', 'prize', 'verified')
     ordering = ('-created', )
+    actions = ('reject_histories', 'verify_histories')
+
+    @admin.action(description='رد', permissions=['change'])
+    def reject_histories(self, request, queryset):
+        queryset.update(verified=False)
+
+    @admin.action(description='تایید', permissions=['change'])
+    def verify_histories(self, request, queryset):
+        queryset.update(verified=True)
 
 
 @admin.register(models.AssetSnapshot)
@@ -447,3 +459,15 @@ class AssetSnapshotAdmin(admin.ModelAdmin):
         return asset_snapshot.calc_hedge_amount - asset_snapshot.hedge_amount
 
     get_hedge_diff.short_description = 'hedge diff'
+
+
+@admin.register(models.FastBuyToken)
+class FastBuyTokenAdmin(admin.ModelAdmin):
+    list_display = ['created', 'asset', 'get_amount', 'status', ]
+    readonly_fields = ('get_amount',)
+    list_filter = ('status', )
+
+    def get_amount(self, fast_buy_token: FastBuyToken):
+        return humanize_number(fast_buy_token.amount)
+
+    get_amount.short_description = 'مقدار'

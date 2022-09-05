@@ -7,7 +7,7 @@ from accounts.models import User
 from financial.models import BankCard
 from financial.models import PaymentRequest
 from financial.models.payment import Payment
-
+from ledger.models import FastBuyToken
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,14 @@ class Gateway(models.Model):
         raise NotImplementedError
 
     def verify(self, payment: Payment):
+        self._verify(payment=payment)
+
+        fast_buy_token = FastBuyToken.objects.filter(payment_request=payment.payment_request).last()
+
+        if fast_buy_token:
+            fast_buy_token.create_otc_for_fast_buy_token(payment)
+
+    def _verify(self, payment: Payment):
         raise NotImplementedError
 
     def __str__(self):

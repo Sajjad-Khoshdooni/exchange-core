@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 from django.conf import settings
-from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from rest_framework import serializers
 

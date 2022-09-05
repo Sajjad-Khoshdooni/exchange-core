@@ -57,7 +57,7 @@ class OrderSerializer(serializers.ModelSerializer):
             raise ValidationError(_('Insufficient Balance'))
         except Exception as e:
             logger.error('failed placing order', extra={'exp': e, 'order': validated_data})
-            if settings.DEBUG:
+            if settings.DEBUG_OR_TESTING_OR_STAGING:
                 raise e
             raise APIException(_('Could not place order'))
 

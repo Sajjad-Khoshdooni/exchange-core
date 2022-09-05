@@ -4,7 +4,7 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from accounts.models import User
-from financial.models import FiatWithdrawRequest
+
 from ledger.models import Transfer
 from ledger.utils.fields import CANCELED
 from ledger.utils.price import get_trading_price_irt, BUY
@@ -32,6 +32,7 @@ def get_start_of_day() -> datetime:
 
 
 def get_fiat_withdraw_irt_value(user: User):
+    from financial.models import FiatWithdrawRequest
     start_of_day = get_start_of_day()
 
     fiat_amount = FiatWithdrawRequest.objects.filter(
