@@ -14,7 +14,7 @@ from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Trx, OTCTrade, Asset
 from ledger.models.trx import FakeTrx
 from ledger.utils.fields import get_amount_field, get_group_id_field
-from ledger.utils.precision import floor_precision, precision_to_step
+from ledger.utils.precision import floor_precision, precision_to_step, decimal_to_str
 from ledger.utils.price import get_tether_irt_price, BUY, get_trading_price_irt, get_trading_price_usdt, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
@@ -193,9 +193,9 @@ class Trade(models.Model):
 
     def format_values(self):
         return {
-            'amount': str(floor_precision(self.amount, self.symbol.step_size)),
-            'price': str(floor_precision(self.price, self.symbol.tick_size)),
-            'total': str(floor_precision(self.amount * self.price, self.symbol.tick_size)),
+            'amount': decimal_to_str(floor_precision(self.amount, self.symbol.step_size)),
+            'price': decimal_to_str(floor_precision(self.price, self.symbol.tick_size)),
+            'total': decimal_to_str(floor_precision(self.amount * self.price, self.symbol.tick_size)),
         }
 
     @classmethod
