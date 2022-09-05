@@ -38,9 +38,9 @@ def min_order_value(base_symbol: str):
         return Order.MIN_USDT_ORDER_SIZE
 
 
-def random_min_order_value(base_symbol: str) -> Decimal:
-    min_order = min_order_value(base_symbol)
-    return Decimal(random.randint(2 * min_order, 40 * min_order))
+def random_min_order_value(symbol: PairSymbol, daily_factor) -> Decimal:
+    min_order = min_order_value(symbol.base_asset.symbol)
+    return Decimal(random.randint(2 * min_order, 8 * min_order)) * daily_factor
 
 
 def get_top_orders(symbol: PairSymbol, side: str):
@@ -71,23 +71,23 @@ def is_all_system(symbol: PairSymbol, side: str, amount: Decimal):
     return False
 
 
-def random_buy(symbol: PairSymbol, account: Account):
-    amount_value = random_min_order_value(symbol.base_asset.symbol)
+def random_buy(symbol: PairSymbol, account: Account, max_amount, daily_factor: int):
+    amount_value = random_min_order_value(symbol, daily_factor)
     ask = get_current_price(symbol, SELL)
-    amount = floor_precision(Decimal(amount_value / ask), symbol.step_size)
+    amount = floor_precision(min(max_amount, Decimal(amount_value / ask)), symbol.step_size)
 
     return new_order(
         symbol, account, amount, None, side=BUY, fill_type=Order.MARKET, raise_exception=False, order_type=Order.BOT
     )
 
 
-def random_sell(symbol: PairSymbol, account: Account):
+def random_sell(symbol: PairSymbol, account: Account, max_amount, daily_factor: int):
     wallet = symbol.asset.get_wallet(account)
     balance = wallet.get_free()
 
     bid = get_current_price(symbol, BUY)
 
-    balance = min(balance, random_min_order_value(symbol.base_asset.symbol) / bid)
+    balance = min(balance, min(max_amount, random_min_order_value(symbol, daily_factor) / bid))
     amount = floor_precision(balance, symbol.step_size)
 
     return new_order(
