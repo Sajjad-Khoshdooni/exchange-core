@@ -46,7 +46,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
         return decimal_to_str(floor_precision(instance.filled_amount, instance.symbol.step_size))
 
     def get_filled_percent(self, instance: Union[Order, StopLoss]):
-        return decimal_to_str(floor_precision(instance.filled_amount / instance.amount, 0)) + '%'
+        return decimal_to_str(floor_precision(100 * instance.filled_amount / instance.amount, 0)) + '%'
 
     def get_trigger_price(self, instance: Union[Order, StopLoss]):
         if isinstance(instance, Order):

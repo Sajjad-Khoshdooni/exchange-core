@@ -132,7 +132,7 @@ class OrderSerializer(serializers.ModelSerializer):
         return decimal_to_str(floor_precision(order.filled_amount, order.symbol.step_size))
 
     def get_filled_percent(self, order: Order):
-        return decimal_to_str(floor_precision(order.filled_amount / order.amount, 0)) + '%'
+        return decimal_to_str(floor_precision(100 * order.filled_amount / order.amount, 0)) + '%'
 
     def get_id(self, instance: Order):
         if instance.stop_loss:
