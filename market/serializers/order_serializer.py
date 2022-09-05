@@ -130,6 +130,9 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_filled_amount(self, order: Order):
         return decimal_to_str(floor_precision(order.filled_amount, order.symbol.step_size))
 
+    def get_filled_percent(self, order: Order):
+        return decimal_to_str(floor_precision(order.filled_amount / order.amount, 0)) + '%'
+
     def get_id(self, instance: Order):
         if instance.stop_loss:
             return f'sl-{instance.stop_loss_id}'
@@ -149,8 +152,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'price', 'filled_price', 'side',
-                  'fill_type', 'status', 'market', 'trigger_price')
+        fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
+                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price')
         read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},

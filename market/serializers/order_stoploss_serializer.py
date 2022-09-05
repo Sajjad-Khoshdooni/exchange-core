@@ -44,6 +44,9 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
     def get_filled_amount(self, instance: Union[Order, StopLoss]):
         return decimal_to_str(floor_precision(instance.filled_amount, instance.symbol.step_size))
 
+    def get_filled_percent(self, instance: Union[Order, StopLoss]):
+        return decimal_to_str(floor_precision(instance.filled_amount / instance.amount, 0)) + '%'
+
     def get_trigger_price(self, instance: Union[Order, StopLoss]):
         if isinstance(instance, Order):
             return None
@@ -62,5 +65,5 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'price', 'filled_price',
-                  'trigger_price', 'side', 'fill_type', 'status', 'market')
+        fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
+                  'filled_price', 'trigger_price', 'side', 'fill_type', 'status', 'market')
