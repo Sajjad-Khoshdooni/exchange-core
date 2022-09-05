@@ -464,7 +464,7 @@ class AssetSnapshotAdmin(admin.ModelAdmin):
 @admin.register(models.FastBuyToken)
 class FastBuyTokenAdmin(admin.ModelAdmin):
     list_display = ['created', 'asset', 'get_amount', 'status', ]
-    readonly_fields = ('get_amount',)
+    readonly_fields = ('get_amount', 'payment_request', 'otc_request')
     list_filter = ('status', )
 
     def get_amount(self, fast_buy_token: FastBuyToken):
