@@ -8,7 +8,7 @@ from rest_framework.generics import get_object_or_404
 
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet
-from ledger.utils.precision import floor_precision
+from ledger.utils.precision import floor_precision, decimal_to_str
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import StopLoss, Order, PairSymbol
 from market.serializers.order_serializer import OrderSerializer
@@ -29,10 +29,10 @@ class StopLossSerializer(OrderSerializer):
 
     def to_representation(self, stop_loss: StopLoss):
         data = super(OrderSerializer, self).to_representation(stop_loss)
-        data['amount'] = str(floor_precision(Decimal(data['amount']), stop_loss.symbol.step_size))
+        data['amount'] = decimal_to_str(floor_precision(Decimal(data['amount']), stop_loss.symbol.step_size))
         if data['price']:
-            data['price'] = str(floor_precision(Decimal(data['price']), stop_loss.symbol.tick_size))
-        data['trigger_price'] = str(floor_precision(Decimal(data['trigger_price']), stop_loss.symbol.tick_size))
+            data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), stop_loss.symbol.tick_size))
+        data['trigger_price'] = decimal_to_str(floor_precision(Decimal(data['trigger_price']), stop_loss.symbol.tick_size))
         data['symbol'] = stop_loss.symbol.name
         return data
 

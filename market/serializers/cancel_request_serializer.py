@@ -24,7 +24,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
                 cancel_request = cancel_order(order)
         except Exception as e:
             logger.error('failed canceling order', extra={'exp': e, 'order': validated_data})
-            if settings.DEBUG:
+            if settings.DEBUG_OR_TESTING_OR_STAGING:
                 raise e
             raise APIException(_('Could not cancel order'))
         return cancel_request

@@ -11,7 +11,8 @@ from rest_framework.generics import get_object_or_404
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet, Asset, CloseRequest
 from ledger.utils.margin import check_margin_view_permission
-from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount
+from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
+    decimal_to_str
 from ledger.utils.price import IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
@@ -23,14 +24,15 @@ class OrderSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     symbol = serializers.CharField(source='symbol.name')
     filled_amount = serializers.SerializerMethodField()
+    filled_percent = serializers.SerializerMethodField()
     filled_price = serializers.SerializerMethodField()
     trigger_price = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
-        data['amount'] = str(floor_precision(Decimal(data['amount']), order.symbol.step_size))
-        data['price'] = str(floor_precision(Decimal(data['price']), order.symbol.tick_size))
+        data['amount'] = decimal_to_str(floor_precision(Decimal(data['amount']), order.symbol.step_size))
+        data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), order.symbol.tick_size))
         data['symbol'] = order.symbol.name
         return data
 
@@ -55,7 +57,7 @@ class OrderSerializer(serializers.ModelSerializer):
             raise ValidationError(_('Insufficient Balance'))
         except Exception as e:
             logger.error('failed placing order', extra={'exp': e, 'order': validated_data})
-            if settings.DEBUG:
+            if settings.DEBUG_OR_TESTING_OR_STAGING:
                 raise e
             raise APIException(_('Could not place order'))
 
@@ -127,7 +129,10 @@ class OrderSerializer(serializers.ModelSerializer):
         return attrs
 
     def get_filled_amount(self, order: Order):
-        return str(floor_precision(order.filled_amount, order.symbol.step_size))
+        return decimal_to_str(floor_precision(order.filled_amount, order.symbol.step_size))
+
+    def get_filled_percent(self, order: Order):
+        return decimal_to_str(floor_precision(100 * order.filled_amount / order.amount, 0)) + '%'
 
     def get_id(self, instance: Order):
         if instance.stop_loss:
@@ -136,7 +141,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_trigger_price(self, instance: Order):
         if instance.stop_loss:
-            return str(floor_precision(instance.stop_loss.trigger_price, instance.symbol.tick_size))
+            return decimal_to_str(floor_precision(instance.stop_loss.trigger_price, instance.symbol.tick_size))
 
     def get_filled_price(self, order: Order):
         fills_amount, fills_value = self.context['trades'].get(order.id, (0, 0))
@@ -144,12 +149,12 @@ class OrderSerializer(serializers.ModelSerializer):
         if not amount:
             return None
         price = Decimal((fills_value or 0)) / amount
-        return str(floor_precision(price, order.symbol.tick_size))
+        return decimal_to_str(floor_precision(price, order.symbol.tick_size))
 
     class Meta:
         model = Order
-        fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'price', 'filled_price', 'side',
-                  'fill_type', 'status', 'market', 'trigger_price')
+        fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
+                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price')
         read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},
