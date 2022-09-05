@@ -1,16 +1,15 @@
 import logging
 from decimal import Decimal
 
-from django.db.models import Sum, F, Subquery, OuterRef
-from django.db.models.functions import Coalesce
+from django.db.models import F
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ledger.utils.precision import floor_precision
 from accounts.throttle import BursApiRateThrottle
+from ledger.utils.precision import floor_precision, decimal_to_str
 from market.models import PairSymbol, Order, Trade
 
 logger = logging.getLogger(__name__)
@@ -54,7 +53,7 @@ class OrderBookAPIView(APIView):
 
         if not request.auth and request.user and not request.user.is_anonymous:
             open_orders = {
-                (order['side'], str(floor_precision(order['price'], symbol.tick_size))): True for order in
+                (order['side'], decimal_to_str(floor_precision(order['price'], symbol.tick_size))): True for order in
                 Order.open_objects.filter(
                     symbol=symbol, wallet__account=self.request.user.account
                 ).values('side', 'price')

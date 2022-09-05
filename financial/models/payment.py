@@ -6,7 +6,7 @@ from django.shortcuts import redirect
 from django.utils import timezone
 from yekta_config.config import config
 from accounts.models import Account
-from ledger.models import Trx, Asset, FastBuyToken
+from ledger.models import Trx, Asset
 from ledger.utils.fields import get_group_id_field, get_status_field
 from accounts.models import Notification
 from accounts.utils import email
@@ -110,6 +110,8 @@ class Payment(models.Model):
         self.alert_payment()
 
     def get_redirect_url(self) -> str:
+        from ledger.models import FastBuyToken
+
         source = self.payment_request.source
         desktop = PaymentRequest.DESKTOP
         fast_by_token = FastBuyToken.objects.filter(payment_request=self.payment_request).last()
