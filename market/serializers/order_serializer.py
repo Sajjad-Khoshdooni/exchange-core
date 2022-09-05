@@ -24,6 +24,7 @@ class OrderSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     symbol = serializers.CharField(source='symbol.name')
     filled_amount = serializers.SerializerMethodField()
+    filled_percent = serializers.SerializerMethodField()
     filled_price = serializers.SerializerMethodField()
     trigger_price = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)

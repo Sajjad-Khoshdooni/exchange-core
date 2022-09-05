@@ -15,6 +15,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
     symbol = serializers.CharField(source='symbol.name')
     id = serializers.SerializerMethodField()
     filled_amount = serializers.SerializerMethodField()
+    filled_percent = serializers.SerializerMethodField()
     filled_price = serializers.SerializerMethodField()
     trigger_price = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
