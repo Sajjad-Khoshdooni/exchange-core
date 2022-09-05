@@ -1,6 +1,7 @@
 import logging
 from decimal import Decimal
 
+from django.db import transaction
 from yekta_config.config import config
 
 from ledger.models import Wallet, OTCTrade, OTCRequest, Asset, CloseRequest, MarginLoan, Trx
@@ -219,4 +220,5 @@ class MarginCloser:
 
     def cancel_open_orders(self):
         from market.models import Order
-        Order.cancel_orders(Order.open_objects.filter(wallet__account=self.account, wallet__market=Wallet.MARGIN))
+        with transaction.atomic():
+            Order.cancel_orders(Order.open_objects.filter(wallet__account=self.account, wallet__market=Wallet.MARGIN))
