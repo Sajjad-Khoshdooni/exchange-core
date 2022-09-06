@@ -119,23 +119,24 @@ def balance_tether(account: Account):
                          order_type=Order.BOT)
 
 
-def system_top_prices(symbol_ids=None):
+def user_top_prices(symbol_ids=None):
     symbol_filter = {'symbol_id__in': symbol_ids} if symbol_ids else {}
     return Order.open_objects.filter(
-        **symbol_filter
-    ).exclude(type=Order.ORDINARY).values('symbol', 'side').annotate(max_price=Max('price'), min_price=Min('price'))
+        **symbol_filter,
+        type=Order.ORDINARY
+    ).values('symbol', 'side').annotate(max_price=Max('price'), min_price=Min('price'))
 
 
 def get_top_prices_exclude_system_orders(symbol_ids=None):
     no_filter_top_prices = get_market_top_prices(symbol_ids=symbol_ids)
     top_ordinary_prices = defaultdict(lambda: Decimal())
 
-    excluding_orders = {
+    user_orders = {
         (o['symbol'], o['side']): o['max_price'] if o['side'] == Order.BUY else o['min_price'] for o in
-        system_top_prices(symbol_ids)
+        user_top_prices(symbol_ids)
     }
     for key, top_price in no_filter_top_prices.items():
-        if top_price != excluding_orders.get(key):
+        if top_price == user_orders.get(key):
             top_ordinary_prices[key] = top_price
     return top_ordinary_prices
 
