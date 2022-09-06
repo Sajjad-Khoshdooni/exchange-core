@@ -32,10 +32,10 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
     code = serializers.CharField(write_only=True)
 
     def create(self, validated_data):
-        if config('WITHDRAW_ENABLE', '1') == '0':
-            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
-
         user = self.context['request'].user
+
+        if config('WITHDRAW_ENABLE', '1') == '0' or not user.can_withdraw:
+            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
 
         if user.level < user.LEVEL2:
             raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')

@@ -137,6 +137,8 @@ class User(AbstractUser):
         verbose_name='امکان برداشت رمزارز در سطح ۱',
     )
 
+    can_withdraw = models.BooleanField(default=True)
+
     @property
     def kyc_bank_card(self):
         return self.bankcard_set.filter(kyc=True).first()
