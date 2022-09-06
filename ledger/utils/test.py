@@ -1,5 +1,7 @@
 from django.conf import settings
 
+from financial.models import BankCard, Gateway
+
 if settings.DEBUG_OR_TESTING:
     import random
     import time
@@ -90,3 +92,11 @@ if settings.DEBUG_OR_TESTING:
         address_book = AddressBook.objects.create(name=name, address=address, account=account, network=network,
                                                   asset=asset)
         return address_book
+
+    def new_bankcard(user) ->BankCard:
+        bankcard = BankCard.objects.create(user=user, card_pan='1', verified=True, kyc=True,)
+        return bankcard
+
+    def new_zibal_gateway() ->Gateway:
+        gateway = Gateway.objects.create(name='test', type=Gateway.ZIBAL, merchant_id='zibal', active=True)
+        return gateway
