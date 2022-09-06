@@ -15,8 +15,8 @@ class MexcSpotHandler(ExchangeHandler):
     MARKET_TYPE = 'spot'
 
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        if settings.DEBUG_OR_TESTING:
-            return {}
+        # if settings.DEBUG_OR_TESTING:
+        #     return {}
         data = data or {}
 
         if signed:
@@ -72,6 +72,29 @@ class MexcSpotHandler(ExchangeHandler):
         }
         resp = self._collect_api(url=order_url, method='POST', data=data, signed=True)
         print(resp)
+        return resp
+
+    def withdraw(self, coin: str, network, address: str, transfer_amount: Decimal,
+                 fee_amount: Decimal, address_tag: str = None,
+                 client_id: str = None) -> dict:
+
+        coin = self.rename_internal_coin_to_original(coin)
+        coefficient_coin = self.get_coin_coefficient(coin)
+
+        amount = transfer_amount + fee_amount
+
+        data = {
+            'coin': coin,
+            'address': address,
+            'amount': decimal_to_str(transfer_amount * coefficient_coin),
+            'network': self.rename_network_symbol_from_origin_to_mexc(network.symbol),
+            'memo': address_tag,
+            'withdrawOrderId': client_id
+        }
+
+        resp = dict()
+        resp['id'] = self.collect_api('/api/v3/capital/withdraw/apply', method='POST', data=data)[0].get('id')
+
         return resp
 
     def get_account_details(self):
