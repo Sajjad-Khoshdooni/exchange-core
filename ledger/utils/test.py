@@ -1,6 +1,6 @@
 from django.conf import settings
 
-if True:
+if settings.DEBUG_OR_TESTING:
     import random
     import time
 
