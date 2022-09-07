@@ -45,7 +45,7 @@ class StakeOptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = StakeOption
         fields = ('id', 'asset', 'apr', 'enable', 'user_max_amount', 'user_min_amount', 'user_available_amount',
-                  'total_cap', 'filled_cap_percent', 'landing')
+                  'total_cap', 'filled_cap_percent', 'landing', 'precision')
 
 
 class StakeOptionAPIView(ListAPIView):

@@ -31,7 +31,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         stake_option = StakeOption.objects.get(id=attrs['stake_option_id'])
-        amount = attrs['amount']
+        amount = round(attrs['amount'], stake_option.precision)
         user = self.context['request'].user
         asset = stake_option.asset
         wallet = asset.get_wallet(user.account)

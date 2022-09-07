@@ -20,6 +20,8 @@ class StakeOption(models.Model):
 
     landing = models.BooleanField(default=False)
 
+    precision = models.IntegerField(default=0)
+
     def __str__(self):
         return self.asset.symbol + ' ' + str(self.apr)
 
