@@ -28,7 +28,7 @@ def handle_provider_withdraw(transfer_id: int):
 
     try:
         transfer.handling = True
-        transfer.save()
+        transfer.save(update_fields=['handling'])
 
         assert not transfer.deposit
         assert transfer.source == handler.NAME
@@ -82,7 +82,7 @@ def handle_provider_withdraw(transfer_id: int):
 
     finally:
         transfer.handling = False
-        transfer.save()
+        transfer.save(update_fields=['handling'])
 
 
 def provider_withdraw(transfer: Transfer):

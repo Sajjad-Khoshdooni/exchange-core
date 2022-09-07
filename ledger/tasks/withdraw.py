@@ -65,49 +65,64 @@ def create_withdraw(transfer_id: int):
 
     transfer = Transfer.objects.get(id=transfer_id)
 
+    if transfer.handling:
+        logger.info('ignored because of handling flag')
+        return
+
     if transfer.source != Transfer.SELF:
+        logger.info('ignored because non self source')
         return
 
     from ledger.requester.withdraw_requester import RequestWithdraw
 
-    response = RequestWithdraw().withdraw_from_hot_wallet(
-        receiver_address=transfer.out_address,
-        amount=transfer.amount,
-        network=transfer.network.symbol,
-        asset=transfer.wallet.asset.symbol,
-        transfer_id=transfer.id
-    )
+    try:
+        transfer.handling = True
+        transfer.save(update_fields=['handling'])
 
-    resp_data = response.json()
+        response = RequestWithdraw().withdraw_from_hot_wallet(
+            receiver_address=transfer.out_address,
+            amount=transfer.amount,
+            network=transfer.network.symbol,
+            asset=transfer.wallet.asset.symbol,
+            transfer_id=transfer.id
+        )
 
-    if response.ok:
-        transfer.status = Transfer.PENDING
-        transfer.save(update_fields=['status'])
+        resp_data = response.json()
 
-    elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
-        logger.info('withdraw switch %s %s' % (transfer.id, resp_data))
+        if response.ok:
+            transfer.status = Transfer.PENDING
+            transfer.save(update_fields=['status'])
 
-        transfer.source = ExchangeHandler.get_handler(transfer.asset.hedge_method).NAME
-        transfer.save(update_fields=['source'])
-        create_provider_withdraw(transfer_id=transfer.id)
-    else:
-        transfer.status = Transfer.PENDING
-        transfer.save(update_fields=['status'])
-        logger.warning('Error sending withdraw to blocklink', extra={
-            'transfer_id': transfer_id,
-            'resp': resp_data
-        })
+        elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
+            logger.info('withdraw switch %s %s' % (transfer.id, resp_data))
+
+            transfer.source = ExchangeHandler.get_handler(transfer.asset.hedge_method).NAME
+            transfer.save(update_fields=['source'])
+            create_provider_withdraw(transfer_id=transfer.id)
+        else:
+            logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
+
+            transfer.status = Transfer.PENDING
+            transfer.save(update_fields=['status'])
+
+            logger.warning('Error sending withdraw to blocklink', extra={
+                'transfer_id': transfer_id,
+                'resp': resp_data
+            })
+
+    finally:
+        transfer.handling = False
+        transfer.save(update_fields=['handling'])
 
 
 @shared_task(queue='blocklink')
 def update_withdraws():
-
     re_handle_transfers = Transfer.objects.filter(
         deposit=False,
+        handling=False,
         source=Transfer.SELF,
         status=Transfer.PROCESSING,
     )
 
     for transfer in re_handle_transfers:
         create_withdraw.delay(transfer.id)
-
