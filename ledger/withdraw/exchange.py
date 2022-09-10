@@ -42,8 +42,8 @@ def handle_provider_withdraw(transfer_id: int):
         fee = handler.get_withdraw_fee(transfer.asset.symbol, transfer.network)
         amount = transfer.amount + fee
 
-        if balance_map[coin] < amount:
-            to_buy_amount = amount - balance_map[coin]
+        if balance_map.get(coin, 0) < amount:
+            to_buy_amount = amount - balance_map.get(coin, 0)
 
             logger.info('not enough %s in interface spot. So buy %s of it!' % (coin, to_buy_amount))
 
@@ -74,7 +74,7 @@ def handle_provider_withdraw(transfer_id: int):
 
         balance_map = handler.get_free_dict()
 
-        if balance_map[coin] < amount:
+        if balance_map.get(coin, 0) < amount:
             logger.info('ignored withdrawing because of insufficient spot balance')
             return
 

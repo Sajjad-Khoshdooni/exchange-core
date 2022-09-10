@@ -67,11 +67,11 @@ class ExchangeHandler:
     def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
                     cache_timeout: int = None):
         cache_key = None
-        # if cache_timeout:
-        #     cache_key = get_cache_func_key(self.__class__, url, method, data, signed)
-        #     result = cache.get(cache_key)
-        #     if result is not None:
-        #         return result
+        if cache_timeout:
+            cache_key = get_cache_func_key(self.__class__, url, method, data, signed)
+            result = cache.get(cache_key)
+            if result is not None:
+                return result
 
         result = self._collect_api(url=url, method=method, data=data, signed=signed)
 
