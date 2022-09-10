@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 import requests
+from django.utils import timezone
 from yekta_config import secret
 from yekta_config.config import config
 
@@ -29,6 +30,7 @@ class Wallet:
 class Withdraw:
     tracking_id: str
     status: str
+    receive_datetime: datetime
 
 
 class FiatWithdraw:
@@ -136,7 +138,8 @@ class PayirChannel(FiatWithdraw):
 
         return Withdraw(
             tracking_id=str(data['cashout']['id']),
-            status=FiatWithdrawRequest.PENDING
+            status=FiatWithdrawRequest.PENDING,
+            receive_datetime=self.get_estimated_receive_time(timezone.now())
         )
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
@@ -283,9 +286,12 @@ class ZibalChannel(FiatWithdraw):
         print('zibal withdraw')
         print(data)
 
+        receive_datetime = datetime.strptime(data['predictedCheckoutDate'], '%Y/%m/%d-%H:%M:%S').astimezone()
+
         return Withdraw(
             tracking_id=data['id'],
-            status=status
+            status=status,
+            receive_datetime=receive_datetime
         )
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> str:

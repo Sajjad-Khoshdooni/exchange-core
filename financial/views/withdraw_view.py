@@ -140,8 +140,7 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
                   'rial_estimate_receive_time',)
 
     def get_rial_estimate_receive_time(self, fiat_withdraw_request: FiatWithdrawRequest):
-        return fiat_withdraw_request.withdraw_datetime and \
-               fiat_withdraw_request.channel_handler.get_estimated_receive_time(fiat_withdraw_request.withdraw_datetime)
+        return fiat_withdraw_request.receive_datetime
 
     def get_status(self, withdraw: FiatWithdrawRequest):
         if withdraw.status == FiatWithdrawRequest.PENDING:
