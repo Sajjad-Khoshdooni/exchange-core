@@ -9,13 +9,26 @@ from ledger.utils.fields import DONE
 import pandas as pd
 
 
-def send_document():
-    url = 'https://api.telegram.org/bot{token}/sendMessage?chat_id={chat_id}&document={document}'.format(
-        token='5780036764:AAGs7ZsYqoIItb0kQO0jCxWikr8CI-07jXM',
-        document='https://books.rouzegar.com/ebook/1401/Shah_Siahpooshan.PDF',
-        chat_id='73407402',
+def send_document(file_path: str):
+    f = open(file_path, 'rb')
+    file_bytes = f.read()
+    f.close()
+
+    document = (f.name, file_bytes)
+
+    url = 'https://api.telegram.org/bot{token}/sendDocument'.format(
+        token='5780036764:AAGs7ZsYqoIItb0kQO0jCxWikr8CI-07jXM'
     )
-    resp = requests.post(url, timeout=5)
+
+    params = {
+        'chat_id': "-1001640029439"
+    }
+
+    files = {
+        'document': document
+    }
+
+    resp = requests.post(url, params=params, files=files, timeout=5)
     return resp.json()
 
 
@@ -24,7 +37,7 @@ def create_daily_transfer():
     gateways = Gateway.objects.all()
 
     data = {'date': [], 'gateway': [], 'withdraw': [], 'deposit': []}
-    for i in range(1, 8):
+    for i in range(7, 0, -1):
 
         date = (timezone.now() - timedelta(days=i)).date()
 
@@ -46,5 +59,4 @@ def create_daily_transfer():
     data_frame = pd.DataFrame(data)
     data_frame.to_csv('daily_payment_{}.csv'.format(date), index=False)
 
-
-
+    send_document(file_path='daily_payment_{}.csv'.format(date))
