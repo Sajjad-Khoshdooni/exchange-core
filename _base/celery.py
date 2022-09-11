@@ -235,7 +235,7 @@ app.conf.beat_schedule = {
     },
     'create_accounting_report': {
         'task': 'accounting.tasks.weekly_fiat_transfer.create_weekly_accounting_report',
-        'schedule': crontab(hour=19, minute=30, day_of_week=7),
+        'schedule': crontab(hour=19, minute=30, day_of_week=6),
         'options': {
             'queue': 'accounting',
             'expire': 36000
