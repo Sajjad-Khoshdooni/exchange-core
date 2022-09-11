@@ -3,15 +3,16 @@ from celery import shared_task
 from django.db.models import Sum
 from django.utils import timezone
 from datetime import timedelta
-
+import csv
 from financial.models import Payment, Gateway, FiatWithdrawRequest
+from ledger.models import Asset
 from ledger.utils.fields import DONE
-import pandas as pd
+import os
 
 from market.models import Trade, Order
 
 
-def send_document(file_path: str):
+def send_accounting_report(file_path: str):
     f = open(file_path, 'rb')
     file_bytes = f.read()
     f.close()
@@ -34,7 +35,7 @@ def send_document(file_path: str):
     return resp.json()
 
 
-def edit_payment_daily_dict(daily_payment_dict:dict, date):
+def add_weekly_payment_dict(weekly_payment_dict:list, date):
     gateways = Gateway.objects.all()
 
     for gateway in gateways:
@@ -47,52 +48,66 @@ def edit_payment_daily_dict(daily_payment_dict:dict, date):
         ).aggregate(Sum('amount'))['amount__sum'] or 0
 
         if withdraw or deposit:
-            daily_payment_dict['date'].append(date)
-            daily_payment_dict['deposit'].append(deposit * 10)
-            daily_payment_dict['withdraw'].append(withdraw * 10)
-            daily_payment_dict['gateway'].append(gateway.name)
+            dict = {}
+            dict['date'] = date
+            dict['gateway'] = gateway.name
+            dict['deposit'] = deposit * 10
+            dict['withdraw'] = withdraw * 10
 
-    return daily_payment_dict
+            weekly_payment_dict.append(dict)
+
+    return weekly_payment_dict
 
 
-def edit_daily_trade_dict(daily_trade_dict: dict, date):
+def add_weekly_trade_dict(weekly_trade_dict: list, date):
     sell_trade = Trade.objects.filter(
         created__date=date,
         trade_source__in=(Trade.SYSTEM, Trade.SYSTEM_TAKER, Trade.SYSTEM_MAKER),
-        side=Order.SELL
+        side=Order.SELL,
+        symbol__base_asset=Asset.get(Asset.IRT)
     ).aggregate(Sum('irt_value'))['irt_value__sum'] or 0
 
     buy_trade = Trade.objects.filter(
         created__date=date,
         trade_source__in=(Trade.SYSTEM, Trade.SYSTEM_TAKER, Trade.SYSTEM_MAKER),
-        side=Order.BUY
+        side=Order.BUY,
+        symbol__base_asset=Asset.get(Asset.IRT)
     ).aggregate(Sum('irt_value'))['irt_value__sum'] or 0
 
     if sell_trade or buy_trade:
-        daily_trade_dict['date'].append(date)
-        daily_trade_dict['sell'].append(sell_trade * 10)
-        daily_trade_dict['buy'].append(buy_trade * 10)
+        dict = {}
+        dict['date'] = date
+        dict['sell'] = sell_trade * 10
+        dict['buy'] = buy_trade * 10
+        weekly_trade_dict.append(dict)
 
 
-@shared_task(queue='')
-def create_daily_transfer():
+@shared_task(queue='accounting')
+def create_weekly_accounting_report():
 
-    daily_payment_dict = {'date': [], 'gateway': [], 'withdraw': [], 'deposit': []}
-    daily_trade_dict = {'date': [], 'sell': [], 'buy': []}
+    weekly_payment_dict = []
+    weekly_trade_dict = []
 
-    for i in range(7, -1, -1):
-        date = (timezone.now() - timedelta(days=i)).date()
-        edit_payment_daily_dict(daily_payment_dict, date)
-        edit_daily_trade_dict(daily_trade_dict, date)
+    now = timezone.now()
+    for i in range(7, 0, -1):
+        date = (now - timedelta(days=i)).date()
+        add_weekly_payment_dict(weekly_payment_dict, date)
+        add_weekly_trade_dict(weekly_trade_dict, date)
 
-    daily_payment_data_frame = pd.DataFrame(daily_payment_dict)
-    daily_payment_data_frame.to_csv('daily_payment_{}.csv'.format(date), index=False)
+    if not os.path.exists('/tmp/accounting'):
+        os.makedirs('/tmp/accounting')
 
-    daily_trade_data_frame = pd.DataFrame(daily_trade_dict)
-    daily_trade_data_frame.to_csv('daily_trade_{}.csv'.format(date), index=False)
+    with open('/tmp/accounting/weekly_payment_{}.csv'.format(date), 'w', newline="") as csv_file:
+        header = ['date', 'gateway', 'deposit', 'withdraw']
+        w = csv.DictWriter(csv_file, fieldnames=header)
+        w.writeheader()
+        w.writerows(weekly_payment_dict)
 
-    send_document(file_path='daily_payment_{}.csv'.format(date))
-    send_document(file_path='daily_trade_{}.csv'.format(date))
+    with open('/tmp/accounting/weekly_trade_{}.csv'.format(date), 'w') as f:
+        header = ['date', 'sell', 'buy']
+        w = csv.DictWriter(f, fieldnames=header)
+        w.writeheader()
+        w.writerows(weekly_trade_dict)
 
-
-#check irt
+    send_accounting_report(file_path='/tmp/accounting/weekly_payment_{}.csv'.format(date))
+    send_accounting_report(file_path='/tmp/accounting/weekly_trade_{}.csv'.format(date))
