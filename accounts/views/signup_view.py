@@ -96,7 +96,7 @@ class SignupSerializer(serializers.Serializer):
         return user
 
     def create_traffic_source(self, user, utm: dict):
-        utm_source = utm.get('utm_source')[:256]
+        utm_source = utm.get('utm_source', '')[:256]
 
         if not utm_source:
             return
