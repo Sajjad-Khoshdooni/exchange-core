@@ -5,14 +5,15 @@ from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils import timezone
 from yekta_config.config import config
+
 from accounts.models import Account
-from ledger.models import Trx, Asset
-from ledger.utils.fields import get_group_id_field, get_status_field
 from accounts.models import Notification
 from accounts.utils import email
+from ledger.models import Trx, Asset
+from ledger.utils.fields import DONE
+from ledger.utils.fields import get_group_id_field, get_status_field
 from ledger.utils.precision import humanize_number, get_presentation_amount
 from ledger.utils.wallet_pipeline import WalletPipeline
-from ledger.utils.fields import DONE, CANCELED
 
 
 class PaymentRequest(models.Model):
@@ -127,11 +128,11 @@ class Payment(models.Model):
         else:
             if self.status == DONE:
                 if fast_by_token and fast_by_token.status != FastBuyToken.DONE:
-                    return 'intent://Checkout/success/#Intent;scheme=raastin;package=com.raastinappts;end'
+                    return 'intent://Checkout/success/#Intent;scheme=raastin;package=com.raastin.pro;end'
                 else:
-                    return 'intent://Checkout/success/#Intent;scheme=raastin;package=com.raastinappts;end'
+                    return 'intent://Checkout/success/#Intent;scheme=raastin;package=com.raastin.pro;end'
             else:
-                return 'intent://Checkout/fail/#Intent;scheme=raastin;package=com.raastinappts;end'
+                return 'intent://Checkout/fail/#Intent;scheme=raastin;package=com.raastin.pro;end'
 
     def redirect_to_app(self):
         url = self.get_redirect_url()
