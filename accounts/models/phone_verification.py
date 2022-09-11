@@ -132,10 +132,15 @@ class VerificationCode(models.Model):
         else:
             code_length = 6
 
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
+            code = '1' * code_length
+        else:
+            code = generate_random_code(code_length)
+
         otp_code = VerificationCode.objects.create(
             phone=phone,
             scope=scope,
-            code=generate_random_code(code_length),
+            code=code,
             user=user,
         )
 
