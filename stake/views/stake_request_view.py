@@ -1,4 +1,3 @@
-from django.db import transaction
 from django.db.models import Sum
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
@@ -9,7 +8,7 @@ from rest_framework.viewsets import ModelViewSet
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet, Trx
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.precision import get_presentation_amount, floor_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
 from stake.models import StakeRequest, StakeOption, StakeRevenue
 from stake.views.stake_option_view import StakeOptionSerializer
@@ -31,7 +30,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         stake_option = StakeOption.objects.get(id=attrs['stake_option_id'])
-        amount = round(attrs['amount'], stake_option.precision)
+        amount = floor_precision(attrs['amount'], stake_option.precision)
         user = self.context['request'].user
         asset = stake_option.asset
         wallet = asset.get_wallet(user.account)
