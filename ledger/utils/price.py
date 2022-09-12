@@ -216,6 +216,10 @@ def get_price_tether_irt_nobitex():
     resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=2)
     data = resp.json()
     status = data['status']
+
+    if not data['asks']:
+        return
+
     price = {'buy': data['asks'][1][0], 'sell': data['bids'][1][0]}
     data = {'price': price, 'status': status}
     return data

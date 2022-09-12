@@ -127,15 +127,20 @@ class VerificationCode(models.Model):
                 logger.info('[OTP] Ignored sending otp to kavenegar because of multiple prev')
                 return
 
-        if scope == cls.SCOPE_TELEPHONE:
+        if scope in (cls.SCOPE_TELEPHONE, cls.SCOPE_VERIFY_PHONE):
             code_length = 4
         else:
             code_length = 6
 
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
+            code = '1' * code_length
+        else:
+            code = generate_random_code(code_length)
+
         otp_code = VerificationCode.objects.create(
             phone=phone,
             scope=scope,
-            code=generate_random_code(code_length),
+            code=code,
             user=user,
         )
 

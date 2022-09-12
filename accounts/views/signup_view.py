@@ -69,7 +69,7 @@ class SignupSerializer(serializers.Serializer):
         validate_password(password=password)
 
         phone = otp_code.phone
-        otp_code.set_token_used()
+        # otp_code.set_token_used()
 
         user = User.objects.create_user(
             username=phone,
@@ -88,7 +88,7 @@ class SignupSerializer(serializers.Serializer):
                 user.account.save()
                 check_prize_achievements(user.account.referred_by.owner)
 
-            otp_code.set_token_used()
+            # otp_code.set_token_used()
 
         utm = validated_data.get('utm') or {}
         self.create_traffic_source(user, utm)
@@ -96,16 +96,16 @@ class SignupSerializer(serializers.Serializer):
         return user
 
     def create_traffic_source(self, user, utm: dict):
-        utm_source = utm.get('utm_source')
+        utm_source = utm.get('utm_source', '')[:256]
 
         if not utm_source:
             return
 
-        utm_medium = utm.get('utm_medium', '')
-        utm_campaign = utm.get('utm_campaign', '')
-        utm_content = utm.get('utm_content', '')
-        utm_term = utm.get('utm_term', '')
-        gps_adid = utm.get('gps_adid', '')
+        utm_medium = utm.get('utm_medium', '')[:256]
+        utm_campaign = utm.get('utm_campaign', '')[:256]
+        utm_content = utm.get('utm_content', '')[:256]
+        utm_term = utm.get('utm_term', '')[:256]
+        gps_adid = utm.get('gps_adid', '')[:256]
 
         if utm_source == 'pwa_app':
             if utm_term.startswith('gclid'):
@@ -137,7 +137,7 @@ class SignupSerializer(serializers.Serializer):
             utm_term=utm_term,
             gps_adid=gps_adid,
             ip=get_client_ip(self.context['request']),
-            user_agent=self.context['request'].META['HTTP_USER_AGENT'],
+            user_agent=self.context['request'].META['HTTP_USER_AGENT'][:256],
         )
 
 

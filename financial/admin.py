@@ -105,12 +105,10 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     get_user.short_description = 'کاربر'
 
     def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
-        if withdraw.withdraw_datetime:
-            data_time = withdraw.channel_handler.get_estimated_receive_time(withdraw.withdraw_datetime)
-
+        if withdraw.receive_datetime:
             return ('زمان : %s تاریخ %s' % (
-                data_time.time().strftime("%H:%M"),
-                gregorian_to_jalali_date_str(data_time.date())
+                withdraw.receive_datetime.time().strftime("%H:%M"),
+                gregorian_to_jalali_date_str(withdraw.receive_datetime.date())
             ))
 
     get_withdraw_request_receive_time.short_description = 'زمان تقریبی واریز'
