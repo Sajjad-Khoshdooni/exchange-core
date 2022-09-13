@@ -89,7 +89,7 @@ class OpenOrderListAPIView(APIView):
 
         open_orders = Order.open_objects.filter(
             wallet__account=self.request.user.account, stop_loss__isnull=True, **filters
-        ).select_related('symbol', 'wallet', 'wallet__reserved_wallet')
+        ).select_related('symbol', 'wallet',)
         open_stop_losses = StopLoss.open_objects.filter(
             wallet__account=self.request.user.account, **filters
         ).select_related('symbol', 'wallet')
