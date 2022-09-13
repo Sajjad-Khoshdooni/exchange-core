@@ -22,7 +22,7 @@ def inject_tether_to_futures():
         usdt_amount = min(balance_map[Asset.USDT], 2000)
 
         if usdt_amount > 1:
-            BinanceSpotHandler().trans:fer('USDT', float(usdt_amount), 'futures', 1)
+            BinanceSpotHandler().transfer('USDT', float(usdt_amount), 'futures', 1)
             logger.info('injected successfully (%s)' % usdt_amount)
 
         send_system_message(
