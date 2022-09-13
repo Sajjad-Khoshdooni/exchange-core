@@ -11,23 +11,23 @@ from ledger.utils.fields import DONE, CANCELED
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 token_cache = caches['token']
-JIBIT_GATEWAY_TOKEN_KEY = 'jibit_gateway_token'
+JIBIT_GATEWAY_PURCHASE_TOKEN_KEY = 'jibit_gateway_purchase_token'
 
 
-class GibitGateway(Gateway):
+class jibitGateway(Gateway):
     BASE_URL = 'https://napi.jibit.ir/ppg'
 
     def _get_token(self, force_renew: bool = False):
         if not force_renew:
-            token = token_cache.get(JIBIT_GATEWAY_TOKEN_KEY)
+            token = token_cache.get(JIBIT_GATEWAY_PURCHASE_TOKEN_KEY)
             if token:
                 return token
 
         resp = requests.post(
             url=self.BASE_URL + '/v3/tokens',
             json={
-                'apiKey': secret('JIBIT_GATEWAY-API_KEY'),
-                'secretKey': secret('JIBIT_GATEWAY_API_SECRET'),
+                'apiKey': secret('JIBIT_GATEWAY_PURCHASE_API_KEY'),
+                'secretKey': secret('JIBIT_GATEWAY_PURCHASE_API_SECRET'),
             },
             timeout=30,
             proxies={
@@ -41,7 +41,7 @@ class GibitGateway(Gateway):
             resp_data = resp.json()
             token = resp_data['accessToken']
             expire = 24 * 3600
-            token_cache.set(JIBIT_GATEWAY_TOKEN_KEY, token, expire)
+            token_cache.set(JIBIT_GATEWAY_PURCHASE_TOKEN_KEY, token, expire)
 
             return token
 
@@ -60,7 +60,7 @@ class GibitGateway(Gateway):
             headers={'Authorization': 'Bearer' + token},
             json={
                 'amount': amount * 10,
-                'callbackUrl': settings.HOST_URL + reverse('finance:gibit-callback'),
+                'callbackUrl': settings.HOST_URL + reverse('finance:jibit-callback'),
                 'clientReferenceNumber': str(payment_request.id),
                 'currency': 'IRR',
                 'description': 'افزایش اعتبار',

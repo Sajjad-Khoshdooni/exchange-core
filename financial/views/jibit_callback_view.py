@@ -5,7 +5,7 @@ from django.views.generic import TemplateView
 from financial.models import PaymentRequest, Payment
 
 
-class GibitCallbackView(TemplateView):
+class JibitCallbackView(TemplateView):
     authentication_classes = permission_classes = ()
 
     def post(self, request, *args, **kwargs):
