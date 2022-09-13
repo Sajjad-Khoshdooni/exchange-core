@@ -27,7 +27,9 @@ def floor_precision(amount: Decimal, precision: int = 0):
 
 
 def get_precision(amount: Decimal) -> int:
-    amount = '{:,f}'.format(amount)
+
+    if isinstance(amount, Decimal):
+        amount = '{:,f}'.format(amount)
 
     if '.' in amount:
         amount = amount.rstrip('0').rstrip('.')
