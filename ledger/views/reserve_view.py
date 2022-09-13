@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -47,8 +48,9 @@ class RefundWalletSerializer(serializers.Serializer):
             raise ValidationError(_('Account and Variant do not match together.'))
         try:
             from market.models import Order
-            Order.cancel_orders(Order.open_objects.filter(wallet__account=account, wallet__variant=variant))
-            return reserve_wallet.refund()
+            with transaction.atomic():
+                Order.cancel_orders(Order.open_objects.filter(wallet__account=account, wallet__variant=variant))
+                return reserve_wallet.refund()
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
         except Exception as exp:
