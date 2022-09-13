@@ -11,7 +11,7 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 class ZarinpalGateway(Gateway):
     BASE_URL = 'https://api.zarinpal.com'
 
-    def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:
+    def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
         resp = requests.post(
             self.BASE_URL + '/pg/v4/payment/request.json',
             json={
@@ -33,14 +33,15 @@ class ZarinpalGateway(Gateway):
             bank_card=bank_card,
             amount=amount,
             gateway=self,
-            authority=authority
+            authority=authority,
+            source=source,
         )
 
     @classmethod
     def get_payment_url(cls, authority: str):
         return 'https://www.zarinpal.com/pg/StartPay/{}'.format(authority)
 
-    def verify(self, payment: Payment):
+    def _verify(self, payment: Payment):
         payment_request = payment.payment_request
 
         resp = requests.post(

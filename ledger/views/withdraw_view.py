@@ -28,11 +28,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
     memo = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     def validate(self, attrs):
-
-        if config('WITHDRAW_ENABLE', '1') == '0':
-            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
-
         user = self.context['request'].user
+
+        if config('WITHDRAW_ENABLE', '1') == '0' or not user.can_withdraw:
+            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
 
         if user.level < user.LEVEL2 and not user.allow_level1_crypto_withdraw:
             raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')

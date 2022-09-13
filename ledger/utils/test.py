@@ -28,7 +28,7 @@ if settings.DEBUG_OR_TESTING:
         }
 
         if asset.symbol == Asset.USDT:
-            key = 'nob:usdtirt'
+            key = 'usdtirt'
         else:
             key = 'bin:' + asset.symbol.lower() + 'usdt'
 

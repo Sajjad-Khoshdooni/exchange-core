@@ -11,7 +11,7 @@ from django.utils import timezone
 from collector.metrics import set_metric
 from collector.utils.price import price_redis
 from ledger.models import Asset
-from ledger.utils.price import get_binance_price_stream
+from ledger.utils.price import get_binance_price_stream, DAY
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,9 @@ class BinanceConsumer:
         self.loop = True
         self.socket = websocket.WebSocket()
         self.queue = {}
+        self.stale_queue = {}
         self.last_flush_time = time.time()
+        self.last_stale_flush_time = 0
         self.verbose = verbose
 
         logger.info('Starting Binance Socket...')
@@ -77,11 +79,21 @@ class BinanceConsumer:
         self.queue[key] = {
             'a': ask, 'b': bid
         }
+        self.stale_queue[key + ':stale'] = {
+            'a': ask, 'b': bid
+        }
 
-        if time.time() - self.last_flush_time > 1:
-            self.flush()
+        _now = time.time()
 
-    def flush(self):
+        if _now - self.last_flush_time > 1:
+            stale = False
+            if _now - self.last_stale_flush_time > 60:
+                stale = True
+                self.last_stale_flush_time = _now
+
+            self.flush(stale)
+
+    def flush(self, stale: bool = False):
         flushed_count = len(self.queue)
         logger.info('%s flushing %d items' % (timezone.now().astimezone().strftime('%Y-%m-%d %H:%M:%S'), flushed_count))
         pipe = price_redis.pipeline(transaction=False)
@@ -89,6 +101,13 @@ class BinanceConsumer:
         for (name, data) in self.queue.items():
             pipe.hset(name=name, mapping=data)
             pipe.expire(name, 30)  # todo: reduce this to 10 for volatile coins
+
+        if stale:
+            for (name, data) in self.stale_queue.items():
+                pipe.hset(name=name, mapping=data)
+                pipe.expire(name, DAY)
+
+            self.stale_queue = {}
 
         pipe.execute()
 

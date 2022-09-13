@@ -25,6 +25,7 @@ STAGING = config('STAGING', cast=bool, default=False)
 TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
 DEBUG_OR_TESTING = DEBUG or TESTING
+DEBUG_OR_TESTING_OR_STAGING = DEBUG or TESTING or STAGING
 
 HOST_URL = config('HOST_URL')
 

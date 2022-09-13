@@ -21,7 +21,7 @@ PER_PAIR_EXPECTED_TRADES_PER_SECOND = Decimal(1) / 30  # every 30 seconds we hav
 
 # no offense to dear traders but for more info about the name,
 # see https://imgurl.ir/uploads/t28108_IMG_20220717_162148_191.jpg
-@shared_task(queue='carrot_trader')
+@shared_task(queue='trader-ma')
 def carrot_trader():
     symbols = list(PairSymbol.objects.filter(enable=True, market_maker_enabled=True))
     choices_count = math.ceil(TASK_INTERVAL * PER_PAIR_EXPECTED_TRADES_PER_SECOND * len(symbols) * 2)
@@ -44,6 +44,7 @@ def get_account():
 def generate_carrot_order(symbol: PairSymbol, account, top_prices):
     side = random.choices([Order.BUY, Order.SELL])[0]
     top_user_price = top_prices[side]
+    top_opposite_user_price = top_prices[Order.get_opposite_side(side)]
     if top_user_price:
         if symbol.base_asset.symbol == Asset.USDT:
             trading_price = get_trading_price_usdt(symbol.asset.symbol, side, gap=Decimal('0.001'))
@@ -53,4 +54,4 @@ def generate_carrot_order(symbol: PairSymbol, account, top_prices):
         if (side == Order.BUY and top_user_price < trading_price) or \
                 (side == Order.SELL and top_user_price > trading_price):
             logger.info('placing carrot order %s %s' % (symbol, side))
-            return place_carrot_order(symbol, account, side, top_user_price)
+            return place_carrot_order(symbol, account, side, top_user_price, top_opposite_user_price)

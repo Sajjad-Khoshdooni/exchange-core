@@ -48,19 +48,25 @@ class StakeRequest(models.Model):
         account = self.account
         asset = self.stake_option.asset
         user_email = account.user.email
+
         valid_change_status = [
             (self.PROCESS, self.PENDING), (self.PROCESS, self.CANCEL_COMPLETE),
             (self.PENDING, self.DONE), (self.PENDING, self.CANCEL_PROCESS),
             (self.DONE, self.CANCEL_PROCESS), (self.CANCEL_PROCESS, self.CANCEL_PENDING),
             (self.CANCEL_PENDING, self.CANCEL_COMPLETE), (self.CANCEL_PROCESS, self.CANCEL_COMPLETE)
         ]
-        valid_cancellation_status = [(self.PROCESS, self.CANCEL_COMPLETE), (self.CANCEL_PENDING, self.CANCEL_COMPLETE)]
+        valid_cancellation_status = [
+            (self.PROCESS, self.CANCEL_COMPLETE),
+            (self.CANCEL_PROCESS, self.CANCEL_COMPLETE),
+            (self.CANCEL_PENDING, self.CANCEL_COMPLETE)
+        ]
 
         assert (old_status, new_status) in valid_change_status, 'invalid change_status'
 
         if (old_status, new_status) in valid_cancellation_status:
             spot_wallet = asset.get_wallet(account)
             stake_wallet = asset.get_wallet(account=account, market=Wallet.STAKE)
+
             with WalletPipeline() as pipeline:
                 pipeline.new_trx(
                     group_id=self.group_id,
@@ -71,12 +77,21 @@ class StakeRequest(models.Model):
                 )
                 self.status = new_status
                 self.save()
+
             self.send_email_for_staking(user_email=user_email, template=email.SCOPE_CANCEL_STAKE)
 
         elif (old_status, new_status) == (self.PENDING, self.DONE):
+            from accounts.tasks import send_message_by_kavenegar
             self.status = new_status
             self.save()
             self.send_email_for_staking(user_email=user_email, template=email.SCOPE_DONE_STAKE)
+
+            send_message_by_kavenegar(
+                phone=account.user.phone,
+                token=asset.name_fa,
+                send_type='sms',
+                template='staking-activated'
+            )
 
         elif (old_status, new_status) in [(self.PENDING, self.CANCEL_PROCESS), (self.DONE, self.CANCEL_PROCESS)]:
             self.status = new_status
@@ -90,5 +105,3 @@ class StakeRequest(models.Model):
         else:
             self.status = new_status
             self.save()
-
-

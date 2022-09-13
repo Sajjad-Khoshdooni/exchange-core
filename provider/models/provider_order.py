@@ -15,6 +15,7 @@ from ledger.utils.precision import floor_precision
 from ledger.utils.price import get_trading_price_usdt, SELL, BUY
 from provider.exchanges import BinanceSpotHandler, BinanceFuturesHandler
 from provider.exchanges.interface.kucoin_interface import KucoinFuturesHandler, KucoinSpotHandler
+from provider.exchanges.interface.mexc_interface import MexcSpotHandler, MexcFuturesHandler
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +27,11 @@ class ProviderOrder(models.Model):
     BUY, SELL = 'buy', 'sell'
     ORDER_CHOICES = [(BUY, BUY), (SELL, SELL)]
 
-    TRADE, BORROW, LIQUIDATION, WITHDRAW, HEDGE, PROVIDE_BASE = 'trade', 'borrow', 'liquid', 'withdraw', 'hedge', 'prv-base'
+    TRADE, BORROW, LIQUIDATION, WITHDRAW, HEDGE, PROVIDE_BASE, FAKE = \
+        'trade', 'borrow', 'liquid', 'withdraw', 'hedge', 'prv-base', 'fake'
+
     SCOPE_CHOICES = ((TRADE, 'trade'), (BORROW, 'borrow'), (LIQUIDATION, 'liquidation'), (WITHDRAW, 'withdraw'),
-                     (HEDGE, HEDGE), (PROVIDE_BASE, PROVIDE_BASE))
+                     (HEDGE, HEDGE), (PROVIDE_BASE, PROVIDE_BASE), (FAKE, FAKE))
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -82,12 +85,16 @@ class ProviderOrder(models.Model):
             if market == cls.FUTURE:
                 if asset.get_hedger().NAME == KucoinSpotHandler.NAME:
                     handler = KucoinFuturesHandler
+                elif asset.get_hedger().NAME == MexcSpotHandler.NAME:
+                    handler = MexcFuturesHandler
                 else:
                     handler = BinanceFuturesHandler
 
             elif market == cls.SPOT:
                 if asset.get_hedger().NAME == KucoinSpotHandler.NAME:
                     handler = KucoinSpotHandler
+                elif asset.get_hedger().NAME == MexcSpotHandler.NAME:
+                    handler = MexcSpotHandler
                 else:
                     handler = BinanceSpotHandler
 
@@ -185,7 +192,9 @@ class ProviderOrder(models.Model):
             # check notional
             price = get_trading_price_usdt(asset.symbol, side=SELL, raw_price=True)
 
-            if order_amount * price < 10:
+            min_hedge_amount = handler.get_min_notional()
+
+            if order_amount * price < min_hedge_amount:
                 logger.info('ignored due to small order')
                 return True
 
@@ -197,10 +206,10 @@ class ProviderOrder(models.Model):
                     if balance < order_amount:
                         diff = order_amount - balance
 
-                        if diff * price < 10:
+                        if diff * price < 11:
                             order_amount = floor_precision(balance, round_digits)
 
-                            if order_amount * price < 10:
+                            if order_amount * price < 11:
                                 logger.info('ignored due to small order')
                                 return True
 

@@ -7,106 +7,12 @@ import pytz
 from django.conf import settings
 from django.utils import timezone
 
-from ledger.utils.cache import get_cache_func_key, cache
 from ledger.utils.precision import decimal_to_str
 from ledger.utils.price import get_price
 from ledger.utils.price_manager import PriceManager
+from provider.exchanges.interface.base import ExchangeHandler, MARKET, SELL, BUY, LIMIT, POST, HOUR, GET
 from provider.exchanges.sdk.binance_sdk import binance_spot_send_signed_request, binance_futures_send_signed_request, \
     binance_futures_send_public_request, binance_spot_send_public_request
-
-MARKET, LIMIT = 'MARKET', 'LIMIT'
-SELL, BUY = 'SELL', 'BUY'
-GET, POST = 'GET', 'POST'
-
-HOUR = 3600
-
-
-class ExchangeHandler:
-    MARKET_TYPE = ''
-    NAME = ''
-
-    @classmethod
-    def get_handler(cls, name: str):
-        from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler, KucoinFuturesHandler
-        from ledger.models.asset import Asset
-
-        mapping = {
-            Asset.HEDGE_BINANCE_SPOT: BinanceSpotHandler,
-            Asset.HEDGE_BINANCE_FUTURE: BinanceFuturesHandler,
-            Asset.HEDGE_KUCOIN_SPOT: KucoinSpotHandler,
-            Asset.HEDGE_KUCOIN_FUTURE: KucoinFuturesHandler
-        }
-
-        return mapping.get(name, BinanceSpotHandler)()
-
-    def collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True,
-                    cache_timeout: int = None):
-        cache_key = None
-
-        if cache_timeout:
-            cache_key = get_cache_func_key(self.__class__, url, method, data, signed)
-            result = cache.get(cache_key)
-
-            if result is not None:
-                return result
-
-        result = self._collect_api(url=url, method=method, data=data, signed=signed)
-
-        if cache_timeout:
-            cache.set(cache_key, result, cache_timeout)
-
-        return result
-
-    def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        raise NotImplementedError
-
-    def get_trading_symbol(self, symbol: str) -> str:
-        raise NotImplementedError
-
-    def place_order(self, symbol: str, side: str, amount: Decimal, order_type: str = MARKET,
-                    client_order_id: str = None) -> dict:
-        raise NotImplementedError
-
-    def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal,
-                 fee_amount: Decimal, address_tag: str = None,
-                 client_id: str = None) -> dict:
-        raise NotImplementedError
-
-    def get_account_details(self):
-        raise NotImplementedError
-
-    def get_free_dict(self):
-        raise NotImplementedError
-
-    def get_all_coins(self):
-        raise NotImplementedError
-
-    def get_coin_data(self, coin: str) -> Union[dict, None]:
-        raise NotImplementedError
-
-    def get_network_info(self, coin: str, network: str) -> Union[dict, None]:
-        raise NotImplementedError
-
-    def get_withdraw_fee(self, coin: str, network: str) -> Decimal:
-        raise NotImplementedError
-
-    def transfer(self, asset: str, amount: float, market: str, transfer_type: int):
-        raise NotImplementedError
-
-    def get_symbol_data(self, symbol: str) -> Union[dict, None]:
-        raise NotImplementedError
-
-    def get_step_size(self, symbol: str) -> Decimal:
-        raise NotImplementedError
-
-    def get_lot_min_quantity(self, symbol: str) -> Decimal:
-        raise NotImplementedError
-
-    def get_withdraw_status(self, withdraw_id: str) -> dict:
-        raise NotImplementedError
-
-    def get_spot_handler(self) -> 'ExchangeHandler':
-        raise NotImplementedError
 
 
 class BinanceSpotHandler(ExchangeHandler):
@@ -115,7 +21,7 @@ class BinanceSpotHandler(ExchangeHandler):
     NAME = 'binance'
 
     def _collect_api(self, url: str, method: str = 'GET', data: dict = None, signed: bool = True):
-        if settings.DEBUG_OR_TESTING:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             return {}
 
         data = data or {}
@@ -157,12 +63,12 @@ class BinanceSpotHandler(ExchangeHandler):
 
         return self.collect_api(self.order_url, data=data, method=POST)
 
-    def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal, fee_amount: Decimal,
+    def withdraw(self, coin: str, network, address: str, transfer_amount: Decimal, fee_amount: Decimal,
                  address_tag: str = None, client_id: str = None, memo: str = None) -> dict:
 
         data = {
             'coin': coin,
-            'network': network,
+            'network': network.symbol,
             'amount': decimal_to_str(Decimal(transfer_amount) + Decimal(fee_amount)),
             'address': address,
             'addressTag': address_tag,
@@ -191,12 +97,12 @@ class BinanceSpotHandler(ExchangeHandler):
 
         return info[0]
 
-    def get_network_info(self, coin: str, network: str) -> Union[dict, None]:
+    def get_network_info(self, coin: str, network) -> Union[dict, None]:
         coin = self.get_coin_data(coin)
         if not coin:
             return
 
-        networks = list(filter(lambda d: d['network'] == network, coin['networkList']))
+        networks = list(filter(lambda d: d['network'] == network.symbol, coin['networkList']))
 
         if not networks:
             return
@@ -208,7 +114,7 @@ class BinanceSpotHandler(ExchangeHandler):
 
         return network
 
-    def get_withdraw_fee(self, coin: str, network: str) -> Decimal:
+    def get_withdraw_fee(self, coin: str, network) -> Decimal:
         info = self.get_network_info(coin, network)
         return Decimal(info['withdrawFee'])
 
@@ -370,6 +276,7 @@ class BinanceSpotHandler(ExchangeHandler):
             asset = wallet['asset']
             free = wallet['free']
             locked = wallet['locked']
+
             with PriceManager(fetch_all=True):
                 if asset == '1000SHIB':
                     price = get_price('SHIB', side=BUY.lower()) * 1000
@@ -380,6 +287,7 @@ class BinanceSpotHandler(ExchangeHandler):
                     usdt_value = Decimal(price) * Decimal(free)
                 else:
                     usdt_value = Decimal(0)
+
             BinanceWallet.objects.update_or_create(
                 asset=asset,
                 type=BinanceWallet.SPOT,
@@ -398,7 +306,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
     }
 
     def _collect_api(self, url: str, method: str = 'POST', data: dict = None, signed: bool = True):
-        if settings.DEBUG_OR_TESTING:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             return {}
 
         data = data or {}
@@ -436,7 +344,7 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
         return coin_data[0]
 
-    def get_lot_size_data(self, symbol: str) -> Union[dict, None]:
+    def _get_lot_size_data(self, symbol: str) -> Union[dict, None]:
         coin_data = self.get_symbol_data(symbol)
         if not coin_data:
             return
@@ -518,3 +426,10 @@ class BinanceFuturesHandler(BinanceSpotHandler):
 
     def get_spot_handler(self):
         return BinanceSpotHandler()
+
+    def get_free_dict(self):
+        raise NotImplementedError
+
+    def withdraw(self, coin: str, network: str, address: str, transfer_amount: Decimal, fee_amount: Decimal,
+                 address_tag: str = None, client_id: str = None, memo: str = None) -> dict:
+        raise NotImplementedError

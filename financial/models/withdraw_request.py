@@ -49,6 +49,7 @@ class FiatWithdrawRequest(models.Model):
     comment = models.TextField(verbose_name='نظر', blank=True)
 
     withdraw_datetime = models.DateTimeField(null=True, blank=True)
+    receive_datetime = models.DateTimeField(null=True, blank=True)
     provider_withdraw_id = models.CharField(max_length=64, blank=True)
 
     withdraw_channel = models.CharField(max_length=10, choices=CHANEL_CHOICES, default=PAYIR)
@@ -106,14 +107,16 @@ class FiatWithdrawRequest(models.Model):
             )
             return
 
-        self.ref_id = self.provider_withdraw_id = self.channel_handler.create_withdraw(
+        withdraw = self.channel_handler.create_withdraw(
             wallet_id,
             self.bank_account,
             self.amount,
             self.id
         )
-        self.change_status(FiatWithdrawRequest.PENDING)
+        self.provider_withdraw_id = self.ref_id = withdraw.tracking_id
+        self.change_status(withdraw.status)
         self.withdraw_datetime = timezone.now()
+        self.receive_datetime = withdraw.receive_datetime
 
         self.save()
 
@@ -132,18 +135,13 @@ class FiatWithdrawRequest(models.Model):
             self.change_status(FiatWithdrawRequest.CANCELED)
 
     def alert_withdraw_verify_status(self):
-        if self.withdraw_datetime:
-            estimated_receive_time = gregorian_to_jalali_datetime_str(
-                self.channel_handler.get_estimated_receive_time(self.withdraw_datetime)
-            )
-        else:
-            estimated_receive_time = None
         user = self.bank_account.user
 
-        if self.status == PENDING:
+        if self.status == PENDING and self.withdraw_datetime:
             title = 'درخواست برداشت شما به بانک ارسال گردید.'
             description = 'وجه درخواستی شما در سیکل بعدی پایا {} به حساب شما واریز خواهد شد.'.format(
-                estimated_receive_time)
+                gregorian_to_jalali_datetime_str(self.withdraw_datetime)
+            )
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
             email_template = email.SCOPE_SUCCESSFUL_FIAT_WITHDRAW
@@ -173,7 +171,7 @@ class FiatWithdrawRequest(models.Model):
             recipient=user.email,
             template=email_template,
             context={
-                'estimated_receive_time': estimated_receive_time or None,
+                'estimated_receive_time': self.receive_datetime or None,
                 'brand': config('BRAND'),
                 'panel_url': config('PANEL_URL'),
                 'logo_elastic_url': config('LOGO_ELASTIC_URL'),

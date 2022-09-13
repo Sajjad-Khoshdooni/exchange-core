@@ -8,8 +8,7 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
-from ledger.models import Asset, Prize, CoinCategory
+from ledger.models import Asset, Prize, CoinCategory, FastBuyToken
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
@@ -43,12 +42,12 @@ class AssetAdmin(AdvancedAdmin):
     list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable', 'new_coin')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
+    actions = ('hedge_asset', )
 
     def changelist_view(self, request, extra_context=None):
 
-        if not settings.DEBUG_OR_TESTING:
-            self.overview = AssetOverview()
-            account = MARGIN_INSURANCE_ACCOUNT
+        if not settings.DEBUG_OR_TESTING_OR_STAGING:
+            self.overview = AssetOverview(strict=False)
 
             context = {
                 'binance_initial_margin': round(self.overview.total_initial_margin, 2),
@@ -56,13 +55,19 @@ class AssetAdmin(AdvancedAdmin):
                 'binance_margin_ratio': round(self.overview.margin_ratio, 2),
                 'hedge_value': round(self.overview.get_total_hedge_value(), 2),
                 'binance_spot_tether_amount': round(self.overview.get_binance_spot_amount(Asset.get(Asset.USDT)), 2),
+                'kucoin_spot_tether_amount': round(self.overview.get_kucoin_spot_amount(Asset.get(Asset.USDT)), 2),
+                'mexc_spot_tether_amount': round(self.overview.get_mexc_spot_amount(Asset.get(Asset.USDT)), 2),
 
                 'binance_spot_usdt': round(self.overview.get_binance_spot_total_value(), 2),
+                'kucoin_spot_usdt': round(self.overview.get_kucoin_spot_total_value(), 2),
+                'mexc_spot_usdt': round(self.overview.get_mexc_spot_total_value(), 2),
+
                 'binance_margin_balance': round(self.overview.total_margin_balance, 2),
                 'internal_usdt': round(self.overview.get_internal_usdt_value(), 2),
-                'fiat_usdt': round(self.overview.get_fiat_usdt(), 0),
-                'margin_insurance_balance': Asset.get(Asset.USDT).get_wallet(account).balance,
+                'fiat_usdt': round(self.overview.get_gateway_usdt(), 0),
+                'margin_insurance_balance': self.overview.get_margin_insurance_balance(),
                 'investment': round(self.overview.get_total_investment(), 0),
+                'cash': round(self.overview.get_total_cash(), 0),
 
                 'total_assets_usdt': round(self.overview.get_all_assets_usdt(), 0),
                 'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
@@ -143,10 +148,16 @@ class AssetAdmin(AdvancedAdmin):
             handler = asset.get_hedger()
 
             if handler:
-                symbol = handler.get_trading_symbol(coin=asset.symbol)
+                symbol = handler.get_trading_symbol(asset.symbol)
                 return handler.get_step_size(symbol)
 
     get_hedge_threshold.short_description = 'hedge threshold'
+
+    @admin.action(description='متعادل سازی رمز ارزها', permissions=['view'])
+    def hedge_asset(self, request, queryset):
+        assets = queryset.exclude(hedge_method=Asset.HEDGE_NONE, )
+        for asset in assets:
+            ProviderOrder.try_hedge_for_new_order(asset, ProviderOrder.HEDGE)
 
 
 @admin.register(models.Network)
@@ -160,9 +171,10 @@ class NetworkAdmin(admin.ModelAdmin):
 
 @admin.register(models.NetworkAsset)
 class NetworkAssetAdmin(admin.ModelAdmin):
-    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'can_deposit', 'hedger_withdraw_enable')
+    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'can_deposit', 'can_withdraw',
+                    'hedger_withdraw_enable')
     search_fields = ('asset__symbol', )
-    list_editable = ('can_deposit', )
+    list_editable = ('can_deposit', 'can_withdraw', )
     list_filter = ('network', )
 
 
@@ -183,9 +195,9 @@ class DepositAddressUserFilter(admin.SimpleListFilter):
 
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_display = ('address_key', 'network', 'address', 'is_registered',)
-    readonly_fields = ('address_key', 'network', 'address', 'is_registered',)
-    list_filter = ('network', 'is_registered', DepositAddressUserFilter )
+    list_display = ('address_key', 'network', 'address',)
+    readonly_fields = ('address_key', 'network', 'address',)
+    list_filter = ('network', DepositAddressUserFilter)
     search_fields = ('address',)
 
 
@@ -322,7 +334,10 @@ class TransferAdmin(admin.ModelAdmin):
     readonly_fields = ('deposit_address', 'network', 'wallet', 'provider_transfer', 'get_total_volume_usdt')
 
     def get_total_volume_usdt(self, transfer: models.Transfer):
-        return transfer.amount * get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
+        price = get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
+        if price:
+            return transfer.amount * price
+
     get_total_volume_usdt.short_description = 'ارزش تتری'
 
 
@@ -394,6 +409,8 @@ class CoinCategoryAdmin(admin.ModelAdmin):
 class AddressKeyAdmin(admin.ModelAdmin):
     list_display = ('address', )
     readonly_fields = ('address', 'account')
+    search_fields = ('address', 'public_address')
+    list_filter = ('architecture', )
 
 
 @admin.register(models.AssetSpreadCategory)
@@ -413,3 +430,44 @@ class CategorySpreadAdmin(admin.ModelAdmin):
     list_editable = ('side', 'step', 'spread')
     ordering = ('category', 'step', 'side')
     list_filter = ('category', 'side', 'step')
+
+
+@admin.register(models.SystemSnapshot)
+class SystemSnapshotAdmin(admin.ModelAdmin):
+    list_display = ('created', 'total', 'users', 'exchange', 'exchange_potential', 'hedge', 'cumulated_hedge',
+                    'binance_futures', 'binance_spot', 'kucoin_spot', 'mexc_spot', 'internal', 'fiat_gateway',
+                    'investment', 'cash', 'prize', 'verified')
+    ordering = ('-created', )
+    actions = ('reject_histories', 'verify_histories')
+
+    @admin.action(description='رد', permissions=['change'])
+    def reject_histories(self, request, queryset):
+        queryset.update(verified=False)
+
+    @admin.action(description='تایید', permissions=['change'])
+    def verify_histories(self, request, queryset):
+        queryset.update(verified=True)
+
+
+@admin.register(models.AssetSnapshot)
+class AssetSnapshotAdmin(admin.ModelAdmin):
+    list_display = ('created', 'asset', 'total_amount', 'users_amount', 'hedge_amount', 'hedge_value', 'get_hedge_diff')
+    ordering = ('-created', 'asset__order')
+    list_filter = ('asset', )
+
+    def get_hedge_diff(self, asset_snapshot: models.AssetSnapshot):
+        return asset_snapshot.calc_hedge_amount - asset_snapshot.hedge_amount
+
+    get_hedge_diff.short_description = 'hedge diff'
+
+
+@admin.register(models.FastBuyToken)
+class FastBuyTokenAdmin(admin.ModelAdmin):
+    list_display = ['created', 'asset', 'get_amount', 'status', ]
+    readonly_fields = ('get_amount', 'payment_request', 'otc_request')
+    list_filter = ('status', )
+
+    def get_amount(self, fast_buy_token: FastBuyToken):
+        return humanize_number(fast_buy_token.amount)
+
+    get_amount.short_description = 'مقدار'

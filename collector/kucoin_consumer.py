@@ -4,13 +4,17 @@ import signal
 import sys
 import time
 from datetime import datetime
+from decimal import Decimal
 
 import websocket
 from django.utils import timezone
 
+from collector.binance_consumer import DAY
 from collector.metrics import set_metric
 from collector.utils.price import price_redis
 from ledger.models import Asset
+from ledger.utils.precision import decimal_to_str
+from provider.exchanges.interface.binance_interface import ExchangeHandler
 from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
 
 logger = logging.getLogger(__name__)
@@ -22,7 +26,9 @@ class KucoinConsumer:
         self.loop = True
         self.socket = websocket.WebSocket()
         self.queue = {}
+        self.stale_queue = {}
         self.last_flush_time = time.time()
+        self.last_stale_flush_time = 0
         self.verbose = verbose
 
         logger.info('Starting kucoin Socket...')
@@ -64,7 +70,7 @@ class KucoinConsumer:
             data_str = self.socket.recv()
             data = json.loads(data_str)
             now = int(time.time())
-            if now - timestamp > 45:
+            if now - timestamp > 15:
                 timestamp = now
                 self.socket.send(json.dumps({'id': socket_id, "type": "ping"}))
             self.handle_stream_data(data)
@@ -88,15 +94,26 @@ class KucoinConsumer:
 
         symbol = symbol.split('-')
 
-        key = 'bin:' + symbol[0].lower() + symbol[1].lower()
-
+        key = 'bin:' + ExchangeHandler.rename_original_coin_to_internal(symbol[0]).lower() + symbol[1].lower()
+        coin_coefficient = ExchangeHandler.get_coin_coefficient(symbol[0])
         self.queue[key] = {
+            'a': decimal_to_str(Decimal(ask) * coin_coefficient), 'b': decimal_to_str(Decimal(bid) * coin_coefficient)
+        }
+        self.stale_queue[key + ':stale'] = {
             'a': ask, 'b': bid
         }
-        if time.time() - self.last_flush_time > 1:
-            self.flush()
 
-    def flush(self):
+        _now = time.time()
+
+        if _now - self.last_flush_time > 1:
+            stale = False
+            if _now - self.last_stale_flush_time > 60:
+                stale = True
+                self.last_stale_flush_time = _now
+
+            self.flush(stale)
+
+    def flush(self, stale: bool):
         flushed_count = len(self.queue)
         logger.info('%s flushing %d items' % (timezone.now().astimezone().strftime('%Y-%m-%d %H:%M:%S'), flushed_count))
         pipe = price_redis.pipeline(transaction=False)
@@ -105,11 +122,18 @@ class KucoinConsumer:
             pipe.hset(name=name, mapping=data)
             pipe.expire(name, 30)  # todo: reduce this to 10 for volatile coins
 
+        if stale:
+            for (name, data) in self.stale_queue.items():
+                pipe.hset(name=name, mapping=data)
+                pipe.expire(name, DAY)
+
+            self.stale_queue = {}
+
         pipe.execute()
 
         self.queue = {}
         self.last_flush_time = time.time()
-        set_metric('Kucoin_price_updates', value=flushed_count, incr=True)
+        set_metric('kucoin_price_updates', value=flushed_count, incr=True)
 
     def exit_gracefully(self, signum, frame):
         self.loop = False
@@ -123,4 +147,12 @@ class KucoinConsumer:
 
         sys.exit()
 
+    def api_consume(self):
+        coins = self.get_streams()
+        while self.loop:
 
+            logger.info('Now %s' % datetime.now())
+            for coin in coins:
+                data = KucoinSpotHandler().get_orderbook(coin)
+                self.handle_stream_data(data)
+            time.sleep(1)

@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Sum
 
@@ -18,6 +19,8 @@ class StakeOption(models.Model):
     enable = models.BooleanField(default=False)
 
     landing = models.BooleanField(default=False)
+
+    precision = models.IntegerField(default=0)
 
     def __str__(self):
         return self.asset.symbol + ' ' + str(self.apr)
@@ -45,3 +48,7 @@ class StakeOption(models.Model):
         ).exclude(status=StakeRequest.CANCEL_COMPLETE).aggregate(Sum('amount'))['amount__sum'] or 0
 
         return max(min((self.user_max_amount - total_stake_amount), self.get_free_cap_amount()), 0)
+
+    def clean(self):
+        if self.user_min_amount > self.user_max_amount:
+            raise ValidationError('مقدار وارد شده برای حداقل مقدار بیشتر از حداکثر مقدار است.')

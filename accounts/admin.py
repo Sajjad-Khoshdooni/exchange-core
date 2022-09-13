@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import CustomToken, FirebaseToken, ExternalNotification
+from accounts.models import FirebaseToken, ExternalNotification, Attribution, AppStatus
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -19,7 +19,6 @@ from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdra
 from ledger.models import OTCTrade, DepositAddress
 from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
-from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import BUY
 from market.models import Trade, ReferralTrx, Order
@@ -168,19 +167,20 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     fields_edit_conditions = {
         'password': None,
-        'first_name': ~M('first_name_verified'),
-        'last_name': ~M('last_name_verified'),
+        'first_name': M.superuser | ~M('first_name_verified'),
+        'last_name': M.superuser | ~M('last_name_verified'),
         'national_code': M.superuser | ~M('national_code_verified'),
         'national_code_phone_verified': True,
         'birth_date': M.superuser | ~M('birth_date_verified'),
-        'selfie_image_verified': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
+        'selfie_image_verified': M.superuser | M('selfie_image'),
         'selfie_image_discard_text': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
-        'first_name_verified': M.is_none('first_name_verified'),
-        'last_name_verified': M.is_none('last_name_verified'),
-        'national_code_verified': M.is_none('national_code_verified'),
-        'birth_date_verified': M.is_none('birth_date_verified'),
+        'first_name_verified': M.superuser | M.is_none('first_name_verified'),
+        'last_name_verified': M.superuser | M.is_none('last_name_verified'),
+        'national_code_verified': M.superuser | ~M('national_code_verified'),
+        'birth_date_verified': M.superuser | M.is_none('birth_date_verified'),
         'withdraw_before_48h_option': True,
         'allow_level1_crypto_withdraw': True,
+        'can_withdraw': True
     }
 
     fieldsets = (
@@ -200,7 +200,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             'fields': (
                 'is_active', 'is_staff', 'is_superuser',
                 'groups', 'user_permissions', 'show_margin',
-                'withdraw_before_48h_option', 'allow_level1_crypto_withdraw'
+                'withdraw_before_48h_option', 'allow_level1_crypto_withdraw', 'can_withdraw'
             ),
         }),
         (_('Important dates'), {'fields': (
@@ -271,7 +271,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     @admin.action(description='رد کردن نام کاربر', permissions=['view'])
     def reject_user_name(self, request, queryset):
-        to_reject_users = queryset.filter(MANUAL_VERIFY_CONDITION).distinct()
+        to_reject_users = queryset.filter(level=User.LEVEL1, verify_status=User.PENDING).distinct()
 
         for user in to_reject_users:
             user.change_status(User.REJECTED)
@@ -340,24 +340,28 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_referrer_user.short_description = 'referrer'
 
     def get_user_reject_reason(self, user: User):
-        if user.level == User.LEVEL1 and user.verify_status == User.REJECTED and \
-                user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
-            return 'کد ملی تکراری'
+        bank_card = user.kyc_bank_card
+
+        if user.level == User.LEVEL1 and user.verify_status == User.REJECTED:
+            if user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
+                return 'کد ملی تکراری'
+            elif bank_card and bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
+                return 'شماره کارت تکراری'
+            elif not user.birth_date_verified:
+                return 'مغایرت کد ملی،‌ شماره کارت و تاریخ تولد'
+            elif not user.first_name_verified or not user.last_name_verified:
+                return 'مغایرت نام'
 
         verify_fields = [
             'national_code_verified', 'birth_date_verified', 'first_name_verified', 'last_name_verified',
-            'bank_card_verified', 'bank_account_verified', 'selfie_image_verified'
+            'bank_card_verified', 'selfie_image_verified', 'national_code_phone_verified'
         ]
 
         for verify_field in verify_fields:
             field = verify_field[:-9]
 
             if field == 'bank_card':
-                bank_card = user.bankcard_set.all().order_by('-verified').first()
                 value = bank_card and bank_card.verified
-            elif field == 'bank_account':
-                bank_account = user.bankaccount_set.all().order_by('-verified').first()
-                value = bank_account and bank_account.verified
             else:
                 value = getattr(user, verify_field)
 
@@ -366,8 +370,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
                 if field == 'bank_card':
                     reason = 'شماره کارت'
-                elif field == 'bank_account':
-                    reason = 'شماره حساب'
+                elif verify_field == 'national_code_phone_verified':
+                    return 'شاهکار'
                 else:
                     reason = getattr(User, field).field.verbose_name
 
@@ -588,6 +592,7 @@ class AccountAdmin(admin.ModelAdmin):
 class ReferralAdmin(admin.ModelAdmin):
     list_display = ('owner', 'code', 'owner_share_percent')
     search_fields = ('code', 'owner__user__phone')
+    readonly_fields = ('owner', )
 
 
 class FinotechRequestUserFilter(SimpleListFilter):
@@ -628,7 +633,8 @@ class UserCommentAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 @admin.register(TrafficSource)
 class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ['user', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
-    search_fields = ['user__phone']
+    search_fields = ['user__phone', 'gps_adid', 'ip']
+    readonly_fields = ('user', )
 
 
 @admin.register(LoginActivity)
@@ -647,3 +653,13 @@ class FirebaseTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 @admin.register(ExternalNotification)
 class ExternalNotificationAdmin(admin.ModelAdmin):
     list_display = ['created', 'user', 'phone', 'scope']
+
+
+@admin.register(Attribution)
+class AttributionAdmin(admin.ModelAdmin):
+    list_display = ['created', 'tracker_code', 'network_name', 'campaign_name', 'adgroup_name', 'gps_adid']
+
+
+@admin.register(AppStatus)
+class AppStatusAdmin(admin.ModelAdmin):
+    list_display = ['latest_version', 'force_update_version', 'active']

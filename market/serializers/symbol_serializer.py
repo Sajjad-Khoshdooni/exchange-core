@@ -8,7 +8,8 @@ from rest_framework.generics import get_object_or_404
 
 from accounts.models import Account
 from ledger.models import Asset
-from ledger.utils.precision import get_presentation_amount, floor_precision
+from ledger.models.asset import AssetSerializerMini
+from ledger.utils.precision import get_presentation_amount, floor_precision, decimal_to_str
 from market.models import PairSymbol, Trade
 
 
@@ -16,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 class SymbolSerializer(serializers.ModelSerializer):
-    asset = serializers.CharField(source='asset.symbol', read_only=True)
-    base_asset = serializers.CharField(source='base_asset.symbol', read_only=True)
+    asset = AssetSerializerMini(read_only=True)
+    base_asset = AssetSerializerMini(read_only=True)
     bookmark = serializers.SerializerMethodField()
     margin_enable = serializers.SerializerMethodField()
 
@@ -40,8 +41,8 @@ class SymbolSerializer(serializers.ModelSerializer):
 
 
 class SymbolBreifStatsSerializer(serializers.ModelSerializer):
-    asset = serializers.CharField(source='asset.symbol', read_only=True)
-    base_asset = serializers.CharField(source='base_asset.symbol', read_only=True)
+    asset = AssetSerializerMini(read_only=True)
+    base_asset = AssetSerializerMini(read_only=True)
     price = serializers.SerializerMethodField()
     change_percent = serializers.SerializerMethodField()
     bookmark = serializers.SerializerMethodField()
@@ -73,7 +74,7 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
         if not (last_price and previous_price):
             return
         change_percent = 100 * (last_price - previous_price) / previous_price
-        return str(floor_precision(change_percent, 2))
+        return decimal_to_str(floor_precision(change_percent, 2))
     
     class Meta:
         model = PairSymbol
@@ -91,7 +92,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
         last_price, previous_price = self.get_change_value_pairs(symbol)
         if not (last_price and previous_price):
             return
-        return str(floor_precision((last_price - previous_price), symbol.tick_size))
+        return decimal_to_str(floor_precision((last_price - previous_price), symbol.tick_size))
 
     def get_high(self, symbol: PairSymbol):
         high_price = Trade.objects.filter(
@@ -100,7 +101,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             created__lte=timezone.now(),
         ).exclude(trade_source=Trade.OTC).aggregate(max_price=Max('price'))['max_price']
         if high_price:
-            return str(floor_precision(high_price, symbol.tick_size))
+            return decimal_to_str(floor_precision(high_price, symbol.tick_size))
 
     def get_low(self, symbol: PairSymbol):
         low_price = Trade.objects.filter(
@@ -109,7 +110,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             created__lte=timezone.now(),
         ).exclude(trade_source=Trade.OTC).aggregate(min_price=Min('price'))['min_price']
         if low_price:
-            return str(floor_precision(low_price, symbol.tick_size))
+            return decimal_to_str(floor_precision(low_price, symbol.tick_size))
 
     def get_volume(self, symbol: PairSymbol):
         total_amount = Trade.objects.filter(
@@ -118,7 +119,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             created__lte=timezone.now(),
         ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum('amount'))['total_amount']
         if total_amount:
-            return str(floor_precision(total_amount, symbol.step_size))
+            return decimal_to_str(floor_precision(total_amount, symbol.step_size))
 
     def get_base_volume(self, symbol: PairSymbol):
         total_amount = Trade.objects.filter(
@@ -127,7 +128,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             created__lte=timezone.now(),
         ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum('base_amount'))['total_amount']
         if total_amount:
-            return str(floor_precision(total_amount))
+            return decimal_to_str(floor_precision(total_amount))
 
     class Meta:
         model = PairSymbol

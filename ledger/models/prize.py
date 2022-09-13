@@ -56,6 +56,8 @@ class Prize(models.Model):
 
     variant = models.CharField(null=True, blank=True, max_length=16)
 
+    value = get_amount_field()
+
     class Meta:
         unique_together = [('account', 'scope', 'variant')]
         constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_ledger_prize_amount', ), ]

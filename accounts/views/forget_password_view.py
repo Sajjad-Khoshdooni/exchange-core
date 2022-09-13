@@ -62,7 +62,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
         user.set_password(password)
         user.save()
 
-        otp_code.set_token_used()
+        # otp_code.set_token_used()
 
         return user
 

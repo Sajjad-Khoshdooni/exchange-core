@@ -4,6 +4,7 @@ from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
 from random import randrange, random
+from time import time
 from uuid import uuid4
 
 from django.conf import settings
@@ -16,8 +17,9 @@ from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_amount_field, get_group_id_field
-from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent
-from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price
+from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent, decimal_to_str
+from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price, \
+    get_spread
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
 from market.models.referral_trx import ReferralTrx
@@ -93,7 +95,8 @@ class Order(models.Model):
         ]
         constraints = [
             CheckConstraint(check=Q(filled_amount__lte=F('amount')), name='check_filled_amount', ),
-            CheckConstraint(check=Q(amount__gte=0, filled_amount__gte=0, price__gte=0), name='check_market_order_amounts', ),
+            CheckConstraint(check=Q(amount__gte=0, filled_amount__gte=0, price__gte=0),
+                            name='check_market_order_amounts', ),
         ]
 
     objects = models.Manager()
@@ -133,8 +136,8 @@ class Order(models.Model):
 
     @staticmethod
     def matching_orders_filter(side, price, op):
-        return(lambda order: order.side == side and order.price >= price) if op == 'gte' else \
-                (lambda order: order.side == side and order.price <= price)
+        return (lambda order: order.side == side and order.price >= price) if op == 'gte' else \
+            (lambda order: order.side == side and order.price <= price)
 
     @staticmethod
     def get_opposite_side(side):
@@ -143,11 +146,11 @@ class Order(models.Model):
     @staticmethod
     def get_order_by(side):
         return (lambda order: (-order.price, order.id)) if side == Order.BUY else \
-                (lambda order: (order.price, order.id))
+            (lambda order: (order.price, order.id))
 
     @classmethod
     def cancel_orders(cls, to_cancel_orders: QuerySet):
-        to_cancel_orders = list(to_cancel_orders.exclude(status=cls.FILLED))
+        to_cancel_orders = list(to_cancel_orders.select_for_update())
 
         for order in to_cancel_orders:
             order.cancel()
@@ -157,7 +160,7 @@ class Order(models.Model):
         return {'price__lte': price} if side == Order.BUY else {'price__gte': price}
 
     @staticmethod
-    def get_maker_price(symbol: PairSymbol.IdName, side: str, loose_factor=Decimal(1), gap=None):
+    def get_maker_price(symbol: PairSymbol.IdName, side: str, loose_factor=Decimal(1), gap=None, last_trade_ts=None):
         if symbol.name.endswith(IRT):
             base_symbol = IRT
             get_trading_price = get_trading_price_irt
@@ -168,7 +171,16 @@ class Order(models.Model):
             raise NotImplementedError('Invalid trading symbol')
 
         coin = symbol.name.split(base_symbol)[0]
-        boundary_price = get_trading_price(coin, side, gap=gap)
+        if gap is None and last_trade_ts:
+            spread_step = (time() - last_trade_ts) // 600
+            gap = {
+                0: (get_spread(coin, side) / 100), 1: '0.0015', 2: '0.0008'
+            }.get(spread_step, '0.0008')
+            boundary_price = get_trading_price(coin, side, gap=Decimal(gap))
+            if spread_step != 0:
+                logger.info(f'override {coin} boundary_price gap with {gap}')
+        else:
+            boundary_price = get_trading_price(coin, side, gap=gap)
 
         precision = Order.get_rounding_precision(boundary_price, symbol.tick_size)
         # use bi-direction in roundness to avoid risky bid ask spread
@@ -253,10 +265,7 @@ class Order(models.Model):
             base_irt_price = 1
 
             if self.symbol.base_asset.symbol == Asset.USDT:
-                try:
-                    base_irt_price = get_tether_irt_price(self.side)
-                except:
-                    base_irt_price = 27000
+                base_irt_price = get_tether_irt_price(self.side)
 
             taker_is_system = self.wallet.account.is_system()
             maker_is_system = matching_order.wallet.account.is_system()
@@ -285,7 +294,7 @@ class Order(models.Model):
                 Notification.send(
                     recipient=self.wallet.account.user,
                     title='معامله {}'.format(self.symbol),
-                    message=( 'مقدار {symbol} {amount} معامله شد.').format(amount=match_amount, symbol=self.symbol)
+                    message=('مقدار {symbol} {amount} معامله شد.').format(amount=match_amount, symbol=self.symbol)
                 )
 
             if not maker_is_system:
@@ -299,7 +308,7 @@ class Order(models.Model):
                 )
 
             if trade_source == Trade.SYSTEM_TAKER and not self.wallet.account.primary:
-                if trades_pair.maker.gap_revenue < trades_pair.maker.irt_value * Decimal('0.0015'):
+                if trades_pair.maker.gap_revenue < trades_pair.maker.irt_value * Decimal('0.001'):
                     raise CancelOrder('Non primary system is being taker! dangerous.')
 
             self.release_lock(pipeline, match_amount)
@@ -362,6 +371,8 @@ class Order(models.Model):
         ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referrals))
         Trade.objects.bulk_create(trades)
 
+        Trade.create_hedge_fiat_trxs(trades)
+
         # updating trade_volume_irt of accounts
         for trade in trades:
             account = trade.account
@@ -370,7 +381,7 @@ class Order(models.Model):
                 account.save(update_fields=['trade_volume_irt'])
                 account.refresh_from_db()
                 check_prize_achievements(account)
-            
+
             cache.delete(key)
             logger.info(log_prefix + 'make match finished.')
 
@@ -389,10 +400,10 @@ class Order(models.Model):
         grouped_by_price = [(i[0], list(i[1])) for i in groupby(sorted(orders, key=key_func), key=key_func)]
         return [{
             'price': str(price),
-            'amount': str(floor_precision(sum(map(lambda i: i['unfilled_amount'], price_orders)), symbol.step_size)),
+            'amount': decimal_to_str(floor_precision(sum(map(lambda i: i['unfilled_amount'], price_orders)), symbol.step_size)),
             'depth': Order.get_depth_value(sum(map(lambda i: i['unfilled_amount'], price_orders)), price,
                                            symbol.base_asset.symbol),
-            'total': str(floor_precision(sum(map(lambda i: i['unfilled_amount'] * price, price_orders)), 0))
+            'total': decimal_to_str(floor_precision(sum(map(lambda i: i['unfilled_amount'] * price, price_orders)), 0))
         } for price, price_orders in grouped_by_price]
 
     @staticmethod
@@ -460,15 +471,17 @@ class Order(models.Model):
             return cls.init_maker_order(symbol, side, maker_price, market)
 
     @classmethod
-    def cancel_invalid_maker_orders(cls, symbol: PairSymbol.IdName, top_prices, gap=None, order_type=DEPTH):
+    def cancel_invalid_maker_orders(cls, symbol: PairSymbol.IdName, top_prices, gap=None, order_type=DEPTH, last_trade_ts=None):
         for side in (Order.BUY, Order.SELL):
-            price = cls.get_maker_price(symbol, side, loose_factor=Decimal('1.001'), gap=gap)
+            price = cls.get_maker_price(
+                symbol, side, loose_factor=Decimal('1.001'), gap=gap, last_trade_ts=last_trade_ts
+            )
             if (side == Order.BUY and Decimal(top_prices[side]) <= price) or (
                     side == Order.SELL and Decimal(top_prices[side]) >= price):
                 logger.info(f'{order_type} {side} ignore cancels with price: {price} top: {top_prices[side]}')
                 continue
 
-            invalid_orders = Order.open_objects.select_for_update().filter(
+            invalid_orders = Order.open_objects.filter(
                 symbol_id=symbol.id, side=side, type=order_type
             ).exclude(**cls.get_price_filter(price, side))
 
@@ -483,12 +496,10 @@ class Order(models.Model):
             wasted_orders = wasted_orders.order_by('price') if side == Order.BUY else wasted_orders.order_by('-price')
             cancel_count = int(open_orders_count[side]) - Order.MAKER_ORDERS_COUNT
 
-            logger.info(f'maker {symbol.name} {side}: wasted={len(wasted_orders)} cancels={cancel_count}')
+            logger.info(f'maker {symbol.name} {side}: wasted={wasted_orders.count()} cancels={cancel_count}')
 
             if cancel_count > 0:
-                cls.cancel_orders(
-                    Order.objects.filter(id__in=wasted_orders.values_list('id', flat=True)[:cancel_count])
-                )
+                cls.cancel_orders(wasted_orders[:cancel_count])
                 logger.info(f'maker {side} cancel wastes')
 
     @classmethod
@@ -509,13 +520,14 @@ class Order(models.Model):
         return market_price
 
     @classmethod
-    def get_top_prices(cls, symbol_id, scope=''):
+    def get_top_depth_prices(cls, symbol_id, scope=''):
         from market.utils.redis import get_top_prices
         top_prices = get_top_prices(symbol_id, scope=scope)
         if not top_prices:
             top_prices = defaultdict(lambda: Decimal())
-            for depth in Order.open_objects.filter(symbol_id=symbol_id).values('side').annotate(max_price=Max('price'),
-                                                                                                min_price=Min('price')):
-                top_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth[
-                    'min_price']) or Decimal()
+            for depth in Order.open_objects.filter(symbol_id=symbol_id, type=Order.DEPTH).values('side').annotate(
+                    max_price=Max('price'), min_price=Min('price')
+            ):
+                top_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) \
+                                            or Decimal()
         return top_prices

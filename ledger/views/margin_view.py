@@ -13,7 +13,7 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowableExceeds, HedgeError
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet, CloseRequest
-from ledger.models.asset import CoinField
+from ledger.models.asset import CoinField, AssetSerializerMini
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.price import get_trading_price_usdt, SELL
@@ -70,6 +70,7 @@ class AssetMarginInfoView(APIView):
 class MarginTransferSerializer(serializers.ModelSerializer):
     amount = get_serializer_amount_field()
     coin = CoinField(source='asset')
+    asset = AssetSerializerMini(read_only=True)
 
     def create(self, validated_data):
         user = self.context['request'].user
@@ -82,7 +83,7 @@ class MarginTransferSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MarginTransfer
-        fields = ('created', 'amount', 'type', 'coin')
+        fields = ('created', 'amount', 'type', 'coin', 'asset')
         read_only_fields = ('created', )
 
 
@@ -108,6 +109,7 @@ class MarginTransferViewSet(ModelViewSet):
 class MarginLoanSerializer(serializers.ModelSerializer):
     coin = CoinField(source='asset')
     amount = get_serializer_amount_field()
+    asset = AssetSerializerMini(read_only=True)
 
     def create(self, validated_data):
         user = self.context['request'].user
@@ -132,7 +134,7 @@ class MarginLoanSerializer(serializers.ModelSerializer):
             raise ValidationError('مشکلی در پردازش اطلاعات به وجود آمد.')
 
     class Meta:
-        fields = ('created', 'amount', 'type', 'coin', 'status')
+        fields = ('created', 'amount', 'type', 'coin', 'asset', 'status')
         read_only_fields = ('created', 'status')
         model = MarginLoan
 

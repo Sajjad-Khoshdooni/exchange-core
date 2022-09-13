@@ -11,3 +11,4 @@ from .referral import Referral
 from .custom_token import CustomToken
 from .firebase_token import FirebaseToken
 from .app_status import AppStatus
+from .attribution import Attribution

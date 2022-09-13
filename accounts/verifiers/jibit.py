@@ -61,13 +61,14 @@ class JibitRequester:
             return token
 
     def collect_api(self, path: str, method: str = 'GET', data: dict = None, force_renew_token: bool = False,
-                    search_key: str = None) -> Response:
+                    search_key: str = None, weight: int = 0) -> Response:
 
         if search_key:
             request = FinotechRequest.objects.filter(
                 created__gt=timezone.now() - datetime.timedelta(days=30),
                 search_key=search_key,
-                service=FinotechRequest.JIBIT
+                service=FinotechRequest.JIBIT,
+                weight=weight,
             ).order_by('-created').first()
 
             if request:
@@ -89,7 +90,8 @@ class JibitRequester:
             method=method,
             data=data,
             user=self._user,
-            service=FinotechRequest.JIBIT
+            service=FinotechRequest.JIBIT,
+            weight=weight,
         )
 
         request_kwargs = {
@@ -122,14 +124,14 @@ class JibitRequester:
             raise TimeoutError
 
         if not force_renew_token and resp.status_code == 403:
-            return self.collect_api(path, method, data, force_renew_token=True, search_key=search_key)
+            return self.collect_api(path, method, data, force_renew_token=True, search_key=search_key, weight=weight)
 
         resp_data = resp.json()
 
         req_object.response = resp_data
         req_object.status_code = resp.status_code
 
-        if resp.status_code < 500:
+        if resp.status_code < 500 and resp_data.get('code') not in ['card.provider_is_not_active']:
             req_object.search_key = search_key
 
         req_object.save()
@@ -170,7 +172,8 @@ class JibitRequester:
         return self.collect_api(
             path='/v1/services/matching',
             data=params,
-            search_key=key
+            search_key=key,
+            weight=FinotechRequest.JIBIT_ADVANCED_MATCHING if national_code else FinotechRequest.JIBIT_SIMPLE_MATCHING
         )
 
     def get_iban_info(self, iban: str) -> Response:
@@ -183,7 +186,8 @@ class JibitRequester:
         return self.collect_api(
             path='/v1/ibans',
             data=params,
-            search_key=key
+            search_key=key,
+            weight=FinotechRequest.JIBIT_IBAN_INFO_WEIGHT,
         )
 
     def get_card_info(self, card_pan: str) -> Response:
@@ -196,5 +200,6 @@ class JibitRequester:
         return self.collect_api(
             path='/v1/cards',
             data=params,
-            search_key=key
+            search_key=key,
+            weight=FinotechRequest.JIBIT_CARD_INFO_WEIGHT
         )

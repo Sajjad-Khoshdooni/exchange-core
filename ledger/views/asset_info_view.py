@@ -1,8 +1,6 @@
 import time
 from decimal import Decimal
 
-from django.conf import settings
-from django.conf.urls import static
 from django.db.models import Min
 from django.http import Http404
 from django.utils.decorators import method_decorator
@@ -43,10 +41,6 @@ class AssetSerializerBuilder(AssetSerializerMini):
     min_withdraw_fee = serializers.SerializerMethodField()
     market_irt_enable = serializers.SerializerMethodField()
 
-    name = serializers.CharField()
-    name_fa = serializers.CharField()
-    logo = serializers.SerializerMethodField()
-
     class Meta:
         model = Asset
         fields = ()
@@ -79,12 +73,12 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return asset.get_presentation_price_irt(price)
 
     def get_min_withdraw_amount(self, asset: Asset):
-        network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True)
+        network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True, can_withdraw=True)
         min_withdraw = network_assets.aggregate(min=Min('withdraw_min'))
         return min_withdraw['min']
 
     def get_min_withdraw_fee(self, asset: Asset):
-        network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True)
+        network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True, can_withdraw=True)
         min_withdraw = network_assets.aggregate(min=Min('withdraw_fee'))
         return min_withdraw['min']
 
@@ -151,24 +145,19 @@ class AssetSerializerBuilder(AssetSerializerMini):
         if cap:
             return int(cap.circulating_supply)
 
-    def get_logo(self, asset: Asset):
-        return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
-
     @classmethod
     def create_serializer(cls,  prices: bool = True, extra_info: bool = True):
         fields = AssetSerializerMini.Meta.fields
         new_fields = []
 
         if prices:
-            new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h', 'market_irt_enable',
-                          'name', 'name_fa', 'logo']
+            new_fields = ['price_usdt', 'price_irt', 'trend_url', 'change_24h', 'volume_24h', 'market_irt_enable']
 
         if extra_info:
             new_fields = [
-                'name', 'name_fa', 'logo',
                 'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
                 'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
-                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee',
+                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee'
             ]
 
         class Serializer(cls):
@@ -206,7 +195,7 @@ class AssetsViewSet(ModelViewSet):
             caps = CoinMarketCap.objects.filter(symbol__in=to_search_symbols)
             ctx['cap_info'] = {CoinMarketCap.SYMBOL_TRANSLATION.get(cap.symbol, cap.symbol): cap for cap in caps}
 
-            ctx['prices'] = get_prices_dict(coins=symbols, side=BUY)
+            ctx['prices'] = get_prices_dict(coins=symbols, side=BUY, allow_stale=True)
             ctx['tether_irt'] = get_tether_irt_price(BUY)
 
         return ctx
@@ -218,7 +207,8 @@ class AssetsViewSet(ModelViewSet):
             'trend': self.request.query_params.get('trend') == '1',
             'extra_info': self.request.query_params.get('extra_info') == '1',
             'market': self.request.query_params.get('market'),
-            'category': self.request.query_params.get('category')
+            'category': self.request.query_params.get('category'),
+            'name': self.request.query_params.get('name'),
         }
 
         return options[key]
@@ -250,6 +240,9 @@ class AssetsViewSet(ModelViewSet):
 
         if self.get_options('coin'):
             queryset = queryset.exclude(symbol=Asset.IRT)
+
+        if self.get_options('name'):
+            queryset = queryset.filter(name=self.get_options('name'))
 
         return queryset
 
@@ -294,6 +287,8 @@ class AssetOverviewAPIView(APIView):
                 coin['price_irt'] = tether_irt * coin['price_usdt']
             coin['market_irt_enable'] = coin['symbol'] in get_irt_market_asset_symbols()
 
+            coin.update(AssetSerializerMini(Asset.objects.get(symbol=coin['symbol'])).data)
+
     def get(self, request):
         symbols = Asset.live_objects.exclude(symbol__in=['IRT', 'IOTA'])
 
@@ -302,13 +297,13 @@ class AssetOverviewAPIView(APIView):
 
         caps = CoinMarketCap.objects.filter(symbol__in=list_symbol)
 
-        price = get_prices_dict(coins=list_symbol, side=BUY)
-        tether_irt = get_tether_irt_price(BUY)
+        price = get_prices_dict(coins=list_symbol, side=BUY, allow_stale=True)
+        tether_irt = get_tether_irt_price(BUY, allow_stale=True)
 
-        high_volume = list(caps.order_by('-volume_24h').values('symbol', 'change_24h',))[:3]
+        high_volume = list(caps.order_by('-volume_24h').values('symbol', 'change_24h'))[:3]
         AssetOverviewAPIView.set_price(high_volume, price, tether_irt)
 
-        high_24h_change = list(caps.order_by('-change_24h').values('symbol', 'change_24h',))[:3]
+        high_24h_change = list(caps.order_by('-change_24h').values('symbol', 'change_24h'))[:3]
 
         AssetOverviewAPIView.set_price(high_24h_change, price, tether_irt)
 

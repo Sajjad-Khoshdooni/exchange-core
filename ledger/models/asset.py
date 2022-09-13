@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.conf import settings
 from django.db import models
 from rest_framework import serializers
 
@@ -8,7 +8,6 @@ from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.precision import get_precision, get_presentation_amount
-from provider.exchanges.interface.binance_interface import ExchangeHandler
 
 
 class InvalidAmount(Exception):
@@ -37,13 +36,19 @@ class Asset(models.Model):
     HEDGE_KUCOIN_FUTURE = 'kucoin-future'
     HEDGE_KUCOIN_SPOT = 'kucoin-spot'
 
+    HEDGE_MEXC_SPOT = 'mexc-spot'
+    HEDGE_MEXC_FUTURES = 'mexc-future'
+
     HEDGE_METHOD_CHOICE = (
         (HEDGE_KUCOIN_SPOT, HEDGE_KUCOIN_SPOT),
         (HEDGE_KUCOIN_FUTURE, HEDGE_KUCOIN_FUTURE),
         (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
         (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE),
+        (HEDGE_MEXC_SPOT, HEDGE_MEXC_SPOT),
+        (HEDGE_MEXC_FUTURES, HEDGE_MEXC_FUTURES),
         (HEDGE_NONE, HEDGE_NONE)
     )
+
     PRECISION = 8
 
     objects = models.Manager()
@@ -52,11 +57,12 @@ class Asset(models.Model):
 
     name = models.CharField(max_length=32, blank=True)
     name_fa = models.CharField(max_length=32, blank=True)
+    original_name_fa = models.CharField(max_length=32, blank=True)
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
-    symbol = models.CharField(max_length=8, unique=True, db_index=True)
+    symbol = models.CharField(max_length=16, unique=True, db_index=True)
 
     trade_quantity_step = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
     min_trade_quantity = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
@@ -73,7 +79,7 @@ class Asset(models.Model):
 
     trade_enable = models.BooleanField(default=True)
 
-    hedge_method = models.CharField(max_length=32, default=HEDGE_BINANCE_FUTURE, choices=HEDGE_METHOD_CHOICE)
+    hedge_method = models.CharField(max_length=32, default=HEDGE_BINANCE_FUTURE, choices=HEDGE_METHOD_CHOICE, blank=True)
 
     candidate = models.BooleanField(default=False)
 
@@ -82,6 +88,8 @@ class Asset(models.Model):
     spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.PROTECT, null=True, blank=True)
 
     new_coin = models.BooleanField(default=False)
+
+    original_symbol = models.CharField(max_length=16, blank=True)
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
@@ -164,7 +172,8 @@ class Asset(models.Model):
         else:
             return self.symbol
 
-    def get_hedger(self) -> ExchangeHandler:
+    def get_hedger(self):
+        from provider.exchanges import ExchangeHandler
         return ExchangeHandler.get_handler(name=self.hedge_method)
 
 
@@ -177,6 +186,9 @@ class AssetSerializer(serializers.ModelSerializer):
 class AssetSerializerMini(serializers.ModelSerializer):
     precision = serializers.SerializerMethodField()
     step_size = serializers.SerializerMethodField()
+    logo = serializers.SerializerMethodField()
+    original_name_fa = serializers.SerializerMethodField()
+    original_symbol = serializers.SerializerMethodField()
 
     def get_precision(self, asset: Asset):
         return asset.get_precision()
@@ -184,9 +196,19 @@ class AssetSerializerMini(serializers.ModelSerializer):
     def get_step_size(self, asset: Asset):
         return get_precision(asset.trade_quantity_step)
 
+    def get_logo(self, asset: Asset):
+        return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
+
+    def get_original_symbol(self, asset: Asset):
+        return asset.original_symbol or asset.symbol
+
+    def get_original_name_fa(self, asset: Asset):
+        return asset.original_name_fa or asset.name_fa
+
     class Meta:
         model = Asset
-        fields = ('symbol', 'margin_enable', 'precision', 'step_size')
+        fields = ('symbol', 'margin_enable', 'precision', 'step_size', 'name', 'name_fa', 'logo', 'original_symbol',
+                  'original_name_fa')
 
 
 class CoinField(serializers.CharField):

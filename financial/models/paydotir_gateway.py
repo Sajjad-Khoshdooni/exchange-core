@@ -12,7 +12,7 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 class PaydotirGateway(Gateway):
     BASE_URL = 'https://pay.ir'
 
-    def create_payment_request(self, bank_card: BankCard, amount: int) -> PaymentRequest:
+    def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
         base_url = config('PAYMENT_PROXY_HOST_URL', default='') or settings.HOST_URL
 
         resp = requests.post(
@@ -40,7 +40,8 @@ class PaydotirGateway(Gateway):
             bank_card=bank_card,
             amount=amount,
             gateway=self,
-            authority=authority
+            authority=authority,
+            source=source,
         )
 
     def get_initial_redirect_url(self, payment_request: PaymentRequest) -> str:
@@ -58,7 +59,7 @@ class PaydotirGateway(Gateway):
     def get_payment_url(cls, authority: str):
         return 'https://pay.ir/pg/{}'.format(authority)
 
-    def verify(self, payment: Payment):
+    def _verify(self, payment: Payment):
         payment_request = payment.payment_request
 
         resp = requests.post(

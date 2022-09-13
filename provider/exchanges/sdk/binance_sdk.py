@@ -1,4 +1,3 @@
-import base64
 import hashlib
 import hmac
 import logging
@@ -8,9 +7,9 @@ from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
-
 from yekta_config import secret
 
+from provider.models import ProviderRequest
 
 logger = logging.getLogger(__name__)
 
@@ -25,14 +24,16 @@ else:
     BINANCE_FUTURES_BASE_URL = "https://testnet.binancefuture.com"
 
 
-def create_binance_request_and_log(response, url: str, method: str, data: dict):
-    from provider.models import BinanceRequests
+def create_provider_request_and_log(name: str, response, url: str, method: str, data: dict):
+
     resp_data = response.json()
+
     if not response.ok:
         print('resp_data')
         print(resp_data)
 
-        BinanceRequests.objects.create(
+        ProviderRequest.objects.create(
+            name=name,
             url=url,
             data=data,
             method=method,
@@ -41,8 +42,9 @@ def create_binance_request_and_log(response, url: str, method: str, data: dict):
         )
 
         logger.warning(
-            'binance request failed',
+            'provider request failed',
             extra={
+                'provider_name': name,
                 'url': url,
                 'method': method,
                 'payload': data,
@@ -54,7 +56,8 @@ def create_binance_request_and_log(response, url: str, method: str, data: dict):
         return
     else:
         if method == 'POST':
-            BinanceRequests.objects.create(
+            ProviderRequest.objects.create(
+                name=name,
                 url=url,
                 data=data,
                 method=method,
@@ -106,11 +109,12 @@ def binance_spot_send_signed_request(http_method, url_path, payload: dict):
 
     response = dispatch_request(http_method)(**params)
 
-    return create_binance_request_and_log(
+    return create_provider_request_and_log(
+        name=ProviderRequest.BINANCE,
         response=response,
         url=url_path,
         method=http_method,
-        data=payload
+        data=payload,
     )
 
 
@@ -122,7 +126,9 @@ def binance_spot_send_public_request(url_path: str, payload: dict):
         url = url + "?" + query_string
     print("{}".format(url))
     response = dispatch_request("GET")(url=url, timeout=TIMEOUT)
-    return create_binance_request_and_log(
+
+    return create_provider_request_and_log(
+        name=ProviderRequest.BINANCE,
         response=response,
         url=url_path,
         method="GET",
@@ -148,7 +154,8 @@ def binance_futures_send_signed_request(http_method: str, url_path: str, payload
 
     response = dispatch_request(http_method)(**params)
 
-    return create_binance_request_and_log(
+    return create_provider_request_and_log(
+        name=ProviderRequest.BINANCE,
         response=response,
         url=url_path,
         method=http_method,
@@ -166,9 +173,10 @@ def binance_futures_send_public_request(url_path, payload: dict):
     print("{}".format(url))
 
     response = dispatch_request("GET")(url=url, timeout=TIMEOUT)
-    return create_binance_request_and_log(
+    return create_provider_request_and_log(
+        name=ProviderRequest.BINANCE,
         response=response,
         url=url_path,
         method='GET',
-        data=payload
+        data=payload,
     )

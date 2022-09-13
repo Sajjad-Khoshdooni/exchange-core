@@ -11,7 +11,13 @@ data_url = 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?sta
 class CoinMarketCap(models.Model):
 
     SYMBOL_TRANSLATION = {
-        'MIOTA': 'IOTA'
+        'MIOTA': 'IOTA',
+        'ELON': '1000ELON',
+        'BABYDOGE': '1M-BABYDOGE',
+        'FLOKI': '1000FLOKI',
+        'QUACK': '1M-QUACK',
+        'STARL': '1000STARL',
+        'SAFEMARS': '1M-SAFEMARS',
     }
 
     symbol = models.CharField(max_length=64, unique=True)

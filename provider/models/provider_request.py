@@ -5,9 +5,12 @@ from django.db import models
 from ledger.utils.fields import get_amount_field
 
 
-class BinanceRequests(models.Model):
+class ProviderRequest(models.Model):
+    BINANCE, KUCOIN, MEXC = 'binance', 'kucoin', 'mexc'
 
     created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
+
+    name = models.CharField(max_length=16, choices=((BINANCE, BINANCE), (KUCOIN, KUCOIN), (MEXC, MEXC)))
     status_code = models.PositiveSmallIntegerField(default=0, verbose_name='وضعیت')
     url = models.CharField(max_length=256)
     data = models.JSONField(blank=True, null=True)

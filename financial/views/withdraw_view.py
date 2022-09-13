@@ -32,10 +32,10 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
     code = serializers.CharField(write_only=True)
 
     def create(self, validated_data):
-        if config('WITHDRAW_ENABLE', '1') == '0':
-            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
-
         user = self.context['request'].user
+
+        if config('WITHDRAW_ENABLE', '1') == '0' or not user.can_withdraw:
+            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
 
         if user.level < user.LEVEL2:
             raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
@@ -140,8 +140,7 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
                   'rial_estimate_receive_time',)
 
     def get_rial_estimate_receive_time(self, fiat_withdraw_request: FiatWithdrawRequest):
-        return fiat_withdraw_request.withdraw_datetime and \
-               fiat_withdraw_request.channel_handler.get_estimated_receive_time(fiat_withdraw_request.withdraw_datetime)
+        return fiat_withdraw_request.receive_datetime
 
     def get_status(self, withdraw: FiatWithdrawRequest):
         if withdraw.status == FiatWithdrawRequest.PENDING:
