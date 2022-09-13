@@ -23,6 +23,10 @@ class ExchangeHandler:
         'STARL': '1000STARL',
         'SAFEMARS': '1M-SAFEMARS',
         'R': 'REV',
+        'VINU': '1M-VINU',
+        'PIT': '1M-PIT',
+        'KISHU': '1M-KISHU',
+        'AKITA': '1M-AKITA',
     }
 
     COIN_COEFFICIENTS = {
