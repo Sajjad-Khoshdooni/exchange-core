@@ -31,7 +31,7 @@ class MarketingCost(models.Model):
     cost = models.PositiveIntegerField()
 
     class Meta:
-        unique_together = ('date', 'cost')
+        unique_together = ('date', 'source')
 
     def __str__(self):
         return '%s %s' % (self.source, self.date)
