@@ -27,7 +27,7 @@ def populate_markets(apps, schema_editor):
             symbol.step_size = get_precision(asset.trade_quantity_step)
             symbol.min_trade_quantity = asset.min_trade_quantity
             symbol.max_trade_quantity = asset.max_trade_quantity
-            symbol.maker_quantity = min(10000 * asset.min_trade_quantity, asset.max_trade_quantity / 100)
+            symbol.maker_amount = min(10000 * asset.min_trade_quantity, asset.max_trade_quantity / 100)
             symbol.save()
 
 

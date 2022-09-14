@@ -27,6 +27,7 @@ class MexcSpotHandler(ExchangeHandler):
     @classmethod
     def rename_network_symbol_from_mexc_to_origin(cls, network_symbol: str):
         rename_list = {
+            'ERC20': 'ETH',
             'TRC20': 'TRX',
             'BEP20(BSC)': 'BSC'
         }
