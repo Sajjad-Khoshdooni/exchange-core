@@ -124,6 +124,7 @@ class User(AbstractUser):
     margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
 
     show_margin = models.BooleanField(default=True, verbose_name='امکان مشاهده حساب تعهدی')
+    show_strategy_bot = models.BooleanField(default=False, verbose_name='امکان مشاهده ربات')
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
 
