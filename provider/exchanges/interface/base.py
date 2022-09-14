@@ -10,6 +10,9 @@ GET, POST = 'GET', 'POST'
 
 HOUR = 3600
 
+KILO = Decimal(1000)
+MILLION = Decimal(1000_000)
+
 
 class ExchangeHandler:
     MARKET_TYPE = ''
@@ -23,15 +26,22 @@ class ExchangeHandler:
         'STARL': '1000STARL',
         'SAFEMARS': '1M-SAFEMARS',
         'R': 'REV',
+        'VINU': '1M-VINU',
+        'PIT': '1M-PIT',
+        'KISHU': '1M-KISHU',
+        'AKITA': '1M-AKITA',
     }
 
     COIN_COEFFICIENTS = {
-        'ELON': Decimal('1000'),
-        'BABYDOGE': Decimal('1000000'),
-        'FLOKI': Decimal('1000'),
-        'QUACK': Decimal('1000000'),
-        'STARL': Decimal('1000'),
-        'SAFEMARS': Decimal('1000000'),
+        'ELON': KILO,
+        'BABYDOGE': MILLION,
+        'FLOKI': KILO,
+        'QUACK': MILLION,
+        'STARL': KILO,
+        'VINU': MILLION,
+        'PIT': MILLION,
+        'KISHU': MILLION,
+        'AKITA': MILLION,
     }
 
     @classmethod

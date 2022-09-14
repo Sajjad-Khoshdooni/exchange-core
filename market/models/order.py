@@ -490,17 +490,16 @@ class Order(models.Model):
             logger.info(f'{order_type} {side} cancels with price: {price}')
 
     @classmethod
-    def cancel_waste_maker_orders(cls, symbol: PairSymbol.IdName, open_orders_count):
-        for side in (Order.BUY, Order.SELL):
-            wasted_orders = Order.open_objects.filter(symbol_id=symbol.id, side=side, type=Order.DEPTH)
-            wasted_orders = wasted_orders.order_by('price') if side == Order.BUY else wasted_orders.order_by('-price')
-            cancel_count = int(open_orders_count[side]) - Order.MAKER_ORDERS_COUNT
+    def cancel_waste_maker_orders(cls, symbol: PairSymbol.IdName, open_orders_count, side: str):
+        wasted_orders = Order.open_objects.filter(symbol_id=symbol.id, side=side, type=Order.DEPTH)
+        wasted_orders = wasted_orders.order_by('price') if side == Order.BUY else wasted_orders.order_by('-price')
+        cancel_count = int(open_orders_count[side]) - Order.MAKER_ORDERS_COUNT
 
-            logger.info(f'maker {symbol.name} {side}: wasted={wasted_orders.count()} cancels={cancel_count}')
+        logger.info(f'maker {symbol.name} {side}: wasted={wasted_orders.count()} cancels={cancel_count}')
 
-            if cancel_count > 0:
-                cls.cancel_orders(wasted_orders[:cancel_count])
-                logger.info(f'maker {side} cancel wastes')
+        if cancel_count > 0:
+            cls.cancel_orders(wasted_orders[:cancel_count])
+            logger.info(f'maker {side} cancel wastes')
 
     @classmethod
     def update_filled_amount(cls, order_ids, match_amount):

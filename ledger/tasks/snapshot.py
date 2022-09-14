@@ -50,7 +50,7 @@ def create_snapshot():
             AssetSnapshot(
                 created=now,
                 asset=asset,
-                price=overview.prices.get(asset.symbol, 0),
+                price=overview.prices.get(asset.symbol) or 0,
                 hedge_amount=overview.get_hedge_amount(asset),
                 hedge_value=overview.get_hedge_value(asset),
                 calc_hedge_amount=ProviderOrder.get_hedge(asset),

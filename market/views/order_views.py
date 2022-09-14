@@ -14,7 +14,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from accounts.views.authentication import CustomTokenAuthentication
-from accounts.views.jwt_views import DelegatedAccountMixin
+from accounts.views.jwt_views import DelegatedAccountMixin, user_has_delegate_permission
 from market.models import Order, CancelRequest
 from market.models import StopLoss, Trade
 from market.serializers.cancel_request_serializer import CancelRequestSerializer
@@ -89,8 +89,10 @@ class OpenOrderListAPIView(APIView):
 
         open_orders = Order.open_objects.filter(
             wallet__account=self.request.user.account, stop_loss__isnull=True, **filters
-        )
-        open_stop_losses = StopLoss.open_objects.filter(wallet__account=self.request.user.account, **filters)
+        ).select_related('symbol', 'wallet',)
+        open_stop_losses = StopLoss.open_objects.filter(
+            wallet__account=self.request.user.account, **filters
+        ).select_related('symbol', 'wallet')
         serialized_orders = OrderStopLossSerializer(open_orders, many=True, context=context)
         serialized_stop_losses = OrderStopLossSerializer(open_stop_losses, many=True, context=context)
         DATE_PATTERN = '%Y-%m-%dT%H:%M:%S.%f%z'
@@ -111,7 +113,8 @@ class CancelOrderAPIView(CreateAPIView, DelegatedAccountMixin):
     def get_serializer_context(self):
         return {
             **super(CancelOrderAPIView, self).get_serializer_context(),
-            'account': self.get_account_variant(self.request)[0]
+            'account': self.get_account_variant(self.request)[0],
+            'allow_cancel_strategy_orders': user_has_delegate_permission(self.request.user)
         }
 
 

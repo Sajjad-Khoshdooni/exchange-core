@@ -153,7 +153,7 @@ class AssetAdmin(AdvancedAdmin):
 
     get_hedge_threshold.short_description = 'hedge threshold'
 
-    @admin.action(description='متعادل سازی رمز ارزها', permissions=['view'])
+    @admin.action(description='هج کردن رمزارزها', permissions=['view'])
     def hedge_asset(self, request, queryset):
         assets = queryset.exclude(hedge_method=Asset.HEDGE_NONE, )
         for asset in assets:
@@ -400,7 +400,7 @@ class CoinCategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'get_coin_count']
 
     def get_coin_count(self, coin_category: CoinCategory):
-        return coin_category.coins.count()
+        return coin_category.coins.filter(enable=True).count()
 
     get_coin_count.short_description = 'تعداد رمزارز'
 

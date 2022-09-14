@@ -18,6 +18,10 @@ class CoinMarketCap(models.Model):
         'QUACK': '1M-QUACK',
         'STARL': '1000STARL',
         'SAFEMARS': '1M-SAFEMARS',
+        'VINU': '1M-VINU',
+        'PIT': '1M-PIT',
+        'KISHU': '1M-KISHU',
+        'AKITA': '1M-AKITA',
     }
 
     symbol = models.CharField(max_length=64, unique=True)

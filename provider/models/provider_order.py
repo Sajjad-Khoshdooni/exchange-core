@@ -151,7 +151,7 @@ class ProviderOrder(models.Model):
                                 dry_run: bool = False, raise_exception: bool = False) -> bool:
         # todo: this method should not called more than once at a single time
         handler = asset.get_hedger()
-        if settings.DEBUG_OR_TESTING:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             logger.info('ignored due to debug')
             return True
 
@@ -189,12 +189,10 @@ class ProviderOrder(models.Model):
 
             order_amount = round(hedge_amount, round_digits)
 
-            # check notional
-            price = get_trading_price_usdt(asset.symbol, side=SELL, raw_price=True)
+            price = get_trading_price_usdt(asset.symbol, side=BUY, raw_price=True)
+            min_notional = handler.get_min_notional() * Decimal('1.1')
 
-            min_hedge_amount = handler.get_min_notional()
-
-            if order_amount * price < min_hedge_amount:
+            if order_amount * price < min_notional:
                 logger.info('ignored due to small order')
                 return True
 
@@ -206,10 +204,10 @@ class ProviderOrder(models.Model):
                     if balance < order_amount:
                         diff = order_amount - balance
 
-                        if diff * price < 11:
+                        if diff * price < min_notional:
                             order_amount = floor_precision(balance, round_digits)
 
-                            if order_amount * price < 11:
+                            if order_amount * price < min_notional:
                                 logger.info('ignored due to small order')
                                 return True
 
@@ -243,7 +241,7 @@ class ProviderOrder(models.Model):
 
             else:
                 logger.info('New provider order with %s, %s, %s, %s, %s' % (asset, side, order_amount, scope, market))
-                if order_amount * price > 20:
+                if order_amount * price > 2 * min_notional:
                     logger.info('Large value: %s' % (order_amount * price))
 
                 return True

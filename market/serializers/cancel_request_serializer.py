@@ -5,7 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from rest_framework.exceptions import APIException, NotFound
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied
 
 from market.models import CancelRequest, Order, StopLoss
 from market.utils import cancel_order
@@ -38,6 +38,8 @@ class CancelRequestSerializer(serializers.ModelSerializer):
             ).first()
             if not stop_loss:
                 raise NotFound(_('StopLoss not found'))
+            if stop_loss.wallet.variant and not self.context['allow_cancel_strategy_orders']:
+                raise PermissionDenied({'message': _('You do not have permission to perform this action.'), })
             with transaction.atomic():
                 stop_loss.delete()
                 order = stop_loss.order_set.first()
@@ -54,6 +56,8 @@ class CancelRequestSerializer(serializers.ModelSerializer):
             ).first()
             if not order or order.stop_loss:
                 raise NotFound(_('Order not found'))
+            if order.wallet.variant and not self.context['allow_cancel_strategy_orders']:
+                raise PermissionDenied({'message': _('You do not have permission to perform this action.'), })
 
         return self.cancel_order(order, validated_data)
 

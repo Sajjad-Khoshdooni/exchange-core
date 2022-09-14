@@ -7,6 +7,9 @@ import requests
 from yekta_config import secret
 from yekta_config.config import config
 
+from provider.exchanges.sdk.binance_sdk import create_provider_request_and_log
+from provider.models import ProviderRequest
+
 MEXC_SPOT_BASE_URL = 'https://api.mexc.com'
 API_KEY = config('MEXC_API_KEY')
 SECRET_KEY = secret('MEXC_SECRET_KEY')
@@ -34,7 +37,14 @@ def mexc_send_sign_request(http_method: str, url_path: str, payload: dict):
     url = MEXC_SPOT_BASE_URL + url_path + '?' + query_string + "&signature=" + hashing(query_string)
 
     response = requests.request(method=http_method, url=url, headers=header)
-    return response.json()
+
+    return create_provider_request_and_log(
+        name=ProviderRequest.MEXC,
+        response=response,
+        url=url_path,
+        method=http_method,
+        data=payload
+    )
 
 
 def mexc_send_public_request(http_method: str, url_path: str, payload: dict):
@@ -48,6 +58,11 @@ def mexc_send_public_request(http_method: str, url_path: str, payload: dict):
         url = url + '?' + query_string
 
     response = requests.request(method=http_method, url=url, headers=header)
-    return response.json()
 
-
+    return create_provider_request_and_log(
+        name=ProviderRequest.MEXC,
+        response=response,
+        url=url_path,
+        method=http_method,
+        data=payload
+    )
