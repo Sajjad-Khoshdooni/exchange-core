@@ -85,7 +85,7 @@ class JibitGateway(Gateway):
             return super().get_initial_redirect_url(payment_request)
         else:
             return payment_proxy + '/api/v1/finance/payment/go/?gateway={gateway}&authority={authority}'.format(
-                gateway=self.PAYIR,
+                gateway=self.JIBIT,
                 authority=payment_request.authority
             )
 
