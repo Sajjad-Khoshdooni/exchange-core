@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from django.db import models
+from django.db.models import Sum
 
 from accounts.models import Account
 from accounts.utils import email
@@ -33,6 +36,13 @@ class StakeRequest(models.Model):
     def __str__(self):
         return self.stake_option.__str__() + ' ' + str(self.account_id)
 
+    def get_locked_amount(self) -> Decimal:
+        locked_revenue = \
+            self.stakerevenue_set.filter(wallet_source=Wallet.STAKE).aggregate(amount=Sum('revenue'))['amount'] or 0
+
+        return self.amount + locked_revenue
+
+
     def send_email_for_staking(self, user_email: str, template: str):
         if user_email:
             email.send_email_by_template(
@@ -66,10 +76,13 @@ class StakeRequest(models.Model):
         if (old_status, new_status) in valid_cancellation_status:
             spot_wallet = asset.get_wallet(account)
             stake_wallet = asset.get_wallet(account=account, market=Wallet.STAKE)
+
             system_stake_wallet = asset.get_wallet(account=Account.system(), market=Wallet.STAKE)
             stake_fee = self.stake_option.fee
+
             with WalletPipeline() as pipeline:
-                amount = self.amount
+                amount = self.get_locked_amount()
+
                 if old_status != self.PROCESS and stake_fee > 0:
                     amount -= stake_fee
                     pipeline.new_trx(
