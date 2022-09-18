@@ -20,6 +20,8 @@ class StakeOption(models.Model):
 
     landing = models.BooleanField(default=False)
 
+    fee = get_amount_field()
+
     def __str__(self):
         return self.asset.symbol + ' ' + str(self.apr)
 
