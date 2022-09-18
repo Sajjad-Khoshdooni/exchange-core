@@ -4,6 +4,9 @@ from django.db.models import Sum
 from django.utils import timezone
 from datetime import timedelta
 import csv
+
+from yekta_config import secret
+
 from financial.models import Payment, Gateway, FiatWithdrawRequest
 from ledger.models import Asset
 from ledger.utils.fields import DONE
@@ -17,6 +20,8 @@ def send_accounting_report(file_path: str):
     file_bytes = f.read()
     f.close()
 
+    token = secret('TELEGRAM_TOKEN')
+    chat_id = secret('TELEGRAM_CHAT_ID')
     document = (f.name, file_bytes)
 
     url = 'https://api.telegram.org/bot{token}/sendDocument'.format(
