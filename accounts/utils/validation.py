@@ -4,6 +4,7 @@ from datetime import timedelta
 from secrets import randbelow
 
 import jdatetime
+import requests
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 
@@ -70,6 +71,19 @@ def parse_positive_int(inp: str, default: int = None):
     return num
 
 
+def get_location_from_ip(ip):
+
+    try:
+        resp = requests.post(
+            url='http://ip-api.com/json/{ip}'.format(ip=ip),
+            timeout=1
+        )
+        return resp.json()
+
+    except:
+        return {'city': '', 'country': ''}
+
+
 def set_login_activity(request, user, is_sign_up: bool = False):
     try:
         os = request.user_agent.os.family
@@ -92,6 +106,8 @@ def set_login_activity(request, user, is_sign_up: bool = False):
         else:
             device_type = LoginActivity.UNKNOWN
 
+        ip = get_client_ip(request)
+        location = get_location_from_ip(ip)
         LoginActivity.objects.create(
             user=user,
             ip=get_client_ip(request),
@@ -101,8 +117,11 @@ def set_login_activity(request, user, is_sign_up: bool = False):
             device=device,
             os=os,
             browser=browser,
-            is_sign_up=is_sign_up
+            is_sign_up=is_sign_up,
+            city=location['city'],
+            country=location['country'],
         )
+
     except:
         logger.exception('User login activity dos not saved ')
     return
