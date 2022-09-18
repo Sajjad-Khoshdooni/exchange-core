@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
 
 from financial.models import PaymentRequest, Payment
+from ledger.utils.fields import CANCELED
 
 
 class JibitCallbackView(TemplateView):
@@ -13,20 +14,25 @@ class JibitCallbackView(TemplateView):
         status = request.data['status']
         authority = request.data['purchaseId']
 
-        if status != 'SUCCESSFUL':
+        if status not in ('SUCCESSFUL', 'FAILED'):
             return HttpResponseBadRequest('Invalid data')
-        else:
-            payment_request = get_object_or_404(PaymentRequest, authority=authority)
-            payment = getattr(payment_request, 'payment', None)
 
-            if not payment:
-                payment = Payment.objects.create(
-                    payment_request=payment_request
-                )
+        payment_request = get_object_or_404(PaymentRequest, authority=authority)
+        payment = getattr(payment_request, 'payment', None)
 
-            payment_request.get_gateway().verify(payment)
+        if not payment:
+            payment = Payment.objects.create(
+                payment_request=payment_request
+            )
 
-            print('REDIRECTING', payment.get_redirect_url())
+        if payment.status == Payment.PENDING:
+            if status == 'FAILED':
+                payment.status = CANCELED
+                payment.save()
+            else:
+                payment_request.get_gateway().verify(payment)
 
-            return payment.redirect_to_app()
+        print('REDIRECTING', payment.get_redirect_url())
+
+        return payment.redirect_to_app()
 
