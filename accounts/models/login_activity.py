@@ -20,6 +20,8 @@ class LoginActivity(models.Model):
     os = models.CharField(blank=True, max_length=200)
     browser = models.CharField(blank=True, max_length=200)
     session = models.ForeignKey(Session, null=True, blank=True, on_delete=models.SET_NULL)
+    city = models.CharField(blank=True, max_length=256)
+    country = models.CharField(blank=True, max_length=256)
 
     class Meta:
         verbose_name_plural = verbose_name = "تاریخچه ورود به حساب"
