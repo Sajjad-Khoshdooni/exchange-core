@@ -52,7 +52,6 @@ class JibitGateway(Gateway):
             bank_card=bank_card,
             amount=amount,
             gateway=self,
-            authority='',
             source=source,
         )
         resp = requests.post(
