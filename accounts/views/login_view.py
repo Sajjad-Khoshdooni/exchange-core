@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 
 from accounts.models.login_activity import LoginActivity
 from accounts.utils.validation import set_login_activity
+from accounts.views.user_view import UserSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class LoginView(APIView):
     def post(self, request):
 
         if request.user.is_authenticated:
-            return Response({'msg': 'already logged in', 'code': 1, 'user_id': request.user.id})
+            return Response(UserSerializer(request.user).data)
 
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -39,7 +40,7 @@ class LoginView(APIView):
         if user:
             login(request, user)
             set_login_activity(request, user)
-            return Response({'msg': 'success', 'code': 0, 'user_id': user.id})
+            return Response(UserSerializer(user).data)
 
         else:
             return Response({'msg': 'authentication failed', 'code': -1}, status=status.HTTP_401_UNAUTHORIZED)
