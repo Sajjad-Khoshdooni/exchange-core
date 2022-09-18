@@ -103,6 +103,7 @@ def _update_coin_networks(asset: Asset, exchange_handler):
             asset=asset,
             network=network,
             defaults={
+                'can_withdraw': False,
                 'withdraw_fee': Decimal(n['withdrawFee']),
                 'withdraw_min': Decimal(n['withdrawMin']),
                 'withdraw_max': Decimal(n['withdrawMax']),

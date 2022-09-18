@@ -61,8 +61,8 @@ class FastBuyToken(models.Model):
 
                 Notification.send(
                     recipient=self.user,
-                    title='خرید رمز ارز.',
-                    message='خرید {} {} با موفقیت انجام شد.'.format(self.asset.symbol, self.amount),
+                    title='خرید آنی {}'.format(self.asset.name_fa),
+                    message='خرید {} {} با موفقیت انجام شد.'.format(self.amount, self.asset.name_fa),
                     level=Notification.SUCCESS
                 )
                 return otc_trade

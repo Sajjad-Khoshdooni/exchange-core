@@ -167,17 +167,17 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     fields_edit_conditions = {
         'password': None,
-        'first_name': ~M('first_name_verified'),
-        'last_name': ~M('last_name_verified'),
+        'first_name': M.superuser | ~M('first_name_verified'),
+        'last_name': M.superuser | ~M('last_name_verified'),
         'national_code': M.superuser | ~M('national_code_verified'),
         'national_code_phone_verified': True,
         'birth_date': M.superuser | ~M('birth_date_verified'),
         'selfie_image_verified': M.superuser | M('selfie_image'),
         'selfie_image_discard_text': M.superuser | (M('selfie_image') & M.is_none('selfie_image_verified')),
-        'first_name_verified': M.is_none('first_name_verified'),
-        'last_name_verified': M.is_none('last_name_verified'),
-        'national_code_verified': ~M('national_code_verified'),
-        'birth_date_verified': M.is_none('birth_date_verified'),
+        'first_name_verified': M.superuser | M.is_none('first_name_verified'),
+        'last_name_verified': M.superuser | M.is_none('last_name_verified'),
+        'national_code_verified': M.superuser | ~M('national_code_verified'),
+        'birth_date_verified': M.superuser | M.is_none('birth_date_verified'),
         'withdraw_before_48h_option': True,
         'allow_level1_crypto_withdraw': True,
         'can_withdraw': True
@@ -211,7 +211,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         (_('لینک های مهم'), {
             'fields': (
                 'get_wallet', 'get_transfer_link', 'get_payment_address',
-                'get_withdraw_address', 'get_otctrade_address', 'get_fill_order_address',
+                'get_withdraw_address', 'get_otctrade_address', 'get_fill_order_address', 'get_order_link',
                 'get_open_order_address', 'get_deposit_address', 'get_bank_card_link',
                 'get_bank_account_link', 'get_finotech_request_link',
                 'get_user_with_same_national_code', 'get_referred_user', 'get_login_activity_link',
@@ -246,7 +246,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_user_reject_reason', 'get_user_with_same_national_code', 'get_user_prizes', 'get_source_medium',
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
-        'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin'
+        'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
     )
     preserve_filters = ('archived', )
 
@@ -305,6 +305,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         link = url_to_admin_list(Trade) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_fill_order_address.short_description = 'معاملات'
+
+    def get_order_link(self, user: User):
+        link = url_to_admin_list(Order) + '?user={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+    get_order_link.short_description = 'سفارشات'
 
     def get_open_order_address(self, user: User):
         link = url_to_admin_list(Order) +'?status=new&user={}'.format(user.id)

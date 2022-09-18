@@ -63,6 +63,7 @@ class Asset(models.Model):
     modified = models.DateTimeField(auto_now=True)
 
     symbol = models.CharField(max_length=16, unique=True, db_index=True)
+    original_symbol = models.CharField(max_length=16, blank=True)
 
     trade_quantity_step = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
     min_trade_quantity = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
@@ -78,18 +79,12 @@ class Asset(models.Model):
     pin_to_top = models.BooleanField(default=False)
 
     trade_enable = models.BooleanField(default=True)
-
     hedge_method = models.CharField(max_length=32, default=HEDGE_BINANCE_FUTURE, choices=HEDGE_METHOD_CHOICE, blank=True)
-
     candidate = models.BooleanField(default=False)
 
     margin_enable = models.BooleanField(default=False)
-
     spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.PROTECT, null=True, blank=True)
-
     new_coin = models.BooleanField(default=False)
-
-    original_symbol = models.CharField(max_length=16, blank=True)
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )

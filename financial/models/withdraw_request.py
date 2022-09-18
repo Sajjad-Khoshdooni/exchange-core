@@ -139,7 +139,9 @@ class FiatWithdrawRequest(models.Model):
 
         if self.status == PENDING and self.withdraw_datetime:
             title = 'درخواست برداشت شما به بانک ارسال گردید.'
-            description = 'وجه درخواستی شما در سیکل بعدی پایا {} به حساب شما واریز خواهد شد.'.format(self.withdraw_datetime)
+            description = 'وجه درخواستی شما در سیکل بعدی پایا {} به حساب شما واریز خواهد شد.'.format(
+                gregorian_to_jalali_datetime_str(self.withdraw_datetime)
+            )
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
             email_template = email.SCOPE_SUCCESSFUL_FIAT_WITHDRAW
