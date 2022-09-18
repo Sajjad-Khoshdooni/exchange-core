@@ -40,7 +40,7 @@ class jibitGateway(Gateway):
         if resp.ok:
             resp_data = resp.json()
             token = resp_data['accessToken']
-            expire = 24 * 3600
+            expire = 23 * 3600
             token_cache.set(JIBIT_GATEWAY_PURCHASE_TOKEN_KEY, token, expire)
 
             return token
