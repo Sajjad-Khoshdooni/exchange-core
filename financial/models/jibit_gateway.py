@@ -11,15 +11,15 @@ from ledger.utils.fields import DONE, CANCELED
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 token_cache = caches['token']
-JIBIT_GATEWAY_PURCHASE_TOKEN_KEY = 'jibit_gateway_purchase_token'
+JIBIT_GATEWAY_ACCESS_KEY = 'jibit_gateway_key'
 
 
-class jibitGateway(Gateway):
+class JibitGateway(Gateway):
     BASE_URL = 'https://napi.jibit.ir/ppg'
 
     def _get_token(self, force_renew: bool = False):
         if not force_renew:
-            token = token_cache.get(JIBIT_GATEWAY_PURCHASE_TOKEN_KEY)
+            token = token_cache.get(JIBIT_GATEWAY_ACCESS_KEY)
             if token:
                 return token
 
@@ -41,7 +41,7 @@ class jibitGateway(Gateway):
             resp_data = resp.json()
             token = resp_data['accessToken']
             expire = 23 * 3600
-            token_cache.set(JIBIT_GATEWAY_PURCHASE_TOKEN_KEY, token, expire)
+            token_cache.set(JIBIT_GATEWAY_ACCESS_KEY, token, expire)
 
             return token
 
