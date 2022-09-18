@@ -70,7 +70,7 @@ class StakeRequest(models.Model):
             stake_fee = self.stake_option.fee
             with WalletPipeline() as pipeline:
                 amount = self.amount
-                if old_status != self.PROCESS:
+                if old_status != self.PROCESS and stake_fee > 0:
                     amount -= stake_fee
                     pipeline.new_trx(
                         group_id=self.group_id,

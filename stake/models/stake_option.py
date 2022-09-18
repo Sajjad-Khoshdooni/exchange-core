@@ -52,3 +52,6 @@ class StakeOption(models.Model):
     def clean(self):
         if self.user_min_amount > self.user_max_amount:
             raise ValidationError('مقدار وارد شده برای حداقل مقدار بیشتر از حداکثر مقدار است.')
+
+        if self.user_min_amount < self.fee:
+            raise ValidationError('مقدار وارد شده برای حداقل مقدار کمتر از کارمزد تعیین شده است.')
