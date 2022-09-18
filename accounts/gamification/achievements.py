@@ -96,6 +96,15 @@ class TradePrizeAchievementStep1(PrizeAchievement):
 
                 if created:
                     prize.build_trx(pipeline)
+                    Notification.send(
+                        recipient=self.account.referred_by.owner.user,
+                        title='جایزه به شما تعلق گرفت.',
+                        message='جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
+                            humanize_number(prize.asset.get_presentation_amount(prize.amount))
+                        ),
+                        level=Notification.SUCCESS,
+                        link='/account/tasks'
+                    )
 
 
 class TradePrizeAchievementStep2(PrizeAchievement):
