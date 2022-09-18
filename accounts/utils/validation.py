@@ -71,7 +71,7 @@ def parse_positive_int(inp: str, default: int = None):
     return num
 
 
-def get_location_from_ip(ip):
+def get_ip_data(ip):
 
     try:
         resp = requests.post(
@@ -81,7 +81,7 @@ def get_location_from_ip(ip):
         return resp.json()
 
     except:
-        return {'city': '', 'country': ''}
+        return {}
 
 
 def set_login_activity(request, user, is_sign_up: bool = False):
@@ -107,7 +107,7 @@ def set_login_activity(request, user, is_sign_up: bool = False):
             device_type = LoginActivity.UNKNOWN
 
         ip = get_client_ip(request)
-        location = get_location_from_ip(ip)
+        ip_data = get_ip_data(ip)
         LoginActivity.objects.create(
             user=user,
             ip=ip,
@@ -118,8 +118,7 @@ def set_login_activity(request, user, is_sign_up: bool = False):
             os=os,
             browser=browser,
             is_sign_up=is_sign_up,
-            city=location.get('city', ''),
-            country=location.get('country', ''),
+            ip_data=ip_data
         )
 
     except:
