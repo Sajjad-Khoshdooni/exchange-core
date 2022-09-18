@@ -166,14 +166,14 @@ app.conf.beat_schedule = {
         },
     },
 
-    'retention_actions': {
-        'task': 'accounts.tasks.retention.retention_actions',
-        'schedule': 3600,
-        'options': {
-            'queue': 'retention',
-            'expire': 3600
-        },
-    },
+    # 'retention_actions': {
+    #     'task': 'accounts.tasks.retention.retention_actions',
+    #     'schedule': 3600,
+    #     'options': {
+    #         'queue': 'retention',
+    #         'expire': 3600
+    #     },
+    # },
 
     'update_withdraw_status': {
         'task': 'financial.tasks.withdraw.update_withdraw_status',
