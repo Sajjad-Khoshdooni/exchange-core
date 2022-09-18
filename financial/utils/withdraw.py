@@ -394,17 +394,13 @@ class ZarinpalChannel(FiatWithdraw):
 class JibitChannel(FiatWithdraw):
     BASE_URL = ' https://napi.jibit.ir/trf'
 
-    def _get_token(self, force_renew: bool = False):
+    @classmethod
+    def _get_token(cls):
         token_cache = caches['token']
         JIBIT_GATEWAY_TRANSFER_TOKEN_KEY = 'jibit_gateway_transfer_token'
 
-        if not force_renew:
-            token = token_cache.get(JIBIT_GATEWAY_TRANSFER_TOKEN_KEY)
-            if token:
-                return token
-
         resp = requests.post(
-            url=self.BASE_URL + '/v2/tokens/generate',
+            url=cls.BASE_URL + '/v2/tokens/generate',
             json={
                 'apiKey': secret('JIBIT_GATEWAY-API_KEY'),
                 'secretKey': secret('JIBIT_GATEWAY_API_SECRET'),
@@ -434,7 +430,7 @@ class JibitChannel(FiatWithdraw):
         request_kwargs = {
             'url': url,
             'timeout': timeout,
-            'headers': {'Authorization': 'Bearer' + cls._get_token()},
+            'headers': {'Authorization': 'Bearer ' + cls._get_token()},
             'proxies': {
                 'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
                 'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',

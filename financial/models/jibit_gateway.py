@@ -56,7 +56,7 @@ class JibitGateway(Gateway):
         )
         resp = requests.post(
             self.BASE_URL + '/v3/purchases',
-            headers={'Authorization': 'Bearer' + token},
+            headers={'Authorization': 'Bearer ' + token},
             json={
                 'amount': amount * 10,
                 'callbackUrl': settings.HOST_URL + reverse('finance:jibit-callback'),
@@ -85,7 +85,7 @@ class JibitGateway(Gateway):
         payment_request = payment.payment_request
         token = self._get_token()
         resp = requests.post(
-            headers={'Authorization': 'Bearer' + token},
+            headers={'Authorization': 'Bearer ' + token},
             url=self.BASE_URL + '/v3/purchases/{purchaseId}/verify'.format(purchaseId=payment_request.authority),
         )
 
