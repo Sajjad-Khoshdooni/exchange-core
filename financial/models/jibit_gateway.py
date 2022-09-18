@@ -26,8 +26,8 @@ class jibitGateway(Gateway):
         resp = requests.post(
             url=self.BASE_URL + '/v3/tokens',
             json={
-                'apiKey': secret('JIBIT_GATEWAY_PURCHASE_API_KEY'),
-                'secretKey': secret('JIBIT_GATEWAY_PURCHASE_API_SECRET'),
+                'apiKey': secret('JIBIT_PAYMENT_API_KEY'),
+                'secretKey': secret('JIBIT_PAYMENT_SECRET_KEY'),
             },
             timeout=30,
             proxies={
