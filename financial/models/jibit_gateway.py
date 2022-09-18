@@ -68,6 +68,7 @@ class JibitGateway(Gateway):
         )
 
         if not resp.ok:
+            print(resp.json())
             raise GatewayFailed
 
         authority = resp.json()['purchaseId']
