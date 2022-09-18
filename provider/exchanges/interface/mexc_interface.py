@@ -75,6 +75,29 @@ class MexcSpotHandler(ExchangeHandler):
         print(resp)
         return resp
 
+    def withdraw(self, coin: str, network, address: str, transfer_amount: Decimal,
+                 fee_amount: Decimal, address_tag: str = None,
+                 client_id: str = None, memo: str = None) -> dict:
+
+        coin = self.rename_internal_coin_to_original(coin)
+        coefficient_coin = self.get_coin_coefficient(coin)
+
+        amount = transfer_amount + fee_amount
+
+        data = {
+            'coin': coin,
+            'address': address,
+            'amount': decimal_to_str(amount * coefficient_coin),
+            'network': self.rename_network_symbol_from_origin_to_mexc(network.symbol),
+            'memo': address_tag,
+            'withdrawOrderId': client_id
+        }
+
+        resp = dict()
+        resp['id'] = self.collect_api('/api/v3/capital/withdraw/apply', method='POST', data=data).get('id')
+
+        return resp
+
     def get_account_details(self):
         return self.collect_api(url='/api/v3/account', method='GET') or {}
 

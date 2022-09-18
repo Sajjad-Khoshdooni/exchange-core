@@ -22,12 +22,11 @@ class UserSerializer(serializers.ModelSerializer):
         else:
             return user.chat_uuid
 
-
     class Meta:
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'possible_time_for_withdraw', 'chat_uuid'
+            'show_margin', 'show_strategy_bot', 'possible_time_for_withdraw', 'chat_uuid'
         )
 
     def get_possible_time_for_withdraw(self, user: User):
