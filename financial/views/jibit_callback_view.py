@@ -11,8 +11,8 @@ class JibitCallbackView(TemplateView):
 
     def post(self, request, *args, **kwargs):
 
-        status = request.data['status']
-        authority = request.data['purchaseId']
+        status = request.POST['status']
+        authority = request.POST['purchaseId']
 
         if status not in ('SUCCESSFUL', 'FAILED'):
             return HttpResponseBadRequest('Invalid data')
