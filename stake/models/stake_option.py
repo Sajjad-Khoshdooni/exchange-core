@@ -20,6 +20,8 @@ class StakeOption(models.Model):
 
     landing = models.BooleanField(default=False)
 
+    precision = models.IntegerField(default=0)
+
     fee = get_amount_field()
 
     def __str__(self):

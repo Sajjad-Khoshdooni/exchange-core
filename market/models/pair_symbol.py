@@ -31,6 +31,7 @@ class PairSymbol(models.Model):
     maker_amount = get_amount_field(default=Decimal('1'))
 
     enable = models.BooleanField(default=False)
+    strategy_enable = models.BooleanField(default=False)
 
     @classmethod
     def get_by(cls, name):

@@ -151,7 +151,7 @@ class ProviderOrder(models.Model):
                                 dry_run: bool = False, raise_exception: bool = False) -> bool:
         # todo: this method should not called more than once at a single time
         handler = asset.get_hedger()
-        if settings.DEBUG_OR_TESTING:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             logger.info('ignored due to debug')
             return True
 
@@ -199,7 +199,7 @@ class ProviderOrder(models.Model):
             if not dry_run:
                 if market == cls.SPOT and side == cls.SELL:
                     balance_map = handler.get_spot_handler().get_free_dict()
-                    balance = balance_map[asset.symbol]
+                    balance = balance_map.get(asset.symbol, 0)
 
                     if balance < order_amount:
                         diff = order_amount - balance
