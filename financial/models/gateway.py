@@ -22,11 +22,12 @@ class Gateway(models.Model):
     ZARINPAL = 'zarinpal'
     PAYIR = 'payir'
     ZIBAL = 'zibal'
+    JIBIT = 'jibit'
 
     name = models.CharField(max_length=128)
     type = models.CharField(
         max_length=8,
-        choices=((ZARINPAL, ZARINPAL), (PAYIR, PAYIR), (ZIBAL, ZIBAL))
+        choices=((ZARINPAL, ZARINPAL), (PAYIR, PAYIR), (ZIBAL, ZIBAL), (JIBIT, JIBIT))
     )
     merchant_id = models.CharField(max_length=128)
     active = models.BooleanField(default=False)
@@ -47,11 +48,12 @@ class Gateway(models.Model):
 
     @classmethod
     def get_gateway_class(cls, type: str) -> Type['Gateway']:
-        from financial.models import ZarinpalGateway, PaydotirGateway, ZibalGateway
+        from financial.models import ZarinpalGateway, PaydotirGateway, ZibalGateway, JibitGateway
         mapping = {
             cls.ZARINPAL: ZarinpalGateway,
             cls.PAYIR: PaydotirGateway,
             cls.ZIBAL: ZibalGateway,
+            cls.JIBIT: JibitGateway
         }
 
         return mapping.get(type)

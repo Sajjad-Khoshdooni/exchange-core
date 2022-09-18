@@ -22,6 +22,8 @@ class StakeOption(models.Model):
 
     precision = models.IntegerField(default=0)
 
+    fee = get_amount_field()
+
     def __str__(self):
         return self.asset.symbol + ' ' + str(self.apr)
 
@@ -52,3 +54,6 @@ class StakeOption(models.Model):
     def clean(self):
         if self.user_min_amount > self.user_max_amount:
             raise ValidationError('مقدار وارد شده برای حداقل مقدار بیشتر از حداکثر مقدار است.')
+
+        if self.user_min_amount < self.fee:
+            raise ValidationError('مقدار وارد شده برای حداقل مقدار کمتر از کارمزد تعیین شده است.')

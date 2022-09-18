@@ -28,7 +28,7 @@ class PaymentRequest(models.Model):
 
     source = models.CharField(max_length=16, choices=((APP, APP), (DESKTOP, DESKTOP)), default=DESKTOP)
 
-    authority = models.CharField(max_length=64, blank=True, db_index=True)
+    authority = models.CharField(max_length=64, blank=True, db_index=True, null=True)
 
     @property
     def rial_amount(self):

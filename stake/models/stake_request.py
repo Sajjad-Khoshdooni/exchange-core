@@ -66,13 +66,24 @@ class StakeRequest(models.Model):
         if (old_status, new_status) in valid_cancellation_status:
             spot_wallet = asset.get_wallet(account)
             stake_wallet = asset.get_wallet(account=account, market=Wallet.STAKE)
-
+            system_stake_wallet = asset.get_wallet(account=Account.system(), market=Wallet.STAKE)
+            stake_fee = self.stake_option.fee
             with WalletPipeline() as pipeline:
+                amount = self.amount
+                if old_status != self.PROCESS and stake_fee > 0:
+                    amount -= stake_fee
+                    pipeline.new_trx(
+                        group_id=self.group_id,
+                        amount=stake_fee,
+                        sender=stake_wallet,
+                        receiver=system_stake_wallet,
+                        scope=Trx.STAKE_FEE,
+                    )
                 pipeline.new_trx(
                     group_id=self.group_id,
                     sender=stake_wallet,
                     receiver=spot_wallet,
-                    amount=self.amount,
+                    amount=amount,
                     scope=Trx.STAKE
                 )
                 self.status = new_status

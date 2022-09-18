@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 import requests
+from django.core.cache import caches
 from django.utils import timezone
 from yekta_config import secret
 from yekta_config.config import config
@@ -42,7 +43,8 @@ class FiatWithdraw:
         mapping = {
             FiatWithdrawRequest.PAYIR: PayirChannel,
             FiatWithdrawRequest.ZIBAL: ZibalChannel,
-            FiatWithdrawRequest.ZARINPAL: ZarinpalChannel
+            FiatWithdrawRequest.ZARINPAL: ZarinpalChannel,
+            FiatWithdrawRequest.JIBIT: JibitChannel
         }
         return mapping[channel]()
 
@@ -387,3 +389,143 @@ class ZarinpalChannel(FiatWithdraw):
 
     def get_total_wallet_irt_value(self):
         return 0
+
+
+class JibitChannel(FiatWithdraw):
+    BASE_URL = ' https://napi.jibit.ir/trf'
+
+    @classmethod
+    def _get_token(cls):
+        token_cache = caches['token']
+        JIBIT_GATEWAY_TRANSFER_TOKEN_KEY = 'jibit_gateway_transfer_token'
+
+        resp = requests.post(
+            url=cls.BASE_URL + '/v2/tokens/generate',
+            json={
+                'apiKey': secret('JIBIT_GATEWAY-API_KEY'),
+                'secretKey': secret('JIBIT_GATEWAY_API_SECRET'),
+            },
+            timeout=30,
+            proxies={
+                'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+                'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+                'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            }
+        )
+
+        if resp.ok:
+            resp_data = resp.json()
+            token = resp_data['accessToken']
+            expire = 23 * 3600
+            token_cache.set(JIBIT_GATEWAY_TRANSFER_TOKEN_KEY, token, expire)
+
+            return token
+
+    def get_wallet_id(self) -> int:
+        return config('JIBIT_WALLET_ID', cast=int)
+
+    @classmethod
+    def collect_api(cls, path: str, method: str = 'GET', data: dict = None, verbose: bool = True, timeout: float = 30) ->dict:
+        url = 'https://napi.jibit.ir/trf' + path
+        request_kwargs = {
+            'url': url,
+            'timeout': timeout,
+            'headers': {'Authorization': 'Bearer ' + cls._get_token()},
+            'proxies': {
+                'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+                'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+                'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            }
+
+        }
+
+        try:
+            if method == 'GET':
+                resp = requests.get(params=data, **request_kwargs)
+            else:
+                method_prop = getattr(requests, method.lower())
+                resp = method_prop(json=data, **request_kwargs)
+        except requests.exceptions.ConnectionError:
+            logger.error('jibit connection error', extra={
+                'url': url,
+                'method': method,
+                'data': data,
+            })
+            raise TimeoutError
+        resp_data = resp.json()
+
+        if verbose:
+            print('status', resp.status_code)
+            print('data', resp_data)
+
+        if not resp.ok or not resp_data['success']:
+            raise ServerError
+
+        return resp_data['data']
+
+    def gat_wallet_data(self, wallet_id: int) -> Wallet:
+        data = self.collect_api('/v2/balances')
+        return Wallet(
+            id=wallet_id,
+            name='main',
+            balance=data['balance'] // 10,
+            free=data['settleableBalance'] //10
+        )
+
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
+        self.collect_api('/v2/transfers', method='post', data={
+            'submissionMode': 'TRANSFER',
+            'transfer': [{
+                'transferID': str(request_id),
+                'destination': receiver.iban[2:],
+                'destinationLastName': receiver.user.get_full_name(),
+                'amount': amount,
+                'currency': 'TOMAN',
+            }],
+        })
+
+        return Withdraw(
+            tracking_id=str(request_id),
+            status=FiatWithdrawRequest.PENDING,
+            receive_datetime=self.get_estimated_receive_time(timezone.now())
+        )
+
+    def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
+        data = self.collect_api('/v2/transfers?transferID={}'.format(request_id))
+
+        mapping_status = {
+            'CANCELLED': self.CANCELED,
+            'TRANSFERRED': self.DONE,
+            'CANCELLING': self.CANCELED,
+            'FAILED': self.CANCELED,
+            'IN_PROGRESS': self.PENDING
+        }
+
+        status = data['transfers'][0]['state']
+        return mapping_status.get(status, self.PENDING)
+
+    def get_estimated_receive_time(self, created: datetime):
+        request_date = created.astimezone()
+        receive_time = request_date.replace(microsecond=0)
+
+        receive_time += timedelta(hours=3)
+
+        return receive_time
+
+    def get_total_wallet_irt_value(self):
+        if not self.is_active():
+            return 0
+
+        resp = self.collect_api(
+            path='/v1/wallet/list',
+            timeout=5
+        )
+
+        total_wallet_irt_value = 0
+        for wallet in resp:
+            total_wallet_irt_value += Decimal(wallet['balance']) + Decimal(wallet.get('pendingPFAmount', 0))
+
+        return total_wallet_irt_value // 10
+
+    def is_active(self):
+        return bool(config('IBIT_GATEWAY-API_KEY', ''))
