@@ -118,7 +118,9 @@ def set_login_activity(request, user, is_sign_up: bool = False):
             os=os,
             browser=browser,
             is_sign_up=is_sign_up,
-            ip_data=ip_data
+            ip_data=ip_data,
+            city=ip_data.get('city', ''),
+            country=ip_data.get('country', '')
         )
 
     except:
