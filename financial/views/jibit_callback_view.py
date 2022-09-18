@@ -1,25 +1,20 @@
-import logging
-
 from django.http import HttpResponseBadRequest
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
 
-from financial.models import PaymentRequest
-from financial.models.payment import Payment
-from ledger.utils.fields import DONE, CANCELED
-
-logger = logging.getLogger(__name__)
+from financial.models import PaymentRequest, Payment
+from ledger.utils.fields import CANCELED
 
 
-class ZibalCallbackView(TemplateView):
+class JibitCallbackView(TemplateView):
     authentication_classes = permission_classes = ()
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
 
-        status = request.GET.get('success')
-        authority = request.GET.get('trackId')
+        status = request.data['status']
+        authority = request.data['purchaseId']
 
-        if status not in ['1', '0']:
+        if status not in ('SUCCESSFUL', 'FAILED'):
             return HttpResponseBadRequest('Invalid data')
 
         payment_request = get_object_or_404(PaymentRequest, authority=authority)
@@ -31,12 +26,13 @@ class ZibalCallbackView(TemplateView):
             )
 
         if payment.status == Payment.PENDING:
-            if status == '0':
+            if status == 'FAILED':
                 payment.status = CANCELED
                 payment.save()
             else:
                 payment_request.get_gateway().verify(payment)
 
-        print('REDIRECTING', payment.   get_redirect_url())
+        print('REDIRECTING', payment.get_redirect_url())
 
         return payment.redirect_to_app()
+

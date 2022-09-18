@@ -22,11 +22,12 @@ class Gateway(models.Model):
     ZARINPAL = 'zarinpal'
     PAYIR = 'payir'
     ZIBAL = 'zibal'
+    JIBIT = 'jibit'
 
     name = models.CharField(max_length=128)
     type = models.CharField(
         max_length=8,
-        choices=((ZARINPAL, ZARINPAL), (PAYIR, PAYIR), (ZIBAL, ZIBAL))
+        choices=((ZARINPAL, ZARINPAL), (PAYIR, PAYIR), (ZIBAL, ZIBAL), (JIBIT, JIBIT))
     )
     merchant_id = models.CharField(max_length=128)
     active = models.BooleanField(default=False)
