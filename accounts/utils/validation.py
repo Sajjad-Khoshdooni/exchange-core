@@ -110,7 +110,7 @@ def set_login_activity(request, user, is_sign_up: bool = False):
         location = get_location_from_ip(ip)
         LoginActivity.objects.create(
             user=user,
-            ip=get_client_ip(request),
+            ip=ip,
             user_agent=request.META['HTTP_USER_AGENT'],
             session=Session.objects.get(session_key=request.session.session_key),
             device_type=device_type,
@@ -118,8 +118,8 @@ def set_login_activity(request, user, is_sign_up: bool = False):
             os=os,
             browser=browser,
             is_sign_up=is_sign_up,
-            city=location['city'],
-            country=location['country'],
+            city=location.get('city', ''),
+            country=location.get('country', ''),
         )
 
     except:
