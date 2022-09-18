@@ -22,6 +22,7 @@ class LoginActivity(models.Model):
     session = models.ForeignKey(Session, null=True, blank=True, on_delete=models.SET_NULL)
     city = models.CharField(blank=True, max_length=256)
     country = models.CharField(blank=True, max_length=256)
+    ip_data = models.JSONField(null=True, blank=True)
 
     class Meta:
         verbose_name_plural = verbose_name = "تاریخچه ورود به حساب"
