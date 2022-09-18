@@ -89,12 +89,12 @@ class jibitGateway(Gateway):
             url=self.BASE_URL + '/v3/purchases/{purchaseId}/verify'.format(purchaseId=payment_request.authority),
         )
 
-        status = resp.json()['data']['status']
+        status = resp.json()['status']
 
         if status == 'ALREADY_VERIFIED':
             logger.warning('duplicate verify!', extra={'payment_id': payment.id})
 
-        if status == 'SUCCESSFUL':
+        if status in ('SUCCESSFUL', 'ALREADY_VERIFIED'):
             with WalletPipeline() as pipeline:
                 payment.status = DONE
                 payment.ref_status = status
