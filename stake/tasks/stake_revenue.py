@@ -24,7 +24,7 @@ def create_stake_revenue():
                 pipeline.new_trx(
                     group_id=stake_revenue.group_id,
                     sender=asset.get_wallet(system, Wallet.STAKE),
-                    receiver=asset.get_wallet(stake_request.account),
+                    receiver=asset.get_wallet(stake_request.account, Wallet.STAKE),
                     amount=revenue,
                     scope=Trx.STAKE_REVENUE
                 )
