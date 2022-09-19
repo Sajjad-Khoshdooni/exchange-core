@@ -29,6 +29,7 @@ class SymbolListAPIView(ListAPIView):
     permission_classes = ()
     filter_backends = [DjangoFilterBackend]
     filter_class = SymbolFilter
+    filterset_fields = ('strategy_enable', )
     queryset = PairSymbol.objects.filter(enable=True).order_by('-asset__trend', 'asset__order', 'base_asset__trend', '-base_asset__order')
 
     def get_serializer_class(self):
