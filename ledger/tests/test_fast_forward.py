@@ -1,10 +1,9 @@
 from django.test import TestCase
+from unittest import mock
 from decimal import Decimal
 
 from ledger.utils.test import new_account, new_network
 from ledger.models import Transfer, DepositAddress, Trx, Asset, AddressKey
-
-from ledger.requester.withdraw_requester import RequestWithdraw
 
 
 class FastForwardTestCase(TestCase):
@@ -34,29 +33,11 @@ class FastForwardTestCase(TestCase):
         )
         self.receiver_wallet1 = self.asset.get_wallet(account=self.receiver_account1)
 
+    @mock.patch('ledger.models.deposit_address.request_architecture')
+    def test_fast_forward1(self, request_architecture):
+        request_architecture.return_value = 'ETH'
+        print(request_architecture('BSC'))
 
-        # self.sender_account2 = new_account()
-        # self.sender_address_key2 = AddressKey.objects.create(account=self.sender_account2, address='0x3e14933d732f4197B4AA82D0D91286BEb8Ac31E9')
-        # self.sender_deposit_address2 = DepositAddress.objects.create(
-        #     account=self.sender_account2,
-        #     network=self.network,
-        #     address_key=self.sender_address_key2,
-        #     address='0x3e14933d732f4197B4AA82D0D91286BEb8Ac31E9'
-        # )
-        # self.sender_wallet2 = self.asset.get_wallet(account=self.sender_account2)
-        #
-        #
-        # self.receiver_account2 = new_account()
-        # self.receiver_address_key2 = AddressKey.objects.create(account=self.receiver_account2, address='0xC40e9B5d702B0e698506fbE49df6504773f850e0')
-        # self.receiver_deposit_address2 = DepositAddress.objects.create(
-        #     account=self.receiver_account2,
-        #     network=self.network,
-        #     address_key=self.receiver_address_key2,
-        #     address='0xC40e9B5d702B0e698506fbE49df6504773f850e0'
-        # )
-        # self.receiver_wallet2 = self.asset.get_wallet(account=self.receiver_account2)
-
-    def test_fast_forward1(self):
         Transfer.check_fast_forward(
             sender_wallet=self.sender_wallet1,
             network=self.network,
@@ -68,7 +49,11 @@ class FastForwardTestCase(TestCase):
             Trx.objects.get(sender=self.sender_wallet1).group_id,
             Transfer.objects.get(deposit_address=self.receiver_deposit_address1).group_id)
 
-    def test_fast_forward2(self):
+    @mock.patch('ledger.models.deposit_address.request_architecture')
+    def test_fast_forward2(self, request_architecture):
+        request_architecture.return_value = 'ETH'
+        print(request_architecture('BSC'))
+
         transfer = Transfer.check_fast_forward(
             sender_wallet=self.sender_wallet1,
             network=self.network,
@@ -77,4 +62,4 @@ class FastForwardTestCase(TestCase):
         )
 
         self.assertEqual(transfer, None)
-#
+
