@@ -92,14 +92,35 @@ def alert_shib_prize_to_signup(token: str):
     )
 
 
-def alert_new_coin_message(token: str):
-    return send_push_notif(
-        token=token,
+def alert_new_coin_message():
+    return send_push_to_all(
         title='بیبی دوج را آنی خریداری کنید',
         body='از امروز می‌توانید کوین بیبی دوج را در راستین معامله کنید 🤩🤩🤩',
         image='https://api.raastin.com/static/ads/babydoge.jpg',
         link='https://raastin.com/wallet/spot/fast-buy?coin=1M-BABYDOGE&utm_source=push-retention&utm_campaign=coin&utm_term=babydoge'
     )
+
+
+def alert_margin_message():
+    return send_push_to_all(
+        title='معاملات تعهدی راستین',
+        body='با معاملات تعهدی راستین حتی در بازار نزولی سود کنید 🤩🤩🤩',
+        image='https://api.raastin.com/static/ads/margin.jpg',
+        link='https://raastin.com/wallet/margin?&utm_source=push-retention&utm_campaign=margin&utm_term=margin'
+    )
+
+
+def send_push_to_all(title, body, image, link, me: bool = False):
+    from accounts.models import FirebaseToken
+
+    tokens = FirebaseToken.objects.all().order_by('id')
+
+    if me:
+        tokens = tokens.filter(user_id=1)
+
+    for f in tokens:
+        print('sending to token: %s' % f.id)
+        send_push_notif(token=f.token, title=title, body=body, image=image, link=link)
 
 
 to_trade_message = """
