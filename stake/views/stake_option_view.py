@@ -10,6 +10,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 class StakeOptionSerializer(serializers.ModelSerializer):
     asset = AssetSerializerMini(read_only=True)
     apr = serializers.SerializerMethodField()
+    fee = serializers.SerializerMethodField()
     user_max_amount = serializers.SerializerMethodField()
     user_min_amount = serializers.SerializerMethodField()
 
@@ -27,6 +28,9 @@ class StakeOptionSerializer(serializers.ModelSerializer):
 
     def get_apr(self, stake_option: StakeOption):
         return get_presentation_amount(stake_option.apr)
+
+    def get_fee(self, stake_option: StakeOption):
+        return get_presentation_amount(stake_option.fee)
 
     def get_user_max_amount(self, stake_option: StakeOption):
         return get_presentation_amount(stake_option.user_max_amount)
