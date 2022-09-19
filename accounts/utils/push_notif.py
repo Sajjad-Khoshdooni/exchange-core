@@ -93,17 +93,17 @@ def alert_shib_prize_to_signup(token: str):
 
 
 new_coin_message = """
-از امروز می‌توانید کوین ایلان مارس را در راستین معامله کنید 🤩🤩🤩
+از امروز می‌توانید کوین بیبی دوج را در راستین معامله کنید 🤩🤩🤩
 """
 
 
 def alert_new_coin_message(token: str):
     return send_push_notif(
         token=token,
-        title='ایلان مارس را آنی خریداری کنید',
-        body=new_coin_message.strip(),
-        image='https://api.raastin.com/static/ads/elon-mars.jpg',
-        link='https://raastin.com/wallet/spot/fast-buy?coin=1000ELON&utm_source=push-retention&utm_campaign=coin&utm_term=elon'
+        title='بیبی دوج را آنی خریداری کنید',
+        body='از امروز می‌توانید کوین بیبی دوج را در راستین معامله کنید 🤩🤩🤩',
+        image='https://api.raastin.com/static/ads/babydoge.jpg',
+        link='https://raastin.com/wallet/spot/fast-buy?coin=1M-BABYDOGE&utm_source=push-retention&utm_campaign=coin&utm_term=babydoge'
     )
 
 
