@@ -92,11 +92,6 @@ def alert_shib_prize_to_signup(token: str):
     )
 
 
-new_coin_message = """
-از امروز می‌توانید کوین بیبی دوج را در راستین معامله کنید 🤩🤩🤩
-"""
-
-
 def alert_new_coin_message(token: str):
     return send_push_notif(
         token=token,
