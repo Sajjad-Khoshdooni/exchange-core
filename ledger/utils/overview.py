@@ -36,6 +36,8 @@ class AssetOverview:
         wallets = Wallet.objects.filter(account__type=Account.ORDINARY).values('asset__symbol').annotate(amount=Sum('balance'))
         self._users_per_asset_balances = {w['asset__symbol']: w['amount'] for w in wallets}
 
+        self._valid_symbols = set(Asset.objects.filter(enable=True).values_list('symbol', flat=True))
+
         self.prices = get_prices_dict(
             coins=list(Asset.candid_objects.values_list('symbol', flat=True)),
             side=SELL,
@@ -228,7 +230,7 @@ class AssetOverview:
         total = Decimal(0)
 
         for symbol, amount in self._internal_deposits.items():
-            if not amount:
+            if symbol not in self._valid_symbols or not amount:
                 continue
 
             total += amount * self.get_price(symbol)
