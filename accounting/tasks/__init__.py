@@ -1,1 +1,1 @@
-from .weekly_fiat_transfer import create_weekly_accounting_report
+from .weekly_reports import create_weekly_accounting_report
