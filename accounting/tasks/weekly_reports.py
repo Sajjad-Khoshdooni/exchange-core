@@ -11,6 +11,7 @@ from django.utils import timezone
 from yekta_config import secret
 from yekta_config.config import config
 
+from accounts.utils.validation import gregorian_to_jalali_date
 from financial.models import Payment, FiatWithdrawRequest
 from ledger.models import Asset
 from ledger.utils.fields import DONE
@@ -45,7 +46,7 @@ def create_trades(start: datetime.date, end: datetime.date, upload: bool = False
     for t in trades_query:
         trades.append({
             'value': t['value'],
-            'date': str(t['date']),
+            'date': str(gregorian_to_jalali_date(t['date'])),
             'side': t['side']
         })
 
@@ -78,7 +79,7 @@ def create_fiat_deposit(start: datetime.date, end: datetime.date, upload: bool =
     for d in deposits_query:
         deposits.append({
             'gateway': d['payment_request__gateway__type'],
-            'date': str(d['date']),
+            'date': str(gregorian_to_jalali_date(d['date'])),
             'amount': d['amount']
         })
 
@@ -111,7 +112,7 @@ def create_fiat_withdraw(start: datetime.date, end: datetime.date, upload: bool 
     for w in withdraws_query:
         withdraws.append({
             'gateway': w['withdraw_channel'],
-            'date': str(w['date']),
+            'date': str(gregorian_to_jalali_date(w['date'])),
             'amount': w['amount']
         })
 
