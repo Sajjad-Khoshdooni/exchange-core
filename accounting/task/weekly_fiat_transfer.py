@@ -1,17 +1,17 @@
+import csv
+import os
+from datetime import timedelta
+
 import requests
 from celery import shared_task
 from django.db.models import Sum
 from django.utils import timezone
-from datetime import timedelta
-import csv
-
 from yekta_config import secret
+from yekta_config.config import config
 
 from financial.models import Payment, Gateway, FiatWithdrawRequest
 from ledger.models import Asset
 from ledger.utils.fields import DONE
-import os
-
 from market.models import Trade, Order
 
 
@@ -21,7 +21,7 @@ def send_accounting_report(file_path: str):
     f.close()
 
     token = secret('ACCOUNTING_TELEGRAM_TOKEN')
-    chat_id = secret('ACCOUNTING_TELEGRAM_CHAT_ID')
+    chat_id = config('ACCOUNTING_TELEGRAM_CHAT_ID')
     document = (f.name, file_bytes)
 
     url = 'https://api.telegram.org/bot{token}/sendDocument'.format(
@@ -32,7 +32,7 @@ def send_accounting_report(file_path: str):
     return resp.json()
 
 
-def add_weekly_payment_dict(weekly_payment_dict:list, date):
+def add_weekly_payment_dict(weekly_payment_dict: list, date):
     gateways = Gateway.objects.all()
 
     for gateway in gateways:
@@ -80,13 +80,12 @@ def add_weekly_trade_dict(weekly_trade_dict: list, date):
 
 
 @shared_task(queue='accounting')
-def create_weekly_accounting_report():
-
+def create_weekly_accounting_report(days: int = 7):
     weekly_payment_dict = []
     weekly_trade_dict = []
 
     now = timezone.now()
-    for i in range(7, 0, -1):
+    for i in range(1, days + 1):
         date = (now - timedelta(days=i)).date()
         add_weekly_payment_dict(weekly_payment_dict, date)
         add_weekly_trade_dict(weekly_trade_dict, date)
@@ -98,13 +97,13 @@ def create_weekly_accounting_report():
         header = ['date', 'gateway', 'deposit', 'withdraw']
         w = csv.DictWriter(csv_file, fieldnames=header)
         w.writeheader()
-        w.writerows(weekly_payment_dict)
+        w.writerows(reversed(weekly_payment_dict))
 
     with open('/tmp/accounting/weekly_trade_{}.csv'.format(date), 'w') as f:
         header = ['date', 'sell', 'buy']
         w = csv.DictWriter(f, fieldnames=header)
         w.writeheader()
-        w.writerows(weekly_trade_dict)
+        w.writerows(reversed('weekly_trade_dict'))
 
     send_accounting_report(file_path='/tmp/accounting/weekly_payment_{}.csv'.format(date))
     send_accounting_report(file_path='/tmp/accounting/weekly_trade_{}.csv'.format(date))
