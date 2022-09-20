@@ -21,7 +21,7 @@ def update_network_fees():
             withdraw_min = Decimal(info['withdrawMin'])
             withdraw_fee = Decimal(info['withdrawFee'])
 
-            if symbol_pair not in [('TRX', 'USDT'), ('BSC', 'USDT'), ('BNB', 'USDT'), ('SOL', 'USDT')]:
+            if symbol_pair in [('TRX', 'USDT'), ('BSC', 'USDT'), ('BNB', 'USDT'), ('SOL', 'USDT')]:
                 withdraw_fee = Decimal('0.8')
                 withdraw_min = Decimal(10)
             elif symbol_pair not in [('TRX', 'USDT'), ('TRX', 'TRX'), ('BSC', 'USDT'), ('BNB', 'USDT'), ('SOL', 'USDT')]:
