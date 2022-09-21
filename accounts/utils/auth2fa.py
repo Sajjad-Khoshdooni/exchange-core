@@ -1,10 +1,9 @@
+import base64
 import hashlib
 import hmac
 import math
 import time
-import base64
 import uuid
-
 import qrcode
 from django.conf import settings
 from rest_framework.exceptions import ValidationError

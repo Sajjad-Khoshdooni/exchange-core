@@ -2,16 +2,14 @@ import uuid
 
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView
-# class Create2Qrcode(serializers.ModelSerializer):
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import Notification
 from accounts.models.auth2fa import Auth2Fa
 from accounts.utils import email
-from accounts.utils.email import SCOPE_MARGIN_LIQUIDATION_FINISHED, SCOPE_2FA_ACTIVATE
 from accounts.utils.auth2fa import create_qr_code, code_2fa_verifier
+from accounts.utils.email import SCOPE_2FA_ACTIVATE
 
 
 class Verify2FaSerializer(serializers.Serializer):
