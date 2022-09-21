@@ -32,12 +32,13 @@ class Create2FaQrCodeAPIView(APIView):
             raise ValidationError('این کاربر قبلا qrcode ساخته است')
 
         token = uuid.uuid4()
+        qrcode_address = create_qr_code(str(token))
         Auth2Fa.objects.create(
             user=user,
             token=token,
-            qrcode=create_qr_code(str(token))
+            qrcode=qrcode_address
         )
-        return Response({'qrcode_link': '', })
+        return Response({'qrcode_link': qrcode_address})
 
 
 class Verify2FaVerificationAPIView(APIView):

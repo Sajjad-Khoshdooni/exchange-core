@@ -672,5 +672,5 @@ class AppStatusAdmin(admin.ModelAdmin):
 
 @admin.register(Auth2Fa)
 class Auth2FaAdmin(admin.ModelAdmin):
-    list_display = ['user']
-    pass
+    list_display = ['user', 'created']
+
