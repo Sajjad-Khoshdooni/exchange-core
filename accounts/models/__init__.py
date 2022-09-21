@@ -12,3 +12,4 @@ from .custom_token import CustomToken
 from .firebase_token import FirebaseToken
 from .app_status import AppStatus
 from .attribution import Attribution
+from .auth2fa import Auth2Fa
