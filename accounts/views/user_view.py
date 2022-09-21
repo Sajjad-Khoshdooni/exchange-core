@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.models import User, CustomToken
+from accounts.utils.auth2fa import is_2fa_active_for_user
 from accounts.verifiers.legal import possible_time_for_withdraw
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 
@@ -13,6 +14,7 @@ from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 class UserSerializer(serializers.ModelSerializer):
     possible_time_for_withdraw = serializers.SerializerMethodField()
     chat_uuid = serializers.CharField()
+    auth2fa = serializers.SerializerMethodField()
 
     def get_chat_uuid(self, user: User):
         request = self.context['request']
@@ -22,11 +24,14 @@ class UserSerializer(serializers.ModelSerializer):
         else:
             return user.chat_uuid
 
+    def get_auth2fa(self, user: User):
+        return is_2fa_active_for_user(user)
+
     class Meta:
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'show_strategy_bot', 'possible_time_for_withdraw', 'chat_uuid'
+            'show_margin', 'show_strategy_bot', 'possible_time_for_withdraw', 'chat_uuid', 'auth2fa'
         )
 
     def get_possible_time_for_withdraw(self, user: User):

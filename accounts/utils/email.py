@@ -31,6 +31,8 @@ SCOPE_DONE_STAKE = 'done_stake'
 
 SCOPE_CANCEL_STAKE = 'cancel_stake'
 
+SCOPE_2FA_ACTIVATE = 'activate_2fa'
+
 BRAND = config('BRAND')
 
 TEMPLATES = {
@@ -68,6 +70,12 @@ TEMPLATES = {
         'subject': '{} | تسویه خودکار حساب تعهدی'.format(BRAND),
         'html': 'accounts/email/margin_liquidation_finished.min.html',
         'text': 'accounts/text/margin_liquidation_finished.txt',
+    },
+
+    SCOPE_2FA_ACTIVATE: {
+        'subject': '{} | فعال سازی رمز دوعاملی'.format(BRAND),
+        'html': 'accounts/email/activate_2fa_email.min.html',
+        'text': 'accounts/text/activate_2fa.txt',
     },
 
     'cancel_stake': {
