@@ -672,5 +672,7 @@ class AppStatusAdmin(admin.ModelAdmin):
 
 @admin.register(Auth2Fa)
 class Auth2FaAdmin(admin.ModelAdmin):
-    list_display = ['user', 'created']
-
+    list_display = ['user', 'created', 'verified']
+    readonly_fields = ('created', )
+    fields = ('user', 'created', 'qrcode', 'verified')
+    search_fields = ('user__phone',)
