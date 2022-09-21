@@ -48,7 +48,6 @@ class InvestmentRevenue(models.Model):
     investment = models.ForeignKey(Investment, on_delete=models.CASCADE)
     amount = get_amount_field(validators=())
     description = models.CharField(blank=True, max_length=256)
-    doc = models.FileField(upload_to='finance/', null=True, blank=True)
     revenue = models.BooleanField(default=False)
 
     class Meta:
