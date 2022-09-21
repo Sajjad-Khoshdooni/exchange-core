@@ -5,6 +5,7 @@ from yekta_config.config import config
 from ledger.utils.cache import cache_for
 
 
+@cache_for(3600)
 def request_architecture(network):
     data = {
         'network': network,
