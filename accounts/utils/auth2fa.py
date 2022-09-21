@@ -41,10 +41,6 @@ def code_2fa_verifier(user_token: str, code_2fa: str):
     raise ValidationError('کد دوعاملی نامعتبر است.')
 
 
-def generate_2fa_token(token: str):
-    pass
-
-
 def is_2fa_active_for_user(user: User):
     if not getattr(user, 'auth2fa', None):
         return False

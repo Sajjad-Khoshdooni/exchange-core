@@ -15,9 +15,3 @@ class Auth2Fa(models.Model):
     class Meta:
         verbose_name = 'رمز دوعاملی'
         verbose_name_plural = 'رمز دوعاملی'
-
-
-
-
-
-

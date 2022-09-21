@@ -13,18 +13,22 @@ from accounts.utils.email import SCOPE_2FA_ACTIVATE
 
 class Verify2FaSerializer(serializers.Serializer):
     code_2fa = serializers.CharField(write_only=True)
-    code = serializers.CharField(write_only=True)
+    otp = serializers.CharField(write_only=True)
 
-    def save(self, **kwargs):
+    def validate(self, attrs):
         user = self.instance
-        code_2fa = self.validated_data['code_2fa']
-        code = self.validated_data['code']
+        code_2fa = attrs['code_2fa']
+        otp = attrs['otp']
         code_2fa_verifier(user_token=str(user.auth2fa.token), code_2fa=code_2fa)
-        otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_2FA_ACTIVATE)
+        otp_code = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_2FA_ACTIVATE)
 
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است'})
+        otp_code.set_code_used()
+        return attrs
 
+    def save(self, **kwargs):
+        user = self.instance
         auth2fa = user.auth2fa
         auth2fa.verified = True
         auth2fa.save()
@@ -50,6 +54,10 @@ class Create2FaQrCodeAPIView(APIView):
         user = request.user
         if not is_2fa_active_for_user(user):
             raise ValidationError('رمز دوعاملی برای شما فعال نیست.')
+
+        verify_2fa_serializer = Verify2FaSerializer(data=request.data, instance=user)
+        verify_2fa_serializer.is_valid(raise_exception=True)
+
         user.auth2fa.delete()
         return Response({'msg': 'رمز دو عاملی شما حذف شد.'})
 
