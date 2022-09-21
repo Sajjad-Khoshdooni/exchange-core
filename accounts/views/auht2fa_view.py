@@ -1,5 +1,7 @@
+import os
 import uuid
 
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -30,6 +32,10 @@ class Verify2FaSerializer(serializers.Serializer):
     def save(self, **kwargs):
         user = self.instance
         auth2fa = user.auth2fa
+        qr_path = settings.MEDIA_ROOT + auth2fa.qrcode
+        if os.path.isfile(qr_path):
+            os.remove(qr_path)
+        auth2fa.qrcode = ''
         auth2fa.verified = True
         auth2fa.save()
 
@@ -48,7 +54,7 @@ class Create2FaQrCodeAPIView(APIView):
             token=token,
             qrcode=qrcode_address
         )
-        return Response({'qrcode_link': qrcode_address})
+        return Response({'qrcode_link': settings.HOST_URL + settings.MEDIA_URL + qrcode_address})
 
     def delete(self, request, *args, **kwargs):
         user = request.user

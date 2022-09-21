@@ -21,7 +21,7 @@ def create_qr_code(token: str):
         "utf-8") + "&issuer=raastin.com&algorithm=SHA1&digits=6&period=30"
     img = qrcode.make(qr_string)
     img.save(path)
-    return settings.HOST_URL + settings.MEDIA_URL + relative_path
+    return relative_path
 
 
 def code_2fa_verifier(user_token: str, code_2fa: str):
