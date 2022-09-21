@@ -104,3 +104,9 @@ class TradeAdmin(admin.ModelAdmin):
 class ReferralTrxAdmin(admin.ModelAdmin):
     list_display = ('created', 'referral', 'referrer_amount', 'trader_amount',)
     list_filter = ('referral', 'referral__owner')
+
+
+@admin.register(StopLoss)
+class StopLossAdmin(admin.ModelAdmin):
+    list_display = ('created', 'wallet', 'symbol', 'fill_type', 'amount', 'filled_amount', 'trigger_price', 'price', 'side')
+    readonly_fields = ('wallet', 'symbol', 'group_id')

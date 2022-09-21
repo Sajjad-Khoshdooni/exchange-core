@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'financial',
     'multimedia',
     'accounts',
+    'accounting',
     'ledger',
     'provider',
     'collector',

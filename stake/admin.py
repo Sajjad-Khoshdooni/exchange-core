@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
+from django.db.models import Sum
 from django.utils.safestring import mark_safe
 
 from accounts.models import User
@@ -11,17 +12,25 @@ from .models import StakeRequest, StakeRevenue, StakeOption
 
 @admin.register(StakeOption)
 class StakeOptionAdmin(admin.ModelAdmin):
-    list_display = ['asset', 'apr', 'get_stake_request_number', 'total_cap', 'enable', 'landing']
+    list_display = ['asset', 'apr', 'get_stake_request_count', 'get_stake_request_amount', 'total_cap', 'fee', 'enable',
+                    'landing']
     list_editable = ('enable', 'landing')
+    readonly_fields = ('get_stake_request_count', 'get_stake_request_amount')
+    list_filter = ('enable', )
 
-    readonly_fields = ('get_stake_request_number',)
-
-    def get_stake_request_number(self, stake_option: StakeOption):
+    def get_stake_request_count(self, stake_option: StakeOption):
         return StakeRequest.objects.filter(
             stake_option=stake_option,
             status__in=(StakeRequest.DONE, StakeRequest.PENDING, StakeRequest.PROCESS)
         ).count()
-    get_stake_request_number.short_description = 'تعداد درخواست های ثبت شده'
+    get_stake_request_count.short_description = 'count'
+
+    def get_stake_request_amount(self, stake_option: StakeOption):
+        return StakeRequest.objects.filter(
+            stake_option=stake_option,
+            status__in=(StakeRequest.DONE, StakeRequest.PENDING, StakeRequest.PROCESS)
+        ).aggregate(amount=Sum('amount'))['amount'] or 0
+    get_stake_request_amount.short_description = 'sum'
 
 
 class StakeStatusFilter(SimpleListFilter):

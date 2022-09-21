@@ -1,5 +1,4 @@
 from celery import shared_task
-from django.db import transaction
 
 from accounts.models import Account
 from ledger.models import Trx, Wallet

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 
+import pytz
 import requests
 from django.core.cache import caches
 from django.utils import timezone
@@ -288,12 +289,12 @@ class ZibalChannel(FiatWithdraw):
         print('zibal withdraw')
         print(data)
 
-        receive_datetime = datetime.strptime(data['predictedCheckoutDate'], '%Y/%m/%d-%H:%M:%S').astimezone()
+        receive_datetime = datetime.strptime(data['predictedCheckoutDate'], '%Y/%m/%d-%H:%M:%S')
 
         return Withdraw(
             tracking_id=data['id'],
             status=status,
-            receive_datetime=receive_datetime
+            receive_datetime=receive_datetime.replace(tzinfo=pytz.utc).astimezone()
         )
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
