@@ -15,13 +15,13 @@ def create_qr_code(token: str):
     key = token.encode('ASCII')
 
     token = base64.b32encode(key)
-
-    address = settings.MEDIA_ROOT + 'qrcode/{}.png'.format(uuid.uuid4())
+    relative_path = 'qrcode/{}.png'.format(uuid.uuid4())
+    path = settings.MEDIA_ROOT + relative_path
     qr_string = "otpauth://totp/Raastin?secret=" + token.decode(
         "utf-8") + "&issuer=raastin.com&algorithm=SHA1&digits=6&period=30"
     img = qrcode.make(qr_string)
-    img.save(address)
-    return address
+    img.save(path)
+    return settings.HOST_URL + settings.MEDIA_URL + relative_path
 
 
 def code_2fa_verifier(user_token: str, code_2fa: str):
