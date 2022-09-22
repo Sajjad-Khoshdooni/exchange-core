@@ -170,18 +170,14 @@ class OTCTradeRequestView(CreateAPIView):
 class OTCTradeSerializer(serializers.ModelSerializer):
     token = serializers.CharField(write_only=True)
     value_usdt = serializers.SerializerMethodField()
-    revenue_usdt = serializers.SerializerMethodField()
 
     def get_value_usdt(self, otc_trade: OTCTrade):
-        return otc_trade.otc_request.to_price_absolute_usdt * otc_trade.otc_request.to_amount
-
-    def get_revenue_usdt(self, otc_trade: OTCTrade):
         from market.models import Trade
         return Trade.objects.filter(group_id=otc_trade.group_id).aggregate(revenue=Sum('gap_revenue'))['revenue'] or 0
 
     class Meta:
         model = OTCTrade
-        fields = ('id', 'token', 'status', 'value_usdt', 'revenue_usdt')
+        fields = ('id', 'token', 'status', 'value_usdt')
         read_only_fields = ('token', )
 
     def create(self, validated_data):
