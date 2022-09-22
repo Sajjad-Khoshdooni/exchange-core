@@ -14,6 +14,7 @@ from yekta_config.config import config
 
 from accounts.models import VerificationCode
 from accounts.permissions import IsBasicVerified
+from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
@@ -30,6 +31,7 @@ MIN_WITHDRAW = 100_000
 class WithdrawRequestSerializer(serializers.ModelSerializer):
     iban = serializers.CharField(write_only=True)
     code = serializers.CharField(write_only=True)
+    code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     def create(self, validated_data):
         user = self.context['request'].user
@@ -60,6 +62,10 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است'})
+
+        if is_2fa_active_for_user(user):
+            code_2fa = validated_data.get('code_2fa') or ''
+            code_2fa_verifier(user_token=user.auth2fa.token, code_2fa=code_2fa)
 
         if amount < MIN_WITHDRAW:
             logger.info('FiatRequest rejected due to small amount. user=%s' % user.id)
@@ -105,7 +111,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FiatWithdrawRequest
-        fields = ('iban', 'amount', 'code')
+        fields = ('iban', 'amount', 'code', 'code_2fa')
 
 
 class WithdrawRequestView(ModelViewSet):
