@@ -92,12 +92,13 @@ def alert_shib_prize_to_signup(token: str):
     )
 
 
-def alert_new_coin_message():
+def alert_new_coin_message(me: bool = False):
     return send_push_to_all(
         title='بیبی دوج را آنی خریداری کنید',
         body='از امروز می‌توانید کوین بیبی دوج را در راستین معامله کنید 🤩🤩🤩',
         image='https://api.raastin.com/static/ads/babydoge.jpg',
-        link='https://raastin.com/wallet/spot/fast-buy?coin=1M-BABYDOGE&utm_source=push-retention&utm_campaign=coin&utm_term=babydoge'
+        link='https://raastin.com/wallet/spot/fast-buy?coin=1M-BABYDOGE&utm_source=push-retention&utm_campaign=coin&utm_term=babydoge',
+        me=me
     )
 
 

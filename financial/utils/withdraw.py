@@ -252,7 +252,7 @@ class ZibalChannel(FiatWithdraw):
 
         if not resp_data['result'] == 1:
             print(resp_data)
-            raise ServerError
+            raise ServerError(resp_data)
 
         return resp_data['data']
 
@@ -276,18 +276,26 @@ class ZibalChannel(FiatWithdraw):
             checkout_delay = 0
             status = FiatWithdrawRequest.PENDING
 
-        data = self.collect_api('/v1/wallet/checkout/plus', method='POST', data={
-            'id': wallet_id,
-            'amount': amount * 10,
-            'bankAccount': receiver.iban,
-            'uniqueCode': request_id,
-            'wageFeeMode': 2,
-            'checkoutDelay': checkout_delay,
-            'showTime': True
-        })
-
-        print('zibal withdraw')
-        print(data)
+        try:
+            data = self.collect_api('/v1/wallet/checkout/plus', method='POST', data={
+                'id': wallet_id,
+                'amount': amount * 10,
+                'bankAccount': receiver.iban,
+                'uniqueCode': request_id,
+                'wageFeeMode': 2,
+                'checkoutDelay': checkout_delay,
+                'showTime': True
+            })
+        except ServerError as e:
+            resp = e.args[0]
+            if 'این درخواست تسویه قبلا ثبت شده است' in resp.get('message', ''):
+                return Withdraw(
+                    tracking_id='',
+                    status=FiatWithdrawRequest.DONE,
+                    receive_datetime=timezone.now() + timedelta(hours=3)
+                )
+            else:
+                raise
 
         receive_datetime = datetime.strptime(data['predictedCheckoutDate'], '%Y/%m/%d-%H:%M:%S')
 
