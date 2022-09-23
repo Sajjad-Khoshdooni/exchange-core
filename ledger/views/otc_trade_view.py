@@ -11,7 +11,7 @@ from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired, ProcessingError
 from ledger.utils.fields import get_serializer_amount_field
-from ledger.utils.price import SELL
+from ledger.utils.price import SELL, get_tether_irt_price, BUY
 from market.models.pair_symbol import DEFAULT_TAKER_FEE
 
 
@@ -173,7 +173,13 @@ class OTCTradeSerializer(serializers.ModelSerializer):
 
     def get_value_usdt(self, otc_trade: OTCTrade):
         from market.models import Trade
-        return Trade.objects.filter(group_id=otc_trade.group_id).aggregate(revenue=Sum('gap_revenue'))['revenue'] or 0
+        revenue_irt = Trade.objects.filter(
+            group_id=otc_trade.group_id
+        ).aggregate(revenue=Sum('gap_revenue'))['revenue'] or 0
+
+        usdt_price = get_tether_irt_price(SELL, allow_stale=True)
+
+        return revenue_irt / usdt_price or 0
 
     class Meta:
         model = OTCTrade
