@@ -2,7 +2,6 @@ import logging
 
 from celery import shared_task
 
-from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, Trade
 from market.models.stop_loss import StopLoss
 from market.utils import new_order

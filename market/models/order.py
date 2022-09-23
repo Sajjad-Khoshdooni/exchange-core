@@ -197,8 +197,8 @@ class Order(models.Model):
     def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
         return amount * price if side == Order.BUY else amount
 
-    def submit(self, pipeline: WalletPipeline, check_balance: bool = True):
-        if not self.stop_loss:
+    def submit(self, pipeline: WalletPipeline, check_balance: bool = True, ignore_lock: bool = False):
+        if not ignore_lock:
             self.acquire_lock(pipeline, check_balance=check_balance)
         self.make_match(pipeline)
 
