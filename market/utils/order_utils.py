@@ -108,7 +108,8 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
             **additional_params
         )
 
-        order.submit(pipeline, check_balance=check_balance)
+        ignore_lock = parent_lock_group_id is not None
+        order.submit(pipeline, check_balance=check_balance, ignore_lock=ignore_lock)
 
     return order
 
