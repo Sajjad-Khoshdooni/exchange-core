@@ -2,6 +2,7 @@ import logging
 
 from celery import shared_task
 
+from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, Trade
 from market.models.stop_loss import StopLoss
 from market.utils import new_order
@@ -45,12 +46,12 @@ def create_needed_stop_loss_orders(symbol_id, side):
         if stop_loss.price:
             order = new_order(
                 stop_loss.symbol, stop_loss.wallet.account, stop_loss.unfilled_amount, stop_loss.price, stop_loss.side,
-                Order.LIMIT, raise_exception=False
+                Order.LIMIT, raise_exception=False, parent_lock_group_id=stop_loss.group_id
             )
         else:
             order = new_order(
                 stop_loss.symbol, stop_loss.wallet.account, stop_loss.unfilled_amount, None, stop_loss.side,
-                Order.MARKET, raise_exception=False
+                Order.MARKET, raise_exception=False, parent_lock_group_id=stop_loss.group_id
             )
         if not order:
             logger.warning(f'could not place order for stop loss ({stop_loss.symbol})',
