@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import APIException, NotFound, PermissionDenied
 
+from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import CancelRequest, Order, StopLoss
 from market.utils import cancel_order
 
@@ -40,12 +41,16 @@ class CancelRequestSerializer(serializers.ModelSerializer):
                 raise NotFound(_('StopLoss not found'))
             if stop_loss.wallet.variant and not self.context['allow_cancel_strategy_orders']:
                 raise PermissionDenied({'message': _('You do not have permission to perform this action.'), })
-            with transaction.atomic():
+            with WalletPipeline() as pipeline:
                 stop_loss.delete()
                 order = stop_loss.order_set.first()
                 if order:
                     return self.cancel_order(order, validated_data)
                 else:
+                    release_amount = Order.get_to_lock_amount(
+                        stop_loss.unfilled_amount, stop_loss.price, stop_loss.side
+                    )
+                    pipeline.release_lock(key=stop_loss.group_id, amount=release_amount)
                     # faking cancel request creation
                     fake_order = Order(id=instance_id)
                     return CancelRequest(order=fake_order, created=timezone.now())

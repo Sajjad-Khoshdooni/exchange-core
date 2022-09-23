@@ -198,7 +198,8 @@ class Order(models.Model):
         return amount * price if side == Order.BUY else amount
 
     def submit(self, pipeline: WalletPipeline, check_balance: bool = True):
-        self.acquire_lock(pipeline, check_balance=check_balance)
+        if not self.stop_loss:
+            self.acquire_lock(pipeline, check_balance=check_balance)
         self.make_match(pipeline)
 
     def acquire_lock(self, pipeline: WalletPipeline, check_balance: bool = True):
