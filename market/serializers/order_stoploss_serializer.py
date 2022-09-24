@@ -57,7 +57,9 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
     def get_trigger_price(self, instance: Union[Order, StopLoss]):
         if isinstance(instance, Order):
             return None
-        return decimal_to_str(floor_precision(instance.trigger_price, instance.symbol.tick_size))
+        price = decimal_to_str(floor_precision(instance.trigger_price, instance.symbol.tick_size))
+        operator = '≥' if instance.side == Order.BUY else '≤'
+        return f'آخرین قیمت {operator} {price}'
 
     def get_filled_price(self, instance: Union[Order, StopLoss]):
         order = instance if isinstance(instance, Order) else instance.order_set.first()
