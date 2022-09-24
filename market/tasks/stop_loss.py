@@ -1,6 +1,7 @@
 import logging
 
 from celery import shared_task
+from django.utils import timezone
 
 from market.models import Order, Trade
 from market.models.stop_loss import StopLoss
@@ -55,6 +56,9 @@ def create_needed_stop_loss_orders(symbol_id, side):
         if not order:
             logger.warning(f'could not place order for stop loss ({stop_loss.symbol})',
                            extra={'stop_loss': stop_loss.id})
+            if stop_loss.fill_type == StopLoss.MARKET:
+                stop_loss.canceled_at = timezone.now()
+                stop_loss.save(update_fields=['canceled_at'])
             continue
         order.refresh_from_db()
         order.stop_loss = stop_loss
