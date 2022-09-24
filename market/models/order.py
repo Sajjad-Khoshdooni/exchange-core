@@ -204,7 +204,7 @@ class Order(models.Model):
         if ignore_lock:
             if self.side == Order.BUY:
                 locked_amount = BalanceLock.objects.get(key=self.group_id).amount
-                if locked_amount < self.amount:
+                if locked_amount < self.amount * self.price:
                     overriding_fill_amount = floor_precision(locked_amount / self.price, self.symbol.step_size)
         else:
             overriding_fill_amount = self.acquire_lock(pipeline, check_balance=check_balance)
