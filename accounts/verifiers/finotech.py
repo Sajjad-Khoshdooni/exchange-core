@@ -99,11 +99,11 @@ class FinotechRequester:
             'url': url,
             'timeout': 10,
             'headers': {'Authorization': 'Bearer ' + token},
-            'proxies': {
-                'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-                'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-                'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            }
+            # 'proxies': {
+            #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            #     'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            # }
         }
 
         try:

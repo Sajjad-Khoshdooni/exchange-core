@@ -88,11 +88,11 @@ class PayirChannel(FiatWithdraw):
             'url': url,
             'timeout': timeout,
             'headers': {'Authorization': 'Bearer ' + secret('PAY_IR_TOKEN')},
-            'proxies': {
-                'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-                'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-                'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            }
+            # 'proxies': {
+            #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            #     'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            # }
         }
 
         try:
@@ -227,11 +227,11 @@ class ZibalChannel(FiatWithdraw):
             'url': url,
             'timeout': timeout,
             'headers': {'Authorization': 'Bearer ' + secret('ZIBAL_TOKEN')},
-            'proxies': {
-                'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-                'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-                'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            }
+            # 'proxies': {
+            #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            #     'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            # }
         }
 
         try:
@@ -415,11 +415,11 @@ class JibitChannel(FiatWithdraw):
                 'secretKey': secret('JIBIT_GATEWAY_API_SECRET'),
             },
             timeout=30,
-            proxies={
-                'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-                'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-                'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            }
+            # proxies={
+            #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            #     'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            # }
         )
 
         if resp.ok:
@@ -440,11 +440,11 @@ class JibitChannel(FiatWithdraw):
             'url': url,
             'timeout': timeout,
             'headers': {'Authorization': 'Bearer ' + cls._get_token()},
-            'proxies': {
-                'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-                'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-                'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            }
+            # 'proxies': {
+            #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            #     'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            # }
 
         }
 
