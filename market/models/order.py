@@ -17,6 +17,7 @@ from accounts.gamification.gamify import check_prize_achievements
 from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
+from ledger.models.balance_lock import BalanceLock
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent, decimal_to_str
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price, \
@@ -199,21 +200,27 @@ class Order(models.Model):
         return amount * price if side == Order.BUY else amount
 
     def submit(self, pipeline: WalletPipeline, check_balance: bool = True, ignore_lock: bool = False):
-        overriding_fill_amount = self.acquire_lock(pipeline, check_balance=check_balance, ignore_lock=ignore_lock)
+        overriding_fill_amount = None
+        if ignore_lock:
+            if self.side == Order.BUY:
+                locked_amount = BalanceLock.objects.get(key=self.group_id).amount
+                if locked_amount < self.amount:
+                    overriding_fill_amount = floor_precision(locked_amount / self.price, self.symbol.step_size)
+        else:
+            overriding_fill_amount = self.acquire_lock(pipeline, check_balance=check_balance)
         self.make_match(pipeline, overriding_fill_amount)
 
-    def acquire_lock(self, pipeline: WalletPipeline, check_balance: bool = True, ignore_lock: bool = False):
+    def acquire_lock(self, pipeline: WalletPipeline, check_balance: bool = True):
         to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side)
 
         if self.side == Order.BUY and self.fill_type == Order.MARKET:
             lock_amount = min(lock_amount, to_lock_wallet.get_free())
 
-        if not ignore_lock:
-            if check_balance:
-                to_lock_wallet.has_balance(lock_amount, raise_exception=True)
+        if check_balance:
+            to_lock_wallet.has_balance(lock_amount, raise_exception=True)
 
-            pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
+        pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 
         if self.side == Order.BUY and self.fill_type == Order.MARKET:
             return floor_precision(lock_amount / self.price, self.symbol.step_size)
