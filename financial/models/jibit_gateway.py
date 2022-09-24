@@ -121,5 +121,3 @@ class JibitGateway(Gateway):
 
     class Meta:
         proxy = True
-
-
