@@ -144,6 +144,9 @@ class NotificationInLine(admin.TabularInline):
     def has_add_permission(self, request, obj):
         return False
 
+    def get_queryset(self, request):
+        return super(NotificationInLine, self).get_queryset(request).order_by('-created')[:20]
+
 
 class UserReferredFilter(SimpleListFilter):
     title = 'لیست کاربران دعوت شده'
@@ -553,7 +556,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     def get_total_balance_irt_admin(self, user: User):
         total_balance_irt = user.account.get_total_balance_irt(side=BUY)
-        
         return humanize_number(int(total_balance_irt))
 
     get_total_balance_irt_admin.short_description = 'دارایی به تومان'

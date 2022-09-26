@@ -73,8 +73,8 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         date_delta = timezone.now().date() - validated_data['birth_date']
         age = date_delta.days / 365
 
-        if age < 18:
-            raise ValidationError('سن باید بالای ۱۸ سال باشد.')
+        if age < 15:
+            raise ValidationError('سن باید بالای ۱۵ سال باشد.')
         elif age > 120:
             raise ValidationError('تاریخ تولد نامعتبر است.')
 

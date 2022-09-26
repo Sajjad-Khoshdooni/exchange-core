@@ -30,11 +30,11 @@ class JibitGateway(Gateway):
                 'secretKey': secret('JIBIT_PAYMENT_SECRET_KEY'),
             },
             timeout=30,
-            proxies={
-                'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-                'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-                'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            }
+            # proxies={
+            #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            #     'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
+            # }
         )
 
         if resp.ok:
@@ -121,5 +121,3 @@ class JibitGateway(Gateway):
 
     class Meta:
         proxy = True
-
-
