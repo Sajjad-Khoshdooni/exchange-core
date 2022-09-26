@@ -5,6 +5,7 @@ from itertools import groupby
 from math import floor, log10
 from random import randrange, random
 from time import time
+from typing import Union
 from uuid import uuid4
 
 from django.conf import settings
@@ -16,6 +17,7 @@ from accounts.gamification.gamify import check_prize_achievements
 from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
+from ledger.models.balance_lock import BalanceLock
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent, decimal_to_str
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price, \
@@ -197,29 +199,43 @@ class Order(models.Model):
     def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
         return amount * price if side == Order.BUY else amount
 
-    def submit(self, pipeline: WalletPipeline, check_balance: bool = True, ignore_lock: bool = False):
-        if not ignore_lock:
-            self.acquire_lock(pipeline, check_balance=check_balance)
-        self.make_match(pipeline)
+    def submit(self, pipeline: WalletPipeline, check_balance: bool = True, is_stoploss: bool = False):
+        overriding_fill_amount = None
+        if is_stoploss:
+            if self.side == Order.BUY:
+                locked_amount = BalanceLock.objects.get(key=self.group_id).amount
+                if locked_amount < self.amount * self.price:
+                    overriding_fill_amount = floor_precision(locked_amount / self.price, self.symbol.step_size)
+        else:
+            overriding_fill_amount = self.acquire_lock(pipeline, check_balance=check_balance)
+        self.make_match(pipeline, overriding_fill_amount)
 
     def acquire_lock(self, pipeline: WalletPipeline, check_balance: bool = True):
         to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side)
+
+        if self.side == Order.BUY and self.fill_type == Order.MARKET:
+            free_amount = to_lock_wallet.get_free()
+            if free_amount > Decimal('0.95') * lock_amount:
+                lock_amount = min(lock_amount, free_amount)
 
         if check_balance:
             to_lock_wallet.has_balance(lock_amount, raise_exception=True)
 
         pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 
+        if self.side == Order.BUY and self.fill_type == Order.MARKET:
+            return floor_precision(lock_amount / self.price, self.symbol.step_size)
+
     def release_lock(self, pipeline: WalletPipeline, release_amount: Decimal):
         release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side)
         pipeline.release_lock(key=self.group_id, amount=release_amount)
 
-    def make_match(self, pipeline: WalletPipeline):
+    def make_match(self, pipeline: WalletPipeline, overriding_fill_amount: Union[Decimal, None]):
         key = 'mm-cc-%s' % self.symbol.name
         log_prefix = 'MM %s: ' % self.symbol.name
 
-        logger.info(log_prefix + 'make match started...')
+        logger.info(log_prefix + f'make match started... {overriding_fill_amount}')
 
         from market.models import Trade
         # lock symbol open orders
@@ -245,7 +261,7 @@ class Order(models.Model):
             self.matching_orders_filter(side=opp_side, price=self.price, op=operator), open_orders
         ), key=self.get_order_by(opp_side)))
 
-        unfilled_amount = self.unfilled_amount
+        unfilled_amount = overriding_fill_amount or self.unfilled_amount
 
         trades = []
         referrals = []

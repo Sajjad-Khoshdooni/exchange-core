@@ -391,7 +391,9 @@ class Trade(models.Model):
         from market.utils.redis import get_top_prices
         top_prices = get_top_prices(symbol_id, scope='stoploss')
         if not top_prices:
-            top_prices = Trade.get_interval_top_prices([symbol_id])
+            top_prices = defaultdict(lambda: Decimal())
+            for k, v in Trade.get_interval_top_prices([symbol_id]).items():
+                top_prices[k[1]] = v
         return top_prices
 
     @classmethod

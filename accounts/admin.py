@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import FirebaseToken, ExternalNotification, Attribution, AppStatus
+from accounts.models import FirebaseToken, ExternalNotification, Attribution, AppStatus, Auth2Fa
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -129,6 +129,8 @@ class ExternalNotificationInLine(admin.TabularInline):
     fields = ('created', 'scope', )
     readonly_fields = ('created', 'scope', )
     can_delete = False
+    max_num = 10
+    ordering = ('-created', )
 
     def has_add_permission(self, request, obj):
         return False
@@ -140,12 +142,11 @@ class NotificationInLine(admin.TabularInline):
     fields = ('created', 'title', 'link', 'message', 'read_date')
     readonly_fields = ('created', 'title', 'link', 'message', 'read_date' )
     can_delete = False
+    max_num = 10
+    ordering = ('-created', )
 
     def has_add_permission(self, request, obj):
         return False
-
-    def get_queryset(self, request):
-        return super(NotificationInLine, self).get_queryset(request).order_by('-created')[:20]
 
 
 class UserReferredFilter(SimpleListFilter):
@@ -670,3 +671,11 @@ class AttributionAdmin(admin.ModelAdmin):
 @admin.register(AppStatus)
 class AppStatusAdmin(admin.ModelAdmin):
     list_display = ['latest_version', 'force_update_version', 'active']
+
+
+@admin.register(Auth2Fa)
+class Auth2FaAdmin(admin.ModelAdmin):
+    list_display = ['user', 'created', 'verified']
+    readonly_fields = ('created', )
+    fields = ('user', 'created', 'verified')
+    search_fields = ('user__phone',)
