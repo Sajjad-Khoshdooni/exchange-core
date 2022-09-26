@@ -18,7 +18,8 @@ def create_stake_revenue():
             with WalletPipeline() as pipeline:
                 stake_revenue = StakeRevenue.objects.create(
                     stake_request=stake_request,
-                    revenue=revenue
+                    revenue=revenue,
+                    wallet_source=Wallet.STAKE
                 )
                 pipeline.new_trx(
                     group_id=stake_revenue.group_id,
