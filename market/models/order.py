@@ -199,9 +199,9 @@ class Order(models.Model):
     def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
         return amount * price if side == Order.BUY else amount
 
-    def submit(self, pipeline: WalletPipeline, check_balance: bool = True, ignore_lock: bool = False):
+    def submit(self, pipeline: WalletPipeline, check_balance: bool = True, is_stoploss: bool = False):
         overriding_fill_amount = None
-        if ignore_lock:
+        if is_stoploss:
             if self.side == Order.BUY:
                 locked_amount = BalanceLock.objects.get(key=self.group_id).amount
                 if locked_amount < self.amount * self.price:
@@ -215,7 +215,9 @@ class Order(models.Model):
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side)
 
         if self.side == Order.BUY and self.fill_type == Order.MARKET:
-            lock_amount = min(lock_amount, to_lock_wallet.get_free())
+            free_amount = to_lock_wallet.get_free()
+            if free_amount > Decimal('0.95') * lock_amount:
+                lock_amount = min(lock_amount, free_amount)
 
         if check_balance:
             to_lock_wallet.has_balance(lock_amount, raise_exception=True)
