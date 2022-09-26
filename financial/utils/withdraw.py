@@ -537,4 +537,4 @@ class JibitChannel(FiatWithdraw):
         return total_wallet_irt_value // 10
 
     def is_active(self):
-        return bool(config('IBIT_GATEWAY-API_KEY', ''))
+        return False
