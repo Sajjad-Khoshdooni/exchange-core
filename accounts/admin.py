@@ -140,12 +140,11 @@ class NotificationInLine(admin.TabularInline):
     fields = ('created', 'title', 'link', 'message', 'read_date')
     readonly_fields = ('created', 'title', 'link', 'message', 'read_date' )
     can_delete = False
+    max_num = 25
+    ordering = ('-created', )
 
     def has_add_permission(self, request, obj):
         return False
-
-    def get_queryset(self, request):
-        return super(NotificationInLine, self).get_queryset(request).order_by('-created')[:20]
 
 
 class UserReferredFilter(SimpleListFilter):
