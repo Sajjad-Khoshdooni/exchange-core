@@ -129,6 +129,8 @@ class ExternalNotificationInLine(admin.TabularInline):
     fields = ('created', 'scope', )
     readonly_fields = ('created', 'scope', )
     can_delete = False
+    max_num = 10
+    ordering = ('-created', )
 
     def has_add_permission(self, request, obj):
         return False
@@ -140,7 +142,7 @@ class NotificationInLine(admin.TabularInline):
     fields = ('created', 'title', 'link', 'message', 'read_date')
     readonly_fields = ('created', 'title', 'link', 'message', 'read_date' )
     can_delete = False
-    max_num = 25
+    max_num = 10
     ordering = ('-created', )
 
     def has_add_permission(self, request, obj):
