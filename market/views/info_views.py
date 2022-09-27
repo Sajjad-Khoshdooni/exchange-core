@@ -16,20 +16,18 @@ class AssetListSerializer(serializers.ModelSerializer):
         asks = self.context['asks']
         price = asks.get(asset.symbol)
 
-        if price:
-            return price
+        if not price:
+            price = get_trading_price_irt(asset.symbol, SELL)
 
-        price = get_trading_price_irt(asset.symbol, SELL)
         return asset.get_presentation_price_irt(price)
 
     def get_bid(self, asset: Asset):
         bids = self.context['bids']
         price = bids.get(asset.symbol)
 
-        if price:
-            return price
+        if not price:
+            price = get_trading_price_irt(asset.symbol, BUY)
 
-        price = get_trading_price_irt(asset.symbol, BUY)
         return asset.get_presentation_price_irt(price)
 
     class Meta:
