@@ -152,6 +152,13 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
             )
         coins.remove('USDC')
 
+    if 'TUSD' in coins:
+        for s in sides:
+            results.append(
+                Price(coin='TUSD', price=Decimal(1), side=s)
+            )
+        coins.remove('TUSD')
+
     if IRT in coins:  # todo: check if market_symbol = IRT
         for s in sides:
             results.append(
