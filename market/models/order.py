@@ -206,6 +206,8 @@ class Order(models.Model):
                 locked_amount = BalanceLock.objects.get(key=self.group_id).amount
                 if locked_amount < self.amount * self.price:
                     overriding_fill_amount = floor_precision(locked_amount / self.price, self.symbol.step_size)
+                    if not overriding_fill_amount:
+                        raise CancelOrder('Overriding fill amount is zero')
         else:
             overriding_fill_amount = self.acquire_lock(pipeline, check_balance=check_balance)
         self.make_match(pipeline, overriding_fill_amount)

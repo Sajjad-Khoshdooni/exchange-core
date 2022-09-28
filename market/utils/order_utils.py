@@ -1,6 +1,7 @@
 import logging
 from collections import defaultdict
 from decimal import Decimal
+from tkinter import E
 from typing import Union
 
 from django.db import transaction
@@ -9,7 +10,7 @@ from django.db.models import Max, Min, F, Q, OuterRef, Subquery, DecimalField, S
 from accounts.models import Account
 from ledger.models import Wallet, Asset
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order, CancelRequest, PairSymbol
+from market.models import Order, CancelRequest, PairSymbol, CancelOrder
 from uuid import UUID
 
 logger = logging.getLogger(__name__)
@@ -109,8 +110,13 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
         )
 
         is_stoploss = parent_lock_group_id is not None
-        order.submit(pipeline, check_balance=check_balance, is_stoploss=is_stoploss)
-
+        try:
+            order.submit(pipeline, check_balance=check_balance, is_stoploss=is_stoploss)
+        except CancelOrder as e:
+            if raise_exception:
+                raise e
+            else:
+                return
     return order
 
 
