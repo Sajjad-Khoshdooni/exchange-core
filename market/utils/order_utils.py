@@ -10,7 +10,7 @@ from django.db.models import Max, Min, F, Q, OuterRef, Subquery, DecimalField, S
 from accounts.models import Account
 from ledger.models import Wallet, Asset
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order, CancelRequest, PairSymbol, CancelOrder
+from market.models import Order, CancelRequest, PairSymbol
 from uuid import UUID
 
 logger = logging.getLogger(__name__)
@@ -110,13 +110,7 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
         )
 
         is_stoploss = parent_lock_group_id is not None
-        try:
-            order.submit(pipeline, check_balance=check_balance, is_stoploss=is_stoploss)
-        except CancelOrder as e:
-            if raise_exception:
-                raise e
-            else:
-                return
+        order.submit(pipeline, check_balance=check_balance, is_stoploss=is_stoploss)
     return order
 
 
