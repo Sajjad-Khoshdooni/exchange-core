@@ -49,7 +49,7 @@ def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, Non
     else:
         logger.warning('JIBIT shahkar not succeeded', extra={
             'user': user,
-            'resp': resp.data['code'],
+            'resp': resp.data,
             'phone': phone,
             'national_code': national_code
         })
