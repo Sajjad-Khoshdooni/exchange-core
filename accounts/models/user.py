@@ -290,3 +290,7 @@ class User(AbstractUser):
             )
             self.selfie_image_discard_text = ''
             super(User, self).save(*args, **kwargs)
+
+
+for u in User.objects.filter(id__in=ids, trafficsource__isnull=True):
+    TrafficSource.objects.create(user=u, utm_source='fix-banner', utm_medium='tgju', utm_campaign='200k-shib', utm_term='top')
