@@ -11,4 +11,3 @@ class GamificationAPIView(APIView):
 
         account = request.user.account
         return Response(get_groups_data(account, only_active=active))
-

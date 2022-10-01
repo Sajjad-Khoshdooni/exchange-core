@@ -28,7 +28,7 @@ goal_groups = [
     ),
     GoalGroup(
         conditions=[
-            InviteGoal, SetEmailGoal, TradeStep2Goal
+            TradeStep2Goal, SetEmailGoal, InviteGoal
         ],
         achievements=[
             TradePrizeAchievementStep2
