@@ -5,8 +5,8 @@ from datetime import timedelta
 
 import requests
 from celery import shared_task
-from django.db.models import Sum, F
-from django.db.models.functions import TruncDate
+from django.db.models import Sum, F, Value
+from django.db.models.functions import TruncDate, Concat
 from django.utils import timezone
 from yekta_config import secret
 from yekta_config.config import config
@@ -70,15 +70,14 @@ def create_users_trades(start: datetime.date, end: datetime.date, upload: bool =
         symbol__base_asset=Asset.get(Asset.IRT),
     ).exclude(trade_source=Trade.SYSTEM).exclude(gap_revenue=0).annotate(
         user_id=F('order__wallet__account__user_id'),
-        user_first_name=F('order__wallet__account__user__first_name'),
-        user_last_name=F('order__wallet__account__user__last_name'),
+        user_name=Concat('order__wallet__account__user__first_name', Value(' '), 'order__wallet__account__user__last_name'),
         user_national_code=F('order__wallet__account__user__national_code'),
-    ).values('user_id', 'side').annotate(value=Sum('irt_value') * 10).order_by('date', 'side')
+    ).values('user_id', 'side').annotate(value=Sum('irt_value') * 10).order_by('user_id', 'side')
 
     file_path = '/tmp/accounting/weekly_users_{}_{}.csv'.format(str(start), str(end))
 
     with open(file_path, 'w', newline="") as csv_file:
-        header = ['date', 'side', 'value']
+        header = ['user_id', 'user_name', 'user_national_code', 'side', 'value']
         t = csv.DictWriter(csv_file, fieldnames=header)
         t.writeheader()
         t.writerows(trades)
