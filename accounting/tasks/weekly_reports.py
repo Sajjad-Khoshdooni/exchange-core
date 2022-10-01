@@ -11,6 +11,7 @@ from django.utils import timezone
 from yekta_config import secret
 from yekta_config.config import config
 
+from accounts.models import User
 from accounts.utils.validation import gregorian_to_jalali_date
 from financial.models import Payment, FiatWithdrawRequest
 from ledger.models import Asset
@@ -68,6 +69,7 @@ def create_users_trades(start: datetime.date, end: datetime.date, upload: bool =
     trades = Trade.objects.filter(
         created__range=(start, end),
         symbol__base_asset=Asset.get(Asset.IRT),
+        order__wallet__account__user__level__gt=User.LEVEL1,
     ).exclude(trade_source=Trade.SYSTEM).exclude(gap_revenue=0).annotate(
         user_id=F('order__wallet__account__user_id'),
         user_name=Concat('order__wallet__account__user__first_name', Value(' '), 'order__wallet__account__user__last_name'),
