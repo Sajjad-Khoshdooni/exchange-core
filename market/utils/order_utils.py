@@ -1,6 +1,7 @@
 import logging
 from collections import defaultdict
 from decimal import Decimal
+from tkinter import E
 from typing import Union
 
 from django.db import transaction
@@ -110,7 +111,6 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
 
         is_stoploss = parent_lock_group_id is not None
         order.submit(pipeline, check_balance=check_balance, is_stoploss=is_stoploss)
-
     return order
 
 
