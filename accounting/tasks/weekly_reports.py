@@ -72,7 +72,7 @@ def create_users_trades(start: datetime.date, end: datetime.date, upload: bool =
         user_id=F('order__wallet__account__user_id'),
         user_name=Concat('order__wallet__account__user__first_name', Value(' '), 'order__wallet__account__user__last_name'),
         user_national_code=F('order__wallet__account__user__national_code'),
-    ).values('user_id', 'side').annotate(value=Sum('irt_value') * 10).order_by('user_id', 'side')
+    ).values('user_id', 'user_name', 'user_national_code', 'side').annotate(value=Sum('irt_value') * 10).order_by('user_id', 'side')
 
     file_path = '/tmp/accounting/weekly_users_{}_{}.csv'.format(str(start), str(end))
 
