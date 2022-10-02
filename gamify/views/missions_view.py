@@ -99,7 +99,7 @@ class MissionsAPIView(ListAPIView):
     def get_queryset(self):
         account = self.request.user.account
         journey = MissionJourney.get_journey(account)
-        return Mission.objects.filter(journey=journey)
+        return Mission.objects.filter(journey=journey, active=True)
 
 
 class ActiveMissionsAPIView(RetrieveAPIView):

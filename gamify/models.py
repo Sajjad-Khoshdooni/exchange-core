@@ -16,7 +16,7 @@ class MissionJourney(models.Model):
         return MissionJourney.objects.filter(active=True).first()
 
     def get_active_mission(self, account: Account):
-        for mission in self.mission_set.all():
+        for mission in self.mission_set.filter(active=True):
             if not mission.finished(account):
                 return mission
 
@@ -25,6 +25,7 @@ class Mission(models.Model):
     journey = models.ForeignKey(MissionJourney, on_delete=models.CASCADE)
     name = models.CharField(max_length=64)
     order = models.PositiveSmallIntegerField(default=0)
+    active = models.BooleanField(default=True)
 
     def achievable(self, account: Account):
         if not self.achievement.achieved(account):
@@ -36,6 +37,9 @@ class Mission(models.Model):
     class Meta:
         ordering = ('order', )
 
+    def __str__(self):
+        return self.name
+
 
 class Achievement(models.Model):
     mission = models.OneToOneField(Mission, on_delete=models.CASCADE)
@@ -46,6 +50,9 @@ class Achievement(models.Model):
 
     def get_asset(self) -> Asset:
         return Asset.get(Asset.SHIB)
+
+    def __str__(self):
+        return dict(Prize.PRIZE_CHOICES)[self.scope]
 
 
 class Task(models.Model):
@@ -61,10 +68,10 @@ class Task(models.Model):
     BOOL, NUMBER = 'bool', 'number'
 
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
-    order = models.PositiveSmallIntegerField(default=0)
     scope = models.CharField(max_length=16, choices=SCOPE_CHOICES)
-    type = models.CharField(max_length=8, default=NUMBER, choices=((BOOL, BOOL), (NUMBER, NUMBER)))
 
+    order = models.PositiveSmallIntegerField(default=0)
+    type = models.CharField(max_length=8, default=NUMBER, choices=((BOOL, BOOL), (NUMBER, NUMBER)))
     max = models.PositiveIntegerField(default=1)
 
     title = models.CharField(max_length=32)
