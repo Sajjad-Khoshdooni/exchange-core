@@ -32,6 +32,7 @@ urlpatterns = [
     path('api/v1/market/', include('market.urls')),
     path('api/v1/collector/', include('collector.urls')),
     path('api/v1/stake/', include('stake.urls')),
+    path('api/v1/gamify/', include('gamify.urls')),
     path('api/', include('ledger.urls')),
     path('hijack/', include('hijack.urls')),
     path('robots.txt', TemplateView.as_view(template_name="robots.txt", content_type="text/plain")),

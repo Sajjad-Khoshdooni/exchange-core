@@ -15,6 +15,7 @@ from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
 from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
+from ledger.utils.price import get_trading_price_usdt, SELL, get_trading_price_irt
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,9 @@ class Transfer(models.Model):
     handling = models.BooleanField(default=False)
 
     hidden = models.BooleanField(default=False)
+
+    irt_value = get_amount_field(default=Decimal(0))
+    usdt_value = get_amount_field(default=Decimal(0))
 
     @property
     def asset(self):
@@ -130,6 +134,9 @@ class Transfer(models.Model):
 
         group_id = uuid4()
 
+        price_usdt = get_trading_price_usdt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL)
+        price_irt = get_trading_price_irt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL)
+
         with WalletPipeline() as pipeline:
             pipeline.new_trx(
                 sender=sender_wallet,
@@ -148,7 +155,9 @@ class Transfer(models.Model):
                 group_id=group_id,
                 trx_hash='internal: <%s>' % str(group_id),
                 out_address=address,
-                source=Transfer.INTERNAL
+                source=Transfer.INTERNAL,
+                usdt_value=amount * price_usdt,
+                irt_value=amount * price_irt,
             )
 
             receiver_transfer = Transfer.objects.create(
@@ -161,7 +170,9 @@ class Transfer(models.Model):
                 group_id=group_id,
                 trx_hash='internal: <%s>' % str(group_id),
                 out_address=sender_deposit_address.address,
-                source=Transfer.INTERNAL
+                source=Transfer.INTERNAL,
+                usdt_value=amount * price_usdt,
+                irt_value=amount * price_irt,
             )
 
         sender_transfer.alert_user()
@@ -185,6 +196,9 @@ class Transfer(models.Model):
 
         commission = network_asset.withdraw_fee
 
+        price_usdt = get_trading_price_usdt(coin=wallet.asset.symbol, raw_price=True, side=SELL)
+        price_irt = get_trading_price_irt(coin=wallet.asset.symbol, raw_price=True, side=SELL)
+
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             transfer = Transfer.objects.create(
                 wallet=wallet,
@@ -195,6 +209,8 @@ class Transfer(models.Model):
                 out_address=address,
                 deposit=False,
                 memo=memo,
+                usdt_value=amount * price_usdt,
+                irt_value=amount * price_irt,
             )
 
             pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
