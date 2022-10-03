@@ -113,6 +113,10 @@ class Transfer(models.Model):
                 scope=Trx.COMMISSION
             )
 
+        if self.deposit:
+            from gamify.utils import check_prize_achievements, Task
+            check_prize_achievements(receiver.account, Task.DEPOSIT)
+
     @classmethod
     def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str) \
             -> Union['Transfer', None]:
@@ -174,6 +178,9 @@ class Transfer(models.Model):
                 usdt_value=amount * price_usdt,
                 irt_value=amount * price_irt,
             )
+
+        from gamify.utils import check_prize_achievements, Task
+        check_prize_achievements(receiver_account, Task.DEPOSIT)
 
         sender_transfer.alert_user()
         receiver_transfer.alert_user()

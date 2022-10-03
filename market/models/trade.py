@@ -10,7 +10,6 @@ from django.db import models
 from django.db.models import F, CheckConstraint, Q, Sum, Max, Min
 from django.utils import timezone
 
-from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Trx, OTCTrade, Asset
 from ledger.models.trx import FakeTrx
 from ledger.utils.fields import get_amount_field, get_group_id_field
@@ -295,7 +294,8 @@ class Trade(models.Model):
                 account.save(update_fields=['trade_volume_irt'])
                 account.refresh_from_db()
 
-                check_prize_achievements(account)
+                from gamify.utils import check_prize_achievements, Task
+                check_prize_achievements(account, Task.TRADE)
 
     @classmethod
     def init_pair(cls, symbol, taker_order, maker_order, amount, price, irt_value, trade_source, **kwargs):

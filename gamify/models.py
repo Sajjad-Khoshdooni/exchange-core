@@ -1,7 +1,11 @@
+import logging
+
 from django.db import models
 
 from accounts.models import Notification, Account
 from ledger.models import Prize, Asset
+
+logger = logging.getLogger(__name__)
 
 
 class MissionJourney(models.Model):
@@ -20,6 +24,20 @@ class MissionJourney(models.Model):
             if not mission.finished(account):
                 return mission
 
+    def achieve_if_can(self, account: Account, task_scope: str):
+        try:
+            missions = self.mission_set.filter(active=True, task__scope=task_scope)
+
+            for mission in missions:
+                if mission.achievable(account):
+                    mission.achievement.achieved(account)
+
+        except Exception as e:
+            logger.exception('Failed to check prize achievements', extra={
+                'account': account.id,
+                'exp': e
+            })
+
 
 class Mission(models.Model):
     journey = models.ForeignKey(MissionJourney, on_delete=models.CASCADE)
@@ -33,6 +51,11 @@ class Mission(models.Model):
 
     def finished(self, account: Account):
         return all([task.finished(account) for task in self.task_set.all()])
+
+    def get_active_task(self, account: Account) -> 'Task':
+        for task in self.task_set:
+            if not task.finished(account):
+                return task
 
     class Meta:
         ordering = ('order', )

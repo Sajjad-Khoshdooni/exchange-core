@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.response import Response
 
 from gamify.models import MissionJourney, Mission, Task, Achievement
 from ledger.models import Prize
@@ -100,6 +101,14 @@ class MissionsAPIView(ListAPIView):
         account = self.request.user.account
         journey = MissionJourney.get_journey(account)
         return Mission.objects.filter(journey=journey, active=True)
+
+    def list(self, request, *args, **kwargs):
+        resp = super(MissionsAPIView, self).list(request, *args, **kwargs)
+        data = resp.data
+
+        data = list(filter(lambda d: d['active'], data)) + list(filter(lambda d: not d['active'], data))
+
+        return Response(data)
 
 
 class ActiveMissionsAPIView(RetrieveAPIView):

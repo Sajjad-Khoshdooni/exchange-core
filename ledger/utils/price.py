@@ -314,6 +314,10 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
 
 def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
                           gap: Union[Decimal, None] = None, allow_stale: bool = False) -> Decimal:
+    """
+
+    :rtype: object
+    """
     if coin == IRT:
         return Decimal(1)
 
