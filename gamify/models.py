@@ -53,7 +53,7 @@ class Mission(models.Model):
         return all([task.finished(account) for task in self.task_set.all()])
 
     def get_active_task(self, account: Account) -> 'Task':
-        for task in self.task_set:
+        for task in self.task_set.all():
             if not task.finished(account):
                 return task
 
