@@ -98,6 +98,13 @@ class MissionSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         return mission.journey.get_active_mission(user.account) == mission
 
+    @property
+    def data(self):
+        if self.instance is None:
+            return
+        else:
+            return super(MissionSerializer, self).data
+
 
 class MissionsAPIView(ListAPIView):
     serializer_class = MissionSerializer
