@@ -49,14 +49,19 @@ class AchievementSerializer(serializers.ModelSerializer):
 
 class TaskSerializer(serializers.ModelSerializer):
     progress = serializers.SerializerMethodField()
+    finished = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
-        fields = ('scope', 'type', 'title', 'link', 'description', 'level', 'progress')
+        fields = ('scope', 'type', 'title', 'link', 'description', 'level', 'progress', 'finished')
 
     def get_progress(self, task: Task):
         user = self.context['request'].user
         return task.get_progress_percent(user.account)
+
+    def get_finished(self, task: Task):
+        user = self.context['request'].user
+        return task.finished(user.account)
 
 
 class MissionSerializer(serializers.ModelSerializer):
