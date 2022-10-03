@@ -187,8 +187,8 @@ class User(AbstractUser):
                 self.save(update_fields=['verify_status', 'level', 'level_2_verify_datetime', 'level_3_verify_datetime', 'archived'])
 
             if self.level == User.LEVEL2:
-                from accounts.gamification.gamify import check_prize_achievements
-                check_prize_achievements(self.account)
+                from gamify.utils import check_prize_achievements, Task
+                check_prize_achievements(self.account, Task.VERIFY_LEVEL2)
 
             alert_user_verify_status(self)
 

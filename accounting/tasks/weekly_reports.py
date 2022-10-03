@@ -5,12 +5,13 @@ from datetime import timedelta
 
 import requests
 from celery import shared_task
-from django.db.models import Sum
-from django.db.models.functions import TruncDate
+from django.db.models import Sum, F, Value
+from django.db.models.functions import TruncDate, Concat
 from django.utils import timezone
 from yekta_config import secret
 from yekta_config.config import config
 
+from accounts.models import User
 from accounts.utils.validation import gregorian_to_jalali_date
 from financial.models import Payment, FiatWithdrawRequest
 from ledger.models import Asset
@@ -54,6 +55,31 @@ def create_trades(start: datetime.date, end: datetime.date, upload: bool = False
 
     with open(file_path, 'w', newline="") as csv_file:
         header = ['date', 'side', 'value']
+        t = csv.DictWriter(csv_file, fieldnames=header)
+        t.writeheader()
+        t.writerows(trades)
+
+    if upload:
+        send_accounting_report(file_path=file_path)
+
+    return trades
+
+
+def create_users_trades(start: datetime.date, end: datetime.date, upload: bool = False):
+    trades = Trade.objects.filter(
+        created__range=(start, end),
+        symbol__base_asset=Asset.get(Asset.IRT),
+        order__wallet__account__user__level__gt=User.LEVEL1,
+    ).exclude(trade_source=Trade.SYSTEM).exclude(gap_revenue=0).annotate(
+        user_id=F('order__wallet__account__user_id'),
+        user_name=Concat('order__wallet__account__user__first_name', Value(' '), 'order__wallet__account__user__last_name'),
+        user_national_code=F('order__wallet__account__user__national_code'),
+    ).values('user_id', 'user_name', 'user_national_code', 'side').annotate(value=Sum('irt_value') * 10).order_by('user_id', 'side')
+
+    file_path = '/tmp/accounting/weekly_users_{}_{}.csv'.format(str(start), str(end))
+
+    with open(file_path, 'w', newline="") as csv_file:
+        header = ['user_id', 'user_name', 'user_national_code', 'side', 'value']
         t = csv.DictWriter(csv_file, fieldnames=header)
         t.writeheader()
         t.writerows(trades)
@@ -138,3 +164,4 @@ def create_weekly_accounting_report(days: int = 7):
     create_fiat_deposit(start, end, upload=True)
     create_fiat_withdraw(start, end, upload=True)
     create_trades(start, end, upload=True)
+    create_users_trades(start, end, upload=True)

@@ -21,6 +21,13 @@ class Prize(models.Model):
     TRADE_PRIZE_STEP2 = 'trade_s2'
     REFERRAL_TRADE_2M_PRIZE = 'referral_trade_2m'
 
+    PRIZE_CHOICES = (
+        (VERIFY_PRIZE, VERIFY_PRIZE),
+        (TRADE_PRIZE_STEP1, TRADE_PRIZE_STEP1),
+        (TRADE_PRIZE_STEP2, TRADE_PRIZE_STEP2),
+        (REFERRAL_TRADE_2M_PRIZE, REFERRAL_TRADE_2M_PRIZE)
+    )
+
     VERBOSE = {
         VERIFY_PRIZE: 'احراز هویت سطح ۲',
         TRADE_PRIZE_STEP1: 'معامله به حجم ۲ میلیون تومان',
@@ -40,12 +47,7 @@ class Prize(models.Model):
     amount = get_amount_field()
     scope = models.CharField(
         max_length=25,
-        choices=(
-            (VERIFY_PRIZE, VERIFY_PRIZE),
-            (TRADE_PRIZE_STEP1, TRADE_PRIZE_STEP1),
-            (TRADE_PRIZE_STEP2, TRADE_PRIZE_STEP2),
-            (REFERRAL_TRADE_2M_PRIZE, REFERRAL_TRADE_2M_PRIZE)
-        ),
+        choices=PRIZE_CHOICES,
         verbose_name='نوع'
     )
     asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE)

@@ -12,5 +12,5 @@ class Gamification(TestCase):
         self.client.force_login(self.user_1)
 
     def test_get_goals(self):
-        resp = self.client.get('/api/v1/accounts/goals/')
+        resp = self.client.get('/api/v1/gamify/missions/')
         self.assertEqual(resp.status_code, 200)

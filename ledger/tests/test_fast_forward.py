@@ -2,7 +2,7 @@ from django.test import TestCase
 from unittest import mock
 from decimal import Decimal
 
-from ledger.utils.test import new_account, new_network
+from ledger.utils.test import new_account, new_network, set_price
 from ledger.models import Transfer, DepositAddress, Trx, Asset, AddressKey
 
 
@@ -10,6 +10,7 @@ class FastForwardTestCase(TestCase):
     def setUp(self) -> None:
         self.network = new_network()
         self.asset = Asset.objects.create(symbol=self.network.symbol)
+        set_price(self.asset, 19000)
 
         self.sender_account1 = new_account()
         self.sender_address_key1 = AddressKey.objects.create(account=self.sender_account1, address='0xC8E19189888BED6aaBf88800024106eC7C8cb00B')
@@ -36,7 +37,6 @@ class FastForwardTestCase(TestCase):
     @mock.patch('ledger.models.deposit_address.request_architecture')
     def test_fast_forward1(self, request_architecture):
         request_architecture.return_value = 'ETH'
-        print(request_architecture('BSC'))
 
         Transfer.check_fast_forward(
             sender_wallet=self.sender_wallet1,

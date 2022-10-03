@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'jalali_date',
     'health',
     'stake',
+    'gamify',
 ]
 
 MIDDLEWARE = [

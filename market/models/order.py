@@ -13,7 +13,6 @@ from django.core.cache import cache
 from django.db import models
 from django.db.models import Sum, F, Q, Max, Min, CheckConstraint, QuerySet
 
-from accounts.gamification.gamify import check_prize_achievements
 from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
@@ -399,7 +398,9 @@ class Order(models.Model):
                 account.trade_volume_irt = F('trade_volume_irt') + trade.irt_value
                 account.save(update_fields=['trade_volume_irt'])
                 account.refresh_from_db()
-                check_prize_achievements(account)
+
+                from gamify.utils import check_prize_achievements, Task
+                check_prize_achievements(account, Task.TRADE)
 
             cache.delete(key)
             logger.info(log_prefix + 'make match finished.')

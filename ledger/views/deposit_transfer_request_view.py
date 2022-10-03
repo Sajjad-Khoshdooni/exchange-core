@@ -6,6 +6,7 @@ from accounts.views.authentication import CustomTokenAuthentication
 from ledger.models import Network, Asset, DepositAddress, AddressKey
 from ledger.models.transfer import Transfer
 from ledger.requester.architecture_requester import request_architecture
+from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
@@ -80,17 +81,23 @@ class DepositSerializer(serializers.ModelSerializer):
             return prev_transfer
 
         else:
+            amount = validated_data.get('amount')
+            price_usdt = get_trading_price_usdt(coin=asset.symbol, raw_price=True, side=SELL)
+            price_irt = get_trading_price_irt(coin=asset.symbol, raw_price=True, side=SELL)
+
             with WalletPipeline() as pipeline:
                 transfer, _ = Transfer.objects.get_or_create(
                     network=network,
                     trx_hash=validated_data.get('trx_hash'),
                     deposit=True,
                     deposit_address=deposit_address,
-                    amount=validated_data.get('amount'),
+                    amount=amount,
                     block_hash=validated_data.get('block_hash'),
                     block_number=validated_data.get('block_number'),
                     out_address=sender_address,
-                    wallet=wallet
+                    wallet=wallet,
+                    usdt_value=amount * price_usdt,
+                    irt_value=amount * price_irt,
                 )
 
                 transfer.status = status
