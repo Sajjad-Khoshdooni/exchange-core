@@ -13,33 +13,22 @@ logger = logging.getLogger(__name__)
 
 
 class Prize(models.Model):
-    VERIFY_PRIZE = 'level2_verify'
-    TRADE_PRIZE_STEP1 = 'trade_2m'
-    TRADE_PRIZE_STEP2 = 'trade_s2'
-    REFERRAL_TRADE_2M_PRIZE = 'referral_trade_2m'
-
-    PRIZE_CHOICES = (
-        (VERIFY_PRIZE, VERIFY_PRIZE),
-        (TRADE_PRIZE_STEP1, TRADE_PRIZE_STEP1),
-        (TRADE_PRIZE_STEP2, TRADE_PRIZE_STEP2),
-        (REFERRAL_TRADE_2M_PRIZE, REFERRAL_TRADE_2M_PRIZE)
-    )
-
     created = models.DateTimeField(auto_now_add=True)
+
+    achievement = models.ForeignKey('gamify.Achievement', on_delete=models.CASCADE)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE, verbose_name='کاربر')
+    group_id = models.UUIDField(default=uuid4, db_index=True)
+
     amount = get_amount_field()
     asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE)
-    group_id = models.UUIDField(default=uuid4, db_index=True)
-    fake = models.BooleanField(default=False)
-
     redeemed = models.BooleanField(default=False)
 
+    fake = models.BooleanField(default=False)
     variant = models.CharField(null=True, blank=True, max_length=16)
-
     value = get_amount_field()
 
     class Meta:
-        unique_together = [('account', 'scope', 'variant')]
+        unique_together = [('account', 'achievement', 'variant')]
         constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_ledger_prize_amount', ), ]
 
     def build_trx(self, pipeline: WalletPipeline):

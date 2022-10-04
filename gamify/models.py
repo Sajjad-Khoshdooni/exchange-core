@@ -67,16 +67,19 @@ class Mission(models.Model):
 
 class Achievement(models.Model):
     mission = models.OneToOneField(Mission, on_delete=models.CASCADE)
-    scope = models.CharField(max_length=32, choices=Prize.PRIZE_CHOICES)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     amount = get_amount_field()
     voucher = models.BooleanField(default=False)
 
     def achieved(self, account: Account):
-        return Prize.objects.filter(account=account, scope=self.scope).exists()
+        return Prize.objects.filter(account=account, achievement=self).exists()
 
     def __str__(self):
-        return dict(Prize.PRIZE_CHOICES)[self.scope]
+        kind = ''
+        if self.voucher:
+            kind = ' voucher'
+
+        return '%s %s %s%s' % (self.mission, int(self.amount), self.asset, kind)
 
 
 class Task(models.Model):
@@ -100,7 +103,7 @@ class Task(models.Model):
 
     title = models.CharField(max_length=32)
     link = models.CharField(max_length=32)
-    description = models.CharField(max_length=64)
+    description = models.CharField(max_length=128)
     level = models.CharField(max_length=8, choices=Notification.LEVEL_CHOICES, default=Notification.WARNING)
 
     def get_goal_type(self):

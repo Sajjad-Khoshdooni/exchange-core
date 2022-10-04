@@ -17,7 +17,7 @@ class AchievementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Achievement
-        fields = ('scope', 'id', 'amount', 'asset', 'achieved', 'redeemed', 'fake', 'voucher')
+        fields = ('id', 'amount', 'asset', 'achieved', 'redeemed', 'fake', 'voucher')
 
     def get_id(self, achievement: Achievement):
         prize = self.context['prize']
@@ -71,7 +71,7 @@ class MissionSerializer(serializers.ModelSerializer):
 
     def get_achievements(self, mission: Mission):
         user = self.context['request'].user
-        prize = Prize.objects.filter(account=user.account, scope=mission.achievement.scope).first()
+        prize = Prize.objects.filter(account=user.account, achievement=mission.achievement).first()
 
         context = {
             **self.context,
