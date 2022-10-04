@@ -17,6 +17,8 @@ class TrafficSource(models.Model):
     ip = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=256, blank=True)
 
+    promotion = models.CharField(max_length=256, blank=True)
+
     class Meta:
         verbose_name_plural = verbose_name = "منشا ترافیک"
 

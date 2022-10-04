@@ -13,9 +13,9 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class Wallet(models.Model):
-    SPOT, MARGIN, LOAN, STAKE = 'spot', 'margin', 'loan', 'stake'
-    MARKETS = (SPOT, MARGIN, LOAN, STAKE)
-    MARKET_CHOICES = ((SPOT, SPOT), (MARGIN, MARGIN), (LOAN, LOAN), (STAKE, STAKE))
+    SPOT, MARGIN, LOAN, STAKE, VOUCHER = 'spot', 'margin', 'loan', 'stake', 'voucher'
+    MARKETS = (SPOT, MARGIN, LOAN, STAKE, VOUCHER)
+    MARKET_CHOICES = ((SPOT, SPOT), (MARGIN, MARGIN), (LOAN, LOAN), (STAKE, STAKE), (VOUCHER, VOUCHER))
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -33,6 +33,8 @@ class Wallet(models.Model):
     locked = get_amount_field(default=Decimal(0))
 
     variant = models.UUIDField(editable=False, null=True, blank=True)
+
+    expiration = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         market_verbose = dict(self.MARKET_CHOICES)[self.market]

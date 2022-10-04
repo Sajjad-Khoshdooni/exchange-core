@@ -44,7 +44,7 @@ def populate_missions(apps, schema_editor):
     Task.objects.create(
         mission=mission,
         scope='trade',
-        max=Prize.TRADE_THRESHOLD_STEP1,
+        max=2_000_000,
         title='معامله',
         link='/trade/classic/BTCIRT',
         description='به ارزش ۲ میلیون تومان معامله کنید.',

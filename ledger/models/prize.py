@@ -13,9 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class Prize(models.Model):
-    TRADE_THRESHOLD_STEP1 = 2_000_000
-    TRADE_THRESHOLD_STEP2 = 20_000_000
-
     VERIFY_PRIZE = 'level2_verify'
     TRADE_PRIZE_STEP1 = 'trade_2m'
     TRADE_PRIZE_STEP2 = 'trade_s2'
@@ -28,28 +25,9 @@ class Prize(models.Model):
         (REFERRAL_TRADE_2M_PRIZE, REFERRAL_TRADE_2M_PRIZE)
     )
 
-    VERBOSE = {
-        VERIFY_PRIZE: 'احراز هویت سطح ۲',
-        TRADE_PRIZE_STEP1: 'معامله به حجم ۲ میلیون تومان',
-        TRADE_PRIZE_STEP2: 'معامله به حجم ۲۰ میلیون تومان',
-        REFERRAL_TRADE_2M_PRIZE: 'دعوت از دوستان با حجم ۲ میلیون تومان معامله',
-    }
-
-    PRIZE_AMOUNTS = {
-        VERIFY_PRIZE: 30_000,
-        TRADE_PRIZE_STEP1: 30_000,
-        REFERRAL_TRADE_2M_PRIZE: 50_000,
-        TRADE_PRIZE_STEP2: 100_000,
-    }
-
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE, verbose_name='کاربر')
     amount = get_amount_field()
-    scope = models.CharField(
-        max_length=25,
-        choices=PRIZE_CHOICES,
-        verbose_name='نوع'
-    )
     asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE)
     group_id = models.UUIDField(default=uuid4, db_index=True)
     fake = models.BooleanField(default=False)

@@ -4,6 +4,7 @@ from django.db import models
 
 from accounts.models import Notification, Account
 from ledger.models import Prize, Asset
+from ledger.utils.fields import get_amount_field
 
 logger = logging.getLogger(__name__)
 
@@ -67,12 +68,12 @@ class Mission(models.Model):
 class Achievement(models.Model):
     mission = models.OneToOneField(Mission, on_delete=models.CASCADE)
     scope = models.CharField(max_length=32, choices=Prize.PRIZE_CHOICES)
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+    amount = get_amount_field()
+    voucher = models.BooleanField(default=False)
 
     def achieved(self, account: Account):
         return Prize.objects.filter(account=account, scope=self.scope).exists()
-
-    def get_asset(self) -> Asset:
-        return Asset.get(Asset.SHIB)
 
     def __str__(self):
         return dict(Prize.PRIZE_CHOICES)[self.scope]
