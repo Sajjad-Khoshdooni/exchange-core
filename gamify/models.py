@@ -1,9 +1,12 @@
 import logging
 
-from django.db import models
+from django.db import models, transaction
 
 from accounts.models import Notification, Account
 from ledger.models import Prize, Asset
+from ledger.utils.precision import humanize_number
+from ledger.utils.price import get_trading_price_usdt, SELL
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +33,7 @@ class MissionJourney(models.Model):
 
             for mission in missions:
                 if mission.achievable(account):
-                    mission.achievement.achieved(account)
+                    mission.achievement.achieve_prize(account)
 
         except Exception as e:
             logger.exception('Failed to check prize achievements', extra={
@@ -73,6 +76,58 @@ class Achievement(models.Model):
 
     def get_asset(self) -> Asset:
         return Asset.get(Asset.SHIB)
+
+    def achieve_prize(self, account: Account):
+        price = get_trading_price_usdt(Asset.SHIB, SELL, raw_price=True)
+
+        with WalletPipeline() as pipeline:
+            prize, created = Prize.objects.get_or_create(
+                account=account,
+                scope=self.scope,
+                defaults={
+                    'amount': Prize.PRIZE_AMOUNTS[self.scope],
+                    'asset': self.get_asset(),
+                    'value': Prize.PRIZE_AMOUNTS[self.scope] * price
+                }
+            )
+
+            if created:
+                title = 'جایزه به شما تعلق گرفت.'
+                description = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
+                    humanize_number(prize.asset.get_presentation_amount(prize.amount))
+                )
+
+                Notification.send(
+                    recipient=account.user,
+                    title=title,
+                    message=description,
+                    level=Notification.SUCCESS,
+                    link='/account/tasks'
+                )
+
+            if self.scope == Prize.TRADE_PRIZE_STEP1 and account.referred_by:
+                prize, created = Prize.objects.get_or_create(
+                    account=account.referred_by.owner,
+                    scope=Prize.REFERRAL_TRADE_2M_PRIZE,
+                    variant=str(account.id),
+                    defaults={
+                        'amount': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE],
+                        'asset': Asset.get(Asset.SHIB),
+                        'value': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE] * price
+                    }
+                )
+
+                if created:
+                    prize.build_trx(pipeline)
+                    Notification.send(
+                        recipient=account.referred_by.owner.user,
+                        title='جایزه به شما تعلق گرفت.',
+                        message='جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
+                            humanize_number(prize.asset.get_presentation_amount(prize.amount))
+                        ),
+                        level=Notification.SUCCESS,
+                        link='/account/tasks'
+                    )
 
     def __str__(self):
         return dict(Prize.PRIZE_CHOICES)[self.scope]

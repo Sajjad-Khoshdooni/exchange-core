@@ -1,7 +1,6 @@
 import logging
 from collections import defaultdict
 from decimal import Decimal
-from tkinter import E
 from typing import Union
 
 from django.db import transaction
