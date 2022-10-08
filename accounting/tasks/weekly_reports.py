@@ -12,7 +12,7 @@ from yekta_config import secret
 from yekta_config.config import config
 
 from accounts.models import User
-from accounts.utils.validation import gregorian_to_jalali_date
+from accounts.utils.validation import gregorian_to_jalali_date, gregorian_to_jalali_datetime
 from financial.models import Payment, FiatWithdrawRequest
 from ledger.models import Asset
 from ledger.utils.fields import DONE
@@ -154,6 +154,119 @@ def create_fiat_withdraw(start: datetime.date, end: datetime.date, upload: bool 
         send_accounting_report(file_path=file_path)
 
     return withdraws
+
+
+def create_fiat_deposit_details(start: datetime.date, end: datetime.date, upload: bool = False):
+    payments = Payment.objects.filter(
+        created__range=(start, end),
+        status=DONE
+    ).order_by('id').prefetch_related('payment_request__gateway', 'payment_request__bank_card__user')
+
+    deposits = []
+
+    for p in payments:
+        user = p.payment_request.bank_card.user
+
+        deposits.append({
+            'id': p.id,
+            'user_id': user.id,
+            'user_name': user.get_full_name(),
+            'user_national_code': user.national_code,
+            'gateway': p.payment_request.gateway.type,
+            'date': str(gregorian_to_jalali_datetime(p.created)),
+            'amount': p.payment_request.amount * 10
+        })
+
+    file_path = '/tmp/accounting/deposit_details_{}_{}.csv'.format(str(start), str(end))
+
+    with open(file_path, 'w', newline="") as csv_file:
+        header = ['id', 'user_id', 'user_name', 'user_national_code', 'date', 'gateway', 'amount']
+        w = csv.DictWriter(csv_file, fieldnames=header)
+        w.writeheader()
+        w.writerows(deposits)
+
+    if upload:
+        send_accounting_report(file_path=file_path)
+
+    return deposits
+
+
+def create_fiat_withdraw_details(start: datetime.date, end: datetime.date, upload: bool = False):
+    withdraws = FiatWithdrawRequest.objects.filter(
+        created__range=(start, end),
+        status=DONE,
+    ).order_by('id').prefetch_related('bank_account__user')
+
+    withdraws_list = []
+
+    for w in withdraws:
+        user = w.bank_account.user
+
+        withdraws_list.append({
+            'id': w.id,
+            'user_id': user.id,
+            'user_name': user.get_full_name(),
+            'user_national_code': user.national_code,
+            'gateway': w.withdraw_channel,
+            'date': str(gregorian_to_jalali_datetime(w.created)),
+            'amount': w.amount * 10
+        })
+
+    file_path = '/tmp/accounting/withdraw_details_{}_{}.csv'.format(str(start), str(end))
+
+    with open(file_path, 'w', newline="") as csv_file:
+        header = ['id', 'user_id', 'user_name', 'user_national_code', 'date', 'gateway', 'amount']
+        w = csv.DictWriter(csv_file, fieldnames=header)
+        w.writeheader()
+        w.writerows(withdraws_list)
+
+    if upload:
+        send_accounting_report(file_path=file_path)
+
+    return withdraws_list
+
+
+def create_trades_details(start: datetime.date, end: datetime.date, upload: bool = False):
+    trades = Trade.objects.filter(
+        created__range=(start, end),
+        symbol__base_asset=Asset.get(Asset.IRT),
+    ).exclude(
+        trade_source=Trade.SYSTEM
+    ).exclude(
+        gap_revenue=0
+    ).order_by('id').prefetch_related('order__wallet__account__user', 'order__symbol__asset')
+
+    trades_list = []
+
+    for t in trades:
+        user = t.order.wallet.account.user
+        asset = t.order.symbol.asset
+
+        trades_list.append({
+            'id': t.id,
+            'user_id': user.id,
+            'user_name': user.get_full_name(),
+            'user_national_code': user.national_code,
+            'coin': asset.symbol,
+            'amount': t.amount,
+            'price': t.price,
+            'value': t.irt_value * 10,
+            'date': str(gregorian_to_jalali_datetime(t.created)),
+            'side': t.side
+        })
+
+    file_path = '/tmp/accounting/trade_details_{}_{}.csv'.format(str(start), str(end))
+
+    with open(file_path, 'w', newline="") as csv_file:
+        header = ['id', 'user_id', 'user_name', 'user_national_code', 'date', 'value', 'side', 'coin', 'amount', 'price']
+        t = csv.DictWriter(csv_file, fieldnames=header)
+        t.writeheader()
+        t.writerows(trades_list)
+
+    if upload:
+        send_accounting_report(file_path=file_path)
+
+    return trades_list
 
 
 @shared_task(queue='accounting')
