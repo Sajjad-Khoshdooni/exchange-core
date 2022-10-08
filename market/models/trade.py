@@ -72,6 +72,7 @@ class Trade(models.Model):
 
     class Meta:
         indexes = [
+            models.Index(fields=['created']),
             models.Index(fields=['account', 'symbol']),
             models.Index(fields=['symbol', 'side', 'created']),
         ]
