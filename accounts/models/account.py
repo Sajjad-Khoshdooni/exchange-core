@@ -66,7 +66,7 @@ class Account(models.Model):
             account=self,
             asset__symbol=Asset.USDT,
             market=Wallet.VOUCHER,
-            expiration__lt=timezone.now(),
+            expiration__gte=timezone.now(),
             balance__gt=0
         )
 
