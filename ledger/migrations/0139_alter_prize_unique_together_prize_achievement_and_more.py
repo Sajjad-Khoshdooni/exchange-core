@@ -13,9 +13,9 @@ def populate_achievement(apps, schema_editor):
     prizes = Prize.objects.all()
 
     for p in prizes:
-        p.achievement = achievements[p.scope]
+        p.achievement_id = achievements[p.scope]
 
-    Prize.objects.bulk_update(prizes, ['achievement'])
+    Prize.objects.bulk_update(prizes, ['achievement_id'])
 
 
 class Migration(migrations.Migration):
