@@ -54,6 +54,21 @@ def populate_missions(apps, schema_editor):
         scope='trade_2m'
     )
 
+    mission = Mission.objects.create(journey=journey, name='trade2', order=2)
+    Task.objects.create(
+        mission=mission,
+        scope='trade',
+        max=20_000_000,
+        title='معامله',
+        link='/trade/classic/BTCIRT',
+        description='به ارزش ۲۰ میلیون تومان معامله کنید.',
+        level=Notification.WARNING,
+    )
+    Achievement.objects.create(
+        mission=mission,
+        scope='trade_s2'
+    )
+
 
 class Migration(migrations.Migration):
 
