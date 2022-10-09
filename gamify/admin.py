@@ -15,7 +15,7 @@ class TaskInline(admin.TabularInline):
 
 
 class AchievementInline(admin.TabularInline):
-    fields = ('scope', )
+    fields = ('asset', 'amount', 'voucher')
     model = models.Achievement
     extra = 0
 

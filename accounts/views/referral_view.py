@@ -133,7 +133,6 @@ class TradingFeeView(APIView):
     def get(self, request):
         voucher = Wallet.objects.filter(market=Wallet.VOUCHER, expiration__lt=timezone.now(), balance__gt=0).first()
 
-        # taker_fee = Decimal('0.2')
         old_taker_fee = Decimal('0.2')
         old_maker_fee = Decimal('0')
 
