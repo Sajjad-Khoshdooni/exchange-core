@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 @shared_task(queue='stop_loss')
 def handle_stop_loss():
     stop_loss_symbols = list(StopLoss.not_triggered_objects.values_list('symbol__id', flat=True).distinct())
+    if not stop_loss_symbols:
+        return
     market_top_prices = Trade.get_interval_top_prices(stop_loss_symbols)
 
     for symbol_id in stop_loss_symbols:
