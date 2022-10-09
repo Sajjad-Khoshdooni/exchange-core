@@ -8,7 +8,7 @@ def populate_achievement(apps, schema_editor):
     Achievement = apps.get_model('gamify', 'Achievement')
     Prize = apps.get_model('ledger', 'Prize')
 
-    achievements = dict(Achievement.objects.values_list('id', 'scope'))
+    achievements = dict(Achievement.objects.values_list('scope', 'id'))
 
     prizes = Prize.objects.all()
 
