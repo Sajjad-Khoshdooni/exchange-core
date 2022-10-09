@@ -24,15 +24,12 @@ class MissionJourney(models.Model):
 
     @classmethod
     def get_journey(cls, account: Account) -> 'MissionJourney':
-        source = TrafficSource.objects.filter(user=account.user).first()
-
-        default_journey = MissionJourney.objects.filter(active=True, promotion=cls.DEFAULT).first()
-
-        if not source:
+        journey = MissionJourney.objects.filter(promotion=account.user.promotion, active=True).first()
+        if not journey:
+            default_journey = MissionJourney.objects.filter(active=True, promotion=cls.DEFAULT).first()
             return default_journey
         else:
-            journey = MissionJourney.objects.filter(promotion=source.promotion, active=True).first()
-            return journey or default_journey
+            return journey
 
     def get_active_mission(self, account: Account):
         for mission in self.mission_set.filter(active=True):
