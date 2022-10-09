@@ -62,18 +62,13 @@ class Account(models.Model):
         from ledger.models import Wallet
         from ledger.models import Asset
 
-        voucher = Wallet.objects.filter(
+        return Wallet.objects.filter(
             account=self,
             asset__symbol=Asset.USDT,
             market=Wallet.VOUCHER,
             expiration__gte=timezone.now(),
             balance__gt=0
         ).first()
-
-        if not voucher:
-            return 0
-        else:
-            return voucher.balance
 
     def __str__(self):
         if self.type == self.SYSTEM:
