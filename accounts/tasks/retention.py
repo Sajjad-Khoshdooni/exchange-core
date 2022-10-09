@@ -104,7 +104,7 @@ def retention_actions():
         is_active=True,
         level__gte=User.LEVEL2,
         first_fiat_deposit_date__isnull=False,
-        account__trade_volume_irt__lt=Prize.TRADE_THRESHOLD_STEP1,
+        account__trade_volume_irt__lt=2_000_000,
     )
 
     now = timezone.now()

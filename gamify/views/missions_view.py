@@ -17,14 +17,14 @@ class AchievementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Achievement
-        fields = ('scope', 'id', 'amount', 'asset', 'achieved', 'redeemed', 'fake')
+        fields = ('id', 'amount', 'asset', 'achieved', 'redeemed', 'fake', 'voucher')
 
     def get_id(self, achievement: Achievement):
         prize = self.context['prize']
         return prize and prize.id
 
     def get_asset(self, achievement: Achievement):
-        return AssetSerializerMini(achievement.get_asset()).data
+        return AssetSerializerMini(achievement.asset).data
 
     def get_amount(self, achievement: Achievement):
         prize = self.context['prize']
@@ -32,7 +32,7 @@ class AchievementSerializer(serializers.ModelSerializer):
         if prize:
             return prize.amount
         else:
-            return Prize.PRIZE_AMOUNTS[achievement.scope]
+            return achievement.amount
 
     def get_achieved(self, achievement: Achievement):
         user = self.context['request'].user
@@ -76,7 +76,7 @@ class MissionSerializer(serializers.ModelSerializer):
 
     def get_achievements(self, mission: Mission):
         user = self.context['request'].user
-        prize = Prize.objects.filter(account=user.account, scope=mission.achievement.scope).first()
+        prize = Prize.objects.filter(account=user.account, achievement=mission.achievement).first()
 
         context = {
             **self.context,

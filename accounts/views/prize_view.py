@@ -29,7 +29,7 @@ class PrizeSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'amount', 'scope', 'coin', 'created')
 
     def get_reason(self, prize: Prize):
-        return Prize.VERBOSE.get(prize.scope, '')
+        return ''
 
     def get_amount(self, prize: Prize):
         return prize.asset.get_presentation_amount(prize.amount)

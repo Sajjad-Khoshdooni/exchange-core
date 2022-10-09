@@ -47,6 +47,7 @@ class SignupSerializer(serializers.Serializer):
     password = serializers.CharField(required=True, write_only=True, validators=[password_validator])
     utm = serializers.JSONField(allow_null=True, required=False, write_only=True)
     referral_code = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
+    promotion = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
 
     @staticmethod
     def validate_referral_code(code):
@@ -92,11 +93,13 @@ class SignupSerializer(serializers.Serializer):
             # otp_code.set_token_used()
 
         utm = validated_data.get('utm') or {}
-        self.create_traffic_source(user, utm)
+        promotion = validated_data.get('promotion') or ''
+
+        self.create_traffic_source(user, utm, promotion)
 
         return user
 
-    def create_traffic_source(self, user, utm: dict):
+    def create_traffic_source(self, user, utm: dict, promotion: str):
         utm_source = utm.get('utm_source', '')[:256]
 
         if not utm_source:
@@ -139,6 +142,7 @@ class SignupSerializer(serializers.Serializer):
             gps_adid=gps_adid,
             ip=get_client_ip(self.context['request']),
             user_agent=self.context['request'].META['HTTP_USER_AGENT'][:256],
+            promotion=promotion,
         )
 
 

@@ -4,6 +4,8 @@ from accounts.models import User
 
 
 class TrafficSource(models.Model):
+    SHIB, VOUCHER = 'shib', 'voucher'
+
     created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name='کاربر')
 
@@ -16,6 +18,8 @@ class TrafficSource(models.Model):
 
     ip = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=256, blank=True)
+
+    promotion = models.CharField(max_length=256, blank=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
 
     class Meta:
         verbose_name_plural = verbose_name = "منشا ترافیک"

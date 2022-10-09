@@ -1,9 +1,10 @@
 import logging
 
-from django.db import models, transaction
+from django.db import models
 
-from accounts.models import Notification, Account
+from accounts.models import Notification, Account, TrafficSource
 from ledger.models import Prize, Asset
+from ledger.utils.fields import get_amount_field
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_trading_price_usdt, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -12,15 +13,26 @@ logger = logging.getLogger(__name__)
 
 
 class MissionJourney(models.Model):
+    DEFAULT, VOUCHER = 'default', 'voucher'
+
     name = models.CharField(max_length=64)
     active = models.BooleanField(default=False)
+    promotion = models.CharField(max_length=8, unique=True, choices=((DEFAULT, DEFAULT), (VOUCHER, VOUCHER)))
 
     def __str__(self):
         return self.name
 
     @classmethod
     def get_journey(cls, account: Account) -> 'MissionJourney':
-        return MissionJourney.objects.filter(active=True).first()
+        source = TrafficSource.objects.filter(user=account.user).first()
+
+        default_journey = MissionJourney.objects.filter(active=True, promotion=cls.DEFAULT).first()
+
+        if not source:
+            return default_journey
+        else:
+            journey = MissionJourney.objects.filter(promotion=source.promotion, active=True).first()
+            return journey or default_journey
 
     def get_active_mission(self, account: Account):
         for mission in self.mission_set.filter(active=True):
@@ -69,25 +81,30 @@ class Mission(models.Model):
 
 class Achievement(models.Model):
     mission = models.OneToOneField(Mission, on_delete=models.CASCADE)
-    scope = models.CharField(max_length=32, choices=Prize.PRIZE_CHOICES)
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+    amount = get_amount_field()
+    voucher = models.BooleanField(default=False)
 
     def achieved(self, account: Account):
-        return Prize.objects.filter(account=account, scope=self.scope).exists()
-
-    def get_asset(self) -> Asset:
-        return Asset.get(Asset.SHIB)
+        return Prize.objects.filter(account=account, achievement=self).exists()
 
     def achieve_prize(self, account: Account):
         price = get_trading_price_usdt(Asset.SHIB, SELL, raw_price=True)
 
         with WalletPipeline() as pipeline:
+
+            value = 0
+
+            if not self.voucher:
+                value = self.amount * price
+
             prize, created = Prize.objects.get_or_create(
                 account=account,
-                scope=self.scope,
+                achievement=self,
                 defaults={
-                    'amount': Prize.PRIZE_AMOUNTS[self.scope],
-                    'asset': self.get_asset(),
-                    'value': Prize.PRIZE_AMOUNTS[self.scope] * price
+                    'amount': self.amount,
+                    'asset': self.asset,
+                    'value': value
                 }
             )
 
@@ -105,32 +122,36 @@ class Achievement(models.Model):
                     link='/account/tasks'
                 )
 
-            if self.scope == Prize.TRADE_PRIZE_STEP1 and account.referred_by:
-                prize, created = Prize.objects.get_or_create(
-                    account=account.referred_by.owner,
-                    scope=Prize.REFERRAL_TRADE_2M_PRIZE,
-                    variant=str(account.id),
-                    defaults={
-                        'amount': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE],
-                        'asset': Asset.get(Asset.SHIB),
-                        'value': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE] * price
-                    }
-                )
-
-                if created:
-                    prize.build_trx(pipeline)
-                    Notification.send(
-                        recipient=account.referred_by.owner.user,
-                        title='جایزه به شما تعلق گرفت.',
-                        message='جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
-                            humanize_number(prize.asset.get_presentation_amount(prize.amount))
-                        ),
-                        level=Notification.SUCCESS,
-                        link='/account/tasks'
-                    )
+            # if self.mission == Prize.TRADE_PRIZE_STEP1 and account.referred_by:
+            #     prize, created = Prize.objects.get_or_create(
+            #         account=account.referred_by.owner,
+            #         scope=Prize.REFERRAL_TRADE_2M_PRIZE,
+            #         variant=str(account.id),
+            #         defaults={
+            #             'amount': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE],
+            #             'asset': Asset.get(Asset.SHIB),
+            #             'value': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE] * price
+            #         }
+            #     )
+            #
+            #     if created:
+            #         prize.build_trx(pipeline)
+            #         Notification.send(
+            #             recipient=account.referred_by.owner.user,
+            #             title='جایزه به شما تعلق گرفت.',
+            #             message='جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
+            #                 humanize_number(prize.asset.get_presentation_amount(prize.amount))
+            #             ),
+            #             level=Notification.SUCCESS,
+            #             link='/account/tasks'
+            #         )
 
     def __str__(self):
-        return dict(Prize.PRIZE_CHOICES)[self.scope]
+        kind = ''
+        if self.voucher:
+            kind = ' voucher'
+
+        return '%s %s %s%s' % (self.mission, int(self.amount), self.asset, kind)
 
 
 class Task(models.Model):
@@ -154,7 +175,7 @@ class Task(models.Model):
 
     title = models.CharField(max_length=32)
     link = models.CharField(max_length=32)
-    description = models.CharField(max_length=64)
+    description = models.CharField(max_length=128)
     level = models.CharField(max_length=8, choices=Notification.LEVEL_CHOICES, default=Notification.WARNING)
 
     def get_goal_type(self):
