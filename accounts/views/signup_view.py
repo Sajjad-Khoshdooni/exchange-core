@@ -70,10 +70,12 @@ class SignupSerializer(serializers.Serializer):
 
         phone = otp_code.phone
         # otp_code.set_token_used()
+        promotion = validated_data.get('promotion') or User.SHIB
 
         user = User.objects.create_user(
             username=phone,
             phone=phone,
+            promotion=promotion
         )
 
         with transaction.atomic():
@@ -93,13 +95,12 @@ class SignupSerializer(serializers.Serializer):
             # otp_code.set_token_used()
 
         utm = validated_data.get('utm') or {}
-        promotion = validated_data.get('promotion') or ''
 
-        self.create_traffic_source(user, utm, promotion)
+        self.create_traffic_source(user, utm)
 
         return user
 
-    def create_traffic_source(self, user, utm: dict, promotion: str):
+    def create_traffic_source(self, user, utm: dict):
         utm_source = utm.get('utm_source', '')[:256]
 
         if not utm_source:
@@ -142,7 +143,6 @@ class SignupSerializer(serializers.Serializer):
             gps_adid=gps_adid,
             ip=get_client_ip(self.context['request']),
             user_agent=self.context['request'].META['HTTP_USER_AGENT'][:256],
-            promotion=promotion,
         )
 
 

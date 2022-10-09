@@ -26,6 +26,8 @@ class User(AbstractUser):
 
     INIT, PENDING, REJECTED, VERIFIED = 'init', 'pending', 'rejected', 'verified'
 
+    SHIB, VOUCHER = 'shib', 'voucher'
+
     USERNAME_FIELD = 'phone'
 
     FIAT, CRYPTO = 'fiat', 'crypto'
@@ -139,6 +141,8 @@ class User(AbstractUser):
     )
 
     can_withdraw = models.BooleanField(default=True)
+
+    promotion = models.CharField(max_length=256, blank=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
 
     @property
     def kyc_bank_card(self):
