@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('accounts', '0089_trafficsource_promotion'),
-        ('gamify', '0003_remove_achievement_scope_achievement_amount_and_more'),
+        ('gamify', '0004_upgrade_achievements'),
         ('ledger', '0138_transfer_irt_value_transfer_usdt_value'),
     ]
 
