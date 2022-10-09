@@ -261,6 +261,7 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': False,
     'AUTH_HEADER_TYPES': ('Bearer', 'JWT'),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
 }
