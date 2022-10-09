@@ -68,7 +68,7 @@ class Account(models.Model):
             market=Wallet.VOUCHER,
             expiration__gte=timezone.now(),
             balance__gt=0
-        )
+        ).first()
 
         if not voucher:
             return 0
