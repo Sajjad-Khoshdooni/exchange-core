@@ -139,8 +139,10 @@ class TradingFeeView(APIView):
 
         if voucher:
             taker_fee = 0
+            expiration = voucher.expiration
         else:
             taker_fee = Decimal('0.2')
+            expiration = None
 
         maker_fee = Decimal('0')
 
@@ -155,5 +157,5 @@ class TradingFeeView(APIView):
             'old_maker_fee': str(old_maker_fee),
             'taker_fee': str(taker_fee),
             'maker_fee': str(maker_fee),
-            'voucher_expiration': voucher.expiration
+            'voucher_expiration': expiration
         })
