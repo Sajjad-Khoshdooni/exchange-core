@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models import CheckConstraint, Q
 
 from accounts.models import Account
-from ledger.models import Trx, Asset
+from ledger.models import Trx, Asset, Wallet
 from ledger.utils.fields import get_amount_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -40,10 +40,16 @@ class Prize(models.Model):
         self.save(update_fields=['redeemed'])
 
         system = Account.system()
+
+        if self.achievement.voucher:
+            market = Wallet.VOUCHER
+        else:
+            market = Wallet.SPOT
+
         pipeline.new_trx(
             group_id=self.group_id,
             sender=self.asset.get_wallet(system),
-            receiver=self.asset.get_wallet(self.account),
+            receiver=self.asset.get_wallet(self.account, market=market),
             amount=self.amount,
             scope=Trx.PRIZE
         )
