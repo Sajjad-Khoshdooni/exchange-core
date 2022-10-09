@@ -4,6 +4,7 @@ from celery import shared_task
 from django.utils import timezone
 
 from market.models import Order, Trade
+from market.models.order import CancelOrder
 from market.models.stop_loss import StopLoss
 from market.utils import new_order
 from market.utils.redis import set_top_prices
@@ -43,16 +44,19 @@ def create_needed_stop_loss_orders(symbol_id, side):
         stop_loss_qs = stop_loss_qs.filter(trigger_price__gte=symbol_price)
 
     for stop_loss in stop_loss_qs:
-        if stop_loss.price:
-            order = new_order(
-                stop_loss.symbol, stop_loss.wallet.account, stop_loss.unfilled_amount, stop_loss.price, stop_loss.side,
-                Order.LIMIT, raise_exception=False, parent_lock_group_id=stop_loss.group_id
-            )
-        else:
-            order = new_order(
-                stop_loss.symbol, stop_loss.wallet.account, stop_loss.unfilled_amount, None, stop_loss.side,
-                Order.MARKET, raise_exception=False, parent_lock_group_id=stop_loss.group_id
-            )
+        try:
+            if stop_loss.price:
+                order = new_order(
+                    stop_loss.symbol, stop_loss.wallet.account, stop_loss.unfilled_amount, stop_loss.price, stop_loss.side,
+                    Order.LIMIT, raise_exception=False, parent_lock_group_id=stop_loss.group_id
+                )
+            else:
+                order = new_order(
+                    stop_loss.symbol, stop_loss.wallet.account, stop_loss.unfilled_amount, None, stop_loss.side,
+                    Order.MARKET, raise_exception=False, parent_lock_group_id=stop_loss.group_id
+                )
+        except CancelOrder:
+            order = None
         if not order:
             logger.warning(f'could not place order for stop loss ({stop_loss.symbol})',
                            extra={'stop_loss': stop_loss.id})

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db.models import Sum
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -21,12 +23,17 @@ class OTCInfoView(APIView):
         from_symbol = request.query_params.get('from')
         to_symbol = request.query_params.get('to')
 
+        from_amount = Decimal(request.query_params.get('from_amount', 0))
+        to_amount = Decimal(request.query_params.get('to_amount', 0))
+
         from_asset = get_object_or_404(Asset, symbol=from_symbol)
         to_asset = get_object_or_404(Asset, symbol=to_symbol)
 
         otc = OTCRequest(
             from_asset=from_asset,
-            to_asset=to_asset
+            to_asset=to_asset,
+            from_amount=from_amount,
+            to_amount=to_amount,
         )
 
         to_price = otc.get_to_price()
