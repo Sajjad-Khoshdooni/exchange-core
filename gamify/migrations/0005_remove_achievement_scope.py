@@ -7,6 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('gamify', '0004_upgrade_achievements'),
+        ('ledger', '0139_alter_prize_unique_together_prize_achievement_and_more')
     ]
 
     operations = [
