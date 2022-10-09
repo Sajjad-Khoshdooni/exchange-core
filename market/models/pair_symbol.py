@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.db import models
 from django.db.models import CheckConstraint, Q
 
+from accounts.models import Account
 from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
 
@@ -51,3 +52,15 @@ class PairSymbol(models.Model):
         constraints = [
             CheckConstraint(check=Q(min_trade_quantity__gte=0, max_trade_quantity__gte=0, maker_amount__gte=0), name='check_market_pairsymbol_amounts', ),
         ]
+
+    def get_maker_fee(self, account: Account):
+        if account.get_voucher_wallet():
+            return Decimal(0)
+        else:
+            return self.maker_fee
+
+    def get_taker_fee(self, account: Account):
+        if account.get_voucher_wallet():
+            return Decimal(0)
+        else:
+            return self.taker_fee

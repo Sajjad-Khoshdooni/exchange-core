@@ -159,7 +159,8 @@ class Trade(models.Model):
         return FakeTrx(**trx_data)
 
     def _create_fee_trx(self, pipeline: WalletPipeline, order: Order, is_taker: bool, fake: bool = False) -> FakeTrx:
-        fee = order.symbol.taker_fee if is_taker else order.symbol.maker_fee
+        account = order.wallet.account
+        fee = order.symbol.get_taker_fee(account) if is_taker else order.symbol.get_maker_fee(account)
 
         fee_wallet = order.wallet if order.side == Order.BUY else order.base_wallet
         trx_amount = fee * (self.amount if order.side == Order.BUY else self.amount * self.price)
