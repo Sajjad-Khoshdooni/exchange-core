@@ -148,7 +148,11 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         return conf.cash.symbol
 
     def get_fee(self, otc_request: OTCRequest):
-        return DEFAULT_TAKER_FEE
+        voucher = otc_request.account.get_voucher_wallet()
+        if voucher:
+            return 0
+        else:
+            return DEFAULT_TAKER_FEE
 
     def get_coin_price(self, otc_request: OTCRequest):
         conf = otc_request.get_trade_config()

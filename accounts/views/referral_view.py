@@ -131,7 +131,7 @@ class ReferralReportAPIView(ListAPIView):
 class TradingFeeView(APIView):
 
     def get(self, request):
-        voucher = Wallet.objects.filter(market=Wallet.VOUCHER, expiration__lt=timezone.now(), balance__gt=0).first()
+        voucher = request.user.account.get_voucher_wallet()
 
         old_taker_fee = Decimal('0.2')
         old_maker_fee = Decimal('0')
@@ -139,9 +139,11 @@ class TradingFeeView(APIView):
         if voucher:
             taker_fee = 0
             expiration = voucher.expiration
+            voucher_amount = voucher.balance
         else:
             taker_fee = Decimal('0.2')
             expiration = None
+            voucher_amount = None
 
         maker_fee = Decimal('0')
 
@@ -156,5 +158,6 @@ class TradingFeeView(APIView):
             'old_maker_fee': str(old_maker_fee),
             'taker_fee': str(taker_fee),
             'maker_fee': str(maker_fee),
-            'voucher_expiration': expiration
+            'voucher_expiration': expiration,
+            'voucher_amount': voucher_amount
         })
