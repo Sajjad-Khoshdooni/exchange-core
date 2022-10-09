@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 from uuid import uuid4
 
 from django.db import models
@@ -43,13 +44,15 @@ class Prize(models.Model):
 
         if self.achievement.voucher:
             market = Wallet.VOUCHER
+            expiration = self.account.user.date_joined + timedelta(days=30)
         else:
             market = Wallet.SPOT
+            expiration = None
 
         pipeline.new_trx(
             group_id=self.group_id,
             sender=self.asset.get_wallet(system),
-            receiver=self.asset.get_wallet(self.account, market=market),
+            receiver=self.asset.get_wallet(self.account, market=market, expiration=expiration),
             amount=self.amount,
             scope=Trx.PRIZE
         )
