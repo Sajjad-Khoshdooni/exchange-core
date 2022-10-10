@@ -22,7 +22,7 @@ def upgrade_achievement(apps, schema_editor):
         title='دعوت از دوستان',
         max=10,
         link='/account/referral',
-        description='دوستان خود را به {} دعوت کنید و به ازای هر کدام در صورت معامله، جایزه بگیرید.'.format(config('BRAND')),
+        description='دوستان خود را به {} دعوت کنید.'.format(config('BRAND')),
         level=Notification.INFO,
     )
 
