@@ -375,7 +375,6 @@ class Order(models.Model):
         for trade in trades:
             if trade.order_id == self.id:
                 trade.order_status = self.status
-                trade.save(update_fields=['order_status'])
 
         if to_hedge_amount != 0:
             side = Order.BUY
