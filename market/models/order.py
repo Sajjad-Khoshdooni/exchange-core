@@ -361,16 +361,20 @@ class Order(models.Model):
             unfilled_amount -= match_amount
             if match_amount == matching_order.unfilled_amount:  # unfilled_amount reduced in DB but not updated here :)
                 with transaction.atomic():
-                    Trade.objects.filter(order_id=matching_order.id, order_status=matching_order.status).update(order_status=Order.FILLED)
+                    Trade.objects.filter(order_id=matching_order.id).update(order_status=Order.FILLED)
                     matching_order.status = Order.FILLED
                     matching_order.save(update_fields=['status'])
 
             if unfilled_amount == 0:
                 with transaction.atomic():
-                    Trade.objects.filter(order_id=self.id, order_status=self.status).update(order_status=Order.FILLED)
+                    Trade.objects.filter(order_id=self.id).update(order_status=Order.FILLED)
                     self.status = Order.FILLED
                     self.save(update_fields=['status'])
                 break
+        
+        for trade in trades:
+            if trade.order_id == self.id:
+                trade.order_status = self.status
 
         if to_hedge_amount != 0:
             side = Order.BUY
