@@ -363,6 +363,9 @@ class Order(models.Model):
                 with transaction.atomic():
                     Trade.objects.filter(order_id=matching_order.id).update(order_status=Order.FILLED)
                     matching_order.status = Order.FILLED
+                    for trade in trades:
+                        if trade.order_id == matching_order.id:
+                            trade.order_status = matching_order.status
                     matching_order.save(update_fields=['status'])
 
             if unfilled_amount == 0:
@@ -371,7 +374,7 @@ class Order(models.Model):
                     self.status = Order.FILLED
                     self.save(update_fields=['status'])
                 break
-        
+
         for trade in trades:
             if trade.order_id == self.id:
                 trade.order_status = self.status
