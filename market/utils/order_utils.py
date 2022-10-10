@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def cancel_order(order: Order) -> CancelRequest:
-    request = CancelRequest.objects.create(order=order)
+    request = CancelRequest.objects.create(order=order, order_status=order.status)
     order.cancel()
 
     return request
@@ -28,7 +28,7 @@ def cancel_orders(orders):
 
     with transaction.atomic():
         for order in orders:
-            CancelRequest.objects.create(order=order)
+            CancelRequest.objects.create(order=order, order_status=order.status)
             order.cancel()
 
 

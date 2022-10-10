@@ -10,7 +10,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.core.cache import cache
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Sum, F, Q, Max, Min, CheckConstraint, QuerySet
 
 from accounts.models import Notification
@@ -108,8 +108,12 @@ class Order(models.Model):
 
         if self.status == self.FILLED:
             return
+        from market.models import Trade, CancelRequest
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
+            CancelRequest.objects.filter(order_id=self.id, order_status=self.status).update(order_status=Order.CANCELED)
+            Trade.objects.filter(order_id=self.id, order_status=self.status).update(order_status=Order.CANCELED)
+
             self.status = self.CANCELED
             self.save(update_fields=['status'])
             pipeline.release_lock(key=self.group_id)
@@ -356,12 +360,16 @@ class Order(models.Model):
 
             unfilled_amount -= match_amount
             if match_amount == matching_order.unfilled_amount:  # unfilled_amount reduced in DB but not updated here :)
-                matching_order.status = Order.FILLED
-                matching_order.save(update_fields=['status'])
+                with transaction.atomic():
+                    Trade.objects.filter(order_id=matching_order.id, order_status=matching_order.status).update(order_status=Order.FILLED)
+                    matching_order.status = Order.FILLED
+                    matching_order.save(update_fields=['status'])
 
             if unfilled_amount == 0:
-                self.status = Order.FILLED
-                self.save(update_fields=['status'])
+                with transaction.atomic():
+                    Trade.objects.filter(order_id=self.id, order_status=self.status).update(order_status=Order.FILLED)
+                    self.status = Order.FILLED
+                    self.save(update_fields=['status'])
                 break
 
         if to_hedge_amount != 0:

@@ -53,7 +53,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
                     pipeline.release_lock(key=stop_loss.group_id, amount=release_amount)
                     # faking cancel request creation
                     fake_order = Order(id=instance_id)
-                    return CancelRequest(order=fake_order, created=timezone.now())
+                    return CancelRequest(order=fake_order, order_status=fake_order.status, created=timezone.now())
         else:
             order = Order.open_objects.filter(
                 wallet__account=self.context['account'],

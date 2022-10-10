@@ -43,6 +43,7 @@ class Trade(models.Model):
     symbol = models.ForeignKey(PairSymbol, on_delete=models.CASCADE)
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='trades')
+    order_status = models.CharField(max_length=8)
     account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
 
     side = models.CharField(max_length=8, choices=Order.ORDER_CHOICES)
@@ -304,6 +305,7 @@ class Trade(models.Model):
         maker_trade = cls(
             symbol=symbol,
             order=maker_order,
+            order_status=maker_order.status,
             account=maker_order.wallet.account,
             side=maker_order.side,
             is_maker=True,
@@ -317,6 +319,7 @@ class Trade(models.Model):
         taker_trade = cls(
             symbol=symbol,
             order=taker_order,
+            order_status=taker_order.status,
             account=taker_order.wallet.account,
             side=taker_order.side,
             is_maker=False,
