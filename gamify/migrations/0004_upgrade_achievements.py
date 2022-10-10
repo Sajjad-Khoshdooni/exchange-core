@@ -15,7 +15,7 @@ def upgrade_achievement(apps, schema_editor):
 
     journey = MissionJourney.objects.get(name='default')
 
-    mission = Mission.objects.create(journey=journey, name='referral', order=3)
+    mission = Mission.objects.create(journey=journey, name='referral', order=3, active=False)
     Task.objects.create(
         mission=mission,
         scope='referral',
