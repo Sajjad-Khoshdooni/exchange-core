@@ -192,7 +192,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
 
                                          'get_selfie_image', 'archived',
-                                         'get_user_reject_reason', 'get_source_medium'
+                                         'get_user_reject_reason', 'get_source_medium', 'promotion'
                                          )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'national_code_phone_verified',
