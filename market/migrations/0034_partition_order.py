@@ -108,9 +108,9 @@ Update market_cancelrequest SET order_status = (
 ALTER TABLE market_cancelrequest ALTER COLUMN order_status SET not null;
 
 ALTER TABLE ONLY market_trade
-    ADD CONSTRAINT market_trade_order_id_af608df3_fk_market_order_id FOREIGN KEY (order_id,order_status) REFERENCES market_order(id, status) on update cascade DEFERRABLE INITIALLY DEFERRED;
+    ADD CONSTRAINT market_trade_order_id_af608df3_fk_market_order_id FOREIGN KEY (order_id,order_status) REFERENCES market_order(id, status) DEFERRABLE INITIALLY DEFERRED;
 ALTER TABLE ONLY market_cancelrequest
-    ADD CONSTRAINT market_cancelrequest_order_id_c3e8f5fc_fk_market_order_id FOREIGN KEY (order_id,order_status) REFERENCES market_order(id, status) on update cascade DEFERRABLE INITIALLY DEFERRED;
+    ADD CONSTRAINT market_cancelrequest_order_id_c3e8f5fc_fk_market_order_id FOREIGN KEY (order_id,order_status) REFERENCES market_order(id, status) DEFERRABLE INITIALLY DEFERRED;
 
 COMMIT TRANSACTION;
 '''
