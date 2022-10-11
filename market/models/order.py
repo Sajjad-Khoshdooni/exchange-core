@@ -375,10 +375,6 @@ class Order(models.Model):
                     self.save(update_fields=['status'])
                 break
 
-        for trade in trades:
-            if trade.order_id == self.id:
-                trade.order_status = self.status
-
         if to_hedge_amount != 0:
             side = Order.BUY
 
@@ -400,6 +396,10 @@ class Order(models.Model):
             self.status = Order.CANCELED
             pipeline.release_lock(self.group_id)
             self.save(update_fields=['status'])
+
+        for trade in trades:
+            if trade.order_id == self.id:
+                trade.order_status = self.status
 
         ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referrals))
         Trade.objects.bulk_create(trades)
