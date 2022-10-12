@@ -107,8 +107,9 @@ class Achievement(models.Model):
 
             if created:
                 title = 'جایزه به شما تعلق گرفت.'
-                description = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
-                    humanize_number(prize.asset.get_presentation_amount(prize.amount))
+                description = 'جایزه {} {} به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
+                    humanize_number(prize.asset.get_presentation_amount(prize.amount)),
+                    self.asset.name_fa
                 )
 
                 Notification.send(
