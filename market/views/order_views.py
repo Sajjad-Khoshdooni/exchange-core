@@ -13,7 +13,7 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
-from accounts.views.authentication import CustomTokenAuthentication
+from accounts.authentication import CustomTokenAuthentication
 from accounts.views.jwt_views import DelegatedAccountMixin, user_has_delegate_permission
 from market.models import Order, CancelRequest
 from market.models import StopLoss, Trade

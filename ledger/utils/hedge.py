@@ -1,12 +1,12 @@
 from ledger.models import Asset
 from ledger.utils.overview import AssetOverview
-from provider.models import ProviderOrder
+from ledger.utils.provider import hedge_asset
 
 
 def reset_assets_hedge(asset: Asset = None):
     overview = AssetOverview()
 
-    assets = Asset.candid_objects.all().exclude(hedge_method=Asset.HEDGE_NONE)
+    assets = Asset.candid_objects.all().filter(hedge=True)
 
     if asset:
         assets = assets.filter(id=asset.id)
@@ -26,4 +26,4 @@ def reset_assets_hedge(asset: Asset = None):
                 hedge_amount=calc_hedge
             )
 
-        ProviderOrder.try_hedge_for_new_order(asset, ProviderOrder.HEDGE)
+        hedge_asset(asset)

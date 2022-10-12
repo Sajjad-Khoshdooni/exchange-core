@@ -1,2 +1,0 @@
-BINANCE = 'binance'
-NOBITEX = 'nobitex'

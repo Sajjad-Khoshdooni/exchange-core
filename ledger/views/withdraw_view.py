@@ -11,7 +11,7 @@ from accounts.models import VerificationCode
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
 from accounts.verifiers.legal import is_48h_rule_passed
-from accounts.views.authentication import CustomTokenAuthentication
+from accounts.authentication import CustomTokenAuthentication
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Network, Transfer, NetworkAsset, AddressBook

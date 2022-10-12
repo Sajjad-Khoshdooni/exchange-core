@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from ledger.models import Transfer, Asset
 from ledger.utils.price import BUY, get_price, SELL
-from provider.models import ProviderTransfer, ProviderHedgedOrder
+from ledger.utils.provider import new_provider_withdraw, new_hedged_spot_buy
 
 logger = logging.getLogger(__name__)
 
@@ -56,13 +56,14 @@ def handle_provider_withdraw(transfer_id: int):
                 raise Exception('insufficient balance in interface spot to full fill withdraw')
 
             if transfer.asset.symbol != Asset.USDT:
-                prev_hedge = ProviderHedgedOrder.objects.filter(caller_id=transfer.id).first()
+                # todo: handle this!
+                # prev_hedge = ProviderHedgedOrder.objects.filter(caller_id=transfer.id).first()
+                #
+                # if prev_hedge and prev_hedge.created < timezone.now() - timedelta(minutes=5):
+                #     prev_hedge.caller_id = prev_hedge.caller_id + 'a'
+                #     prev_hedge.save(update_fields=['caller_id'])
 
-                if prev_hedge and prev_hedge.created < timezone.now() - timedelta(minutes=5):
-                    prev_hedge.caller_id = prev_hedge.caller_id + 'a'
-                    prev_hedge.save(update_fields=['caller_id'])
-
-                ProviderHedgedOrder.new_hedged_order(
+                new_hedged_spot_buy(
                     asset=transfer.asset,
                     amount=to_buy_amount,
                     spot_side=BUY,
@@ -94,7 +95,7 @@ def provider_withdraw(transfer: Transfer):
 
     logger.info('withdrawing %s %s in %s network' % (withdraw_fee + transfer.amount, transfer.asset, transfer.network))
 
-    provider_transfer = ProviderTransfer.new_withdraw(
+    provider_transfer = new_provider_withdraw(
         asset=transfer.asset,
         network=transfer.network,
         transfer_amount=transfer.amount,

@@ -13,7 +13,7 @@ from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_trading_price_usdt, SELL
-from provider.models import ProviderOrder
+from ledger.utils.provider import hedge_asset, get_hedge
 
 
 @admin.register(models.Asset)
@@ -129,7 +129,7 @@ class AssetAdmin(AdvancedAdmin):
     get_hedge_amount.short_description = 'hedge amount'
 
     def get_calculated_hedge_amount(self, asset: Asset):
-        return asset.get_presentation_amount(ProviderOrder.get_hedge(asset))
+        return asset.get_presentation_amount(get_hedge(asset))
 
     get_calculated_hedge_amount.short_description = 'calc hedge amount'
 
@@ -155,9 +155,9 @@ class AssetAdmin(AdvancedAdmin):
 
     @admin.action(description='هج کردن رمزارزها', permissions=['view'])
     def hedge_asset(self, request, queryset):
-        assets = queryset.exclude(hedge_method=Asset.HEDGE_NONE, )
+        assets = queryset.filter(hedge=True)
         for asset in assets:
-            ProviderOrder.try_hedge_for_new_order(asset, ProviderOrder.HEDGE)
+            hedge_asset(asset)
 
 
 @admin.register(models.Network)

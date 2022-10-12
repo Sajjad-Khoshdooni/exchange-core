@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import Account
-from accounts.views.authentication import CustomTokenAuthentication
+from accounts.authentication import CustomTokenAuthentication
 from accounts.views.jwt_views import user_has_delegate_permission
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Wallet

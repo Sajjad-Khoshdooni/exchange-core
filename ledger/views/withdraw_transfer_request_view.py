@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
 
-from accounts.views.authentication import CustomTokenAuthentication
+from accounts.authentication import CustomTokenAuthentication
 from ledger.models.transfer import Transfer
 from ledger.utils.wallet_pipeline import WalletPipeline
 

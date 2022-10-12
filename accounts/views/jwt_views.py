@@ -12,7 +12,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from yekta_config import secret
 
 from accounts.models import Account
-from accounts.views.authentication import CustomTokenAuthentication
+from accounts.authentication import CustomTokenAuthentication
 
 
 def user_has_delegate_permission(user):
