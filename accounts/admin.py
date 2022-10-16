@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import FirebaseToken, ExternalNotification, Attribution, AppStatus, Auth2Fa
+from accounts.models import FirebaseToken, ExternalNotification, Attribution, AppStatus, Auth2Fa, VerificationCode
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -679,3 +679,10 @@ class Auth2FaAdmin(admin.ModelAdmin):
     readonly_fields = ('created', )
     fields = ('user', 'created', 'verified')
     search_fields = ('user__phone',)
+
+
+@admin.register(VerificationCode)
+class VerificationCodeAdmin(admin.ModelAdmin):
+    list_display = ['phone', 'user', 'scope']
+    search_fields = ('user__phone', 'phone', 'user__first_name', 'user__last_name')
+    list_filter = ('scope', )
