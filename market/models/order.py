@@ -361,6 +361,10 @@ class Order(models.Model):
 
             if unfilled_amount == 0:
                 self.status = Order.FILLED
+
+                if self.fill_type == Order.MARKET:
+                    pipeline.release_lock(self.group_id)
+
                 self.save(update_fields=['status'])
                 break
 
