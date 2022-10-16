@@ -372,10 +372,11 @@ class MarginLoanAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.CloseRequest)
-class MarginLiquidationAdmin(admin.ModelAdmin):
+class CloseRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'margin_level', 'group_id', 'status')
     search_fields = ('group_id',)
     list_filter = ('status', )
+    readonly_fields = ('account', 'created', 'group_id')
 
 
 @admin.register(models.AddressBook)
