@@ -18,7 +18,7 @@ LIQUIDATION_FEE_RATE = Decimal('0.05')
 
 
 class MarginCloser:
-    def __init__(self, close_request: CloseRequest, force_liquidation: bool):
+    def __init__(self, close_request: CloseRequest, force_liquidation: bool, verbose: bool = True):
         assert close_request.status == PENDING
 
         self.account = close_request.account
@@ -28,6 +28,7 @@ class MarginCloser:
         self.force_liquidation = force_liquidation
 
         self._liquidated_value = 0
+        self.verbose = verbose
 
     def info_log(self, msg):
         logger.info(msg + ' (id=%s)' % self.request.id)
@@ -104,6 +105,8 @@ class MarginCloser:
             amount = min(margin_wallet.balance, -loan_wallet.balance)
 
             asset = margin_wallet.asset
+
+            self.info_log('fast repay %s %s' % (amount, asset))
 
             # todo: add reason field to margin loan
             MarginLoan.new_loan(
