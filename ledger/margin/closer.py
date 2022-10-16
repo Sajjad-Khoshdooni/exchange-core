@@ -31,7 +31,7 @@ class MarginCloser:
         self.verbose = verbose
 
     def info_log(self, msg):
-        logger.info(msg + ' (id=%s)' % self.request.id)
+        logger.info('Margin Close: ' + msg + ' (id=%s)' % self.request.id)
 
     def _get_margin_wallets(self):
         return Wallet.objects.filter(account=self.account, market=Wallet.MARGIN, balance__gt=0).prefetch_related('asset')
