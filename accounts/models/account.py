@@ -105,6 +105,8 @@ class Account(models.Model):
 
         if market:
             wallets = wallets.filter(market=market)
+        else:
+            wallets = wallets.exclude(market=Wallet.VOUCHER)
 
         total = Decimal('0')
 

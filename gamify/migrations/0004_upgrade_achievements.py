@@ -15,14 +15,14 @@ def upgrade_achievement(apps, schema_editor):
 
     journey = MissionJourney.objects.get(name='default')
 
-    mission = Mission.objects.create(journey=journey, name='referral', order=3)
+    mission = Mission.objects.create(journey=journey, name='referral', order=3, active=False)
     Task.objects.create(
         mission=mission,
         scope='referral',
         title='دعوت از دوستان',
         max=10,
         link='/account/referral',
-        description='دوستان خود را به {} دعوت کنید و به ازای هر کدام در صورت معامله، جایزه بگیرید.'.format(config('BRAND')),
+        description='دوستان خود را به {} دعوت کنید.'.format(config('BRAND')),
         level=Notification.INFO,
     )
 

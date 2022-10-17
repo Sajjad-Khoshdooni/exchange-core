@@ -107,8 +107,9 @@ class Achievement(models.Model):
 
             if created:
                 title = 'جایزه به شما تعلق گرفت.'
-                description = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
-                    humanize_number(prize.asset.get_presentation_amount(prize.amount))
+                description = 'جایزه {} {} به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
+                    humanize_number(prize.asset.get_presentation_amount(prize.amount)),
+                    self.asset.name_fa
                 )
 
                 Notification.send(
@@ -118,30 +119,6 @@ class Achievement(models.Model):
                     level=Notification.SUCCESS,
                     link='/account/tasks'
                 )
-
-            # if self.mission == Prize.TRADE_PRIZE_STEP1 and account.referred_by:
-            #     prize, created = Prize.objects.get_or_create(
-            #         account=account.referred_by.owner,
-            #         scope=Prize.REFERRAL_TRADE_2M_PRIZE,
-            #         variant=str(account.id),
-            #         defaults={
-            #             'amount': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE],
-            #             'asset': Asset.get(Asset.SHIB),
-            #             'value': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE] * price
-            #         }
-            #     )
-            #
-            #     if created:
-            #         prize.build_trx(pipeline)
-            #         Notification.send(
-            #             recipient=account.referred_by.owner.user,
-            #             title='جایزه به شما تعلق گرفت.',
-            #             message='جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
-            #                 humanize_number(prize.asset.get_presentation_amount(prize.amount))
-            #             ),
-            #             level=Notification.SUCCESS,
-            #             link='/account/tasks'
-            #         )
 
     def __str__(self):
         kind = ''
