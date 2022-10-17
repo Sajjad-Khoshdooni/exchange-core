@@ -504,7 +504,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         prizes = user.account.prize_set.all()
         prize_list = []
         for prize in prizes:
-            prize_list.append(prize.scope)
+            prize_list.append(str(prize.achievement))
         return prize_list
 
     get_user_prizes.short_description = 'جایزه‌های دریافتی کاربر'
