@@ -342,7 +342,7 @@ class TransferAdmin(admin.ModelAdmin):
 
 
 class CryptoAccountTypeFilter(SimpleListFilter):
-    title = 'type' # or use _('country') for translated title
+    title = 'type'
     parameter_name = 'type'
 
     def lookups(self, request, model_admin):
@@ -391,7 +391,7 @@ class PrizeAdmin(admin.ModelAdmin):
     readonly_fields = ('account', 'asset', )
 
     def get_asset_amount(self, prize: Prize):
-        return str(get_presentation_amount(prize.amount)) + str(prize.asset)
+        return '%s %s' % (get_presentation_amount(prize.amount), prize.asset)
 
     get_asset_amount.short_description = 'مقدار'
 
