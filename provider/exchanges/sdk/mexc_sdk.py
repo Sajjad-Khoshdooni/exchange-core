@@ -14,6 +14,11 @@ MEXC_SPOT_BASE_URL = 'https://api.mexc.com'
 API_KEY = config('MEXC_API_KEY')
 SECRET_KEY = secret('MEXC_SECRET_KEY')
 
+proxies = {
+    'https': config('PROVIDER_PROXY_IP', default='localhost') + ':3128',
+    'http': config('PROVIDER_PROXY_IP', default='localhost') + ':3128',
+    'ftp': config('PROVIDER_PROXY_IP', default='localhost') + ':3128',
+}
 
 def get_time_stamp():
     return int(time.time() * 1000)
@@ -36,7 +41,7 @@ def mexc_send_sign_request(http_method: str, url_path: str, payload: dict):
         query_string = 'recvWindow=50000&timestamp={}'.format(get_time_stamp())
     url = MEXC_SPOT_BASE_URL + url_path + '?' + query_string + "&signature=" + hashing(query_string)
 
-    response = requests.request(method=http_method, url=url, headers=header)
+    response = requests.request(method=http_method, url=url, headers=header, proxies=proxies)
 
     return create_provider_request_and_log(
         name=ProviderRequest.MEXC,
@@ -57,7 +62,7 @@ def mexc_send_public_request(http_method: str, url_path: str, payload: dict):
         query_string = '{}'.format(query_string)
         url = url + '?' + query_string
 
-    response = requests.request(method=http_method, url=url, headers=header)
+    response = requests.request(method=http_method, url=url, headers=header, proxies=proxies)
 
     return create_provider_request_and_log(
         name=ProviderRequest.MEXC,

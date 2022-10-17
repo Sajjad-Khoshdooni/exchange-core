@@ -86,13 +86,19 @@ def kucoin_send_signed_request(http_method, url_path, **kwargs):
     str_to_sign = str(timestamp) + http_method + url_path
     data_json = json.dumps(data)
 
+    proxies = {
+        'https': config('PROVIDER_PROXY_IP', default='localhost') + ':3128',
+        'http': config('PROVIDER_PROXY_IP', default='localhost') + ':3128',
+        'ftp': config('PROVIDER_PROXY_IP', default='localhost') + ':3128',
+    }
+
     if http_method in ('GET', 'DELETE'):
         headers = add_sign_kucoin(str_to_sign, timestamp, http_method)
-        response = requests.request('GET', url, headers=headers)
+        response = requests.request('GET', url, headers=headers, proxies=proxies)
     elif http_method in ('POST', 'PUT'):
         str_to_sign += data_json
         headers = add_sign_kucoin(str_to_sign, timestamp, http_method)
-        response = requests.request(http_method, url, headers=headers, json=data, data=data_json)
+        response = requests.request(http_method, url, headers=headers, json=data, data=data_json, proxies=proxies)
     else:
         raise NotImplementedError
 

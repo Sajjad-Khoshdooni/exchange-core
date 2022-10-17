@@ -6,6 +6,7 @@ import time
 from urllib.parse import urlencode
 
 import requests
+from decouple import config
 from django.conf import settings
 from yekta_config import secret
 
@@ -85,6 +86,12 @@ def dispatch_request(http_method):
     session.headers.update(
         {"Content-Type": "application/json;charset=utf-8", "X-MBX-APIKEY": api_key}
     )
+    session.proxies = {
+        'https': config('PROVIDER_PROXY_IP', default='localhost') + ':3128',
+        'http': config('PROVIDER_PROXY_IP', default='localhost') + ':3128',
+        'ftp': config('PROVIDER_PROXY_IP', default='localhost') + ':3128',
+    }
+
     return {
         "GET": session.get,
         "DELETE": session.delete,
