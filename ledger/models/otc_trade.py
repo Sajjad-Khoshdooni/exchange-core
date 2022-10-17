@@ -8,7 +8,6 @@ from accounts.models import Account
 from ledger.exceptions import AbruptDecrease
 from ledger.models import OTCRequest, Trx
 from ledger.utils.price import SELL
-from ledger.utils.provider import new_provider_order, TRADE
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -103,7 +102,8 @@ class OTCTrade(models.Model):
 
         if self.otc_request.account.is_ordinary_user():
             try:
-                hedged = new_provider_order(
+                from ledger.utils.provider import TRADE, ProviderRequester
+                hedged = ProviderRequester().new_order(
                     asset=conf.coin,
                     side=conf.side,
                     amount=conf.coin_amount,

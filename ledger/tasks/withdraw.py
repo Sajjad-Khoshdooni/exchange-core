@@ -4,7 +4,6 @@ from celery import shared_task
 from django.conf import settings
 
 from ledger.models import Transfer
-from ledger.utils.provider import get_provider_transfer_status
 from ledger.utils.wallet_pipeline import WalletPipeline
 from ledger.withdraw.exchange import handle_provider_withdraw
 

@@ -21,7 +21,6 @@ from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent, decimal_to_str
 from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_price_usdt, get_tether_irt_price, \
     get_spread
-from ledger.utils.provider import new_provider_order, TRADE
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
 from market.models.referral_trx import ReferralTrx
@@ -371,7 +370,8 @@ class Order(models.Model):
                 to_hedge_amount = -to_hedge_amount
                 side = Order.SELL
 
-            placed_hedge_order = new_provider_order(
+            from ledger.utils.provider import ProviderRequester, TRADE
+            placed_hedge_order = ProviderRequester().new_order(
                 asset=self.wallet.asset,
                 side=side,
                 amount=to_hedge_amount,

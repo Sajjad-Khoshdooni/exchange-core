@@ -1,14 +1,12 @@
 import logging
 import time
-from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
-from django.utils import timezone
 
 from ledger.models import Transfer, Asset
 from ledger.utils.price import BUY, get_price, SELL
-from ledger.utils.provider import new_provider_withdraw, new_hedged_spot_buy
+from ledger.utils.provider import ProviderRequester, SPOT, BINANCE
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +18,6 @@ def handle_provider_withdraw(transfer_id: int):
     logger.info('withdraw handling transfer_id = %d' % transfer_id)
 
     transfer = Transfer.objects.get(id=transfer_id)
-    handler = transfer.asset.get_hedger().get_spot_handler()
 
     if transfer.handling:
         logger.info('ignored because of handling flag')
@@ -31,19 +28,22 @@ def handle_provider_withdraw(transfer_id: int):
         transfer.save(update_fields=['handling'])
 
         assert not transfer.deposit
-        assert transfer.source == handler.NAME
+        assert transfer.source == Transfer.PROVIDER
         assert transfer.status == transfer.PROCESSING
         assert not transfer.provider_transfer
 
-        balance_map = handler.get_free_dict()
-
         coin = transfer.asset.symbol
 
-        fee = handler.get_withdraw_fee(transfer.asset.symbol, transfer.network)
+        requester = ProviderRequester()
+
+        balance_map = requester.get_spot_balance_map(BINANCE)
+        network_info = requester.get_network_info(transfer.asset, transfer.network)
+
+        fee = network_info.withdraw_fee
         amount = transfer.amount + fee
 
-        if balance_map.get(coin, 0) < amount:
-            to_buy_amount = amount - balance_map.get(coin, 0)
+        if balance_map[coin] < amount:
+            to_buy_amount = amount - balance_map[coin]
 
             logger.info('not enough %s in interface spot. So buy %s of it!' % (coin, to_buy_amount))
 
@@ -63,7 +63,7 @@ def handle_provider_withdraw(transfer_id: int):
                 #     prev_hedge.caller_id = prev_hedge.caller_id + 'a'
                 #     prev_hedge.save(update_fields=['caller_id'])
 
-                new_hedged_spot_buy(
+                ProviderRequester().new_hedged_spot_buy(
                     asset=transfer.asset,
                     amount=to_buy_amount,
                     spot_side=BUY,
@@ -73,9 +73,9 @@ def handle_provider_withdraw(transfer_id: int):
                 logger.info('waiting to finish buying...')
                 time.sleep(1)
 
-        balance_map = handler.get_free_dict()
+        balance_map = requester.get_spot_balance_map(BINANCE)
 
-        if balance_map.get(coin, 0) < amount:
+        if balance_map[coin] < amount:
             logger.info('ignored withdrawing because of insufficient spot balance')
             return
 
@@ -87,31 +87,12 @@ def handle_provider_withdraw(transfer_id: int):
 
 
 def provider_withdraw(transfer: Transfer):
+    assert transfer.source == Transfer.PROVIDER
 
-    assert transfer.source == transfer.asset.get_hedger().NAME
+    success = ProviderRequester().new_withdraw(transfer)
 
-    handler = transfer.asset.get_hedger().get_spot_handler()
-    withdraw_fee = handler.get_withdraw_fee(transfer.wallet.asset.symbol, transfer.network)
-
-    logger.info('withdrawing %s %s in %s network' % (withdraw_fee + transfer.amount, transfer.asset, transfer.network))
-
-    provider_transfer = new_provider_withdraw(
-        asset=transfer.asset,
-        network=transfer.network,
-        transfer_amount=transfer.amount,
-        withdraw_fee=withdraw_fee,
-        address=transfer.out_address,
-        caller_id=str(transfer.id),
-        exchange=transfer.source,
-        memo=transfer.memo,
-    )
-
-    if not provider_transfer:
-        logger.error(
-            'creating provider transfer failed!'
-        )
+    if not success:
         return
 
-    transfer.provider_transfer = provider_transfer
     transfer.status = transfer.PENDING
-    transfer.save()
+    transfer.save(update_fields=['status'])

@@ -8,8 +8,7 @@ from django.utils import timezone
 
 from accounts.models import User, ExternalNotification
 from accounts.utils.push_notif import send_push_notif, IMAGE_200K_SHIB
-from collector.models import CoinMarketCap
-from ledger.models import Prize, Asset
+from ledger.models import Asset
 
 logger = logging.getLogger(__name__)
 

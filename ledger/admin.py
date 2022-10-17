@@ -13,7 +13,7 @@ from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_trading_price_usdt, SELL
-from ledger.utils.provider import hedge_asset, get_hedge
+from ledger.utils.provider import ProviderRequester, HEDGE
 
 
 @admin.register(models.Asset)
@@ -129,7 +129,7 @@ class AssetAdmin(AdvancedAdmin):
     get_hedge_amount.short_description = 'hedge amount'
 
     def get_calculated_hedge_amount(self, asset: Asset):
-        return asset.get_presentation_amount(get_hedge(asset))
+        return asset.get_presentation_amount(ProviderRequester().get_hedge_amount(asset))
 
     get_calculated_hedge_amount.short_description = 'calc hedge amount'
 
@@ -145,11 +145,8 @@ class AssetAdmin(AdvancedAdmin):
 
     def get_hedge_threshold(self, asset: Asset):
         if asset.enable:
-            handler = asset.get_hedger()
-
-            if handler:
-                symbol = handler.get_trading_symbol(asset.symbol)
-                return handler.get_step_size(symbol)
+            info = ProviderRequester().get_market_info(asset)
+            return info.step_size
 
     get_hedge_threshold.short_description = 'hedge threshold'
 
@@ -157,7 +154,7 @@ class AssetAdmin(AdvancedAdmin):
     def hedge_asset(self, request, queryset):
         assets = queryset.filter(hedge=True)
         for asset in assets:
-            hedge_asset(asset)
+            ProviderRequester().try_hedge_new_order(asset, scope=HEDGE)
 
 
 @admin.register(models.Network)

@@ -7,7 +7,6 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('provider', '0004_alter_providerorder_scope_providertransfer_and_more'),
         ('ledger', '0038_network_address_regex_transfer_handling'),
     ]
 

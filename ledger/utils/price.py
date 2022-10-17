@@ -6,14 +6,16 @@ from json import JSONDecodeError
 from typing import Dict, List, Union
 
 import requests
+from django.conf import settings
+from redis import Redis
 from yekta_config.config import config
 
-from collector.price.grpc_client import gRPCClient
-from collector.utils.price import price_redis
 from ledger.utils.cache import cache_for
 from ledger.utils.price_manager import PriceManager
 
 logger = logging.getLogger(__name__)
+
+price_redis = Redis.from_url(settings.PRICE_CACHE_LOCATION, decode_responses=True)
 
 
 BINANCE = 'binance'
@@ -73,9 +75,8 @@ SIDE_MAP = {
 }
 
 
-def get_binance_price_stream(coin: str):
-    from provider.exchanges import BinanceSpotHandler
-    return BinanceSpotHandler().get_trading_symbol(coin).lower()
+def get_redis_price_key(coin: str):
+    return 'price:' + coin.lower() + 'usdt'
 
 
 def get_tether_price_irt_grpc(side: str, now: datetime = None, delay: int = 600):
@@ -174,7 +175,7 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
 
     pipe = price_redis.pipeline(transaction=False)
     for c in coins:
-        name = 'bin:' + get_binance_price_stream(c)
+        name = get_redis_price_key(c)
         pipe.hgetall(name)
 
     prices = pipe.execute()
@@ -183,7 +184,7 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
         price_dict = prices[i] or {}
 
         if allow_stale and not price_dict:
-            name = 'bin:' + get_binance_price_stream(c) + ':stale'
+            name = get_redis_price_key(c) + ':stale'
             price_dict = price_redis.hgetall(name)
 
             # logger.error('{} price fallback to stale'.format(c))
