@@ -1,5 +1,5 @@
 FROM python:3.10-alpine
-RUN apk add --update gettext
+RUN apk add --update gettext gcc linux-headers openssh-client
 WORKDIR /
 ADD ./requirements.txt ./
 RUN pip install -r ./requirements.txt
