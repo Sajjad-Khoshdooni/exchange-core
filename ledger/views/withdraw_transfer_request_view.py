@@ -50,9 +50,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         with WalletPipeline() as pipeline:
             transfer.status = status
-            transfer.trx_hash = validated_data['trx_hash']
-            transfer.block_hash = validated_data['block_hash']
-            transfer.block_number = validated_data['block_number']
+            transfer.trx_hash = validated_data.get('trx_hash')
+            transfer.block_hash = validated_data.get('block_hash') or ''
+            transfer.block_number = validated_data.get('block_number')
 
             transfer.save(update_fields=['status', 'trx_hash', 'block_hash', 'block_number'])
 
