@@ -1,4 +1,5 @@
-FROM hub.hamdocker.ir/library/python:3.10
+FROM python:3.10-alpine
+RUN apk add --update gettext
 WORKDIR /
 ADD ./requirements.txt ./
 RUN pip install -r ./requirements.txt
