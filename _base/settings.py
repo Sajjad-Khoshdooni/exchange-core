@@ -68,6 +68,10 @@ INSTALLED_APPS = [
     'gamify',
 ]
 
+if not DEBUG_OR_TESTING:
+    INSTALLED_APPS.append('minio_storage')
+
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'raven.contrib.django.raven_compat.middleware.SentryResponseErrorIdMiddleware',
@@ -216,9 +220,17 @@ STATICFILES_DIRS = [
 MEDIA_URL = config('MEDIA_URL', default='/media/')
 MEDIA_ROOT = config('MEDIA_ROOT', default=os.path.join(BASE_DIR, 'media/'))
 
+if not DEBUG_OR_TESTING:
+    DEFAULT_FILE_STORAGE = "minio_storage.storage.MinioMediaStorage"
+    STATICFILES_STORAGE = "minio_storage.storage.MinioStaticStorage"
+    MINIO_STORAGE_ENDPOINT = config('MINIO_STORAGE_ENDPOINT')
+    MINIO_STORAGE_ACCESS_KEY = config('MINIO_STORAGE_ACCESS_KEY')
+    MINIO_STORAGE_SECRET_KEY = config('MINIO_STORAGE_SECRET_KEY')
+    MINIO_STORAGE_MEDIA_BUCKET_NAME = 'core-media'
+    MINIO_STORAGE_AUTO_CREATE_MEDIA_BUCKET = True
+    MINIO_STORAGE_STATIC_BUCKET_NAME = 'core-static'
+    MINIO_STORAGE_AUTO_CREATE_STATIC_BUCKET = True
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
