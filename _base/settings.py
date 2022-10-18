@@ -134,10 +134,13 @@ DATABASES = {
     }
 }
 
+LOCAL_REDIS_URL = config('LOCAL_REDIS', default='redis://127.0.0.1:6379')
+PROVIDER_REDIS_URL = config('PRICE_REDIS', default='redis://127.0.0.1:6379')
+
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': secret('DEFAULT_CACHE_LOCATION', default='redis://127.0.0.1:6379/0'),
+        'LOCATION': LOCAL_REDIS_URL + '/0',
 
         'OPTIONS': {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -145,7 +148,7 @@ CACHES = {
     },
     'token': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': secret('TOKEN_CACHE_LOCATION', default='redis://127.0.0.1:6379/1'),
+        'LOCATION': LOCAL_REDIS_URL + '/1',
 
         'OPTIONS': {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -153,7 +156,7 @@ CACHES = {
     },
     'trader': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': secret('TRADER_CACHE_LOCATION', default='redis://127.0.0.1:6379/1'),
+        'LOCATION': LOCAL_REDIS_URL + '/2',
 
         'OPTIONS': {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -161,10 +164,10 @@ CACHES = {
     },
 }
 
-PROVIDER_CACHE_LOCATION = secret('PROVIDER_CACHE_LOCATION', default='redis://127.0.0.1:6379/2')
-METRICS_CACHE_LOCATION = secret('METRICS_CACHE_LOCATION', default='redis://127.0.0.1:6379/0')
-TRADER_CACHE_LOCATION = secret('TRADER_CACHE_LOCATION', default='redis://127.0.0.1:6379/1')
-MARKET_CACHE_LOCATION = secret('MARKET_CACHE_LOCATION', default='redis://127.0.0.1:6379/3')
+MARKET_CACHE_LOCATION = LOCAL_REDIS_URL + '/3',
+METRICS_CACHE_LOCATION = LOCAL_REDIS_URL + '/4',
+
+PRICE_CACHE_LOCATION = PROVIDER_REDIS_URL + '/' + config('PRICE_REDIS_DB', default='0')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
