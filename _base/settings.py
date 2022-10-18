@@ -267,15 +267,11 @@ SIMPLE_JWT = {
 }
 
 if not DEBUG_OR_TESTING:
-    with open(config('JWT_PRIVATE_KEY_PATH', './jwtRS256.key'), 'r') as fin:
-        JWT_PRIVATE_KEY = fin.read()
-    with open(config('JWT_PUBLIC_KEY_PATH', './jwtRS256.key.pub'), 'r') as fin:
-        JWT_PUBLIC_KEY = fin.read()
     SIMPLE_JWT = {
         **SIMPLE_JWT,
         'ALGORITHM': 'RS256',
-        'SIGNING_KEY': JWT_PRIVATE_KEY,
-        'VERIFYING_KEY': JWT_PUBLIC_KEY,
+        'SIGNING_KEY': config('JWT_PRIVATE_KEY') ,
+        'VERIFYING_KEY': config('JWT_PUBLIC_KEY'),
         'REFRESH_TOKEN_LIFETIME': timedelta(hours=6),
     }
 
