@@ -134,8 +134,8 @@ DATABASES = {
     }
 }
 
-LOCAL_REDIS_URL = config('LOCAL_REDIS', default='redis://127.0.0.1:6379')
-PROVIDER_REDIS_URL = config('PRICE_REDIS', default='redis://127.0.0.1:6379')
+LOCAL_REDIS_URL = config('LOCAL_REDIS_URL', default='redis://127.0.0.1:6379')
+PROVIDER_REDIS_URL = config('PROVIDER_REDIS_URL', default='redis://127.0.0.1:6379')
 
 CACHES = {
     'default': {
