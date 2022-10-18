@@ -4,7 +4,6 @@ from rest_framework.response import Response
 
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from ledger.models import Network
-from ledger.utils.encoding import base58_from_hex
 
 
 class InputAddressSerializer(serializers.Serializer):
