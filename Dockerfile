@@ -1,15 +1,5 @@
-FROM python:3.10-alpine
-RUN apk update && apk upgrade \
-    && apk add postgresql-client \
-        postgresql-dev \
-        musl-dev \
-        gcc \
-        linux-headers \
-        gettext-dev
-
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONIOENCODING=UTF-8
-
+FROM hub.hamdocker.ir/library/python:3.10
+RUN apt update && apt -y install gettext
 WORKDIR /
 ADD ./requirements.txt ./
 RUN pip install -r ./requirements.txt
