@@ -128,7 +128,7 @@ DATABASES = {
         'ENGINE': config('DEFAULT_DB_ENGINE', default='django.db.backends.postgresql_psycopg2'),
         'NAME': config('DEFAULT_DB_NAME', default='core'),
         'USER': config('DEFAULT_DB_USER', default='exchange'),
-        'PASSWORD': secret('DEFAULT_DB_PASSWORD'),
+        'PASSWORD': config('DEFAULT_DB_PASSWORD'),
         'HOST': config('DEFAULT_DB_HOST', default='localhost'),
         'PORT': config('DEFAULT_DB_PORT', default=5432),
     }
