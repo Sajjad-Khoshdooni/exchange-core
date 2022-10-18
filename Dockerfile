@@ -1,5 +1,15 @@
 FROM python:3.10-alpine
-RUN apk add --update gettext gcc linux-headers openssh-client
+RUN apk update && apk upgrade \
+    && apk add postgresql-client \
+        postgresql-dev \
+        musl-dev \
+        gcc \
+        linux-headers \
+        gettext-dev
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=UTF-8
+
 WORKDIR /
 ADD ./requirements.txt ./
 RUN pip install -r ./requirements.txt
