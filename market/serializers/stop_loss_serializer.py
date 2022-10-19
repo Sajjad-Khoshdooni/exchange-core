@@ -39,15 +39,18 @@ class StopLossSerializer(OrderSerializer):
     def create(self, validated_data):
         symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
         if validated_data.get('price'):
+            conservative_factor = Decimal(1)
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
         else:
-            validated_data['price'] = validated_data['trigger_price']
-        wallet = self.post_validate(symbol, validated_data)
+            conservative_factor = Decimal('1.01') if validated_data['side'] == Order.BUY else Decimal(1)
+        
+        order_price = validated_data.get('price', validated_data['trigger_price']) * conservative_factor
+        wallet = self.post_validate(symbol, {**validated_data, 'price': validated_data.get('price', order_price)})
         validated_data['trigger_price'] = self.post_validate_price(symbol, validated_data['trigger_price'])
         try:
             with WalletPipeline() as pipeline:
                 lock_amount = Order.get_to_lock_amount(
-                    validated_data['amount'], validated_data['price'], validated_data['side']
+                    validated_data['amount'], order_price, validated_data['side']
                 )
                 base_wallet = symbol.base_asset.get_wallet(wallet.account, wallet.market)
                 lock_wallet = Order.get_to_lock_wallet(wallet, base_wallet, validated_data['side'])

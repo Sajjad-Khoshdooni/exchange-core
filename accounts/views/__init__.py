@@ -16,7 +16,6 @@ from .on_boarding_flow import OnBoardingFlowStatus
 from .change_phone_before_verify import ChangePhoneView
 
 from .referral_view import ReferralReportAPIView, ReferralViewSet, ReferralOverviewAPIView, TradingFeeView
-from .gamification_view import GamificationAPIView
 from .banner_view import BannerAlertAPIView
 from .prize_view import PrizeView
 
@@ -25,3 +24,5 @@ from .app_status_view import AppStatusView
 
 from .shahkar_view import ShahkarCheckView, ShahkarStatusView
 from .attribution_view import AttributionAPIView
+
+from .auht2fa_view import Create2FaQrCodeAPIView, Verify2FaVerificationAPIView

@@ -118,8 +118,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if asset.symbol == Asset.IRT:
             return True
 
-        network_asset = NetworkAsset.objects.filter(asset=asset, network__can_deposit=True).first()
-        return bool(network_asset and network_asset.can_deposit_enabled())
+        return NetworkAsset.objects.filter(asset=asset, network__can_deposit=True, can_deposit=True).exists()
 
     def get_can_withdraw(self, asset: Asset):
         if asset.symbol == Asset.IRT:

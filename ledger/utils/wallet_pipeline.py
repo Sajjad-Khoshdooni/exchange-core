@@ -106,10 +106,11 @@ class WalletPipeline(Atomic):
                 return
 
             if amount is None:
-                amount = lock.amount
-
-            self._locks_amount[key] -= amount
-            self._wallet_locks[lock.wallet_id] -= amount
+                self._locks_amount[key] = -lock.amount
+                self._wallet_locks[lock.wallet_id] = -lock.amount
+            else:
+                self._locks_amount[key] -= amount
+                self._wallet_locks[lock.wallet_id] -= amount
 
     def new_trx(self, sender, receiver, amount: Union[Decimal, int], scope: str, group_id: UUID):
         from ledger.models.trx import Trx

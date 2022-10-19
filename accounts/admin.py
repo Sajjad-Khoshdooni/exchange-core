@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import FirebaseToken, ExternalNotification, Attribution, AppStatus
+from accounts.models import FirebaseToken, ExternalNotification, Attribution, AppStatus, Auth2Fa, VerificationCode
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -129,6 +129,8 @@ class ExternalNotificationInLine(admin.TabularInline):
     fields = ('created', 'scope', )
     readonly_fields = ('created', 'scope', )
     can_delete = False
+    max_num = 10
+    ordering = ('-created', )
 
     def has_add_permission(self, request, obj):
         return False
@@ -140,6 +142,8 @@ class NotificationInLine(admin.TabularInline):
     fields = ('created', 'title', 'link', 'message', 'read_date')
     readonly_fields = ('created', 'title', 'link', 'message', 'read_date' )
     can_delete = False
+    max_num = 10
+    ordering = ('-created', )
 
     def has_add_permission(self, request, obj):
         return False
@@ -188,7 +192,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
 
                                          'get_selfie_image', 'archived',
-                                         'get_user_reject_reason', 'get_source_medium'
+                                         'get_user_reject_reason', 'get_source_medium', 'promotion'
                                          )}),
         (_('Authentication'), {'fields': ('level', 'verify_status', 'first_name_verified',
                                           'last_name_verified', 'national_code_verified', 'national_code_phone_verified',
@@ -500,7 +504,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         prizes = user.account.prize_set.all()
         prize_list = []
         for prize in prizes:
-            prize_list.append(prize.scope)
+            prize_list.append(str(prize.achievement))
         return prize_list
 
     get_user_prizes.short_description = 'جایزه‌های دریافتی کاربر'
@@ -553,7 +557,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     def get_total_balance_irt_admin(self, user: User):
         total_balance_irt = user.account.get_total_balance_irt(side=BUY)
-        
         return humanize_number(int(total_balance_irt))
 
     get_total_balance_irt_admin.short_description = 'دارایی به تومان'
@@ -668,3 +671,19 @@ class AttributionAdmin(admin.ModelAdmin):
 @admin.register(AppStatus)
 class AppStatusAdmin(admin.ModelAdmin):
     list_display = ['latest_version', 'force_update_version', 'active']
+
+
+@admin.register(Auth2Fa)
+class Auth2FaAdmin(admin.ModelAdmin):
+    list_display = ['user', 'created', 'verified']
+    readonly_fields = ('created', )
+    fields = ('user', 'created', 'verified')
+    search_fields = ('user__phone',)
+
+
+@admin.register(VerificationCode)
+class VerificationCodeAdmin(admin.ModelAdmin):
+    list_display = ['phone', 'user', 'scope']
+    search_fields = ('user__phone', 'phone', 'user__first_name', 'user__last_name')
+    list_filter = ('scope', )
+    readonly_fields = ('user', )

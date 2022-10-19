@@ -26,6 +26,8 @@ class User(AbstractUser):
 
     INIT, PENDING, REJECTED, VERIFIED = 'init', 'pending', 'rejected', 'verified'
 
+    SHIB, VOUCHER = 'shib', 'voucher'
+
     USERNAME_FIELD = 'phone'
 
     FIAT, CRYPTO = 'fiat', 'crypto'
@@ -140,6 +142,8 @@ class User(AbstractUser):
 
     can_withdraw = models.BooleanField(default=True)
 
+    promotion = models.CharField(max_length=256, blank=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
+
     @property
     def kyc_bank_card(self):
         return self.bankcard_set.filter(kyc=True).first()
@@ -187,8 +191,8 @@ class User(AbstractUser):
                 self.save(update_fields=['verify_status', 'level', 'level_2_verify_datetime', 'level_3_verify_datetime', 'archived'])
 
             if self.level == User.LEVEL2:
-                from accounts.gamification.gamify import check_prize_achievements
-                check_prize_achievements(self.account)
+                from gamify.utils import check_prize_achievements, Task
+                check_prize_achievements(self.account, Task.VERIFY_LEVEL2)
 
             alert_user_verify_status(self)
 

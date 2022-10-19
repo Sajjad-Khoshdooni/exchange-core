@@ -14,7 +14,6 @@ from ledger.utils.price import SELL, get_trading_price_usdt
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
-
 class MarginTransfer(models.Model):
     SPOT_TO_MARGIN = 'sm'
     MARGIN_TO_SPOT = 'ms'

@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 class Notification(models.Model):
     INFO, SUCCESS, WARNING, ERROR = 'info', 'success', 'warning', 'error'
+    LEVEL_CHOICES = ((INFO, INFO), (SUCCESS, SUCCESS), (WARNING, WARNING), (ERROR, ERROR))
 
     created = models.DateTimeField(auto_now_add=True)
     read_date = models.DateTimeField(null=True, blank=True)
@@ -20,7 +21,7 @@ class Notification(models.Model):
 
     level = models.CharField(
         max_length=8,
-        choices=((INFO, INFO), (SUCCESS, SUCCESS), (WARNING, WARNING), (ERROR, ERROR)),
+        choices=LEVEL_CHOICES,
         default=INFO
     )
 

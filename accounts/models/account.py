@@ -3,6 +3,7 @@ from typing import Union
 
 from django.db import models
 from django.db.models import UniqueConstraint, Q
+from django.utils import timezone
 
 from accounts.models import User
 from ledger.utils.price import BUY
@@ -56,6 +57,18 @@ class Account(models.Model):
     @classmethod
     def out(cls) -> 'Account':
         return Account.objects.get(type=cls.OUT)
+    
+    def get_voucher_wallet(self):
+        from ledger.models import Wallet
+        from ledger.models import Asset
+
+        return Wallet.objects.filter(
+            account=self,
+            asset__symbol=Asset.USDT,
+            market=Wallet.VOUCHER,
+            expiration__gte=timezone.now(),
+            balance__gt=0
+        ).first()
 
     def __str__(self):
         if self.type == self.SYSTEM:
@@ -92,6 +105,8 @@ class Account(models.Model):
 
         if market:
             wallets = wallets.filter(market=market)
+        else:
+            wallets = wallets.exclude(market=Wallet.VOUCHER)
 
         total = Decimal('0')
 

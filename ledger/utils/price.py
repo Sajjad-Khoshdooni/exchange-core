@@ -6,6 +6,7 @@ from json import JSONDecodeError
 from typing import Dict, List, Union
 
 import requests
+from yekta_config.config import config
 
 from collector.price.grpc_client import gRPCClient
 from collector.utils.price import price_redis
@@ -144,6 +145,20 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
             )
         coins.remove(USDT)
 
+    if 'USDC' in coins:
+        for s in sides:
+            results.append(
+                Price(coin='USDC', price=Decimal(1), side=s)
+            )
+        coins.remove('USDC')
+
+    if 'TUSD' in coins:
+        for s in sides:
+            results.append(
+                Price(coin='TUSD', price=Decimal(1), side=s)
+            )
+        coins.remove('TUSD')
+
     if IRT in coins:  # todo: check if market_symbol = IRT
         for s in sides:
             results.append(
@@ -278,13 +293,19 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
     else:
         spread = get_spread(coin, side, value) / 100
 
+    if config('AUTO_SPREED_SHEER', cast=bool, default=False):
+        spread_sheer = Decimal('0.5')
+    else:
+        spread_sheer = 0
+
     if raw_price:
         multiplier = 1
     else:
         if side == BUY:
-            multiplier = 1 - spread
+
+            multiplier = 1 - spread * (1 - spread_sheer)
         else:
-            multiplier = 1 + spread
+            multiplier = 1 + spread * (1 + spread_sheer)
 
     price = get_price(coin, side, allow_stale=allow_stale)
 
@@ -293,6 +314,10 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
 
 def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
                           gap: Union[Decimal, None] = None, allow_stale: bool = False) -> Decimal:
+    """
+
+    :rtype: object
+    """
     if coin == IRT:
         return Decimal(1)
 

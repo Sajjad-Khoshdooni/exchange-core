@@ -108,6 +108,9 @@ class Payment(models.Model):
             user.first_fiat_deposit_date = timezone.now()
             user.save()
 
+        from gamify.utils import check_prize_achievements, Task
+        check_prize_achievements(user.account, Task.DEPOSIT)
+
         self.alert_payment()
 
     def get_redirect_url(self) -> str:

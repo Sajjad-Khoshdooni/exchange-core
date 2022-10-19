@@ -342,7 +342,7 @@ class TransferAdmin(admin.ModelAdmin):
 
 
 class CryptoAccountTypeFilter(SimpleListFilter):
-    title = 'type' # or use _('country') for translated title
+    title = 'type'
     parameter_name = 'type'
 
     def lookups(self, request, model_admin):
@@ -372,10 +372,11 @@ class MarginLoanAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.CloseRequest)
-class MarginLiquidationAdmin(admin.ModelAdmin):
+class CloseRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'margin_level', 'group_id', 'status')
     search_fields = ('group_id',)
     list_filter = ('status', )
+    readonly_fields = ('account', 'created', 'group_id')
 
 
 @admin.register(models.AddressBook)
@@ -386,11 +387,11 @@ class AddressBookAdmin(admin.ModelAdmin):
 
 @admin.register(models.Prize)
 class PrizeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'scope', 'account', 'get_asset_amount')
+    list_display = ('created', 'achievement', 'account', 'get_asset_amount')
     readonly_fields = ('account', 'asset', )
 
     def get_asset_amount(self, prize: Prize):
-        return str(get_presentation_amount(prize.amount)) + str(prize.asset)
+        return '%s %s' % (get_presentation_amount(prize.amount), prize.asset)
 
     get_asset_amount.short_description = 'مقدار'
 

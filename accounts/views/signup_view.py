@@ -9,7 +9,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from yekta_config.config import config
 
-from accounts.gamification.gamify import check_prize_achievements
 from accounts.models import User, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
@@ -48,6 +47,7 @@ class SignupSerializer(serializers.Serializer):
     password = serializers.CharField(required=True, write_only=True, validators=[password_validator])
     utm = serializers.JSONField(allow_null=True, required=False, write_only=True)
     referral_code = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
+    promotion = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
 
     @staticmethod
     def validate_referral_code(code):
@@ -70,10 +70,12 @@ class SignupSerializer(serializers.Serializer):
 
         phone = otp_code.phone
         # otp_code.set_token_used()
+        promotion = validated_data.get('promotion') or User.SHIB
 
         user = User.objects.create_user(
             username=phone,
             phone=phone,
+            promotion=promotion
         )
 
         with transaction.atomic():
@@ -86,11 +88,14 @@ class SignupSerializer(serializers.Serializer):
             if validated_data.get('referral_code'):
                 user.account.referred_by = Referral.objects.get(code=validated_data['referral_code'])
                 user.account.save()
-                check_prize_achievements(user.account.referred_by.owner)
+
+                from gamify.utils import check_prize_achievements, Task
+                check_prize_achievements(user.account.referred_by.owner, Task.REFERRAL)
 
             # otp_code.set_token_used()
 
         utm = validated_data.get('utm') or {}
+
         self.create_traffic_source(user, utm)
 
         return user

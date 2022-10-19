@@ -1,9 +1,11 @@
+from django.db.models import Max, Min
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView
 
 from ledger.models.asset import Asset
 from ledger.utils.price import get_trading_price_irt, BUY, SELL
 from ledger.utils.price_manager import PriceManager
+from market.models import Order
 
 
 class AssetListSerializer(serializers.ModelSerializer):
@@ -11,11 +13,21 @@ class AssetListSerializer(serializers.ModelSerializer):
     bid = serializers.SerializerMethodField()
 
     def get_ask(self, asset: Asset):
-        price = get_trading_price_irt(asset.symbol, SELL)
+        asks = self.context['asks']
+        price = asks.get(asset.symbol)
+
+        if not price:
+            price = get_trading_price_irt(asset.symbol, SELL)
+
         return asset.get_presentation_price_irt(price)
 
     def get_bid(self, asset: Asset):
-        price = get_trading_price_irt(asset.symbol, BUY)
+        bids = self.context['bids']
+        price = bids.get(asset.symbol)
+
+        if not price:
+            price = get_trading_price_irt(asset.symbol, BUY)
+
         return asset.get_presentation_price_irt(price)
 
     class Meta:
@@ -29,6 +41,24 @@ class MarketInfoView(ListAPIView):
     serializer_class = AssetListSerializer
     authentication_classes = []
     permission_classes = []
+
+    def get_serializer_context(self):
+        ctx = super(MarketInfoView, self).get_serializer_context()
+
+        bids = dict(Order.open_objects.filter(
+            side=BUY,
+            symbol__base_asset__symbol=Asset.IRT
+        ).values('symbol__asset__symbol').annotate(price=Max('price')).values_list('symbol__asset__symbol', 'price'))
+        asks = dict(Order.open_objects.filter(
+            side=SELL,
+            symbol__base_asset__symbol=Asset.IRT
+        ).values('symbol__asset__symbol').annotate(price=Min('price')).values_list('symbol__asset__symbol', 'price'))
+
+        return {
+            **ctx,
+            'asks': asks,
+            'bids': bids
+        }
 
     def list(self, request, *args, **kwargs):
         with PriceManager(fetch_all=True):

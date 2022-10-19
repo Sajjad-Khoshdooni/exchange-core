@@ -10,7 +10,6 @@ from django.db import models
 from django.db.models import F, CheckConstraint, Q, Sum, Max, Min
 from django.utils import timezone
 
-from accounts.gamification.gamify import check_prize_achievements
 from ledger.models import Trx, OTCTrade, Asset
 from ledger.models.trx import FakeTrx
 from ledger.utils.fields import get_amount_field, get_group_id_field
@@ -73,6 +72,7 @@ class Trade(models.Model):
 
     class Meta:
         indexes = [
+            models.Index(fields=['created']),
             models.Index(fields=['account', 'symbol']),
             models.Index(fields=['symbol', 'side', 'created']),
         ]
@@ -159,7 +159,8 @@ class Trade(models.Model):
         return FakeTrx(**trx_data)
 
     def _create_fee_trx(self, pipeline: WalletPipeline, order: Order, is_taker: bool, fake: bool = False) -> FakeTrx:
-        fee = order.symbol.taker_fee if is_taker else order.symbol.maker_fee
+        account = order.wallet.account
+        fee = order.symbol.get_taker_fee(account) if is_taker else order.symbol.get_maker_fee(account)
 
         fee_wallet = order.wallet if order.side == Order.BUY else order.base_wallet
         trx_amount = fee * (self.amount if order.side == Order.BUY else self.amount * self.price)
@@ -295,7 +296,8 @@ class Trade(models.Model):
                 account.save(update_fields=['trade_volume_irt'])
                 account.refresh_from_db()
 
-                check_prize_achievements(account)
+                from gamify.utils import check_prize_achievements, Task
+                check_prize_achievements(account, Task.TRADE)
 
     @classmethod
     def init_pair(cls, symbol, taker_order, maker_order, amount, price, irt_value, trade_source, **kwargs):
@@ -391,7 +393,9 @@ class Trade(models.Model):
         from market.utils.redis import get_top_prices
         top_prices = get_top_prices(symbol_id, scope='stoploss')
         if not top_prices:
-            top_prices = Trade.get_interval_top_prices([symbol_id])
+            top_prices = defaultdict(lambda: Decimal())
+            for k, v in Trade.get_interval_top_prices([symbol_id]).items():
+                top_prices[k[1]] = v
         return top_prices
 
     @classmethod

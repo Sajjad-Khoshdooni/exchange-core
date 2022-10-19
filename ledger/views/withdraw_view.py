@@ -9,6 +9,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.models import VerificationCode
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
+from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
 from accounts.verifiers.legal import is_48h_rule_passed
 from accounts.views.authentication import CustomTokenAuthentication
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
@@ -26,6 +27,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
     code = serializers.CharField(write_only=True, required=False)
     address = serializers.CharField(write_only=True, required=False)
     memo = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
 
     def validate(self, attrs):
         user = self.context['request'].user
@@ -79,6 +82,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
             if not otp_code:
                 raise ValidationError({'code': 'کد نامعتبر است.'})
+
+            if is_2fa_active_for_user(user):
+                code_2fa = attrs.get('code_2fa') or ''
+                code_2fa_verifier(user_token=user.auth2fa.token, code_2fa=code_2fa)
 
         if not is_48h_rule_passed(user):
             raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
@@ -140,7 +147,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transfer
-        fields = ('amount', 'address', 'coin', 'network', 'code', 'address_book_id', 'memo',)
+        fields = ('amount', 'address', 'coin', 'network', 'code', 'address_book_id', 'memo', 'code_2fa')
 
 
 class WithdrawView(CreateAPIView):

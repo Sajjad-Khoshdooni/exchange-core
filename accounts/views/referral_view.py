@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.db.models import Q, DateField, Case, When, F, Sum
 from django.db.models.functions import Cast
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins
@@ -14,6 +15,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from accounts.models import Referral, User, Account
+from ledger.models import Wallet
 from market.models import ReferralTrx
 
 logger = logging.getLogger(__name__)
@@ -129,11 +131,20 @@ class ReferralReportAPIView(ListAPIView):
 class TradingFeeView(APIView):
 
     def get(self, request):
-        # taker_fee = Decimal('0.2')
+        voucher = request.user.account.get_voucher_wallet()
+
         old_taker_fee = Decimal('0.2')
         old_maker_fee = Decimal('0')
 
-        taker_fee = Decimal('0.2')
+        if voucher:
+            taker_fee = 0
+            expiration = voucher.expiration
+            voucher_amount = voucher.balance
+        else:
+            taker_fee = Decimal('0.2')
+            expiration = None
+            voucher_amount = None
+
         maker_fee = Decimal('0')
 
         referral_code = request.user.account.referred_by
@@ -147,5 +158,6 @@ class TradingFeeView(APIView):
             'old_maker_fee': str(old_maker_fee),
             'taker_fee': str(taker_fee),
             'maker_fee': str(maker_fee),
+            'voucher_expiration': expiration,
+            'voucher_amount': voucher_amount
         })
-
