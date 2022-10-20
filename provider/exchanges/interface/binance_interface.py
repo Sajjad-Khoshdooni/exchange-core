@@ -32,7 +32,7 @@ class BinanceSpotHandler(ExchangeHandler):
             return binance_spot_send_public_request(url, data)
 
     def get_trading_symbol(self, coin: str) -> str:
-        if coin == 'LUNC':
+        if coin in ('LUNC', 'HNT'):
             base = 'BUSD'
         else:
             base = 'USDT'
