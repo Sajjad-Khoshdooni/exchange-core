@@ -283,17 +283,11 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': False,
     'AUTH_HEADER_TYPES': ('Bearer', 'JWT'),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ALGORITHM': 'RS256',
+    'SIGNING_KEY': config('JWT_PRIVATE_KEY', default=''),
+    'VERIFYING_KEY': config('JWT_PUBLIC_KEY', default=''),
+    'REFRESH_TOKEN_LIFETIME': timedelta(hours=6),
 }
-
-if not DEBUG_OR_TESTING:
-    SIMPLE_JWT = {
-        **SIMPLE_JWT,
-        'ALGORITHM': 'RS256',
-        'SIGNING_KEY': config('JWT_PRIVATE_KEY') ,
-        'VERIFYING_KEY': config('JWT_PUBLIC_KEY'),
-        'REFRESH_TOKEN_LIFETIME': timedelta(hours=6),
-    }
 
 AUTH_USER_MODEL = 'accounts.User'
 AUTHENTICATION_BACKENDS = ('accounts.backends.AuthenticationBackend',)
