@@ -116,7 +116,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
         from accounts.tasks import basic_verify_user
 
-        if not settings.DEBUG_OR_TESTING:
+        if not settings.DEBUG_OR_TESTING_OR_STAGING:
             basic_verify_user.s(user.id).apply_async(countdown=60)
 
         return user
