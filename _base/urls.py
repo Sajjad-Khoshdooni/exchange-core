@@ -10,7 +10,7 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
-from accounts.views.health_view import HealthView
+from health.views import HealthView
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -27,7 +27,7 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/health/', HealthView.as_view()),
+    path('api/v1/health/', include('health.urls')),
     path('api/v1/accounts/', include('accounts.urls')),
     path('api/v1/media/', include('multimedia.urls')),
     path('api/v1/finance/', include(('financial.urls', 'financial'), 'finance', )),

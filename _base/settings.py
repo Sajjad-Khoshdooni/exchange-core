@@ -73,6 +73,7 @@ if not DEBUG_OR_TESTING:
 
 
 MIDDLEWARE = [
+    'allow_cidr.middleware.AllowCIDRMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'raven.contrib.django.raven_compat.middleware.SentryResponseErrorIdMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -118,6 +119,7 @@ TEMPLATES = [
 WSGI_APPLICATION = '_base.wsgi.application'
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv(), default='')
+ALLOWED_CIDR_NETS = ['10.0.0.0/16']
 
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv(), default='')
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', cast=Csv(), default='')
@@ -341,7 +343,7 @@ CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='None')
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', cast=bool, default=True)
 
 JALALI_DATE_DEFAULTS = {
-   'Strftime': {
+    'Strftime': {
         'date': '%y/%m/%d',
         'datetime': '%H:%M:%S _ %y/%m/%d',
     },
