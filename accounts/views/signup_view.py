@@ -70,7 +70,7 @@ class SignupSerializer(serializers.Serializer):
 
         phone = otp_code.phone
         # otp_code.set_token_used()
-        promotion = validated_data.get('promotion')
+        promotion = validated_data.get('promotion') or ''
 
         user = User.objects.create_user(
             username=phone,
