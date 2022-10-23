@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
+from typing import Union
 
 import pytz
 import requests
@@ -32,7 +33,7 @@ class Wallet:
 class Withdraw:
     tracking_id: str
     status: str
-    receive_datetime: datetime
+    receive_datetime: Union[datetime, None]
 
 
 class FiatWithdraw:
@@ -288,11 +289,19 @@ class ZibalChannel(FiatWithdraw):
             })
         except ServerError as e:
             resp = e.args[0]
-            if 'این درخواست تسویه قبلا ثبت شده است' in resp.get('message', ''):
+            message = resp.get('message', '')
+
+            if 'این درخواست تسویه قبلا ثبت شده است' in message:
                 return Withdraw(
                     tracking_id='',
                     status=FiatWithdrawRequest.DONE,
                     receive_datetime=timezone.now() + timedelta(hours=3)
+                )
+            elif 'این حساب مسدود شده و یا قابلیت واریز ندارد' in message:
+                return Withdraw(
+                    tracking_id='',
+                    status=FiatWithdrawRequest.CANCELED,
+                    receive_datetime=None
                 )
             else:
                 raise
