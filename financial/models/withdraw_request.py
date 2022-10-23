@@ -205,7 +205,7 @@ class FiatWithdrawRequest(models.Model):
 
         if old and old.status in (FiatWithdrawRequest.DONE, FiatWithdrawRequest.CANCELED) and\
                 self.status != old.status:
-            raise ValidationError('امکان تغییر وضعیت برای این ترکانش وجود ندارد.')
+            raise ValidationError('امکان تغییر وضعیت برای این تراکنش وجود ندارد.')
 
         if old:
             old.change_status(self.status)
