@@ -109,14 +109,12 @@ class JibitGateway(Gateway):
         if status in ('SUCCESSFUL', 'ALREADY_VERIFIED'):
             with WalletPipeline() as pipeline:
                 payment.status = DONE
-                payment.ref_status = payment_request.authority
                 payment.save(update_fields=['status', 'ref_status'])
 
                 payment.accept(pipeline)
 
         else:
             payment.status = CANCELED
-            payment.ref_status = payment_request.authority
             payment.save(update_fields=['status', 'ref_status'])
 
     class Meta:
