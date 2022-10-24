@@ -138,7 +138,7 @@ class ExchangeHandler:
     def get_lot_min_quantity(self, symbol: str) -> Decimal:
         raise NotImplementedError
 
-    def get_withdraw_status(self, withdraw_id: str) -> dict:
+    def get_withdraw_status(self, client_transfer_id: str, provider_transfer_id: str) -> dict:
         raise NotImplementedError
 
     def get_spot_handler(self) -> 'ExchangeHandler':

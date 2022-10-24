@@ -193,10 +193,10 @@ class KucoinSpotHandler(ExchangeHandler):
         lot_size = list(filter(lambda f: f['filterType'] == 'LOT_SIZE', data['filters']))[0]
         return Decimal(lot_size.get('minQty'))
 
-    def get_withdraw_status(self, withdraw_id: str) -> dict:
+    def get_withdraw_status(self, client_transfer_id: str, provider_transfer_id: str) -> dict:
         from ledger.models import Transfer
         data = self.collect_api(
-            '/api/v1/withdrawals/{}'.format(withdraw_id), 'GET')
+            '/api/v1/withdrawals/{}'.format(provider_transfer_id), 'GET')
 
         if not data:
             return

@@ -148,11 +148,11 @@ class BinanceSpotHandler(ExchangeHandler):
         lot_size = self._get_lot_size_data(symbol)
         return lot_size and Decimal(lot_size['minQty'])
 
-    def get_withdraw_status(self, withdraw_id: str) -> dict:
+    def get_withdraw_status(self, client_transfer_id: str, provider_transfer_id: str) -> dict:
         from ledger.models import Transfer
         data = self.collect_api(
             '/sapi/v1/capital/withdraw/history', 'GET',
-            data={'withdrawOrderId': withdraw_id}
+            data={'withdrawOrderId': client_transfer_id}
         )
 
         if not data:
