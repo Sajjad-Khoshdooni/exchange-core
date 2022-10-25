@@ -6,7 +6,7 @@ from django.conf import settings
 
 from ledger.models import Transfer, Asset
 from ledger.utils.price import BUY, get_price, SELL
-from ledger.utils.provider import ProviderRequester, SPOT, BINANCE
+from ledger.utils.provider import get_provider_requester, BINANCE
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def handle_provider_withdraw(transfer_id: int):
 
         coin = transfer.asset.symbol
 
-        requester = ProviderRequester()
+        requester = get_provider_requester()
 
         balance_map = requester.get_spot_balance_map(BINANCE)
         network_info = requester.get_network_info(transfer.asset, transfer.network)
@@ -63,7 +63,7 @@ def handle_provider_withdraw(transfer_id: int):
                 #     prev_hedge.caller_id = prev_hedge.caller_id + 'a'
                 #     prev_hedge.save(update_fields=['caller_id'])
 
-                ProviderRequester().new_hedged_spot_buy(
+                get_provider_requester().new_hedged_spot_buy(
                     asset=transfer.asset,
                     amount=to_buy_amount,
                     spot_side=BUY,
@@ -89,7 +89,7 @@ def handle_provider_withdraw(transfer_id: int):
 def provider_withdraw(transfer: Transfer):
     assert transfer.source == Transfer.PROVIDER
 
-    success = ProviderRequester().new_withdraw(transfer)
+    success = get_provider_requester().new_withdraw(transfer)
 
     if not success:
         return

@@ -20,10 +20,7 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    'coin_market_cap_update': {
-        'task': 'collector.tasks.coin_market_cap.update_coin_market_cap',
-        'schedule': crontab(minute="*/30"),
-    },
+
     'update_network_fee': {
         'task': 'ledger.tasks.fee.update_network_fees',
         'schedule': crontab(minute="*/30"),
@@ -50,46 +47,6 @@ app.conf.beat_schedule = {
         },
     },
 
-    'inject_tether_to_futures': {
-        'task': 'provider.tasks.binance.inject_tether_to_futures',
-        'schedule': 1,
-        'options': {
-            'queue': 'binance-monitor',
-            'expire': 1
-        },
-    },
-    'collect_metrics': {
-        'task': 'collector.tasks.metrics.collect_metrics',
-        'schedule': 5,
-        'options': {
-            'queue': 'metrics',
-            'expire': 5
-        },
-    },
-    'monitor_values': {
-        'task': 'collector.tasks.monitor.collect_values',
-        'schedule': 300,
-        'options': {
-            'queue': 'celery',
-            'expire': 300
-        },
-    },
-    'create_transfer_history': {
-        'task': 'provider.tasks.binance.create_transfer_history',
-        'schedule': 1800,
-        'options': {
-            'queue': 'binance',
-            'expire': 1800,
-        }
-    },
-    'get_binance_wallet': {
-        'task': 'provider.tasks.binance.get_binance_wallet',
-        'schedule': 900,
-        'options': {
-            'queue': 'binance',
-            'expire': 900,
-        }
-    },
     # market tasks
     'create depth orders': {
         'task': 'market.tasks.market_maker.create_depth_orders',
@@ -113,22 +70,6 @@ app.conf.beat_schedule = {
         'options': {
             'queue': 'stop_loss',
             'expire': 1
-        },
-    },
-    'fill_future_binance_income': {
-        'task': 'collector.tasks.binance.fill_future_binance_income',
-        'schedule': crontab(minute=5),
-        'options': {
-            'queue': 'binance',
-            'expire': 3600
-        },
-    },
-    'auto_hedge_assets': {
-        'task': 'provider.tasks.auto_hedge.auto_hedge_assets',
-        'schedule': crontab(hour=1, minute=30),
-        'options': {
-            'queue': 'binance',
-            'expire': 36000
         },
     },
     'create_stake_revenue': {
@@ -243,77 +184,3 @@ app.conf.beat_schedule = {
         },
     },
 }
-
-if settings.DEBUG_OR_TESTING:
-    app.conf.beat_schedule = {
-        'coin_market_cap_update': {
-            'task': 'collector.tasks.coin_market_cap.update_coin_market_cap',
-            # 'schedule': crontab(minute=0, hour=2),
-            'schedule': crontab(minute="*/30"),
-        },
-        # market tasks
-        'create depth orders': {
-            'task': 'market.tasks.market_maker.create_depth_orders',
-            'schedule': 5,
-            'options': {
-                'queue': 'market',
-                'expire': 5
-            },
-        },
-        'update maker orders': {
-            'task': 'market.tasks.market_maker.update_maker_orders',
-            'schedule': 1,
-            'options': {
-                'queue': 'market',
-                'expire': 2
-            },
-        },
-        # 'moving_average_trader': {
-        #     'task': 'trader.tasks.moving_average.update_all_moving_averages',
-        #     'schedule': 67,
-        #     'options': {
-        #         'queue': 'trader-ma',
-        #         'expire': 67
-        #     }
-        # },
-        'handle open stop loss': {
-            'task': 'market.tasks.stop_loss.handle_stop_loss',
-            'schedule': 1,
-            'options': {
-                'queue': 'stop_loss',
-                'expire': 1
-            },
-        },
-        'check_margin_level': {
-            'task': 'ledger.tasks.margin.check_margin_level',
-            'schedule': 5,
-            'options': {
-                'queue': 'margin',
-                'expire': 5
-            },
-        },
-
-        'random_trader': {
-            'task': 'trader.tasks.random_trader.random_trader',
-            'schedule': 17,
-            'options': {
-                'queue': 'trader-ma',
-                'expire': 17
-            }
-        },
-        'carrot_trader': {
-            'task': 'trader.tasks.carrot_trader.carrot_trader',
-            'schedule': 7,
-            'options': {
-                'queue': 'trader-ma',
-                'expire': 7
-            }
-        },
-        'update_accounts_pnl': {
-            'task': 'ledger.tasks.pnl.create_pnl_histories',
-            'schedule': crontab(hour=20, minute=30),
-            'options': {
-                'queue': 'celery',
-            }
-        },
-    }

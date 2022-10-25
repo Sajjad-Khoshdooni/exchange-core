@@ -1,4 +1,3 @@
-from collections import defaultdict
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -11,7 +10,7 @@ from ledger.models import Asset, Wallet, Transfer, Prize
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
 from ledger.utils.cache import cache_for
 from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, BUY, PriceFetchError
-from ledger.utils.provider import ProviderRequester, BINANCE, KUCOIN, MEXC
+from ledger.utils.provider import get_provider_requester, BINANCE, KUCOIN, MEXC
 
 
 @cache_for(60)
@@ -25,7 +24,7 @@ def get_internal_asset_deposits():
 class AssetOverview:
     def __init__(self, strict: bool = True):
         self._strict = strict
-        self.provider = ProviderRequester()
+        self.provider = get_provider_requester()
 
         self._binance_futures = self.provider.get_futures_info(BINANCE)
 

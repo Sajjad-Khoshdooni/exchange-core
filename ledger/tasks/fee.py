@@ -5,7 +5,7 @@ from celery import shared_task
 
 from ledger.models import NetworkAsset
 from ledger.utils.price import get_trading_price_usdt, BUY
-from ledger.utils.provider import ProviderRequester
+from ledger.utils.provider import get_provider_requester
 
 
 @shared_task(queue='celery')
@@ -13,7 +13,7 @@ def update_network_fees():
     network_assets = NetworkAsset.objects.all()
 
     for ns in network_assets:
-        info = ProviderRequester().get_network_info(ns.asset, ns.network)
+        info = get_provider_requester().get_network_info(ns.asset, ns.network)
 
         if info:
             symbol_pair = (ns.network.symbol, ns.asset.symbol)

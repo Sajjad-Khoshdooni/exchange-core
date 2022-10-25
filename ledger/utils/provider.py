@@ -15,6 +15,7 @@ from accounts.models import Account
 from accounts.verifiers.jibit import Response
 from ledger.exceptions import HedgeError
 from ledger.models import Asset, Network, Wallet, Transfer
+from ledger.utils.fields import DONE
 from ledger.utils.precision import floor_precision
 from ledger.utils.price import SELL, BUY, get_trading_price_usdt
 
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 SPOT, FUTURES = 'spot', 'futures'
 BINANCE, KUCOIN, MEXC = 'binance', 'kucoin', 'mexc'
+
 
 @dataclass
 class MarketInfo:
@@ -73,7 +75,6 @@ class WithdrawStatus:
 
 
 class ProviderRequester:
-
     def collect_api(self, path: str, method: str = 'GET', data: dict = None) -> Response:
         if data is None:
             data = {}
@@ -97,11 +98,11 @@ class ProviderRequester:
 
         return Response(data=resp.json(), success=resp.ok)
 
-    def get_total_orders_amount_sum(self, asset: Asset) -> dict:
+    def get_total_orders_amount_sum(self, asset: Asset) -> list:
         resp = self.collect_api('api/v1/orders/total/', data={'coin': asset.symbol})
         return resp.data
 
-    def get_hedge_amount(self, asset: Asset):
+    def get_hedge_amount(self, asset: Asset) -> Decimal:
         """
         how much assets we have more!
 
@@ -266,3 +267,62 @@ class ProviderRequester:
     def get_transfer_status(self, transfer: Transfer) -> WithdrawStatus:
         resp = self.collect_api('api/v1/withdraw/%d/' % transfer.id)
         return WithdrawStatus.init(resp.data['status'])
+
+
+class MockProviderRequester(ProviderRequester):
+    def get_total_orders_amount_sum(self, asset: Asset) -> list:
+        return []
+
+    def get_hedge_amount(self, asset: Asset) -> Decimal:
+        return Decimal(0)
+
+    def get_market_info(self, asset: Asset) -> MarketInfo:
+        return MarketInfo(
+            asset=asset,
+            base_asset=Asset.get(Asset.USDT),
+            exchange='binance',
+            type='spot',
+            step_size=Decimal(1),
+            min_quantity=Decimal(1),
+            max_quantity=Decimal(1000),
+            min_notional=Decimal(10)
+        )
+
+    def get_spot_balance_map(self, exchange) -> dict:
+        return {}
+
+    def get_futures_info(self, exchange: str) -> dict:
+        return {}
+
+    def get_network_info(self, asset: Asset, network: Network) -> NetworkInfo:
+        return NetworkInfo(
+            asset=asset,
+            network=network,
+            withdraw_min=Decimal(1),
+            withdraw_max=Decimal(100),
+            withdraw_fee=Decimal(1),
+            withdraw_enable=True
+        )
+
+    def try_hedge_new_order(self, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
+        pass
+
+    def new_order(self, asset: Asset, scope: str, amount: Decimal, side: str):
+        return True
+
+    def new_withdraw(self, transfer: Transfer):
+        return True
+
+    def new_hedged_spot_buy(self, asset: Asset, amount: Decimal, spot_side: str, caller_id: str):
+        pass
+
+    def get_transfer_status(self, transfer: Transfer) -> WithdrawStatus:
+        return WithdrawStatus(status=DONE, tx_id='tx')
+
+
+def get_provider_requester() -> ProviderRequester:
+    if settings.DEBUG_OR_TESTING:
+        return MockProviderRequester()
+    else:
+        return ProviderRequester()
+

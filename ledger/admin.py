@@ -13,7 +13,7 @@ from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_trading_price_usdt, SELL
-from ledger.utils.provider import ProviderRequester, HEDGE
+from ledger.utils.provider import HEDGE, get_provider_requester
 
 
 @admin.register(models.Asset)
@@ -34,7 +34,7 @@ class AssetAdmin(AdvancedAdmin):
         'get_total_asset', 'get_ledger_balance_users',
 
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
-        'order', 'trend', 'trade_enable', 'hedge_method',
+        'order', 'trend', 'trade_enable',
 
         'candidate', 'margin_enable', 'new_coin', 'spread_category'
     )
@@ -129,7 +129,7 @@ class AssetAdmin(AdvancedAdmin):
     get_hedge_amount.short_description = 'hedge amount'
 
     def get_calculated_hedge_amount(self, asset: Asset):
-        return asset.get_presentation_amount(ProviderRequester().get_hedge_amount(asset))
+        return asset.get_presentation_amount(get_provider_requester().get_hedge_amount(asset))
 
     get_calculated_hedge_amount.short_description = 'calc hedge amount'
 
@@ -145,7 +145,7 @@ class AssetAdmin(AdvancedAdmin):
 
     def get_hedge_threshold(self, asset: Asset):
         if asset.enable:
-            info = ProviderRequester().get_market_info(asset)
+            info = get_provider_requester().get_market_info(asset)
             return info.step_size
 
     get_hedge_threshold.short_description = 'hedge threshold'
@@ -154,7 +154,7 @@ class AssetAdmin(AdvancedAdmin):
     def hedge_asset(self, request, queryset):
         assets = queryset.filter(hedge=True)
         for asset in assets:
-            ProviderRequester().try_hedge_new_order(asset, scope=HEDGE)
+            get_provider_requester().try_hedge_new_order(asset, scope=HEDGE)
 
 
 @admin.register(models.Network)
@@ -328,7 +328,7 @@ class TransferAdmin(admin.ModelAdmin):
                     )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
-    readonly_fields = ('deposit_address', 'network', 'wallet', 'provider_transfer', 'get_total_volume_usdt')
+    readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt')
 
     def get_total_volume_usdt(self, transfer: models.Transfer):
         price = get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)

@@ -3,10 +3,8 @@ from unittest import mock
 from django.test import Client
 from django.test import TestCase
 
-import financial.models.zibal_gateway
 from accounts.models import Account
-from financial.models import Gateway
-from ledger.models import Asset, FastBuyToken
+from ledger.models import Asset
 from ledger.utils.fields import DONE
 from ledger.utils.test import new_account, set_price, new_bankcard, new_zibal_gateway
 from ledger.utils.wallet_pipeline import WalletPipeline

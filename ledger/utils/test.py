@@ -7,7 +7,7 @@ if settings.DEBUG_OR_TESTING:
     import time
 
     from accounts.models import Account, User, VerificationCode
-    from collector.utils.price import price_redis
+    from ledger.utils.price import price_redis
     from ledger.models import Asset, AddressBook, Network, NetworkAsset
 
     def get_rand_int():
@@ -32,7 +32,7 @@ if settings.DEBUG_OR_TESTING:
         if asset.symbol == Asset.USDT:
             key = 'usdtirt'
         else:
-            key = 'bin:' + asset.symbol.lower() + 'usdt'
+            key = 'price:' + asset.symbol.lower() + 'usdt'
 
         price_redis.hset(name=key, mapping=mapping)
 

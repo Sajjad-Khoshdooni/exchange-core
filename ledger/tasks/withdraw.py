@@ -4,6 +4,7 @@ from celery import shared_task
 from django.conf import settings
 
 from ledger.models import Transfer
+from ledger.utils.provider import get_provider_requester
 from ledger.utils.wallet_pipeline import WalletPipeline
 from ledger.withdraw.exchange import handle_provider_withdraw
 
@@ -32,12 +33,12 @@ def update_provider_withdraw():
     ).exclude(source=Transfer.SELF)
 
     for transfer in transfers:
-        data = get_provider_transfer_status(transfer.id)
+        data = get_provider_requester().get_transfer_status(transfer.id)
 
-        status = data['status']
+        status = data.status
 
         if 'txId' in data:
-            transfer.trx_hash = data['txId']
+            transfer.trx_hash = data.tx_id
 
         if status == transfer.CANCELED:
             with WalletPipeline() as pipeline:

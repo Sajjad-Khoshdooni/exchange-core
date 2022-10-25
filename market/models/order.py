@@ -374,8 +374,8 @@ class Order(models.Model):
                 to_hedge_amount = -to_hedge_amount
                 side = Order.SELL
 
-            from ledger.utils.provider import ProviderRequester, TRADE
-            placed_hedge_order = ProviderRequester().new_order(
+            from ledger.utils.provider import get_provider_requester, TRADE
+            placed_hedge_order = get_provider_requester().new_order(
                 asset=self.wallet.asset,
                 side=side,
                 amount=to_hedge_amount,
