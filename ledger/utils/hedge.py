@@ -1,18 +1,18 @@
 from ledger.models import Asset
 from ledger.utils.overview import AssetOverview
-from provider.models import ProviderOrder
+from ledger.utils.provider import hedge_asset, ProviderRequester
 
 
 def reset_assets_hedge(asset: Asset = None):
     overview = AssetOverview()
 
-    assets = Asset.candid_objects.all().exclude(hedge_method=Asset.HEDGE_NONE)
+    assets = Asset.candid_objects.all().filter(hedge=True)
 
     if asset:
         assets = assets.filter(id=asset.id)
 
     for asset in assets:
-        calc_hedge = ProviderOrder.get_hedge(asset)
+        calc_hedge = ProviderRequester().get_hedge_amount(asset)
         hedge = overview.get_hedge_amount(asset)
         diff = hedge - calc_hedge
 
@@ -21,9 +21,9 @@ def reset_assets_hedge(asset: Asset = None):
                 exchange='fake',
                 asset=asset,
                 amount=abs(diff),
-                scope=ProviderOrder.FAKE,
+                scope='fake',
                 side=ProviderOrder.BUY if diff > 0 else ProviderOrder.SELL,
                 hedge_amount=calc_hedge
             )
 
-        ProviderOrder.try_hedge_for_new_order(asset, ProviderOrder.HEDGE)
+        hedge_asset(asset)

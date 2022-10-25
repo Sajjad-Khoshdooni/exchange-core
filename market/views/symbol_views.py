@@ -1,14 +1,14 @@
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.generics import ListAPIView, RetrieveAPIView, UpdateAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.models import User
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
-from accounts.views.authentication import CustomTokenAuthentication
+from accounts.authentication import CustomTokenAuthentication
 from market.models import PairSymbol
 from market.serializers.symbol_serializer import SymbolSerializer, SymbolBreifStatsSerializer, SymbolStatsSerializer
 

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404
 
-from accounts.views.authentication import CustomTokenAuthentication
+from accounts.authentication import CustomTokenAuthentication
 from ledger.models import Network, Asset, DepositAddress, AddressKey
 from ledger.models.transfer import Transfer
 from ledger.requester.architecture_requester import request_architecture

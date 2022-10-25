@@ -31,26 +31,6 @@ class Asset(models.Model):
     USDT = 'USDT'
     SHIB = 'SHIB'
 
-    HEDGE_NONE = ''
-    HEDGE_BINANCE_FUTURE = 'binance-future'
-    HEDGE_BINANCE_SPOT = 'binance-spot'
-
-    HEDGE_KUCOIN_FUTURE = 'kucoin-future'
-    HEDGE_KUCOIN_SPOT = 'kucoin-spot'
-
-    HEDGE_MEXC_SPOT = 'mexc-spot'
-    HEDGE_MEXC_FUTURES = 'mexc-future'
-
-    HEDGE_METHOD_CHOICE = (
-        (HEDGE_KUCOIN_SPOT, HEDGE_KUCOIN_SPOT),
-        (HEDGE_KUCOIN_FUTURE, HEDGE_KUCOIN_FUTURE),
-        (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
-        (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE),
-        (HEDGE_MEXC_SPOT, HEDGE_MEXC_SPOT),
-        (HEDGE_MEXC_FUTURES, HEDGE_MEXC_FUTURES),
-        (HEDGE_NONE, HEDGE_NONE)
-    )
-
     PRECISION = 8
 
     objects = models.Manager()
@@ -81,7 +61,7 @@ class Asset(models.Model):
     pin_to_top = models.BooleanField(default=False)
 
     trade_enable = models.BooleanField(default=True)
-    hedge_method = models.CharField(max_length=32, default=HEDGE_BINANCE_FUTURE, choices=HEDGE_METHOD_CHOICE, blank=True)
+    hedge = models.BooleanField(default=True)
     candidate = models.BooleanField(default=False)
 
     margin_enable = models.BooleanField(default=False)
@@ -171,10 +151,6 @@ class Asset(models.Model):
         else:
             return self.symbol
 
-    def get_hedger(self):
-        from provider.exchanges import ExchangeHandler
-        return ExchangeHandler.get_handler(name=self.hedge_method)
-
 
 class AssetSerializer(serializers.ModelSerializer):
     class Meta:
@@ -220,4 +196,3 @@ class CoinField(serializers.CharField):
             return
         else:
             return Asset.get(symbol=data)
-

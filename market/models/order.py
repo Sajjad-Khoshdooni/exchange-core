@@ -24,7 +24,6 @@ from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_pri
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
 from market.models.referral_trx import ReferralTrx
-from provider.models import ProviderOrder
 
 logger = logging.getLogger(__name__)
 
@@ -375,11 +374,12 @@ class Order(models.Model):
                 to_hedge_amount = -to_hedge_amount
                 side = Order.SELL
 
-            placed_hedge_order = ProviderOrder.try_hedge_for_new_order(
+            from ledger.utils.provider import ProviderRequester, TRADE
+            placed_hedge_order = ProviderRequester().new_order(
                 asset=self.wallet.asset,
                 side=side,
                 amount=to_hedge_amount,
-                scope=ProviderOrder.TRADE
+                scope=TRADE
             )
 
             if not placed_hedge_order:

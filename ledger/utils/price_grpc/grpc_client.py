@@ -1,6 +1,6 @@
 import grpc
 
-from collector.price import order_pb2, order_pb2_grpc, trade_pb2_grpc, trade_pb2
+from . import order_pb2, order_pb2_grpc, trade_pb2_grpc, trade_pb2
 
 # if not settings.DEBUG:
 with open('collector/price/server.crt', 'rb') as f:

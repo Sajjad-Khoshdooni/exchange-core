@@ -6,7 +6,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
-from accounts.views.authentication import CustomTokenAuthentication
+from accounts.authentication import CustomTokenAuthentication
 from ledger.models import Transfer
 from ledger.models.asset import AssetSerializerMini
 

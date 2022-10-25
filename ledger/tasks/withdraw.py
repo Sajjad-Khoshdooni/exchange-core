@@ -6,7 +6,6 @@ from django.conf import settings
 from ledger.models import Transfer
 from ledger.utils.wallet_pipeline import WalletPipeline
 from ledger.withdraw.exchange import handle_provider_withdraw
-from provider.exchanges.interface.binance_interface import ExchangeHandler
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ def update_provider_withdraw():
     ).exclude(source=Transfer.SELF)
 
     for transfer in transfers:
-        data = transfer.provider_transfer.get_status()
+        data = get_provider_transfer_status(transfer.id)
 
         status = data['status']
 
@@ -96,7 +95,7 @@ def create_withdraw(transfer_id: int):
         elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
             logger.info('withdraw switch %s %s' % (transfer.id, resp_data))
 
-            transfer.source = ExchangeHandler.get_handler(transfer.asset.hedge_method).NAME
+            transfer.source = Transfer.PROVIDER
             transfer.save(update_fields=['source'])
             create_provider_withdraw(transfer_id=transfer.id)
         else:

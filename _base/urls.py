@@ -32,7 +32,6 @@ urlpatterns = [
     path('api/v1/media/', include('multimedia.urls')),
     path('api/v1/finance/', include(('financial.urls', 'financial'), 'finance', )),
     path('api/v1/market/', include('market.urls')),
-    path('api/v1/collector/', include('collector.urls')),
     path('api/v1/stake/', include('stake.urls')),
     path('api/v1/gamify/', include('gamify.urls')),
     path('api/', include('ledger.urls')),

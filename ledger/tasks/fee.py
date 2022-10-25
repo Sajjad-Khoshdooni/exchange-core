@@ -5,7 +5,7 @@ from celery import shared_task
 
 from ledger.models import NetworkAsset
 from ledger.utils.price import get_trading_price_usdt, BUY
-from provider.exchanges import BinanceSpotHandler
+from ledger.utils.provider import ProviderRequester
 
 
 @shared_task(queue='celery')
@@ -13,13 +13,12 @@ def update_network_fees():
     network_assets = NetworkAsset.objects.all()
 
     for ns in network_assets:
-        handler = ns.asset.get_hedger().get_spot_handler()
-        info = handler.get_network_info(ns.asset.symbol, ns.network)
+        info = ProviderRequester().get_network_info(ns.asset, ns.network)
 
         if info:
             symbol_pair = (ns.network.symbol, ns.asset.symbol)
-            withdraw_min = Decimal(info['withdrawMin'])
-            withdraw_fee = Decimal(info['withdrawFee'])
+            withdraw_fee = info.withdraw_fee
+            withdraw_min = info.withdraw_min
 
             if symbol_pair in [('TRX', 'USDT'), ('BSC', 'USDT'), ('BNB', 'USDT'), ('SOL', 'USDT')]:
                 withdraw_fee = Decimal('0.8')
@@ -40,13 +39,13 @@ def update_network_fees():
 
             withdraw_min = max(
                 withdraw_min,
-                Decimal(info['withdrawMin']) + withdraw_fee - Decimal(info['withdrawFee'])
+                info.withdraw_min + withdraw_fee - info.withdraw_fee
             )
 
             ns.withdraw_fee = withdraw_fee
             ns.withdraw_min = withdraw_min
-            ns.withdraw_max = Decimal(info['withdrawMax'])
-            ns.hedger_withdraw_enable = info['withdrawEnable']
+            ns.withdraw_max = info.withdraw_max
+            ns.hedger_withdraw_enable = info.withdraw_enable
         else:
             ns.hedger_withdraw_enable = False
 

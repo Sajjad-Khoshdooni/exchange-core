@@ -12,7 +12,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from collector.models import CoinMarketCap
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.fields import get_irt_market_asset_symbols
@@ -51,7 +50,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
     def get_bookmark_assets(self, asset: Asset):
         return asset.id in self.context['bookmark_assets']
 
-    def get_cap(self, asset) -> CoinMarketCap:
+    def get_cap(self, asset):
         return self.context['cap_info'].get(asset.symbol)
 
     def get_price_usdt(self, asset: Asset):
