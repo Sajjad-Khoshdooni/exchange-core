@@ -297,40 +297,6 @@ SIMPLE_JWT = {
 AUTH_USER_MODEL = 'accounts.User'
 AUTHENTICATION_BACKENDS = ('accounts.backends.AuthenticationBackend',)
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
-    },
-    'formatters': {
-        'verbose': {
-            'format': '[contactor] %(levelname)s %(asctime)s %(message)s'
-        },
-    },
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-        },
-        'sentry': {
-            'level': 'WARNING',
-            'filters': ['require_debug_false'],
-            'class': 'raven.contrib.django.handlers.SentryHandler',
-        },
-    },
-    'loggers': {
-        '': {
-            'handlers': ['console', 'sentry'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-    }
-}
-
-
 SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='None')
 SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', cast=bool, default=True)
 

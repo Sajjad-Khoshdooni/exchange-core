@@ -79,7 +79,7 @@ class ProviderRequester:
         if data is None:
             data = {}
 
-        url = config('PROVIDER_BASE_URL') + path
+        url = config('PROVIDER_BASE_URL', default='https://provider.raastin.com') + path
 
         request_kwargs = {
             'url': url,
