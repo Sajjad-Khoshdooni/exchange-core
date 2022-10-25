@@ -556,8 +556,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_deposit_address.short_description = 'آدرس‌های کیف پول'
 
     def get_total_balance_irt_admin(self, user: User):
-        total_balance_irt = user.account.get_total_balance_irt(side=BUY)
-        return humanize_number(int(total_balance_irt))
+        try:
+            total_balance_irt = user.account.get_total_balance_irt(side=BUY)
+            return humanize_number(int(total_balance_irt))
+        except:
+            pass
 
     get_total_balance_irt_admin.short_description = 'دارایی به تومان'
 
