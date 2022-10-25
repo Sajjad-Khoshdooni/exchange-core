@@ -141,7 +141,6 @@ DATABASES = {
 }
 
 LOCAL_REDIS_URL = config('LOCAL_REDIS_URL', default='redis://127.0.0.1:6379')
-PROVIDER_REDIS_URL = config('PROVIDER_REDIS_URL', default='redis://127.0.0.1:6379')
 
 CACHES = {
     'default': {
@@ -171,8 +170,9 @@ CACHES = {
 }
 
 MARKET_CACHE_LOCATION = LOCAL_REDIS_URL + '/3'
-PRICE_CACHE_LOCATION = secret('PRICE_CACHE_LOCATION', default='redis://127.0.0.1:6379/2')
 METRICS_CACHE_LOCATION = LOCAL_REDIS_URL + '/4'
+
+PRICE_CACHE_LOCATION = config('PRICE_CACHE_LOCATION', default='redis://127.0.0.1:6379/2')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators

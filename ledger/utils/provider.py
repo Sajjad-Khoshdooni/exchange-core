@@ -325,4 +325,3 @@ def get_provider_requester() -> ProviderRequester:
         return MockProviderRequester()
     else:
         return ProviderRequester()
-
