@@ -237,7 +237,7 @@ if not DEBUG_OR_TESTING:
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 sentry_sdk.init(
-    dsn=config("SENTRY_DSN"),
+    dsn=config("SENTRY_DSN", default=''),
     integrations=[
         DjangoIntegration(),
     ],
