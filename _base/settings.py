@@ -4,11 +4,11 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-import raven
 from decouple import Csv
 from yekta_config import secret
 from yekta_config.config import config
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'raven.contrib.django.raven_compat',
     'django_admin_listfilter_dropdown',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
@@ -75,7 +74,6 @@ if not DEBUG_OR_TESTING:
 MIDDLEWARE = [
     'allow_cidr.middleware.AllowCIDRMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'raven.contrib.django.raven_compat.middleware.SentryResponseErrorIdMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -238,13 +236,21 @@ if not DEBUG_OR_TESTING:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-SENTRY_CLIENT = 'raven.contrib.django.raven_compat.DjangoClient'
-RAVEN_CONFIG = {
-    'ignore_exceptions ': ['Http404', 'django.exceptions.http.Http404', 'rest_framework.exceptions.PermissionDenied'],
-    'dsn': config('SENTRY_DSN', default=''),
-    'release': raven.fetch_git_sha(os.path.dirname(os.pardir)),
-    'environment': config('ENV', default='development')
-}
+sentry_sdk.init(
+    dsn=config("SENTRY_DSN"),
+    integrations=[
+        DjangoIntegration(),
+    ],
+
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production.
+    traces_sample_rate=1.0,
+
+    # If you wish to associate users to errors (assuming you are using
+    # django.contrib.auth) you may enable sending PII data.
+    send_default_pii=True
+)
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
