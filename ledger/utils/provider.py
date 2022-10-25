@@ -3,6 +3,7 @@ import math
 from dataclasses import dataclass
 from decimal import Decimal
 from math import log10
+from typing import List
 
 import requests
 from django.conf import settings
@@ -72,6 +73,24 @@ class WithdrawStatus:
             status=data['status'],
             tx_id=data.get('tx_id')
         )
+
+
+@dataclass
+class CoinInfo:
+    coin: str
+    change_24h: str
+    volume_24h: str
+    change_7d: str
+    high_24h: str
+    low_24h: str
+    change_1h: str
+    cmc_rank: int
+    market_cap: str
+    circulating_supply: int
+
+    @property
+    def weekly_trend_url(self):
+        return ''
 
 
 class ProviderRequester:
@@ -268,6 +287,9 @@ class ProviderRequester:
         resp = self.collect_api('api/v1/withdraw/%d/' % transfer.id)
         return WithdrawStatus.init(resp.data['status'])
 
+    def get_coins_info(self, coins: List[str] = None) -> List[CoinInfo]:
+        pass
+
 
 class MockProviderRequester(ProviderRequester):
     def get_total_orders_amount_sum(self, asset: Asset) -> list:
@@ -318,6 +340,9 @@ class MockProviderRequester(ProviderRequester):
 
     def get_transfer_status(self, transfer: Transfer) -> WithdrawStatus:
         return WithdrawStatus(status=DONE, tx_id='tx')
+
+    def get_coins_info(self, coins: List[str] = None) -> List[CoinInfo]:
+        return []
 
 
 def get_provider_requester() -> ProviderRequester:
