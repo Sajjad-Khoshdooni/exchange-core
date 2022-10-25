@@ -51,7 +51,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return asset.id in self.context['bookmark_assets']
 
     def get_cap(self, asset) -> CoinInfo:
-        return self.context['cap_info'].get(asset.symbol)
+        return self.context['cap_info'].get(asset.symbol, CoinInfo())
 
     def get_price_usdt(self, asset: Asset):
         prices = self.context['prices']
@@ -257,7 +257,7 @@ class AssetOverviewAPIView(APIView):
         list_symbol = list(symbols.values_list('symbol', flat=True))
         newest_coin_symbols = list(symbols.filter(new_coin=True).values_list('symbol', flat=True))
 
-        caps = ProviderRequester().get_coins_info(list_symbol)
+        caps = ProviderRequester().get_coins_info()
 
         price = get_prices_dict(coins=list_symbol, side=BUY, allow_stale=True)
         tether_irt = get_tether_irt_price(BUY, allow_stale=True)

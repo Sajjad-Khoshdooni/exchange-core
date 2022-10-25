@@ -3,13 +3,12 @@ import math
 from dataclasses import dataclass
 from decimal import Decimal
 from math import log10
-from typing import List
+from typing import List, Dict
 
 import requests
 from django.conf import settings
 from django.db.models import Sum
 from urllib3.exceptions import ReadTimeoutError
-from yekta_config import secret
 from yekta_config.config import config
 
 from accounts.models import Account
@@ -77,20 +76,18 @@ class WithdrawStatus:
 
 @dataclass
 class CoinInfo:
-    coin: str
-    change_24h: str
-    volume_24h: str
-    change_7d: str
-    high_24h: str
-    low_24h: str
-    change_1h: str
-    cmc_rank: int
-    market_cap: str
-    circulating_supply: int
-
-    @property
-    def weekly_trend_url(self):
-        return ''
+    coin: str = ''
+    price: float = 0
+    change_24h: float = 0
+    volume_24h: float = 0
+    change_7d: float = 0
+    high_24h: float = 0
+    low_24h: float = 0
+    change_1h: float = 0
+    cmc_rank: int = 0
+    market_cap: float = 0
+    circulating_supply: float = 0
+    weekly_trend_url: str = ''
 
 
 class ProviderRequester:
@@ -103,7 +100,7 @@ class ProviderRequester:
         request_kwargs = {
             'url': url,
             'timeout': 60,
-            'headers': {'Authorization': secret('PROVIDER_TOKEN')},
+            'headers': {'Authorization': config('PROVIDER_TOKEN')},
         }
 
         try:
@@ -118,7 +115,7 @@ class ProviderRequester:
         return Response(data=resp.json(), success=resp.ok)
 
     def get_total_orders_amount_sum(self, asset: Asset) -> list:
-        resp = self.collect_api('api/v1/orders/total/', data={'coin': asset.symbol})
+        resp = self.collect_api('/api/v1/orders/total/', data={'coin': asset.symbol})
         return resp.data
 
     def get_hedge_amount(self, asset: Asset) -> Decimal:
@@ -250,7 +247,7 @@ class ProviderRequester:
                 raise HedgeError
 
     def new_order(self, asset: Asset, scope: str, amount: Decimal, side: str):
-        return self.collect_api('api/v1/orders/', method='POST', data={
+        return self.collect_api('/api/v1/orders/', method='POST', data={
             'coin': asset.symbol,
             'scope': scope,
             'amount': amount,
@@ -260,7 +257,7 @@ class ProviderRequester:
     def new_withdraw(self, transfer: Transfer):
         assert not transfer.deposit
 
-        resp = self.collect_api('api/v1/withdraw/', method='POST', data={
+        resp = self.collect_api('/api/v1/withdraw/', method='POST', data={
             'coin': transfer.asset.symbol,
             'network': transfer.network.symbol,
             'amount': transfer.amount,
@@ -277,18 +274,27 @@ class ProviderRequester:
         return resp.success
 
     def new_hedged_spot_buy(self, asset: Asset, amount: Decimal, spot_side: str, caller_id: str):
-        self.collect_api('api/v1/orders/hedged/', method='POST', data={
+        self.collect_api('/api/v1/orders/hedged/', method='POST', data={
             'coin': asset.symbol,
             'amount': amount,
             'requester_id': caller_id
         })
 
     def get_transfer_status(self, transfer: Transfer) -> WithdrawStatus:
-        resp = self.collect_api('api/v1/withdraw/%d/' % transfer.id)
+        resp = self.collect_api('/api/v1/withdraw/%d/' % transfer.id)
         return WithdrawStatus.init(resp.data['status'])
 
-    def get_coins_info(self, coins: List[str] = None) -> List[CoinInfo]:
-        pass
+    # todo: add caching
+    def get_coins_info(self, coins: List[str] = None) -> Dict[str, CoinInfo]:
+        resp = self.collect_api('/api/v1/coins/info/')
+
+        coins_info = {}
+
+        for info_data in resp.data:
+            info = CoinInfo(**info_data)
+            coins_info[info.coin] = info
+
+        return coins_info
 
 
 class MockProviderRequester(ProviderRequester):
@@ -341,12 +347,12 @@ class MockProviderRequester(ProviderRequester):
     def get_transfer_status(self, transfer: Transfer) -> WithdrawStatus:
         return WithdrawStatus(status=DONE, tx_id='tx')
 
-    def get_coins_info(self, coins: List[str] = None) -> List[CoinInfo]:
-        return []
+    def get_coins_info(self, coins: List[str] = None) -> Dict[str, CoinInfo]:
+        return {}
 
 
 def get_provider_requester() -> ProviderRequester:
-    if settings.DEBUG_OR_TESTING:
-        return MockProviderRequester()
-    else:
-        return ProviderRequester()
+    # if settings.DEBUG_OR_TESTING:
+    #     return MockProviderRequester()
+    # else:
+    return ProviderRequester()
