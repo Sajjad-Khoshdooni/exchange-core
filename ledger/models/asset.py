@@ -21,11 +21,6 @@ class LiveAssetManager(models.Manager):
         return super().get_queryset().filter(enable=True)
 
 
-class CandidAssetManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().exclude(enable=False, candidate=False)
-
-
 class Asset(models.Model):
     IRT = 'IRT'
     USDT = 'USDT'
@@ -35,7 +30,6 @@ class Asset(models.Model):
 
     objects = models.Manager()
     live_objects = LiveAssetManager()
-    candid_objects = CandidAssetManager()
 
     name = models.CharField(max_length=32, blank=True)
     name_fa = models.CharField(max_length=32, blank=True)
@@ -62,7 +56,6 @@ class Asset(models.Model):
 
     trade_enable = models.BooleanField(default=True)
     hedge = models.BooleanField(default=True)
-    candidate = models.BooleanField(default=False)
 
     margin_enable = models.BooleanField(default=False)
     spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.PROTECT, null=True, blank=True)

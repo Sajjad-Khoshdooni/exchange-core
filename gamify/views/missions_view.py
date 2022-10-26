@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from gamify.models import MissionJourney, Mission, Task, Achievement
 from ledger.models import Prize
@@ -130,3 +131,19 @@ class ActiveMissionsAPIView(RetrieveAPIView):
         account = self.request.user.account
         journey = MissionJourney.get_journey(account)
         return journey.get_active_mission(account)
+
+
+class TotalVoucherAPIView(APIView):
+
+    def get(self, request):
+        account = self.request.user.account
+        voucher = account.get_voucher_wallet()
+
+        voucher_amount = 0
+
+        if voucher:
+            voucher_amount = voucher.balance
+
+        return Response({
+            'voucher_usdt': voucher_amount
+        })

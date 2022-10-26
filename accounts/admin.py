@@ -231,7 +231,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     )
 
     list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
-                    'verify_status', 'get_source_medium', 'get_referrer_user')
+                    'verify_status', 'promotion', 'get_source_medium', 'get_referrer_user')
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'national_code_phone_verified', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
@@ -556,8 +556,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_deposit_address.short_description = 'آدرس‌های کیف پول'
 
     def get_total_balance_irt_admin(self, user: User):
-        total_balance_irt = user.account.get_total_balance_irt(side=BUY)
-        return humanize_number(int(total_balance_irt))
+        try:
+            total_balance_irt = user.account.get_total_balance_irt(side=BUY)
+            return humanize_number(int(total_balance_irt))
+        except:
+            pass
 
     get_total_balance_irt_admin.short_description = 'دارایی به تومان'
 

@@ -184,7 +184,7 @@ class AssetsViewSet(ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.is_superuser:
-            queryset = Asset.candid_objects.all()
+            queryset = Asset.live_objects.all()
         else:
             queryset = Asset.live_objects.all()
 

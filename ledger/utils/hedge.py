@@ -6,7 +6,7 @@ from ledger.utils.provider import get_provider_requester
 def reset_assets_hedge(asset: Asset = None):
     overview = AssetOverview()
 
-    assets = Asset.candid_objects.all().filter(hedge=True)
+    assets = Asset.live_objects.filter(hedge=True)
 
     if asset:
         assets = assets.filter(id=asset.id)
