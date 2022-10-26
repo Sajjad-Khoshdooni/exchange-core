@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.conf import settings
+from django.db.models import Q
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
 from rest_framework.generics import get_object_or_404
@@ -246,7 +247,12 @@ class WalletViewSet(ModelViewSet):
         return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper())
 
     def get_queryset(self):
-        return Asset.live_objects.all()
+        disabled_assets = Wallet.objects.filter(
+            account=self.request.user.account,
+            asset__enable=False
+        ).exclude(balance=0).values_list('asset_id', flat=True)
+
+        return Asset.objects.filter(Q(enable=True) | Q(id__in=disabled_assets))
 
     def list(self, request, *args, **kwargs):
         with PriceManager(fetch_all=True, allow_stale=True):
