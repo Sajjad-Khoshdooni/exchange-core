@@ -14,7 +14,7 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
+from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict, get_trading_price_usdt
 from ledger.utils.price_manager import PriceManager
 from ledger.utils.provider import ProviderRequester, CoinInfo
 
@@ -241,26 +241,14 @@ class AssetOverviewAPIView(APIView):
     permission_classes = []
 
     @classmethod
-    def set_price(cls, coins: list, price: dict, tether_irt: Decimal):
+    def set_price(cls, coins: list):
         for coin in coins:
-            coin['price_usdt'] = price[coin['symbol']]
-
-            if coin['price_usdt']:
-                coin['price_irt'] = tether_irt * coin['price_usdt']
+            coin['price_usdt'] = get_trading_price_usdt(coin['symbol'], side=BUY)
             coin['market_irt_enable'] = coin['symbol'] in get_irt_market_asset_symbols()
-
-            coin.update(AssetSerializerMini(Asset.objects.get(symbol=coin['symbol'])).data)
+            coin.update(AssetSerializerMini(Asset.get(symbol=coin['symbol'])).data)
 
     def get(self, request):
-        symbols = Asset.live_objects.exclude(symbol__in=['IRT', 'IOTA'])
-
-        list_symbol = list(symbols.values_list('symbol', flat=True))
-        newest_coin_symbols = list(symbols.filter(new_coin=True).values_list('symbol', flat=True))
-
         caps = ProviderRequester().get_coins_info().values()
-
-        price = get_prices_dict(coins=list_symbol, side=BUY, allow_stale=True)
-        tether_irt = get_tether_irt_price(BUY, allow_stale=True)
 
         def coin_info_to_dict(info: CoinInfo):
             return {
@@ -269,16 +257,19 @@ class AssetOverviewAPIView(APIView):
             }
 
         high_volume = list(map(coin_info_to_dict, sorted(caps, key=lambda cap: cap.volume_24h, reverse=True)[:3]))
-        AssetOverviewAPIView.set_price(high_volume, price, tether_irt)
+        AssetOverviewAPIView.set_price(high_volume)
 
         high_24h_change = list(map(coin_info_to_dict, sorted(caps, key=lambda cap: cap.change_24h, reverse=True)[:3]))
-        AssetOverviewAPIView.set_price(high_24h_change, price, tether_irt)
+        AssetOverviewAPIView.set_price(high_24h_change)
 
-        new = list(map(coin_info_to_dict, filter(lambda cap: cap.coin in newest_coin_symbols, caps)))
-        AssetOverviewAPIView.set_price(new, price, tether_irt)
+        newest_coin_symbols = list(Asset.live_objects.exclude(
+            symbol__in=['IRT', 'IOTA']
+        ).filter(new_coin=True).values_list('symbol', flat=True))
+        newest = list(map(coin_info_to_dict, filter(lambda cap: cap.coin in newest_coin_symbols, caps)))
+        AssetOverviewAPIView.set_price(newest)
 
         return Response({
             'high_volume': high_volume,
             'high_24h_change': high_24h_change,
-            'newest': new
+            'newest': newest
         })

@@ -57,8 +57,6 @@ INSTALLED_APPS = [
     'accounts',
     'accounting',
     'ledger',
-    'provider',
-    'collector',
     'market',
     'trader',
     'jalali_date',
