@@ -293,8 +293,8 @@ class ProviderRequester:
 
 
 class MockProviderRequester(ProviderRequester):
-    def get_total_orders_amount_sum(self, asset: Asset) -> list:
-        return []
+    def get_total_orders_amount_sum(self, asset: Asset) -> dict:
+        return {SELL: 0, BUY: 0}
 
     def get_hedge_amount(self, asset: Asset) -> Decimal:
         return Decimal(0)
