@@ -280,7 +280,7 @@ class ProviderRequester:
         return self.collect_api('/api/v1/orders/', method='POST', data={
             'coin': asset.symbol,
             'scope': scope,
-            'amount': amount,
+            'amount': str(amount),
             'side': side
         })
 
@@ -290,7 +290,7 @@ class ProviderRequester:
         resp = self.collect_api('/api/v1/withdraw/', method='POST', data={
             'coin': transfer.asset.symbol,
             'network': transfer.network.symbol,
-            'amount': transfer.amount,
+            'amount': str(transfer.amount),
             'address': transfer.out_address,
             'memo': transfer.memo,
             'requester_id': transfer.id,
@@ -306,7 +306,7 @@ class ProviderRequester:
     def new_hedged_spot_buy(self, asset: Asset, amount: Decimal, spot_side: str, caller_id: str):
         self.collect_api('/api/v1/orders/hedged/', method='POST', data={
             'coin': asset.symbol,
-            'amount': amount,
+            'amount': str(amount),
             'requester_id': caller_id
         })
 

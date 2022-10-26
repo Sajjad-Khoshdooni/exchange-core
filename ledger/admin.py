@@ -34,19 +34,19 @@ class AssetAdmin(AdvancedAdmin):
         'get_total_asset', 'get_ledger_balance_users',
 
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
-        'order', 'trend', 'trade_enable',
+        'order', 'trend', 'trade_enable', 'hedge',
 
         'margin_enable', 'new_coin', 'spread_category'
     )
     list_filter = ('enable', 'trend', 'margin_enable', 'spread_category')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'new_coin')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'new_coin', 'hedge')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('hedge_asset', )
 
     def changelist_view(self, request, extra_context=None):
 
-        if True:
+        if not settings.DEBUG_OR_TESTING:
             self.overview = AssetOverview(strict=False, calculated_hedge=True)
 
             context = {
