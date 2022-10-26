@@ -28,6 +28,7 @@ class AssetOverview:
     def __init__(self, strict: bool = True):
         self._strict = strict
         self._future = BinanceFuturesHandler().get_account_details()
+        self._disabled_assets = set(Asset.objects.filter(enable=False).values_list('symbol', flat=True))
 
         self._future_positions = {
             pos['symbol']: pos for pos in self._future['positions']
@@ -122,6 +123,9 @@ class AssetOverview:
         return float(self._future['totalMarginBalance'])
 
     def get_price(self, symbol: str) -> Decimal:
+        if symbol in self._disabled_assets:
+            return Decimal(0)
+
         price = self.prices.get(symbol)
 
         if self._strict and price is None:

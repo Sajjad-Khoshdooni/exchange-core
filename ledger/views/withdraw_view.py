@@ -29,7 +29,6 @@ class WithdrawSerializer(serializers.ModelSerializer):
     memo = serializers.CharField(write_only=True, required=False, allow_blank=True)
     code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
-
     def validate(self, attrs):
         user = self.context['request'].user
 
@@ -51,8 +50,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
             if address_book.asset:
                 asset = address_book.asset
             else:
-                if not 'coin' in attrs:
+                if 'coin' not in attrs:
                     raise ValidationError('رمزارزی انتخاب نشده است.')
+
                 asset = get_object_or_404(Asset, symbol=attrs['coin'])
         else:
             if 'coin' not in attrs:
