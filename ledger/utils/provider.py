@@ -1,5 +1,6 @@
 import logging
 import math
+from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
 from math import log10
@@ -51,6 +52,13 @@ class FuturesInfo:
 
 
 @dataclass
+class CoinOrders:
+    coin: str
+    buy: Decimal
+    sell: Decimal
+
+
+@dataclass
 class NetworkInfo:
     asset: Asset
     network: Network
@@ -99,7 +107,7 @@ class ProviderRequester:
 
         request_kwargs = {
             'url': url,
-            'timeout': 60,
+            # 'timeout': 60,
             'headers': {'Authorization': config('PROVIDER_TOKEN')},
         }
 
@@ -112,18 +120,39 @@ class ProviderRequester:
         except (requests.exceptions.ConnectionError, ReadTimeoutError, requests.exceptions.Timeout):
             raise TimeoutError
 
-        return Response(data=resp.json(), success=resp.ok)
+        print('PROVIDER', path, method, data, resp.json())
 
-    def get_total_orders_amount_sum(self, asset: Asset) -> dict:
-        resp = self.collect_api('/api/v1/orders/total/', data={'coin': asset.symbol})
-        data = resp.data
+        return Response(data=resp.json(), success=resp.ok, status_code=resp.status_code)
 
-        return {
-            BUY: Decimal(data.get(BUY, 0)),
-            SELL: Decimal(data.get(SELL, 0)),
-        }
+    def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:
+        if asset:
+            data = {'coin': asset.symbol}
+        else:
+            data = {}
 
-    def get_hedge_amount(self, asset: Asset) -> Decimal:
+        resp = self.collect_api('/api/v1/orders/total/', data=data)
+        assert resp.success
+
+        coin_orders_data_map = defaultdict(dict)
+        for order_data in resp.data:
+            coin = order_data['coin']
+            side = order_data['side']
+            amount = Decimal(order_data['amount'])
+
+            coin_orders_data_map[coin][side] = amount
+
+        orders = []
+
+        for coin, orders_data in coin_orders_data_map.items():
+            orders.append(CoinOrders(
+                coin=coin,
+                buy=Decimal(orders_data.get('buy', 0)),
+                sell=Decimal(orders_data.get('sell', 0)),
+            ))
+
+        return orders
+
+    def get_hedge_amount(self, asset: Asset, coin_order: CoinOrders = None) -> Decimal:
         """
         how much assets we have more!
 
@@ -141,9 +170,15 @@ class ProviderRequester:
             sum=Sum('balance')
         )['sum'] or 0
 
-        orders = self.get_total_orders_amount_sum(asset)
+        if not coin_order:
+            coin_order = next(iter(self.get_total_orders_amount_sum(asset)), None)
 
-        return system_balance + orders[BUY] - orders[SELL]
+        orders_diff = 0
+
+        if coin_order:
+            orders_diff = coin_order.buy - coin_order.sell
+
+        return system_balance + orders_diff
 
     def get_market_info(self, asset: Asset) -> MarketInfo:
         resp = self.collect_api('/api/v1/market/', data={'coin': asset.symbol})
@@ -293,10 +328,10 @@ class ProviderRequester:
 
 
 class MockProviderRequester(ProviderRequester):
-    def get_total_orders_amount_sum(self, asset: Asset) -> dict:
-        return {SELL: 0, BUY: 0}
+    def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:
+        return []
 
-    def get_hedge_amount(self, asset: Asset) -> Decimal:
+    def get_hedge_amount(self, asset: Asset, coin_orders: CoinOrders = None) -> Decimal:
         return Decimal(0)
 
     def get_market_info(self, asset: Asset) -> MarketInfo:

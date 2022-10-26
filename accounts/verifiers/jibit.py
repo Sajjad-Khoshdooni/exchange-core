@@ -23,6 +23,7 @@ JIBIT_TOKEN_KEY = 'jibit-token'
 class Response:
     data: dict
     success: bool = True
+    status_code: int = 200
 
 
 class JibitRequester:

@@ -46,8 +46,8 @@ class AssetAdmin(AdvancedAdmin):
 
     def changelist_view(self, request, extra_context=None):
 
-        if not settings.DEBUG_OR_TESTING_OR_STAGING:
-            self.overview = AssetOverview(strict=False)
+        if True:
+            self.overview = AssetOverview(strict=False, calculated_hedge=True)
 
             context = {
                 'binance_initial_margin': round(self.overview.total_initial_margin, 2),
@@ -129,7 +129,7 @@ class AssetAdmin(AdvancedAdmin):
     get_hedge_amount.short_description = 'hedge amount'
 
     def get_calculated_hedge_amount(self, asset: Asset):
-        return asset.get_presentation_amount(get_provider_requester().get_hedge_amount(asset))
+        return self.overview and asset.get_presentation_amount(self.overview.get_calculated_hedge(asset))
 
     get_calculated_hedge_amount.short_description = 'calc hedge amount'
 

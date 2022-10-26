@@ -10,7 +10,7 @@ from ledger.models import Asset, Wallet, Transfer, Prize
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
 from ledger.utils.cache import cache_for
 from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, BUY, PriceFetchError
-from ledger.utils.provider import get_provider_requester, BINANCE, KUCOIN, MEXC
+from ledger.utils.provider import get_provider_requester, BINANCE, KUCOIN, MEXC, CoinOrders
 
 
 @cache_for(60)
@@ -22,9 +22,15 @@ def get_internal_asset_deposits():
 
 
 class AssetOverview:
-    def __init__(self, strict: bool = True):
+    def __init__(self, strict: bool = True, calculated_hedge: bool = False):
         self._strict = strict
+        self._coin_total_orders = None
         self.provider = get_provider_requester()
+
+        if calculated_hedge:
+            self._coin_total_orders = {
+                coin_order.coin: coin_order for coin_order in self.provider.get_total_orders_amount_sum()
+            }
 
         self._binance_futures = self.provider.get_futures_info(BINANCE)
         self._disabled_assets = set(Asset.objects.filter(enable=False).values_list('symbol', flat=True))
@@ -93,15 +99,20 @@ class AssetOverview:
 
     @property
     def total_initial_margin(self):
-        return float(self._binance_futures['totalInitialMargin'])
+        return float(self._binance_futures['total_initial_margin'])
 
     @property
     def total_maintenance_margin(self):
-        return float(self._binance_futures['totalMaintMargin'])
+        return float(self._binance_futures['total_maint_margin'])
 
     @property
     def total_margin_balance(self):
-        return float(self._binance_futures['totalMarginBalance'])
+        return float(self._binance_futures['total_margin_balance'])
+
+    def get_calculated_hedge(self, asset: Asset):
+        assert self._coin_total_orders is not None
+        coin_orders = self._coin_total_orders.get(asset.symbol, CoinOrders(coin=asset.symbol, buy=Decimal(), sell=Decimal()))
+        return self.provider.get_hedge_amount(asset, coin_orders)
 
     def get_price(self, symbol: str) -> Decimal:
         if symbol in self._disabled_assets:
@@ -122,10 +133,10 @@ class AssetOverview:
         return self._internal_deposits.get(asset.symbol, 0)
 
     def get_futures_available_usdt(self):
-        return self._binance_futures['availableBalance']
+        return self._binance_futures['available_balance']
 
     def get_future_position_amount(self, asset: Asset):
-        return self._binance_futures['positions'].get(asset.symbol, {}).get('balance', 0)
+        return self._future_positions.get(asset.symbol, {}).get('balance', 0)
 
     def get_binance_spot_amount(self, asset: Asset) -> float:
         return self._binance_spot_balance_map.get(asset.symbol, 0)
