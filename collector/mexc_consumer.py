@@ -32,7 +32,7 @@ class MexcConsumer:
         logger.info('Starting Mexc Socket...')
 
     def get_streams(self):
-        assets = list(Asset.candid_objects.filter(
+        assets = list(Asset.live_objects.filter(
             hedge_method__in=(Asset.HEDGE_MEXC_SPOT, Asset.HEDGE_MEXC_FUTURES)
         ).values_list('symbol', flat=True))
         return list(map(lambda asset: MexcSpotHandler().get_trading_symbol(asset), assets))

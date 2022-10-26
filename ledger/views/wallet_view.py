@@ -246,10 +246,7 @@ class WalletViewSet(ModelViewSet):
         return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper())
 
     def get_queryset(self):
-        if self.request.user.is_superuser:
-            return Asset.candid_objects.all()
-        else:
-            return Asset.live_objects.all()
+        return Asset.live_objects.all()
 
     def list(self, request, *args, **kwargs):
         with PriceManager(fetch_all=True, allow_stale=True):
@@ -262,7 +259,11 @@ class WalletViewSet(ModelViewSet):
             with_balance_wallets = list(filter(lambda w: w['balance'] != '0' and not w['pin_to_top'], data))
             without_balance_wallets = list(filter(lambda w: w['balance'] == '0' and not w['pin_to_top'], data))
 
-            wallets = pin_to_top_wallets + sorted(with_balance_wallets, key=lambda w: Decimal(w['balance_irt'] or 0), reverse=True) + without_balance_wallets
+            wallets = pin_to_top_wallets + sorted(
+                with_balance_wallets,
+                key=lambda w: Decimal(w['balance_irt'] or 0),
+                reverse=True
+            ) + without_balance_wallets
 
         return Response(wallets)
 

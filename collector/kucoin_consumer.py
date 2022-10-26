@@ -34,7 +34,7 @@ class KucoinConsumer:
         logger.info('Starting kucoin Socket...')
 
     def get_streams(self):
-        assets = list(Asset.candid_objects.filter(
+        assets = list(Asset.live_objects.filter(
             hedge_method__in=(Asset.HEDGE_KUCOIN_SPOT, Asset.HEDGE_KUCOIN_SPOT)
         ).values_list('symbol', flat=True))
         return list(map(lambda asset: KucoinSpotHandler().get_trading_symbol(asset), assets))

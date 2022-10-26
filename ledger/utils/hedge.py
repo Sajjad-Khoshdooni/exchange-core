@@ -6,7 +6,7 @@ from provider.models import ProviderOrder
 def reset_assets_hedge(asset: Asset = None):
     overview = AssetOverview()
 
-    assets = Asset.candid_objects.all().exclude(hedge_method=Asset.HEDGE_NONE)
+    assets = Asset.live_objects.all().exclude(hedge_method=Asset.HEDGE_NONE)
 
     if asset:
         assets = assets.filter(id=asset.id)

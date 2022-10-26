@@ -39,7 +39,7 @@ class AssetOverview:
         self._valid_symbols = set(Asset.objects.filter(enable=True).values_list('symbol', flat=True))
 
         self.prices = get_prices_dict(
-            coins=list(Asset.candid_objects.values_list('symbol', flat=True)),
+            coins=list(Asset.live_objects.values_list('symbol', flat=True)),
             side=SELL,
             allow_stale=True
         )
@@ -259,7 +259,7 @@ class AssetOverview:
     def get_all_users_asset_value(self) -> Decimal:
         value = Decimal(0)
 
-        for asset in Asset.candid_objects.all():
+        for asset in Asset.live_objects.all():
             value += self.get_users_asset_value(asset)
 
         pending_withdraws = FiatWithdrawRequest.objects.filter(
@@ -275,12 +275,12 @@ class AssetOverview:
 
     def get_total_hedge_value(self):
         return sum([
-            abs(self.get_hedge_value(asset) or 0) for asset in Asset.candid_objects.exclude(hedge_method=Asset.HEDGE_NONE)
+            abs(self.get_hedge_value(asset) or 0) for asset in Asset.live_objects.exclude(hedge_method=Asset.HEDGE_NONE)
         ])
 
     def get_cumulated_hedge_value(self):
         return abs(sum([
-            self.get_hedge_value(asset) for asset in Asset.candid_objects.exclude(hedge_method=Asset.HEDGE_NONE)
+            self.get_hedge_value(asset) for asset in Asset.live_objects.exclude(hedge_method=Asset.HEDGE_NONE)
         ]))
 
     def get_binance_balance(self, asset: Asset) -> Decimal:

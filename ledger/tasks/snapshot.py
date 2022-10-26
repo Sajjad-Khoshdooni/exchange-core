@@ -45,7 +45,7 @@ def create_snapshot():
 
     asset_snapshots = []
 
-    for asset in Asset.candid_objects.all():
+    for asset in Asset.live_objects.all():
         asset_snapshots.append(
             AssetSnapshot(
                 created=now,

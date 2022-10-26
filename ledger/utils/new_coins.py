@@ -43,9 +43,6 @@ def add_candidate_coins(coins: list, handler: str):
             order += 1
             asset.order = order
 
-        if not asset.enable:
-            asset.candidate = True
-
         if exchange_handler.NAME == BinanceSpotHandler.NAME:
             futures_symbol = BinanceFuturesHandler().get_trading_symbol(coin=coin)
             futures = BinanceFuturesHandler().get_symbol_data(futures_symbol)
