@@ -103,7 +103,7 @@ class OTCTrade(models.Model):
         if self.otc_request.account.is_ordinary_user():
             try:
                 from ledger.utils.provider import TRADE, get_provider_requester
-                hedged = get_provider_requester().new_order(
+                hedged = get_provider_requester().try_hedge_new_order(
                     asset=conf.coin,
                     side=conf.side,
                     amount=conf.coin_amount,
