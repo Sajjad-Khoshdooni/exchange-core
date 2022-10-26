@@ -4,7 +4,7 @@ from accounts.models import User
 from financial.models import Payment, FiatWithdrawRequest
 from ledger.models import Wallet
 from ledger.utils.fields import DONE
-from ledger.utils.price import BUY, get_trading_price_irt
+from ledger.utils.price import BUY, get_trading_price_irt, SELL
 
 
 def get_user_irt_net_deposit(user: User) -> int:
@@ -47,7 +47,7 @@ def check_withdraw_laundering(wallet: Wallet, amount: Decimal) -> bool:
     if net_irt_deposit <= 1000:
         return True
 
-    total_irt_value = wallet.account.get_total_balance_irt(Wallet.SPOT, side=BUY)
+    total_irt_value = wallet.account.get_total_balance_irt(side=SELL)
 
     price = get_trading_price_irt(wallet.asset.symbol, side=BUY, raw_price=True)
 
