@@ -257,7 +257,7 @@ class AssetOverviewAPIView(APIView):
         list_symbol = list(symbols.values_list('symbol', flat=True))
         newest_coin_symbols = list(symbols.filter(new_coin=True).values_list('symbol', flat=True))
 
-        caps = ProviderRequester().get_coins_info()
+        caps = ProviderRequester().get_coins_info().values()
 
         price = get_prices_dict(coins=list_symbol, side=BUY, allow_stale=True)
         tether_irt = get_tether_irt_price(BUY, allow_stale=True)
@@ -274,7 +274,7 @@ class AssetOverviewAPIView(APIView):
         high_24h_change = list(map(coin_info_to_dict, sorted(caps, key=lambda cap: cap.change_24h, reverse=True)[:3]))
         AssetOverviewAPIView.set_price(high_24h_change, price, tether_irt)
 
-        new = list(map(coin_info_to_dict, filter(lambda cap: cap.coin in newest_coin_symbols)))
+        new = list(map(coin_info_to_dict, filter(lambda cap: cap.coin in newest_coin_symbols, caps)))
         AssetOverviewAPIView.set_price(new, price, tether_irt)
 
         return Response({
