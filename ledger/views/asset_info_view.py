@@ -183,12 +183,7 @@ class AssetsViewSet(ModelViewSet):
         )
 
     def get_queryset(self):
-        if self.request.user.is_superuser:
-            queryset = Asset.live_objects.all()
-        else:
-            queryset = Asset.live_objects.all()
-
-        queryset = queryset.filter(trade_enable=True)
+        queryset = Asset.live_objects.filter(trade_enable=True)
 
         if self.get_options('category'):
             category = get_object_or_404(CoinCategory, name=self.get_options('category'))
@@ -248,7 +243,8 @@ class AssetOverviewAPIView(APIView):
             coin.update(AssetSerializerMini(Asset.get(symbol=coin['symbol'])).data)
 
     def get(self, request):
-        caps = ProviderRequester().get_coins_info().values()
+        coins = list(Asset.live_objects.values_list('symbol', flat=True))
+        caps = ProviderRequester().get_coins_info(coins).values()
 
         def coin_info_to_dict(info: CoinInfo):
             return {
