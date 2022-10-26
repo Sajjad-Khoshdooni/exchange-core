@@ -114,9 +114,14 @@ class ProviderRequester:
 
         return Response(data=resp.json(), success=resp.ok)
 
-    def get_total_orders_amount_sum(self, asset: Asset) -> list:
+    def get_total_orders_amount_sum(self, asset: Asset) -> dict:
         resp = self.collect_api('/api/v1/orders/total/', data={'coin': asset.symbol})
-        return resp.data
+        data = resp.data
+
+        return {
+            BUY: Decimal(data.get(BUY, 0)),
+            SELL: Decimal(data.get(SELL, 0)),
+        }
 
     def get_hedge_amount(self, asset: Asset) -> Decimal:
         """
@@ -138,17 +143,7 @@ class ProviderRequester:
 
         orders = self.get_total_orders_amount_sum(asset)
 
-        orders_amount = 0
-
-        for order in orders:
-            amount = order['amount']
-
-            if order['side'] == SELL:
-                amount = -amount
-
-            orders_amount += amount
-
-        return system_balance + orders_amount
+        return system_balance + orders[BUY] - orders[SELL]
 
     def get_market_info(self, asset: Asset) -> MarketInfo:
         resp = self.collect_api('/api/v1/market/', data={'coin': asset.symbol})
