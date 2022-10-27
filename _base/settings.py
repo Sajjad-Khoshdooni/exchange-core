@@ -351,3 +351,4 @@ JALALI_DATE_DEFAULTS = {
 SYSTEM_ACCOUNT_ID = config('SYSTEM_ACCOUNT_ID', default=1)
 
 BRAND_EN = config('BRAND_EN', default='')
+BRAND = config('BRAND', default='')

@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -172,7 +173,7 @@ class FiatWithdrawRequest(models.Model):
             template=email_template,
             context={
                 'estimated_receive_time': self.receive_datetime or None,
-                'brand': config('BRAND'),
+                'brand': settings.BRAND,
                 'panel_url': config('PANEL_URL'),
                 'logo_elastic_url': config('LOGO_ELASTIC_URL'),
             }

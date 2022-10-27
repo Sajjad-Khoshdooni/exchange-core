@@ -162,7 +162,7 @@ class VerificationCode(models.Model):
                     phone=phone,
                     template='69129',
                     params={
-                        'brand': config('BRAND'),
+                        'brand': settings.BRAND,
                         'code': otp_code.code
                     }
                 )

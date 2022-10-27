@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
 from django.shortcuts import render
@@ -36,7 +37,7 @@ def dashboard(request):
             'pending_or_reject_withdraw_requests': pending_or_reject_withdraw_requests,
             'archived_users': users.filter(archived=True).count(),
             'shahkar_rejected': users.filter(level=User.LEVEL2, national_code_phone_verified=False).count(),
-            'brand': config('BRAND')
+            'brand': settings.BRAND
 
         }
 

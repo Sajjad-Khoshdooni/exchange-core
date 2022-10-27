@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.db import models
 from django.http import HttpResponse
 from django.shortcuts import redirect
@@ -85,7 +86,7 @@ class Payment(models.Model):
                 template=email.SCOPE_PAYMENT,
                 context={
                     'payment_amount': payment_amont,
-                    'brand': config('BRAND'),
+                    'brand': settings.BRAND,
                     'panel_url': config('PANEL_URL'),
                     'logo_elastic_url': config('LOGO_ELASTIC_URL'),
                 }

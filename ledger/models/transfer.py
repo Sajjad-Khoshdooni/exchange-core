@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Union
 from uuid import uuid4
 
+from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import UniqueConstraint, Q
@@ -259,7 +260,7 @@ class Transfer(models.Model):
                         'wallet_asset': self.wallet.asset.symbol,
                         'withdraw_address': self.out_address,
                         'trx_hash': self.trx_hash,
-                        'brand': config('BRAND'),
+                        'brand': settings.BRAND,
                         'panel_url': config('PANEL_URL'),
                         'logo_elastic_url': config('LOGO_ELASTIC_URL'),
                     }
