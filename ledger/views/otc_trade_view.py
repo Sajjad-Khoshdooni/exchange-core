@@ -8,10 +8,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease
+from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease, HedgeError
 from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
-from ledger.models.otc_trade import TokenExpired, ProcessingError
+from ledger.models.otc_trade import TokenExpired
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.price import SELL, get_tether_irt_price, BUY
 from market.models.pair_symbol import DEFAULT_TAKER_FEE
@@ -217,7 +217,7 @@ class OTCTradeSerializer(serializers.ModelSerializer):
             raise ValidationError(str(e))
         except AbruptDecrease as e:
             raise ValidationError('مشکلی در ثبت سفارش رخ داد. لطفا دوباره تلاش کنید.')
-        except ProcessingError as e:
+        except HedgeError as e:
             raise ValidationError('مشکلی در پردازش سفارش رخ داد.')
 
 

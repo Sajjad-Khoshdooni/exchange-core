@@ -79,55 +79,6 @@ def get_redis_price_key(coin: str):
     return 'price:' + coin.lower() + 'usdt'
 
 
-def get_tether_price_irt_grpc(side: str, now: datetime = None, delay: int = 600):
-    coins = 'USDT'
-    symbol_to_coins = {
-        coins + IRT: coins
-    }
-
-    if not now:
-        _now = datetime.now()
-    else:
-        _now = now
-
-    grpc_client = gRPCClient()
-    timestamp = int((_now.timestamp() - delay) * 1000)
-
-    order_by = ('symbol', '-timestamp')
-    distinct = ('symbol',)
-    values = ('symbol', 'price')
-
-    orders = grpc_client.get_current_orders(
-        exchange=NOBITEX,
-        symbols=tuple(symbol_to_coins.keys()),
-        position=0,
-        type=side,
-        timestamp=timestamp,
-        order_by=order_by,
-        distinct=distinct,
-        values=values,
-    ).orders
-
-    grpc_client.channel.close()
-
-    if not orders:
-        return
-
-    return Decimal(Price(coin='USDT', price=Decimal(orders[0].price), side=side).price) // 10
-
-
-def get_avg_tether_price_irt_grpc(start_timestamp, end_timestamp):
-    grpc_client = gRPCClient()
-    response = grpc_client.get_trades_average_price_by_time(
-        min_timestamp=start_timestamp,
-        max_timestamp=end_timestamp,
-        symbol='USDTIRT',
-        exchange=NOBITEX
-    ).value
-    grpc_client.channel.close()
-    return Decimal(response / 10)
-
-
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
                   now: datetime = None, allow_stale: bool = False) -> List[Price]:
     results = []
@@ -241,7 +192,7 @@ def get_price_tether_irt_nobitex():
     return data
 
 
-def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = False) -> Decimal:
+def get_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
     price = price_redis.hget('usdtirt', SIDE_MAP[side])
     if price:
         return Decimal(price)
@@ -254,11 +205,13 @@ def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = Fa
 
     except (requests.exceptions.ConnectionError, TimeoutError, TypeError, JSONDecodeError, KeyError):
         try:
-            price = get_tether_price_irt_grpc(side=side, now=now)
+            from ledger.utils.provider import get_provider_requester
+            provider = get_provider_requester()
+            price = provider.get_price('USDTIRT', side=side)
 
             if not price:
                 if allow_stale:
-                    return get_tether_price_irt_grpc(side=side, now=now, delay=DAY)
+                    return provider.get_price('USDTIRT', side=side, delay=DAY)
                 else:
                     raise
         except:
@@ -294,7 +247,7 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
     else:
         spread = get_spread(coin, side, value) / 100
 
-    if config('AUTO_SPREED_SHEER', cast=bool, default=False):
+    if config('AUTO_SPREAD_SHEER', cast=bool, default=False):
         spread_sheer = Decimal('0.5')
     else:
         spread_sheer = 0

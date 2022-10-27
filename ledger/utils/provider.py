@@ -2,6 +2,7 @@ import logging
 import math
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from math import log10
 from typing import List, Dict
@@ -12,7 +13,6 @@ from django.db.models import Sum
 from urllib3.exceptions import ReadTimeoutError
 from yekta_config.config import config
 
-from accounts.models import Account
 from accounts.verifiers.jibit import Response
 from ledger.exceptions import HedgeError
 from ledger.models import Asset, Network, Wallet, Transfer
@@ -162,6 +162,7 @@ class ProviderRequester:
 
         given binance manual deposit = 0 -> hedge = system + binance manual deposit + binance trades
         """
+        from accounts.models import Account
 
         system_balance = Wallet.objects.filter(
             account__type=Account.SYSTEM,
@@ -326,6 +327,27 @@ class ProviderRequester:
 
         return coins_info
 
+    def get_price(self, symbol: str, side: str, delay: int = 300, when: datetime = None) -> Decimal:
+        resp = self.collect_api('/api/v1/market/price/history/', data={
+            'symbol': symbol,
+            'side': side,
+            'delay': delay,
+            'datetime': when
+        })
+
+        if resp.success:
+            return Decimal(resp.data['price'])
+
+    def get_avg_trade_price(self, symbol: str, start: datetime, end: datetime) -> Decimal:
+        resp = self.collect_api('/api/v1/market/price/trade/avg/', data={
+            'symbol': symbol,
+            'start': start,
+            'end': end
+        })
+
+        if resp.success:
+            return Decimal(resp.data['price'])
+
 
 class MockProviderRequester(ProviderRequester):
     def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:
@@ -380,9 +402,15 @@ class MockProviderRequester(ProviderRequester):
     def get_coins_info(self, coins: List[str] = None) -> Dict[str, CoinInfo]:
         return {}
 
+    def get_price(self, symbol: str, side: str, delay: int = 300, when: datetime = None) -> Decimal:
+        return Decimal(30000)
+
+    def get_avg_trade_price(self, symbol: str, start: datetime, end: datetime) -> Decimal:
+        return Decimal(30000)
+
 
 def get_provider_requester() -> ProviderRequester:
-    # if settings.DEBUG_OR_TESTING:
-    #     return MockProviderRequester()
-    # else:
-    return ProviderRequester()
+    if settings.DEBUG_OR_TESTING:
+        return MockProviderRequester()
+    else:
+        return ProviderRequester()

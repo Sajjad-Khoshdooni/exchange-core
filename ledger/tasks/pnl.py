@@ -3,12 +3,12 @@ from datetime import timedelta
 
 from celery import shared_task
 from celery.exceptions import MaxRetriesExceededError
-from django.conf import settings
 from django.utils import timezone
 
 from ledger.models import PNLHistory, Wallet, Asset
-from ledger.utils.price import get_avg_tether_price_irt_grpc, BUY, get_tether_irt_price
+from ledger.utils.price import BUY, get_tether_irt_price
 from ledger.utils.price_manager import PriceManager
+from ledger.utils.provider import get_provider_requester
 
 logger = logging.getLogger(__name__)
 
@@ -16,15 +16,13 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True, queue='history', max_retries=6)
 def create_pnl_histories(self):
     try:
-        today = timezone.localtime(timezone.now()).replace(hour=0, minute=0, second=0, microsecond=0)
-        today_timestamp = int(today.timestamp() * 1000)
+        today = timezone.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
 
-        if settings.DEBUG:
-            usdt_price = get_tether_irt_price(BUY)
-        else:
-            usdt_price = get_avg_tether_price_irt_grpc(
-                today_timestamp - 600_000, today_timestamp
-            ) or get_tether_irt_price(BUY)
+        usdt_price = get_provider_requester().get_avg_trade_price(
+            symbol='USDTIRT',
+            start=today - timedelta(minutes=10),
+            end=today
+        ) or get_tether_irt_price(BUY)
 
         all_in_out = PNLHistory.get_all_in_out(today - timedelta(days=1), today)
         all_wallets = PNLHistory.get_all_wallets()

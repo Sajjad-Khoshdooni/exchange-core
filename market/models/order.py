@@ -375,15 +375,12 @@ class Order(models.Model):
                 side = Order.SELL
 
             from ledger.utils.provider import get_provider_requester, TRADE
-            placed_hedge_order = get_provider_requester().try_hedge_new_order(
+            get_provider_requester().try_hedge_new_order(
                 asset=self.wallet.asset,
                 side=side,
                 amount=to_hedge_amount,
                 scope=TRADE
             )
-
-            if not placed_hedge_order:
-                raise Exception('failed placing hedge order')
 
         if self.fill_type == Order.MARKET and self.status == Order.NEW:
             self.status = Order.CANCELED

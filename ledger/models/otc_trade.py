@@ -5,7 +5,7 @@ from uuid import uuid4
 from django.db import models
 
 from accounts.models import Account
-from ledger.exceptions import AbruptDecrease
+from ledger.exceptions import AbruptDecrease, HedgeError
 from ledger.models import OTCRequest, Trx
 from ledger.utils.price import SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -14,10 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class TokenExpired(Exception):
-    pass
-
-
-class ProcessingError(Exception):
     pass
 
 
@@ -103,25 +99,17 @@ class OTCTrade(models.Model):
         if self.otc_request.account.is_ordinary_user():
             try:
                 from ledger.utils.provider import TRADE, get_provider_requester
-                hedged = get_provider_requester().try_hedge_new_order(
+                get_provider_requester().try_hedge_new_order(
                     asset=conf.coin,
                     side=conf.side,
                     amount=conf.coin_amount,
                     scope=TRADE
                 )
-            except:
+                self.accept()
+            except HedgeError:
                 logger.exception('Error in hedging otc request')
-                hedged = False
-        else:
-            hedged = True
-
-        if hedged:
-            self.accept()
-        else:
-            self.cancel()
-
-        if not hedged:
-            raise ProcessingError
+                self.cancel()
+                raise
 
     def cancel(self):
         with WalletPipeline() as pipeline:  # type: WalletPipeline
