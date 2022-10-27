@@ -118,7 +118,7 @@ CORS_ALLOW_CREDENTIALS = True
 DATABASES = {
     'default': {
         'ENGINE': config('DEFAULT_DB_ENGINE', default='django.db.backends.postgresql_psycopg2'),
-        'NAME': config('DEFAULT_DB_NAME', default='core'),
+        'NAME': config('DEFAULT_DB_NAME', default='core_db'),
         'USER': config('DEFAULT_DB_USER', default='exchange'),
         'PASSWORD': config('DEFAULT_DB_PASSWORD'),
         'HOST': config('DEFAULT_DB_HOST', default='localhost'),
