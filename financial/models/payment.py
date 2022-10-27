@@ -46,7 +46,6 @@ class PaymentRequest(models.Model):
 
 
 class Payment(models.Model):
-    APP_DEEP_LINK = config('APP_DEEP_LINK')
     PANEL_URL = config('PANEL_URL')
     SUCCESS_URL = '/checkout/success'
     FAIL_URL = '/checkout/fail'
