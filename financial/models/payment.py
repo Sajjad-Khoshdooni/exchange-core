@@ -46,7 +46,6 @@ class PaymentRequest(models.Model):
 
 
 class Payment(models.Model):
-    PANEL_URL = config('PANEL_URL')
     SUCCESS_URL = '/checkout/success'
     FAIL_URL = '/checkout/fail'
     SUCCESS_PAYMENT_FAIL_FAST_bUY = '/checkout/fail_trade'
@@ -86,7 +85,7 @@ class Payment(models.Model):
                 context={
                     'payment_amount': payment_amont,
                     'brand': settings.BRAND,
-                    'panel_url': config('PANEL_URL'),
+                    'panel_url': settings.PANEL_URL,
                     'logo_elastic_url': config('LOGO_ELASTIC_URL'),
                 }
             )

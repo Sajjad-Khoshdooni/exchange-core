@@ -105,7 +105,7 @@ class EmailVerificationCode(models.Model):
             context={
                 'otp_code': otp_code.code,
                 'brand': settings.BRAND,
-                'panel_url': config('PANEL_URL'),
+                'panel_url': settings.PANEL_URL,
                 'logo_elastic_url': config('LOGO_ELASTIC_URL'),
             }
         )

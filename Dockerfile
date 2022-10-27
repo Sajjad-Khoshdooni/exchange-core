@@ -4,4 +4,4 @@ WORKDIR /
 ADD ./requirements.txt ./
 RUN pip install -r ./requirements.txt
 ADD ./ ./
-ENTRYPOINT ["/bin/sh", "-c" , "python manage.py collectstatic --noinput && python manage.py compilemessages && python manage.py migrate && gunicorn --bind 0.0.0.0:8000 _base.wsgi"]
+CMD python manage.py collectstatic --noinput && python manage.py compilemessages && python manage.py migrate && gunicorn --bind 0.0.0.0:8000 _base.wsgi
