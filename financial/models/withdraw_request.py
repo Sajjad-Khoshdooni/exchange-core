@@ -3,7 +3,7 @@ import logging
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import Account
 from accounts.models import Notification

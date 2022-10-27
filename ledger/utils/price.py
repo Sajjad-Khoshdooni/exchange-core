@@ -8,7 +8,7 @@ from typing import Dict, List, Union
 import requests
 from django.conf import settings
 from redis import Redis
-from yekta_config.config import config
+from decouple import config
 
 from ledger.utils.cache import cache_for
 from ledger.utils.price_manager import PriceManager

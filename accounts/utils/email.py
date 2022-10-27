@@ -3,13 +3,13 @@ import logging
 import requests
 from django.conf import settings
 from django.template.loader import render_to_string
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
+from decouple import config
 
 logger = logging.getLogger(__name__)
 
 
-api_key = secret('ELASTICMAIL_API_KEY')
+api_key = config('ELASTICMAIL_API_KEY')
 email_sender = config('EMAIL_SENDER')
 brand = config('BRAND')
 SCOPE_VERIFY_EMAIL = 'verify_email'

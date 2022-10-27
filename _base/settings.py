@@ -7,12 +7,11 @@ from pathlib import Path
 import sentry_sdk
 from decouple import Csv
 from sentry_sdk.integrations.django import DjangoIntegration
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = secret('SECRET')
+SECRET_KEY = config('SECRET')
 
 DEBUG = config('DEBUG', cast=bool, default=False)
 STAGING = config('STAGING', cast=bool, default=False)
@@ -21,7 +20,7 @@ TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 DEBUG_OR_TESTING = DEBUG or TESTING
 DEBUG_OR_TESTING_OR_STAGING = DEBUG or TESTING or STAGING
 
-HOST_URL = config('HOST_URL')
+HOST_URL = config('HOST_URL', default='https://api.raastin.com')
 
 CELERY_TASK_ALWAYS_EAGER = config('CELERY_ALWAYS_EAGER', default=False)
 
@@ -114,10 +113,6 @@ ALLOWED_CIDR_NETS = ['10.0.0.0/16']
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv(), default='')
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', cast=Csv(), default='')
 CORS_ALLOW_CREDENTIALS = True
-
-KAVENEGAR_KEY = secret('KAVENEGAR_KEY')
-SMS_IR_API_KEY = secret('SMS_IR_API_KEY')
-SMS_IR_API_SECRET = secret('SMS_IR_API_SECRET')
 
 DATABASES = {
     'default': {
@@ -329,7 +324,9 @@ SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', cast=bool, default=True)
 if config('SESSION_COOKIE_DOMAIN', default=None):
     SESSION_COOKIE_DOMAIN = config('SESSION_COOKIE_DOMAIN')
 
-CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN')
+if config('CSRF_COOKIE_DOMAIN', default=None):
+    CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN')
+
 CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='None')
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', cast=bool, default=True)
 
@@ -352,4 +349,4 @@ JALALI_DATE_DEFAULTS = {
 
 SYSTEM_ACCOUNT_ID = config('SYSTEM_ACCOUNT_ID', default=1)
 
-BRAND_EN = config('BRAND_EN')
+BRAND_EN = config('BRAND_EN', default='')

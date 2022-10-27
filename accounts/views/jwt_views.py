@@ -9,14 +9,14 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from yekta_config import secret
+from decouple import config
 
 from accounts.models import Account
 from accounts.authentication import CustomTokenAuthentication
 
 
 def user_has_delegate_permission(user):
-    return str(user.id) in secret('DELEGATION_PERMITTED_USERS', '').split(',')
+    return str(user.id) in config('DELEGATION_PERMITTED_USERS', '').split(',')
 
 
 class DelegatedAccountMixin:

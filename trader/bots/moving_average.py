@@ -5,7 +5,7 @@ from typing import Union
 
 from django.core.cache import caches
 from django.utils import timezone
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import Account
 from ledger.models import Asset

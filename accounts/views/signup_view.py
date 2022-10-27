@@ -7,7 +7,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import User, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode

@@ -2,7 +2,7 @@
 
 import django.db.models.deletion
 from django.db import migrations, models
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import Notification
 

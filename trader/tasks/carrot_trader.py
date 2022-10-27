@@ -4,7 +4,7 @@ import random
 from decimal import Decimal
 
 from celery import shared_task
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import Account
 from ledger.models import Asset

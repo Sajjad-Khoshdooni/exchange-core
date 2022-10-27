@@ -8,8 +8,8 @@ import pytz
 import requests
 from django.core.cache import caches
 from django.utils import timezone
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
+from decouple import config
 
 from financial.models import BankAccount, FiatWithdrawRequest, Gateway, Payment, PaymentRequest
 from financial.utils.withdraw_limit import is_holiday, time_in_range
@@ -88,7 +88,7 @@ class PayirChannel(FiatWithdraw):
         request_kwargs = {
             'url': url,
             'timeout': timeout,
-            'headers': {'Authorization': 'Bearer ' + secret('PAY_IR_TOKEN')},
+            'headers': {'Authorization': 'Bearer ' + config('PAY_IR_TOKEN')},
             # 'proxies': {
             #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
             #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -227,7 +227,7 @@ class ZibalChannel(FiatWithdraw):
         request_kwargs = {
             'url': url,
             'timeout': timeout,
-            'headers': {'Authorization': 'Bearer ' + secret('ZIBAL_TOKEN')},
+            'headers': {'Authorization': 'Bearer ' + config('ZIBAL_TOKEN')},
             # 'proxies': {
             #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
             #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -420,8 +420,8 @@ class JibitChannel(FiatWithdraw):
         resp = requests.post(
             url=cls.BASE_URL + '/v2/tokens/generate',
             json={
-                'apiKey': secret('JIBIT_GATEWAY-API_KEY'),
-                'secretKey': secret('JIBIT_GATEWAY_API_SECRET'),
+                'apiKey': config('JIBIT_GATEWAY-API_KEY'),
+                'secretKey': config('JIBIT_GATEWAY_API_SECRET'),
             },
             timeout=30,
             # proxies={

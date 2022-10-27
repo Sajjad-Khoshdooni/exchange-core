@@ -8,8 +8,8 @@ from celery import shared_task
 from django.db.models import Sum, F, Value
 from django.db.models.functions import TruncDate, Concat
 from django.utils import timezone
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
+from decouple import config
 
 from accounts.models import User
 from accounts.utils.validation import gregorian_to_jalali_date, gregorian_to_jalali_datetime
@@ -23,7 +23,7 @@ def send_accounting_report(file_path: str):
     f = open(file_path, 'rb')
     file_bytes = f.read()
     f.close()
-    token = secret('ACCOUNTING_TELEGRAM_TOKEN')
+    token = config('ACCOUNTING_TELEGRAM_TOKEN')
     chat_id = config('ACCOUNTING_TELEGRAM_CHAT_ID')
     document = (f.name, file_bytes)
     url = 'https://api.telegram.org/bot{token}/sendDocument'.format(token=token)

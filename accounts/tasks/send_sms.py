@@ -4,8 +4,8 @@ import requests
 from celery import shared_task
 from django.conf import settings
 from kavenegar import KavenegarAPI, APIException, HTTPException
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
+from decouple import config
 
 from accounts.verifiers.finotech import token_cache
 
@@ -23,7 +23,7 @@ def send_message_by_kavenegar(phone: str, template: str, token: str, send_type: 
     if settings.BRAND_EN != 'Raastin':
         template = settings.BRAND_EN.lower() + '-' + template
 
-    api_key = settings.KAVENEGAR_KEY
+    api_key = config('KAVENEGAR_KEY')
 
     try:
         api = KavenegarAPI(apikey=api_key)
@@ -51,7 +51,7 @@ def get_sms_ir_token():
         timeout=15,
         data={
             'UserApiKey': config('SMS_IR_API_KEY'),
-            'SecretKey': secret('SMS_IR_API_SECRET'),
+            'SecretKey': config('SMS_IR_API_SECRET'),
         }
     )
 

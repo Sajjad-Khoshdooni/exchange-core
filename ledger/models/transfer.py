@@ -6,7 +6,7 @@ from uuid import uuid4
 from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import UniqueConstraint, Q
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import Account, Notification
 from accounts.utils import email

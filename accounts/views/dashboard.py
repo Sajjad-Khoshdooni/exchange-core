@@ -1,7 +1,7 @@
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
 from django.shortcuts import render
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models.user import User
 from financial.models.withdraw_request import FiatWithdrawRequest

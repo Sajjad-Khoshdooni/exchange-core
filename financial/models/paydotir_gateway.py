@@ -1,7 +1,7 @@
 import requests
 from django.conf import settings
 from django.urls import reverse
-from yekta_config.config import config
+from decouple import config
 
 from financial.models import Gateway, BankCard, PaymentRequest, Payment
 from financial.models.gateway import GatewayFailed

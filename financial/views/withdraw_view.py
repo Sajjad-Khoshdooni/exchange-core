@@ -10,7 +10,7 @@ from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import VerificationCode
 from accounts.permissions import IsBasicVerified

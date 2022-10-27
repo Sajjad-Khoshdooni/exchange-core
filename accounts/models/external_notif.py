@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import User
 from accounts.utils.validation import PHONE_MAX_LENGTH
@@ -39,7 +39,7 @@ class ExternalNotification(models.Model):
             'params': {
                 'name': '{count} کوین {percent} درصد',
                 'brand': 'و دریافت تا ۲۰۰ هزار شیبا به صرافی {}'.format(config('BRAND')),
-                'department': config('RETENTION_URL_TOP_GAINERS'),
+                'department': config('RETENTION_URL_TOP_GAINERS', ''),
             }
         },
 
@@ -47,7 +47,7 @@ class ExternalNotification(models.Model):
             'template': '67757',
             'params': {
                 'brand': 'صرافی {} و دریافت تا ۲۰۰ هزار شیبا،'.format(config('BRAND')),
-                'department': config('RETENTION_URL_VERIFY')
+                'department': config('RETENTION_URL_VERIFY', '')
             }
         },
 
@@ -55,7 +55,7 @@ class ExternalNotification(models.Model):
             'template': '67757',
             'params': {
                 'brand': 'صرافی {} و دریافت تا ۲۰۰ هزار شیبا،'.format(config('BRAND')),
-                'department': config('RETENTION_URL_VERIFY')
+                'department': config('RETENTION_URL_VERIFY', '')
             }
         },
 
@@ -63,7 +63,7 @@ class ExternalNotification(models.Model):
             'template': '68113',
             'params': {
                 'name': 'آخرین فرصت دریافت تا ۲۰۰ هزار شیبا در {}.'.format(config('BRAND')),
-                'department': config('RETENTION_URL_VERIFY')
+                'department': config('RETENTION_URL_VERIFY', '')
             }
         },
 
@@ -72,7 +72,7 @@ class ExternalNotification(models.Model):
             'params': {
                 'name': 'صرافی {}'.format(config('BRAND')),
                 'brand': 'و دریافت هدیه تا ۲۰۰ هزار شیبا به {}'.format(config('BRAND')),
-                'department': config('RETENTION_URL_DEPOSIT')
+                'department': config('RETENTION_URL_DEPOSIT', '')
             }
         },
         SCOPE_DEPOSIT2: {
@@ -80,7 +80,7 @@ class ExternalNotification(models.Model):
             'params': {
                 'name': '{} تنها صرافی با کارمزد صفر.'.format(config('BRAND')),
                 'brand': 'و دریافت هدیه تا ۲۰۰ هزار شیبا به {}'.format(config('BRAND')),
-                'department': config('RETENTION_URL_DEPOSIT')
+                'department': config('RETENTION_URL_DEPOSIT', '')
             }
         },
         SCOPE_DEPOSIT3: {
@@ -88,7 +88,7 @@ class ExternalNotification(models.Model):
             'params': {
                 'name': 'تا آخر هفته فرصت دارید با',
                 'brand': 'در صرافی {} تا ۲۰۰ هزار شیبا هدیه بگیرید.'.format(config('BRAND')),
-                'department': config('RETENTION_URL_DEPOSIT')
+                'department': config('RETENTION_URL_DEPOSIT', '')
             }
         },
         SCOPE_DEPOSIT4: {
@@ -96,7 +96,7 @@ class ExternalNotification(models.Model):
             'params': {
                 'name': 'تا امشب فرصت دارید با',
                 'brand': 'در صرافی {} تا ۲۰۰ هزار شیبا هدیه بگیرید.'.format(config('BRAND')),
-                'department': config('RETENTION_URL_DEPOSIT')
+                'department': config('RETENTION_URL_DEPOSIT', '')
             }
         },
 
@@ -105,7 +105,7 @@ class ExternalNotification(models.Model):
             'params': {
                 'name': 'صرافی {} با کارمزد صفر'.format(config('BRAND')),
                 'brand': 'و تا ۲۰۰ هزار شیبا هدیه بگیرید',
-                'department': config('RETENTION_URL_TRADE')
+                'department': config('RETENTION_URL_TRADE', '')
             }
         },
 
@@ -114,7 +114,7 @@ class ExternalNotification(models.Model):
             'params': {
                 'name': 'صرافی {} تا امشب'.format(config('BRAND')),
                 'brand': 'و تا ۲۰۰ هزار شیبا هدیه بگیرید',
-                'department': config('RETENTION_URL_TRADE')
+                'department': config('RETENTION_URL_TRADE', '')
             }
         },
         SCOPE_TRADE3: {
@@ -122,7 +122,7 @@ class ExternalNotification(models.Model):
             'params': {
                 'name': 'صرافی {} تا امشب'.format(config('BRAND')),
                 'brand': 'و تا ۲۰۰ هزار شیبا هدیه بگیرید',
-                'department': config('RETENTION_URL_TRADE')
+                'department': config('RETENTION_URL_TRADE', '')
             }
         },
     }

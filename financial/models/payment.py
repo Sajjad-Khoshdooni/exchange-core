@@ -4,7 +4,7 @@ from django.db import models
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils import timezone
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import Account
 from accounts.models import Notification
@@ -88,7 +88,7 @@ class Payment(models.Model):
                     'brand': config('BRAND'),
                     'panel_url': config('PANEL_URL'),
                     'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-                         }
+                }
             )
 
     def accept(self, pipeline: WalletPipeline):

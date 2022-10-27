@@ -11,7 +11,7 @@ import requests
 from django.conf import settings
 from django.db.models import Sum
 from urllib3.exceptions import ReadTimeoutError
-from yekta_config.config import config
+from decouple import config
 
 from accounts.verifiers.jibit import Response
 from ledger.exceptions import HedgeError

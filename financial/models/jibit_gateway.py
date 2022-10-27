@@ -2,8 +2,8 @@ import requests
 from django.conf import settings
 from django.core.cache import caches
 from rest_framework.reverse import reverse
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
+from decouple import config
 
 from financial.models import Gateway, BankCard, PaymentRequest, Payment
 from financial.models.gateway import GatewayFailed, logger
@@ -26,8 +26,8 @@ class JibitGateway(Gateway):
         resp = requests.post(
             url=self.BASE_URL + '/v3/tokens',
             json={
-                'apiKey': secret('JIBIT_PAYMENT_API_KEY'),
-                'secretKey': secret('JIBIT_PAYMENT_SECRET_KEY'),
+                'apiKey': config('JIBIT_PAYMENT_API_KEY'),
+                'secretKey': config('JIBIT_PAYMENT_SECRET_KEY'),
             },
             timeout=30,
             # proxies={

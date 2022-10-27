@@ -1,7 +1,7 @@
 import requests
 from django.conf import settings
 from oauth2client.service_account import ServiceAccountCredentials
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import User
 

@@ -2,7 +2,7 @@ import logging
 from decimal import Decimal
 
 from django.db import transaction
-from yekta_config.config import config
+from decouple import config
 
 from ledger.models import Wallet, OTCTrade, OTCRequest, Asset, CloseRequest, MarginLoan, Trx
 from ledger.utils.fields import PENDING, DONE
