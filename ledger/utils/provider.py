@@ -270,7 +270,12 @@ class ProviderRequester:
                         scope='prv-base',
                     )
 
-            order = self.new_order(asset, side, order_amount, scope)
+            order = self.new_order(
+                asset=asset,
+                side=side,
+                amount=order_amount,
+                scope=scope
+            )
 
             if not order:
                 raise HedgeError
