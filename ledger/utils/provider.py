@@ -276,12 +276,13 @@ class ProviderRequester:
                 raise HedgeError
 
     def new_order(self, asset: Asset, scope: str, amount: Decimal, side: str):
-        return self.collect_api('/api/v1/orders/', method='POST', data={
+        resp = self.collect_api('/api/v1/orders/', method='POST', data={
             'coin': asset.symbol,
             'scope': scope,
             'amount': str(amount),
             'side': side
         })
+        return resp.success
 
     def new_withdraw(self, transfer: Transfer):
         assert not transfer.deposit
