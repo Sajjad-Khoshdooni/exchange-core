@@ -14,8 +14,12 @@ from ledger.utils.provider import get_provider_requester, BINANCE, KUCOIN, MEXC,
 
 
 @cache_for(60)
-def get_internal_asset_deposits():
+def get_internal_asset_deposits() -> dict:
     assets = InternalAssetsRequester().get_assets()
+
+    if not assets:
+        return {}
+
     return {
         asset['coin']: Decimal(asset['amount']) for asset in assets
     }
