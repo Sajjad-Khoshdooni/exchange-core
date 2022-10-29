@@ -48,14 +48,6 @@ class MarketInfo:
 
 @validate_arguments
 @dataclass
-class FuturesInfo:
-    asset: Asset
-    notional: Decimal
-    position_amount: Decimal
-
-
-@validate_arguments
-@dataclass
 class CoinOrders:
     coin: str
     buy: Decimal
