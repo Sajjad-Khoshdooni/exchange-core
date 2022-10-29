@@ -75,7 +75,7 @@ class Asset(models.Model):
     pin_to_top = models.BooleanField(default=False)
 
     trade_enable = models.BooleanField(default=True)
-    hedge_method = models.CharField(max_length=32, default=HEDGE_BINANCE_FUTURE, choices=HEDGE_METHOD_CHOICE, blank=True)
+    hedge_method = models.CharField(max_length=32, default=HEDGE_BINANCE_FUTURE, choices=HEDGE_METHOD_CHOICE, blank=True, db_index=True)
 
     margin_enable = models.BooleanField(default=False)
     spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.PROTECT, null=True, blank=True)
