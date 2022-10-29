@@ -1,4 +1,3 @@
-from decouple import config
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -39,7 +38,7 @@ urlpatterns = [
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-if config('STAGING', default=False, cast=bool):
+if settings.STAGING:
     urlpatterns += [
         re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0),
             name='schema-json'),
