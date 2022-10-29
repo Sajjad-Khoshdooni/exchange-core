@@ -8,10 +8,11 @@ from math import log10
 from typing import List, Dict
 
 import requests
+from decouple import config
 from django.conf import settings
 from django.db.models import Sum
+from pydantic.decorator import validate_arguments
 from urllib3.exceptions import ReadTimeoutError
-from decouple import config
 
 from accounts.verifiers.jibit import Response
 from ledger.exceptions import HedgeError
@@ -29,10 +30,11 @@ SPOT, FUTURES = 'spot', 'futures'
 BINANCE, KUCOIN, MEXC = 'binance', 'kucoin', 'mexc'
 
 
+@validate_arguments
 @dataclass
 class MarketInfo:
-    asset: Asset
-    base_asset: Asset
+    coin: str
+    base_coin: str
     exchange: str
 
     type: str  # spot | futures
@@ -44,6 +46,7 @@ class MarketInfo:
     min_notional: Decimal
 
 
+@validate_arguments
 @dataclass
 class FuturesInfo:
     asset: Asset
@@ -51,6 +54,7 @@ class FuturesInfo:
     position_amount: Decimal
 
 
+@validate_arguments
 @dataclass
 class CoinOrders:
     coin: str
@@ -58,10 +62,11 @@ class CoinOrders:
     sell: Decimal
 
 
+@validate_arguments
 @dataclass
 class NetworkInfo:
-    asset: Asset
-    network: Network
+    coin: str
+    network: str
 
     withdraw_min: Decimal
     withdraw_max: Decimal
@@ -69,6 +74,7 @@ class NetworkInfo:
     withdraw_enable: bool
 
 
+@validate_arguments
 @dataclass
 class WithdrawStatus:
     status: str
@@ -82,6 +88,7 @@ class WithdrawStatus:
         )
 
 
+@validate_arguments
 @dataclass
 class CoinInfo:
     coin: str = ''
@@ -183,8 +190,7 @@ class ProviderRequester:
 
     def get_market_info(self, asset: Asset) -> MarketInfo:
         resp = self.collect_api('/api/v1/market/', data={'coin': asset.symbol})
-        base_asset = Asset.get(symbol=resp.data.pop('base_asset'))
-        return MarketInfo(asset=asset, base_asset= base_asset, **resp.data)
+        return MarketInfo(coin=asset.symbol, **resp.data)
 
     def get_spot_balance_map(self, exchange) -> dict:
         resp = self.collect_api('/api/v1/spot/balance/', data={'exchange': exchange})
@@ -257,7 +263,7 @@ class ProviderRequester:
                             logger.info('ignored due to small order')
                             return
 
-            if side == BUY and market_info.base_asset.symbol == 'BUSD':
+            if side == BUY and market_info.base_coin == 'BUSD':
                 busd_balance = self.get_spot_balance_map(market_info.exchange)['BUSD']
                 needed_busd = order_amount * price
 
@@ -358,8 +364,8 @@ class MockProviderRequester(ProviderRequester):
 
     def get_market_info(self, asset: Asset) -> MarketInfo:
         return MarketInfo(
-            asset=asset,
-            base_asset=Asset.get(Asset.USDT),
+            coin=asset.symbol,
+            base_coin=Asset.USDT,
             exchange='binance',
             type='spot',
             step_size=Decimal(1),
@@ -376,8 +382,8 @@ class MockProviderRequester(ProviderRequester):
 
     def get_network_info(self, asset: Asset, network: Network) -> NetworkInfo:
         return NetworkInfo(
-            asset=asset,
-            network=network,
+            coin=asset.symbol,
+            network=network.symbol,
             withdraw_min=Decimal(1),
             withdraw_max=Decimal(100),
             withdraw_fee=Decimal(1),
