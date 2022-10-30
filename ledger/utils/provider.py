@@ -253,7 +253,7 @@ class ProviderRequester:
 
                         if order_amount * price < min_notional:
                             logger.info('ignored due to small order')
-                            return
+                            returns
 
             if side == BUY and market_info.base_coin == 'BUSD':
                 busd_balance = self.get_spot_balance_map(market_info.exchange)['BUSD']
@@ -321,7 +321,11 @@ class ProviderRequester:
 
     # todo: add caching
     def get_coins_info(self, coins: List[str] = None) -> Dict[str, CoinInfo]:
-        resp = self.collect_api('/api/v1/coins/info/')
+        data = {}
+        if coins:
+            data['coins'] = ','.join(coins)
+
+        resp = self.collect_api('/api/v1/coins/info/', data=data)
 
         coins_info = {}
 
