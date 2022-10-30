@@ -253,7 +253,7 @@ class ProviderRequester:
 
                         if order_amount * price < min_notional:
                             logger.info('ignored due to small order')
-                            returns
+                            return
 
             if side == BUY and market_info.base_coin == 'BUSD':
                 busd_balance = self.get_spot_balance_map(market_info.exchange)['BUSD']

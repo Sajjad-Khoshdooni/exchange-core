@@ -16,7 +16,7 @@ from ledger.models.asset import AssetSerializerMini
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict, get_trading_price_usdt
 from ledger.utils.price_manager import PriceManager
-from ledger.utils.provider import ProviderRequester, CoinInfo
+from ledger.utils.provider import CoinInfo, get_provider_requester
 
 
 class AssetSerializerBuilder(AssetSerializerMini):
@@ -156,7 +156,7 @@ class AssetsViewSet(ModelViewSet):
 
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
-            ctx['cap_info'] = ProviderRequester().get_coins_info()
+            ctx['cap_info'] = get_provider_requester().get_coins_info(symbols)
             ctx['prices'] = get_prices_dict(coins=symbols, side=BUY, allow_stale=True)
             ctx['tether_irt'] = get_tether_irt_price(BUY)
 
@@ -244,7 +244,7 @@ class AssetOverviewAPIView(APIView):
 
     def get(self, request):
         coins = list(Asset.live_objects.values_list('symbol', flat=True))
-        caps = ProviderRequester().get_coins_info(coins).values()
+        caps = get_provider_requester().get_coins_info(coins).values()
 
         def coin_info_to_dict(info: CoinInfo):
             return {
