@@ -102,7 +102,7 @@ def send_email_by_template(recipient: str, template: str, context: dict = None):
 
 
 def send_email(subject: str, body_html: str, body_text: str, to: list, transactional: bool = True, purpose: str = 'Email'):
-    if settings.DEBUG_OR_TESTING:
+    if settings.DEBUG_OR_TESTING_OR_STAGING:
         return print(subject, body_html, body_text, purpose, to)
 
     resp = requests.post(

@@ -12,7 +12,7 @@ def send_support_message(message: str, link: str):
     text = message + '\n' + link
 
     # to receive chat_id call https://api.telegram.org/bot{token}/getUpdates
-    if settings.DEBUG_OR_TESTING:
+    if settings.DEBUG_OR_TESTING_OR_STAGING:
         print('Sending support...')
         print(text)
         return
@@ -32,7 +32,7 @@ def send_support_message(message: str, link: str):
 def send_system_message(message: str, link: str):
     text = message + '\n' + link
 
-    if settings.DEBUG_OR_TESTING:
+    if settings.DEBUG_OR_TESTING_OR_STAGING:
         print('Sending system...')
         print(text)
         return

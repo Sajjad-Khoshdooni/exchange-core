@@ -93,7 +93,7 @@ class EmailVerificationCode(models.Model):
             user=user,
         )
 
-        if settings.DEBUG_OR_TESTING:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             print('[OTP] code for %s is: %s' % (otp_code.email, otp_code.code))
             return
 

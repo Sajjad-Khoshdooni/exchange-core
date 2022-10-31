@@ -109,8 +109,7 @@ class VerificationCode(models.Model):
             logger.info('[OTP] Ignored sending otp to kavenegar due to blacklist')
             return
 
-        if not settings.DEBUG_OR_TESTING:
-
+        if not settings.DEBUG_OR_TESTING_OR_STAGING:
             any_recent_code = VerificationCode.objects.filter(
                 phone=phone,
                 created__gte=timezone.now() - timedelta(minutes=2),

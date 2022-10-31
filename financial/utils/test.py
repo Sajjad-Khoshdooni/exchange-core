@@ -1,7 +1,6 @@
 from django.conf import settings
-from uuid import uuid4
+
 from financial.models import BankCard, Gateway, FiatWithdrawRequest, BankAccount
-from ledger.models import BalanceLock
 
 if settings.DEBUG_OR_TESTING:
     from accounts.models import User

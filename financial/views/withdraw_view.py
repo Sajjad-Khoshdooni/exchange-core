@@ -104,7 +104,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         from financial.tasks import process_withdraw
 
-        if not settings.DEBUG_OR_TESTING:
+        if not settings.DEBUG_OR_TESTING_OR_STAGING:
             process_withdraw.s(withdraw_request.id).apply_async(countdown=FiatWithdrawRequest.FREEZE_TIME)
 
         return withdraw_request

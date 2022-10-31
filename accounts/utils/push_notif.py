@@ -18,7 +18,7 @@ def _get_access_token():
 
 
 def send_push_notif_to_user(user: User, title: str, body: str, image: str = None, link: str = None):
-    if settings.DEBUG_OR_TESTING:
+    if settings.DEBUG_OR_TESTING_OR_STAGING:
         return
 
     from accounts.models import FirebaseToken

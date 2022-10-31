@@ -164,7 +164,7 @@ class ExternalNotification(models.Model):
     def send_sms(cls, user: User, scope: str, params_converter=None) -> bool:
         from accounts.tasks import send_message_by_sms_ir
 
-        if settings.DEBUG_OR_TESTING:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             print('scope={},phone={}'.format(scope, user.phone))
             return True
 
