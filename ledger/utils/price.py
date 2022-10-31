@@ -193,7 +193,7 @@ def get_price_tether_irt_nobitex():
 
 
 def get_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
-    price = price_redis.hget('usdtirt', SIDE_MAP[side])
+    price = price_redis.hget('price:usdtirt', SIDE_MAP[side])
     if price:
         return Decimal(price)
 
@@ -216,7 +216,7 @@ def get_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
                     raise
         except:
             if allow_stale:
-                price = price_redis.hget('usdtirt:stale', get_redis_side(side))
+                price = price_redis.hget('price:usdtirt:stale', get_redis_side(side))
                 logger.error('usdt irt price fallback to stale')
 
                 if price:
@@ -225,14 +225,6 @@ def get_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
                     raise
             else:
                 raise
-
-    pipe = price_redis.pipeline(transaction=False)
-    pipe.hset(name='usdtirt', mapping={get_redis_side(side): str(price)})
-    pipe.hset(name='usdtirt:stale', mapping={get_redis_side(side): str(price)})
-    pipe.expire('usdtirt', 10)
-    pipe.expire('usdtirt:stale', DAY)
-
-    pipe.execute()
 
     return price
 
