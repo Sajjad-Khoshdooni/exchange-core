@@ -17,9 +17,9 @@ def get_user_irt_net_deposit(user: User) -> int:
     irt_withdraws = FiatWithdrawRequest.objects.filter(
         bank_account__user=user,
         status=DONE
-    ).order_by('created').values_list('created', 'amount')
+    ).order_by('created').values_list('created', 'amount', 'fee_amount')
 
-    net_irt_transfers = list(irt_deposits) + [(created, -amount) for (created, amount) in irt_withdraws]
+    net_irt_transfers = list(irt_deposits) + [(created, -amount - fee) for (created, amount, fee) in irt_withdraws]
 
     net_irt_transfers.sort(key=lambda x: x[0])
 
@@ -44,7 +44,7 @@ def check_withdraw_laundering(wallet: Wallet, amount: Decimal) -> bool:
 
     net_irt_deposit = get_user_irt_net_deposit(user)
 
-    if net_irt_deposit <= 1000:
+    if net_irt_deposit <= 100000:
         return True
 
     total_irt_value = wallet.account.get_total_balance_irt(side=SELL)
