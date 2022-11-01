@@ -320,7 +320,7 @@ class ProviderRequester:
         return WithdrawStatus.init(resp.data['status'])
 
     # todo: add caching
-    def get_coins_info(self, coins: List[str] = None) -> Dict[str, CoinInfo]:
+    def get_coins_info(self, coins: List[str]) -> Dict[str, CoinInfo]:
         data = {}
         if coins:
             data['coins'] = ','.join(coins)
@@ -407,8 +407,16 @@ class MockProviderRequester(ProviderRequester):
     def get_transfer_status(self, transfer: Transfer) -> WithdrawStatus:
         return WithdrawStatus(status=DONE, tx_id='tx')
 
-    def get_coins_info(self, coins: List[str] = None) -> Dict[str, CoinInfo]:
-        return {}
+    def get_coins_info(self, coins: List[str]) -> Dict[str, CoinInfo]:
+        data = {}
+        for c in coins:
+            data[c] = CoinInfo(
+                coin=c,
+                weekly_trend_url='https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/825.svg?v=463140',
+                volume_24h=5
+            )
+
+        return data
 
     def get_price(self, symbol: str, side: str, delay: int = 300, when: datetime = None) -> Decimal:
         return Decimal(30000)
