@@ -13,7 +13,7 @@ class gRPCClient(object):
     """
 
     def __init__(self):
-        self.host = '51.178.94.246'
+        self.host = 'collector_grpc'
         self.server_port = 50051
 
         # instantiate a channel
