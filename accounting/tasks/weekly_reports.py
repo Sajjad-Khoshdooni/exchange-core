@@ -278,3 +278,21 @@ def create_weekly_accounting_report(days: int = 7):
     create_fiat_withdraw(start, end, upload=True)
     create_trades(start, end, upload=True)
     create_users_trades(start, end, upload=True)
+
+
+def print_snapshot(date):
+    irt = Asset.get(Asset.IRT)
+
+    trx_list = Trx.objects.filter(
+        created__lte=date,
+        sender__asset=irt
+    ).values('sender__account', 'receiver__account').annotate(amount=Sum('amount'))
+
+    balance_map = defaultdict(Decimal)
+
+    for t in trx_list:
+        balance_map[t['sender__account']] -= t['amount']
+        balance_map[t['receiver__account']] += t['amount']
+
+    Account.objects.filter(type=Account.SYSTEM, id__in=balance_map)
+

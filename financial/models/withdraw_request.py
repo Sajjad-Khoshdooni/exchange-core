@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 class FiatWithdrawRequest(models.Model):
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
 
-    ZIBAL, PAYIR, ZARINPAL, JIBIT = 'zibal', 'payir', 'zarinpal', 'jibit'
-    CHANEL_CHOICES = ((ZIBAL, ZIBAL), (PAYIR, PAYIR), (JIBIT, JIBIT))
+    MANUAL, ZIBAL, PAYIR, ZARINPAL, JIBIT = 'manual', 'zibal', 'payir', 'zarinpal', 'jibit'
+    CHANEL_CHOICES = ((ZIBAL, ZIBAL), (PAYIR, PAYIR), (JIBIT, JIBIT), (MANUAL, MANUAL))
 
     FREEZE_TIME = 3 * 60
 
@@ -90,6 +90,9 @@ class FiatWithdrawRequest(models.Model):
             )
 
     def create_withdraw_request(self):
+        if self.withdraw_channel == self.MANUAL:
+            return
+
         assert not self.provider_withdraw_id
         assert self.status == self.PROCESSING
 
