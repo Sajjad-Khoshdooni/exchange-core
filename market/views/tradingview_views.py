@@ -101,11 +101,13 @@ class OHLCVAPIView(APIView):
         start = request.query_params.get('from', (timezone.now() - timedelta(hours=24)).timestamp())
         end = request.query_params.get('to', timezone.now().timestamp())
         interval = request.query_params.get('resolution', 3600)
-        candles = Trade.get_grouped_by_interval(
+        count_back = request.query_params.get('countBack', 0)
+        candles = Trade.get_grouped_by_count(
             symbol_id=symbol.id,
             interval_in_secs=interval,
             start=datetime.fromtimestamp(int(start)).astimezone(),
-            end=datetime.fromtimestamp(int(end)).astimezone()
+            end=datetime.fromtimestamp(int(end)).astimezone(),
+            count_back=int(count_back)
         )
         candles = self.append_empty_candles(candles, timedelta(seconds=int(interval)))
         results = OHLCVSerializer(candles=candles, symbol=symbol).format_data()
