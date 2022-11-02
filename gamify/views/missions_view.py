@@ -54,7 +54,7 @@ class TaskSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
-        fields = ('scope', 'type', 'title', 'link', 'description', 'level', 'progress', 'finished')
+        fields = ('scope', 'type', 'title', 'link', 'app_link', 'description', 'level', 'progress', 'finished')
 
     def get_progress(self, task: Task):
         user = self.context['request'].user
