@@ -9,7 +9,7 @@ class MissionJourneyAdmin(admin.ModelAdmin):
 
 
 class TaskInline(admin.TabularInline):
-    fields = ('scope', 'type', 'max', 'title', 'link', 'description', 'level', 'order')
+    fields = ('scope', 'type', 'max', 'title', 'link', 'app_link', 'description', 'level', 'order')
     model = models.Task
     extra = 0
 

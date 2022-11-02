@@ -124,14 +124,30 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
             fiat_withdraw.create_withdraw_request()
 
 
+class PaymentRequestUserFilter(SimpleListFilter):
+    title = 'کاربر'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(bank_card__user_id=user)
+        else:
+            return queryset
+
+
 @admin.register(PaymentRequest)
 class PaymentRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'gateway', 'bank_card', 'amount', 'authority')
     search_fields = ('bank_card__card_pan', 'amount', 'authority')
     readonly_fields = ('bank_card', )
+    list_filter = (PaymentRequestUserFilter,)
 
 
-class UserFilter(SimpleListFilter):
+class PaymentUserFilter(SimpleListFilter):
     title = 'کاربر'
     parameter_name = 'user'
 
@@ -151,7 +167,7 @@ class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_payment_amount', 'status', 'ref_id', 'ref_status', 'get_user_bank_card',
                     'get_withdraw_request_user_mobile',)
     readonly_fields = ('payment_request', )
-    list_filter = (UserFilter, 'status', )
+    list_filter = (PaymentUserFilter, 'status', )
     search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'payment_request__amount', 'payment_request__authority')
 
     def get_user_bank_card(self, payment: Payment):
