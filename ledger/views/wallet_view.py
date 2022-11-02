@@ -1,20 +1,28 @@
 from decimal import Decimal
 
-from rest_framework import serializers
+from django.conf import settings
+from django.db.models import Q
+from rest_framework import serializers, status
+from rest_framework.generics import ListAPIView
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.models import Wallet, DepositAddress, Transfer, NetworkAsset, Network
+from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCTrade
 from ledger.models.asset import Asset
-from ledger.utils.precision import get_presentation_amount
-from ledger.utils.price import get_trading_price_irt, BUY, SELL, get_prices_dict
+from ledger.utils.fields import get_irt_market_asset_symbols
+from ledger.utils.precision import get_presentation_amount, get_precision
+from ledger.utils.price import get_trading_price_irt, BUY, SELL
 from ledger.utils.price_manager import PriceManager
-from rest_framework.generics import ListAPIView
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AssetListSerializer(serializers.ModelSerializer):
+    logo = serializers.SerializerMethodField()
+
     balance = serializers.SerializerMethodField()
     balance_irt = serializers.SerializerMethodField()
     balance_usdt = serializers.SerializerMethodField()
@@ -26,6 +34,26 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     free = serializers.SerializerMethodField()
     free_irt = serializers.SerializerMethodField()
+
+    pin_to_top = serializers.SerializerMethodField()
+
+    precision = serializers.SerializerMethodField()
+
+    market_irt_enable = serializers.SerializerMethodField()
+
+    original_name_fa = serializers.SerializerMethodField()
+    original_symbol = serializers.SerializerMethodField()
+
+    step_size = serializers.SerializerMethodField()
+
+    def get_market_irt_enable(self, asset: Asset):
+        return asset.symbol in self.context['enable_irt_market_list']
+
+    def get_precision(self, asset: Asset):
+        return asset.get_precision()
+
+    def get_pin_to_top(self, asset: Asset):
+        return asset.pin_to_top
 
     def get_wallet(self, asset: Asset):
         return self.context['asset_to_wallet'].get(asset.id)
@@ -77,58 +105,51 @@ class AssetListSerializer(serializers.ModelSerializer):
         if asset.symbol == asset.IRT:
             return ''
 
-        price = get_trading_price_irt(asset.symbol, SELL)
+        price = get_trading_price_irt(asset.symbol, SELL, allow_stale=True)
         return asset.get_presentation_price_irt(price)
 
     def get_buy_price_irt(self, asset: Asset):
         if asset.symbol == asset.IRT:
             return ''
 
-        price = get_trading_price_irt(asset.symbol, BUY)
+        price = get_trading_price_irt(asset.symbol, BUY, allow_stale=True)
         return asset.get_presentation_price_irt(price)
 
     def get_can_deposit(self, asset: Asset):
-        return NetworkAsset.objects.filter(asset=asset, network__can_deposit=True).exists()
+        if asset.symbol == Asset.IRT:
+            return True
+
+        return NetworkAsset.objects.filter(asset=asset, network__can_deposit=True, can_deposit=True).exists()
 
     def get_can_withdraw(self, asset: Asset):
+        if asset.symbol == Asset.IRT:
+            return True
+
         return NetworkAsset.objects.filter(
             asset=asset,
             network__can_withdraw=True,
-            binance_withdraw_enable=True
+            hedger_withdraw_enable=True,
+            can_withdraw=True,
         ).exists()
+
+    def get_logo(self, asset: Asset):
+        return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
+
+    def get_original_symbol(self, asset: Asset):
+        return asset.original_symbol or asset.symbol
+
+    def get_original_name_fa(self, asset: Asset):
+        return asset.original_name_fa or asset.name_fa
+
+    def get_step_size(self, asset: Asset):
+        return get_precision(asset.trade_quantity_step)
 
     class Meta:
         model = Asset
         fields = ('symbol', 'precision', 'free', 'free_irt', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt',
-                  'buy_price_irt', 'can_deposit', 'can_withdraw')
+                  'buy_price_irt', 'can_deposit', 'can_withdraw', 'trade_enable', 'pin_to_top', 'market_irt_enable',
+                  'name', 'name_fa', 'logo', 'original_symbol', 'original_name_fa', 'step_size')
         ref_name = 'ledger asset'
-
-
-class TransferSerializer(serializers.ModelSerializer):
-    link = serializers.SerializerMethodField()
-    amount = serializers.SerializerMethodField()
-    fee_amount = serializers.SerializerMethodField()
-    network = serializers.SerializerMethodField()
-    coin = serializers.SerializerMethodField()
-
-    def get_link(self, transfer: Transfer):
-        return transfer.get_explorer_link()
-
-    def get_amount(self, transfer: Transfer):
-        return transfer.wallet.asset.get_presentation_amount(transfer.total_amount - transfer.fee_amount)
-
-    def get_fee_amount(self, transfer: Transfer):
-        return transfer.wallet.asset.get_presentation_amount(transfer.fee_amount)
-
-    def get_coin(self, transfer: Transfer):
-        return transfer.wallet.asset.symbol
-
-    def get_network(self, transfer: Transfer):
-        return transfer.network.symbol
-
-    class Meta:
-        model = Transfer
-        fields = ('created', 'amount', 'status', 'link', 'out_address', 'coin', 'network', 'trx_hash', 'fee_amount')
 
 
 class NetworkAssetSerializer(serializers.ModelSerializer):
@@ -144,6 +165,11 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 
     withdraw_precision = serializers.SerializerMethodField()
 
+    need_memo = serializers.SerializerMethodField()
+
+    def get_need_memo(self, network_asset: NetworkAsset):
+        return network_asset.network.need_memo
+
     def get_network(self, network_asset: NetworkAsset):
         return network_asset.network.symbol
 
@@ -154,13 +180,13 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return network_asset.network.address_regex
 
     def get_can_deposit(self, network_asset: NetworkAsset):
-        return network_asset.network.can_deposit
+        return network_asset.can_deposit_enabled()
 
     def get_can_withdraw(self, network_asset: NetworkAsset):
-        return network_asset.network.can_withdraw and network_asset.binance_withdraw_enable
+        return network_asset.can_withdraw_enabled()
 
     def get_address(self, network_asset: NetworkAsset):
-        addresses = self.context['addresses']
+        addresses = self.context.get('addresses', {})
         return addresses.get(network_asset.network.symbol)
 
     def get_min_withdraw(self, network_asset: NetworkAsset):
@@ -174,12 +200,11 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('network', 'address', 'can_deposit', 'can_withdraw', 'withdraw_commission', 'min_withdraw',
-                  'network_name', 'address_regex', 'withdraw_precision')
+                  'network_name', 'address_regex', 'withdraw_precision', 'need_memo')
         model = NetworkAsset
 
 
 class AssetRetrieveSerializer(AssetListSerializer):
-
     networks = serializers.SerializerMethodField()
 
     def get_networks(self, asset: Asset):
@@ -187,10 +212,10 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
         account = self.context['request'].user.account
 
-        deposit_addresses = DepositAddress.objects.filter(account_secret__account=account)
+        deposit_addresses = DepositAddress.objects.filter(address_key__account=account)
 
         address_mapping = {
-            deposit.network.symbol: deposit.presentation_address for deposit in deposit_addresses
+            deposit.network.symbol: deposit.address for deposit in deposit_addresses
         }
 
         serializer = NetworkAssetSerializer(network_assets, many=True, context={
@@ -204,15 +229,12 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
 
 class WalletViewSet(ModelViewSet):
-    queryset = Asset.live_objects.all()
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-
-        market = self.get_market()
-        wallets = Wallet.objects.filter(account=self.request.user.account, market=market)
+        wallets = Wallet.objects.filter(account=self.request.user.account, market=Wallet.SPOT, variant__isnull=True)
         ctx['asset_to_wallet'] = {wallet.asset_id: wallet for wallet in wallets}
-
+        ctx['enable_irt_market_list'] = get_irt_market_asset_symbols()
         return ctx
 
     def get_serializer_class(self):
@@ -225,33 +247,34 @@ class WalletViewSet(ModelViewSet):
         return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper())
 
     def get_queryset(self):
-        queryset = super(WalletViewSet, self).get_queryset()
+        disabled_assets = Wallet.objects.filter(
+            account=self.request.user.account,
+            asset__enable=False
+        ).exclude(balance=0).values_list('asset_id', flat=True)
 
-        if self.get_market() == Wallet.MARGIN:
-            return queryset.exclude(symbol=Asset.IRT)
-        else:
-            return queryset
-
-    def get_market(self) -> str:
-        return self.request.query_params.get('market') or Wallet.SPOT
+        return Asset.objects.filter(Q(enable=True) | Q(id__in=disabled_assets))
 
     def list(self, request, *args, **kwargs):
-        with PriceManager():
+        with PriceManager(fetch_all=True, allow_stale=True):
             queryset = self.get_queryset()
-            get_prices_dict(coins=list(queryset.values_list('symbol', flat=True)))  # cache prices
 
             serializer = self.get_serializer(queryset, many=True)
             data = serializer.data
 
-            with_balance_wallets = list(filter(lambda w: w['balance'] != '0', data))
-            without_balance_wallets = list(filter(lambda w: w['balance'] == '0', data))
-            wallets = sorted(with_balance_wallets, key=lambda w: Decimal(w['balance_irt'] or 0), reverse=True) + without_balance_wallets
+            pin_to_top_wallets = list(filter(lambda w: w['pin_to_top'], data))
+            with_balance_wallets = list(filter(lambda w: w['balance'] != '0' and not w['pin_to_top'], data))
+            without_balance_wallets = list(filter(lambda w: w['balance'] == '0' and not w['pin_to_top'], data))
+
+            wallets = pin_to_top_wallets + sorted(
+                with_balance_wallets,
+                key=lambda w: Decimal(w['balance_irt'] or 0),
+                reverse=True
+            ) + without_balance_wallets
 
         return Response(wallets)
 
 
 class WalletBalanceView(APIView):
-
     def get(self, request, *args, **kwargs):
         market = request.query_params.get('market', Wallet.SPOT)
         asset = get_object_or_404(Asset, symbol=kwargs['symbol'].upper())
@@ -265,7 +288,6 @@ class WalletBalanceView(APIView):
 
 
 class BriefNetworkAssetsSerializer(serializers.ModelSerializer):
-
     name = serializers.SerializerMethodField()
     symbol = serializers.SerializerMethodField()
     address_regex = serializers.SerializerMethodField()
@@ -285,7 +307,6 @@ class BriefNetworkAssetsSerializer(serializers.ModelSerializer):
 
 
 class BriefNetworkAssetsView(ListAPIView):
-
     serializer_class = BriefNetworkAssetsSerializer
 
     def get_queryset(self):
@@ -293,9 +314,51 @@ class BriefNetworkAssetsView(ListAPIView):
         query_set = NetworkAsset.objects.all()
         if 'symbol' in query_params:
             return query_set.filter(asset__symbol=query_params['symbol'].upper(),
+                                    can_withdraw=True,
                                     network__can_withdraw=True,
-                                    binance_withdraw_enable=True)
+                                    hedger_withdraw_enable=True)
         else:
             query_set = query_set.distinct('network__symbol')
 
-        return query_set.filter(network__can_withdraw=True, network__is_universal=True)
+        return query_set.filter(can_withdraw=True, network__can_withdraw=True, network__is_universal=True)
+
+
+class WalletSerializer(serializers.ModelSerializer):
+    asset = serializers.SerializerMethodField()
+    free = serializers.SerializerMethodField()
+
+    def get_asset(self, wallet: Wallet):
+        return wallet.asset.symbol
+
+    def get_free(self, wallet: Wallet):
+        return wallet.asset.get_presentation_amount(wallet.get_free())
+
+    class Meta:
+        model = Wallet
+        fields = ('asset', 'free',)
+
+
+class ConvertDustView(APIView):
+
+    def post(self, *args):
+        account = self.request.user.account
+        IRT = Asset.get(Asset.IRT)
+        spot_wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT, balance__gt=0).exclude(asset=IRT)
+
+        for wallet in spot_wallets:
+            if Decimal(0) < wallet.get_free_irt() < Decimal('100000'):
+                logger.info('Converting dust %s' % wallet)
+
+                request = OTCRequest.new_trade(
+                    account=account,
+                    market=Wallet.SPOT,
+                    from_asset=wallet.asset,
+                    to_asset=IRT,
+                    from_amount=wallet.get_free(),
+                    allow_dust=True
+                )
+
+                OTCTrade.execute_trade(request, force=True)
+
+        return Response({'msg': 'convert_dust success'}, status=status.HTTP_200_OK)
+

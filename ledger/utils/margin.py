@@ -1,57 +1,22 @@
-from dataclasses import dataclass
-from decimal import Decimal
+from rest_framework.exceptions import ValidationError
 
 from accounts.models import Account
-from ledger.models import Wallet, Asset, Trx
-from ledger.utils.price import SELL, BUY, get_trading_price_usdt
-
-TRANSFER_OUT_BLOCK_ML = Decimal('2')
-BORROW_BLOCK_ML = Decimal('1.5')  # leverage = 3
-MARGIN_CALL_ML_THRESHOLD = Decimal('1.25')
-LIQUIDATION_ML_THRESHOLD = Decimal('1.15')
+from ledger.models import Asset, CloseRequest
 
 
-@dataclass
-class MarginInfo:
-    total_debt: Decimal
-    total_assets: Decimal
+def check_margin_view_permission(account: Account, asset: Asset):
+    user = account.user
 
-    @classmethod
-    def get(cls, account: Account) -> 'MarginInfo':
-        total_assets = get_total_assets(account)
-        total_debt = get_total_debt(account)
+    assert user
 
-        return MarginInfo(
-            total_debt=total_debt,
-            total_assets=total_assets
-        )
+    # if user.level < user.LEVEL3:
+    #     raise ValidationError('برا استفاده از حساب تعهدی باید احراز هویت سطح ۳ را انجام دهید.')
 
-    def get_margin_level(self) -> Decimal:
-        return get_margin_level(self.total_assets, self.total_debt)
+    if not user.show_margin or not asset.margin_enable:
+        raise ValidationError('شما نمی‌توانید این عملیات را انجام دهید.')
 
-    def get_total_equity(self):
-        return self.total_assets - self.total_debt
+    if not user.margin_quiz_pass_date:
+        raise ValidationError('لطفا ابتدا به سوالات آزمون معاملات تعهدی پاسخ دهید.')
 
-    def get_max_borrowable(self) -> Decimal:
-        return (self.total_assets - BORROW_BLOCK_ML * self.total_debt) / (BORROW_BLOCK_ML - 1)
-
-    def get_max_transferable(self) -> Decimal:
-        return self.total_assets - TRANSFER_OUT_BLOCK_ML * self.total_debt
-
-    def get_liquidation_amount(self) -> Decimal:
-        return -self.get_max_borrowable()
-
-
-def get_total_debt(account: Account) -> Decimal:
-    return -account.get_total_balance_usdt(Wallet.LOAN, SELL)
-
-
-def get_total_assets(account: Account) -> Decimal:
-    return account.get_total_balance_usdt(Wallet.MARGIN, BUY)
-
-
-def get_margin_level(total_assets: Decimal, total_debt: Decimal):
-    if total_debt <= 0:
-        return Decimal(999)
-    else:
-        return total_assets / total_debt
+    if CloseRequest.is_liquidating(user.account):
+        raise ValidationError('حساب تعهدی شما در حال تسویه خودکار است. فعلا امکان این عملیات وجود ندارد.')

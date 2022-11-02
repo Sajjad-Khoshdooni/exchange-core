@@ -3,47 +3,47 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from ledger.models import Wallet
-from market.models import FillOrder
-from market.serializers.trade_serializer import FillOrderSerializer, TradeSerializer
+from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
+from market.models import Trade
+from market.serializers.trade_serializer import TradeSerializer, AccountTradeSerializer
 
 
 class TradeFilter(django_filters.FilterSet):
     symbol = django_filters.CharFilter(field_name='symbol__name', required=True, lookup_expr='iexact')
 
     class Meta:
-        model = FillOrder
+        model = Trade
         fields = ('symbol',)
 
 
+class AccountTradeFilter(django_filters.FilterSet):
+    symbol = django_filters.CharFilter(field_name='symbol__name', lookup_expr='iexact')
+
+    class Meta:
+        model = Trade
+        fields = ('symbol', 'side')
+
+
 class AccountTradeHistoryView(ListAPIView):
-    authentication_classes = (SessionAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    authentication_classes = (SessionAuthentication, JWTAuthentication)
     pagination_class = LimitOffsetPagination
+
+    filter_backends = [DjangoFilterBackend]
+    filter_class = AccountTradeFilter
 
     def get_queryset(self):
         market = self.request.query_params.get('market')
         if not market:
-            return FillOrder.objects.filter(
-                maker_order__wallet__account=self.request.user.account
-            ).union(
-                FillOrder.objects.filter(
-                    taker_order__wallet__account=self.request.user.account
-                ), all=True
-            ).order_by('-created')
+            return Trade.objects.filter(
+                account=self.request.user.account
+            ).select_related('symbol', 'symbol__asset', 'symbol__base_asset', 'order__wallet').order_by('-created')
 
-        return FillOrder.objects.filter(
-            maker_order__wallet__account=self.request.user.account,
-            maker_order__wallet__market=market
-        ).union(
-            FillOrder.objects.filter(
-                taker_order__wallet__account=self.request.user.account,
-                taker_order__wallet__market=market
-            ), all=True
-        ).order_by('-created')
+        return Trade.objects.filter(
+            account=self.request.user.account, maker_order__wallet__market=market
+        ).select_related('symbol', 'symbol__asset', 'symbol__base_asset', 'order__wallet').order_by('-created')
 
     def get_serializer_context(self):
         return {
@@ -58,9 +58,9 @@ class AccountTradeHistoryView(ListAPIView):
 
         result = []
         for index, trade in enumerate(page):
-            result.append(FillOrderSerializer(
+            result.append(AccountTradeSerializer(
                 instance=trade,
-                context={**self.get_serializer_context(), 'index': index}
+                context={'account': self.request.user.account, 'index': index}
             ).data)
 
         return self.get_paginated_response(result)
@@ -70,7 +70,8 @@ class TradeHistoryView(ListAPIView):
     authentication_classes = ()
     permission_classes = ()
     pagination_class = LimitOffsetPagination
-    queryset = FillOrder.objects.exclude(trade_source=FillOrder.OTC).order_by('-created')
+    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
+    queryset = Trade.objects.filter(is_maker=True).exclude(trade_source=Trade.OTC).order_by('-created')
     serializer_class = TradeSerializer
 
     filter_backends = [DjangoFilterBackend]

@@ -1,19 +1,63 @@
-from datetime import timedelta
+from decimal import Decimal
 
+from django.db.models import Sum
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView, get_object_or_404, ListAPIView
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.generics import CreateAPIView, get_object_or_404
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease
+from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease, HedgeError
 from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
-from ledger.models.otc_trade import TokenExpired, ProcessingError
+from ledger.models.otc_trade import TokenExpired
 from ledger.utils.fields import get_serializer_amount_field
-from ledger.utils.price import SELL
+from ledger.utils.price import SELL, get_tether_irt_price, BUY
+from market.models.pair_symbol import DEFAULT_TAKER_FEE
+
+
+class OTCInfoView(APIView):
+
+    def get(self, request: Request):
+        from_symbol = request.query_params.get('from')
+        to_symbol = request.query_params.get('to')
+
+        from_amount = Decimal(request.query_params.get('from_amount', 0))
+        to_amount = Decimal(request.query_params.get('to_amount', 0))
+
+        from_asset = get_object_or_404(Asset, symbol=from_symbol)
+        to_asset = get_object_or_404(Asset, symbol=to_symbol)
+
+        otc = OTCRequest(
+            from_asset=from_asset,
+            to_asset=to_asset,
+            from_amount=from_amount,
+            to_amount=to_amount,
+        )
+
+        to_price = otc.get_to_price()
+        config = otc.get_trade_config()
+
+        return Response({
+            'from': from_symbol,
+            'to': to_symbol,
+            'cash': config.cash.symbol,
+            'coin': config.coin.symbol,
+            'side': config.side,
+            'to_price': to_price,
+            'coin_price': self.get_coin_price(config, to_price)
+        })
+
+    def get_coin_price(self, conf, to_price):
+
+        if conf.side == SELL:
+            to_price = 1 / to_price
+
+        if conf.cash.symbol == Asset.IRT:
+            return conf.coin.get_presentation_price_irt(to_price)
+        else:
+            return conf.coin.get_presentation_price_usdt(to_price)
 
 
 class OTCRequestSerializer(serializers.ModelSerializer):
@@ -26,16 +70,9 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     coin = serializers.SerializerMethodField()
     coin_price = serializers.SerializerMethodField()
     cash = serializers.SerializerMethodField()
+    fee = serializers.SerializerMethodField()
 
     def validate(self, attrs):
-        market = attrs['market']
-
-        if market == Wallet.MARGIN:
-            user = self.context['request'].user
-
-            if not user.margin_quiz_pass_date:
-                raise ValidationError('شما باید ابتدا به سوالات این بخش پاسخ دهید.')
-
         from_symbol = attrs['from_asset']['symbol']
         to_symbol = attrs['to_asset']['symbol']
 
@@ -44,9 +81,6 @@ class OTCRequestSerializer(serializers.ModelSerializer):
 
         if from_symbol == to_symbol:
             raise ValidationError('هر دو دارایی نمی‌تواند یکی باشد.')
-
-        if market == Wallet.MARGIN and Asset.IRT in (from_symbol, to_symbol):
-            raise ValidationError('در بازار معاملات تعهدی نمی‌توان به تومان معامله کرد.')
 
         try:
             from_asset = attrs['from_asset'] = Asset.get(from_symbol)
@@ -85,7 +119,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
                 to_asset=to_asset,
                 from_amount=from_amount,
                 to_amount=to_amount,
-                market=validated_data.get('market'),
+                market=Wallet.SPOT,
             )
         except InvalidAmount as e:
             raise ValidationError(str(e))
@@ -113,6 +147,13 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         conf = otc_request.get_trade_config()
         return conf.cash.symbol
 
+    def get_fee(self, otc_request: OTCRequest):
+        voucher = otc_request.account.get_voucher_wallet()
+        if voucher:
+            return 0
+        else:
+            return DEFAULT_TAKER_FEE
+
     def get_coin_price(self, otc_request: OTCRequest):
         conf = otc_request.get_trade_config()
 
@@ -121,12 +162,15 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         if conf.side == SELL:
             price = 1 / price
 
-        return conf.coin.get_presentation_price_irt(price)
+        if conf.cash.symbol == Asset.IRT:
+            return conf.coin.get_presentation_price_irt(price)
+        else:
+            return conf.coin.get_presentation_price_usdt(price)
 
     class Meta:
         model = OTCRequest
-        fields = ('from_asset', 'to_asset', 'from_amount', 'to_amount', 'token', 'price', 'expire', 'market', 'coin',
-                  'coin_price', 'cash')
+        fields = ('from_asset', 'to_asset', 'from_amount', 'to_amount', 'token', 'price', 'expire', 'coin',
+                  'coin_price', 'cash', 'fee')
         read_only_fields = ('token', 'price')
 
 
@@ -139,7 +183,14 @@ class OTCTradeSerializer(serializers.ModelSerializer):
     value_usdt = serializers.SerializerMethodField()
 
     def get_value_usdt(self, otc_trade: OTCTrade):
-        return otc_trade.otc_request.to_price_absolute_usdt * otc_trade.otc_request.to_amount
+        from market.models import Trade
+        revenue_irt = Trade.objects.filter(
+            group_id=otc_trade.group_id
+        ).aggregate(revenue=Sum('gap_revenue'))['revenue'] or 0
+
+        usdt_price = get_tether_irt_price(SELL, allow_stale=True)
+
+        return revenue_irt / usdt_price or 0
 
     class Meta:
         model = OTCTrade
@@ -166,49 +217,9 @@ class OTCTradeSerializer(serializers.ModelSerializer):
             raise ValidationError(str(e))
         except AbruptDecrease as e:
             raise ValidationError('مشکلی در ثبت سفارش رخ داد. لطفا دوباره تلاش کنید.')
-        except ProcessingError as e:
+        except HedgeError as e:
             raise ValidationError('مشکلی در پردازش سفارش رخ داد.')
 
 
 class OTCTradeView(CreateAPIView):
     serializer_class = OTCTradeSerializer
-
-
-class OTCTradeHistoryInputSerializer(serializers.Serializer):
-    market = serializers.ChoiceField(choices=((Wallet.SPOT, Wallet.SPOT), (Wallet.MARGIN, Wallet.MARGIN),))
-
-
-class OTCHistoryView(ListAPIView):
-    pagination_class = LimitOffsetPagination
-
-    def get_queryset(self):
-        serializer = OTCTradeHistoryInputSerializer(data=self.request.query_params)
-        serializer.is_valid(raise_exception=True)
-
-        market = serializer.data['market']
-
-        return OTCTrade.objects.filter(
-            otc_request__account=self.request.user.account,
-            otc_request__market=market
-        ).order_by('-created')
-
-    def list(self, request: Request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-
-        page = self.paginate_queryset(queryset)
-
-        result = []
-
-        for trade in page:
-            config = trade.otc_request.get_trade_config()
-
-            result.append({
-                'created': trade.created,
-                'side': config.side,
-                'coin': config.coin.symbol,
-                'amount': config.coin.get_presentation_amount(config.coin_amount),
-                'pair': config.cash.symbol,
-                'pair_amount': config.cash.get_presentation_amount(config.cash_amount)
-            })
-
-        return self.get_paginated_response(result)

@@ -5,8 +5,8 @@ import requests
 from django.core.cache import caches
 from django.utils import timezone
 from urllib3.exceptions import ReadTimeoutError
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
+from decouple import config
 
 from accounts.models import FinotechRequest
 from accounts.utils.validation import gregorian_to_jalali_date_str
@@ -41,11 +41,11 @@ class FinotechRequester:
             url='https://apibeta.finnotech.ir/dev/v2/oauth2/token',
             data={
                 'grant_type': 'client_credentials',
-                'nid': secret('FINOTECH_OWNER_NATIONAL_ID'),
+                'nid': config('FINOTECH_OWNER_NATIONAL_ID'),
                 'scopes': ','.join(scopes)
             },
             headers={
-                'Authorization': secret('FINOTECH_AUTH_TOKEN')
+                'Authorization': config('FINOTECH_AUTH_TOKEN')
             }
         )
 
@@ -64,10 +64,14 @@ class FinotechRequester:
         if search_key:
             request = FinotechRequest.objects.filter(
                 created__gt=timezone.now() - datetime.timedelta(days=30),
-                search_key=search_key
+                search_key=search_key,
+                service=FinotechRequest.FINOTECH
             ).order_by('-created').first()
 
             if request:
+
+                if request.status_code >= 500:
+                    raise ServerError
 
                 if request.status_code not in (200, 201):
                     return
@@ -86,6 +90,7 @@ class FinotechRequester:
             method=method,
             data=data,
             user=self._user,
+            service=FinotechRequest.FINOTECH
         )
 
         url += '?trackId=%s' % req_object.track_id
@@ -131,6 +136,9 @@ class FinotechRequester:
             req_object.search_key = search_key
 
         req_object.save()
+
+        if resp.status_code >= 500:
+            raise ServerError
 
         if not resp.ok:
             logger.error('failed to call finnotech', extra={

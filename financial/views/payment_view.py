@@ -15,29 +15,30 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
     card_pan = serializers.CharField(write_only=True)
 
     def get_callback(self, payment_request: PaymentRequest):
-        return payment_request.get_gateway().get_redirect_url(payment_request)
+        return payment_request.get_gateway().get_initial_redirect_url(payment_request)
 
     def create(self, validated_data):
         amount = validated_data['amount']
         card_pan = validated_data['card_pan']
+        source = validated_data.get('source', PaymentRequest.DESKTOP)
 
         user = self.context['request'].user
-        bank_card = get_object_or_404(BankCard, card_pan=card_pan, user=user, deleted=False)
+        bank_card = get_object_or_404(BankCard, card_pan=card_pan, user=user, verified=True, deleted=False)
 
         if not bank_card.verified:
             raise ValidationError({'card_pan': 'شماره کارت تایید نشده است.'})
 
         from financial.models import Gateway
-        gateway = Gateway.get_active()
+        gateway = Gateway.get_active(user)
 
         try:
-            return gateway.create_payment_request(bank_card=bank_card, amount=amount)
+            return gateway.create_payment_request(bank_card=bank_card, amount=amount, source=source)
         except GatewayFailed:
             raise ValidationError('مشکلی در ارتباط با درگاه بانک به وجود آمد.')
 
     class Meta:
         model = PaymentRequest
-        fields = ('callback', 'amount', 'card_pan')
+        fields = ('callback', 'amount', 'card_pan', 'source')
 
 
 class PaymentRequestView(CreateAPIView):

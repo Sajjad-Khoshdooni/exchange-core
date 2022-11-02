@@ -6,7 +6,12 @@ urlpatterns = [
     path('v1/assets/', views.AssetsViewSet.as_view({'get': 'list'})),
     path('v1/networkassets/', views.NetworkAssetView.as_view()),
 
+    path('v1/asset/overview/', views.AssetOverviewAPIView.as_view()),
+
     path('v1/networks/', views.BriefNetworkAssetsView.as_view()),
+
+    path('v1/assets/reserve/', views.ReserveWalletCreateAPIView.as_view()),
+    path('v1/assets/reserve/refund/', views.ReserveWalletRefundAPIView.as_view()),
 
     path('v1/assets/<slug:symbol>/', views.AssetsViewSet.as_view({'get': 'retrieve'})),
 
@@ -22,7 +27,7 @@ urlpatterns = [
 
     path('v1/trade/otc/request/', views.OTCTradeRequestView.as_view()),
     path('v1/trade/otc/', views.OTCTradeView.as_view()),
-    path('v1/trade/otc/history/', views.OTCHistoryView.as_view()),
+    path('v1/trade/otc/info/', views.OTCInfoView.as_view()),
 
     path('v1/margin/info/', views.MarginInfoView.as_view()),
     path('v1/margin/info/<slug:symbol>/', views.AssetMarginInfoView.as_view()),
@@ -30,6 +35,9 @@ urlpatterns = [
         'get': 'list',
         'post': 'create'
     })),
+
+    path('v1/margin/wallets/', views.MarginWalletViewSet.as_view({'get': 'list'})),
+    path('v1/margin/close/', views.MarginClosePositionView.as_view()),
     path('v1/margin/loan/', views.MarginLoanViewSet.as_view({
         'get': 'list',
         'post': 'create'
@@ -43,4 +51,17 @@ urlpatterns = [
         'post': 'create',
         'get': 'list',
     })),
+
+    path('v1/wallet/balance/', views.GetBalanceInformation.as_view()),
+    path('v1/bookmark/assets/', views.BookmarkAssetsAPIView.as_view()),
+
+    path('v1/transfer/deposit/', views.DepositTransferUpdateView.as_view()),
+    path('v1/transfer/withdraw/', views.WithdrawTransferUpdateView.as_view()),
+
+    path('v1/convert/dust/', views.ConvertDustView.as_view()),
+    path('v1/bookmark/assets/', views.BookmarkAssetsAPIView.as_view()),
+    path('v1/pnl/overview/', views.PNLOverview.as_view()),
+
+    path('v1/fast_buy/', views.FastBuyTokenAPI.as_view()),
+
 ]

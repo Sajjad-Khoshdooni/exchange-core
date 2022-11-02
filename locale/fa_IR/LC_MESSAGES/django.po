@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-05-07 13:43+0200\n"
+"POT-Creation-Date: 2022-06-07 10:15+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,12 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+msgid "IRT"
+msgstr "تومان"
+
+msgid "USDT"
+msgstr "تتر"
 
 #: accounts/views/referral_view.py:47
 msgid "Invalid share percent"
@@ -26,7 +32,7 @@ msgstr "سهم وارد شده معتبر نیست."
 msgid "Input value is greater than {max_percent}"
 msgstr "درصد سهم وارد شده از {max_percent} بیشتر است."
 
-#: accounts/views/signup_view.py:58
+#: accounts/views/signup_view.py:54
 msgid "Referral code is invalid"
 msgstr "کد معرف نامعتبر است."
 
@@ -38,48 +44,49 @@ msgstr "سفارش موردنظر یافت نشد."
 msgid "Could not cancel order"
 msgstr "سفارش لغو نشد."
 
-#: market/serializers/order_serializer.py:36
+#: market/serializers/order_serializer.py:50
+#: market/serializers/stop_loss_serializer.py:46
+msgid "Insufficient Balance"
+msgstr "موجودی کافی نیست."
+
+#: market/serializers/order_serializer.py:55
+msgid "Could not place order"
+msgstr "ثبت سفارش امکان‌پذیر نیست."
+
+#: market/serializers/order_serializer.py:62
 #, python-brace-format
 msgid "{symbol} is not enable"
 msgstr "{symbol} فعال نیست."
 
-#: market/serializers/order_serializer.py:41
+#: market/serializers/order_serializer.py:66
 msgid "margin trading is not enable"
 msgstr "معاملات تعهدی برای شما مجاز نیست."
 
-#: market/serializers/order_serializer.py:43
+#: market/serializers/order_serializer.py:68
 msgid "You need to pass margin quiz"
-msgstr "شما باید ابتدا به سوالات معاملات تعهدی پاسخ دهید."
+msgstr "لطفا ابتدا به سوالات آزمون معاملات تعهدی پاسخ دهید."
 
-#: market/serializers/order_serializer.py:45
+#: market/serializers/order_serializer.py:70
 #, python-brace-format
 msgid "{symbol} is not enable in margin trading"
 msgstr "{symbol} در معاملات تعهدی فعال نیست."
 
-#: market/serializers/order_serializer.py:62
-msgid "Insufficient Balance"
-msgstr "موجودی کافی نیست."
-
-#: market/serializers/order_serializer.py:67
-msgid "Could not place order"
-msgstr "ثبت سفارش امکان‌پذیر نیست."
-
-#: market/serializers/order_serializer.py:76
+#: market/serializers/order_serializer.py:82
 #, python-brace-format
-msgid "amount is less than {min_quantity}"
-msgstr "مقدار سفارش از {min_quantity} کمتر است."
+msgid "amount is less than {min_quantity} {asset}"
+msgstr "مقدار سفارش از {min_quantity} {asset} کمتر است."
 
-#: market/serializers/order_serializer.py:81
+#: market/serializers/order_serializer.py:89
 #, python-brace-format
-msgid "amount is more than {max_quantity}"
-msgstr "مقدار سفارش از {max_quantity} بیشتر است."
+msgid "amount is more than {max_quantity} {asset}"
+msgstr "مقدار سفارش از {max_quantity} {asset} بیشتر است."
 
-#: market/serializers/order_serializer.py:90
+#: market/serializers/order_serializer.py:99
 #, python-brace-format
-msgid "Small order size {min_order_size}"
-msgstr "ارزش سفارش از {min_order_size} کمتر است."
+msgid "Small order size {min_order_size} {base_asset}"
+msgstr "ارزش سفارش از {min_order_size} {base_asset} کمتر است."
 
-#: market/serializers/order_serializer.py:97
+#: market/serializers/order_serializer.py:112
 #, python-brace-format
 msgid "price precision is more than {tick_size}"
 msgstr "مقدار اعشار از {tick_size} یبشتر است."

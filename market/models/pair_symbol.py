@@ -2,16 +2,19 @@ from collections import namedtuple
 from decimal import Decimal
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 
+from accounts.models import Account
 from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
 
 DEFAULT_MAKER_FEE = 0
-DEFAULT_TAKER_FEE = 0.002
+# DEFAULT_TAKER_FEE = 0
+DEFAULT_TAKER_FEE = Decimal('0.002')
 
 
 class PairSymbol(models.Model):
-    IdName = namedtuple("PairSymbol", "id name")
+    IdName = namedtuple("PairSymbol", "id name tick_size")
 
     name = models.CharField(max_length=32, blank=True, unique=True)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='pair')
@@ -29,6 +32,7 @@ class PairSymbol(models.Model):
     maker_amount = get_amount_field(default=Decimal('1'))
 
     enable = models.BooleanField(default=False)
+    strategy_enable = models.BooleanField(default=False)
 
     @classmethod
     def get_by(cls, name):
@@ -45,3 +49,18 @@ class PairSymbol(models.Model):
 
     class Meta:
         unique_together = ('asset', 'base_asset')
+        constraints = [
+            CheckConstraint(check=Q(min_trade_quantity__gte=0, max_trade_quantity__gte=0, maker_amount__gte=0), name='check_market_pairsymbol_amounts', ),
+        ]
+
+    def get_maker_fee(self, account: Account):
+        if account.get_voucher_wallet():
+            return Decimal(0)
+        else:
+            return self.maker_fee
+
+    def get_taker_fee(self, account: Account):
+        if account.get_voucher_wallet():
+            return Decimal(0)
+        else:
+            return self.taker_fee

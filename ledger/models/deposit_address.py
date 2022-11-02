@@ -1,40 +1,51 @@
 from django.db import models
 
-from ledger.models import AccountSecret
+from ledger.requester.address_requester import AddressRequester
+from ledger.models.address_key import AddressKey
+from ledger.requester.architecture_requester import request_architecture
 
 
 class DepositAddress(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
     network = models.ForeignKey('ledger.Network', on_delete=models.PROTECT)
-    account_secret = models.ForeignKey('ledger.AccountSecret', on_delete=models.PROTECT)
     address = models.CharField(max_length=256, blank=True)
-
-    # address_tag = models.CharField(max_length=32, blank=True)
+    address_key = models.ForeignKey('ledger.AddressKey', on_delete=models.PROTECT)
 
     def __str__(self):
-        return '%s %s (network= %s)' % (self.account_secret, self.address, self.network)
-
-    @property
-    def presentation_address(self):
-        wallet = self.account_secret.get_crypto_wallet(self.network)
-        return wallet.get_presentation_address(self.address)
+        return '%s (network= %s)' % (self.address, self.network)
 
     @classmethod
-    def new_deposit_address(cls, account, network):
-        account_secret, _ = AccountSecret.objects.get_or_create(account=account)
-        crypto_wallet = account_secret.get_crypto_wallet(network)
+    def get_deposit_address(cls, account, network):
+        architecture = request_architecture(network)
 
-        return DepositAddress.objects.create(
+        deposit_address = DepositAddress.objects.filter(address_key__account=account, network=network).first()
+        address_key = AddressKey.objects.filter(account=account, architecture=architecture).first()
+
+        if deposit_address:
+            return deposit_address
+
+        elif not address_key:
+            address_dictionary = AddressRequester().create_wallet(account, architecture)
+            address_key = AddressKey.objects.create(
+                account=account,
+                address=address_dictionary.get('pointer_address'),
+                public_address=address_dictionary.get('public_address'),
+                architecture=architecture
+            )
+
+        deposit_address = DepositAddress.objects.create(
             network=network,
-            account_secret=account_secret,
-            address=crypto_wallet.address,
+            address_key=address_key,
+            address=address_key.public_address,
         )
 
-    @property
-    def account(self):
-        return self.account_secret.account
+        return deposit_address
+
+    def update_transaction_history(self):
+        from ledger.requester.trx_history_updater import UpdateTrxHistory
+        UpdateTrxHistory().update_history(deposit_address=self)
 
     class Meta:
         unique_together = (
-            ('network', 'account_secret'),
             ('network', 'address'),
         )

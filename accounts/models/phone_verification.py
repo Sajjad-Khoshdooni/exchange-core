@@ -7,8 +7,8 @@ from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
+from decouple import config
 
-from accounts.tasks import send_message_by_kavenegar
 from accounts.utils.validation import generate_random_code, PHONE_MAX_LENGTH, fifteen_minutes_later_datetime, MINUTES
 
 logger = logging.getLogger(__name__)
@@ -19,15 +19,20 @@ class VerificationCode(models.Model):
 
     SCOPE_FORGET_PASSWORD = 'forget'
     SCOPE_VERIFY_PHONE = 'verify'
-    SCOPE_WITHDRAW = 'withdraw'
+    SCOPE_VERIFY_EMAIL = 'email_verify'
+    SCOPE_CRYPTO_WITHDRAW = 'withdraw'
+    SCOPE_FIAT_WITHDRAW = 'fiat_withdraw'
     SCOPE_TELEPHONE = 'tel'
     SCOPE_CHANGE_PASSWORD = 'change_pass'
     SCOPE_CHANGE_PHONE = 'change_phone'
+    SCOPE_2FA_ACTIVATE = '2fa_activate'
 
     SCOPE_CHOICES = [
         (SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_PHONE, SCOPE_VERIFY_PHONE),
-        (SCOPE_WITHDRAW, SCOPE_WITHDRAW), (SCOPE_TELEPHONE, SCOPE_TELEPHONE),
+        (SCOPE_CRYPTO_WITHDRAW, SCOPE_CRYPTO_WITHDRAW), (SCOPE_TELEPHONE, SCOPE_TELEPHONE),
         (SCOPE_CHANGE_PASSWORD, SCOPE_CHANGE_PASSWORD), (SCOPE_CHANGE_PHONE, SCOPE_CHANGE_PHONE),
+        (SCOPE_VERIFY_EMAIL, SCOPE_VERIFY_EMAIL), (SCOPE_FIAT_WITHDRAW, SCOPE_FIAT_WITHDRAW),
+        (SCOPE_2FA_ACTIVATE, SCOPE_2FA_ACTIVATE),
     ]
 
     created = models.DateTimeField(auto_now_add=True)
@@ -101,40 +106,46 @@ class VerificationCode(models.Model):
         # todo: use user devices / ip , ...
 
         if phone == '09120889956':
-            logger.info('Ignored sending otp to kavenegar due to blacklist')
+            logger.info('[OTP] Ignored sending otp to kavenegar due to blacklist')
             return
 
-        any_recent_code = VerificationCode.objects.filter(
-            phone=phone,
-            created__gte=timezone.now() - timedelta(minutes=2),
-        ).exists()
+        if not settings.DEBUG_OR_TESTING_OR_STAGING:
+            any_recent_code = VerificationCode.objects.filter(
+                phone=phone,
+                created__gte=timezone.now() - timedelta(minutes=2),
+            ).exists()
 
-        if any_recent_code:
-            logger.info('Ignored sending otp to kavenegar because of recent')
-            return
+            if not settings.DEBUG_OR_TESTING_OR_STAGING and any_recent_code:
+                logger.info('[OTP] Ignored sending otp to kavenegar because of recent')
+                return
 
-        prev_codes = VerificationCode.objects.filter(
-            phone=phone,
-            created__gte=timezone.now() - timedelta(minutes=15),
-        ).count()
+            prev_codes = VerificationCode.objects.filter(
+                phone=phone,
+                created__gte=timezone.now() - timedelta(minutes=15),
+            ).count()
 
-        if prev_codes >= 3:
-            logger.info('Ignored sending otp to kavenegar because of multiple prev')
-            return
+            if not settings.DEBUG_OR_TESTING_OR_STAGING and prev_codes >= 3:
+                logger.info('[OTP] Ignored sending otp to kavenegar because of multiple prev')
+                return
 
-        if scope == cls.SCOPE_TELEPHONE:
+        if scope in (cls.SCOPE_TELEPHONE, cls.SCOPE_VERIFY_PHONE):
             code_length = 4
         else:
             code_length = 6
 
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
+            code = '1' * code_length
+        else:
+            code = generate_random_code(code_length)
+
         otp_code = VerificationCode.objects.create(
             phone=phone,
             scope=scope,
-            code=generate_random_code(code_length),
+            code=code,
             user=user,
         )
 
-        if settings.DEBUG_OR_TESTING:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             print('[OTP] code for %s is: %s' % (otp_code.phone, otp_code.code))
         else:
             if scope != cls.SCOPE_TELEPHONE:  # is_phone(phone):
@@ -144,12 +155,24 @@ class VerificationCode(models.Model):
                 send_type = 'call'
                 template = 'telephone'
 
-            send_message_by_kavenegar(
-                phone=otp_code.phone,
-                token=otp_code.code,
-                send_type=send_type,
-                template=template
-            )
+            if config('OTP_BY_SMS_IR', cast=bool, default=False):
+                from accounts.tasks import send_message_by_sms_ir
+                send_message_by_sms_ir(
+                    phone=phone,
+                    template='69129',
+                    params={
+                        'brand': settings.BRAND,
+                        'code': otp_code.code
+                    }
+                )
+            else:
+                from accounts.tasks import send_message_by_kavenegar
+                send_message_by_kavenegar(
+                    phone=otp_code.phone,
+                    token=otp_code.code,
+                    send_type=send_type,
+                    template=template
+                )
 
         return otp_code
 

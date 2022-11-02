@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 from django.utils import timezone
 
 from accounts.models import Account
@@ -34,7 +35,7 @@ class OTCRequest(models.Model):
 
     to_amount = get_amount_field()
     from_amount = get_amount_field()
-    to_price = get_amount_field()
+    to_price = get_amount_field(max_digits=40, decimal_places=18)
 
     to_price_absolute_irt = get_amount_field()
     to_price_absolute_usdt = get_amount_field()
@@ -47,9 +48,10 @@ class OTCRequest(models.Model):
 
     @classmethod
     def new_trade(cls, account: Account, market: str, from_asset: Asset, to_asset: Asset, from_amount: Decimal = None,
-                  to_amount: Decimal = None, allow_small_trades: bool = False) -> 'OTCRequest':
+                  to_amount: Decimal = None, allow_dust: bool = False, check_enough_balance: bool = True) -> 'OTCRequest':
 
         assert from_amount or to_amount
+        assert (from_amount or to_amount) > 0
 
         otc_request = OTCRequest(
             account=account,
@@ -58,9 +60,9 @@ class OTCRequest(models.Model):
             market=market,
         )
 
-        otc_request.set_amounts(from_amount, to_amount)
+        otc_request.set_amounts(from_amount, to_amount, allow_dust)
 
-        if not allow_small_trades:
+        if not allow_dust:
             if from_amount:
                 check_asset, check_amount = from_asset, from_amount
             else:
@@ -69,8 +71,9 @@ class OTCRequest(models.Model):
             if check_amount * get_trading_price_irt(check_asset.symbol, BUY, raw_price=True) < 8_000:
                 raise SmallAmountTrade()
 
-        from_wallet = from_asset.get_wallet(account, otc_request.market)
-        from_wallet.has_balance(otc_request.from_amount, raise_exception=True)
+        if check_enough_balance:
+            from_wallet = from_asset.get_wallet(account, otc_request.market)
+            from_wallet.has_balance(otc_request.from_amount, raise_exception=True)
 
         otc_request.save()
 
@@ -102,15 +105,13 @@ class OTCRequest(models.Model):
             raise NotImplementedError
 
     def get_to_price(self):
-        from ledger.utils.price import get_trading_price_irt
-
         conf = self.get_trade_config()
         other_side = get_other_side(conf.side)
 
         if conf.cash.symbol == Asset.IRT:
-            trading_price = get_trading_price_irt(conf.coin.symbol, other_side)
+            trading_price = get_trading_price_irt(conf.coin.symbol, other_side, value=conf.cash_amount)
         elif conf.cash.symbol == Asset.USDT:
-            trading_price = get_trading_price_usdt(conf.coin.symbol, other_side)
+            trading_price = get_trading_price_usdt(conf.coin.symbol, other_side, value=conf.cash_amount)
         else:
             raise NotImplementedError
 
@@ -129,32 +130,48 @@ class OTCRequest(models.Model):
         other_side = get_other_side(conf.side)
         return get_trading_price_usdt(self.to_asset.symbol, other_side)
 
-    def set_amounts(self, from_amount: Decimal = None, to_amount: Decimal = None,):
-        assert (from_amount or to_amount) and (not from_amount or not to_amount), 'exactly one amount should presents'
+    def set_amounts(self, from_amount: Decimal = None, to_amount: Decimal = None, allow_dust: bool = False):
+        assert (from_amount or to_amount) and (not from_amount or not to_amount), 'exactly one amount should present'
 
         to_price = self.get_to_price()
 
         if to_amount:
+            self.from_amount = to_price * to_amount
+            self.to_amount = to_amount
+
+            # recalc with price diff_multipliers
+            to_price = self.get_to_price()
             from_amount = to_price * to_amount
 
             if self.from_asset.is_trade_base() and self.to_asset.symbol != Asset.IRT:
-                self.to_asset.is_trade_amount_valid(to_amount, raise_exception=True)
+                self.to_asset.is_trade_amount_valid(to_amount, raise_exception=not allow_dust)
             else:
-                from_amount = from_amount - (from_amount % self.from_asset.trade_quantity_step)  # step coin
-                to_amount = from_amount / to_price  # re calc cash
+                prev_from_amount = from_amount
+                from_amount = from_amount - (from_amount % self.from_asset.trade_quantity_step)
+
+                if prev_from_amount != from_amount:
+                    from_amount += self.from_asset.trade_quantity_step
+
+                # to_amount = from_amount / to_price  # re calc cash
 
         else:
+            self.from_amount = from_amount
+            self.to_amount = from_amount / to_price
+
+            # recalc with price diff_multipliers
+            to_price = self.get_to_price()
             to_amount = from_amount / to_price
 
             if self.from_asset.is_trade_base() and self.to_asset.symbol != Asset.IRT:
-                to_amount = to_amount - (to_amount % self.to_asset.trade_quantity_step)  # step coin
-                from_amount = to_amount * to_price  # re calc cash
+                to_amount = to_amount - (to_amount % self.to_asset.trade_quantity_step)
+                # from_amount = to_amount * to_price  # re calc cash
             else:
-                self.from_asset.is_trade_amount_valid(from_amount, raise_exception=True)
+                self.from_asset.is_trade_amount_valid(from_amount, raise_exception=not allow_dust)
 
         self.to_price = to_price
         self.from_amount = from_amount
         self.to_amount = to_amount
+
         self.to_price_absolute_irt = self._get_to_price_absolute_irt()
         self.to_price_absolute_usdt = self._get_to_price_absolute_usdt()
 
@@ -166,3 +183,13 @@ class OTCRequest(models.Model):
 
     def __str__(self):
         return 'Buy %s %s from %s' % (self.to_asset.get_presentation_amount(self.to_amount), self.to_asset, self.from_asset)
+
+    class Meta:
+        constraints = [
+            CheckConstraint(check=Q(
+                from_amount__gte=0,
+                to_amount__gte=0,
+                to_price__gte=0,
+                to_price_absolute_irt__gte=0,
+                to_price_absolute_usdt__gte=0,
+            ), name='check_ledger_otc_request_amounts', ), ]

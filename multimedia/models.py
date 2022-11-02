@@ -13,3 +13,20 @@ class Image(models.Model):
 
     def __str__(self):
         return self.get_absolute_image_url()
+
+
+class Banner(models.Model):
+    title = models.CharField(max_length=64)
+    image = models.ImageField()
+    link = models.CharField(max_length=256)
+    active = models.BooleanField(default=True)
+    order = models.PositiveSmallIntegerField()
+
+    def get_absolute_image_url(self):
+        return settings.HOST_URL + self.image.url
+
+    def __str__(self):
+        return self.get_absolute_image_url()
+
+    class Meta:
+        ordering = ('order', )

@@ -1,10 +1,7 @@
-from uuid import uuid4
-
-from django.test import TestCase
-from accounts.models import Account
-from ledger.models import Asset, Trx
-from ledger.utils.test import new_account, new_address_book, new_network, new_network_asset
 from django.test import Client
+from django.test import TestCase
+from ledger.models import Asset
+from ledger.utils.test import new_account, new_address_book, new_network, new_network_asset
 
 
 class AddressBookTestCase(TestCase):
@@ -37,4 +34,3 @@ class AddressBookTestCase(TestCase):
     def test_delete_address_book(self):
         resp = self.client.delete('/api/v1/addressbook/{}/'.format(self.address_book.pk))
         self.assertEqual(resp.status_code, 204)
-

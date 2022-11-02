@@ -4,3 +4,6 @@ from .paydotir_callback_veiw import PaydotirCallbackView
 from .bank_card_view import BankCardView
 from .withdraw_view import WithdrawRequestView, WithdrawHistoryView
 from .bank_account_view import BankAccountView
+from .zibal_callback_view import ZibalCallbackView
+from .proxy_redirect_view import ProxyPaymentRedirectView
+from .jibit_callback_view import JibitCallbackView

@@ -1,46 +1,44 @@
 import os
 import re
 import sys
+from datetime import timedelta
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-import raven
+import sentry_sdk
 from decouple import Csv
-from django.conf import settings
-from yekta_config import secret
-from yekta_config.config import config
+from sentry_sdk.integrations.django import DjangoIntegration
+from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+SECRET_KEY = config('SECRET_KEY')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = secret('SECRET')
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', cast=bool, default=False)
+STAGING = config('STAGING', cast=bool, default=False)
 TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
 DEBUG_OR_TESTING = DEBUG or TESTING
+DEBUG_OR_TESTING_OR_STAGING = DEBUG or TESTING or STAGING
 
-HOST_URL = config('HOST_URL')
+HOST_URL = config('HOST_URL', default='https://api.raastin.com')
+PANEL_URL = config('PANEL_URL', default='https://raastin.com')
 
 CELERY_TASK_ALWAYS_EAGER = config('CELERY_ALWAYS_EAGER', default=False)
 
 # Application definition
 
 INSTALLED_APPS = [
+    'admin_interface',
+    'colorfield',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'raven.contrib.django.raven_compat',
     'django_admin_listfilter_dropdown',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'hijack',
     'hijack.contrib.admin',
@@ -51,19 +49,23 @@ INSTALLED_APPS = [
     'financial',
     'multimedia',
     'accounts',
+    'accounting',
     'ledger',
-    'tracker',
-    'provider',
-    'wallet',
-    'collector',
     'market',
     'trader',
     'jalali_date',
+    'health',
+    'stake',
+    'gamify',
 ]
 
+if not DEBUG_OR_TESTING:
+    INSTALLED_APPS.append('minio_storage')
+
+
 MIDDLEWARE = [
+    'allow_cidr.middleware.AllowCIDRMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'raven.contrib.django.raven_compat.middleware.SentryResponseErrorIdMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -74,6 +76,8 @@ MIDDLEWARE = [
     'hijack.middleware.HijackUserMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
+
+    'utilities.middleware.SetLocaleMiddleware',
 ]
 
 # todo: fix csrf check
@@ -105,30 +109,29 @@ TEMPLATES = [
 WSGI_APPLICATION = '_base.wsgi.application'
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv(), default='')
+ALLOWED_CIDR_NETS = ['10.0.0.0/16']
 
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv(), default='')
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', cast=Csv(), default='')
 CORS_ALLOW_CREDENTIALS = True
 
-KAVENEGAR_KEY = secret('KAVENEGAR_KEY')
-SMS_IR_API_KEY = secret('SMS_IR_API_KEY')
-SMS_IR_API_SECRET = secret('SMS_IR_API_SECRET')
-
 DATABASES = {
     'default': {
         'ENGINE': config('DEFAULT_DB_ENGINE', default='django.db.backends.postgresql_psycopg2'),
-        'NAME': config('DEFAULT_DB_NAME', default='core'),
+        'NAME': config('DEFAULT_DB_NAME', default='core_db'),
         'USER': config('DEFAULT_DB_USER', default='exchange'),
-        'PASSWORD': secret('DEFAULT_DB_PASSWORD'),
+        'PASSWORD': config('DEFAULT_DB_PASSWORD'),
         'HOST': config('DEFAULT_DB_HOST', default='localhost'),
         'PORT': config('DEFAULT_DB_PORT', default=5432),
     }
 }
 
+LOCAL_REDIS_URL = config('LOCAL_REDIS_URL', default='redis://127.0.0.1:6379')
+
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': secret('DEFAULT_CACHE_LOCATION', default='redis://127.0.0.1:6379/0'),
+        'LOCATION': LOCAL_REDIS_URL + '/0',
 
         'OPTIONS': {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -136,7 +139,7 @@ CACHES = {
     },
     'token': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': secret('TOKEN_CACHE_LOCATION', default='redis://127.0.0.1:6379/1'),
+        'LOCATION': LOCAL_REDIS_URL + '/1',
 
         'OPTIONS': {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -144,7 +147,7 @@ CACHES = {
     },
     'trader': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': secret('TRADER_CACHE_LOCATION', default='redis://127.0.0.1:6379/1'),
+        'LOCATION': LOCAL_REDIS_URL + '/2',
 
         'OPTIONS': {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -152,10 +155,10 @@ CACHES = {
     },
 }
 
-PROVIDER_CACHE_LOCATION = secret('PROVIDER_CACHE_LOCATION', default='redis://127.0.0.1:6379/2')
-METRICS_CACHE_LOCATION = secret('METRICS_CACHE_LOCATION', default='redis://127.0.0.1:6379/0')
-TRADER_CACHE_LOCATION = secret('TRADER_CACHE_LOCATION', default='redis://127.0.0.1:6379/1')
-MARKET_CACHE_LOCATION = secret('MARKET_CACHE_LOCATION', default='redis://127.0.0.1:6379/3')
+MARKET_CACHE_LOCATION = LOCAL_REDIS_URL + '/3'
+METRICS_CACHE_LOCATION = LOCAL_REDIS_URL + '/4'
+
+PRICE_CACHE_LOCATION = config('PRICE_CACHE_LOCATION', default='redis://127.0.0.1:6379/2')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -197,22 +200,45 @@ USE_TZ = True
 STATIC_URL = config('STATIC_URL', default='/static/')
 STATIC_ROOT = config('STATIC_ROOT', default=os.path.join(BASE_DIR, 'public/'))
 
+STATICFILES_DIRS = [
+    'static'
+]
+
 MEDIA_URL = config('MEDIA_URL', default='/media/')
 MEDIA_ROOT = config('MEDIA_ROOT', default=os.path.join(BASE_DIR, 'media/'))
 
+if not DEBUG_OR_TESTING:
+    DEFAULT_FILE_STORAGE = "minio_storage.storage.MinioMediaStorage"
+    STATICFILES_STORAGE = "minio_storage.storage.MinioStaticStorage"
+    MINIO_STORAGE_ENDPOINT = config('MINIO_STORAGE_ENDPOINT')
+    MINIO_STORAGE_ACCESS_KEY = config('MINIO_STORAGE_ACCESS_KEY')
+    MINIO_STORAGE_SECRET_KEY = config('MINIO_STORAGE_SECRET_KEY')
+    MINIO_STORAGE_USE_HTTPS = False
+    MINIO_STORAGE_MEDIA_BUCKET_NAME = 'core-media'
+    MINIO_STORAGE_AUTO_CREATE_MEDIA_BUCKET = True
+    MINIO_STORAGE_STATIC_BUCKET_NAME = 'core-static'
+    MINIO_STORAGE_AUTO_CREATE_STATIC_BUCKET = True
+    MINIO_STORAGE_STATIC_URL = config('MINIO_CDN_STATIC_URL')
+    MINIO_STORAGE_MEDIA_URL = config('MINIO_CDN_MEDIA_URL')
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-SENTRY_CLIENT = 'raven.contrib.django.raven_compat.DjangoClient'
-RAVEN_CONFIG = {
-    'ignore_exceptions ': ['Http404', 'django.exceptions.http.Http404', 'rest_framework.exceptions.PermissionDenied'],
-    'dsn': secret('SENTRY_DSN', default=''),
-    'release': raven.fetch_git_sha(os.path.dirname(os.pardir)),
-    'environment': config('ENVIRONMENT', default='development')
-}
+sentry_sdk.init(
+    dsn=config("SENTRY_DSN", default=''),
+    integrations=[
+        DjangoIntegration(),
+    ],
+
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production.
+    traces_sample_rate=0.1,
+
+    # If you wish to associate users to errors (assuming you are using
+    # django.contrib.auth) you may enable sending PII data.
+    send_default_pii=True
+)
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
@@ -228,6 +254,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         # 'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
 
     'DEFAULT_PERMISSION_CLASSES': [
@@ -238,8 +265,23 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'burst': '5/min',
         'sustained': '50/day',
+        # 'burst_api': '40/min',
+        # 'sustained_api': '20000/day',
+        'burst_api': '200/min',
+        'sustained_api': '200000/day',
     }
 }
+
+if config('JWT_PRIVATE_KEY', None):
+    SIMPLE_JWT = {
+        'ROTATE_REFRESH_TOKENS': True,
+        'BLACKLIST_AFTER_ROTATION': False,
+        'AUTH_HEADER_TYPES': ('Bearer', 'JWT'),
+        'ALGORITHM': 'RS256',
+        'SIGNING_KEY': config('JWT_PRIVATE_KEY', default=''),
+        'VERIFYING_KEY': config('JWT_PUBLIC_KEY', default=''),
+        'REFRESH_TOKEN_LIFETIME': timedelta(hours=6),
+    }
 
 AUTH_USER_MODEL = 'accounts.User'
 AUTHENTICATION_BACKENDS = ('accounts.backends.AuthenticationBackend',)
@@ -265,7 +307,7 @@ LOGGING = {
         'sentry': {
             'level': 'WARNING',
             'filters': ['require_debug_false'],
-            'class': 'raven.contrib.django.handlers.SentryHandler',
+            'class': 'sentry_sdk.integrations.logging.EventHandler',
         },
     },
     'loggers': {
@@ -281,14 +323,17 @@ LOGGING = {
 SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='None')
 SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', cast=bool, default=True)
 
-CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN', default='.raastin.com')
+if config('SESSION_COOKIE_DOMAIN', default=None):
+    SESSION_COOKIE_DOMAIN = config('SESSION_COOKIE_DOMAIN')
+
+if config('CSRF_COOKIE_DOMAIN', default=None):
+    CSRF_COOKIE_DOMAIN = config('CSRF_COOKIE_DOMAIN')
+
 CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='None')
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', cast=bool, default=True)
 
-DEFAULT_FROM_EMAIL = 'راستین <%s>' % config('EMAIL_SENDER', default='')
-
 JALALI_DATE_DEFAULTS = {
-   'Strftime': {
+    'Strftime': {
         'date': '%y/%m/%d',
         'datetime': '%H:%M:%S _ %y/%m/%d',
     },
@@ -306,4 +351,5 @@ JALALI_DATE_DEFAULTS = {
 
 SYSTEM_ACCOUNT_ID = config('SYSTEM_ACCOUNT_ID', default=1)
 
-BRAND_EN = config('BRAND_EN')
+BRAND_EN = config('BRAND_EN', default='')
+BRAND = config('BRAND', default='')

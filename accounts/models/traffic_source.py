@@ -1,5 +1,4 @@
 from django.db import models
-from simple_history.models import HistoricalRecords
 
 from accounts.models import User
 
@@ -13,6 +12,10 @@ class TrafficSource(models.Model):
     utm_campaign = models.CharField(max_length=256)
     utm_content = models.CharField(max_length=256)
     utm_term = models.CharField(max_length=256)
+    gps_adid = models.CharField(max_length=256)
+
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=256, blank=True)
 
     class Meta:
         verbose_name_plural = verbose_name = "منشا ترافیک"

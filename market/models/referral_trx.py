@@ -4,10 +4,12 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 
 from ledger.models import Trx, Asset, Wallet
+from ledger.models.trx import FakeTrx
 from ledger.utils.fields import get_amount_field
-from ledger.utils.precision import floor_precision
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -34,24 +36,27 @@ class ReferralTrx(models.Model):
     referrer_amount = get_amount_field()
     trader_amount = get_amount_field()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.trx_dict = None
-
     @staticmethod
-    def get_trade_referrals(maker_fee, taker_fee, trade_price, tether_irt, is_buyer_maker: bool):
+    def get_trade_referrals(pipeline, maker_fee, taker_fee, trade_price, tether_irt, is_buyer_maker: bool):
         irt_asset = Asset.get(symbol=Asset.IRT)
-        maker_referral = ReferralTrx().init_trx(
-            maker_fee, trade_price, tether_irt, irt_asset=irt_asset, sell=not is_buyer_maker
+        maker_referral = ReferralTrx.init_trx(
+            pipeline, maker_fee, trade_price, tether_irt, irt_asset=irt_asset, sell=not is_buyer_maker
         )
-        taker_referral = ReferralTrx().init_trx(
-            taker_fee, trade_price, tether_irt, irt_asset=irt_asset, sell=is_buyer_maker
+        taker_referral = ReferralTrx.init_trx(
+            pipeline, taker_fee, trade_price, tether_irt, irt_asset=irt_asset, sell=is_buyer_maker
         )
 
         TradeReferral = namedtuple("TradeReferral", "maker taker")
         return TradeReferral(maker_referral, taker_referral)
 
-    def init_trx(self, fee_trx, trade_price: Decimal, tether_factor: Decimal, sell: bool, irt_asset=None):
+    @staticmethod
+    def get_trade_referral(pipeline: WalletPipeline, fee: FakeTrx, trade_price, tether_irt, sell: bool):
+        irt_asset = Asset.get(symbol=Asset.IRT)
+        return ReferralTrx.init_trx(pipeline, fee, trade_price, tether_irt, irt_asset=irt_asset, sell=sell)
+
+    @classmethod
+    def init_trx(cls, pipeline, fee_trx: FakeTrx, trade_price: Decimal, tether_factor: Decimal, sell: bool,
+                 irt_asset=None):
         if not fee_trx or not fee_trx.amount:
             return
 
@@ -63,29 +68,37 @@ class ReferralTrx(models.Model):
             irt_asset = Asset.get(symbol=Asset.IRT)
         system_wallet = irt_asset.get_wallet(fee_trx.receiver.account, Wallet.SPOT)
 
+        real_fee_amount = fee_trx.amount * (Decimal(100) / (Decimal(100) - (
+                Decimal(ReferralTrx.REFERRAL_MAX_RETURN_PERCENT) - Decimal(referral.owner_share_percent))))
         if sell:
-            amount = fee_trx.amount * tether_factor
+            amount = real_fee_amount * tether_factor
         else:
-            amount = fee_trx.amount * trade_price * tether_factor
+            amount = real_fee_amount * trade_price * tether_factor
 
-        self.trx_dict = {}
-        for receiver_type in [self.TRADER, self.REFERRER]:
-            self.trx_dict[receiver_type] = Trx(
-                sender=system_wallet,
-                receiver=self.get_receiver(irt_asset, fee_trx, receiver_type),
-                amount=amount * self.get_share_factor(referral, receiver_type),
-                group_id=fee_trx.group_id,
-                scope=Trx.COMMISSION
+        trx_dict = {}
+        for receiver_type in [cls.TRADER, cls.REFERRER]:
+            trx_data = {
+                'sender': system_wallet,
+                'receiver': cls.get_receiver(irt_asset, fee_trx, receiver_type),
+                'amount': amount * cls.get_share_factor(referral, receiver_type),
+                'group_id': fee_trx.group_id,
+                'scope': Trx.COMMISSION,
+            }
+
+            pipeline.new_trx(**trx_data)
+
+            trx_dict[receiver_type] = FakeTrx(**trx_data)
+
+        if trx_dict[ReferralTrx.TRADER]:
+            instance = cls(
+                trader=trx_dict[ReferralTrx.TRADER].receiver.account,
+                referral=trx_dict[ReferralTrx.TRADER].receiver.account.referred_by,
+                group_id=trx_dict[ReferralTrx.TRADER].group_id,
+                trader_amount=trx_dict[ReferralTrx.TRADER].amount,
+                referrer_amount=trx_dict[ReferralTrx.REFERRER].amount,
             )
-
-        if self.trx_dict[ReferralTrx.TRADER]:
-            self.trader = self.trx_dict[ReferralTrx.TRADER].receiver.account
-            self.referral = self.trx_dict[ReferralTrx.TRADER].receiver.account.referred_by
-            self.group_id = self.trx_dict[ReferralTrx.TRADER].group_id
-            self.trader_amount = self.trx_dict[ReferralTrx.TRADER].amount
-            self.referrer_amount = self.trx_dict[ReferralTrx.REFERRER].amount
-            if self.trader_amount or self.referrer_amount:
-                return self
+            if instance.trader_amount or instance.referrer_amount:
+                return instance
 
     @staticmethod
     def get_receiver(irt_asset, fee_trx, receiver_type):
@@ -99,15 +112,12 @@ class ReferralTrx(models.Model):
         assert 0 <= referral.owner_share_percent <= cls.REFERRAL_MAX_RETURN_PERCENT
 
         if receiver_type == ReferralTrx.TRADER:
-            return Decimal(cls.REFERRAL_MAX_RETURN_PERCENT) / 100 - Decimal(referral.owner_share_percent) / 100
+            return Decimal(0)
         else:
             return Decimal(referral.owner_share_percent) / 100
 
-    @staticmethod
-    def get_trx_list(referrals):
-        trx_list = []
-        if referrals.maker and referrals.maker.trx_dict:
-            trx_list.extend(referrals.maker.trx_dict.values())
-        if referrals.taker and referrals.taker.trx_dict:
-            trx_list.extend(referrals.taker.trx_dict.values())
-        return trx_list
+    class Meta:
+        constraints = [
+            CheckConstraint(check=Q(referrer_amount__gte=0, trader_amount__gte=0),
+                            name='check_market_referraltrx_amounts', ),
+        ]

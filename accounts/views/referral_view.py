@@ -3,19 +3,19 @@ from decimal import Decimal
 
 from django.db.models import Q, DateField, Case, When, F, Sum
 from django.db.models.functions import Cast
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins
 from rest_framework import serializers
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from accounts.models import Referral, User, Account
+from ledger.models import Wallet
 from market.models import ReferralTrx
 
 logger = logging.getLogger(__name__)
@@ -86,12 +86,6 @@ class ReferralViewSet(
             'account': self.request.user.account
         }
 
-    def perform_create(self, serializer):
-        if self.request.user.level < User.LEVEL2:
-            raise ValidationError('برای ساخت کد معرف، ابتدا باید احراز هویت سطح دو را انجام دهید.')
-
-        serializer.save()
-
 
 class ReferralOverviewAPIView(APIView):
 
@@ -137,22 +131,33 @@ class ReferralReportAPIView(ListAPIView):
 class TradingFeeView(APIView):
 
     def get(self, request):
-        # taker_fee = Decimal('0.2')
-        old_taker_fee = Decimal('0.2')
-        old_maker_fee = Decimal('0.2')
+        voucher = request.user.account.get_voucher_wallet()
 
-        taker_fee = Decimal('0')
+        old_taker_fee = Decimal('0.2')
+        old_maker_fee = Decimal('0')
+
+        if voucher:
+            taker_fee = 0
+            expiration = voucher.expiration
+            voucher_amount = voucher.balance
+        else:
+            taker_fee = Decimal('0.2')
+            expiration = None
+            voucher_amount = None
+
         maker_fee = Decimal('0')
 
         referral_code = request.user.account.referred_by
 
         if referral_code:
-            taker_fee = taker_fee * (Decimal('1') - referral_code.owner_share_percent/Decimal('100'))
+            referral_percent = ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - referral_code.owner_share_percent
+            taker_fee = taker_fee * (Decimal('1') - referral_percent /Decimal('100'))
 
         return Response({
             'old_taker_fee': str(old_taker_fee),
             'old_maker_fee': str(old_maker_fee),
             'taker_fee': str(taker_fee),
             'maker_fee': str(maker_fee),
+            'voucher_expiration': expiration,
+            'voucher_amount': voucher_amount
         })
-

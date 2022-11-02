@@ -1,6 +1,8 @@
+from uuid import uuid4
+
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
-from django.db.models import Q, UniqueConstraint
+from django.db.models import Q, UniqueConstraint, Sum
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
@@ -24,12 +26,18 @@ class User(AbstractUser):
 
     INIT, PENDING, REJECTED, VERIFIED = 'init', 'pending', 'rejected', 'verified'
 
+    SHIB, VOUCHER = 'shib', 'voucher'
+
     USERNAME_FIELD = 'phone'
 
     FIAT, CRYPTO = 'fiat', 'crypto'
 
+    NATIONAL_CODE_DUPLICATED = 'duplicated-national-code'
+
     objects = CustomUserManager()
     history = HistoricalRecords()
+
+    chat_uuid = models.UUIDField(default=uuid4)
 
     phone = models.CharField(
         max_length=PHONE_MAX_LENGTH,
@@ -42,7 +50,6 @@ class User(AbstractUser):
         }
     )
 
-
     first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام',)
     last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی',)
 
@@ -54,6 +61,7 @@ class User(AbstractUser):
         validators=[national_card_code_validator],
     )
     national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی',)
+    national_code_phone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی و موبایل (شاهکار)',)
 
     birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد',)
     birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد',)
@@ -75,6 +83,12 @@ class User(AbstractUser):
         choices=((INIT, INIT), (PENDING, PENDING), (REJECTED, REJECTED), (VERIFIED, VERIFIED)),
         default=INIT,
         verbose_name='وضعیت تایید'
+    )
+
+    reject_reason = models.CharField(
+        max_length=32,
+        blank=True,
+        choices=((NATIONAL_CODE_DUPLICATED, NATIONAL_CODE_DUPLICATED), )
     )
 
     first_fiat_deposit_date = models.DateTimeField(blank=True, null=True, verbose_name='زمان اولین واریز ریالی')
@@ -111,8 +125,8 @@ class User(AbstractUser):
 
     margin_quiz_pass_date = models.DateTimeField(null=True, blank=True)
 
-    show_margin = models.BooleanField(default=False, verbose_name='امکان مشاهده حساب تعهدی')
-    national_code_duplicated_alert = models.BooleanField(default=False, verbose_name='آیا شماره ملی تکراری است؟')
+    show_margin = models.BooleanField(default=True, verbose_name='امکان مشاهده حساب تعهدی')
+    show_strategy_bot = models.BooleanField(default=False, verbose_name='امکان مشاهده ربات')
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
 
@@ -121,12 +135,25 @@ class User(AbstractUser):
         verbose_name='امکان برداشت وجه پیش از سپری شدن ۴۸ ساعت از اولین واریز',
     )
 
-    on_boarding_flow = models.CharField(
-        max_length=10,
-        choices=((FIAT, FIAT), (CRYPTO, CRYPTO),),
-        blank=True,
-        default=''
+    allow_level1_crypto_withdraw = models.BooleanField(
+        default=False,
+        verbose_name='امکان برداشت رمزارز در سطح ۱',
     )
+
+    can_withdraw = models.BooleanField(default=True)
+
+    promotion = models.CharField(max_length=256, blank=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
+
+    @property
+    def kyc_bank_card(self):
+        return self.bankcard_set.filter(kyc=True).first()
+
+    def get_verify_weight(self) -> int:
+        from accounts.models import FinotechRequest
+        return FinotechRequest.objects.filter(
+            user=self,
+            search_key__isnull=False
+        ).exclude(search_key='').aggregate(w=Sum('weight'))['w'] or 0
 
     class Meta:
         verbose_name = _('user')
@@ -140,34 +167,32 @@ class User(AbstractUser):
             )
         ]
 
-    def change_status(self, status: str):
-        # from ledger.models import Prize, Asset
-        # from ledger.models.prize import alert_user_prize
+    def change_status(self, status: str, reason: str = ''):
         from accounts.tasks.verify_user import alert_user_verify_status
 
         if self.verify_status != self.VERIFIED and status == self.VERIFIED:
             self.verify_status = self.INIT
+
+            if self.level == User.LEVEL1:
+                if User.objects.filter(level__gte=User.LEVEL2, national_code=self.national_code).exclude(id=self.id):
+                    self.national_code_verified = False
+                    self.save(update_fields=['national_code_verified'])
+                    return self.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
+
             self.level += 1
             with transaction.atomic():
                 if self.level == User.LEVEL2:
                     self.level_2_verify_datetime = timezone.now()
 
-                    # prize, created = Prize.objects.get_or_create(
-                    #     account=self.account,
-                    #     scope=Prize.LEVEL2_PRIZE,
-                    #     defaults={
-                    #         'amount': Prize.LEVEL2_PRIZE_AMOUNT,
-                    #         'asset': Asset.objects.get(symbol=Asset.SHIB)
-                    #     }
-                    # )
-                    # if created:
-                    #     prize.build_trx()
-                    #     alert_user_prize(self, Prize.LEVEL2_PRIZE)
-
                 elif self.level == User.LEVEL3:
                     self.level_3_verify_datetime = timezone.now()
 
-                self.save()
+                self.archived = False
+                self.save(update_fields=['verify_status', 'level', 'level_2_verify_datetime', 'level_3_verify_datetime', 'archived'])
+
+            if self.level == User.LEVEL2:
+                from gamify.utils import check_prize_achievements, Task
+                check_prize_achievements(self.account, Task.VERIFY_LEVEL2)
 
             alert_user_verify_status(self)
 
@@ -180,13 +205,15 @@ class User(AbstractUser):
                 )
 
             self.verify_status = status
-            self.save()
+            self.reject_reason = reason
+            self.save(update_fields=['verify_status', 'reject_reason'])
 
             alert_user_verify_status(self)
 
         else:
             self.verify_status = status
-            self.save()
+            self.archived = False
+            self.save(update_fields=['verify_status', 'archived'])
 
     @property
     def primary_data_verified(self) -> bool:
@@ -194,7 +221,7 @@ class User(AbstractUser):
                and self.birth_date and self.birth_date_verified
 
     def get_level2_verify_fields(self):
-        from financial.models import BankCard, BankAccount
+        from financial.models import BankCard
 
         bank_card_verified = None
 
@@ -203,24 +230,18 @@ class User(AbstractUser):
         elif not BankCard.live_objects.filter(user=self, verified__isnull=True):
             bank_card_verified = False
 
-        bank_account_verified = None
-
-        if BankAccount.live_objects.filter(user=self, verified=True):
-            bank_account_verified = True
-        elif not BankAccount.live_objects.filter(user=self, verified__isnull=True):
-            bank_account_verified = False
-
         return [
-            bool(self.national_code), self.national_code_verified,
+            bool(self.national_code),
             bool(self.birth_date), self.birth_date_verified,
             bool(self.first_name), self.first_name_verified,
             bool(self.last_name), self.last_name_verified,
-            bank_card_verified, bank_account_verified
+            bank_card_verified
         ]
 
     def verify_level2_if_not(self) -> bool:
         if self.level == User.LEVEL1 and all(self.get_level2_verify_fields()):
             self.change_status(User.VERIFIED)
+
             return True
 
         return False
@@ -251,20 +272,18 @@ class User(AbstractUser):
             Account.objects.create(user=self)
 
         if self.level == self.LEVEL2 and self.verify_status == self.PENDING:
-            if self.telephone_verified and self.selfie_image_verified:
+            if self.national_code_phone_verified and self.selfie_image_verified:
                 self.change_status(self.VERIFIED)
-
             else:
-                fields = [self.telephone_verified, self.selfie_image_verified]
-                # any_none = any(map(lambda f: f is None, fields))
+                fields = [self.selfie_image_verified]
                 any_false = any(map(lambda f: f is False, fields))
 
                 if any_false:
                     self.change_status(self.REJECTED)
 
         elif self.level == self.LEVEL1 and self.verify_status == self.PENDING:
-            self.verify_level2_if_not()
             self.reject_level2_if_should()
+            self.verify_level2_if_not()
 
         if old and old.selfie_image_verified is None and self.selfie_image_verified is False:
             Notification.send(

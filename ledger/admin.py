@@ -3,17 +3,17 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
-from ledger.utils.precision import get_presentation_amount
+
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
 from ledger import models
-from ledger.models import Asset, Prize
+from ledger.models import Asset, Prize, CoinCategory, FastBuyToken
 from ledger.utils.overview import AssetOverview
-from ledger.utils.price import get_trading_price_usdt, BUY
-from provider.exchanges import BinanceFuturesHandler
+from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
-from provider.models import ProviderOrder
+from ledger.utils.price import get_trading_price_usdt, SELL
+from ledger.utils.provider import HEDGE, get_provider_requester
 
 
 @admin.register(models.Asset)
@@ -27,28 +27,52 @@ class AssetAdmin(AdvancedAdmin):
         'ask_diff': True
     }
 
+    readonly_fields = ('get_calculated_hedge_amount', 'get_hedge_value', 'get_hedge_amount')
+
     list_display = (
-        'symbol', 'order', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calculated_hedge_amount',
+        'symbol', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calculated_hedge_amount',
+        'get_total_asset', 'get_ledger_balance_users',
+
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
-        'get_ledger_balance_users', 'get_total_asset', 'get_hedge_threshold', 'get_future_value',
-        'get_ledger_balance_system', 'get_ledger_balance_out', 'trend', 'trade_enable', 'hedge_method', 'bid_diff', 'ask_diff'
+        'order', 'trend', 'trade_enable', 'hedge',
+
+        'margin_enable', 'new_coin', 'spread_category'
     )
-    list_filter = ('enable', 'trend')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable')
+    list_filter = ('enable', 'trend', 'margin_enable', 'spread_category')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'new_coin', 'hedge')
     search_fields = ('symbol', )
+    ordering = ('-enable', '-pin_to_top', '-trend', 'order')
+    actions = ('hedge_asset', )
 
     def changelist_view(self, request, extra_context=None):
 
-        if not settings.DEBUG:
-            self.overview = AssetOverview()
+        if not settings.DEBUG_OR_TESTING_OR_STAGING:
+            self.overview = AssetOverview(strict=False, calculated_hedge=True)
+
             context = {
                 'binance_initial_margin': round(self.overview.total_initial_margin, 2),
                 'binance_maint_margin': round(self.overview.total_maintenance_margin, 2),
-                'binance_margin_balance': round(self.overview.total_margin_balance, 2),
                 'binance_margin_ratio': round(self.overview.margin_ratio, 2),
                 'hedge_value': round(self.overview.get_total_hedge_value(), 2),
-                'binance_spot_usdt': round(self.overview.get_binance_spot_amount(Asset.get(Asset.USDT)), 2),
-                'internal_usdt': round(self.overview.get_internal_usdt_value(), 2)
+                'binance_spot_tether_amount': round(self.overview.get_binance_spot_amount(Asset.get(Asset.USDT)), 2),
+                'kucoin_spot_tether_amount': round(self.overview.get_kucoin_spot_amount(Asset.get(Asset.USDT)), 2),
+                'mexc_spot_tether_amount': round(self.overview.get_mexc_spot_amount(Asset.get(Asset.USDT)), 2),
+
+                'binance_spot_usdt': round(self.overview.get_binance_spot_total_value(), 2),
+                'kucoin_spot_usdt': round(self.overview.get_kucoin_spot_total_value(), 2),
+                'mexc_spot_usdt': round(self.overview.get_mexc_spot_total_value(), 2),
+
+                'binance_margin_balance': round(self.overview.total_margin_balance, 2),
+                'internal_usdt': round(self.overview.get_internal_usdt_value(), 2),
+                'fiat_usdt': round(self.overview.get_gateway_usdt(), 0),
+                'margin_insurance_balance': self.overview.get_margin_insurance_balance(),
+                'investment': round(self.overview.get_total_investment(), 0),
+                'cash': round(self.overview.get_total_cash(), 0),
+
+                'total_assets_usdt': round(self.overview.get_all_assets_usdt(), 0),
+                'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
+                'exchange_potential_usdt': round(self.overview.get_exchange_potential_usdt(), 0),
+                'users_usdt': round(self.overview.get_all_users_asset_value(), 0)
             }
         else:
             self.overview = None
@@ -64,20 +88,15 @@ class AssetAdmin(AdvancedAdmin):
 
     def get_ledger_balance_users(self, asset: Asset):
         return self.overview and asset.get_presentation_amount(
-            self.overview.get_ledger_balance(Account.ORDINARY, asset)
+            self.overview.get_users_asset_amount(asset)
         )
 
     get_ledger_balance_users.short_description = 'users'
 
-    def get_ledger_balance_system(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(self.overview.get_ledger_balance(Account.SYSTEM, asset))
+    def get_users_usdt_value(self, asset: Asset):
+        return self.overview and round(self.overview.get_users_asset_value(asset), 2)
 
-    get_ledger_balance_system.short_description = 'system'
-
-    def get_ledger_balance_out(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(self.overview.get_ledger_balance(Account.OUT, asset))
-
-    get_ledger_balance_out.short_description = 'out'
+    get_users_usdt_value.short_description = 'usdt_value'
 
     def get_total_asset(self, asset: Asset):
         return self.overview and asset.get_presentation_amount(self.overview.get_total_assets(asset))
@@ -110,7 +129,7 @@ class AssetAdmin(AdvancedAdmin):
     get_hedge_amount.short_description = 'hedge amount'
 
     def get_calculated_hedge_amount(self, asset: Asset):
-        return asset.get_presentation_amount(ProviderOrder.get_hedge(asset))
+        return self.overview and asset.get_presentation_amount(self.overview.get_calculated_hedge(asset))
 
     get_calculated_hedge_amount.short_description = 'calc hedge amount'
 
@@ -125,9 +144,17 @@ class AssetAdmin(AdvancedAdmin):
     get_hedge_value.short_description = 'hedge value'
 
     def get_hedge_threshold(self, asset: Asset):
-        return BinanceFuturesHandler.get_step_size(asset.symbol + 'USDT')
+        if asset.enable:
+            info = get_provider_requester().get_market_info(asset)
+            return info.step_size
 
-    get_hedge_threshold.short_description = 'future hedge threshold'
+    get_hedge_threshold.short_description = 'hedge threshold'
+
+    @admin.action(description='هج کردن رمزارزها', permissions=['view'])
+    def hedge_asset(self, request, queryset):
+        assets = queryset.filter(hedge=True)
+        for asset in assets:
+            get_provider_requester().try_hedge_new_order(asset, scope=HEDGE)
 
 
 @admin.register(models.Network)
@@ -141,18 +168,40 @@ class NetworkAdmin(admin.ModelAdmin):
 
 @admin.register(models.NetworkAsset)
 class NetworkAssetAdmin(admin.ModelAdmin):
-    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'binance_withdraw_enable')
-    search_fields = ('network__symbol', 'asset__symbol')
+    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'can_deposit', 'can_withdraw',
+                    'hedger_withdraw_enable')
+    search_fields = ('asset__symbol', )
+    list_editable = ('can_deposit', 'can_withdraw', )
+    list_filter = ('network', )
+
+
+class DepositAddressUserFilter(admin.SimpleListFilter):
+    title = 'کاربران'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(address_key__account__user=user)
+        else:
+            return queryset
 
 
 @admin.register(models.DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
-    list_display = ('account_secret', 'network', 'address')
+    list_display = ('address_key', 'network', 'address',)
+    readonly_fields = ('address_key', 'network', 'address',)
+    list_filter = ('network', DepositAddressUserFilter)
+    search_fields = ('address',)
 
 
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'from_asset', 'to_asset', 'to_price', 'from_amount', 'to_amount', 'token')
+    readonly_fields = ('account', )
 
     def get_from_amount(self, otc_request: models.OTCRequest):
         return humanize_number((otc_request.from_asset.get_presentation_amount(otc_request.from_amount)))
@@ -208,21 +257,23 @@ class OTCTradeAdmin(admin.ModelAdmin):
 
 @admin.register(models.Trx)
 class TrxAdmin(admin.ModelAdmin):
-    list_display = ('created', 'sender', 'receiver', 'amount', 'group_id')
-    search_fields = ('sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone')
+    list_display = ('created', 'sender', 'receiver', 'amount', 'scope', 'group_id')
+    search_fields = ('sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone', 'group_id')
+    readonly_fields = ('sender', 'receiver', )
+    list_filter = ('scope', )
 
 
 class WalletUserFilter(SimpleListFilter):
     title = 'کاربر'
-    parameter_name = 'user'
+    parameter_name = 'account'
 
     def lookups(self, request, model_admin):
         return [(1, 1)]
 
     def queryset(self, request, queryset):
-        user = request.GET.get('user')
-        if user is not None:
-            return queryset.filter(account__user_id=user)
+        account = request.GET.get('account')
+        if account is not None:
+            return queryset.filter(account=account)
         else:
             return queryset
 
@@ -234,6 +285,7 @@ class WalletAdmin(admin.ModelAdmin):
         ('asset', RelatedDropdownFilter),
         WalletUserFilter
     ]
+    readonly_fields = ('account', 'asset', 'market')
 
     def get_free(self, wallet: models.Wallet):
         return float(wallet.get_free())
@@ -271,21 +323,23 @@ class TransferUserFilter(SimpleListFilter):
 
 @admin.register(models.Transfer)
 class TransferAdmin(admin.ModelAdmin):
-    list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount', 'deposit', 'status', 'is_fee', 'source')
+    list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount',
+                    'deposit', 'status', 'is_fee', 'source', 'get_total_volume_usdt',
+                    )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
-    readonly_fields = ('deposit_address', 'network', 'wallet', 'lock', 'provider_transfer')
+    readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt')
 
+    def get_total_volume_usdt(self, transfer: models.Transfer):
+        price = get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
+        if price:
+            return transfer.amount * price
 
-@admin.register(models.BalanceLock)
-class BalanceLockAdmin(admin.ModelAdmin):
-    list_display = ('created', 'release_date', 'wallet', 'amount', 'freed')
-    list_filter = ('freed', 'wallet')
-    ordering = ('-created', )
+    get_total_volume_usdt.short_description = 'ارزش تتری'
 
 
 class CryptoAccountTypeFilter(SimpleListFilter):
-    title = 'type' # or use _('country') for translated title
+    title = 'type'
     parameter_name = 'type'
 
     def lookups(self, request, model_admin):
@@ -297,43 +351,9 @@ class CryptoAccountTypeFilter(SimpleListFilter):
             if value == 'ord':
                 value = None
 
-            return queryset.filter(deposit_address__account_secret__account__type=value)
+            return queryset.filter(deposit_address__address_key__account__type=value)
         else:
             return queryset
-
-
-@admin.register(models.CryptoBalance)
-class CryptoBalanceAdmin(admin.ModelAdmin):
-    list_display = ('asset', 'get_network', 'get_address', 'get_owner', 'amount', 'get_value_usdt', 'updated_at', )
-    search_fields = ('asset__symbol', 'deposit_address__address',)
-    list_filter = (CryptoAccountTypeFilter, )
-    actions = ('collect_asset_action', )
-
-    def get_network(self, crypto_balance: models.CryptoBalance):
-        return crypto_balance.deposit_address.network
-
-    get_network.short_description = 'network'
-
-    def get_address(self, crypto_balance: models.CryptoBalance):
-        return crypto_balance.deposit_address.presentation_address
-
-    get_address.short_description = 'address'
-
-    def get_owner(self, crypto_balance: models.CryptoBalance):
-        return str(crypto_balance.deposit_address.account_secret.account)
-
-    get_owner.short_description = 'owner'
-
-    def get_value_usdt(self, crypto_balance: models.CryptoBalance):
-        value = crypto_balance.amount * get_trading_price_usdt(crypto_balance.asset.symbol, BUY, raw_price=True)
-        return get_presentation_amount(value)
-
-    get_value_usdt.short_description = 'value'
-
-    @admin.action(description='ارسال به بایننس')
-    def collect_asset_action(self, request, queryset):
-        for crypto in queryset:
-            crypto.collect()
 
 
 @admin.register(models.MarginTransfer)
@@ -348,10 +368,12 @@ class MarginLoanAdmin(admin.ModelAdmin):
     search_fields = ('group_id',)
 
 
-@admin.register(models.MarginLiquidation)
-class MarginLiquidationAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'margin_level', 'group_id')
+@admin.register(models.CloseRequest)
+class CloseRequestAdmin(admin.ModelAdmin):
+    list_display = ('created', 'account', 'margin_level', 'group_id', 'status')
     search_fields = ('group_id',)
+    list_filter = ('status', )
+    readonly_fields = ('account', 'created', 'group_id')
 
 
 @admin.register(models.AddressBook)
@@ -362,9 +384,88 @@ class AddressBookAdmin(admin.ModelAdmin):
 
 @admin.register(models.Prize)
 class PrizeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'scope', 'account', 'get_asset_amount')
+    list_display = ('created', 'achievement', 'account', 'get_asset_amount')
+    readonly_fields = ('account', 'asset', )
 
     def get_asset_amount(self, prize: Prize):
-        return str(get_presentation_amount(prize.amount)) + str(prize.asset)
+        return '%s %s' % (get_presentation_amount(prize.amount), prize.asset)
 
     get_asset_amount.short_description = 'مقدار'
+
+
+@admin.register(models.CoinCategory)
+class CoinCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'get_coin_count']
+
+    def get_coin_count(self, coin_category: CoinCategory):
+        return coin_category.coins.filter(enable=True).count()
+
+    get_coin_count.short_description = 'تعداد رمزارز'
+
+
+@admin.register(models.AddressKey)
+class AddressKeyAdmin(admin.ModelAdmin):
+    list_display = ('address', )
+    readonly_fields = ('address', 'account')
+    search_fields = ('address', 'public_address')
+    list_filter = ('architecture', )
+
+
+@admin.register(models.AssetSpreadCategory)
+class AssetSpreadCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', )
+
+
+@admin.register(models.PNLHistory)
+class PNLHistoryAdmin(admin.ModelAdmin):
+    list_display = ('date', 'account', 'market', 'base_asset', 'snapshot_balance', 'profit')
+    readonly_fields = ('date', 'account', 'market', 'base_asset', 'snapshot_balance', 'profit')
+
+
+@admin.register(models.CategorySpread)
+class CategorySpreadAdmin(admin.ModelAdmin):
+    list_display = ('category', 'step', 'side', 'spread')
+    list_editable = ('side', 'step', 'spread')
+    ordering = ('category', 'step', 'side')
+    list_filter = ('category', 'side', 'step')
+
+
+@admin.register(models.SystemSnapshot)
+class SystemSnapshotAdmin(admin.ModelAdmin):
+    list_display = ('created', 'total', 'users', 'exchange', 'exchange_potential', 'hedge', 'cumulated_hedge',
+                    'binance_futures', 'binance_spot', 'kucoin_spot', 'mexc_spot', 'internal', 'fiat_gateway',
+                    'investment', 'cash', 'prize', 'verified')
+    ordering = ('-created', )
+    actions = ('reject_histories', 'verify_histories')
+
+    @admin.action(description='رد', permissions=['change'])
+    def reject_histories(self, request, queryset):
+        queryset.update(verified=False)
+
+    @admin.action(description='تایید', permissions=['change'])
+    def verify_histories(self, request, queryset):
+        queryset.update(verified=True)
+
+
+@admin.register(models.AssetSnapshot)
+class AssetSnapshotAdmin(admin.ModelAdmin):
+    list_display = ('created', 'asset', 'total_amount', 'users_amount', 'hedge_amount', 'hedge_value', 'get_hedge_diff')
+    ordering = ('-created', 'asset__order')
+    list_filter = ('asset', )
+
+    def get_hedge_diff(self, asset_snapshot: models.AssetSnapshot):
+        return asset_snapshot.calc_hedge_amount - asset_snapshot.hedge_amount
+
+    get_hedge_diff.short_description = 'hedge diff'
+
+
+@admin.register(models.FastBuyToken)
+class FastBuyTokenAdmin(admin.ModelAdmin):
+    list_display = ['created', 'asset', 'get_amount', 'status', ]
+    readonly_fields = ('get_amount', 'payment_request', 'otc_request')
+    list_filter = ('status', )
+
+    def get_amount(self, fast_buy_token: FastBuyToken):
+        return humanize_number(fast_buy_token.amount)
+
+    get_amount.short_description = 'مقدار'

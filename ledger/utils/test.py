@@ -1,35 +1,22 @@
-import time
-
 from django.conf import settings
 
+from financial.models import BankCard, Gateway
+
 if settings.DEBUG_OR_TESTING:
-    from accounts.models import Account, User, VerificationCode
     import random
+    import time
 
-    from collector.utils.price import price_redis
-    from ledger.models import Asset, Trx, AddressBook, Network, NetworkAsset
-    from uuid import uuid4
-
+    from accounts.models import Account, User, VerificationCode
+    from ledger.utils.price import price_redis
+    from ledger.models import Asset, AddressBook, Network, NetworkAsset
 
     def get_rand_int():
         return random.randint(0, 100000000)
-
 
     def new_account() -> Account:
         name = 'test' + str(get_rand_int())
         u = User.objects.create(username=name, phone=name)
         return u.account
-
-
-    def new_trx(account: Account, asset: Asset, amount):
-        return Trx.transaction(
-            sender=asset.get_wallet(Account.out()),
-            receiver=asset.get_wallet(account),
-            amount=amount,
-            scope=Trx.TRANSFER,
-            group_id=str(uuid4())
-        )
-
 
     def set_price(asset: Asset, ask: float, bid: float = None):
         if not bid:
@@ -43,9 +30,9 @@ if settings.DEBUG_OR_TESTING:
         }
 
         if asset.symbol == Asset.USDT:
-            key = 'nob:usdtirt'
+            key = 'usdtirt'
         else:
-            key = 'bin:' + asset.symbol.lower() + 'usdt'
+            key = 'price:' + asset.symbol.lower() + 'usdt'
 
         price_redis.hset(name=key, mapping=mapping)
 
@@ -55,6 +42,7 @@ if settings.DEBUG_OR_TESTING:
     def set_up_user(self):
         phone = '09355913457'
         user = User.objects.create(username=phone, password='1', phone=phone)
+        return user
 
 
     def generate_otp_code(user, scope) -> VerificationCode:
@@ -104,3 +92,11 @@ if settings.DEBUG_OR_TESTING:
         address_book = AddressBook.objects.create(name=name, address=address, account=account, network=network,
                                                   asset=asset)
         return address_book
+
+    def new_bankcard(user) ->BankCard:
+        bankcard = BankCard.objects.create(user=user, card_pan='1', verified=True, kyc=True,)
+        return bankcard
+
+    def new_zibal_gateway() ->Gateway:
+        gateway = Gateway.objects.create(name='test', type=Gateway.ZIBAL, merchant_id='zibal', active=True)
+        return gateway

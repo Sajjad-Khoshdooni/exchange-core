@@ -20,7 +20,7 @@ class BaseAssetFilter(SimpleListFilter):
               return queryset
 
 
-class UserFillOrderFilter(SimpleListFilter):
+class UserTradeFilter(SimpleListFilter):
     title = 'کاربر'
     parameter_name = 'user'
 
@@ -30,7 +30,7 @@ class UserFillOrderFilter(SimpleListFilter):
     def queryset(self, request, queryset):
         user = request.GET.get('user')
         if user is not None:
-            return queryset.filter(taker_order__wallet__account__user=user)
+            return queryset.filter(account__user=user)
         else:
             return queryset
 
@@ -42,6 +42,7 @@ class PairSymbolAdmin(admin.ModelAdmin):
     list_filter = ('enable', BaseAssetFilter, 'market_maker_enabled',)
     readonly_fields = ('name',)
     search_fields = ('name', )
+    ordering = ('-enable', 'asset__order', 'base_asset__order')
 
 
 class TypeFilter(SimpleListFilter):
@@ -82,13 +83,20 @@ class UserFilter(SimpleListFilter):
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount', 'wallet')
     list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
+    readonly_fields = ('wallet', 'symbol')
 
 
-@admin.register(FillOrder)
-class FillOrderAdmin(admin.ModelAdmin):
-    list_display = ('created', 'symbol', 'amount', 'price', 'irt_value', 'trade_source')
-    list_filter = ('trade_source', UserFillOrderFilter)
-    readonly_fields = ('symbol', 'taker_order', 'maker_order')
+@admin.register(CancelRequest)
+class CancelRequestAdmin(admin.ModelAdmin):
+    list_display = ('created', 'order')
+    readonly_fields = ('order',)
+
+
+@admin.register(Trade)
+class TradeAdmin(admin.ModelAdmin):
+    list_display = ('created', 'symbol', 'amount', 'price', 'gap_revenue', 'hedge_price', 'side', 'trade_source', 'irt_value', 'account')
+    list_filter = ('trade_source', UserTradeFilter)
+    readonly_fields = ('symbol', 'order', 'account')
     search_fields = ('symbol__name', )
 
 
@@ -96,3 +104,9 @@ class FillOrderAdmin(admin.ModelAdmin):
 class ReferralTrxAdmin(admin.ModelAdmin):
     list_display = ('created', 'referral', 'referrer_amount', 'trader_amount',)
     list_filter = ('referral', 'referral__owner')
+
+
+@admin.register(StopLoss)
+class StopLossAdmin(admin.ModelAdmin):
+    list_display = ('created', 'wallet', 'symbol', 'fill_type', 'amount', 'filled_amount', 'trigger_price', 'price', 'side')
+    readonly_fields = ('wallet', 'symbol', 'group_id')

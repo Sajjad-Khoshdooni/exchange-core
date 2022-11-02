@@ -1,10 +1,12 @@
 from decimal import Decimal
+from typing import Union
 
 from django.db import models
-from django.db.models import UniqueConstraint, Q, Sum
+from django.db.models import UniqueConstraint, Q
+from django.utils import timezone
 
 from accounts.models import User
-from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt
+from ledger.utils.price import BUY
 from ledger.utils.price_manager import PriceManager
 
 
@@ -28,7 +30,7 @@ class Account(models.Model):
 
     primary = models.BooleanField(default=True)
 
-    last_margin_warn = models.DateTimeField(null=True, blank=True)
+    margin_alerting = models.BooleanField(default=False)
 
     referred_by = models.ForeignKey(
         to='accounts.Referral',
@@ -38,6 +40,9 @@ class Account(models.Model):
     )
 
     trade_volume_irt = models.PositiveBigIntegerField(default=0)
+
+    bookmark_market = models.ManyToManyField("market.PairSymbol")
+    bookmark_assets = models.ManyToManyField("ledger.Asset")
 
     def is_system(self) -> bool:
         return self.type == self.SYSTEM
@@ -52,6 +57,18 @@ class Account(models.Model):
     @classmethod
     def out(cls) -> 'Account':
         return Account.objects.get(type=cls.OUT)
+    
+    def get_voucher_wallet(self):
+        from ledger.models import Wallet
+        from ledger.models import Asset
+
+        return Wallet.objects.filter(
+            account=self,
+            asset__symbol=Asset.USDT,
+            market=Wallet.VOUCHER,
+            expiration__gte=timezone.now(),
+            balance__gt=0
+        ).first()
 
     def __str__(self):
         if self.type == self.SYSTEM:
@@ -74,24 +91,32 @@ class Account(models.Model):
 
         total = Decimal('0')
 
-        with PriceManager(fetch_all=True):
+        with PriceManager(coins=list(wallets.values_list('asset__symbol', flat=True))):
             for wallet in wallets:
-                balance = wallet.get_free()
-                total += balance * get_trading_price_usdt(wallet.asset.symbol, side, raw_price=True)
+                balance = wallet.get_balance_usdt(side)
+                total += balance
 
         return total
 
-    def get_total_balance_irt(self, market: str, side: str):
+    def get_total_balance_irt(self, market: str = None, side: str = BUY):
         from ledger.models import Wallet
 
-        wallets = Wallet.objects.filter(account=self, market=market)
+        wallets = Wallet.objects.filter(account=self)
+
+        if market:
+            wallets = wallets.filter(market=market)
+        else:
+            wallets = wallets.exclude(market=Wallet.VOUCHER)
 
         total = Decimal('0')
 
         with PriceManager(fetch_all=True):
             for wallet in wallets:
-                balance = wallet.get_free()
-                total += balance * get_trading_price_irt(wallet.asset.symbol, side, raw_price=True)
+                if wallet.balance == 0:
+                    continue
+
+                balance = wallet.get_balance_irt(side)
+                total += balance
 
         return total
 
@@ -111,6 +136,17 @@ class Account(models.Model):
             print('%s %s %s: %s' % (w.account, w.asset.symbol, w.market, w.get_free()))
 
         print()
+
+    def get_invited_count(self):
+        return int(Account.objects.filter(referred_by__owner=self).count())
+
+    def airdrop(self, asset, amount: Union[Decimal, int]):
+        wallet = asset.get_wallet(self)
+        wallet.airdrop(amount)
+
+    def has_debt(self) -> bool:
+        from ledger.models import Wallet
+        return Wallet.objects.filter(account=self, market=Wallet.LOAN, balance__lt=0).exists()
 
     class Meta:
         constraints = [

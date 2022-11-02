@@ -1,91 +1,61 @@
 import logging
+from datetime import timedelta
 from uuid import uuid4
 
-from django.db import models, transaction
+from django.db import models
+from django.db.models import CheckConstraint, Q
 
-from accounts.models import Account, Notification
-from ledger.models import Trx, Asset
+from accounts.models import Account
+from ledger.models import Trx, Asset, Wallet
 from ledger.utils.fields import get_amount_field
-from ledger.utils.precision import humanize_number
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
 
 class Prize(models.Model):
-    TRADE_2M_PRIZE, TRADE_2M_AMOUNT, TRADE_THRESHOLD_2M = 'trade_2m', 50_000, 2_000_000
-    REFERRAL_TRADE_2M_PRIZE, REFERRAL_TRADE_2M_AMOUNT = 'referral_trade_2m', 50_000
-
     created = models.DateTimeField(auto_now_add=True)
-    account = models.ForeignKey(to=Account, on_delete=models.CASCADE, verbose_name='کاربر')
-    amount = get_amount_field()
-    scope = models.CharField(
-        max_length=25,
-        choices=(
-            (TRADE_2M_PRIZE, TRADE_2M_PRIZE),
-            (REFERRAL_TRADE_2M_PRIZE, REFERRAL_TRADE_2M_PRIZE)
-        ),
-        verbose_name='نوع'
-    )
-    asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE)
-    group_id = models.UUIDField(default=uuid4, db_index=True)
-    fake = models.BooleanField(default=False)
 
+    achievement = models.ForeignKey('gamify.Achievement', on_delete=models.CASCADE)
+    account = models.ForeignKey(to=Account, on_delete=models.CASCADE, verbose_name='کاربر')
+    group_id = models.UUIDField(default=uuid4, db_index=True)
+
+    amount = get_amount_field()
+    asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE)
+    redeemed = models.BooleanField(default=False)
+
+    fake = models.BooleanField(default=False)
     variant = models.CharField(null=True, blank=True, max_length=16)
+    value = get_amount_field()
 
     class Meta:
-        unique_together = [('account', 'scope', 'variant')]
+        unique_together = [('account', 'achievement', 'variant')]
+        constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_ledger_prize_amount', ), ]
 
-    def build_trx(self):
+    def build_trx(self, pipeline: WalletPipeline):
+        if self.redeemed:
+            logger.info('Ignored redeem prize because it is redeemed before.')
+            return
+
+        self.redeemed = True
+        self.save(update_fields=['redeemed'])
+
         system = Account.system()
-        Trx.transaction(
+
+        if self.achievement.voucher:
+            market = Wallet.VOUCHER
+            expiration = self.account.user.date_joined + timedelta(days=30)
+        else:
+            market = Wallet.SPOT
+            expiration = None
+
+        pipeline.new_trx(
             group_id=self.group_id,
             sender=self.asset.get_wallet(system),
-            receiver=self.asset.get_wallet(self.account),
+            receiver=self.asset.get_wallet(self.account, market=market, expiration=expiration),
             amount=self.amount,
             scope=Trx.PRIZE
         )
 
-        title = '{} شیبا به کیف پول شما اضافه شد.'.format(humanize_number(self.amount))
-
-        Notification.send(
-            recipient=self.account.user,
-            title=title,
-            level=Notification.SUCCESS
-        )
-
     def __str__(self):
         return '%s %s %s' % (self.account, self.amount, self.asset)
-
-
-def check_trade_prize(account: Account):
-    account.refresh_from_db()
-
-    if account.trade_volume_irt >= Prize.TRADE_THRESHOLD_2M and \
-            not Prize.objects.filter(account=account, scope=Prize.TRADE_2M_PRIZE).exists():
-
-        with transaction.atomic():
-            prize, created = Prize.objects.get_or_create(
-                account=account,
-                scope=Prize.TRADE_2M_PRIZE,
-                defaults={
-                    'amount': Prize.TRADE_2M_AMOUNT,
-                    'asset': Asset.get(Asset.SHIB),
-                }
-            )
-
-            if created:
-                prize.build_trx()
-
-                if account.referred_by:
-                    prize, created = Prize.objects.get_or_create(
-                        account=account.referred_by.owner,
-                        scope=Prize.REFERRAL_TRADE_2M_PRIZE,
-                        variant=str(account.id),
-                        defaults={
-                            'amount': Prize.TRADE_2M_AMOUNT,
-                            'asset': Asset.get(Asset.SHIB),
-                        }
-                    )
-
-                    if created:
-                        prize.build_trx()

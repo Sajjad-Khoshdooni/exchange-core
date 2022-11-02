@@ -3,10 +3,12 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import ModelViewSet
+from decouple import config
 
-from accounts.models import User
-from financial.models.bank_card import BankCard, BankCardSerializer, BankAccountSerializer, BankAccount
-from financial.validators import bank_card_pan_validator, iban_validator
+from accounts.models import User, FinotechRequest
+from accounts.utils.similarity import clean_persian_name
+from financial.models.bank_card import BankCard, BankCardSerializer
+from financial.validators import bank_card_pan_validator
 
 
 class CardPanField(serializers.CharField):
@@ -15,21 +17,45 @@ class CardPanField(serializers.CharField):
             return BankCardSerializer(instance=value).data
 
     def get_attribute(self, user: User):
-        return BankCard.live_objects.filter(user=user).order_by('verified', 'id').first()
-
-
-class IbanField(serializers.CharField):
-    def to_representation(self, value):
-        if value:
-            return BankAccountSerializer(instance=value).data
-
-    def get_attribute(self, user: User):
-        return BankAccount.live_objects.filter(user=user).order_by('verified', 'id').first()
+        return user.bankcard_set.filter(kyc=True).order_by('id').last()
 
 
 class BasicInfoSerializer(serializers.ModelSerializer):
     card_pan = CardPanField(validators=[bank_card_pan_validator])
-    iban = IbanField(validators=[iban_validator])
+    reason = serializers.SerializerMethodField()
+
+    def get_reason(self, user: User):
+        if user.verify_status == User.REJECTED and user.level == User.LEVEL1:
+
+            if user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
+                return 'کد ملی تکراری است. لطفا به پنل اصلی‌تان وارد شوید.'
+
+            bank_card = user.bankcard_set.filter(kyc=True).first()
+            if bank_card and bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
+                return 'شماره کارت وارد شده تکراری است.'
+
+            if not user.birth_date_verified:
+                return 'کد ملی،‌ شماره کارت و تاریخ تولد متعلق به یک نفر نیستند.'
+
+            if not user.first_name_verified or not user.last_name_verified:
+                return 'نام و نام خانوادگی با دیگر اطلاعات مغایر است.'
+
+    def get_kyc_bank_card(self, user: User, card_pan: str) -> BankCard:
+        if BankCard.live_objects.filter(user=user, kyc=True, verified=True).exclude(card_pan=card_pan):
+            raise ValidationError({'card_pan': 'امکان تغییر شماره کارت تایید شده وجود ندارد.'})
+
+        bank_card = BankCard.live_objects.filter(user=user, kyc=True).first()
+
+        if bank_card and bank_card.card_pan != card_pan:
+            BankCard.live_objects.filter(user=user, card_pan=card_pan).update(deleted=True)
+
+            bank_card.card_pan = card_pan
+            bank_card.save()
+
+        elif not bank_card:
+            bank_card, _ = BankCard.live_objects.update_or_create(user=user, card_pan=card_pan, defaults={'kyc': True})
+
+        return bank_card
 
     def update(self, user, validated_data):
         if user and user.verify_status in (User.PENDING, User.VERIFIED):
@@ -38,57 +64,42 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         if user.level > User.LEVEL1:
             raise ValidationError('کاربر تایید شده است.')
 
-        if user.national_code_duplicated_alert:
-            raise ValidationError('کد ملی تکراری است. لطفا به حساب اصلی‌تان وارد شوید.')
+        if user.get_verify_weight() >= FinotechRequest.MAX_WEIGHT:
+            raise ValidationError('به خاطر تلاش‌های مکرر امکان تایید خودکار وجود ندارد. برای ارتقای حساب با پشتیبانی صحبت کنید.')
+
+        # if user.national_code_verified is False:
+        #     raise ValidationError('کد ملی شما رد شده است. برای ارتقای حساب با پشتیبانی صحبت کنید.')
 
         date_delta = timezone.now().date() - validated_data['birth_date']
         age = date_delta.days / 365
 
-        if age < 18:
-            raise ValidationError('سن باید بالای ۱۸ سال باشد.')
+        if age < 15:
+            raise ValidationError('سن باید بالای ۱۵ سال باشد.')
         elif age > 120:
             raise ValidationError('تاریخ تولد نامعتبر است.')
 
         card_pan = validated_data.pop('card_pan')
-        iban = validated_data.pop('iban')
+        bank_card = self.get_kyc_bank_card(user, card_pan)
 
-        if BankCard.live_objects.filter(card_pan=card_pan, verified=True).exclude(user=user).exists():
-            raise ValidationError('این شماره کارت قبلا ثبت شده است.')
+        # if bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
+        #     raise ValidationError('شماره کارت‌تان تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
 
-        if BankAccount.live_objects.filter(iban=iban, verified=True).exclude(user=user).exists():
-            raise ValidationError('این شماره شبا قبلا ثبت شده است.')
-
-        bank_card = BankCard.live_objects.filter(user=user, card_pan=card_pan).first()
-        bank_account = BankAccount.live_objects.filter(user=user, iban=iban).first()
-
-        if not bank_card:
-            # new bank_card
-            if BankCard.live_objects.filter(user=user, verified=True).exists():
-                raise ValidationError('امکان تغییر شماره کارت تایید شده وجود ندارد.')
-
-            # BankCard.objects.filter(user=user).delete()
-            BankCard.objects.create(user=user, card_pan=card_pan)
-
-        if not bank_account:
-            # new bank_card
-            if BankAccount.live_objects.filter(user=user, verified=True).exists():
-                raise ValidationError('امکان تغییر شماره شبای تایید شده وجود ندارد.')
-
-            # BankAccount.objects.filter(user=user).delete()
-            BankAccount.objects.create(user=user, iban=iban)
+        if not bank_card.verified:
+            bank_card.verified = None
+            bank_card.save()
 
         if not user.national_code_verified:
             user.national_code = validated_data['national_code']
             user.national_code_verified = None
 
         if not user.first_name_verified:
-            user.first_name = validated_data['first_name']
+            user.first_name = clean_persian_name(validated_data['first_name'])
             user.first_name_verified = None
-            
+
         if not user.last_name_verified:
-            user.last_name = validated_data['last_name']
+            user.last_name = clean_persian_name(validated_data['last_name'])
             user.last_name_verified = None
-            
+
         if not user.birth_date_verified:
             user.birth_date = validated_data['birth_date']
             user.birth_date_verified = None
@@ -96,9 +107,16 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         user.save()
         user.change_status(User.PENDING)
 
+        if User.objects.filter(level__gte=User.LEVEL2, national_code=user.national_code).exclude(id=user.id):
+            user.national_code_verified = False
+            user.save(update_fields=['national_code_verified'])
+            user.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
+
+            raise ValidationError('کد ملی تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
+
         from accounts.tasks import basic_verify_user
 
-        if not settings.DEBUG_OR_TESTING:
+        if not settings.DEBUG_OR_TESTING_OR_STAGING:
             basic_verify_user.s(user.id).apply_async(countdown=60)
 
         return user
@@ -106,12 +124,12 @@ class BasicInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'verify_status', 'level', 'first_name', 'last_name', 'birth_date', 'national_code', 'card_pan', 'iban',
-            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified',
+            'verify_status', 'level', 'first_name', 'last_name', 'birth_date', 'national_code', 'card_pan',
+            'national_code_verified', 'first_name_verified', 'last_name_verified', 'birth_date_verified', 'reason'
         )
         read_only_fields = (
             'verify_status', 'level',
-            'first_name_verified', 'last_name_verified', 'birth_date_verified', 'national_code_verified',
+            'first_name_verified', 'last_name_verified', 'birth_date_verified'
         )
         extra_kwargs = {
             'first_name': {'required': True},

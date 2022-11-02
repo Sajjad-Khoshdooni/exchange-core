@@ -8,28 +8,24 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Max, Min, Count
 
-from market.models import Order, PairSymbol
-from market.utils.redis import set_top_prices, set_open_orders_count, get_open_orders_count, get_top_prices, \
-    set_top_depth_prices, get_top_depth_prices
+from ledger.utils.wallet_pipeline import WalletPipeline
+from market.models import Order, PairSymbol, Trade
+from market.utils.order_utils import get_market_top_prices
+from market.utils.redis import set_top_prices, set_open_orders_count, get_open_orders_count, set_top_depth_prices, \
+    get_top_depth_prices
 
 logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='market')
 def update_maker_orders():
-    market_top_prices = defaultdict(lambda: Decimal())
-
-    for depth in Order.open_objects.values('symbol', 'side').annotate(
-            max_price=Max('price'), min_price=Min('price')):
-        market_top_prices[
-            (depth['symbol'], depth['side'])
-        ] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) or Decimal()
-
+    market_top_prices = get_market_top_prices(order_type=Order.DEPTH)
     top_depth_prices = defaultdict(lambda: Decimal())
 
-    depth_orders = Order.open_objects.filter(type=Order.DEPTH).values('symbol', 'side').annotate(max_price=Max('price'),
-                                                                                                 min_price=Min('price'),
-                                                                                                 count=Count('*'))
+    depth_orders = Order.open_objects.filter(type__in=(Order.DEPTH, Order.BOT)).values('symbol', 'side').annotate(
+        max_price=Max('price'),
+        min_price=Min('price'),
+        count=Count('*'))
     for depth in depth_orders:
         top_depth_prices[
             (depth['symbol'], depth['side'])
@@ -39,7 +35,12 @@ def update_maker_orders():
     for depth in depth_orders:
         open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
 
-    for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True):
+    last_trades_ts = {
+        record['symbol']: record['last'].timestamp() for record in
+        Trade.objects.values('symbol').annotate(last=Max('created'))
+    }
+
+    for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True, asset__enable=True):
         symbol_top_prices = {
             Order.BUY: market_top_prices[symbol.id, Order.BUY],
             Order.SELL: market_top_prices[symbol.id, Order.SELL],
@@ -57,28 +58,24 @@ def update_maker_orders():
         set_open_orders_count(symbol.id, symbol_open_depth_orders_count)
 
         update_symbol_maker_orders.apply_async(
-            args=(PairSymbol.IdName(id=symbol.id, name=symbol.name),), queue='market'
+            args=(
+                PairSymbol.IdName(id=symbol.id, name=symbol.name, tick_size=symbol.tick_size),
+                last_trades_ts.get(symbol.id)
+            ), queue='market'
         )
 
 
 @shared_task(queue='market')
-def update_symbol_maker_orders(symbol):
+def update_symbol_maker_orders(symbol, last_trade_ts):
     symbol = PairSymbol.IdName(*symbol)
-    market_top_prices = get_top_prices(symbol.id)
+    depth_top_prices = Order.get_top_depth_prices(symbol.id)
     top_depth_prices = get_top_depth_prices(symbol.id)
     open_depth_orders_count = get_open_orders_count(symbol.id)
 
-    if not market_top_prices:
-        market_top_prices = defaultdict(lambda: Decimal())
-        for depth in Order.open_objects.filter(symbol_id=symbol.id).values('side').annotate(max_price=Max('price'),
-                                                                                            min_price=Min('price')):
-            market_top_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth[
-                'min_price']) or Decimal()
-
-    depth_orders = Order.open_objects.filter(symbol_id=symbol.id, type=Order.DEPTH).values('side').annotate(
-        max_price=Max('price'),
-        min_price=Min('price'),
-        count=Count('*')
+    depth_orders = Order.open_objects.filter(
+        symbol_id=symbol.id, type__in=(Order.DEPTH, Order.BOT)
+    ).values('side').annotate(
+        max_price=Max('price'), min_price=Min('price'), count=Count('*')
     )
     if not top_depth_prices:
         top_depth_prices = defaultdict(lambda: Decimal())
@@ -93,22 +90,26 @@ def update_symbol_maker_orders(symbol):
 
     try:
         with transaction.atomic():
-            Order.cancel_invalid_maker_orders(symbol, top_depth_prices)
+            Order.cancel_invalid_maker_orders(symbol, top_depth_prices, last_trade_ts=last_trade_ts)
+            Order.cancel_invalid_maker_orders(symbol, top_depth_prices, gap=Decimal('0.001'), order_type=Order.BOT)
 
         for side in (Order.BUY, Order.SELL):
             logger.info(f'{symbol.name} {side} open count: {open_depth_orders_count[side]}')
-            price = Order.get_maker_price(symbol, side)
-            order = Order.init_top_maker_order(symbol, side, price, Decimal(market_top_prices[side]))
+            price = Order.get_maker_price(symbol, side, last_trade_ts=last_trade_ts)
+            order = Order.init_top_maker_order(symbol, side, price, Decimal(depth_top_prices[side]))
             logger.info(f'{symbol.name} {side} maker order created: {bool(order)}')
+
             if order:
                 if int(open_depth_orders_count[side]) > Order.MAKER_ORDERS_COUNT:
                     with transaction.atomic():
-                        Order.cancel_waste_maker_orders(symbol, open_depth_orders_count)
-                with transaction.atomic():
+                        Order.cancel_waste_maker_orders(symbol, open_depth_orders_count, side=side)
+
+                with WalletPipeline() as pipeline:
                     order.save()
-                    order.submit()
+                    order.submit(pipeline)
+
     except Exception as e:
-        if settings.DEBUG:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             raise e
         logger.exception(f'update maker order failed for {symbol}', extra={'exp': e, })
 
@@ -125,27 +126,27 @@ def create_depth_orders(symbol=None, open_depth_orders_count=None):
             open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
 
     if symbol is None:
-        for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True):
+        for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True, asset__enable=True):
             symbol_open_depth_orders_count = {
                 Order.BUY: open_depth_orders_count[symbol.id, Order.BUY],
                 Order.SELL: open_depth_orders_count[symbol.id, Order.SELL],
             }
-            create_depth_orders.apply_async(
-                args=(PairSymbol.IdName(id=symbol.id, name=symbol.name), symbol_open_depth_orders_count), queue='market'
-            )
+            pair_symbol = PairSymbol.IdName(id=symbol.id, name=symbol.name, tick_size=symbol.tick_size)
+            create_depth_orders.apply_async(args=(pair_symbol, symbol_open_depth_orders_count), queue='market')
     else:
         symbol = PairSymbol.IdName(*symbol)
-        present_prices = set(Order.open_objects.filter(symbol_id=symbol.id, type=Order.DEPTH).values_list('price', flat=True))
+        present_prices = set(
+            Order.open_objects.filter(symbol_id=symbol.id, type=Order.DEPTH).values_list('price', flat=True))
         try:
             for side in (Order.BUY, Order.SELL):
                 price = Order.get_maker_price(symbol, side)
-                for i in range(open_depth_orders_count[side], Order.MAKER_ORDERS_COUNT):
-                    order = Order.init_maker_order(symbol, side, price * get_price_factor(side, i))
+                for rank in range(open_depth_orders_count[side], Order.MAKER_ORDERS_COUNT):
+                    order = Order.init_maker_order(symbol, side, price * get_price_factor(side, rank))
                     if order and order.price not in present_prices:
-                        with transaction.atomic():
+                        with WalletPipeline() as pipeline:
                             order.save()
-                            order.submit()
+                            order.submit(pipeline)
         except Exception as e:
-            if settings.DEBUG:
+            if settings.DEBUG_OR_TESTING_OR_STAGING:
                 raise e
             logger.exception(f'create depth order failed for {symbol.name}', extra={'exp': e, })

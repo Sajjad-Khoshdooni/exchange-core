@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 class Notification(models.Model):
     INFO, SUCCESS, WARNING, ERROR = 'info', 'success', 'warning', 'error'
+    LEVEL_CHOICES = ((INFO, INFO), (SUCCESS, SUCCESS), (WARNING, WARNING), (ERROR, ERROR))
 
     created = models.DateTimeField(auto_now_add=True)
     read_date = models.DateTimeField(null=True, blank=True)
@@ -15,11 +16,12 @@ class Notification(models.Model):
     recipient = models.ForeignKey(to='accounts.User', on_delete=models.CASCADE)
 
     title = models.CharField(max_length=128)
-    message = models.CharField(max_length=512)
+    link = models.CharField(blank=True, max_length=128)
+    message = models.CharField(max_length=512, blank=True)
 
     level = models.CharField(
         max_length=8,
-        choices=((INFO, INFO), (SUCCESS, SUCCESS), (WARNING, WARNING), (ERROR, ERROR)),
+        choices=LEVEL_CHOICES,
         default=INFO
     )
 
@@ -29,7 +31,7 @@ class Notification(models.Model):
         ordering = ('-created', )
 
     @classmethod
-    def send(cls, recipient, title: str, message: str = '', level: str = INFO):
+    def send(cls, recipient, title: str, link: str = '', message: str = '', level: str = INFO):
         if not recipient:
             logger.info('failed to send notif')
             return
@@ -37,6 +39,7 @@ class Notification(models.Model):
         Notification.objects.create(
             recipient=recipient,
             title=title,
+            link=link,
             message=message,
             level=level
         )

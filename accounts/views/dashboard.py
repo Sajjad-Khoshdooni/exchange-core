@@ -1,6 +1,8 @@
+from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
 from django.shortcuts import render
+from decouple import config
 
 from accounts.models.user import User
 from financial.models.withdraw_request import FiatWithdrawRequest
@@ -29,11 +31,14 @@ def dashboard(request):
         ).count()
 
         context = {
-            'user_count':user_count,
+            'user_count': user_count,
             'pending_or_reject_level_2_users': pending_or_reject_level_2_users,
             'pending_level_3_users': pending_level_3_users,
             'pending_or_reject_withdraw_requests': pending_or_reject_withdraw_requests,
             'archived_users': users.filter(archived=True).count(),
+            'shahkar_rejected': users.filter(level=User.LEVEL2, national_code_phone_verified=False).count(),
+            'brand': settings.BRAND
+
         }
 
         return render(request, 'accounts/dashboard.html', context)

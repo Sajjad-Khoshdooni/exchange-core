@@ -6,25 +6,29 @@ from django.db import models
 from django.db.models import CharField
 from rest_framework import serializers
 
+
+from ledger.utils.cache import cache_for
 from ledger.utils.precision import normalize_fraction
+
 
 PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 
-COMMISSION_MAX_DIGITS = 32
-
-AMOUNT_DECIMAL_PLACES = 18
-AMOUNT_MAX_DIGITS = 40
-
-PRICE_DECIMAL_PLACES = 18
-PRICE_MAX_DIGITS = 40
+AMOUNT_PRECISION = 8
 
 
-def get_amount_field(max_digits: int = None, decimal_places: int = None, default: Decimal = None):
+def get_amount_field(default: Decimal = None, max_digits: int = None, decimal_places: int = None, null: bool = False,
+                     validators: tuple = (MinValueValidator(0), ), verbose_name: str = None):
+
+    if validators is None:
+        validators = [MinValueValidator(0)]
 
     kwargs = {
-        'max_digits': max_digits or AMOUNT_MAX_DIGITS,
-        'decimal_places': decimal_places or AMOUNT_DECIMAL_PLACES,
-        'validators': [MinValueValidator(0)]
+        'max_digits': max_digits or 30,
+        'decimal_places': decimal_places or AMOUNT_PRECISION,
+        'validators': validators,
+        'blank': null,
+        'null': null,
+        'verbose_name': verbose_name
     }
 
     if default is not None:
@@ -33,26 +37,13 @@ def get_amount_field(max_digits: int = None, decimal_places: int = None, default
     return models.DecimalField(**kwargs)
 
 
-def get_price_field(max_digits: int = None, decimal_places: int = None, default: Decimal = None):
-
-    kwargs = {
-        'max_digits': max_digits or PRICE_MAX_DIGITS,
-        'decimal_places': decimal_places or PRICE_DECIMAL_PLACES,
-        'validators': [MinValueValidator(0)]
-    }
-
-    if default is not None:
-        kwargs['default'] = default
-
-    return models.DecimalField(**kwargs)
-
-
-def get_serializer_amount_field(max_digits: int = None, decimal_places: int = None, **kwargs):
+def get_serializer_amount_field(**kwargs):
 
     return SerializerDecimalField(
-        max_digits=max_digits or AMOUNT_MAX_DIGITS,
-        decimal_places=decimal_places or AMOUNT_DECIMAL_PLACES,
-        **kwargs
+        max_digits=30,
+        decimal_places=8,
+        min_value=0,
+        **kwargs,
     )
 
 
@@ -65,13 +56,8 @@ def get_status_field():
     )
 
 
-def get_lock_field(null: bool = True, **kwargs):
-    return models.OneToOneField(
-        'ledger.BalanceLock', on_delete=models.SET_NULL, null=null, blank=null, editable=False, **kwargs)
-
-
-def get_group_id_field(db_index: bool = False):
-    return models.UUIDField(default=uuid4, editable=False, db_index=db_index)
+def get_group_id_field(db_index: bool = False, null: bool = False):
+    return models.UUIDField(default=uuid4, editable=False, db_index=db_index, null=null, blank=null)
 
 
 def get_address_field():
@@ -94,4 +80,15 @@ class SerializerDecimalField(serializers.DecimalField):
         if not isinstance(data, Decimal):
             data = Decimal(str(data).strip())
 
-        return str(normalize_fraction(data))
+        return '{:f}'.format(normalize_fraction(data))
+
+
+@cache_for(time=600)
+def get_irt_market_asset_symbols():
+    from market.models import PairSymbol
+    from ledger.models import Asset
+    return set(PairSymbol.objects.select_related('base_asset').filter(
+        enable=True,
+        base_asset__symbol=Asset.IRT
+    ).values_list('asset__symbol', flat=True))
+

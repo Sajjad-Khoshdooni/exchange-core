@@ -2,33 +2,11 @@
 import math
 from decimal import Decimal
 
-import django.core.validators
 from django.db import migrations, models
-
-from provider.exchanges import BinanceSpotHandler
 
 
 def populate_precision(apps, schema_editor):
-    NetworkAsset = apps.get_model('ledger', 'NetworkAsset')
-    Asset = apps.get_model('ledger', 'Asset')
-
-    for network_asset in NetworkAsset.objects.all():
-        coin = network_asset.asset.symbol
-        network = network_asset.network.symbol
-
-        info = BinanceSpotHandler.get_network_info(coin, network)
-        if info:
-            withdraw_integer = Decimal(info['withdrawIntegerMultiple']) or 1
-
-            network_asset.withdraw_precision = -int(math.log10(withdraw_integer))
-            network_asset.save()
-
-    for asset in Asset.objects.all():
-        withdraw_precisions = list(asset.networkasset_set.all().values_list('withdraw_precision', flat=True))
-
-        if withdraw_precisions:
-            asset.precision = max(withdraw_precisions)
-            asset.save()
+    pass
 
 
 class Migration(migrations.Migration):

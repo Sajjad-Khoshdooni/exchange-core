@@ -1,3 +1,4 @@
+from django.contrib.auth.models import AnonymousUser
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
@@ -18,10 +19,10 @@ class InitiateForgotPasswordSerializer(serializers.Serializer):
         login_phrase = validated_data['login']
         user = User.get_user_from_login(login_phrase)
 
-        if not user:
-            raise ValidationError({'login': 'کاربری یافت نشد.'})
-
-        VerificationCode.send_otp_code(user.phone, VerificationCode.SCOPE_FORGET_PASSWORD)
+        if user:
+            VerificationCode.send_otp_code(user.phone, VerificationCode.SCOPE_FORGET_PASSWORD)
+        else:
+            user = AnonymousUser()
 
         return user
 
@@ -61,7 +62,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
         user.set_password(password)
         user.save()
 
-        otp_code.set_token_used()
+        # otp_code.set_token_used()
 
         return user
 
