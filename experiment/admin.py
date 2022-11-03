@@ -29,8 +29,7 @@ class VariantUserAdmin(admin.ModelAdmin):
 
 @admin.register(Link)
 class LinkAdmin(admin.ModelAdmin):
-    list_display = ('created', 'updated', 'token', 'destination', 'user')
-    list_filter = ('destination', )
+    list_display = ('created', 'updated', 'token', 'user')
     search_fields = ('token', 'destination', 'user')
 
 
