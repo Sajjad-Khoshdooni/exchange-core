@@ -19,6 +19,10 @@ def trigger_variant_action():
 
     for variant_user in variant_user_list:
         variant_data = variant_user.variant.data
+        params = variant_data.get('params')
+        params.update({
+            'url': variant_user.link.get_sms_link()
+        })
         sms = send_message_by_sms_ir(
             phone=variant_user.user.phone,
             template=variant_data.get('template_id'),

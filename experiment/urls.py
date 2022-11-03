@@ -2,5 +2,5 @@ from django.urls import path
 from experiment.views import *
 
 urlpatterns = [
-    path('<int:token>', DepositExperimentView.as_view()),
+    path('<int:token>', deposit_experiment_view),
 ]
