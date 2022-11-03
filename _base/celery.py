@@ -245,7 +245,7 @@ app.conf.beat_schedule = {
         'task': 'experiment.tasks.action_trigger.trigger_variant_action',
         'schedule': 1800,
         'options': {
-            'queue': 'variant_action',
+            'queue': 'celery',
             'expire': 1800
         },
     },
