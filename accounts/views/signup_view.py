@@ -15,6 +15,10 @@ from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
 from accounts.utils.validation import set_login_activity
 from accounts.validators import mobile_number_validator, password_validator
+from experiment.models.experiment import Experiment
+from experiment.models.link import Link
+from experiment.models.variant import Variant
+from experiment.models.variant_user import VariantUser
 
 
 class InitiateSignupSerializer(serializers.Serializer):
@@ -98,6 +102,8 @@ class SignupSerializer(serializers.Serializer):
 
         self.create_traffic_source(user, utm)
 
+        self.user_experiment_assign(user)
+
         return user
 
     def create_traffic_source(self, user, utm: dict):
@@ -144,6 +150,23 @@ class SignupSerializer(serializers.Serializer):
             ip=get_client_ip(self.context['request']),
             user_agent=self.context['request'].META['HTTP_USER_AGENT'][:256],
         )
+
+    def user_experiment_assign(self, user):
+        for experiment in Experiment.objetcs.filter(is_done=True):
+            with transaction.atomic():
+                for variant in [experiment.b_variant, experiment.a_variant]:
+                    if variant is None:
+                        continue
+
+                    link = None
+                    if variant.type == Variant.SMS_NOTIF:
+                        link = Link.create(user=user)
+
+                    VariantUser.object.create(
+                        variant=variant,
+                        user=user,
+                        link=link
+                    )
 
 
 class SignupView(CreateAPIView):
