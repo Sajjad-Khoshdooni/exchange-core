@@ -8,7 +8,7 @@ from experiment.utils.exceptions import TokenCreationError
 
 def create_token():
     for i in range(0, 3):
-        token = ''.join(random.choices(string.ascii_letters + string.digits, k=5))
+        token = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
         if not Link.objects.filter(token=token).first():
             return token
 
@@ -29,6 +29,3 @@ class Link(models.Model):
 
     def get_sms_link(self):
         return 'c.raastin.com/{token}'.format(token=self.token)
-
-    def __str__(self):
-        return self.user.name
