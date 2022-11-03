@@ -1,3 +1,6 @@
+import logging
+import random
+
 from django.contrib.auth import login
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
@@ -19,6 +22,10 @@ from experiment.models.experiment import Experiment
 from experiment.models.link import Link
 from experiment.models.variant import Variant
 from experiment.models.variant_user import VariantUser
+from experiment.utils.exceptions import TokenCreationError
+
+
+logger = logging.getLogger(__name__)
 
 
 class InitiateSignupSerializer(serializers.Serializer):
@@ -152,21 +159,31 @@ class SignupSerializer(serializers.Serializer):
         )
 
     def user_experiment_assign(self, user):
-        for experiment in Experiment.objetcs.filter(is_done=True):
+        for experiment in Experiment.objetcs.filter(active=True):
+            variant_list = list(Variant.objects.filter(experiment=experiment))
+            try:
+                variant = variant_list[random.randint(0, 2) % 2]  # todo :: generalize
+            except:
+                logger.warning('QueryVariantError')
+
             with transaction.atomic():
-                for variant in [experiment.b_variant, experiment.a_variant]:
-                    if variant is None:
-                        continue
-
-                    link = None
-                    if variant.type == Variant.SMS_NOTIF:
+                if variant is None:
+                    return
+                link = None
+                if variant.type == Variant.SMS_NOTIF:
+                    try:
                         link = Link.create(user=user)
+                    except TokenCreationError:
+                        logger.info('TokenCreationError', extra={
+                            'user': user.id
+                        })
+                        return
 
-                    VariantUser.object.create(
-                        variant=variant,
-                        user=user,
-                        link=link
-                    )
+                VariantUser.object.create(
+                    variant=variant,
+                    user=user,
+                    link=link
+                )
 
 
 class SignupView(CreateAPIView):

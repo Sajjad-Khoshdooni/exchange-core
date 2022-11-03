@@ -9,22 +9,21 @@ from experiment.models.variant_user import VariantUser
 
 @admin.register(Experiment)
 class ExperimentAdmin(admin.ModelAdmin):
-    list_display = ('created', 'updated', 'a_variant', 'b_variant', 'active')
+    list_display = ('created', 'updated', 'active')
     list_filter = ('active', )
-    search_fields = ('a_variant__name', 'b_variant__name', 'a_variant__type', 'b_variant__type',)
 
 
 @admin.register(Variant)
 class VariantAdmin(admin.ModelAdmin):
-    list_display = ('created', 'updated', 'name', 'type', 'data')
-    list_filter = ('type', )
-    search_fields = ('name', 'type', 'data',)
+    list_display = ('created', 'updated', 'name', 'type', 'data', 'experiment')
+    list_filter = ('type', 'experiment__name')
+    search_fields = ('name', 'type', 'data', 'experiment__name')
 
 
 @admin.register(VariantUser)
 class VariantUserAdmin(admin.ModelAdmin):
-    list_display = ('created', 'updated', 'variant', 'user', 'is_done', 'link')
-    list_filter = ('variant', 'is_done')
+    list_display = ('created', 'updated', 'variant', 'user', 'triggered', 'link')
+    list_filter = ('variant', 'triggered')
     search_fields = ('variant__name', 'variant__type')
 
 
@@ -37,4 +36,4 @@ class LinkAdmin(admin.ModelAdmin):
 
 @admin.register(Click)
 class ClickAdmin(admin.ModelAdmin):
-    list_display = ('created', 'updated', 'user_agent')
+    list_display = ('created', 'user_agent')

@@ -243,10 +243,10 @@ app.conf.beat_schedule = {
     },
     'trigger_variant_action': {
         'task': 'experiment.tasks.action_trigger.trigger_variant_action',
-        'schedule': 36000,
+        'schedule': 1800,
         'options': {
             'queue': 'variant_action',
-            'expire': 36000
+            'expire': 1800
         },
     },
 }
