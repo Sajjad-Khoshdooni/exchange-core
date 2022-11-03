@@ -19,7 +19,7 @@ def trigger_variant_action():
     start_time, end_time = now - timedelta(hours=2), now - timedelta(minutes=30)
     variant_user_list = VariantUser.objects.filter(
         triggered=False,
-        varint__type=Variant.SMS_NOTIF,
+        variant__type=Variant.SMS_NOTIF,
         user__first_fiat_deposit_date=None,
         user__date_joined__range=[start_time, end_time]
     )
