@@ -109,7 +109,16 @@ class SignupSerializer(serializers.Serializer):
 
         self.create_traffic_source(user, utm)
 
-        self.user_experiment_assign(user)
+        try:
+            self.user_experiment_assign(user)
+        except Exception as e:
+            logger.exception(
+                'Experiment assigning failed',
+                extra={
+                    'exp': e,
+                    'user': user
+                }
+            )
 
         return user
 
@@ -158,32 +167,30 @@ class SignupSerializer(serializers.Serializer):
             user_agent=self.context['request'].META['HTTP_USER_AGENT'][:256],
         )
 
-    def user_experiment_assign(self, user):
-        for experiment in Experiment.objetcs.filter(active=True):
-            variant_list = list(Variant.objects.filter(experiment=experiment))
-            try:
-                variant = variant_list[random.randint(0, 2) % 2]  # todo :: generalize
-            except:
-                logger.warning('QueryVariantError')
+    @classmethod
+    def user_experiment_assign(cls, user):
+        for experiment in Experiment.objects.filter(active=True):
+            variant_list = Variant.objects.filter(experiment=experiment).order_by('id')
+            variant = variant_list[random.randint(0, 1)]  # todo :: generalize
 
-            with transaction.atomic():
-                if variant is None:
+            if variant is None:
+                return
+
+            link = None
+            if variant.type == Variant.SMS_NOTIF:
+                try:
+                    link = Link.create(user=user)
+                except TokenCreationError:
+                    logger.info('TokenCreationError', extra={
+                        'user': user.id
+                    })
                     return
-                link = None
-                if variant.type == Variant.SMS_NOTIF:
-                    try:
-                        link = Link.create(user=user)
-                    except TokenCreationError:
-                        logger.info('TokenCreationError', extra={
-                            'user': user.id
-                        })
-                        return
 
-                VariantUser.object.create(
-                    variant=variant,
-                    user=user,
-                    link=link
-                )
+            VariantUser.objects.create(
+                variant=variant,
+                user=user,
+                link=link
+            )
 
 
 class SignupView(CreateAPIView):
