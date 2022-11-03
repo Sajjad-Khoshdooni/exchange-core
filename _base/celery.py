@@ -241,6 +241,14 @@ app.conf.beat_schedule = {
             'expire': 36000
         },
     },
+    'trigger_variant_action': {
+        'task': 'experiment.tasks.action_trigger.trigger_variant_action',
+        'schedule': 1800,
+        'options': {
+            'queue': 'celery',
+            'expire': 1800
+        },
+    },
 }
 
 if settings.DEBUG_OR_TESTING:

@@ -1,0 +1,2 @@
+class TokenCreationError(Exception):
+    pass

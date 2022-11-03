@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'health',
     'stake',
     'gamify',
+    'experiment'
 ]
 
 MIDDLEWARE = [
