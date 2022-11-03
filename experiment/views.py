@@ -22,7 +22,7 @@ def click_view(request, token):
         logger.info('LinkObjectExistenceError', extra={
             'token': token
         })
-        response = redirect('https://raastin.com/')
+        response = redirect(config('PANEL_URL'))
 
     return response
 
