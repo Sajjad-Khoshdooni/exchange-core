@@ -138,8 +138,8 @@ class MexcSpotHandler(ExchangeHandler):
                                                   / coin_coefficient),
                     'withdrawMax': decimal_to_str(Decimal(chain.get('withdrawMax', '100000000000')) / coin_coefficient),
                     'withdrawIntegerMultiple': Decimal('1e-{}'.format(chain.get('withdrawIntegerMultiple') or '0')),
-                    'withdrawEnable': chain.get('withdrawEnable')
-
+                    'withdrawEnable': chain.get('withdrawEnable'),
+                    'depositEnable': chain.get('depositEnable'),
                 })
         return data
 

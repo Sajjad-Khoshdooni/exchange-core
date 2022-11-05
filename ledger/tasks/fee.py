@@ -47,6 +47,7 @@ def update_network_fees():
             ns.withdraw_min = withdraw_min
             ns.withdraw_max = Decimal(info['withdrawMax'])
             ns.hedger_withdraw_enable = info['withdrawEnable']
+            ns.hedger_deposit_enable = info['depositEnable']
         else:
             ns.hedger_withdraw_enable = False
 

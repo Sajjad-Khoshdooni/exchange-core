@@ -126,8 +126,8 @@ class KucoinSpotHandler(ExchangeHandler):
                                               / coin_coefficient),
                 'withdrawMax': decimal_to_str(Decimal(chain.get('withdrawMax', '100000000000')) / coin_coefficient),
                 'withdrawIntegerMultiple': Decimal('1e-{}'.format(resp.get('precision') or '9')),
-                'withdrawEnable': chain.get('isWithdrawEnabled')
-
+                'withdrawEnable': chain.get('isWithdrawEnabled'),
+                'depositEnable': chain.get('isDepositEnabled'),
             })
         return data
 
