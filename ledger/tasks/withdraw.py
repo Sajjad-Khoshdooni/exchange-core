@@ -39,25 +39,11 @@ def update_provider_withdraw():
 
         status = data['status']
 
-        if 'txId' in data:
-            transfer.trx_hash = data['txId']
-
         if status == transfer.CANCELED:
-            with WalletPipeline() as pipeline:
-                pipeline.release_lock(transfer.group_id)
-                transfer.status = transfer.CANCELED
-                transfer.save()
+            transfer.reject()
 
         elif status == transfer.DONE:
-
-            with WalletPipeline() as pipeline:  # type: WalletPipeline
-                transfer.status = transfer.DONE
-                transfer.save()
-
-                pipeline.release_lock(transfer.group_id)
-                transfer.build_trx(pipeline)
-
-            transfer.alert_user()
+            transfer.accept(data.get('txId', ''))
 
 
 @shared_task(queue='blocklink')
