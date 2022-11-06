@@ -65,53 +65,53 @@ class ProviderOrder(models.Model):
                   hedge_amount: Decimal = 0) -> 'ProviderOrder':
 
         handler = asset.get_hedger()
-        with transaction.atomic():
-            order = ProviderOrder.objects.create(
-                asset=asset,
-                amount=amount,
-                side=side,
-                scope=scope,
-                market=market,
-                hedge_amount=hedge_amount,
-                exchange=asset.hedge_method
-            )
 
-            symbol = handler.get_trading_symbol(asset.symbol)
+        order = ProviderOrder.objects.create(
+            asset=asset,
+            amount=amount,
+            side=side,
+            scope=scope,
+            market=market,
+            hedge_amount=hedge_amount,
+            exchange=asset.hedge_method
+        )
 
-            if asset.get_hedger().NAME == BinanceFuturesHandler.NAME and market == cls.FUTURE and asset.symbol == 'SHIB':
-                symbol = symbol.replace('SHIB', '1000SHIB')
-                amount = round(amount / 1000)
+        symbol = handler.get_trading_symbol(asset.symbol)
 
-            if market == cls.FUTURE:
-                if asset.get_hedger().NAME == KucoinSpotHandler.NAME:
-                    handler = KucoinFuturesHandler
-                elif asset.get_hedger().NAME == MexcSpotHandler.NAME:
-                    handler = MexcFuturesHandler
-                else:
-                    handler = BinanceFuturesHandler
+        if asset.get_hedger().NAME == BinanceFuturesHandler.NAME and market == cls.FUTURE and asset.symbol == 'SHIB':
+            symbol = symbol.replace('SHIB', '1000SHIB')
+            amount = round(amount / 1000)
 
-            elif market == cls.SPOT:
-                if asset.get_hedger().NAME == KucoinSpotHandler.NAME:
-                    handler = KucoinSpotHandler
-                elif asset.get_hedger().NAME == MexcSpotHandler.NAME:
-                    handler = MexcSpotHandler
-                else:
-                    handler = BinanceSpotHandler
-
+        if market == cls.FUTURE:
+            if asset.get_hedger().NAME == KucoinSpotHandler.NAME:
+                handler = KucoinFuturesHandler
+            elif asset.get_hedger().NAME == MexcSpotHandler.NAME:
+                handler = MexcFuturesHandler
             else:
-                raise NotImplementedError
+                handler = BinanceFuturesHandler
 
-            resp = handler().place_order(
-                symbol=symbol,
-                side=side,
-                amount=amount,
-                client_order_id=order.id
-            )
+        elif market == cls.SPOT:
+            if asset.get_hedger().NAME == KucoinSpotHandler.NAME:
+                handler = KucoinSpotHandler
+            elif asset.get_hedger().NAME == MexcSpotHandler.NAME:
+                handler = MexcSpotHandler
+            else:
+                handler = BinanceSpotHandler
 
-            order.order_id = resp['orderId']
-            order.save()
+        else:
+            raise NotImplementedError
 
-            return order
+        resp = handler().place_order(
+            symbol=symbol,
+            side=side,
+            amount=amount,
+            client_order_id=order.id
+        )
+
+        order.order_id = resp['orderId']
+        order.save()
+
+        return order
 
     @classmethod
     def get_hedge(cls, asset: Asset):
