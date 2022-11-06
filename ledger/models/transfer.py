@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class Transfer(models.Model):
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
-    SELF, INTERNAL, BINANCE, KUCOIN = 'self', 'internal', 'binance', 'kucoin'
+    SELF, INTERNAL, BINANCE, KUCOIN, NOBITEX = 'self', 'internal', 'binance', 'kucoin', 'nobitex'
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
@@ -55,7 +55,7 @@ class Transfer(models.Model):
     source = models.CharField(
         max_length=8,
         default=SELF,
-        choices=((SELF, SELF), (INTERNAL, INTERNAL), (BINANCE, BINANCE), (KUCOIN, KUCOIN))
+        choices=((SELF, SELF), (INTERNAL, INTERNAL), (BINANCE, BINANCE), (KUCOIN, KUCOIN), (NOBITEX, NOBITEX))
     )
     provider_transfer = models.OneToOneField(to='provider.ProviderTransfer', on_delete=models.PROTECT, null=True,
                                              blank=True)
