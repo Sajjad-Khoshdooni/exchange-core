@@ -3,6 +3,8 @@ import logging
 from celery import shared_task
 from django.conf import settings
 
+from accounts.utils.admin import url_to_edit_object
+from accounts.utils.telegram import send_system_message
 from ledger.models import Transfer
 from ledger.utils.wallet_pipeline import WalletPipeline
 from ledger.withdraw.exchange import handle_provider_withdraw
@@ -98,7 +100,13 @@ def create_withdraw(transfer_id: int):
 
             transfer.source = ExchangeHandler.get_handler(transfer.asset.hedge_method).NAME
             transfer.save(update_fields=['source'])
-            create_provider_withdraw(transfer_id=transfer.id)
+
+            send_system_message(
+                message='Manual withdraw %s %s' % (transfer.asset, transfer.amount),
+                link=url_to_edit_object(transfer)
+            )
+
+            # create_provider_withdraw(transfer_id=transfer.id)
         else:
             logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
 
