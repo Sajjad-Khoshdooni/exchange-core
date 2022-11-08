@@ -13,7 +13,6 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import BankAccount
-from financial.utils.withdraw import ProviderError
 from ledger.models import Trx, Asset
 from ledger.utils.fields import DONE, get_group_id_field, PENDING, CANCELED
 from ledger.utils.precision import humanize_number
@@ -96,6 +95,8 @@ class FiatWithdrawRequest(models.Model):
 
         assert not self.provider_withdraw_id
         assert self.status == self.PROCESSING
+
+        from financial.utils.withdraw import ProviderError
 
         wallet_id = self.channel_handler.get_wallet_id()
 
