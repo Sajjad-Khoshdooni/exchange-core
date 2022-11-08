@@ -316,7 +316,8 @@ class ZibalChannel(FiatWithdraw):
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
         data = self.collect_api(f'/v1/report/checkout/inquire', method='POST', data={
-            "checkoutRequestId": str(provider_id)
+            "walletId": self.get_wallet_id(),
+            'uniqueCode': str(request_id)
         })
 
         if data['type'] == 'canceledCheckout':
