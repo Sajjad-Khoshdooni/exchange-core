@@ -21,9 +21,18 @@
             ({{ pending_or_reject_level_2_users }}) لیست کاربران منتظر تایید سطح ۲
         </a>
         <br>
+        <a type="button" href="/admin/ledger/transfer/?status__exact=init" class="btn btn-secondary btn-lg btn-block" target="_blank">
+            ({{ crypto_withdraw_count }}) برداشت رمزارز منتظر تایید
+        </a>
+        <br>
         <a type="button" href="/admin/accounts/user/?level__exact=2&status_is_pending=1&archived__exact=0"
            class="btn btn-secondary btn-lg btn-block" target="_blank">
             ({{ pending_level_3_users }}) لیست کاربران منتظر تایید سطح ۳
+        </a>
+        <br>
+        <a type="button" href="/admin/financial/fiatwithdrawrequest/?status__exact=process"
+           class="btn btn-warning btn-lg btn-block" target="_blank">
+            ({{ pending_or_reject_withdraw_requests }}) لیست برداشت‌های ریالی در انتظار تایید
         </a>
         <br>
         <a type="button" href="/admin/accounts/user/?level__exact=2&national_code_phone_verified__exact=0"
@@ -34,11 +43,6 @@
         <a type="button" href="/admin/accounts/user/?archived__exact=1"
            class="btn btn-secondary btn-lg btn-block" target="_blank">
             ({{ archived_users }}) کاربران بایگانی شده
-        </a>
-        <br>
-        <a type="button" href="/admin/financial/fiatwithdrawrequest/?status__exact=pending"
-           class="btn btn-warning btn-lg btn-block" target="_blank">
-            ({{ pending_or_reject_withdraw_requests }}) لیست برداشت‌های ریالی در انتظار تایید
         </a>
         <br>
     </div>
