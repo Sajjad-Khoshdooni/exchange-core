@@ -15,7 +15,6 @@ from accounts.utils.push_notif import send_push_notif_to_user
 from accounts.utils.telegram import send_support_message
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
-from ledger.models.withdraw_verify import auto_withdraw_verify
 from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_trading_price_usdt, SELL, get_trading_price_irt
@@ -228,6 +227,8 @@ class Transfer(models.Model):
 
         # from ledger.tasks import create_withdraw
         # create_withdraw(transfer.id)
+
+        from ledger.models.withdraw_verify import auto_withdraw_verify
 
         if auto_withdraw_verify(transfer):
             transfer.status = Transfer.PROCESSING
