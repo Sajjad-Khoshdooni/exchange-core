@@ -328,6 +328,9 @@ class ProviderRequester:
 
         resp = self.collect_api('/api/v1/coins/info/', data=data)
 
+        if not resp.success:
+            return {}
+
         coins_info = {}
 
         for info_data in resp.data:
