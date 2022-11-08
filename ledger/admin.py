@@ -332,6 +332,7 @@ class TransferAdmin(admin.ModelAdmin):
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
     readonly_fields = ('deposit_address', 'network', 'wallet', 'provider_transfer', 'get_total_volume_usdt')
+    actions = ('accept_withdraw', )
 
     def get_total_volume_usdt(self, transfer: models.Transfer):
         price = get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
@@ -339,6 +340,10 @@ class TransferAdmin(admin.ModelAdmin):
             return transfer.amount * price
 
     get_total_volume_usdt.short_description = 'ارزش تتری'
+
+    @admin.action(description='تایید برداشت', permissions=['view'])
+    def accept_withdraw(self, request, queryset):
+        queryset.filter(status=models.Transfer.INIT).update(status=models.Transfer.PROCESSING)
 
 
 class CryptoAccountTypeFilter(SimpleListFilter):
