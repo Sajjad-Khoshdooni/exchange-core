@@ -3,7 +3,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404
 
 from accounts.authentication import CustomTokenAuthentication
-from ledger.models import Network, Asset, DepositAddress, AddressKey
+from ledger.models import Network, Asset, DepositAddress, AddressKey, NetworkAsset
 from ledger.models.transfer import Transfer
 from ledger.requester.architecture_requester import request_architecture
 from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt, SELL
@@ -45,6 +45,11 @@ class DepositSerializer(serializers.ModelSerializer):
 
         asset = Asset.objects.get(symbol=validated_data.get('coin'))
         wallet = asset.get_wallet(deposit_address.address_key.account)
+
+        network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
+
+        if not network_asset.can_deposit_enabled():
+            raise ValidationError({'deposit_enable': 'false'})
 
         status = validated_data.get('status')
 

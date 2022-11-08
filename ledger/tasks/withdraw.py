@@ -3,9 +3,10 @@ import logging
 from celery import shared_task
 from django.conf import settings
 
+from accounts.utils.admin import url_to_edit_object
+from accounts.utils.telegram import send_system_message
 from ledger.models import Transfer
 from ledger.utils.provider import get_provider_requester
-from ledger.utils.wallet_pipeline import WalletPipeline
 from ledger.withdraw.exchange import handle_provider_withdraw
 
 logger = logging.getLogger(__name__)
@@ -37,25 +38,11 @@ def update_provider_withdraw():
 
         status = data.status
 
-        if 'txId' in data:
-            transfer.trx_hash = data.tx_id
-
         if status == transfer.CANCELED:
-            with WalletPipeline() as pipeline:
-                pipeline.release_lock(transfer.group_id)
-                transfer.status = transfer.CANCELED
-                transfer.save()
+            transfer.reject()
 
         elif status == transfer.DONE:
-
-            with WalletPipeline() as pipeline:  # type: WalletPipeline
-                transfer.status = transfer.DONE
-                transfer.save()
-
-                pipeline.release_lock(transfer.group_id)
-                transfer.build_trx(pipeline)
-
-            transfer.alert_user()
+            transfer.accept(data.tx_id)
 
 
 @shared_task(queue='blocklink')
@@ -98,7 +85,13 @@ def create_withdraw(transfer_id: int):
 
             transfer.source = Transfer.PROVIDER
             transfer.save(update_fields=['source'])
-            create_provider_withdraw(transfer_id=transfer.id)
+
+            send_system_message(
+                message='Manual withdraw %s %s' % (transfer.asset, transfer.amount),
+                link=url_to_edit_object(transfer)
+            )
+
+            # create_provider_withdraw(transfer_id=transfer.id)
         else:
             logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
 

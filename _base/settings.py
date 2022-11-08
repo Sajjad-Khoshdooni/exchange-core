@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'health',
     'stake',
     'gamify',
+    'experiment'
 ]
 
 if not DEBUG_OR_TESTING:

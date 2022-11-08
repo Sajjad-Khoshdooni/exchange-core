@@ -46,8 +46,11 @@ def update_network_fees():
             ns.withdraw_min = withdraw_min
             ns.withdraw_max = info.withdraw_max
             ns.hedger_withdraw_enable = info.withdraw_enable
+            ns.hedger_deposit_enable = info.deposit_enable
+
         else:
             ns.hedger_withdraw_enable = False
 
-    NetworkAsset.objects.bulk_update(network_assets, fields=['withdraw_fee', 'withdraw_min', 'withdraw_max',
-                                                             'hedger_withdraw_enable'])
+    NetworkAsset.objects.bulk_update(network_assets, fields=[
+        'withdraw_fee', 'withdraw_min', 'withdraw_max', 'hedger_withdraw_enable', 'hedger_deposit_enable'
+    ])

@@ -29,14 +29,14 @@ app.conf.beat_schedule = {
             'expire': 30 * 60
         },
     },
-    'update_provider_withdraw': {
-        'task': 'ledger.tasks.withdraw.update_provider_withdraw',
-        'schedule': 10,
-        'options': {
-            'queue': 'binance',
-            'expire': 10
-        },
-    },
+    # 'update_provider_withdraw': {
+    #     'task': 'ledger.tasks.withdraw.update_provider_withdraw',
+    #     'schedule': 10,
+    #     'options': {
+    #         'queue': 'binance',
+    #         'expire': 10
+    #     },
+    # },
 
     'update_withdraws': {
         'task': 'ledger.tasks.withdraw.update_withdraws',
@@ -99,14 +99,14 @@ app.conf.beat_schedule = {
         },
     },
 
-    'retention_leads_to_signup': {
-        'task': 'accounts.tasks.retention.retention_leads_to_signup',
-        'schedule': 3600,
-        'options': {
-            'queue': 'retention',
-            'expire': 3600
-        },
-    },
+    # 'retention_leads_to_signup': {
+    #     'task': 'accounts.tasks.retention.retention_leads_to_signup',
+    #     'schedule': 3600,
+    #     'options': {
+    #         'queue': 'retention',
+    #         'expire': 3600
+    #     },
+    # },
 
     # 'retention_actions': {
     #     'task': 'accounts.tasks.retention.retention_actions',
@@ -181,6 +181,14 @@ app.conf.beat_schedule = {
         'options': {
             'queue': 'accounting',
             'expire': 36000
+        },
+    },
+    'trigger_variant_action': {
+        'task': 'experiment.tasks.action_trigger.trigger_variant_action',
+        'schedule': 1800,
+        'options': {
+            'queue': 'celery',
+            'expire': 1800
         },
     },
 }

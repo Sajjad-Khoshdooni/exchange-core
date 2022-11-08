@@ -278,3 +278,5 @@ def create_weekly_accounting_report(days: int = 7):
     create_fiat_withdraw(start, end, upload=True)
     create_trades(start, end, upload=True)
     create_users_trades(start, end, upload=True)
+
+

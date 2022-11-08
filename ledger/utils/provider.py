@@ -64,6 +64,7 @@ class NetworkInfo:
     withdraw_max: Decimal
     withdraw_fee: Decimal
     withdraw_enable: bool
+    deposit_enable: bool
 
 
 @validate_arguments
@@ -389,7 +390,8 @@ class MockProviderRequester(ProviderRequester):
             withdraw_min=Decimal(1),
             withdraw_max=Decimal(100),
             withdraw_fee=Decimal(1),
-            withdraw_enable=True
+            withdraw_enable=True,
+            deposit_enable=True,
         )
 
     def try_hedge_new_order(self, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):

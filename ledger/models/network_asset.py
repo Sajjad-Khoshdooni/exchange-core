@@ -14,11 +14,13 @@ class NetworkAsset(models.Model):
     withdraw_precision = models.PositiveSmallIntegerField()
 
     hedger_withdraw_enable = models.BooleanField(default=True)
+    hedger_deposit_enable = models.BooleanField(default=True)
+
     can_deposit = models.BooleanField(default=False)
     can_withdraw = models.BooleanField(default=True)
 
     def can_deposit_enabled(self) -> bool:
-        return self.network.can_deposit and self.can_deposit
+        return self.network.can_deposit and self.can_deposit and self.hedger_deposit_enable
 
     def can_withdraw_enabled(self) -> bool:
         return self.network.can_withdraw and self.can_withdraw and self.hedger_withdraw_enable

@@ -266,6 +266,23 @@ class Transfer(models.Model):
                     }
                 )
 
+    def accept(self, tx_id: str):
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
+            self.status = self.DONE
+            self.trx_hash = tx_id
+            self.save(update_fields=['status', 'trx_hash'])
+
+            pipeline.release_lock(self.group_id)
+            self.build_trx(pipeline)
+
+        self.alert_user()
+
+    def reject(self):
+        with WalletPipeline() as pipeline:
+            pipeline.release_lock(self.group_id)
+            self.status = self.CANCELED
+            self.save(update_fields=['status'])
+
     class Meta:
         constraints = [
             UniqueConstraint(
