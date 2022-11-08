@@ -21,6 +21,10 @@ class ServerError(Exception):
     pass
 
 
+class ProviderError(Exception):
+    pass
+
+
 @dataclass
 class Wallet:
     id: int
@@ -34,6 +38,7 @@ class Withdraw:
     tracking_id: str
     status: str
     receive_datetime: Union[datetime, None]
+    message: str = ''
 
 
 class FiatWithdraw:
@@ -294,17 +299,26 @@ class ZibalChannel(FiatWithdraw):
             if 'این درخواست تسویه قبلا ثبت شده است' in message:
                 return Withdraw(
                     tracking_id='',
-                    status=FiatWithdrawRequest.DONE,
-                    receive_datetime=timezone.now() + timedelta(hours=3)
+                    status=FiatWithdrawRequest.PENDING,
+                    receive_datetime=timezone.now() + timedelta(hours=3),
+                    message=message,
                 )
             elif 'این حساب مسدود شده و یا قابلیت واریز ندارد' in message:
                 return Withdraw(
                     tracking_id='',
                     status=FiatWithdrawRequest.CANCELED,
-                    receive_datetime=None
+                    receive_datetime=None,
+                    message=message,
+                )
+            elif 'باقی مانده سقف روزانه تسویه به این شبا' in message:
+                return Withdraw(
+                    tracking_id='',
+                    status=FiatWithdrawRequest.CANCELED,
+                    receive_datetime=None,
+                    message=message,
                 )
             else:
-                raise
+                raise ProviderError(message)
 
         receive_datetime = datetime.strptime(data['predictedCheckoutDate'], '%Y/%m/%d-%H:%M:%S')
 
@@ -488,7 +502,7 @@ class JibitChannel(FiatWithdraw):
             id=wallet_id,
             name='main',
             balance=data['balance'] // 10,
-            free=data['settleableBalance'] //10
+            free=data['settleableBalance'] // 10
         )
 
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:

@@ -228,7 +228,7 @@ class Transfer(models.Model):
         # from ledger.tasks import create_withdraw
         # create_withdraw(transfer.id)
 
-        from ledger.models.withdraw_verify import auto_withdraw_verify
+        from ledger.utils.withdraw_verify import auto_withdraw_verify
 
         if auto_withdraw_verify(transfer):
             transfer.status = Transfer.PROCESSING

@@ -13,6 +13,7 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import BankAccount
+from financial.utils.withdraw import ProviderError
 from ledger.models import Trx, Asset
 from ledger.utils.fields import DONE, get_group_id_field, PENDING, CANCELED
 from ledger.utils.precision import humanize_number
@@ -110,18 +111,24 @@ class FiatWithdrawRequest(models.Model):
             )
             return
 
-        withdraw = self.channel_handler.create_withdraw(
-            wallet_id,
-            self.bank_account,
-            self.amount,
-            self.id
-        )
-        self.provider_withdraw_id = self.ref_id = withdraw.tracking_id
-        self.change_status(withdraw.status)
-        self.withdraw_datetime = timezone.now()
-        self.receive_datetime = withdraw.receive_datetime
+        try:
+            withdraw = self.channel_handler.create_withdraw(
+                wallet_id,
+                self.bank_account,
+                self.amount,
+                self.id
+            )
+            self.provider_withdraw_id = self.ref_id = withdraw.tracking_id
+            self.change_status(withdraw.status)
+            self.withdraw_datetime = timezone.now()
+            self.receive_datetime = withdraw.receive_datetime
+            self.comment = withdraw.message
 
-        self.save()
+            self.save()
+
+        except ProviderError as e:
+            self.comment = str(e)
+            self.save(update_fields=['comment'])
 
     def update_status(self):
         from financial.utils.withdraw import FiatWithdraw
