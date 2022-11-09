@@ -28,7 +28,7 @@ def trigger_variant_action():
         variant_data = variant_user.variant.data
         params = variant_data.get('params')
         params.update({
-            'url': config('EXPERIMENT_DEPOSIT_URL')
+            'url': variant_user.link.get_sms_link()
         })
         sms = send_message_by_sms_ir(
             phone=variant_user.user.phone,
