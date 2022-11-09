@@ -9,7 +9,6 @@ from accounts.tasks import send_message_by_sms_ir
 from experiment.models.variant import Variant
 from experiment.models.variant_user import VariantUser
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -38,10 +37,6 @@ def trigger_variant_action():
         if sms:
             variant_user.is_done = True
             variant_user.save(update_fields=['is_done'])
-            logger.log('ExperimentSMSSentSuccessfully', extra={
-                'variant_user': variant_user.id
-            })
+            logger.info('experiment sms successful variant=%s' % variant_user.id)
         else:
-            logger.log('ExperimentSMSDoesntSent', extra={
-                'variant_user': variant_user.id
-            })
+            logger.info('experiment sms failed variant=%s' % variant_user.id)

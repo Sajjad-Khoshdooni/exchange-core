@@ -99,3 +99,40 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
         return
 
     return data
+
+
+@shared_task(queue='sms')
+def send_message_by_sms_ir2(phone: str, template: str, params: dict):
+    param_array = [
+        {"name": key, "value": value} for (key, value) in params.items()
+    ]
+
+    resp = requests.post(
+        url='https://api.sms.ir/v1/send/verify',
+        json={
+            "mobile": phone,
+            "templateId": template,
+            "parameters": param_array,
+        },
+        headers={
+            'X-API-KEY': secret('SMS_IR2_API_KEY'),
+            'ACCEPT': 'application/json'
+        }
+    )
+
+    if not resp.ok:
+        return
+
+    data = resp.json()
+
+    if data['status'] == 0:
+        logger.error('Failed to send sms via sms.ir', extra={
+            'phone': phone,
+            'template': template,
+            'params': params,
+            'data': data
+        })
+
+        return
+
+    return data
