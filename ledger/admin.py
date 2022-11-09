@@ -333,7 +333,7 @@ class TransferAdmin(admin.ModelAdmin):
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
     readonly_fields = ('deposit_address', 'network', 'wallet', 'provider_transfer', 'get_total_volume_usdt')
-    actions = ('accept_withdraw', )
+    actions = ('accept_withdraw', 'reject_withdraw')
 
     def save_model(self, request, obj: models.Transfer, form, change):
         if obj.id and obj.status == models.Transfer.DONE and obj.trx_hash:
@@ -354,6 +354,11 @@ class TransferAdmin(admin.ModelAdmin):
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw(self, request, queryset):
         queryset.filter(status=models.Transfer.INIT).update(status=models.Transfer.PROCESSING)
+
+    @admin.action(description='رد برداشت', permissions=['view'])
+    def reject_withdraw(self, request, queryset):
+        for transfer in queryset.filter(status=models.Transfer.INIT):
+            transfer.reject()
 
 
 class CryptoAccountTypeFilter(SimpleListFilter):
