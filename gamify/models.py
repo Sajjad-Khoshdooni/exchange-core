@@ -178,3 +178,6 @@ class Task(models.Model):
 
     class Meta:
         ordering = ('order', )
+
+    def __str__(self):
+        return '%s / %s' % (self.mission.name, self.type)
