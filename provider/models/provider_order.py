@@ -66,16 +66,6 @@ class ProviderOrder(models.Model):
 
         handler = asset.get_hedger()
 
-        order = ProviderOrder.objects.create(
-            asset=asset,
-            amount=amount,
-            side=side,
-            scope=scope,
-            market=market,
-            hedge_amount=hedge_amount,
-            exchange=asset.hedge_method
-        )
-
         symbol = handler.get_trading_symbol(asset.symbol)
 
         if asset.get_hedger().NAME == BinanceFuturesHandler.NAME and market == cls.FUTURE and asset.symbol == 'SHIB':
@@ -101,6 +91,16 @@ class ProviderOrder(models.Model):
         else:
             raise NotImplementedError
 
+        order = ProviderOrder.objects.create(
+            asset=asset,
+            amount=amount,
+            side=side,
+            scope=scope,
+            market=market,
+            hedge_amount=hedge_amount,
+            exchange=asset.hedge_method
+        )
+
         resp = handler().place_order(
             symbol=symbol,
             side=side,
@@ -108,10 +108,12 @@ class ProviderOrder(models.Model):
             client_order_id=order.id
         )
 
-        order.order_id = resp['orderId']
-        order.save()
-
-        return order
+        if not resp:
+            order.delete()
+        else:
+            order.order_id = resp['orderId']
+            order.save()
+            return order
 
     @classmethod
     def get_hedge(cls, asset: Asset):
