@@ -75,7 +75,7 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
         url='https://RestfulSms.com/api/UltraFastSend',
         json={
             "ParameterArray": param_array,
-            "Mobile":phone,
+            "Mobile": phone,
             "TemplateId": template
         },
         headers={
@@ -87,6 +87,7 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
         return
 
     data = resp.json()
+    print(data)
 
     if not data['IsSuccessful']:
         logger.error('Failed to send sms via sms.ir', extra={

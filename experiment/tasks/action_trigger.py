@@ -4,7 +4,7 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 
-from accounts.tasks import send_message_by_sms_ir2
+from accounts.tasks import send_message_by_sms_ir
 from experiment.models.variant import Variant
 from experiment.models.variant_user import VariantUser
 
@@ -30,7 +30,7 @@ def trigger_variant_action():
         template_id = variant_data['template_id']
         params = {k: v.replace('%url%', url) for (k, v) in raw_params.items()}
 
-        sms = send_message_by_sms_ir2(
+        sms = send_message_by_sms_ir(
             phone=variant_user.user.phone,
             template=template_id,
             params=params
