@@ -83,11 +83,11 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
         }
     )
 
-    if not resp.ok:
-        return
-
     data = resp.json()
     print(data)
+
+    if not resp.ok:
+        return
 
     if not data['IsSuccessful']:
         logger.error('Failed to send sms via sms.ir', extra={
