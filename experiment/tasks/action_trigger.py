@@ -3,9 +3,8 @@ from datetime import timedelta
 
 from celery import shared_task
 from django.utils import timezone
-from yekta_config.config import config
 
-from accounts.tasks import send_message_by_sms_ir
+from accounts.tasks import send_message_by_sms_ir2
 from experiment.models.variant import Variant
 from experiment.models.variant_user import VariantUser
 
@@ -25,14 +24,16 @@ def trigger_variant_action():
 
     for variant_user in variant_user_list:
         variant_data = variant_user.variant.data
-        params = variant_data.get('params')
-        params.update({
-            'url': variant_user.link.get_sms_link()
-        })
-        sms = send_message_by_sms_ir(
+        raw_params = variant_data.get('params')
+
+        url = variant_user.link.get_sms_link()
+        template_id = variant_data['template_id']
+        params = {k: v.replace('%url%', url) for (k, v) in raw_params.items()}
+
+        sms = send_message_by_sms_ir2(
             phone=variant_user.user.phone,
-            template=variant_data.get('template_id'),
-            params=variant_data.get('params')
+            template=template_id,
+            params=params
         )
         if sms:
             variant_user.is_done = True

@@ -2,5 +2,5 @@ from django.urls import path
 from experiment.views import *
 
 urlpatterns = [
-    path('<int:token>', click_view),
+    path('click/<slug:token>/', click_view),
 ]
