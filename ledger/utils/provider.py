@@ -187,6 +187,8 @@ class ProviderRequester:
 
     def get_spot_balance_map(self, exchange) -> dict:
         resp = self.collect_api('/api/v1/spot/balance/', data={'exchange': exchange})
+        if not resp.success:
+            return {}
         return resp.data
 
     def get_futures_info(self, exchange: str) -> dict:
