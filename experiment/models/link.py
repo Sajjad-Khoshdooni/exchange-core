@@ -29,3 +29,6 @@ class Link(models.Model):
 
     def get_sms_link(self):
         return 'c.raastin.com/{token}'.format(token=self.token)
+
+    def __str__(self):
+        return self.get_sms_link()
