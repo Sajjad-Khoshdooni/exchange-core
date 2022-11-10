@@ -23,7 +23,7 @@ class Link(models.Model):
 
     @classmethod
     def create(cls, user):
-        cls.objects.create(
+        return cls.objects.create(
             user=user,
         )
 
