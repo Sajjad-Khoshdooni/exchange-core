@@ -36,8 +36,8 @@ def trigger_variant_action():
             params=params
         )
         if sms:
-            variant_user.is_done = True
-            variant_user.save(update_fields=['is_done'])
+            variant_user.triggered = True
+            variant_user.save(update_fields=['triggered'])
             logger.info('experiment sms successful variant=%s' % variant_user.id)
         else:
             logger.info('experiment sms failed variant=%s' % variant_user.id)
