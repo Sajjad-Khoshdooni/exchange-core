@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 
 from django.conf import settings
+from django.db.models import Sum
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers, status
@@ -26,6 +27,7 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 logger = logging.getLogger(__name__)
 
 MIN_WITHDRAW = 100_000
+MAX_WITHDRAW = 100_000_000
 
 
 class WithdrawRequestSerializer(serializers.ModelSerializer):
@@ -70,6 +72,16 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         if amount < MIN_WITHDRAW:
             logger.info('FiatRequest rejected due to small amount. user=%s' % user.id)
             raise ValidationError({'iban': 'مقدار وارد شده کمتر از حد مجاز است.'})
+
+        today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_withdraws = FiatWithdrawRequest.objects.filter(
+            bank_account=bank_account,
+            created__gte=today,
+        ).aggregate(amount=Sum('amount'))['amount'] or 0
+
+        if amount + today_withdraws > MAX_WITHDRAW:
+            logger.info('FiatRequest rejected due to large amount. user=%s' % user.id)
+            raise ValidationError({'amount': 'حداکثر میزان برداشت به حساب بانکی در روز ۱۰۰ میلیون تومان است.'})
 
         asset = Asset.get(Asset.IRT)
         wallet = asset.get_wallet(user.account)

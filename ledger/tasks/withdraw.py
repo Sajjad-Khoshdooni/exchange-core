@@ -60,6 +60,10 @@ def create_withdraw(transfer_id: int):
         logger.info('ignored because non self source')
         return
 
+    if transfer.status != Transfer.PROCESSING:
+        logger.info('ignored due to invalid status')
+        return
+
     from ledger.requester.withdraw_requester import RequestWithdraw
 
     try:
