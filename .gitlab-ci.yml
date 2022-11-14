@@ -21,14 +21,14 @@ deploy_staging:
     refs:
     - develop
   script:
-    - 'darkube deploy --token ${DEPLOY_TOKEN_STAGING_API}
-      --app-id ${APP_ID_STAGING_API}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+    - 'darkube deploy --token ${STAGING_API_DEPLOY_TOKEN}
+      --app-id ${STAGING_API_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
       --job-id "${CI_JOB_ID}"'
-    - 'darkube deploy --token ${DEPLOY_TOKEN_STAGING_CELERY_BEAT}
-      --app-id ${APP_ID_STAGING_CELERY_BEAT}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+    - 'darkube deploy --token ${STAGING_CELERY_BEAT_DEPLOY_TOKEN}
+      --app-id ${STAGING_CELERY_BEAT_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
       --job-id "${CI_JOB_ID}"'
-    - 'darkube deploy --token ${DEPLOY_TOKEN_STAGING_CELERY_WORKERS}
-      --app-id ${APP_ID_STAGING_CELERY_WORKERS}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+    - 'darkube deploy --token ${STAGING_CELERY_WORKERS_DEPLOY_TOKEN}
+      --app-id ${STAGING_CELERY_WORKERS_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
       --job-id "${CI_JOB_ID}"'
   stage: deploy
   tags:
