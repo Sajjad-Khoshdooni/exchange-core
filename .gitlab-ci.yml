@@ -53,11 +53,29 @@ arzplus_deploy_production:
     refs:
     - develop
   script:
-    - 'darkube deploy --token ${DEPLOY_TOKEN_ARZPLUS_PRODUCTION_API}
-      --app-id ${APP_ID_ARZPLUS_PRODUCTION_API}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+    - 'darkube deploy --token ${ARZPLUS_API_DEPLOY_TOKEN}
+      --app-id ${ARZPLUS_API_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
       --job-id "${CI_JOB_ID}"'
-    - 'darkube deploy --token ${DEPLOY_TOKEN_ARZPLUS_PRODUCTION_CELERY_BEAT}
-      --app-id ${APP_ID_ARZPLUS_PRODUCTION_API}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+    - 'darkube deploy --token ${ARZPLUS_CELERY_BEAT_DEPLOY_TOKEN}
+      --app-id ${ARZPLUS_CELERY_BEAT_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${ARZPLUS_CELERY_CELERY_TOKEN}
+      --app-id ${ARZPLUS_CELERY_CELERY_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${ARZPLUS_CELERY_KYC_TOKEN}
+      --app-id ${ARZPLUS_CELERY_KYC_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${ARZPLUS_CELERY_MARKET_TOKEN}
+      --app-id ${ARZPLUS_CELERY_MARKET_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${ARZPLUS_CELERY_TRADER_TOKEN}
+      --app-id ${ARZPLUS_CELERY_TRADER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${ARZPLUS_CELERY_MARGIN_TOKEN}
+      --app-id ${ARZPLUS_CELERY_MARGIN_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${ARZPLUS_CELERY_STOPLOSS_TOKEN}
+      --app-id ${ARZPLUS_CELERY_STOPLOSS_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
       --job-id "${CI_JOB_ID}"'
   stage: deploy
   tags:

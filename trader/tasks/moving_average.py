@@ -10,7 +10,7 @@ from trader.bots.utils import balance_tether
 logger = logging.getLogger(__name__)
 
 
-@shared_task(queue='trader-ma')
+@shared_task(queue='trader')
 def update_all_moving_averages():
     if random.randint(0, 60) == 0:  # balance every one hour
         balance_tether(MovingAverage.get_account())
@@ -19,7 +19,7 @@ def update_all_moving_averages():
         update_moving_average.apply_async(args=(symbol.id, ), expires=5)
 
 
-@shared_task(queue='trader-ma')
+@shared_task(queue='trader')
 def update_moving_average(symbol_id: int):
     symbol = PairSymbol.objects.get(id=symbol_id)
 

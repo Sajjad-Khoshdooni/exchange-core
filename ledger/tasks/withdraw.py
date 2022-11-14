@@ -45,7 +45,7 @@ def update_provider_withdraw():
             transfer.accept(data.tx_id)
 
 
-@shared_task(queue='blocklink')
+@shared_task(queue='transfer')
 def create_withdraw(transfer_id: int):
     if settings.DEBUG_OR_TESTING_OR_STAGING:
         return
@@ -112,7 +112,7 @@ def create_withdraw(transfer_id: int):
         transfer.save(update_fields=['handling'])
 
 
-@shared_task(queue='blocklink')
+@shared_task(queue='transfer')
 def update_withdraws():
     re_handle_transfers = Transfer.objects.filter(
         deposit=False,

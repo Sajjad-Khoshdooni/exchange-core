@@ -1,10 +1,8 @@
 import os
 
 from celery import Celery
-# Set the default Django settings module for the 'celery' program.
 from celery.schedules import crontab
 from decouple import config
-from django.conf import settings
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', '_base.settings')
 
@@ -42,7 +40,7 @@ app.conf.beat_schedule = {
         'task': 'ledger.tasks.withdraw.update_withdraws',
         'schedule': 10,
         'options': {
-            'queue': 'blocklink',
+            'queue': 'transfer',
             'expire': 10
         },
     },
@@ -139,7 +137,7 @@ app.conf.beat_schedule = {
         'task': 'trader.tasks.random_trader.random_trader',
         'schedule': 17,
         'options': {
-            'queue': 'trader-ma',
+            'queue': 'trader',
             'expire': 17
         }
     },
@@ -147,7 +145,7 @@ app.conf.beat_schedule = {
         'task': 'trader.tasks.carrot_trader.carrot_trader',
         'schedule': 7,
         'options': {
-            'queue': 'trader-ma',
+            'queue': 'trader',
             'expire': 7
         }
     },
@@ -156,25 +154,25 @@ app.conf.beat_schedule = {
         'task': 'ledger.tasks.pnl.create_pnl_histories',
         'schedule': crontab(hour=20, minute=30),
         'options': {
-            'queue': 'history',
+            'queue': 'celery',
         }
     },
     'create_snapshot': {
         'task': 'ledger.tasks.snapshot.create_snapshot',
         'schedule': crontab(minute='*/5'),
         'options': {
-            'queue': 'history',
+            'queue': 'celery',
             'expire': 200
         }
     },
-    'create_accounting_report': {
-        'task': 'accounting.tasks.weekly_fiat_transfer.create_weekly_accounting_report',
-        'schedule': crontab(hour=19, minute=30, day_of_week=6),
-        'options': {
-            'queue': 'accounting',
-            'expire': 36000
-        },
-    },
+    # 'create_accounting_report': {
+    #     'task': 'accounting.tasks.weekly_fiat_transfer.create_weekly_accounting_report',
+    #     'schedule': crontab(hour=19, minute=30, day_of_week=6),
+    #     'options': {
+    #         'queue': 'celery',
+    #         'expire': 36000
+    #     },
+    # },
     'trigger_variant_action': {
         'task': 'experiment.tasks.action_trigger.trigger_variant_action',
         'schedule': 300,
