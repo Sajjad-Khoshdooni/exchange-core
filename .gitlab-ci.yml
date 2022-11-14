@@ -1,0 +1,64 @@
+stages:
+- build
+- deploy
+
+raastin_build:
+  image: hamravesh.hamdocker.ir/public/darkube-cli:v1.1
+  only:
+    refs:
+      - master
+      - develop
+  script:
+    - export IMAGE="registry.hamdocker.ir/raastin/core"
+    - 'darkube build --push -t $IMAGE:$CI_COMMIT_SHORT_SHA -t $IMAGE:$CI_COMMIT_REF_SLUG'
+  stage: build
+  tags:
+    - hamravesh
+
+deploy_staging:
+  image: hamravesh.hamdocker.ir/public/darkube-cli:v1.1
+  only:
+    refs:
+    - develop
+  script:
+    - 'darkube deploy --token ${DEPLOY_TOKEN_STAGING_API}
+      --app-id ${APP_ID_STAGING_API}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${DEPLOY_TOKEN_STAGING_CELERY_BEAT}
+      --app-id ${APP_ID_STAGING_CELERY_BEAT}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${DEPLOY_TOKEN_STAGING_CELERY_WORKERS}
+      --app-id ${APP_ID_STAGING_CELERY_WORKERS}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+  stage: deploy
+  tags:
+    - hamravesh
+
+#raastin_deploy_production:
+#  image: hamravesh.hamdocker.ir/public/darkube-cli:v1.1
+#  only:
+#    refs:
+#    - master
+#  script:
+#    - 'darkube deploy --token ${DEPLOY_TOKEN_RAASTIN_PRODUCTION}
+#      --app-id ${APP_ID_RAASTIN_PRODUCTION}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+#      --job-id "${CI_JOB_ID}"'
+#  stage: deploy
+#  tags:
+#    - hamravesh
+
+arzplus_deploy_production:
+  image: hamravesh.hamdocker.ir/public/darkube-cli:v1.1
+  only:
+    refs:
+    - develop
+  script:
+    - 'darkube deploy --token ${DEPLOY_TOKEN_ARZPLUS_PRODUCTION_API}
+      --app-id ${APP_ID_ARZPLUS_PRODUCTION_API}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${DEPLOY_TOKEN_ARZPLUS_PRODUCTION_CELERY_BEAT}
+      --app-id ${APP_ID_ARZPLUS_PRODUCTION_API}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+  stage: deploy
+  tags:
+    - hamravesh

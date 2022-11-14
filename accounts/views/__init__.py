@@ -26,3 +26,4 @@ from .shahkar_view import ShahkarCheckView, ShahkarStatusView
 from .attribution_view import AttributionAPIView
 
 from .auht2fa_view import Create2FaQrCodeAPIView, Verify2FaVerificationAPIView
+from .health_view import HealthView

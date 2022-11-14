@@ -1,7 +1,7 @@
 import logging
 
+from decouple import config
 from django.shortcuts import redirect
-from yekta_config.config import config
 
 from experiment.models.click import Click
 from experiment.models.link import Link

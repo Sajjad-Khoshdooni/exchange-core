@@ -54,7 +54,6 @@ INSTALLED_APPS = [
     'market',
     'trader',
     'jalali_date',
-    'health',
     'stake',
     'gamify',
     'experiment'
