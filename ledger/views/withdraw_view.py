@@ -115,10 +115,13 @@ class WithdrawSerializer(serializers.ModelSerializer):
             raise ValidationError(
                 'در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید. لطفا احراز هویت سطح ۳ را انجام دهید.')
 
-        irt_value = get_trading_price_irt(asset.symbol, BUY, raw_price=False) * amount
+        price = get_trading_price_irt(asset.symbol, BUY, raw_price=False)
 
-        if user_reached_crypto_withdraw_limit(user, irt_value):
-            raise ValidationError({'amount': 'شما به سقف برداشت رمزارزی خورده اید.'})
+        if price:
+            irt_value = price * amount
+
+            if user_reached_crypto_withdraw_limit(user, irt_value):
+                raise ValidationError({'amount': 'شما به سقف برداشت رمزارزی خورده اید.'})
 
         if not api:
             otp_code.set_code_used()
