@@ -122,11 +122,11 @@ class Payment(models.Model):
         if source == desktop:
             if self.status == DONE:
                 if fast_by_token and fast_by_token.status != FastBuyToken.DONE:
-                    return self.PANEL_URL + self.SUCCESS_PAYMENT_FAIL_FAST_bUY
+                    return settings.PANEL_URL + self.SUCCESS_PAYMENT_FAIL_FAST_bUY
                 else:
-                    return self.PANEL_URL + self.SUCCESS_URL
+                    return settings.PANEL_URL + self.SUCCESS_URL
             else:
-                return self.PANEL_URL + self.FAIL_URL
+                return settings.PANEL_URL + self.FAIL_URL
         else:
             if self.status == DONE:
                 if fast_by_token and fast_by_token.status != FastBuyToken.DONE:
