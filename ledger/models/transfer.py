@@ -140,8 +140,8 @@ class Transfer(models.Model):
 
         group_id = uuid4()
 
-        price_usdt = get_trading_price_usdt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL)
-        price_irt = get_trading_price_irt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL)
+        price_usdt = get_trading_price_usdt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL) or 0
+        price_irt = get_trading_price_irt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL) or 0
 
         with WalletPipeline() as pipeline:
             pipeline.new_trx(
@@ -205,8 +205,8 @@ class Transfer(models.Model):
 
         commission = network_asset.withdraw_fee
 
-        price_usdt = get_trading_price_usdt(coin=wallet.asset.symbol, raw_price=True, side=SELL)
-        price_irt = get_trading_price_irt(coin=wallet.asset.symbol, raw_price=True, side=SELL)
+        price_usdt = get_trading_price_usdt(coin=wallet.asset.symbol, raw_price=True, side=SELL) or 0
+        price_irt = get_trading_price_irt(coin=wallet.asset.symbol, raw_price=True, side=SELL) or 0
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             transfer = Transfer.objects.create(
