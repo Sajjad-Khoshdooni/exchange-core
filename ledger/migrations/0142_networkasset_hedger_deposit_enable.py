@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ledger', '0141_merge_20221026_1601'),
+        ('ledger', '0140_remove_asset_candidate'),
     ]
 
     operations = [
