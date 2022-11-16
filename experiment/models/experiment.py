@@ -26,7 +26,7 @@ class Experiment(models.Model):
         html_url += '</tr>'
 
         user_analytics_list = [
-            produce_users_analytics(VariantUser.objects.filter(variant=variant).values_list('user__id', flat=True))
+            produce_users_analytics(list(VariantUser.objects.filter(variant=variant).values_list('user__id', flat=True)))
             for variant in variant_list
         ]
         for key in user_analytics_list[0].keys():
