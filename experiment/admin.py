@@ -9,7 +9,8 @@ from experiment.models.variant_user import VariantUser
 
 @admin.register(Experiment)
 class ExperimentAdmin(admin.ModelAdmin):
-    list_display = ('created', 'updated', 'active', 'variants_result')
+    list_display = ('created', 'updated', 'active',)
+    readonly_fields = ('variants_result', )
     list_filter = ('active', )
 
 
