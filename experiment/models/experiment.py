@@ -18,7 +18,7 @@ class Experiment(models.Model):
         return self.name
 
     @admin.display
-    def get_variants_result(self):
+    def variants_result(self):
         variant_list = Variant.objects.filter(experiment=self)
         html_url = '<table><tr><th>Parameters</th>'
         for variant in variant_list:
