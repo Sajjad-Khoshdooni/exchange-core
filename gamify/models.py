@@ -13,11 +13,13 @@ logger = logging.getLogger(__name__)
 
 
 class MissionJourney(models.Model):
-    DEFAULT, VOUCHER = 'default', 'voucher'
+    SHIB, VOUCHER = 'true', 'voucher'
 
     name = models.CharField(max_length=64)
     active = models.BooleanField(default=False)
-    promotion = models.CharField(max_length=8, unique=True, choices=((DEFAULT, DEFAULT), (VOUCHER, VOUCHER)))
+    promotion = models.CharField(max_length=8, unique=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
+
+    default = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name
@@ -26,7 +28,7 @@ class MissionJourney(models.Model):
     def get_journey(cls, account: Account) -> 'MissionJourney':
         journey = MissionJourney.objects.filter(promotion=account.user.promotion, active=True).first()
         if not journey:
-            default_journey = MissionJourney.objects.filter(active=True, promotion=cls.DEFAULT).first()
+            default_journey = MissionJourney.objects.filter(active=True, default=True).first()
             return default_journey
         else:
             return journey
