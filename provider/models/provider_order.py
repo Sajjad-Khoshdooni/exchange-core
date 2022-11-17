@@ -66,21 +66,12 @@ class ProviderOrder(models.Model):
 
         handler = asset.get_hedger()
 
-        order = ProviderOrder.objects.create(
-            asset=asset,
-            amount=amount,
-            side=side,
-            scope=scope,
-            market=market,
-            hedge_amount=hedge_amount,
-            exchange=asset.hedge_method
-        )
-
         symbol = handler.get_trading_symbol(asset.symbol)
+        order_amount = amount
 
         if asset.get_hedger().NAME == BinanceFuturesHandler.NAME and market == cls.FUTURE and asset.symbol == 'SHIB':
             symbol = symbol.replace('SHIB', '1000SHIB')
-            amount = round(amount / 1000)
+            order_amount = round(amount / 1000)
 
         if market == cls.FUTURE:
             if asset.get_hedger().NAME == KucoinSpotHandler.NAME:
@@ -101,17 +92,29 @@ class ProviderOrder(models.Model):
         else:
             raise NotImplementedError
 
+        order = ProviderOrder.objects.create(
+            asset=asset,
+            amount=amount,
+            side=side,
+            scope=scope,
+            market=market,
+            hedge_amount=hedge_amount,
+            exchange=asset.hedge_method
+        )
+
         resp = handler().place_order(
             symbol=symbol,
             side=side,
-            amount=amount,
+            amount=order_amount,
             client_order_id=order.id
         )
 
-        order.order_id = resp['orderId']
-        order.save()
-
-        return order
+        if not resp:
+            order.delete()
+        else:
+            order.order_id = resp['orderId']
+            order.save()
+            return order
 
     @classmethod
     def get_hedge(cls, asset: Asset):

@@ -239,7 +239,10 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     )
     inlines = [UserCommentInLine, ExternalNotificationInLine, NotificationInLine]
     ordering = ('-id', )
-    actions = ('verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify')
+    actions = (
+        'verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify',
+        'verify_user', 'reject_user'
+    )
     readonly_fields = (
         'get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet',
         'get_sum_of_value_buy_sell',
@@ -272,6 +275,20 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
         for user in to_verify_users:
             basic_verify_user.delay(user.id)
+
+    @admin.action(description='تایید دستی احراز هویت پایه کاربر', permissions=['change'])
+    def verify_user(self, request, queryset):
+        to_verify_users = queryset.filter(level=User.LEVEL1, verify_status__in=[User.INIT, User.PENDING])
+
+        for user in to_verify_users:
+            user.change_status(User.VERIFIED)
+
+    @admin.action(description='رد دستی احراز هویت پایه کاربر', permissions=['change'])
+    def reject_user(self, request, queryset):
+        to_verify_users = queryset.filter(level=User.LEVEL1, verify_status__in=[User.INIT, User.PENDING])
+
+        for user in to_verify_users:
+            user.change_status(User.REJECTED)
 
     @admin.action(description='رد کردن نام کاربر', permissions=['view'])
     def reject_user_name(self, request, queryset):

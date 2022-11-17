@@ -10,7 +10,9 @@ from yekta_config.config import config
 
 from accounts.models import Account, Notification
 from accounts.utils import email
+from accounts.utils.admin import url_to_edit_object
 from accounts.utils.push_notif import send_push_notif_to_user
+from accounts.utils.telegram import send_support_message
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
 from ledger.utils.fields import get_amount_field, get_address_field
@@ -22,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class Transfer(models.Model):
-    PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
+    INIT, PROCESSING, PENDING, CANCELED, DONE = 'init', 'process', 'pending', 'canceled', 'done'
     SELF, INTERNAL, BINANCE, KUCOIN, NOBITEX = 'self', 'internal', 'binance', 'kucoin', 'nobitex'
 
     created = models.DateTimeField(auto_now_add=True)
@@ -39,7 +41,7 @@ class Transfer(models.Model):
     status = models.CharField(
         default=PROCESSING,
         max_length=8,
-        choices=[(PROCESSING, PROCESSING), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
+        choices=[(INIT, INIT), (PROCESSING, PROCESSING), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
         db_index=True
     )
 
@@ -138,8 +140,8 @@ class Transfer(models.Model):
 
         group_id = uuid4()
 
-        price_usdt = get_trading_price_usdt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL)
-        price_irt = get_trading_price_irt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL)
+        price_usdt = get_trading_price_usdt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL) or 0
+        price_irt = get_trading_price_irt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL) or 0
 
         with WalletPipeline() as pipeline:
             pipeline.new_trx(
@@ -203,11 +205,12 @@ class Transfer(models.Model):
 
         commission = network_asset.withdraw_fee
 
-        price_usdt = get_trading_price_usdt(coin=wallet.asset.symbol, raw_price=True, side=SELL)
-        price_irt = get_trading_price_irt(coin=wallet.asset.symbol, raw_price=True, side=SELL)
+        price_usdt = get_trading_price_usdt(coin=wallet.asset.symbol, raw_price=True, side=SELL) or 0
+        price_irt = get_trading_price_irt(coin=wallet.asset.symbol, raw_price=True, side=SELL) or 0
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             transfer = Transfer.objects.create(
+                status=Transfer.INIT,
                 wallet=wallet,
                 network=network,
                 amount=amount - commission,
@@ -222,8 +225,19 @@ class Transfer(models.Model):
 
             pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
-        from ledger.tasks import create_withdraw
-        create_withdraw(transfer.id)
+        # from ledger.tasks import create_withdraw
+        # create_withdraw(transfer.id)
+
+        from ledger.utils.withdraw_verify import auto_withdraw_verify
+
+        if auto_withdraw_verify(transfer):
+            transfer.status = Transfer.PROCESSING
+            transfer.save(update_fields=['status'])
+
+        send_support_message(
+            message='New withdraw %s' % transfer,
+            link=url_to_edit_object(transfer)
+        )
 
         return transfer
 

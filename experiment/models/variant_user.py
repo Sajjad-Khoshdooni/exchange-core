@@ -6,7 +6,7 @@ class VariantUser(models.Model):
     updated = models.DateTimeField(auto_now=True)
     variant = models.ForeignKey('experiment.Variant', on_delete=models.CASCADE, db_index=True)
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, db_index=True)
-    link = models.ForeignKey('experiment.Link', on_delete=models.CASCADE)
+    link = models.ForeignKey('experiment.Link', on_delete=models.CASCADE, blank=True, null=True)
     triggered = models.BooleanField(default=False, db_index=True)
 
     class Meta:

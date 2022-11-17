@@ -5,6 +5,7 @@ from yekta_config.config import config
 
 from accounts.models.user import User
 from financial.models.withdraw_request import FiatWithdrawRequest
+from ledger.models import Transfer
 
 
 @staff_member_required
@@ -29,6 +30,8 @@ def dashboard(request):
             status=User.PENDING,
         ).count()
 
+        crypto_withdraw_count = Transfer.objects.filter(deposit=False, status=Transfer.INIT).count()
+
         context = {
             'user_count': user_count,
             'pending_or_reject_level_2_users': pending_or_reject_level_2_users,
@@ -36,8 +39,8 @@ def dashboard(request):
             'pending_or_reject_withdraw_requests': pending_or_reject_withdraw_requests,
             'archived_users': users.filter(archived=True).count(),
             'shahkar_rejected': users.filter(level=User.LEVEL2, national_code_phone_verified=False).count(),
-            'brand': config('BRAND')
-
+            'brand': config('BRAND'),
+            'crypto_withdraw_count': crypto_withdraw_count,
         }
 
         return render(request, 'accounts/dashboard.html', context)

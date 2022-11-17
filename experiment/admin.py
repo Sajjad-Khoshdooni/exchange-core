@@ -26,6 +26,7 @@ class VariantUserAdmin(admin.ModelAdmin):
     list_display = ('created', 'updated', 'variant', 'user', 'triggered', 'link')
     list_filter = ('variant', 'triggered')
     search_fields = ('variant__name', 'variant__type')
+    readonly_fields = ('user', )
 
 
 @admin.register(Link)

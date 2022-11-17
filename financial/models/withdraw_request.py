@@ -96,6 +96,8 @@ class FiatWithdrawRequest(models.Model):
         assert not self.provider_withdraw_id
         assert self.status == self.PROCESSING
 
+        from financial.utils.withdraw import ProviderError
+
         wallet_id = self.channel_handler.get_wallet_id()
 
         wallet = self.channel_handler.get_wallet_data(wallet_id)
@@ -110,18 +112,24 @@ class FiatWithdrawRequest(models.Model):
             )
             return
 
-        withdraw = self.channel_handler.create_withdraw(
-            wallet_id,
-            self.bank_account,
-            self.amount,
-            self.id
-        )
-        self.provider_withdraw_id = self.ref_id = withdraw.tracking_id
-        self.change_status(withdraw.status)
-        self.withdraw_datetime = timezone.now()
-        self.receive_datetime = withdraw.receive_datetime
+        try:
+            withdraw = self.channel_handler.create_withdraw(
+                wallet_id,
+                self.bank_account,
+                self.amount,
+                self.id
+            )
+            self.provider_withdraw_id = self.ref_id = withdraw.tracking_id
+            self.change_status(withdraw.status)
+            self.withdraw_datetime = timezone.now()
+            self.receive_datetime = withdraw.receive_datetime
+            self.comment = withdraw.message
 
-        self.save()
+            self.save()
+
+        except ProviderError as e:
+            self.comment = str(e)
+            self.save(update_fields=['comment'])
 
     def update_status(self):
         from financial.utils.withdraw import FiatWithdraw

@@ -41,6 +41,9 @@ class AssetSerializerBuilder(AssetSerializerMini):
     min_withdraw_fee = serializers.SerializerMethodField()
     market_irt_enable = serializers.SerializerMethodField()
 
+    can_deposit = serializers.SerializerMethodField()
+    can_withdraw = serializers.SerializerMethodField()
+
     class Meta:
         model = Asset
         fields = ()
@@ -145,6 +148,22 @@ class AssetSerializerBuilder(AssetSerializerMini):
         if cap:
             return int(cap.circulating_supply)
 
+    def get_can_deposit(self, asset: Asset):
+        return NetworkAsset.objects.filter(
+            asset=asset,
+            can_deposit=True,
+            hedger_deposit_enable=True,
+            network__can_deposit=True
+        ).exists()
+
+    def get_can_withdraw(self, asset: Asset):
+        return NetworkAsset.objects.filter(
+            asset=asset,
+            can_withdraw=True,
+            hedger_withdraw_enable=True,
+            network__can_withdraw=True
+        ).exists()
+
     @classmethod
     def create_serializer(cls,  prices: bool = True, extra_info: bool = True):
         fields = AssetSerializerMini.Meta.fields
@@ -157,7 +176,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
             new_fields = [
                 'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
                 'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
-                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee'
+                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee', 'can_deposit', 'can_withdraw',
             ]
 
         class Serializer(cls):

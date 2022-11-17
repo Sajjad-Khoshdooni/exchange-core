@@ -23,9 +23,12 @@ class Link(models.Model):
 
     @classmethod
     def create(cls, user):
-        cls.objects.create(
+        return cls.objects.create(
             user=user,
         )
 
     def get_sms_link(self):
         return 'c.raastin.com/{token}'.format(token=self.token)
+
+    def __str__(self):
+        return self.get_sms_link()

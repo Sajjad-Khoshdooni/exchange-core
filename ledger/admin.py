@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F
+from django.forms import ModelForm
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 
 from accounts.admin_guard import M
@@ -332,6 +333,16 @@ class TransferAdmin(admin.ModelAdmin):
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
     readonly_fields = ('deposit_address', 'network', 'wallet', 'provider_transfer', 'get_total_volume_usdt')
+    actions = ('accept_withdraw', 'reject_withdraw')
+
+    def save_model(self, request, obj: models.Transfer, form, change):
+        if obj.id and obj.status == models.Transfer.DONE and obj.trx_hash:
+            old = models.Transfer.objects.get(id=obj.id)
+
+            if old.status != models.Transfer.DONE:
+                old.accept(obj.trx_hash)
+
+        obj.save()
 
     def get_total_volume_usdt(self, transfer: models.Transfer):
         price = get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
@@ -339,6 +350,15 @@ class TransferAdmin(admin.ModelAdmin):
             return transfer.amount * price
 
     get_total_volume_usdt.short_description = 'ارزش تتری'
+
+    @admin.action(description='تایید برداشت', permissions=['view'])
+    def accept_withdraw(self, request, queryset):
+        queryset.filter(status=models.Transfer.INIT).update(status=models.Transfer.PROCESSING)
+
+    @admin.action(description='رد برداشت', permissions=['view'])
+    def reject_withdraw(self, request, queryset):
+        for transfer in queryset.filter(status=models.Transfer.INIT):
+            transfer.reject()
 
 
 class CryptoAccountTypeFilter(SimpleListFilter):
