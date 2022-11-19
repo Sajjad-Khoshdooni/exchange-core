@@ -42,7 +42,7 @@ class PriceManager:
                 )
 
             for c, price in prices.items():
-                self._prices[c, side] = price
+                PriceManager._prices[c, side] = price
 
     def __enter__(self):
         PriceManager._prices = {}

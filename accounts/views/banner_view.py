@@ -22,7 +22,7 @@ class BannerAlertAPIView(APIView):
         return Response({
             'banner': {
                 'text': 'کاربران گرامی، با عرض پوزش به اطلاع می رساند که سیستم در حال به روز رسانی است. لذا ممکن است تا دقایقی در مشاهده موجودی ها و برخی بخش های دیگر اختلالاتی مشاهده شود.',
-                'btn_link': '/',
+                'btn_link': '/fdsfds',
                 'btn_title': '',
                 'level': 'warning'
             }
