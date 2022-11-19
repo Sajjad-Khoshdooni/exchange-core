@@ -247,7 +247,7 @@ class AssetsViewSet(ModelViewSet):
         return asset
 
     def get(self, *args, **kwargs):
-        with PriceManager():
+        with PriceManager(fetch_all=True, allow_stale=True):
             return super().get(*args, **kwargs)
 
 

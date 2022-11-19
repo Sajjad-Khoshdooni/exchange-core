@@ -163,7 +163,7 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
 def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
               now: datetime = None, allow_stale: bool = False) -> Decimal:
     if PriceManager.active():
-        price = PriceManager.get_price(coin)
+        price = PriceManager.get_price(coin, side)
         if price is not None:
             return price
 

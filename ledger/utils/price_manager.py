@@ -23,18 +23,26 @@ class PriceManager:
 
     def __init__(self, fetch_all: bool = False, side: str = None, coins: list = None, allow_stale: bool = True):
 
-        if fetch_all or coins:
-            from ledger.utils.price import get_prices_dict
-            from ledger.models import Asset
+        if side:
+            sides = [side]
+        else:
+            sides = ['buy', 'sell']
 
+        self._prices = {}
+        from ledger.utils.price import get_prices_dict
+
+        for side in sides:
             if fetch_all:
-                self.prices = prefetch_all_prices(side, allow_stale=allow_stale)
+                prices = prefetch_all_prices(side, allow_stale=allow_stale)
             else:
-                self._prices = get_prices_dict(
+                prices = get_prices_dict(
                     coins=coins,
                     side=side,
                     allow_stale=allow_stale
                 )
+
+            for c, price in prices.items():
+                self._prices[c, side] = price
 
     def __enter__(self):
         PriceManager._prices = {}
@@ -47,5 +55,5 @@ class PriceManager:
         return cls._prices is not None
 
     @classmethod
-    def get_price(cls, coin: str):
-        return cls._prices.get(coin)
+    def get_price(cls, coin: str, side: str):
+        return cls._prices.get((coin, side))
