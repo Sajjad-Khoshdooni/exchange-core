@@ -69,4 +69,4 @@ class PriceManager:
 
     @classmethod
     def get_tether_price(cls, side: str):
-        return cls._tether_prices[side]
+        return cls._tether_prices.get(side)
