@@ -87,7 +87,7 @@ def alert_shib_prize_to_signup(token: str):
         token=token,
         title='تا ۲۰۰,۰۰۰ شیبا هدیه بگیرید',
         body=to_signup_message.strip(),
-        image=settings.HOST_URL + '/static/ads/shiba-prize.png',
+        image=settings.MINIO_STORAGE_STATIC_URL + '/ads/shiba-prize.png',
         link='https://raastin.com/auth/register?rewards=true&utm_source=push&utm_medium=push&utm_campaign=signup'
     )
 
@@ -130,10 +130,10 @@ to_trade_message = """
 """
 
 
-IMAGE_200K_SHIB = settings.HOST_URL + '/static/ads/shiba-prize.png'
-
 
 def alert_shib_prize_to_engagement(user: User):
+    IMAGE_200K_SHIB = settings.MINIO_STORAGE_STATIC_URL + '/ads/shiba-prize.png'
+
     return send_push_notif_to_user(
         user=user,
         title='تا ۲۰۰,۰۰۰ شیبا هدیه بگیرید',

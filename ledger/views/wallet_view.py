@@ -133,7 +133,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         ).exists()
 
     def get_logo(self, asset: Asset):
-        return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
+        return settings.MINIO_STORAGE_STATIC_URL + '/coins/%s.png' % asset.symbol
 
     def get_original_symbol(self, asset: Asset):
         return asset.original_symbol or asset.symbol

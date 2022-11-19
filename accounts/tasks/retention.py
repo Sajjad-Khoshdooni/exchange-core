@@ -3,10 +3,11 @@ import time
 from datetime import timedelta
 
 from celery import shared_task
+from django.conf import settings
 from django.utils import timezone
 
 from accounts.models import User, ExternalNotification
-from accounts.utils.push_notif import send_push_notif, IMAGE_200K_SHIB
+from accounts.utils.push_notif import send_push_notif
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ def retention_leads_to_signup():
 
 def trigger_token(token):
     from accounts.models import FirebaseToken
+    IMAGE_200K_SHIB = settings.MINIO_STORAGE_STATIC_URL + '/ads/shiba-prize.png'
 
     templates = {
         FirebaseToken.STATE_1: {
