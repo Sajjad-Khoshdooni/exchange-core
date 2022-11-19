@@ -189,6 +189,11 @@ def get_price_tether_irt_nobitex():
 
 
 def get_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
+    if PriceManager.active():
+        price = PriceManager.get_tether_price(side)
+        if price is not None:
+            return price
+
     price = price_redis.hget('price:usdtirt', SIDE_MAP[side])
     if price:
         return Decimal(price)

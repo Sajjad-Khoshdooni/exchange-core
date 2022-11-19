@@ -20,6 +20,7 @@ def prefetch_all_prices(side: str, allow_stale: bool = False):
 
 class PriceManager:
     _prices = None
+    _tether_prices = None
 
     def __init__(self, fetch_all: bool = False, side: str = None, coins: list = None, allow_stale: bool = True):
         self.fetch_all = fetch_all
@@ -29,6 +30,7 @@ class PriceManager:
 
     def __enter__(self):
         PriceManager._prices = {}
+        PriceManager._tether_prices = {}
 
         if self.side:
             sides = [self.side]
@@ -36,7 +38,7 @@ class PriceManager:
             sides = ['buy', 'sell']
 
         self._prices = {}
-        from ledger.utils.price import get_prices_dict
+        from ledger.utils.price import get_prices_dict, get_tether_irt_price
 
         for side in sides:
             if self.fetch_all:
@@ -51,8 +53,11 @@ class PriceManager:
             for c, price in prices.items():
                 PriceManager._prices[c, side] = price
 
+            PriceManager._tether_prices[side] = get_tether_irt_price(side, allow_stale=self.allow_stale)
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         PriceManager._prices = None
+        PriceManager._tether_prices = None
 
     @classmethod
     def active(cls):
@@ -61,3 +66,7 @@ class PriceManager:
     @classmethod
     def get_price(cls, coin: str, side: str):
         return cls._prices.get((coin, side))
+
+    @classmethod
+    def get_tether_price(cls, side: str):
+        return cls._tether_prices[side]
