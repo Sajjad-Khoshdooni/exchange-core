@@ -35,7 +35,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             (Transfer.PROCESSING, Transfer.CANCELED),
         ]
 
-        if transfer.source == Transfer.BINANCE:
+        if transfer.source != Transfer.SELF:
             logger.error('Update Binance Withdraw', extra={
                 'requester_id': requester_id,
                 'status': status
