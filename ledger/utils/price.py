@@ -6,9 +6,9 @@ from json import JSONDecodeError
 from typing import Dict, List, Union
 
 import requests
+from decouple import config
 from django.conf import settings
 from redis import Redis
-from decouple import config
 
 from ledger.utils.cache import cache_for
 from ledger.utils.price_manager import PriceManager
@@ -75,8 +75,16 @@ SIDE_MAP = {
 }
 
 
+BUSD_COINS = ('HTN', )
+
+
 def get_redis_price_key(coin: str):
-    return 'price:' + coin.lower() + 'usdt'
+    if coin in BUSD_COINS:
+        base = 'busd'
+    else:
+        base = 'usdt'
+
+    return 'price:' + coin.lower() + base
 
 
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
