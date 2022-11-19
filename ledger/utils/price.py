@@ -157,17 +157,13 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
                     now: datetime = None, allow_stale: bool = False) -> Dict[str, Decimal]:
     results = _fetch_prices(coins, side, exchange, now, allow_stale=allow_stale)
 
-    if PriceManager.active():
-        for r in results:
-            PriceManager.set_price(r.coin, r.side, exchange, market_symbol, now, r.price)
-
     return {r.coin: r.price for r in results}
 
 
 def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
               now: datetime = None, allow_stale: bool = False) -> Decimal:
     if PriceManager.active():
-        price = PriceManager.get_price(coin, side, exchange, market_symbol, now)
+        price = PriceManager.get_price(coin)
         if price is not None:
             return price
 
