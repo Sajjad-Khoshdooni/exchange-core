@@ -9,7 +9,7 @@ class Image(models.Model):
     image = models.ImageField()
 
     def get_absolute_image_url(self):
-        return settings.HOST_URL + self.image.url
+        return settings.MINIO_STORAGE_MEDIA_URL + self.image.url
 
     def __str__(self):
         return self.get_absolute_image_url()
@@ -23,7 +23,7 @@ class Banner(models.Model):
     order = models.PositiveSmallIntegerField()
 
     def get_absolute_image_url(self):
-        return settings.HOST_URL + self.image.url
+        return self.image.url
 
     def __str__(self):
         return self.get_absolute_image_url()
