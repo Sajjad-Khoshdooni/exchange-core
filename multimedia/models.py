@@ -9,7 +9,7 @@ class Image(models.Model):
     image = models.ImageField()
 
     def get_absolute_image_url(self):
-        return settings.MINIO_STORAGE_MEDIA_URL + self.image.url
+        return self.image.url
 
     def __str__(self):
         return self.get_absolute_image_url()
@@ -22,11 +22,8 @@ class Banner(models.Model):
     active = models.BooleanField(default=True)
     order = models.PositiveSmallIntegerField()
 
-    def get_absolute_image_url(self):
-        return self.image.url
-
     def __str__(self):
-        return self.get_absolute_image_url()
+        return self.image.url
 
     class Meta:
         ordering = ('order', )
