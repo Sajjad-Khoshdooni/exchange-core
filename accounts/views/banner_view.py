@@ -20,8 +20,15 @@ class BannerAlertAPIView(APIView):
     def get(self, request):
 
         return Response({
-            'banner': self.get_alert_condition()
+            'text': 'کاربران گرامی، با عرض پوزش به اطلاع می رساند که سیستم در حال به روز رسانی است. لذا ممکن است تا دقایقی در مشاهده موجودی ها و برخی بخش های دیگر اختلالاتی مشاهده شود.',
+            'btn_link': '/',
+            'btn_title': '',
+            'level': 'warning'
         })
+
+        # return Response({
+        #     'banner': self.get_alert_condition()
+        # })
 
     def get_alert_condition(self):
         account = self.request.user.account
