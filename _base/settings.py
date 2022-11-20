@@ -59,10 +59,6 @@ INSTALLED_APPS = [
     'experiment'
 ]
 
-if not DEBUG_OR_TESTING:
-    INSTALLED_APPS.append('django_minio_backend')
-    INSTALLED_APPS.append('django_minio_backend.apps.DjangoMinioBackendConfig')
-
 
 MIDDLEWARE = [
     'allow_cidr.middleware.AllowCIDRMiddleware',
@@ -209,6 +205,8 @@ MEDIA_URL = config('MEDIA_URL', default='/media/')
 MEDIA_ROOT = config('MEDIA_ROOT', default=os.path.join(BASE_DIR, 'media/'))
 
 if not DEBUG_OR_TESTING:
+    INSTALLED_APPS.append('django_minio_backend')
+
     DEFAULT_FILE_STORAGE = "django_minio_backend.models.MinioBackend"
     STATICFILES_STORAGE = "django_minio_backend.models.MinioBackendStatic"
 
