@@ -1,6 +1,6 @@
 FROM hub.hamdocker.ir/library/python:3.10
 RUN apt update && apt -y install gettext
-WORKDIR /
+WORKDIR /app
 ADD ./requirements.txt ./
 RUN pip install -r ./requirements.txt
 ADD ./ ./
