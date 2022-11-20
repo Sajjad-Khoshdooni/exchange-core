@@ -27,7 +27,7 @@ class Response:
 
 
 class JibitRequester:
-    BASE_URL = 'https://napi.jibit.ir/ide'
+    BASE_URL = 'https://napi.jibit.cloud/ide'
 
     def __init__(self, user):
         self._user = user

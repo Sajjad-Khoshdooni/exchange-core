@@ -259,6 +259,7 @@ class Trade(models.Model):
             price=price,
             side=Order.get_opposite_side(config.side),
             fill_type=Order.MARKET,
+            filled_amount=amount,
             status=Order.FILLED,
         )
         taker_wallet = symbol.asset.get_wallet(otc_trade.otc_request.account, market=otc_trade.otc_request.market)
@@ -269,6 +270,7 @@ class Trade(models.Model):
             price=price,
             side=config.side,
             fill_type=Order.MARKET,
+            filled_amount=amount,
             status=Order.FILLED,
         )
 
