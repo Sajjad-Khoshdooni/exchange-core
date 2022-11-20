@@ -61,6 +61,7 @@ INSTALLED_APPS = [
 
 if not DEBUG_OR_TESTING:
     INSTALLED_APPS.append('django_minio_backend')
+    INSTALLED_APPS.append('django_minio_backend.apps.DjangoMinioBackendConfig')
 
 
 MIDDLEWARE = [
