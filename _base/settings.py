@@ -60,7 +60,7 @@ INSTALLED_APPS = [
 ]
 
 if not DEBUG_OR_TESTING:
-    INSTALLED_APPS.append('minio_storage')
+    INSTALLED_APPS.append('django_minio_backend')
 
 
 MIDDLEWARE = [
@@ -208,19 +208,23 @@ MEDIA_URL = config('MEDIA_URL', default='/media/')
 MEDIA_ROOT = config('MEDIA_ROOT', default=os.path.join(BASE_DIR, 'media/'))
 
 if not DEBUG_OR_TESTING:
-    DEFAULT_FILE_STORAGE = "minio_storage.storage.MinioMediaStorage"
-    STATICFILES_STORAGE = "minio_storage.storage.MinioStaticStorage"
-    MINIO_STORAGE_ENDPOINT = config('MINIO_STORAGE_ENDPOINT')
-    MINIO_STORAGE_ACCESS_KEY = config('MINIO_STORAGE_ACCESS_KEY')
-    MINIO_STORAGE_SECRET_KEY = config('MINIO_STORAGE_SECRET_KEY')
-    MINIO_STORAGE_USE_HTTPS = False
-    MINIO_STORAGE_MEDIA_BUCKET_NAME = 'core-media'
-    MINIO_STORAGE_AUTO_CREATE_MEDIA_BUCKET = True
-    MINIO_STORAGE_STATIC_BUCKET_NAME = 'core-static'
-    MINIO_STORAGE_AUTO_CREATE_STATIC_BUCKET = True
-    MINIO_STORAGE_STATIC_URL = config('MINIO_CDN_STATIC_URL')
-    MINIO_STORAGE_MEDIA_URL = config('MINIO_CDN_MEDIA_URL')
+    DEFAULT_FILE_STORAGE = "django_minio_backend.models.MinioBackend"
+    STATICFILES_STORAGE = "django_minio_backend.models.MinioBackendStatic"
 
+    MINIO_ENDPOINT = config('MINIO_STORAGE_ENDPOINT')
+    MINIO_EXTERNAL_ENDPOINT = config('MINIO_CDN_ENDPOINT')
+    MINIO_ACCESS_KEY = config('MINIO_STORAGE_ACCESS_KEY')
+    MINIO_SECRET_KEY = config('MINIO_STORAGE_SECRET_KEY')
+    MINIO_USE_HTTPS = True
+    MINIO_PRIVATE_BUCKETS = [
+        'core-media',
+    ]
+    MINIO_PUBLIC_BUCKETS = [
+        'core-static',
+    ]
+    MINIO_MEDIA_FILES_BUCKET = 'core-media'
+    MINIO_STATIC_FILES_BUCKET = 'core-static'
+    MINIO_BUCKET_CHECK_ON_SAVE = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
