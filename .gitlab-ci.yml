@@ -7,6 +7,7 @@ raastin_build:
   only:
     refs:
       - master
+      - release/hamravesh
       - develop
   script:
     - export IMAGE="registry.hamdocker.ir/raastin/core"
@@ -51,7 +52,7 @@ arzplus_deploy_production:
   image: hamravesh.hamdocker.ir/public/darkube-cli:v1.1
   only:
     refs:
-    - develop
+    - release/hamravesh
   script:
     - 'darkube deploy --token ${ARZPLUS_API_DEPLOY_TOKEN}
       --app-id ${ARZPLUS_API_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
