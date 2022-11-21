@@ -35,9 +35,6 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if config('WITHDRAW_ENABLE', '1') == '0' or not user.can_withdraw:
             raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
 
-        if user.level < user.LEVEL2 and not user.allow_level1_crypto_withdraw:
-            raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
-
         account = user.account
         api = self.context.get('api')
         if attrs['address_book_id'] and (not api):

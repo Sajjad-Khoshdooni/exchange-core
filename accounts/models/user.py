@@ -135,11 +135,6 @@ class User(AbstractUser):
         verbose_name='امکان برداشت وجه پیش از سپری شدن ۴۸ ساعت از اولین واریز',
     )
 
-    allow_level1_crypto_withdraw = models.BooleanField(
-        default=False,
-        verbose_name='امکان برداشت رمزارز در سطح ۱',
-    )
-
     can_withdraw = models.BooleanField(default=True)
 
     promotion = models.CharField(max_length=256, blank=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))

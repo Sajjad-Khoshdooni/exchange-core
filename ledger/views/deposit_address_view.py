@@ -1,7 +1,9 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.response import Response
 
+from accounts.models import User
 from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
 from ledger.models import Network
 
@@ -16,6 +18,9 @@ class DepositAddressView(RetrieveAPIView):
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
     def retrieve(self, request, *args, **kwargs):
+        if request.user.level < User.LEVEL2:
+            raise ValidationError({'user': 'برای واریز ابتدا احراز هویت خود را تکمیل نمایید.'})
+
         serializer = InputAddressSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
 

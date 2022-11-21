@@ -183,7 +183,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'national_code_verified': M.superuser | ~M('national_code_verified'),
         'birth_date_verified': M.superuser | M.is_none('birth_date_verified'),
         'withdraw_before_48h_option': True,
-        'allow_level1_crypto_withdraw': True,
         'can_withdraw': True
     }
 
@@ -204,7 +203,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             'fields': (
                 'is_active', 'is_staff', 'is_superuser',
                 'groups', 'user_permissions', 'show_margin',
-                'withdraw_before_48h_option', 'allow_level1_crypto_withdraw', 'can_withdraw'
+                'withdraw_before_48h_option', 'can_withdraw'
             ),
         }),
         (_('Important dates'), {'fields': (
