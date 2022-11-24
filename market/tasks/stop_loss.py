@@ -50,12 +50,12 @@ def create_needed_stop_loss_orders(symbol_id, side):
             if stop_loss.price:
                 order = new_order(
                     stop_loss.symbol, stop_loss.wallet.account, stop_loss.unfilled_amount, stop_loss.price, stop_loss.side,
-                    Order.LIMIT, raise_exception=False, parent_lock_group_id=stop_loss.group_id
+                    Order.LIMIT, raise_exception=False, market=stop_loss.wallet.market, parent_lock_group_id=stop_loss.group_id
                 )
             else:
                 order = new_order(
                     stop_loss.symbol, stop_loss.wallet.account, stop_loss.unfilled_amount, None, stop_loss.side,
-                    Order.MARKET, raise_exception=False, parent_lock_group_id=stop_loss.group_id
+                    Order.MARKET, raise_exception=False, market=stop_loss.wallet.market, parent_lock_group_id=stop_loss.group_id
                 )
         except CancelOrder:
             order = None

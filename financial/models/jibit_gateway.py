@@ -15,7 +15,7 @@ JIBIT_GATEWAY_ACCESS_KEY = 'jibit_gateway_key'
 
 
 class JibitGateway(Gateway):
-    BASE_URL = 'https://napi.jibit.ir/ppg'
+    BASE_URL = 'https://napi.jibit.cloud/ppg'
 
     def _get_token(self, force_renew: bool = False):
         if not force_renew:
@@ -91,7 +91,7 @@ class JibitGateway(Gateway):
 
     @classmethod
     def get_payment_url(cls, authority: str):
-        return 'https://napi.jibit.ir/ppg/v3/purchases/{}/payments'.format(authority)
+        return 'https://napi.jibit.cloud/ppg/v3/purchases/{}/payments'.format(authority)
 
     def _verify(self, payment: Payment):
         payment_request = payment.payment_request
