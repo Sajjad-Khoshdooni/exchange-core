@@ -120,7 +120,8 @@ class ProviderRequester:
         except (requests.exceptions.ConnectionError, ReadTimeoutError, requests.exceptions.Timeout):
             raise TimeoutError
 
-        logger.info('PROVIDER', path, method, data, resp.json())
+        if not resp.ok:
+            logger.info('PROVIDER', path, method, data, resp.json())
 
         return Response(data=resp.json(), success=resp.ok, status_code=resp.status_code)
 
