@@ -10,7 +10,7 @@ from ledger.utils.provider import get_provider_requester
 
 @shared_task(queue='celery')
 def update_network_fees():
-    network_assets = NetworkAsset.objects.all()
+    network_assets = NetworkAsset.objects.all().exclude(can_withdraw=False, can_deposit=False)
 
     for ns in network_assets:
         info = get_provider_requester().get_network_info(ns.asset, ns.network)
