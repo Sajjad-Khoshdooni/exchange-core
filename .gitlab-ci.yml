@@ -81,3 +81,40 @@ arzplus_deploy_production:
   stage: deploy
   tags:
     - hamravesh
+
+raastin_deploy_production:
+  image: hamravesh.hamdocker.ir/public/darkube-cli:v1.1
+  only:
+    refs:
+    - release/hamravesh
+  script:
+    - 'darkube deploy --token ${RAASTIN_API_DEPLOY_TOKEN}
+      --app-id ${RAASTIN_API_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${RAASTIN_CELERY_BEAT_TOKEN}
+      --app-id ${RAASTIN_CELERY_BEAT_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${RAASTIN_CELERY_CELERY_TOKEN}
+      --app-id ${RAASTIN_CELERY_CELERY_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${RAASTIN_CELERY_KYC_TOKEN}
+      --app-id ${RAASTIN_CELERY_KYC_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${RAASTIN_CELERY_MARKET_TOKEN}
+      --app-id ${RAASTIN_CELERY_MARKET_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${RAASTIN_CELERY_TRADER_TOKEN}
+      --app-id ${RAASTIN_CELERY_TRADER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${RAASTIN_CELERY_STOPLOSS_TOKEN}
+      --app-id ${RAASTIN_CELERY_STOPLOSS_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${RAASTIN_CELERY_MARGIN_TOKEN}
+      --app-id ${RAASTIN_CELERY_MARGIN_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${RAASTIN_CELERY_TRANSFER_TOKEN}
+      --app-id ${RAASTIN_CELERY_TRANSFER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+  stage: deploy
+  tags:
+    - hamravesh
