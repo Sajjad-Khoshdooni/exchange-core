@@ -404,10 +404,10 @@ class MockProviderRequester(ProviderRequester):
             deposit_enable=True,
         )
 
-    def try_hedge_new_order(self, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
+    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
         pass
 
-    def new_order(self, asset: Asset, scope: str, amount: Decimal, side: str):
+    def new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal, side: str):
         return True
 
     def new_withdraw(self, transfer: Transfer):
