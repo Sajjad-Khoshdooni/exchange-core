@@ -376,6 +376,7 @@ class Order(models.Model):
 
             from ledger.utils.provider import get_provider_requester, TRADE
             get_provider_requester().try_hedge_new_order(
+                request_id='taker:%s' % self.id,
                 asset=self.wallet.asset,
                 side=side,
                 amount=to_hedge_amount,

@@ -199,7 +199,7 @@ class ProviderRequester:
         resp = self.collect_api('/api/v1/networks/', data={'coin': asset.symbol, 'network': network.symbol})
         return NetworkInfo(**resp.data)
 
-    def try_hedge_new_order(self, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
+    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
         assert amount >= 0
         if amount > 0:
             assert side
@@ -267,6 +267,7 @@ class ProviderRequester:
                     to_buy_busd = max(math.ceil((needed_busd - busd_balance) * Decimal('1.01')), min_notional)
 
                     self.new_order(
+                        request_id=request_id,
                         asset=Asset.objects.get('BUSD'),
                         side=BUY,
                         amount=Decimal(to_buy_busd),
@@ -274,6 +275,7 @@ class ProviderRequester:
                     )
 
             order = self.new_order(
+                request_id=request_id,
                 asset=asset,
                 side=side,
                 amount=order_amount,
@@ -283,8 +285,9 @@ class ProviderRequester:
             if not order:
                 raise HedgeError
 
-    def new_order(self, asset: Asset, scope: str, amount: Decimal, side: str):
+    def new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal, side: str):
         resp = self.collect_api('/api/v1/orders/', method='POST', data={
+            'request_id': request_id,
             'coin': asset.symbol,
             'scope': scope,
             'amount': str(amount),
