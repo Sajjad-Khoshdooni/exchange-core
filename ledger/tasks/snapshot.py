@@ -10,7 +10,7 @@ from ledger.utils.provider import get_provider_requester
 def create_snapshot():
     now = timezone.now()
 
-    overview = AssetOverview()
+    overview = AssetOverview(calculated_hedge=True)
 
     system_snapshot = SystemSnapshot(
         created=now,
@@ -53,7 +53,7 @@ def create_snapshot():
                 price=overview.prices.get(asset.symbol) or 0,
                 hedge_amount=overview.get_hedge_amount(asset),
                 hedge_value=overview.get_hedge_value(asset),
-                calc_hedge_amount=get_provider_requester().get_hedge_amount(asset),
+                calc_hedge_amount=overview.get_calculated_hedge(asset),
 
                 total_amount=overview.get_total_assets(asset),
                 users_amount=overview.get_users_asset_amount(asset),

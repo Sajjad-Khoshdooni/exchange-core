@@ -120,7 +120,8 @@ class ProviderRequester:
         except (requests.exceptions.ConnectionError, ReadTimeoutError, requests.exceptions.Timeout):
             raise TimeoutError
 
-        logger.info('PROVIDER', path, method, data, resp.json())
+        if not resp.ok:
+            logger.info('PROVIDER', path, method, data, resp.json())
 
         return Response(data=resp.json(), success=resp.ok, status_code=resp.status_code)
 
@@ -197,7 +198,8 @@ class ProviderRequester:
 
     def get_network_info(self, asset: Asset, network: Network) -> NetworkInfo:
         resp = self.collect_api('/api/v1/networks/', data={'coin': asset.symbol, 'network': network.symbol})
-        return NetworkInfo(**resp.data)
+        if resp.success:
+            return NetworkInfo(**resp.data)
 
     def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
         assert amount >= 0
