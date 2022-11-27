@@ -26,7 +26,7 @@ def check_margin_level():
 
     status = 0
 
-    with PriceManager():
+    with PriceManager(fetch_all=True):
         for account in accounts:
             margin_info = MarginInfo.get(account)
             margin_level = margin_info.get_margin_level()
