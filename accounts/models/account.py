@@ -87,7 +87,7 @@ class Account(models.Model):
     def get_total_balance_usdt(self, market: str, side: str):
         from ledger.models import Wallet, Asset
 
-        wallets = Wallet.objects.filter(account=self, market=market).exclude(asset__symbol=Asset.IRT)
+        wallets = Wallet.objects.filter(account=self, market=market).exclude(asset__symbol=Asset.IRT).prefetch_related('asset')
 
         total = Decimal('0')
 
@@ -101,7 +101,7 @@ class Account(models.Model):
     def get_total_balance_irt(self, market: str = None, side: str = BUY):
         from ledger.models import Wallet
 
-        wallets = Wallet.objects.filter(account=self)
+        wallets = Wallet.objects.filter(account=self).prefetch_related('asset')
 
         if market:
             wallets = wallets.filter(market=market)
