@@ -109,3 +109,4 @@ media/
 public/
 
 .env
+dump.rdb
