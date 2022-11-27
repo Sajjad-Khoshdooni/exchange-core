@@ -30,7 +30,7 @@ if settings.DEBUG_OR_TESTING:
         }
 
         if asset.symbol == Asset.USDT:
-            key = 'usdtirt'
+            key = 'price:usdtirt'
         else:
             key = 'price:' + asset.symbol.lower() + 'usdt'
 
