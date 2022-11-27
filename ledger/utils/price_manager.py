@@ -1,7 +1,10 @@
+import logging
 from datetime import datetime
 from decimal import Decimal
 
 from ledger.utils.cache import cache_for
+
+logger = logging.getLogger(__name__)
 
 
 @cache_for(time=20)
@@ -38,6 +41,8 @@ class PriceManager:
         PriceManager._prices = {}
         PriceManager._tether_prices = {}
         PriceManager._fetch_all = self.fetch_all
+
+        logger.info('PriceManager execution...')
 
         if self.side:
             sides = [self.side]
