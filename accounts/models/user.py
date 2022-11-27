@@ -127,6 +127,7 @@ class User(AbstractUser):
 
     show_margin = models.BooleanField(default=True, verbose_name='امکان مشاهده حساب تعهدی')
     show_strategy_bot = models.BooleanField(default=False, verbose_name='امکان مشاهده ربات')
+    show_community = models.BooleanField(default=False, verbose_name='امکان مشاهده کامیونیتی')
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
 
