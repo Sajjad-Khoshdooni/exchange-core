@@ -14,6 +14,7 @@ from ledger.margin.margin_info import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_T
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import Wallet
 from ledger.models.margin import CloseRequest
+from ledger.utils.price_manager import PriceManager
 
 logger = logging.getLogger(__name__)
 
@@ -25,28 +26,29 @@ def check_margin_level():
 
     status = 0
 
-    for account in accounts:
-        margin_info = MarginInfo.get(account)
-        margin_level = margin_info.get_margin_level()
+    with PriceManager():
+        for account in accounts:
+            margin_info = MarginInfo.get(account)
+            margin_level = margin_info.get_margin_level()
 
-        logger.info('margin_level for account=%d is %s' % (account.id, margin_level))
+            logger.info('margin_level for account=%d is %s' % (account.id, margin_level))
 
-        if margin_level <= LIQUIDATION_ML_THRESHOLD:
-            CloseRequest.close_margin(account, reason=CloseRequest.LIQUIDATION)
-            alert_liquidation(account)
-            status = 2
+            if margin_level <= LIQUIDATION_ML_THRESHOLD:
+                CloseRequest.close_margin(account, reason=CloseRequest.LIQUIDATION)
+                alert_liquidation(account)
+                status = 2
 
-        elif not account.margin_alerting and margin_level <= MARGIN_CALL_ML_THRESHOLD:
-            logger.warning('Send MARGIN_CALL_ML_THRESHOLD for account = %d' % account.id)
-            warn_risky_level(account, margin_level)
+            elif not account.margin_alerting and margin_level <= MARGIN_CALL_ML_THRESHOLD:
+                logger.warning('Send MARGIN_CALL_ML_THRESHOLD for account = %d' % account.id)
+                warn_risky_level(account, margin_level)
 
-            if status == 0:
-                status = 1
+                if status == 0:
+                    status = 1
 
-            Account.objects.filter(id=account.id).update(margin_alerting=True)
+                Account.objects.filter(id=account.id).update(margin_alerting=True)
 
-        elif margin_level > MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD:
-            Account.objects.filter(id=account.id).update(margin_alerting=False)
+            elif margin_level > MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD:
+                Account.objects.filter(id=account.id).update(margin_alerting=False)
 
     return status
 
