@@ -85,7 +85,7 @@ class MovingAverage:
 
     @classmethod
     def get_account(cls) -> Account:
-        account_id = config('BOT_MOVING_AVERAGE_ACCOUNT_ID')
+        account_id = config('BOT_RANDOM_TRADER_ACCOUNT_ID')
         return Account.objects.get(id=account_id)
 
     def get_average_prices(self) -> Union[None, dict]:

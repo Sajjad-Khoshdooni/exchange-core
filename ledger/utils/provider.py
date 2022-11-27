@@ -120,7 +120,8 @@ class ProviderRequester:
         except (requests.exceptions.ConnectionError, ReadTimeoutError, requests.exceptions.Timeout):
             raise TimeoutError
 
-        logger.info('PROVIDER', path, method, data, resp.json())
+        if not resp.ok:
+            logger.info('PROVIDER', path, method, data, resp.json())
 
         return Response(data=resp.json(), success=resp.ok, status_code=resp.status_code)
 
@@ -197,9 +198,10 @@ class ProviderRequester:
 
     def get_network_info(self, asset: Asset, network: Network) -> NetworkInfo:
         resp = self.collect_api('/api/v1/networks/', data={'coin': asset.symbol, 'network': network.symbol})
-        return NetworkInfo(**resp.data)
+        if resp.success:
+            return NetworkInfo(**resp.data)
 
-    def try_hedge_new_order(self, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
+    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
         assert amount >= 0
         if amount > 0:
             assert side
@@ -267,6 +269,7 @@ class ProviderRequester:
                     to_buy_busd = max(math.ceil((needed_busd - busd_balance) * Decimal('1.01')), min_notional)
 
                     self.new_order(
+                        request_id=request_id,
                         asset=Asset.objects.get('BUSD'),
                         side=BUY,
                         amount=Decimal(to_buy_busd),
@@ -274,6 +277,7 @@ class ProviderRequester:
                     )
 
             order = self.new_order(
+                request_id=request_id,
                 asset=asset,
                 side=side,
                 amount=order_amount,
@@ -283,8 +287,9 @@ class ProviderRequester:
             if not order:
                 raise HedgeError
 
-    def new_order(self, asset: Asset, scope: str, amount: Decimal, side: str):
+    def new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal, side: str):
         resp = self.collect_api('/api/v1/orders/', method='POST', data={
+            'request_id': request_id,
             'coin': asset.symbol,
             'scope': scope,
             'amount': str(amount),
@@ -399,10 +404,10 @@ class MockProviderRequester(ProviderRequester):
             deposit_enable=True,
         )
 
-    def try_hedge_new_order(self, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
+    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
         pass
 
-    def new_order(self, asset: Asset, scope: str, amount: Decimal, side: str):
+    def new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal, side: str):
         return True
 
     def new_withdraw(self, transfer: Transfer):

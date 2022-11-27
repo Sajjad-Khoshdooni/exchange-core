@@ -100,6 +100,7 @@ class OTCTrade(models.Model):
             try:
                 from ledger.utils.provider import TRADE, get_provider_requester
                 get_provider_requester().try_hedge_new_order(
+                    request_id='otc:%s' % self.id,
                     asset=conf.coin,
                     side=conf.side,
                     amount=conf.coin_amount,

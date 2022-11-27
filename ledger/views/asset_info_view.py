@@ -295,7 +295,7 @@ class AssetOverviewAPIView(APIView):
 
         newest_coin_symbols = list(Asset.live_objects.exclude(
             symbol__in=['IRT', 'IOTA']
-        ).filter(new_coin=True).values_list('symbol', flat=True))
+        ).filter(new_coin=True).values_list('symbol', flat=True))[:3]
         newest = list(map(coin_info_to_dict, filter(lambda cap: cap.coin in newest_coin_symbols, caps)))
         AssetOverviewAPIView.set_price(newest)
 

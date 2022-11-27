@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
@@ -155,7 +157,11 @@ class AssetAdmin(AdvancedAdmin):
     def hedge_asset(self, request, queryset):
         assets = queryset.filter(hedge=True)
         for asset in assets:
-            get_provider_requester().try_hedge_new_order(asset, scope=HEDGE)
+            get_provider_requester().try_hedge_new_order(
+                request_id='manual:%s' % uuid4(),
+                asset=asset,
+                scope=HEDGE
+            )
 
 
 @admin.register(models.Network)

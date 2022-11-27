@@ -1,17 +1,18 @@
+import json
+
 import requests
+from decouple import config
 from django.conf import settings
 from oauth2client.service_account import ServiceAccountCredentials
-from decouple import config
 
 from accounts.models import User
 
 
 def _get_access_token():
-    SCOPES = ['https://www.googleapis.com/auth/firebase.messaging']
+    scopes = ['https://www.googleapis.com/auth/firebase.messaging']
+    firebase_json = json.loads(config('FIREBASE_SECRET_JSON'))
 
-    file_path = config('FIREBASE_SECRET_FILE_PATH')
-
-    credentials = ServiceAccountCredentials.from_json_keyfile_name(file_path, SCOPES)
+    credentials = ServiceAccountCredentials._from_parsed_json_keyfile(firebase_json, scopes)
     access_token_info = credentials.get_access_token()
 
     return access_token_info.access_token
