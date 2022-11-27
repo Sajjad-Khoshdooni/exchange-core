@@ -25,7 +25,7 @@ class MarginInfo:
         wallets = Wallet.objects.filter(
             account=account,
             market__in=[Wallet.MARGIN, Wallet.LOAN]
-        ).exclude(asset__symbol=Asset.IRT).prefetch_related('asset')
+        ).exclude(asset__symbol=Asset.IRT).prefetch_related('asset', 'account')
 
         total_assets = Decimal()
         total_debt = Decimal()
@@ -73,7 +73,7 @@ def get_bulk_margin_info(accounts: List[Account]) -> Dict[Account, MarginInfo]:
     wallets = Wallet.objects.filter(
         account__in=accounts,
         market__in=[Wallet.MARGIN, Wallet.LOAN]
-    ).exclude(asset__symbol=Asset.IRT).prefetch_related('asset')
+    ).exclude(asset__symbol=Asset.IRT).prefetch_related('asset', 'account')
 
     total_assets = defaultdict(Decimal)
     total_debt = defaultdict(Decimal)
