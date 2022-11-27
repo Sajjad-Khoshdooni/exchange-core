@@ -110,5 +110,7 @@ class OHLCVAPIView(APIView):
             count_back=int(count_back)
         )
         candles = self.append_empty_candles(candles, timedelta(seconds=int(interval)))
+        if candles:
+            candles = candles[-int(count_back):]
         results = OHLCVSerializer(candles=candles, symbol=symbol).format_data()
         return Response(results, status=status.HTTP_200_OK)
