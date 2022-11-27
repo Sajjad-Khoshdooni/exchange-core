@@ -17,6 +17,7 @@ from ledger.utils.precision import floor_precision, precision_to_step, decimal_t
 from ledger.utils.price import get_tether_irt_price, BUY, get_trading_price_irt, get_trading_price_usdt, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
+from market.utils.datetime_utils import ceil_date
 
 logger = logging.getLogger(__name__)
 
@@ -216,6 +217,8 @@ class Trade(models.Model):
 
     @classmethod
     def get_grouped_by_interval(cls, symbol_id, interval_in_secs, start, end):
+        start = ceil_date(start, seconds=interval_in_secs)
+        end = ceil_date(end, seconds=interval_in_secs)
         return [
             {'timestamp': group.tf, 'open': group.open[1], 'high': group.high, 'low': group.low,
              'close': group.close[1], 'volume': group.volume}
