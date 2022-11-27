@@ -205,7 +205,6 @@ class Trade(models.Model):
         results = Trade.get_grouped_by_interval(symbol_id, interval_in_secs, start, end)
         if not count_back:
             return results
-
         # TODO: clean it later.
         try_count = 0
         while try_count < 3 and len(results) < count_back:
@@ -213,7 +212,6 @@ class Trade(models.Model):
             shift = (end - start) * try_count
             older_results = Trade.get_grouped_by_interval(symbol_id, interval_in_secs, start - shift, end - shift)
             results = older_results[(len(results)) - count_back:] + results
-        return results
 
     @classmethod
     def get_grouped_by_interval(cls, symbol_id, interval_in_secs, start, end):
