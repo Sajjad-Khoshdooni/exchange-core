@@ -1,6 +1,5 @@
 import logging
 
-from django.utils.translation import activate
 from django.utils.translation import gettext_lazy as _
 from rest_framework import exceptions
 from rest_framework.authentication import TokenAuthentication, get_authorization_header
@@ -52,4 +51,3 @@ class CustomTokenAuthentication(TokenAuthentication):
             raise exceptions.AuthenticationFailed(_('User inactive or deleted.'))
 
         return (token.user, token)
-

@@ -27,4 +27,4 @@ from .attribution_view import AttributionAPIView
 
 from .auht2fa_view import Create2FaQrCodeAPIView, Verify2FaVerificationAPIView
 from .health_view import HealthView
-from .signup_hint_view import SignUpHintView
+from .signup_hint_view import UserDetailView
