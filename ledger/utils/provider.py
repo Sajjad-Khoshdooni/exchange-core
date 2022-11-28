@@ -270,7 +270,7 @@ class ProviderRequester:
 
                     self.new_order(
                         request_id=request_id,
-                        asset=Asset.objects.get('BUSD'),
+                        asset=Asset.get('BUSD'),
                         side=BUY,
                         amount=Decimal(to_buy_busd),
                         scope='prv-base',
