@@ -111,7 +111,18 @@ class OHLCVAPIView(APIView):
             raise ValidationError(f'{symbol} is not enable')
         start = request.query_params.get('from', (timezone.now() - timedelta(hours=24)).timestamp())
         end = request.query_params.get('to', timezone.now().timestamp())
-        interval = request.query_params.get('resolution', 3600)
+        interval = request.query_params.get('resolution')
+        if str(interval) == '15':
+            interval = 15 * 60
+        elif str(interval) in ('1', '1h', '1H'):
+            interval = 3600
+        elif str(interval) in ('1d', '1D'):
+            interval = 24 * 3600
+        elif str(interval) in ('7d', '7D'):
+            interval = 7 * 24 * 3600
+        else:
+            interval = 60
+
         count_back = request.query_params.get('countBack', 0)
         start_datetime = datetime.fromtimestamp(int(start)).astimezone()
         end_datetime = datetime.fromtimestamp(int(end)).astimezone()
