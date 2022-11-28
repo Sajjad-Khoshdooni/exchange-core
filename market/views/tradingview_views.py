@@ -104,7 +104,7 @@ class OHLCVAPIView(APIView):
         count_back = request.query_params.get('countBack', 0)
         candles = Trade.get_grouped_by_count(
             symbol_id=symbol.id,
-            interval_in_secs=interval,
+            interval_in_secs=int(interval),
             start=datetime.fromtimestamp(int(start)).astimezone(),
             end=datetime.fromtimestamp(int(end)).astimezone(),
             count_back=int(count_back)
