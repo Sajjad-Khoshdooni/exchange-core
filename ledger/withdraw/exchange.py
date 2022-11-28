@@ -75,7 +75,7 @@ def handle_provider_withdraw(transfer_id: int):
 
         balance_map = requester.get_spot_balance_map(BINANCE)
 
-        if balance_map[coin] < amount:
+        if Decimal(balance_map[coin]) < amount:
             logger.info('ignored withdrawing because of insufficient spot balance')
             return
 

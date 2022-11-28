@@ -232,11 +232,14 @@ MINIO_STORAGE_MEDIA_URL = f'https://{MINIO_EXTERNAL_ENDPOINT}/{MINIO_MEDIA_FILES
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+ENV = 'staging' if STAGING else 'production'
+
 sentry_sdk.init(
     dsn=config("SENTRY_DSN", default=''),
     integrations=[
         DjangoIntegration(),
     ],
+    environment=ENV,
 
     # Set traces_sample_rate to 1.0 to capture 100%
     # of transactions for performance monitoring.
