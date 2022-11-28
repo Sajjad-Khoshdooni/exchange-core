@@ -248,7 +248,7 @@ class ProviderRequester:
 
             if market_info.type == 'spot' and side == SELL:
                 balance_map = self.get_spot_balance_map(market_info.exchange)
-                balance = balance_map[asset.symbol]
+                balance = Decimal(balance_map[asset.symbol])
 
                 if balance < order_amount:
                     diff = order_amount - balance
@@ -261,7 +261,7 @@ class ProviderRequester:
                             return
 
             if side == BUY and market_info.base_coin == 'BUSD':
-                busd_balance = self.get_spot_balance_map(market_info.exchange)['BUSD']
+                busd_balance = Decimal(self.get_spot_balance_map(market_info.exchange)['BUSD'])
                 needed_busd = order_amount * price
 
                 if needed_busd > busd_balance:
@@ -270,7 +270,7 @@ class ProviderRequester:
 
                     self.new_order(
                         request_id=request_id,
-                        asset=Asset.objects.get('BUSD'),
+                        asset=Asset.get('BUSD'),
                         side=BUY,
                         amount=Decimal(to_buy_busd),
                         scope='prv-base',

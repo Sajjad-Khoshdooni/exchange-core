@@ -19,6 +19,7 @@ class StakeOptionSerializer(serializers.ModelSerializer):
     total_cap = serializers.SerializerMethodField()
 
     filled_cap_percent = serializers.SerializerMethodField()
+    enable = serializers.SerializerMethodField()
 
     def get_total_cap(self, stake_option: StakeOption):
         return get_presentation_amount(stake_option.total_cap)
@@ -33,9 +34,14 @@ class StakeOptionSerializer(serializers.ModelSerializer):
         return get_presentation_amount(stake_option.fee)
 
     def get_user_max_amount(self, stake_option: StakeOption):
+        if stake_option.user_max_amount <= stake_option.user_min_amount:
+            return '-'
         return get_presentation_amount(stake_option.user_max_amount)
 
     def get_user_min_amount(self, stake_option: StakeOption):
+        if stake_option.user_max_amount <= stake_option.user_min_amount:
+            return '-'
+
         return get_presentation_amount(stake_option.user_min_amount)
 
     def get_user_available_amount(self, stake_option: StakeOption):
@@ -45,6 +51,11 @@ class StakeOptionSerializer(serializers.ModelSerializer):
             return stake_option.get_free_amount_per_user(user=user)
         else:
             return stake_option.user_max_amount
+
+    def get_enable(self, stake_option: StakeOption):
+        if stake_option.user_max_amount <= stake_option.user_min_amount:
+            return False
+        return stake_option.enable
 
     class Meta:
         model = StakeOption

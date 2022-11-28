@@ -91,3 +91,7 @@ msgstr "ارزش سفارش از {min_order_size} {base_asset} کمتر است."
 msgid "price precision is more than {tick_size}"
 msgstr "مقدار اعشار از {tick_size} یبشتر است."
 
+#: market/serializers/order_serializer.py:112
+#, python-brace-format
+msgid "price is mandatory in limit order."
+msgstr "قیمت نمی‌تواند خالی باشد."
