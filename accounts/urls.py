@@ -96,4 +96,6 @@ urlpatterns = [
     path('attribution/', views.AttributionAPIView.as_view()),
     path('2fa/', views.Create2FaQrCodeAPIView.as_view()),
     path('2fa/verify', views.Verify2FaVerificationAPIView.as_view()),
+
+    path('users/<int:pk>/', views.UserDigestView.as_view()),
 ]

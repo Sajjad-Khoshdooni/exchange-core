@@ -221,7 +221,6 @@ if not DEBUG_OR_TESTING:
     MINIO_PUBLIC_BUCKETS = [
         'core-static',
     ]
-    MINIO_BUCKET_CHECK_ON_SAVE = True
 
 MINIO_EXTERNAL_ENDPOINT = config('MINIO_CDN_ENDPOINT')
 MINIO_MEDIA_FILES_BUCKET = 'core-media'
