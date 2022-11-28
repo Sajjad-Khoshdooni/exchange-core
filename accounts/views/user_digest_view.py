@@ -11,7 +11,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'first_name', 'last_name')
 
 
-class UserDetailView(RetrieveAPIView):
+class UserDigestView(RetrieveAPIView):
     authentication_classes = [CustomTokenAuthentication]
     queryset = User.objects.all()
     serializer_class = UserSerializer
