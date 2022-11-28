@@ -275,7 +275,7 @@ class ZibalChannel(FiatWithdraw):
         )
 
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
-        paya_banks = ['AYANDEH']
+        paya_banks = []
 
         if receiver.bank not in paya_banks:
             checkout_delay = -1
