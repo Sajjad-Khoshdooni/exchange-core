@@ -73,6 +73,8 @@ class OHLCVAPIView(APIView):
 
         start = ceil_date(start, seconds=interval.total_seconds())
         end = floor_date(end, seconds=interval.total_seconds())
+        if interval.total_seconds() > 3600:
+            end -= interval
 
         first_candle = candles[0]
         candle_datetime = first_candle['timestamp']
@@ -132,7 +134,7 @@ class OHLCVAPIView(APIView):
             start=start_datetime,
             end=end_datetime,
         )
-        candles = self.append_empty_candles(
+        candles = OHLCVAPIView.append_empty_candles(
             candles, timedelta(seconds=int(interval)), start_datetime, end_datetime
         )
         if candles and count_back:

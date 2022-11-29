@@ -216,9 +216,15 @@ class Trade(models.Model):
 
     @classmethod
     def get_grouped_by_interval(cls, symbol_id: int, interval_in_secs: int, start: datetime, end: datetime):
-        from market.utils.datetime_utils import ceil_date
-        start = ceil_date(start, seconds=interval_in_secs)
-        end = ceil_date(end, seconds=interval_in_secs)
+        from market.utils.datetime_utils import ceil_date, floor_date
+        if interval_in_secs <= 3600:
+            round_func = ceil_date
+            tf_shift = '30 min'
+        else:
+            round_func = floor_date
+            tf_shift = '0 sec'
+        start = round_func(start, seconds=interval_in_secs)
+        end = round_func(end, seconds=interval_in_secs)
         return [
             {'timestamp': group.tf, 'open': group.open[1], 'high': group.high, 'low': group.low,
              'close': group.close[1], 'volume': group.volume}
@@ -227,9 +233,9 @@ class Trade(models.Model):
                 "min(array[id, price]) as open, max(array[id, price]) as close, "
                 "max(price) as high, min(price) as low, "
                 "sum(amount) as volume, "
-                "(date_trunc('seconds', (created - (timestamptz 'epoch' - interval '30 min')) / %s) * %s + (timestamptz 'epoch' - interval '30 min')) as tf "
+                "(date_trunc('seconds', (created - (timestamptz 'epoch' - interval %s)) / %s) * %s + (timestamptz 'epoch' - interval %s)) as tf "
                 "from market_trade where symbol_id = %s and side = 'buy' and trade_source != 'otc' and created between %s and %s group by tf order by tf",
-                [interval_in_secs, interval_in_secs, symbol_id, start, end]
+                [tf_shift, interval_in_secs, interval_in_secs, tf_shift, symbol_id, start, end]
             )
         ]
 
