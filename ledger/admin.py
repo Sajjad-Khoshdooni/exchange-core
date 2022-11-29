@@ -247,7 +247,7 @@ class OTCTradeAdmin(admin.ModelAdmin):
     list_filter = (OTCUserFilter, 'status')
     search_fields = ('group_id', )
     readonly_fields = ('otc_request', )
-    actions = ('accept_trade', 'cancel_trade')
+    actions = ('accept_trade', 'accept_trade_without_hedge', 'cancel_trade')
 
     def get_otc_trade_from_amount(self, otc_trade: models.OTCTrade):
         return humanize_number(
@@ -266,6 +266,11 @@ class OTCTradeAdmin(admin.ModelAdmin):
     def accept_trade(self, request, queryset):
         for otc in queryset.filter(status='pending'):
             otc.hedge_and_finalize()
+
+    @admin.action(description='تایید معامله بدون هج')
+    def accept_trade_without_hedge(self, request, queryset):
+        for otc in queryset.filter(status='pending'):
+            otc.accept()
 
     @admin.action(description='لغو معامله')
     def cancel_trade(self, request, queryset):
