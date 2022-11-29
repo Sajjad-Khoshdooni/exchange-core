@@ -316,13 +316,6 @@ class ProviderRequester:
 
         return resp.success
 
-    def new_hedged_spot_buy(self, asset: Asset, amount: Decimal, spot_side: str, caller_id: str):
-        self.collect_api('/api/v1/orders/hedged/', method='POST', data={
-            'coin': asset.symbol,
-            'amount': str(amount),
-            'requester_id': caller_id
-        })
-
     def get_transfer_status(self, transfer: Transfer) -> WithdrawStatus:
         resp = self.collect_api('/api/v1/withdraw/%d/' % transfer.id)
         return WithdrawStatus.init(resp.data['status'])
