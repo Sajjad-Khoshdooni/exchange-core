@@ -216,10 +216,15 @@ class Trade(models.Model):
 
     @classmethod
     def get_grouped_by_interval(cls, symbol_id: int, interval_in_secs: int, start: datetime, end: datetime):
-        from market.utils.datetime_utils import ceil_date
-        start = ceil_date(start, seconds=interval_in_secs)
-        end = ceil_date(end, seconds=interval_in_secs)
-        tf_shift = '30 min' if interval_in_secs <= 3600 else '0 sec'
+        from market.utils.datetime_utils import ceil_date, floor_date
+        if interval_in_secs <= 3600:
+            round_func = ceil_date
+            tf_shift = '30 min'
+        else:
+            round_func = floor_date
+            tf_shift = '0 sec'
+        start = round_func(start, seconds=interval_in_secs)
+        end = round_func(end, seconds=interval_in_secs)
         return [
             {'timestamp': group.tf, 'open': group.open[1], 'high': group.high, 'low': group.low,
              'close': group.close[1], 'volume': group.volume}
