@@ -1,5 +1,6 @@
 import logging
 
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from rest_framework import exceptions
 from rest_framework.authentication import TokenAuthentication, get_authorization_header
@@ -41,7 +42,10 @@ class CustomTokenAuthentication(TokenAuthentication):
         print('request_ip', request_ip)
 
         try:
-            token = model.objects.select_related('user').get(key=key, ip_list__contains=[request_ip])
+            token = model.objects.select_related('user').get(
+                Q(ip_list__contains=[request_ip]) | Q(ip_list__isnull=True),
+                key=key
+            )
 
         except model.DoesNotExist:
             logger.info(f'requested ip: {request_ip}')
