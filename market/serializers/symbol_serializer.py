@@ -10,8 +10,7 @@ from accounts.models import Account
 from ledger.models import Asset
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.precision import get_presentation_amount, floor_precision, decimal_to_str
-from market.models import PairSymbol, Trade
-
+from market.models import PairSymbol, Trade, Order
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +117,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
+            side=Order.BUY,
         ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum('amount'))['total_amount']
         if total_amount:
             return decimal_to_str(floor_precision(total_amount, symbol.step_size))
@@ -127,6 +127,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
+            side=Order.BUY,
         ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum('base_amount'))['total_amount']
         if total_amount:
             return decimal_to_str(floor_precision(total_amount))

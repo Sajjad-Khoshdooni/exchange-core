@@ -219,6 +219,7 @@ class Trade(models.Model):
         from market.utils.datetime_utils import ceil_date
         start = ceil_date(start, seconds=interval_in_secs)
         end = ceil_date(end, seconds=interval_in_secs)
+        tf_shift = '30 min' if interval_in_secs <= 3600 else '0 sec'
         return [
             {'timestamp': group.tf, 'open': group.open[1], 'high': group.high, 'low': group.low,
              'close': group.close[1], 'volume': group.volume}
@@ -227,9 +228,9 @@ class Trade(models.Model):
                 "min(array[id, price]) as open, max(array[id, price]) as close, "
                 "max(price) as high, min(price) as low, "
                 "sum(amount) as volume, "
-                "(date_trunc('seconds', (created - (timestamptz 'epoch' - interval '30 min')) / %s) * %s + (timestamptz 'epoch' - interval '30 min')) as tf "
+                "(date_trunc('seconds', (created - (timestamptz 'epoch' - interval %s)) / %s) * %s + (timestamptz 'epoch' - interval %s)) as tf "
                 "from market_trade where symbol_id = %s and side = 'buy' and trade_source != 'otc' and created between %s and %s group by tf order by tf",
-                [interval_in_secs, interval_in_secs, symbol_id, start, end]
+                [tf_shift, interval_in_secs, interval_in_secs, tf_shift, symbol_id, start, end]
             )
         ]
 
