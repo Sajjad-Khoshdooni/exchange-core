@@ -6,7 +6,7 @@ from ledger.utils.overview import AssetOverview
 from ledger.utils.provider import get_provider_requester
 
 
-@shared_task(queue='celery')
+@shared_task(queue='history')
 def create_snapshot():
     now = timezone.now()
 

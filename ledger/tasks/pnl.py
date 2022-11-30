@@ -13,7 +13,7 @@ from ledger.utils.provider import get_provider_requester
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, queue='celery', max_retries=6)
+@shared_task(bind=True, queue='history', max_retries=6)
 def create_pnl_histories(self):
     try:
         today = timezone.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)

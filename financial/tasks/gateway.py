@@ -7,7 +7,7 @@ from financial.models import Gateway, Payment
 from financial.utils.withdraw import FiatWithdraw
 
 
-@shared_task(queue='financial')
+@shared_task(queue='finance')
 def handle_missing_payments():
     # update pending payments
     now = timezone.now()
