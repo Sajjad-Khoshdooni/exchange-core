@@ -82,6 +82,6 @@ class StakeOptionAPIView(ListAPIView):
         ctx['caps'] = dict(StakeRequest.objects.filter(
             stake_option__enable=True,
             status__in=(StakeRequest.PROCESS, StakeRequest.PENDING, StakeRequest.DONE),
-        ).annotate(sum=Sum('amount')).values_list('stake_option', 'sum'))
+        ).values('stake_option').annotate(sum=Sum('amount')).values_list('stake_option', 'sum'))
 
         return ctx
