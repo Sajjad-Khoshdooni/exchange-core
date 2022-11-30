@@ -71,9 +71,13 @@ def is_all_system(symbol: PairSymbol, side: str, amount: Decimal):
     return False
 
 
-def random_buy(symbol: PairSymbol, account: Account, max_amount, daily_factor: int):
-    amount_value = random_min_order_value(symbol, daily_factor)
+def random_buy(symbol: PairSymbol, account: Account, max_amount, market_price, daily_factor: int):
     ask = get_current_price(symbol, SELL)
+    if market_price > ask * Decimal('1.01'):
+        from market.models.order import CancelOrder
+        raise CancelOrder(f'random-buy: Invalid market price {symbol} ({market_price}, {ask})')
+
+    amount_value = random_min_order_value(symbol, daily_factor)
     amount = floor_precision(min(max_amount, Decimal(amount_value / ask)), symbol.step_size)
 
     return new_order(
@@ -81,11 +85,14 @@ def random_buy(symbol: PairSymbol, account: Account, max_amount, daily_factor: i
     )
 
 
-def random_sell(symbol: PairSymbol, account: Account, max_amount, daily_factor: int):
+def random_sell(symbol: PairSymbol, account: Account, max_amount, market_price, daily_factor: int):
+    bid = get_current_price(symbol, BUY)
+    if market_price < bid * Decimal('1.01'):
+        from market.models.order import CancelOrder
+        raise CancelOrder(f'random-sell: Invalid market price {symbol} ({market_price}, {bid})')
+
     wallet = symbol.asset.get_wallet(account)
     balance = wallet.get_free()
-
-    bid = get_current_price(symbol, BUY)
 
     balance = min(balance, min(max_amount, random_min_order_value(symbol, daily_factor) / bid))
     amount = floor_precision(balance, symbol.step_size)
