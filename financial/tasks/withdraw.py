@@ -12,7 +12,7 @@ def process_withdraw(withdraw_request_id: int):
     withdraw_request.create_withdraw_request()
 
 
-@shared_task(queue='celery')
+@shared_task(queue='finance')
 def update_withdraw_status():
     withdraws = FiatWithdrawRequest.objects.filter(status=FiatWithdrawRequest.PENDING)
 

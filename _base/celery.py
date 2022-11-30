@@ -127,7 +127,7 @@ app.conf.beat_schedule = {
         'task': 'financial.tasks.withdraw.update_withdraw_status',
         'schedule': 300,
         'options': {
-            'queue': 'celery',
+            'queue': 'finance',
             'expire': 300
         },
     },
@@ -136,7 +136,7 @@ app.conf.beat_schedule = {
         'task': 'financial.tasks.gateway.handle_missing_payments',
         'schedule': 30,
         'options': {
-            'queue': 'celery',
+            'queue': 'finance',
             'expire': 60
         },
     },
