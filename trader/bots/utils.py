@@ -11,7 +11,6 @@ from ledger.models import Asset
 from ledger.utils.precision import floor_precision
 from ledger.utils.price import get_trading_price_irt, get_trading_price_usdt, SELL, BUY
 from market.models import PairSymbol, Order
-from market.models.order import CancelOrder
 from market.utils import new_order
 from market.utils.order_utils import get_market_top_prices, cancel_orders
 
@@ -75,6 +74,7 @@ def is_all_system(symbol: PairSymbol, side: str, amount: Decimal):
 def random_buy(symbol: PairSymbol, account: Account, max_amount, market_price, daily_factor: int):
     ask = get_current_price(symbol, SELL)
     if market_price > ask * Decimal('1.01'):
+        from market.models.order import CancelOrder
         raise CancelOrder(f'random-buy: Invalid market price {symbol} ({market_price}, {ask})')
 
     amount_value = random_min_order_value(symbol, daily_factor)
@@ -88,6 +88,7 @@ def random_buy(symbol: PairSymbol, account: Account, max_amount, market_price, d
 def random_sell(symbol: PairSymbol, account: Account, max_amount, market_price, daily_factor: int):
     bid = get_current_price(symbol, BUY)
     if market_price < bid * Decimal('1.01'):
+        from market.models.order import CancelOrder
         raise CancelOrder(f'random-sell: Invalid market price {symbol} ({market_price}, {bid})')
 
     wallet = symbol.asset.get_wallet(account)
