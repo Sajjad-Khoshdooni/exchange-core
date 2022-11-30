@@ -32,67 +32,14 @@ def handle_provider_withdraw(transfer_id: int):
         assert transfer.status == transfer.PROCESSING
         assert not transfer.provider_transfer
 
-        coin = transfer.asset.symbol
+        success = get_provider_requester().new_withdraw(transfer)
 
-        requester = get_provider_requester()
-
-        balance_map = requester.get_spot_balance_map(BINANCE)
-        network_info = requester.get_network_info(transfer.asset, transfer.network)
-
-        fee = network_info.withdraw_fee
-        amount = transfer.amount + fee
-
-        if balance_map[coin] < amount:
-            to_buy_amount = amount - balance_map[coin]
-
-            logger.info('not enough %s in interface spot. So buy %s of it!' % (coin, to_buy_amount))
-
-            if coin != Asset.USDT:
-                to_buy_value = to_buy_amount * get_price(coin, side=SELL) * Decimal('1.002')
-            else:
-                to_buy_value = to_buy_amount
-
-            if to_buy_value > balance_map[Asset.USDT]:
-                raise Exception('insufficient balance in interface spot to full fill withdraw')
-
-            if transfer.asset.symbol != Asset.USDT:
-                # todo: handle this!
-                # prev_hedge = ProviderHedgedOrder.objects.filter(caller_id=transfer.id).first()
-                #
-                # if prev_hedge and prev_hedge.created < timezone.now() - timedelta(minutes=5):
-                #     prev_hedge.caller_id = prev_hedge.caller_id + 'a'
-                #     prev_hedge.save(update_fields=['caller_id'])
-
-                get_provider_requester().new_hedged_spot_buy(
-                    asset=transfer.asset,
-                    amount=to_buy_amount,
-                    spot_side=BUY,
-                    caller_id=transfer.id
-                )
-
-                logger.info('waiting to finish buying...')
-                time.sleep(1)
-
-        balance_map = requester.get_spot_balance_map(BINANCE)
-
-        if Decimal(balance_map[coin]) < amount:
-            logger.info('ignored withdrawing because of insufficient spot balance')
+        if not success:
             return
 
-        provider_withdraw(transfer)
+        transfer.status = transfer.PENDING
+        transfer.save(update_fields=['status'])
 
     finally:
         transfer.handling = False
         transfer.save(update_fields=['handling'])
-
-
-def provider_withdraw(transfer: Transfer):
-    assert transfer.source == Transfer.PROVIDER
-
-    success = get_provider_requester().new_withdraw(transfer)
-
-    if not success:
-        return
-
-    transfer.status = transfer.PENDING
-    transfer.save(update_fields=['status'])

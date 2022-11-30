@@ -406,9 +406,6 @@ class MockProviderRequester(ProviderRequester):
     def new_withdraw(self, transfer: Transfer):
         return True
 
-    def new_hedged_spot_buy(self, asset: Asset, amount: Decimal, spot_side: str, caller_id: str):
-        pass
-
     def get_transfer_status(self, transfer: Transfer) -> WithdrawStatus:
         return WithdrawStatus(status=DONE, tx_id='tx')
 
