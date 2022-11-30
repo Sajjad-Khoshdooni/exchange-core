@@ -26,7 +26,7 @@ class StakeOptionSerializer(serializers.ModelSerializer):
         return get_presentation_amount(stake_option.total_cap)
 
     def get_filled_cap_percent(self, stake_option: StakeOption):
-        return self.context['caps'].get(stake_option.id, 0) / stake_option.total_cap * 100
+        return self.context['filled'].get(stake_option.id, 0) / stake_option.total_cap * 100
 
     def get_apr(self, stake_option: StakeOption):
         return get_presentation_amount(stake_option.apr)
@@ -35,7 +35,7 @@ class StakeOptionSerializer(serializers.ModelSerializer):
         return get_presentation_amount(stake_option.fee)
 
     def is_staking_available(self, stake_option: StakeOption):
-        return self.context['caps'].get(stake_option.id, 0) >= stake_option.user_min_amount
+        return stake_option.total_cap - self.context['filled'].get(stake_option.id, 0) >= stake_option.user_min_amount
 
     def get_user_max_amount(self, stake_option: StakeOption):
         if not self.is_staking_available(stake_option):
@@ -79,7 +79,7 @@ class StakeOptionAPIView(ListAPIView):
         if self.request.user.is_authenticated:
             ctx['user'] = self.request.user
 
-        ctx['caps'] = dict(StakeRequest.objects.filter(
+        ctx['filled'] = dict(StakeRequest.objects.filter(
             stake_option__enable=True,
             status__in=(StakeRequest.PROCESS, StakeRequest.PENDING, StakeRequest.DONE),
         ).values('stake_option').annotate(sum=Sum('amount')).values_list('stake_option', 'sum'))
