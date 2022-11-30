@@ -108,7 +108,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if not wallet.has_balance(amount):
             raise ValidationError('موجودی کافی نیست.')
 
-        if not check_withdraw_laundering(wallet=wallet, amount=amount):
+        if asset.enable and not check_withdraw_laundering(wallet=wallet, amount=amount):
             raise ValidationError(
                 'در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید. لطفا احراز هویت سطح ۳ را انجام دهید.')
 
