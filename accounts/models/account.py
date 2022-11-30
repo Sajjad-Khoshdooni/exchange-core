@@ -94,7 +94,9 @@ class Account(models.Model):
         with PriceManager(fetch_all=True):
             for wallet in wallets:
                 balance = wallet.get_balance_usdt(side)
-                total += balance
+
+                if balance:
+                    total += balance
 
         return total
 
@@ -116,7 +118,9 @@ class Account(models.Model):
                     continue
 
                 balance = wallet.get_balance_irt(side)
-                total += balance
+
+                if balance:
+                    total += balance
 
         return total
 
