@@ -40,7 +40,7 @@ class AssetOverview:
         self._disabled_assets = set(Asset.objects.filter(enable=False).values_list('symbol', flat=True))
 
         self._future_positions = {
-            pos['coin']: pos for pos in self._binance_futures['positions']
+            pos['coin']: pos for pos in self._binance_futures.get('positions', [])
         }
 
         self._binance_spot_balance_map = self.provider.get_spot_balance_map(BINANCE)

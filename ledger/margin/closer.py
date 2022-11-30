@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 MARGIN_INSURANCE_ACCOUNT = config('MARGIN_INSURANCE_ACCOUNT', cast=int)
 
-LIQUIDATION_FEE_RATE = Decimal('0.05')
+LIQUIDATION_FEE_RATE = Decimal('0.02')
 
 
 class MarginCloser:

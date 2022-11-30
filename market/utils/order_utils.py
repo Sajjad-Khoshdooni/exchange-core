@@ -127,7 +127,7 @@ def get_market_top_prices(order_type='all', symbol_ids=None):
 
 
 def get_market_top_price_amounts(order_type='all', symbol_ids=None):
-    market_top_price_amounts = defaultdict(lambda: Decimal())
+    market_top_price_amounts = defaultdict(lambda: {'price': Decimal(), 'amount': Decimal()})
     symbol_filter = {'symbol_id__in': symbol_ids} if symbol_ids else {}
     if order_type != 'all':
         symbol_filter['type'] = order_type
@@ -148,5 +148,8 @@ def get_market_top_price_amounts(order_type='all', symbol_ids=None):
     ).filter(
         Q(price=F('max_price'), side=Order.BUY) | Q(price=F('min_price'), side=Order.SELL)
     ).annotate(total_amount=Sum('amount')):
-        market_top_price_amounts[(depth['symbol'], depth['side'])] = depth['total_amount']
+        market_top_price_amounts[(depth['symbol'], depth['side'])] = {
+            'price': depth['max_price'] if depth['side'] == Order.BUY else depth['min_price'],
+            'amount': depth['total_amount'],
+        }
     return market_top_price_amounts
