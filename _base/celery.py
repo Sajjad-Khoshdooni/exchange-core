@@ -78,6 +78,14 @@ app.conf.beat_schedule = {
             'expire': 36000
         },
     },
+    'complete_stake_requests': {
+        'task': 'stake.tasks.stake_finish.finish_stakes',
+        'schedule': crontab(hour=20, minute=0),
+        'options': {
+            'queue': 'celery',
+            'expire': 36000
+        },
+    },
 
     # 'lock_monitor': {
     #     'task': 'ledger.tasks.lock_monitor.lock_monitor',

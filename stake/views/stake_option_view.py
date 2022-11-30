@@ -1,10 +1,11 @@
+from django.db.models import Sum
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
+from rest_framework.generics import ListAPIView
 
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.precision import get_presentation_amount
-from stake.models import StakeOption
-from rest_framework.generics import ListAPIView
-from django_filters.rest_framework import DjangoFilterBackend
+from stake.models import StakeOption, StakeRequest
 
 
 class StakeOptionSerializer(serializers.ModelSerializer):
@@ -25,7 +26,7 @@ class StakeOptionSerializer(serializers.ModelSerializer):
         return get_presentation_amount(stake_option.total_cap)
 
     def get_filled_cap_percent(self, stake_option: StakeOption):
-        return stake_option.get_filled_cap_percent()
+        return self.context['caps'].get(stake_option.id, 0) / stake_option.total_cap * 100
 
     def get_apr(self, stake_option: StakeOption):
         return get_presentation_amount(stake_option.apr)
@@ -33,13 +34,16 @@ class StakeOptionSerializer(serializers.ModelSerializer):
     def get_fee(self, stake_option: StakeOption):
         return get_presentation_amount(stake_option.fee)
 
+    def is_staking_available(self, stake_option: StakeOption):
+        return self.context['caps'].get(stake_option.id) >= stake_option.user_min_amount
+
     def get_user_max_amount(self, stake_option: StakeOption):
-        if stake_option.user_max_amount <= stake_option.user_min_amount:
+        if not self.is_staking_available(stake_option):
             return '-'
         return get_presentation_amount(stake_option.user_max_amount)
 
     def get_user_min_amount(self, stake_option: StakeOption):
-        if stake_option.user_max_amount <= stake_option.user_min_amount:
+        if not self.is_staking_available(stake_option):
             return '-'
 
         return get_presentation_amount(stake_option.user_min_amount)
@@ -53,9 +57,7 @@ class StakeOptionSerializer(serializers.ModelSerializer):
             return stake_option.user_max_amount
 
     def get_enable(self, stake_option: StakeOption):
-        if stake_option.user_max_amount <= stake_option.user_min_amount:
-            return False
-        return stake_option.enable
+        return self.is_staking_available(stake_option)
 
     class Meta:
         model = StakeOption
@@ -76,4 +78,10 @@ class StakeOptionAPIView(ListAPIView):
         ctx = super().get_serializer_context()
         if self.request.user.is_authenticated:
             ctx['user'] = self.request.user
+
+        ctx['caps'] = dict(StakeRequest.objects.filter(
+            stake_option__enable=True,
+            status__in=(StakeRequest.PROCESS, StakeRequest.PENDING, StakeRequest.DONE),
+        ).annotate(sum=Sum('amount')).values_list('stake_option', 'sum'))
+
         return ctx

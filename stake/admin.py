@@ -79,7 +79,7 @@ class StakeRequestAdmin(admin.ModelAdmin):
 
     @admin.action(description='بردن به حالت انجام شده', permissions=['view'])
     def stake_request_done(self, request, queryset):
-        queryset = queryset.filter(status=StakeRequest.PENDING)
+        queryset = queryset.filter(status__in=[StakeRequest.PROCESS, StakeRequest.PENDING])
         for stake_request in queryset:
             stake_request.change_status(StakeRequest.DONE)
 
