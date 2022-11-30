@@ -35,7 +35,7 @@ class StakeOptionSerializer(serializers.ModelSerializer):
         return get_presentation_amount(stake_option.fee)
 
     def is_staking_available(self, stake_option: StakeOption):
-        return self.context['caps'].get(stake_option.id) >= stake_option.user_min_amount
+        return self.context['caps'].get(stake_option.id, 0) >= stake_option.user_min_amount
 
     def get_user_max_amount(self, stake_option: StakeOption):
         if not self.is_staking_available(stake_option):
