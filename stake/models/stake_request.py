@@ -19,8 +19,10 @@ class StakeRequest(models.Model):
     PROCESS, PENDING, DONE, FINISHED = 'process', 'pending', 'done', 'finished'
     CANCEL_PROCESS, CANCEL_PENDING, CANCEL_COMPLETE = 'cancel_process', 'cancel_pending', 'cancel_complete'
 
-    STATUS_CHOICE = ((PROCESS, PROCESS), (PENDING, PENDING), (DONE, DONE), (CANCEL_PROCESS, CANCEL_PROCESS),
-                     (CANCEL_PENDING, CANCEL_PENDING), (CANCEL_COMPLETE, CANCEL_COMPLETE))
+    STATUS_CHOICE = (
+        (PROCESS, PROCESS), (PENDING, PENDING), (DONE, DONE), (CANCEL_PROCESS, CANCEL_PROCESS),
+        (CANCEL_PENDING, CANCEL_PENDING), (CANCEL_COMPLETE, CANCEL_COMPLETE), (FINISHED, FINISHED)
+    )
 
     status = models.CharField(choices=STATUS_CHOICE, max_length=16, default=PROCESS)
 
