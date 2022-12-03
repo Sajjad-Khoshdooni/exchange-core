@@ -184,7 +184,7 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
 
 
 def get_price_tether_irt_nobitex():
-    resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=10)
+    resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=10, verify=False)
     data = resp.json()
     status = data['status']
 
