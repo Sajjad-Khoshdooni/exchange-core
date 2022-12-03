@@ -35,15 +35,15 @@ class StakeOptionAdmin(admin.ModelAdmin):
 
 class StakeStatusFilter(SimpleListFilter):
     title = 'نیازمند بررسی'
-    parameter_name = 'status_is_not_done_or_cancel_complete'
+    parameter_name = 'check_need'
 
     def lookups(self, request, model_admin):
         return [(1, 1)]
 
     def queryset(self, request, queryset):
-        status_filter = request.GET.get('status_is_not_done_or_cancel_complete')
+        status_filter = request.GET.get('check_need')
         if status_filter is not None:
-            return queryset.exclude(status__in=[StakeRequest.DONE, StakeRequest.CANCEL_COMPLETE])
+            return queryset.exclude(status__in=[StakeRequest.DONE, StakeRequest.CANCEL_COMPLETE, StakeRequest.FINISHED])
         else:
             return queryset
 
