@@ -76,7 +76,7 @@ class PNLHistory(models.Model):
         in_out_trxs = Trx.objects.filter(
             **datetime_filter
         ).exclude(
-            scope__in=(Trx.TRADE, Trx.COMMISSION, Trx.PRIZE, Trx.STAKE_REVENUE)
+            scope__in=(Trx.TRADE, Trx.COMMISSION, Trx.PRIZE, Trx.STAKE_REVENUE, Trx.STAKE)
         ).annotate(asset=F('sender__asset__symbol')).values(
             'sender__market', 'receiver__market', 'asset', 'sender__account', 'receiver__account'
         ).annotate(total_amount=Sum('amount'))
