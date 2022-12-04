@@ -30,7 +30,6 @@ def handle_provider_withdraw(transfer_id: int):
         assert not transfer.deposit
         assert transfer.source == Transfer.PROVIDER
         assert transfer.status == transfer.PROCESSING
-        assert not transfer.provider_transfer
 
         success = get_provider_requester().new_withdraw(transfer)
 
