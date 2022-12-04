@@ -186,8 +186,8 @@ class ProviderRequester:
         resp = self.collect_api('/api/v1/market/', data={'coin': asset.symbol})
         return MarketInfo(coin=asset.symbol, **resp.data)
 
-    def get_spot_balance_map(self, exchange) -> dict:
-        resp = self.collect_api('/api/v1/spot/balance/', data={'exchange': exchange})
+    def get_spot_balance_map(self, exchange: str, market: str = 'trade') -> dict:
+        resp = self.collect_api('/api/v1/spot/balance/', data={'exchange': exchange, 'market': market})
         if not resp.success:
             return {}
         return resp.data
