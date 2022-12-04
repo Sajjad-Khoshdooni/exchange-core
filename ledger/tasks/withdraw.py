@@ -3,8 +3,6 @@ import logging
 from celery import shared_task
 from django.conf import settings
 
-from accounts.utils.admin import url_to_edit_object
-from accounts.utils.telegram import send_system_message
 from ledger.models import Transfer
 from ledger.utils.provider import get_provider_requester
 from ledger.withdraw.exchange import handle_provider_withdraw
@@ -19,19 +17,11 @@ def create_provider_withdraw(transfer_id: int):
 
 @shared_task(queue='binance')
 def update_provider_withdraw():
-    re_handle_transfers = Transfer.objects.filter(
-        deposit=False,
-        status=Transfer.PROCESSING,
-        handling=False
-    ).exclude(source=Transfer.SELF)
-
-    for transfer in re_handle_transfers:
-        create_provider_withdraw.delay(transfer.id)
-
     transfers = Transfer.objects.filter(
         deposit=False,
+        source=Transfer.PROVIDER,
         status=Transfer.PENDING
-    ).exclude(source=Transfer.SELF)
+    )
 
     for transfer in transfers:
         data = get_provider_requester().get_transfer_status(transfer.id)
@@ -90,12 +80,7 @@ def create_withdraw(transfer_id: int):
             transfer.source = Transfer.PROVIDER
             transfer.save(update_fields=['source'])
 
-            send_system_message(
-                message='Manual withdraw %s %s' % (transfer.asset, transfer.amount),
-                link=url_to_edit_object(transfer)
-            )
-
-            # create_provider_withdraw(transfer_id=transfer.id)
+            create_provider_withdraw(transfer_id=transfer.id)
         else:
             logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
 
