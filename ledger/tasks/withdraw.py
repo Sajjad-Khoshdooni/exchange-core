@@ -10,12 +10,12 @@ from ledger.withdraw.exchange import handle_provider_withdraw
 logger = logging.getLogger(__name__)
 
 
-@shared_task(queue='binance')
+@shared_task(queue='transfer')
 def create_provider_withdraw(transfer_id: int):
     handle_provider_withdraw(transfer_id)
 
 
-@shared_task(queue='binance')
+@shared_task(queue='transfer')
 def update_provider_withdraw():
     transfers = Transfer.objects.filter(
         deposit=False,
