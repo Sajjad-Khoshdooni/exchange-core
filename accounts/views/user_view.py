@@ -31,7 +31,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'show_strategy_bot', 'show_community', 'possible_time_for_withdraw', 'chat_uuid', 'auth2fa'
+            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw', 'chat_uuid', 'auth2fa'
         )
 
     def get_possible_time_for_withdraw(self, user: User):
