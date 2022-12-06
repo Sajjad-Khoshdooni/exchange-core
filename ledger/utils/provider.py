@@ -73,12 +73,6 @@ class WithdrawStatus:
     status: str
     tx_id: str
 
-    @classmethod
-    def init(cls, data: dict):
-        return WithdrawStatus(
-            status=data['status'],
-            tx_id=data.get('tx_id')
-        )
 
 
 @validate_arguments
@@ -318,7 +312,12 @@ class ProviderRequester:
 
     def get_transfer_status(self, transfer: Transfer) -> WithdrawStatus:
         resp = self.collect_api('/api/v1/withdraw/%d/' % transfer.id)
-        return WithdrawStatus.init(resp.data['status'])
+        data = resp.data['status']
+
+        return WithdrawStatus(
+            status=data['status'],
+            tx_id=data.get('tx_id')
+        )
 
     # todo: add caching
     def get_coins_info(self, coins: List[str]) -> Dict[str, CoinInfo]:
