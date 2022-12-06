@@ -24,7 +24,7 @@ def update_provider_withdraw():
     )
 
     for transfer in transfers:
-        data = get_provider_requester().get_transfer_status(transfer.id)
+        data = get_provider_requester().get_transfer_status(transfer)
 
         status = data.status
 
