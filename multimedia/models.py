@@ -19,7 +19,7 @@ class Banner(models.Model):
     title = models.CharField(max_length=64)
     image = models.ImageField()
     link = models.CharField(max_length=256)
-    app_link = models.CharField(max_length=256)
+    app_link = models.CharField(max_length=256, blank=True)
     active = models.BooleanField(default=True)
     order = models.PositiveSmallIntegerField()
 
