@@ -17,6 +17,16 @@ def create_provider_withdraw(transfer_id: int):
 
 @shared_task(queue='transfer')
 def update_provider_withdraw():
+    re_handle_transfers = Transfer.objects.filter(
+        deposit=False,
+        source=Transfer.PROVIDER,
+        status=Transfer.PROCESSING,
+        handling=False
+    )
+
+    for transfer in re_handle_transfers:
+        create_provider_withdraw.delay(transfer.id)
+
     transfers = Transfer.objects.filter(
         deposit=False,
         source=Transfer.PROVIDER,
