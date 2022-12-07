@@ -12,7 +12,7 @@ class ImageAdmin(admin.ModelAdmin):
 
 @admin.register(Banner)
 class BannerAdmin(admin.ModelAdmin):
-    list_display = ('title', 'image', 'link', 'order', 'active')
+    list_display = ('title', 'image', 'link', 'app_link', 'order', 'active')
     list_editable = ('active', 'order')
 
     def save_model(self, request, obj, form, change):
