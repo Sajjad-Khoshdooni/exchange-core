@@ -374,6 +374,9 @@ class Trade(models.Model):
             return self.irt_value * self.fee_amount / self.base_amount
 
     def set_gap_revenue(self):
+        if settings.DEBUG_OR_TESTING:
+            return
+
         self.gap_revenue = 0
 
         fee = self.get_fee_irt_value()

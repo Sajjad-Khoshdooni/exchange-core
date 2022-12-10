@@ -73,8 +73,3 @@ class BookMarkSymbolAPIView(APIView):
 
     def get_queryset(self):
         return User.objects.filter(user=self.request.user)
-
-
-
-
-

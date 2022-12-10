@@ -94,18 +94,9 @@ class OTCTrade(models.Model):
         return otc_trade
 
     def hedge_and_finalize(self):
-        conf = self.otc_request.get_trade_config()
 
         if self.otc_request.account.is_ordinary_user():
             try:
-                from ledger.utils.provider import TRADE, get_provider_requester
-                get_provider_requester().try_hedge_new_order(
-                    request_id='otc:%s' % self.id,
-                    asset=conf.coin,
-                    side=conf.side,
-                    amount=conf.coin_amount,
-                    scope=TRADE
-                )
                 self.accept()
             except HedgeError:
                 logger.exception('Error in hedging otc request')
@@ -117,13 +108,25 @@ class OTCTrade(models.Model):
             pipeline.release_lock(self.group_id)
             self.change_status(self.CANCELED)
 
-    def accept(self):
+    def accept(self, hedge: bool = True):
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             pipeline.release_lock(self.group_id)
             from market.models import Trade
             self.change_status(self.DONE)
             self.create_ledger(pipeline)
             Trade.create_for_otc_trade(self, pipeline)
+
+            if hedge:
+                conf = self.otc_request.get_trade_config()
+
+                from ledger.utils.provider import TRADE, get_provider_requester
+                get_provider_requester().try_hedge_new_order(
+                    request_id='otc:%s' % self.id,
+                    asset=conf.coin,
+                    side=conf.side,
+                    amount=conf.coin_amount,
+                    scope=TRADE
+                )
 
     @classmethod
     def check_abrupt_decrease(cls, otc_request: OTCRequest):

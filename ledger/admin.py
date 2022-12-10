@@ -265,12 +265,12 @@ class OTCTradeAdmin(admin.ModelAdmin):
     @admin.action(description='تایید معامله')
     def accept_trade(self, request, queryset):
         for otc in queryset.filter(status='pending'):
-            otc.hedge_and_finalize()
+            otc.accept()
 
     @admin.action(description='تایید معامله بدون هج')
     def accept_trade_without_hedge(self, request, queryset):
         for otc in queryset.filter(status='pending'):
-            otc.accept()
+            otc.accept(hedge=False)
 
     @admin.action(description='لغو معامله')
     def cancel_trade(self, request, queryset):
