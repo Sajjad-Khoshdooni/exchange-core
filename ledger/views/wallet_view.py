@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
+from accounts.views.jwt_views import DelegatedAccountMixin
 from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCTrade
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_irt_market_asset_symbols
@@ -228,11 +229,12 @@ class AssetRetrieveSerializer(AssetListSerializer):
         fields = (*AssetListSerializer.Meta.fields, 'networks')
 
 
-class WalletViewSet(ModelViewSet):
+class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-        wallets = Wallet.objects.filter(account=self.request.user.account, market=Wallet.SPOT, variant__isnull=True)
+        account, variant = self.get_account_variant(self.request)
+        wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT, variant=variant)
         ctx['asset_to_wallet'] = {wallet.asset_id: wallet for wallet in wallets}
         ctx['enable_irt_market_list'] = get_irt_market_asset_symbols()
         return ctx
@@ -347,7 +349,8 @@ class ConvertDustView(APIView):
     def post(self, *args):
         account = self.request.user.account
         IRT = Asset.get(Asset.IRT)
-        spot_wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT, balance__gt=0).exclude(asset=IRT)
+        spot_wallets = Wallet.objects.filter(
+            account=account, market=Wallet.SPOT, balance__gt=0, variant__isnull=True).exclude(asset=IRT)
 
         for wallet in spot_wallets:
             free_irt_value = wallet.get_free_irt()
