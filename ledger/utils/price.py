@@ -280,10 +280,5 @@ def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: 
     price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether, gap=gap,
                                    allow_stale=allow_stale)
 
-    logger.info('Price %s %s gap=%s value=%s allow_stale=%s raw_price=%s' % (coin, side, gap, value, allow_stale, raw_price))
-    logger.info('price: %s' % price)
-    logger.info('tether: %s' % tether)
-    logger.info('final: %s' % (price * tether))
-
     if price:
         return price * tether
