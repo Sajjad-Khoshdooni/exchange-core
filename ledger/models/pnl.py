@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 from decimal import Decimal
 
@@ -8,6 +9,9 @@ from accounts.models import Account
 from ledger.models import Wallet, Asset, Trx
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_trading_price_usdt, BUY
+
+
+logger = logging.getLogger(__name__)
 
 
 class PNLHistory(models.Model):
@@ -38,6 +42,13 @@ class PNLHistory(models.Model):
             elif coin == Asset.IRT:
                 return 1 / usdt_price
             return get_trading_price_usdt(coin, BUY, raw_price=True)
+
+        missing_price_coins = list(filter(
+            lambda coin: not get_price(coin),
+            set(account_wallets.keys()).union(set(account_input_outputs.keys())))
+        )
+        if missing_price_coins:
+            raise Exception(f'Missing coin prices for {missing_price_coins}')
 
         snapshot_balance = sum(map(
             lambda coin_amount: Decimal(get_price(coin_amount[0])) * coin_amount[1], account_wallets.items()

@@ -31,7 +31,7 @@ def create_pnl_histories(self):
         margin_accounts = set(map(lambda k: k[1], filter(lambda w: w[0] == Wallet.MARGIN, all_wallets)))
 
         to_create_pnl_histories = []
-        with PriceManager(fetch_all=True):
+        with PriceManager(fetch_all=True, allow_stale=True):
             for account in pnl_accounts:
                 for market in (Wallet.SPOT, Wallet.MARGIN):
                     if market == Wallet.MARGIN and account not in margin_accounts:
