@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from math import log10
-from typing import List, Dict
+from typing import List, Dict, Union
 
 import requests
 from decouple import config
@@ -72,7 +72,6 @@ class NetworkInfo:
 class WithdrawStatus:
     status: str
     tx_id: str
-
 
 
 @validate_arguments
@@ -310,9 +309,12 @@ class ProviderRequester:
 
         return resp.success
 
-    def get_transfer_status(self, transfer: Transfer) -> WithdrawStatus:
+    def get_transfer_status(self, transfer: Transfer) -> Union[WithdrawStatus, None]:
         resp = self.collect_api('/api/v1/withdraw/%d/' % transfer.id)
         data = resp.data['status']
+
+        if not data:
+            return
 
         return WithdrawStatus(
             status=data['status'],

@@ -36,6 +36,9 @@ def update_provider_withdraw():
     for transfer in transfers:
         data = get_provider_requester().get_transfer_status(transfer)
 
+        if not data:
+            continue
+
         status = data.status
 
         if status == transfer.CANCELED:
