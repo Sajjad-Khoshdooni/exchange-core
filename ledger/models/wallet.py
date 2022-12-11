@@ -43,21 +43,23 @@ class Wallet(models.Model):
     class Meta:
         constraints = [
             UniqueConstraint(
-                fields=['account', 'asset', 'market'], condition=Q(variant__isnull=True),
                 name='uniqueness_without_variant_constraint',
+                fields=('account', 'asset', 'market'),
+                condition=Q(variant__isnull=True),
             ),
             UniqueConstraint(
-                fields=['account', 'asset', 'market', 'variant'], condition=Q(variant__isnull=False),
                 name='uniqueness_with_variant_constraint',
+                fields=('account', 'asset', 'market', 'variant'),
+                condition=Q(variant__isnull=False),
             ),
             CheckConstraint(
+                name='valid_balance_constraint',
                 check=Q(check_balance=False) | (~Q(market='loan') & Q(balance__gte=0) & Q(balance__gte=F('locked'))) |
                       (Q(market='loan') & Q(balance__lte=0) & Q(locked=0)),
-                name='valid_balance_constraint'
             ),
             CheckConstraint(
+                name='valid_locked_constraint',
                 check=Q(locked__gte=0),
-                name='valid_locked_constraint'
             ),
         ]
 
