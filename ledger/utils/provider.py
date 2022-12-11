@@ -318,7 +318,7 @@ class ProviderRequester:
 
         return WithdrawStatus(
             status=data['status'],
-            tx_id=data.get('tx_id')
+            tx_id=data.get('tx_id', '')
         )
 
     # todo: add caching
