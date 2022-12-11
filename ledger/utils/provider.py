@@ -290,7 +290,7 @@ class ProviderRequester:
         })
         return resp.success
 
-    def new_withdraw(self, transfer: Transfer):
+    def new_withdraw(self, transfer: Transfer) -> Response:
         assert not transfer.deposit
 
         resp = self.collect_api('/api/v1/withdraw/', method='POST', data={
@@ -307,7 +307,7 @@ class ProviderRequester:
                 'resp': resp.data
             })
 
-        return resp.success
+        return resp
 
     def get_transfer_status(self, transfer: Transfer) -> Union[WithdrawStatus, None]:
         resp = self.collect_api('/api/v1/withdraw/%d/' % transfer.id)
@@ -381,7 +381,7 @@ class MockProviderRequester(ProviderRequester):
             min_notional=Decimal(10)
         )
 
-    def get_spot_balance_map(self, exchange) -> dict:
+    def get_spot_balance_map(self, exchange: str, market: str = 'trade') -> dict:
         return {}
 
     def get_futures_info(self, exchange: str) -> dict:

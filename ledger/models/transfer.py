@@ -3,11 +3,11 @@ from decimal import Decimal
 from typing import Union
 from uuid import uuid4
 
+from decouple import config
 from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import UniqueConstraint, Q
-from decouple import config
 
 from accounts.models import Account, Notification
 from accounts.utils import email
@@ -26,7 +26,10 @@ logger = logging.getLogger(__name__)
 
 class Transfer(models.Model):
     INIT, PROCESSING, PENDING, CANCELED, DONE = 'init', 'process', 'pending', 'canceled', 'done'
-    SELF, INTERNAL, PROVIDER = 'self', 'internal', 'provider'
+    STATUS_CHOICES = (INIT, INIT), (PROCESSING, PROCESSING), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)
+
+    SELF, INTERNAL, PROVIDER, MANUAL = 'self', 'internal', 'provider', 'manual'
+    SOURCE_CHOICES = (SELF, SELF), (INTERNAL, INTERNAL), (PROVIDER, PROVIDER), (MANUAL, MANUAL)
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
@@ -42,7 +45,7 @@ class Transfer(models.Model):
     status = models.CharField(
         default=PROCESSING,
         max_length=8,
-        choices=[(INIT, INIT), (PROCESSING, PROCESSING), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
+        choices=STATUS_CHOICES,
         db_index=True
     )
 
@@ -58,7 +61,7 @@ class Transfer(models.Model):
     source = models.CharField(
         max_length=8,
         default=SELF,
-        choices=((SELF, SELF), (INTERNAL, INTERNAL), (PROVIDER, PROVIDER))
+        choices=SOURCE_CHOICES
     )
 
     handling = models.BooleanField(default=False)
