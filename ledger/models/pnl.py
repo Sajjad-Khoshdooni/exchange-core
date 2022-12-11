@@ -85,6 +85,7 @@ class PNLHistory(models.Model):
         datetime_filter = {'created__range': (start, end)} if start else {}
         in_out_dict = defaultdict(Decimal)
         in_out_trxs = Trx.objects.filter(
+            sender__asset__enable=True,
             **datetime_filter
         ).exclude(
             scope__in=(Trx.TRADE, Trx.COMMISSION, Trx.PRIZE, Trx.STAKE_REVENUE, Trx.STAKE)
