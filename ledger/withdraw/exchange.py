@@ -41,8 +41,8 @@ def handle_provider_withdraw(transfer_id: int):
                 transfer.save(update_fields=['source'])
 
                 send_system_message("Manual withdraw", link=url_to_edit_object(transfer))
-            else:
-                return
+
+            return
 
         transfer.status = transfer.PENDING
         transfer.save(update_fields=['status'])
