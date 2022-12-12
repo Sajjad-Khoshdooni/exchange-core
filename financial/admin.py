@@ -164,11 +164,11 @@ class PaymentUserFilter(SimpleListFilter):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('created', 'get_payment_amount', 'status', 'ref_id', 'ref_status', 'get_user_bank_card',
-                    'get_withdraw_request_user_mobile',)
+    list_display = ('created', 'get_payment_amount', 'status', 'ref_id', 'ref_status', 'get_user',)
     readonly_fields = ('payment_request', )
     list_filter = (PaymentUserFilter, 'status', )
-    search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'payment_request__amount', 'payment_request__authority')
+    search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'payment_request__amount',
+                     'payment_request__authority')
 
     def get_user_bank_card(self, payment: Payment):
         return payment.payment_request.bank_card.user
@@ -180,11 +180,11 @@ class PaymentAdmin(admin.ModelAdmin):
     
     get_payment_amount.short_description = 'مقدار'
 
-    def get_withdraw_request_user_mobile(self, payment: Payment):
+    def get_user(self, payment: Payment):
         link = url_to_admin_list(User) + '{}'.format(payment.payment_request.bank_card.user.id) + '/change'
         return mark_safe("<a href='%s'>%s</a>" % (link, payment.payment_request.bank_card.user.phone))
 
-    get_withdraw_request_user_mobile.short_description = 'کاربر'
+    get_user.short_description = 'کاربر'
 
 
 class BankCardUserFilter(SimpleListFilter):

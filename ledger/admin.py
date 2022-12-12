@@ -350,8 +350,8 @@ class TransferUserFilter(SimpleListFilter):
 @admin.register(models.Transfer)
 class TransferAdmin(admin.ModelAdmin):
     list_display = (
-        'created', 'network', 'wallet', 'amount', 'fee_amount', 'deposit', 'status', 'source',
-        'get_total_volume_usdt', 'get_time_to_pass_72h',
+        'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source',
+        'get_total_volume_usdt', 'get_remaining_time_to_pass_72h',
     )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
@@ -370,7 +370,7 @@ class TransferAdmin(admin.ModelAdmin):
     def get_total_volume_usdt(self, transfer: models.Transfer):
         price = get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
         if price:
-            return transfer.amount * price
+            return round(transfer.amount * price, 1)
 
     get_total_volume_usdt.short_description = 'ارزش تتری'
 
@@ -380,7 +380,7 @@ class TransferAdmin(admin.ModelAdmin):
         users = set(queryset.filter(deposit=False).values_list('wallet__account__user_id', flat=True))
 
         self.payments_map = dict(Payment.objects.filter(
-            created__gte=timezone.now() - timedelta(days=30),
+            created__gte=timezone.now() - timedelta(days=3),
             status=DONE,
             payment_request__bank_card__user__in=users
         ).values(
@@ -389,14 +389,20 @@ class TransferAdmin(admin.ModelAdmin):
 
         return queryset
 
-    def get_time_to_pass_72h(self, transfer: models.Transfer):
+    @admin.display(description='Asset')
+    def get_asset(self, transfer: models.Transfer):
+        return transfer.wallet.asset
+
+    @admin.display(description='Remaining 72h')
+    def get_remaining_time_to_pass_72h(self, transfer: models.Transfer):
         if transfer.deposit:
             return
 
         latest_payment = self.payments_map.get(transfer.wallet.account.user_id)
 
         if latest_payment:
-            return timezone.now() - latest_payment
+            passed = timezone.now() - latest_payment
+            return timedelta(days=3) - passed
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw(self, request, queryset):
