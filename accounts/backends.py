@@ -1,4 +1,5 @@
 from django.contrib.auth.backends import ModelBackend
+from rest_framework.exceptions import PermissionDenied
 
 from accounts.models import User
 
@@ -17,5 +18,8 @@ class AuthenticationBackend(ModelBackend):
             User().set_password(password)
             return
 
-        if user.check_password(password) and self.user_can_authenticate(user):
-            return user
+        if user.check_password(password):
+            if self.user_can_authenticate(user):
+                return user
+            else:
+                raise PermissionDenied({'reason': 'حساب شما تعلیق شده است.'})

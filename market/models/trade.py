@@ -21,6 +21,10 @@ from market.models import Order, PairSymbol
 logger = logging.getLogger(__name__)
 
 
+class NegativeGapRevenue(Exception):
+    pass
+
+
 @dataclass
 class FillOrderTrxs:
     base: FakeTrx
@@ -370,6 +374,9 @@ class Trade(models.Model):
             return self.irt_value * self.fee_amount / self.base_amount
 
     def set_gap_revenue(self):
+        if settings.DEBUG_OR_TESTING:
+            return
+
         self.gap_revenue = 0
 
         fee = self.get_fee_irt_value()
@@ -400,6 +407,9 @@ class Trade(models.Model):
 
         if base_asset.symbol == Asset.USDT:
             self.gap_revenue *= get_tether_irt_price(side=reverse_side)
+
+        if self.gap_revenue < 0:
+            raise NegativeGapRevenue
 
         self.gap_revenue += fee
 

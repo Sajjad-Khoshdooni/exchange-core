@@ -1,17 +1,22 @@
+from datetime import timedelta
 from uuid import uuid4
 
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F
-from django.forms import ModelForm
+from django.utils import timezone
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
+from accounts.admin_guard.html_tags import anchor_tag
 from accounts.models import Account
+from accounts.utils.admin import url_to_edit_object
+from financial.models import Payment
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken
+from ledger.utils.fields import DONE
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
@@ -265,12 +270,12 @@ class OTCTradeAdmin(admin.ModelAdmin):
     @admin.action(description='تایید معامله')
     def accept_trade(self, request, queryset):
         for otc in queryset.filter(status='pending'):
-            otc.hedge_and_finalize()
+            otc.accept()
 
     @admin.action(description='تایید معامله بدون هج')
     def accept_trade_without_hedge(self, request, queryset):
         for otc in queryset.filter(status='pending'):
-            otc.accept()
+            otc.accept(hedge=False)
 
     @admin.action(description='لغو معامله')
     def cancel_trade(self, request, queryset):
@@ -346,11 +351,12 @@ class TransferUserFilter(SimpleListFilter):
 
 @admin.register(models.Transfer)
 class TransferAdmin(admin.ModelAdmin):
-    list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount',
-                    'deposit', 'status', 'is_fee', 'source', 'get_total_volume_usdt',
-                    )
+    list_display = (
+        'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
+        'get_total_volume_usdt', 'get_remaining_time_to_pass_72h',
+    )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
-    list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
+    list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
     readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt')
     actions = ('accept_withdraw', 'reject_withdraw')
 
@@ -363,12 +369,47 @@ class TransferAdmin(admin.ModelAdmin):
 
         obj.save()
 
+    @admin.display(description='ارزش تتری')
     def get_total_volume_usdt(self, transfer: models.Transfer):
         price = get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
         if price:
-            return transfer.amount * price
+            return round(transfer.amount * price, 1)
 
-    get_total_volume_usdt.short_description = 'ارزش تتری'
+    def get_queryset(self, request):
+        queryset = super(TransferAdmin, self).get_queryset(request).select_related('wallet__account__user')
+
+        users = set(queryset.filter(deposit=False).values_list('wallet__account__user_id', flat=True))
+
+        return queryset
+
+    @admin.display(description='Asset')
+    def get_asset(self, transfer: models.Transfer):
+        return transfer.wallet.asset
+
+    @admin.display(description='User')
+    def get_user(self, transfer: models.Transfer):
+        user = transfer.wallet.account.user
+        link = url_to_edit_object(user)
+        return anchor_tag(user.phone, link)
+
+    @admin.display(description='Remaining 72h')
+    def get_remaining_time_to_pass_72h(self, transfer: models.Transfer):
+        if transfer.deposit:
+            return
+
+        user = transfer.wallet.account.user
+
+        last_payment = Payment.objects.filter(
+            created__gt=timezone.now() - timedelta(days=3),
+            created__lt=transfer.created,
+            status=DONE,
+            payment_request__bank_card__user=user
+        ).order_by('created').last()
+
+        if last_payment:
+            passed = timezone.now() - last_payment.created
+            rem = timedelta(days=3) - passed
+            return '%s روز %s ساعت %s دقیقه' % (rem.days, rem.seconds // 3600, rem.seconds % 3600 // 60)
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw(self, request, queryset):

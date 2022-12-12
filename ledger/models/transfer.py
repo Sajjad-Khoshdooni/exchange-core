@@ -3,11 +3,11 @@ from decimal import Decimal
 from typing import Union
 from uuid import uuid4
 
+from decouple import config
 from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import UniqueConstraint, Q
-from decouple import config
 
 from accounts.models import Account, Notification
 from accounts.utils import email
@@ -26,7 +26,10 @@ logger = logging.getLogger(__name__)
 
 class Transfer(models.Model):
     INIT, PROCESSING, PENDING, CANCELED, DONE = 'init', 'process', 'pending', 'canceled', 'done'
-    SELF, INTERNAL, PROVIDER = 'self', 'internal', 'provider'
+    STATUS_CHOICES = (INIT, INIT), (PROCESSING, PROCESSING), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)
+
+    SELF, INTERNAL, PROVIDER, MANUAL = 'self', 'internal', 'provider', 'manual'
+    SOURCE_CHOICES = (SELF, SELF), (INTERNAL, INTERNAL), (PROVIDER, PROVIDER), (MANUAL, MANUAL)
 
     created = models.DateTimeField(auto_now_add=True)
     group_id = models.UUIDField(default=uuid4, db_index=True)
@@ -42,7 +45,7 @@ class Transfer(models.Model):
     status = models.CharField(
         default=PROCESSING,
         max_length=8,
-        choices=[(INIT, INIT), (PROCESSING, PROCESSING), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
+        choices=STATUS_CHOICES,
         db_index=True
     )
 
@@ -53,20 +56,16 @@ class Transfer(models.Model):
     out_address = get_address_field()
     memo = models.CharField(max_length=64, blank=True)
 
-    is_fee = models.BooleanField(default=False)
-
     source = models.CharField(
         max_length=8,
         default=SELF,
-        choices=((SELF, SELF), (INTERNAL, INTERNAL), (PROVIDER, PROVIDER))
+        choices=SOURCE_CHOICES
     )
-
-    handling = models.BooleanField(default=False)
-
-    hidden = models.BooleanField(default=False)
 
     irt_value = get_amount_field(default=Decimal(0))
     usdt_value = get_amount_field(default=Decimal(0))
+
+    comment = models.TextField(blank=True, verbose_name='نظر')
 
     @property
     def asset(self):
@@ -86,10 +85,6 @@ class Transfer(models.Model):
         return self.network.explorer_link.format(hash=self.trx_hash)
 
     def build_trx(self, pipeline: WalletPipeline):
-        if self.hidden or (self.deposit and self.is_fee):
-            logger.info(f'Creating Trx for transfer id: {self.id} ignored.')
-            return
-
         asset = self.wallet.asset
         out_wallet = asset.get_wallet(Account.out())
 
@@ -244,7 +239,7 @@ class Transfer(models.Model):
     def alert_user(self):
         user = self.wallet.account.user
 
-        if self.status == Transfer.DONE and not self.hidden and user and user.is_active:
+        if self.status == Transfer.DONE and user and user.is_active:
             sent_amount = self.asset.get_presentation_amount(self.amount)
             user_email = self.wallet.account.user.email
             if self.deposit:

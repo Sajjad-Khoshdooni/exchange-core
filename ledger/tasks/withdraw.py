@@ -17,6 +17,15 @@ def create_provider_withdraw(transfer_id: int):
 
 @shared_task(queue='transfer')
 def update_provider_withdraw():
+    re_handle_transfers = Transfer.objects.filter(
+        deposit=False,
+        source=Transfer.PROVIDER,
+        status=Transfer.PROCESSING,
+    )
+
+    for transfer in re_handle_transfers:
+        create_provider_withdraw.delay(transfer.id)
+
     transfers = Transfer.objects.filter(
         deposit=False,
         source=Transfer.PROVIDER,
@@ -25,6 +34,9 @@ def update_provider_withdraw():
 
     for transfer in transfers:
         data = get_provider_requester().get_transfer_status(transfer)
+
+        if not data:
+            continue
 
         status = data.status
 
@@ -42,10 +54,6 @@ def create_withdraw(transfer_id: int):
 
     transfer = Transfer.objects.get(id=transfer_id)
 
-    if transfer.handling:
-        logger.info('ignored because of handling flag')
-        return
-
     if transfer.source != Transfer.SELF:
         logger.info('ignored because non self source')
         return
@@ -56,52 +64,43 @@ def create_withdraw(transfer_id: int):
 
     from ledger.requester.withdraw_requester import RequestWithdraw
 
-    try:
-        transfer.handling = True
-        transfer.save(update_fields=['handling'])
+    response = RequestWithdraw().withdraw_from_hot_wallet(
+        receiver_address=transfer.out_address,
+        amount=transfer.amount,
+        network=transfer.network.symbol,
+        asset=transfer.wallet.asset.symbol,
+        transfer_id=transfer.id
+    )
 
-        response = RequestWithdraw().withdraw_from_hot_wallet(
-            receiver_address=transfer.out_address,
-            amount=transfer.amount,
-            network=transfer.network.symbol,
-            asset=transfer.wallet.asset.symbol,
-            transfer_id=transfer.id
-        )
+    resp_data = response.json()
 
-        resp_data = response.json()
+    if response.ok:
+        transfer.status = Transfer.PENDING
+        transfer.save(update_fields=['status'])
 
-        if response.ok:
-            transfer.status = Transfer.PENDING
-            transfer.save(update_fields=['status'])
+    elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
+        logger.info('withdraw switch %s %s' % (transfer.id, resp_data))
 
-        elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
-            logger.info('withdraw switch %s %s' % (transfer.id, resp_data))
+        transfer.source = Transfer.PROVIDER
+        transfer.save(update_fields=['source'])
 
-            transfer.source = Transfer.PROVIDER
-            transfer.save(update_fields=['source'])
+        create_provider_withdraw(transfer_id=transfer.id)
+    else:
+        logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
 
-            create_provider_withdraw(transfer_id=transfer.id)
-        else:
-            logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
+        transfer.status = Transfer.PENDING
+        transfer.save(update_fields=['status'])
 
-            transfer.status = Transfer.PENDING
-            transfer.save(update_fields=['status'])
-
-            logger.warning('Error sending withdraw to blocklink', extra={
-                'transfer_id': transfer_id,
-                'resp': resp_data
-            })
-
-    finally:
-        transfer.handling = False
-        transfer.save(update_fields=['handling'])
+        logger.warning('Error sending withdraw to blocklink', extra={
+            'transfer_id': transfer_id,
+            'resp': resp_data
+        })
 
 
 @shared_task(queue='transfer')
 def update_withdraws():
     re_handle_transfers = Transfer.objects.filter(
         deposit=False,
-        handling=False,
         source=Transfer.SELF,
         status=Transfer.PROCESSING,
     )

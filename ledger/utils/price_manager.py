@@ -42,8 +42,6 @@ class PriceManager:
         PriceManager._tether_prices = {}
         PriceManager._fetch_all = self.fetch_all
 
-        logger.info('PriceManager execution...')
-
         if self.side:
             sides = [self.side]
         else:

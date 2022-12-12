@@ -3,6 +3,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.viewsets import ModelViewSet
 
+from accounts.models import User
 from financial.models.bank_card import BankAccountSerializer, BankAccount
 
 
@@ -15,6 +16,9 @@ class BankAccountView(ModelViewSet):
         return BankAccount.live_objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
+        if self.request.user.level < User.LEVEL2:
+            raise ValidationError('برای افزودن شماره شبا ابتدا احراز هویت کنید.')
+
         serializer.save(user=self.request.user)
 
     def perform_destroy(self, bank_account: BankAccount):

@@ -346,13 +346,13 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_otctrade_address.short_description = 'خریدهای OTC'
 
+    @admin.display(description='source/medium')
     def get_source_medium(self, user: User):
         if hasattr(user, 'trafficsource'):
             link = url_to_edit_object(user.trafficsource)
             text = '%s/%s' % (user.trafficsource.utm_source, user.trafficsource.utm_medium)
 
             return mark_safe("<a href='%s'>%s</a>" % (link, text))
-    get_source_medium.short_description = 'source/medium'
 
     def get_referrer_user(self, user: User):
         account = getattr(user, 'account', None)

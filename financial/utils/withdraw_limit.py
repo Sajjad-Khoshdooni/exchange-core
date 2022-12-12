@@ -51,7 +51,7 @@ def get_crypto_withdraw_irt_value(user: User):
     start_of_day = get_start_of_day()
 
     crypto_withdraws = Transfer.objects.filter(
-        deposit=False, hidden=False, is_fee=False,
+        deposit=False,
         wallet__account__user=user,
         created__gte=start_of_day
     ).exclude(

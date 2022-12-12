@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from math import log10
-from typing import List, Dict
+from typing import List, Dict, Union
 
 import requests
 from decouple import config
@@ -72,7 +72,6 @@ class NetworkInfo:
 class WithdrawStatus:
     status: str
     tx_id: str
-
 
 
 @validate_arguments
@@ -291,7 +290,7 @@ class ProviderRequester:
         })
         return resp.success
 
-    def new_withdraw(self, transfer: Transfer):
+    def new_withdraw(self, transfer: Transfer) -> Response:
         assert not transfer.deposit
 
         resp = self.collect_api('/api/v1/withdraw/', method='POST', data={
@@ -308,15 +307,18 @@ class ProviderRequester:
                 'resp': resp.data
             })
 
-        return resp.success
+        return resp
 
-    def get_transfer_status(self, transfer: Transfer) -> WithdrawStatus:
+    def get_transfer_status(self, transfer: Transfer) -> Union[WithdrawStatus, None]:
         resp = self.collect_api('/api/v1/withdraw/%d/' % transfer.id)
         data = resp.data['status']
 
+        if not data:
+            return
+
         return WithdrawStatus(
             status=data['status'],
-            tx_id=data.get('tx_id')
+            tx_id=data.get('tx_id', '')
         )
 
     # todo: add caching
@@ -379,7 +381,7 @@ class MockProviderRequester(ProviderRequester):
             min_notional=Decimal(10)
         )
 
-    def get_spot_balance_map(self, exchange) -> dict:
+    def get_spot_balance_map(self, exchange: str, market: str = 'trade') -> dict:
         return {}
 
     def get_futures_info(self, exchange: str) -> dict:
