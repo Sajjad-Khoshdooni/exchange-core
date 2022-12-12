@@ -72,7 +72,7 @@ class OrderViewSet(mixins.CreateModelMixin,
 
 
 class OpenOrderListAPIView(APIView):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
 
     def get(self, request, *args, **kwargs):
