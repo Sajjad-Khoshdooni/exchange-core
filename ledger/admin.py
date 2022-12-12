@@ -4,9 +4,8 @@ from uuid import uuid4
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import F, Max
+from django.db.models import F
 from django.utils import timezone
-from django.utils.safestring import mark_safe
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 
 from accounts.admin_guard import M
