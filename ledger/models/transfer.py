@@ -56,8 +56,6 @@ class Transfer(models.Model):
     out_address = get_address_field()
     memo = models.CharField(max_length=64, blank=True)
 
-    is_fee = models.BooleanField(default=False)
-
     source = models.CharField(
         max_length=8,
         default=SELF,
@@ -87,10 +85,6 @@ class Transfer(models.Model):
         return self.network.explorer_link.format(hash=self.trx_hash)
 
     def build_trx(self, pipeline: WalletPipeline):
-        if self.deposit and self.is_fee:
-            logger.info(f'Creating Trx for transfer id: {self.id} ignored.')
-            return
-
         asset = self.wallet.asset
         out_wallet = asset.get_wallet(Account.out())
 
