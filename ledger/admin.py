@@ -381,14 +381,6 @@ class TransferAdmin(admin.ModelAdmin):
 
         users = set(queryset.filter(deposit=False).values_list('wallet__account__user_id', flat=True))
 
-        self.payments_map = dict(Payment.objects.filter(
-            created__gte=timezone.now() - timedelta(days=3),
-            status=DONE,
-            payment_request__bank_card__user__in=users
-        ).values(
-            'payment_request__bank_card__user_id'
-        ).annotate(latest=Max('created')).values_list('payment_request__bank_card__user_id', 'latest'))
-
         return queryset
 
     @admin.display(description='Asset')
@@ -406,10 +398,17 @@ class TransferAdmin(admin.ModelAdmin):
         if transfer.deposit:
             return
 
-        latest_payment = self.payments_map.get(transfer.wallet.account.user_id)
+        user = transfer.wallet.account.user
 
-        if latest_payment:
-            passed = timezone.now() - latest_payment
+        last_payment = Payment.objects.filter(
+            created__gt=timezone.now() - timedelta(days=3),
+            created__lt=transfer.created,
+            status=DONE,
+            payment_request__bank_card__user=user
+        ).order_by('created').last()
+
+        if last_payment:
+            passed = timezone.now() - last_payment.created
             rem = timedelta(days=3) - passed
             return '%s روز %s ساعت %s دقیقه' % (rem.days, rem.seconds // 3600, rem.seconds % 3600 // 60)
 
