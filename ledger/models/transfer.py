@@ -69,6 +69,8 @@ class Transfer(models.Model):
     irt_value = get_amount_field(default=Decimal(0))
     usdt_value = get_amount_field(default=Decimal(0))
 
+    comment = models.TextField(blank=True, verbose_name='نظر')
+
     @property
     def asset(self):
         return self.wallet.asset

@@ -346,9 +346,10 @@ class TransferUserFilter(SimpleListFilter):
 
 @admin.register(models.Transfer)
 class TransferAdmin(admin.ModelAdmin):
-    list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount',
-                    'deposit', 'status', 'is_fee', 'source', 'get_total_volume_usdt',
-                    )
+    list_display = (
+        'created', 'network', 'wallet', 'amount', 'fee_amount', 'deposit', 'status', 'is_fee', 'source',
+        'get_total_volume_usdt',
+    )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
     readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt')
