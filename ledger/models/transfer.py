@@ -64,8 +64,6 @@ class Transfer(models.Model):
         choices=SOURCE_CHOICES
     )
 
-    hidden = models.BooleanField(default=False)
-
     irt_value = get_amount_field(default=Decimal(0))
     usdt_value = get_amount_field(default=Decimal(0))
 
@@ -89,7 +87,7 @@ class Transfer(models.Model):
         return self.network.explorer_link.format(hash=self.trx_hash)
 
     def build_trx(self, pipeline: WalletPipeline):
-        if self.hidden or (self.deposit and self.is_fee):
+        if self.deposit and self.is_fee:
             logger.info(f'Creating Trx for transfer id: {self.id} ignored.')
             return
 
@@ -247,7 +245,7 @@ class Transfer(models.Model):
     def alert_user(self):
         user = self.wallet.account.user
 
-        if self.status == Transfer.DONE and not self.hidden and user and user.is_active:
+        if self.status == Transfer.DONE and user and user.is_active:
             sent_amount = self.asset.get_presentation_amount(self.amount)
             user_email = self.wallet.account.user.email
             if self.deposit:

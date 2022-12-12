@@ -1,17 +1,20 @@
+from datetime import timedelta
 from uuid import uuid4
 
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import F
-from django.forms import ModelForm
+from django.db.models import F, Max
+from django.utils import timezone
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import Account
+from financial.models import Payment
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken
+from ledger.utils.fields import DONE
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
@@ -348,7 +351,7 @@ class TransferUserFilter(SimpleListFilter):
 class TransferAdmin(admin.ModelAdmin):
     list_display = (
         'created', 'network', 'wallet', 'amount', 'fee_amount', 'deposit', 'status', 'is_fee', 'source',
-        'get_total_volume_usdt',
+        'get_total_volume_usdt', 'get_time_to_pass_72h',
     )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
@@ -370,6 +373,30 @@ class TransferAdmin(admin.ModelAdmin):
             return transfer.amount * price
 
     get_total_volume_usdt.short_description = 'ارزش تتری'
+
+    def get_queryset(self, request):
+        queryset = super(TransferAdmin, self).get_queryset(request).select_related('wallet__account__user')
+
+        users = set(queryset.filter(deposit=False).values_list('wallet__account__user_id', flat=True))
+
+        self.payments_map = dict(Payment.objects.filter(
+            created__gte=timezone.now() - timedelta(days=30),
+            status=DONE,
+            payment_request__bank_card__user__in=users
+        ).values(
+            'payment_request__bank_card__user_id'
+        ).annotate(latest=Max('created')).values_list('payment_request__bank_card__user_id', 'latest'))
+
+        return queryset
+
+    def get_time_to_pass_72h(self, transfer: models.Transfer):
+        if transfer.deposit:
+            return
+
+        latest_payment = self.payments_map.get(transfer.wallet.account.user_id)
+
+        if latest_payment:
+            return timezone.now() - latest_payment
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw(self, request, queryset):
