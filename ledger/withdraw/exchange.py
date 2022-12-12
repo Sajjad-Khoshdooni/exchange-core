@@ -21,32 +21,20 @@ def handle_provider_withdraw(transfer_id: int):
 
     transfer = Transfer.objects.get(id=transfer_id)
 
-    if transfer.handling:
-        logger.info('ignored because of handling flag')
+    assert not transfer.deposit
+    assert transfer.source == Transfer.PROVIDER
+    assert transfer.status == transfer.PROCESSING
+
+    resp = get_provider_requester().new_withdraw(transfer)
+
+    if not resp.success:
+        if resp.status_code == 400:
+            transfer.source = Transfer.MANUAL
+            transfer.save(update_fields=['source'])
+
+            send_system_message("Manual withdraw", link=url_to_edit_object(transfer))
+
         return
 
-    try:
-        transfer.handling = True
-        transfer.save(update_fields=['handling'])
-
-        assert not transfer.deposit
-        assert transfer.source == Transfer.PROVIDER
-        assert transfer.status == transfer.PROCESSING
-
-        resp = get_provider_requester().new_withdraw(transfer)
-
-        if not resp.success:
-            if resp.status_code == 400:
-                transfer.source = Transfer.MANUAL
-                transfer.save(update_fields=['source'])
-
-                send_system_message("Manual withdraw", link=url_to_edit_object(transfer))
-
-            return
-
-        transfer.status = transfer.PENDING
-        transfer.save(update_fields=['status'])
-
-    finally:
-        transfer.handling = False
-        transfer.save(update_fields=['handling'])
+    transfer.status = transfer.PENDING
+    transfer.save(update_fields=['status'])

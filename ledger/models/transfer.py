@@ -64,8 +64,6 @@ class Transfer(models.Model):
         choices=SOURCE_CHOICES
     )
 
-    handling = models.BooleanField(default=False)
-
     hidden = models.BooleanField(default=False)
 
     irt_value = get_amount_field(default=Decimal(0))
