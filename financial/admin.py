@@ -11,7 +11,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import User
-from accounts.utils.admin import url_to_admin_list
+from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
     FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost, Investment, InvestmentRevenue, \
@@ -72,37 +72,32 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
         ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'bank_account',
          'ref_doc', 'get_withdraw_request_receive_time', 'provider_withdraw_id')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
-                                      'get_withdraw_request_user_mobile')}),
+                                      'get_user')}),
         ('نظر', {'fields': ('comment',)})
     )
-    # list_display = ('bank_account', )
     list_filter = ('status', UserRialWithdrawRequestFilter, )
     ordering = ('-created', )
-    readonly_fields = ('created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount',
-                       'get_withdraw_request_user', 'get_withdraw_request_user_mobile', 'withdraw_channel',
-                       'get_withdraw_request_receive_time', 'get_user'
-                       )
+    readonly_fields = (
+        'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount',
+        'get_withdraw_request_user', 'withdraw_channel', 'get_withdraw_request_receive_time', 'get_user'
+    )
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'withdraw_channel', 'ref_id')
 
     actions = ('resend_withdraw_request', )
 
+    @admin.display(description='نام و نام خانوادگی')
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.user.get_full_name()
-    get_withdraw_request_user.short_description = 'نام و نام خانوادگی'
 
-    def get_withdraw_request_user_mobile(self, withdraw_request: FiatWithdrawRequest):
-        link = url_to_admin_list(User) + '{}'.format(withdraw_request.bank_account.user.id) + '/change'
+    @admin.display(description='کاربر')
+    def get_user(self, withdraw_request: FiatWithdrawRequest):
+        link = url_to_edit_object(withdraw_request.bank_account.user)
         return mark_safe("<a href='%s'>%s</a>" % (link, withdraw_request.bank_account.user.phone))
-    get_withdraw_request_user_mobile.short_description = 'تلفن همراه'
 
+    @admin.display(description='شماره شبا')
     def get_withdraw_request_iban(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.iban
-    get_withdraw_request_iban.short_description = 'شماره شبا'
-
-    def get_user(self, withdraw_request: FiatWithdrawRequest):
-        return withdraw_request.bank_account.user.phone
-    get_user.short_description = 'کاربر'
 
     def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
         if withdraw.receive_datetime:
@@ -170,18 +165,13 @@ class PaymentAdmin(admin.ModelAdmin):
     search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'payment_request__amount',
                      'payment_request__authority')
 
-    def get_user_bank_card(self, payment: Payment):
-        return payment.payment_request.bank_card.user
-
-    get_user_bank_card.short_description = 'کاربر'
-    
+    @admin.display(description='مقدار')
     def get_payment_amount(self, payment: Payment):
         return humanize_number(payment.payment_request.amount)
-    
-    get_payment_amount.short_description = 'مقدار'
 
+    @admin.display(description='کاربر')
     def get_user(self, payment: Payment):
-        link = url_to_admin_list(User) + '{}'.format(payment.payment_request.bank_card.user.id) + '/change'
+        link = url_to_edit_object(payment.payment_request.bank_card.user)
         return mark_safe("<a href='%s'>%s</a>" % (link, payment.payment_request.bank_card.user.phone))
 
     get_user.short_description = 'کاربر'
