@@ -328,7 +328,7 @@ class AssetOverview:
 
         fiat_deposit_accounts = set(Payment.objects.filter(
             status=DONE
-        ).values_list('payment_request__bank_card__user__account__id ', flat=True))
+        ).values_list('payment_request__bank_card__user__account', flat=True))
 
         non_deposited_wallets = Wallet.objects.filter(
             account__type=Account.ORDINARY,
