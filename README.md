@@ -29,4 +29,7 @@ REVOKE SELECT ON excluding_table from bi;
 ```
 
 # Rabbitmq
-
+```shell
+rabbitmqctl add_vhost my_vhost
+rabbitmqctl set_permissions -p my_vhost rabbitmq ".*" ".*" ".*"
+```
