@@ -357,7 +357,9 @@ class TransferAdmin(admin.ModelAdmin):
     )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
-    readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt', )
+    readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt', 'created', 'accepted_datetime',
+                       'finished_datetime')
+
     actions = ('accept_withdraw', 'reject_withdraw')
 
     def save_model(self, request, obj: models.Transfer, form, change):
@@ -523,7 +525,7 @@ class SystemSnapshotAdmin(admin.ModelAdmin):
                     'investment', 'cash', 'prize', 'verified')
     ordering = ('-created', )
     actions = ('reject_histories', 'verify_histories')
-    readonly_fields = ('created', 'accepted_datetime', 'finished_datetime')
+    readonly_fields = ('created', )
 
     @admin.action(description='رد', permissions=['change'])
     def reject_histories(self, request, queryset):
