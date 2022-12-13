@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404
@@ -76,7 +77,11 @@ class DepositSerializer(serializers.ModelSerializer):
 
             with WalletPipeline() as pipeline:
                 prev_transfer.status = status
-                prev_transfer.save(update_fields=['status'])
+
+                if status in (Transfer.CANCELED, Transfer.DONE):
+                    prev_transfer.finished_datetime = timezone.now()
+
+                prev_transfer.save(update_fields=['status', 'finished_datetime'])
 
                 if status == Transfer.DONE:
                     prev_transfer.build_trx(pipeline)
@@ -106,7 +111,11 @@ class DepositSerializer(serializers.ModelSerializer):
                 )
 
                 transfer.status = status
-                transfer.save(update_fields=['status'])
+
+                if status in (Transfer.CANCELED, Transfer.DONE):
+                    prev_transfer.finished_datetime = timezone.now()
+
+                transfer.save(update_fields=['status', 'finished_datetime'])
 
                 if status == Transfer.DONE:
                     transfer.build_trx(pipeline)

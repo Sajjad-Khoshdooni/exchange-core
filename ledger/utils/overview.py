@@ -3,12 +3,13 @@ from decimal import Decimal
 from django.db.models import Sum
 
 from accounts.models import Account
-from financial.models import InvestmentRevenue, FiatWithdrawRequest
+from financial.models import InvestmentRevenue, FiatWithdrawRequest, Payment
 from financial.utils.stats import get_total_fiat_irt
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Asset, Wallet, Transfer, Prize
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
 from ledger.utils.cache import cache_for
+from ledger.utils.fields import DONE
 from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, BUY, PriceFetchError
 from ledger.utils.provider import get_provider_requester, BINANCE, KUCOIN, MEXC, CoinOrders
 
@@ -320,12 +321,21 @@ class AssetOverview:
 
     @classmethod
     def get_non_deposited_accounts_per_asset_balance(cls) -> dict:
-        transferred_accounts = list(Transfer.objects.filter(deposit=True).values_list('wallet__account_id', flat=True))
+        crypto_deposit_accounts = set(Transfer.objects.filter(
+            deposit=True,
+            status=Transfer.DONE,
+        ).values_list('wallet__account_id', flat=True))
+
+        fiat_deposit_accounts = set(Payment.objects.filter(
+            status=DONE
+        ).values_list('payment_request__bank_card__user__account__id ', flat=True))
 
         non_deposited_wallets = Wallet.objects.filter(
             account__type=Account.ORDINARY,
             account__user__first_fiat_deposit_date__isnull=True
-        ).exclude(account__in=transferred_accounts).values('asset__symbol').annotate(amount=Sum('balance'))
+        ).exclude(
+            account__in=crypto_deposit_accounts | fiat_deposit_accounts
+        ).values('asset__symbol').annotate(amount=Sum('balance'))
 
         return {w['asset__symbol']: w['amount'] for w in non_deposited_wallets}
 

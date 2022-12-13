@@ -413,7 +413,10 @@ class TransferAdmin(admin.ModelAdmin):
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw(self, request, queryset):
-        queryset.filter(status=models.Transfer.INIT).update(status=models.Transfer.PROCESSING)
+        queryset.filter(status=models.Transfer.INIT).update(
+            status=models.Transfer.PROCESSING,
+            accepted_datetime=timezone.now(),
+        )
 
     @admin.action(description='رد برداشت', permissions=['view'])
     def reject_withdraw(self, request, queryset):
