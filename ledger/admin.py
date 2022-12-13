@@ -350,7 +350,13 @@ class TransferUserFilter(SimpleListFilter):
 
 
 @admin.register(models.Transfer)
-class TransferAdmin(admin.ModelAdmin):
+class TransferAdmin(AdvancedAdmin):
+    default_edit_condition = M.superuser
+
+    fields_edit_conditions = {
+        'comment': True
+    }
+
     list_display = (
         'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
         'get_total_volume_usdt', 'get_remaining_time_to_pass_72h',
@@ -391,8 +397,10 @@ class TransferAdmin(admin.ModelAdmin):
     @admin.display(description='User')
     def get_user(self, transfer: models.Transfer):
         user = transfer.wallet.account.user
-        link = url_to_edit_object(user)
-        return anchor_tag(user.phone, link)
+
+        if user:
+            link = url_to_edit_object(user)
+            return anchor_tag(user.phone, link)
 
     @admin.display(description='Remaining 72h')
     def get_remaining_time_to_pass_72h(self, transfer: models.Transfer):

@@ -27,3 +27,6 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO bi;
 -- if needed to exclude some
 REVOKE SELECT ON excluding_table from bi;
 ```
+
+# Rabbitmq
+
