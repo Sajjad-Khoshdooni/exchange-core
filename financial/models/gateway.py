@@ -1,6 +1,7 @@
 import logging
 from typing import Type
 
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from accounts.models import User
@@ -32,6 +33,10 @@ class Gateway(models.Model):
     merchant_id = models.CharField(max_length=128)
     active = models.BooleanField(default=False)
     active_for_staff = models.BooleanField(default=False)
+
+    def clean(self):
+        if not self.active and not Gateway.objects.filter(active=True).exclude(id=self.id):
+            raise ValidationError('At least one gateway should be active')
 
     @classmethod
     def get_active(cls, user: User = None) -> 'Gateway':
