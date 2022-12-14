@@ -280,12 +280,12 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
         return Response(wallets)
 
 
-class WalletBalanceView(APIView):
+class WalletBalanceView(APIView, DelegatedAccountMixin):
     def get(self, request, *args, **kwargs):
         market = request.query_params.get('market', Wallet.SPOT)
         asset = get_object_or_404(Asset, symbol=kwargs['symbol'].upper())
-
-        wallet = asset.get_wallet(request.user.account, market=market)
+        account, variant = self.get_account_variant(self.request)
+        wallet = asset.get_wallet(account, market=market, variant=variant)
 
         return Response({
             'symbol': asset.symbol,
