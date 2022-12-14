@@ -113,7 +113,7 @@ class DepositSerializer(serializers.ModelSerializer):
                 transfer.status = status
 
                 if status in (Transfer.CANCELED, Transfer.DONE):
-                    prev_transfer.finished_datetime = timezone.now()
+                    transfer.finished_datetime = timezone.now()
 
                 transfer.save(update_fields=['status', 'finished_datetime'])
 
