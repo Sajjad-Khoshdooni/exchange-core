@@ -20,7 +20,7 @@ class InternalAssetsRequester:
         if settings.DEBUG_OR_TESTING_OR_STAGING:
             return []
 
-        resp = requests.get(url=self.url, headers=self.header)
+        resp = requests.get(url=self.url, headers=self.header, timeout=10)
         if not resp.ok:
             return None
 

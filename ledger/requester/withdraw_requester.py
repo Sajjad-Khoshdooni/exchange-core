@@ -24,4 +24,4 @@ class RequestWithdraw:
 
         url = config('BLOCKLINK_BASE_URL', default='https://blocklink.raastin.com') + '/api/v1/withdraw/'
 
-        return requests.post(data=data, url=url, headers=self.header)
+        return requests.post(data=data, url=url, headers=self.header, timeout=15)

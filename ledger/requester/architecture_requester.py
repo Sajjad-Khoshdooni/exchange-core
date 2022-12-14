@@ -14,4 +14,4 @@ def request_architecture(network):
     header = {
         'Authorization': config('BLOCKLINK_TOKEN')
     }
-    return requests.get(url=url, params=data, headers=header).json().get('architecture')
+    return requests.get(url=url, params=data, headers=header, timeout=10).json().get('architecture')
