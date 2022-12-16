@@ -9,6 +9,7 @@ from ledger.exceptions import AbruptDecrease, HedgeError
 from ledger.models import OTCRequest, Trx
 from ledger.utils.price import SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
+from market.exceptions import NegativeGapRevenue
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +99,7 @@ class OTCTrade(models.Model):
         if self.otc_request.account.is_ordinary_user():
             try:
                 self.accept()
-            except HedgeError:
+            except (HedgeError, NegativeGapRevenue):
                 logger.exception('Error in hedging otc request')
                 self.cancel()
                 raise
