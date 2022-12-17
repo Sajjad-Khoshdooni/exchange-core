@@ -45,6 +45,8 @@ class User(AbstractUser):
         verbose_name='شماره موبایل',
         unique=True,
         db_index=True,
+        null=True,
+        blank=True,
         error_messages={
             'unique': 'شماره موبایل وارد شده از قبل در سیستم موجود است.'
         }
