@@ -27,11 +27,8 @@ def random_trader():
     symbols = set(random.choices(symbols, k=choices_count))
 
     account = get_account()
-    logger.info('random_trader get account')
     daily_factors = get_daily_order_size_factors(symbol_ids=list(map(lambda s: s.id, symbols)))
-    logger.info('random_trader daily factors')
     market_top_price_amounts = get_market_top_price_amounts(symbol_ids=list(map(lambda s: s.id, symbols)))
-    logger.info('random_trader top prices')
 
     for symbol in symbols:
         top_price_amounts = {
