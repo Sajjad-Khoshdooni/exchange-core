@@ -39,7 +39,7 @@ class InternalTokenObtainPairSerializer(serializers.Serializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['mask'] = serializers.IntegerField(required=True)
-        self.fields['variant'] = serializers.CharField(required=True)
+        self.fields['variant'] = serializers.CharField(required=True, allow_null=True)
 
     @classmethod
     def get_token(cls, user, mask=None, variant=None):
