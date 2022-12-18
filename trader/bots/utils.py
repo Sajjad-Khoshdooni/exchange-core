@@ -89,7 +89,7 @@ def random_buy(symbol: PairSymbol, account: Account, max_amount, market_price, d
 
 def random_sell(symbol: PairSymbol, account: Account, max_amount, market_price, daily_factor: int):
     bid = get_current_price(symbol, BUY)
-    if market_price < bid * Decimal('1.01'):
+    if market_price < bid * Decimal('0.99'):
         from market.models.order import CancelOrder
         msg = f'random-sell: Invalid market price {symbol} ({market_price}, {bid})'
         logger.info(msg)
