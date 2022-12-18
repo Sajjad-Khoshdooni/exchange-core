@@ -92,7 +92,7 @@ def random_sell(symbol: PairSymbol, account: Account, max_amount, market_price, 
     if market_price < bid * Decimal('1.01'):
         from market.models.order import CancelOrder
         msg = f'random-sell: Invalid market price {symbol} ({market_price}, {bid})'
-        logger.warning(msg)
+        logger.info(msg)
         raise CancelOrder(msg)
 
     wallet = symbol.asset.get_wallet(account)
