@@ -51,6 +51,7 @@ def random_trade(symbol: PairSymbol, account, top_price_amounts, daily_factor: i
     ])[0]
 
     try:
+        logger.info(f'random trading {symbol} {random_func.__name__}')
         random_func(symbol, account, max_amount, market_price, daily_factor)
     except CancelOrder as e:
         logger.info(e)

@@ -100,7 +100,7 @@ def random_sell(symbol: PairSymbol, account: Account, max_amount, market_price, 
 
     balance = min(balance, min(max_amount, random_min_order_value(symbol, daily_factor) / bid))
     amount = floor_precision(balance, symbol.step_size)
-
+    logger.info(f'random sell {symbol}, {amount}')
     return new_order(
         symbol, account, amount, None, fill_type=Order.MARKET, side=SELL, raise_exception=False, order_type=Order.BOT
     )
