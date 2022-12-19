@@ -21,7 +21,7 @@ class SymbolFilter(django_filters.FilterSet):
 
     class Meta:
         model = PairSymbol
-        fields = ('name', 'asset', 'base_asset', 'enable')
+        fields = ('name', 'asset', 'base_asset', 'enable', 'strategy_enable')
 
 
 class SymbolListAPIView(ListAPIView):
