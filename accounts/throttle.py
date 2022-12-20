@@ -20,9 +20,9 @@ class SustainedRateThrottle(CustomUserRateThrottle):
     scope = 'sustained'
 
 
-class BursApiRateThrottle(CustomUserRateThrottle):
+class BursAPIRateThrottle(CustomUserRateThrottle):
     scope = 'burst_api'
 
 
-class SustaineApiRatethrottle(CustomUserRateThrottle):
+class SustainedAPIRateThrottle(CustomUserRateThrottle):
     scope = 'sustained_api'

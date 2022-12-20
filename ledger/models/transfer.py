@@ -8,6 +8,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import UniqueConstraint, Q
+from django.utils import timezone
 
 from accounts.models import Account, Notification
 from accounts.utils import email
@@ -32,6 +33,9 @@ class Transfer(models.Model):
     SOURCE_CHOICES = (SELF, SELF), (INTERNAL, INTERNAL), (PROVIDER, PROVIDER), (MANUAL, MANUAL)
 
     created = models.DateTimeField(auto_now_add=True)
+    accepted_datetime = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    finished_datetime = models.DateTimeField(null=True, blank=True)
+
     group_id = models.UUIDField(default=uuid4, db_index=True)
     deposit_address = models.ForeignKey('ledger.DepositAddress', on_delete=models.CASCADE, null=True, blank=True)
     network = models.ForeignKey('ledger.Network', on_delete=models.CASCADE)
@@ -278,8 +282,9 @@ class Transfer(models.Model):
     def accept(self, tx_id: str):
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             self.status = self.DONE
+            self.finished_datetime = timezone.now()
             self.trx_hash = tx_id
-            self.save(update_fields=['status', 'trx_hash'])
+            self.save(update_fields=['status', 'trx_hash', 'finished_datetime'])
 
             pipeline.release_lock(self.group_id)
             self.build_trx(pipeline)
@@ -290,7 +295,8 @@ class Transfer(models.Model):
         with WalletPipeline() as pipeline:
             pipeline.release_lock(self.group_id)
             self.status = self.CANCELED
-            self.save(update_fields=['status'])
+            self.finished_datetime = timezone.now()
+            self.save(update_fields=['status', 'finished_datetime'])
 
     class Meta:
         constraints = [

@@ -19,7 +19,7 @@ TASK_INTERVAL = 17
 PER_PAIR_EXPECTED_TRADES_PER_SECOND = Decimal(1) / 180  # every 3 min we have at least one order
 
 
-@shared_task(queue='random_trader')
+@shared_task(queue='trader')
 def random_trader():
     symbols = list(PairSymbol.objects.filter(enable=True, market_maker_enabled=True))
     choices_count = math.ceil(TASK_INTERVAL * PER_PAIR_EXPECTED_TRADES_PER_SECOND * len(symbols) * 2)

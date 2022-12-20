@@ -325,7 +325,11 @@ class AssetOverview:
         non_deposited_wallets = Wallet.objects.filter(
             account__type=Account.ORDINARY,
             account__user__first_fiat_deposit_date__isnull=True
-        ).exclude(account__in=transferred_accounts).values('asset__symbol').annotate(amount=Sum('balance'))
+        ).exclude(
+            market=Wallet.VOUCHER
+        ).exclude(
+            account__in=transferred_accounts
+        ).values('asset__symbol').annotate(amount=Sum('balance'))
 
         return {w['asset__symbol']: w['amount'] for w in non_deposited_wallets}
 

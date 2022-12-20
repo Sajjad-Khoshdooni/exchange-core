@@ -16,13 +16,10 @@ from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, precision_to_step, decimal_to_str
 from ledger.utils.price import get_tether_irt_price, BUY, get_trading_price_irt, get_trading_price_usdt, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
+from market.exceptions import NegativeGapRevenue
 from market.models import Order, PairSymbol
 
 logger = logging.getLogger(__name__)
-
-
-class NegativeGapRevenue(Exception):
-    pass
 
 
 @dataclass

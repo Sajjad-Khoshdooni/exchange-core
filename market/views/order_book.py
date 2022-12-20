@@ -8,7 +8,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.throttle import BursApiRateThrottle
+from accounts.throttle import BursAPIRateThrottle
 from ledger.utils.precision import floor_precision, decimal_to_str
 from market.models import PairSymbol, Order, Trade
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class OrderBookAPIView(APIView):
     permission_classes = ()
-    throttle_classes = [BursApiRateThrottle]
+    throttle_classes = [BursAPIRateThrottle]
 
     def get(self, request, symbol):
         symbol = get_object_or_404(PairSymbol, name=symbol.upper())

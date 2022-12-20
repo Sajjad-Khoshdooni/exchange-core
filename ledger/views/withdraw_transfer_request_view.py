@@ -1,4 +1,6 @@
 import logging
+
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
@@ -54,14 +56,14 @@ class WithdrawSerializer(serializers.ModelSerializer):
             transfer.block_hash = validated_data.get('block_hash') or ''
             transfer.block_number = validated_data.get('block_number')
 
-            transfer.save(update_fields=['status', 'trx_hash', 'block_hash', 'block_number'])
+            if status in [Transfer.CANCELED, Transfer.DONE]:
+                pipeline.release_lock(transfer.group_id)
+                transfer.finished_datetime = timezone.now()
 
             if status == Transfer.DONE:
                 transfer.build_trx(pipeline)
 
-            if status in [Transfer.CANCELED, Transfer.DONE]:
-                pipeline.release_lock(transfer.group_id)
-
+            transfer.save(update_fields=['status', 'trx_hash', 'block_hash', 'block_number', 'finished_datetime'])
             transfer.alert_user()
 
         return transfer

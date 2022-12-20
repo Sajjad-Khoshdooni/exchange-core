@@ -24,4 +24,4 @@ class UpdateTrxHistory:
             'network': deposit_address.network.symbol
         }
 
-        requests.put(url=self.url, headers=self.header, data=data)
+        requests.put(url=self.url, headers=self.header, data=data, timeout=10)

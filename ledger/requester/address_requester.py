@@ -18,4 +18,4 @@ class AddressRequester:
         header = {
             'Authorization': config('BLOCKLINK_TOKEN')
         }
-        return requests.post(url=url, data=data, headers=header).json()
+        return requests.post(url=url, data=data, headers=header, timeout=10).json()

@@ -27,3 +27,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO bi;
 -- if needed to exclude some
 REVOKE SELECT ON excluding_table from bi;
 ```
+
+# Rabbitmq
+```shell
+rabbitmqctl add_vhost my_vhost
+rabbitmqctl set_permissions -p my_vhost rabbitmq ".*" ".*" ".*"
+```

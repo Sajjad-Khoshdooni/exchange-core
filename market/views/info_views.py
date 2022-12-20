@@ -47,11 +47,14 @@ class MarketInfoView(ListAPIView):
 
         bids = dict(Order.open_objects.filter(
             side=BUY,
-            symbol__base_asset__symbol=Asset.IRT
+            symbol__base_asset__symbol=Asset.IRT,
+            symbol__enable=True,
         ).values('symbol__asset__symbol').annotate(price=Max('price')).values_list('symbol__asset__symbol', 'price'))
+
         asks = dict(Order.open_objects.filter(
             side=SELL,
-            symbol__base_asset__symbol=Asset.IRT
+            symbol__base_asset__symbol=Asset.IRT,
+            symbol__enable=True,
         ).values('symbol__asset__symbol').annotate(price=Min('price')).values_list('symbol__asset__symbol', 'price'))
 
         return {

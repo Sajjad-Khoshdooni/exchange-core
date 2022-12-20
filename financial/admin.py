@@ -118,6 +118,14 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
         for fiat_withdraw in valid_qs:
             fiat_withdraw.create_withdraw_request()
 
+    def save_model(self, request, obj: FiatWithdrawRequest, form, change):
+        if obj.id:
+            old = FiatWithdrawRequest.objects.get(id=obj.id)
+            if old.status != obj.status:
+                obj.change_status(obj.status)
+
+        obj.save()
+
 
 class PaymentRequestUserFilter(SimpleListFilter):
     title = 'کاربر'

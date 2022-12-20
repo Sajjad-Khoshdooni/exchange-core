@@ -350,14 +350,22 @@ class TransferUserFilter(SimpleListFilter):
 
 
 @admin.register(models.Transfer)
-class TransferAdmin(admin.ModelAdmin):
+class TransferAdmin(AdvancedAdmin):
+    default_edit_condition = M.superuser
+
+    fields_edit_conditions = {
+        'comment': True
+    }
+
     list_display = (
         'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
         'get_total_volume_usdt', 'get_remaining_time_to_pass_72h',
     )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
-    readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt')
+    readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt', 'created', 'accepted_datetime',
+                       'finished_datetime')
+
     actions = ('accept_withdraw', 'reject_withdraw')
 
     def save_model(self, request, obj: models.Transfer, form, change):
@@ -389,8 +397,10 @@ class TransferAdmin(admin.ModelAdmin):
     @admin.display(description='User')
     def get_user(self, transfer: models.Transfer):
         user = transfer.wallet.account.user
-        link = url_to_edit_object(user)
-        return anchor_tag(user.phone, link)
+
+        if user:
+            link = url_to_edit_object(user)
+            return anchor_tag(user.phone, link)
 
     @admin.display(description='Remaining 72h')
     def get_remaining_time_to_pass_72h(self, transfer: models.Transfer):
@@ -413,7 +423,10 @@ class TransferAdmin(admin.ModelAdmin):
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw(self, request, queryset):
-        queryset.filter(status=models.Transfer.INIT).update(status=models.Transfer.PROCESSING)
+        queryset.filter(status=models.Transfer.INIT).update(
+            status=models.Transfer.PROCESSING,
+            accepted_datetime=timezone.now(),
+        )
 
     @admin.action(description='رد برداشت', permissions=['view'])
     def reject_withdraw(self, request, queryset):
@@ -520,6 +533,7 @@ class SystemSnapshotAdmin(admin.ModelAdmin):
                     'investment', 'cash', 'prize', 'verified')
     ordering = ('-created', )
     actions = ('reject_histories', 'verify_histories')
+    readonly_fields = ('created', )
 
     @admin.action(description='رد', permissions=['change'])
     def reject_histories(self, request, queryset):

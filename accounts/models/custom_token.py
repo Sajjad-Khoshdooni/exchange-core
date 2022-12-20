@@ -7,3 +7,6 @@ class CustomToken(Token):
     ip_list = ArrayField(
         models.GenericIPAddressField(default='127.0.0.1'), default=list, blank=True, null=True
     )
+
+    def __str__(self):
+        return str(self.user)
