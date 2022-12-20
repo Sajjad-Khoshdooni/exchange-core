@@ -19,6 +19,8 @@ class NetworkAsset(models.Model):
     can_deposit = models.BooleanField(default=False)
     can_withdraw = models.BooleanField(default=True)
 
+    allow_provider_withdraw = models.BooleanField(default=True)
+
     def can_deposit_enabled(self) -> bool:
         return self.network.can_deposit and self.can_deposit and self.hedger_deposit_enable
 

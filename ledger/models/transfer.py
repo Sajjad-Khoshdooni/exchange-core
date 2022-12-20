@@ -79,6 +79,10 @@ class Transfer(models.Model):
     def total_amount(self):
         return self.amount + self.fee_amount
 
+    @property
+    def network_asset(self):
+        return NetworkAsset.objects.get(network=self.network, asset=self.asset)
+
     def get_explorer_link(self) -> str:
         if not self.trx_hash:
             return ''

@@ -29,12 +29,19 @@ def handle_provider_withdraw(transfer_id: int):
 
     if not resp.success:
         if resp.status_code == 400:
-            transfer.source = Transfer.MANUAL
-            transfer.save(update_fields=['source'])
-
-            send_system_message("Manual withdraw", link=url_to_edit_object(transfer))
+            change_to_manual(transfer)
 
         return
 
     transfer.status = transfer.PENDING
     transfer.save(update_fields=['status'])
+
+
+def change_to_manual(transfer: Transfer):
+    if transfer.source == Transfer.MANUAL:
+        return
+
+    transfer.source = Transfer.MANUAL
+    transfer.save(update_fields=['source'])
+
+    send_system_message("Manual withdraw", link=url_to_edit_object(transfer))
