@@ -82,10 +82,13 @@ class OpenOrderListAPIView(APIView):
         filters = {}
         symbol_filter = self.request.query_params.get('symbol')
         side_filter = self.request.query_params.get('side')
+        bot_filter = self.request.query_params.get('bot')
         if symbol_filter:
             filters['symbol__name'] = symbol_filter.upper()
         if side_filter:
             filters['side'] = side_filter
+        if bot_filter:
+            filters['wallet__variant__isnull'] = not(str(bot_filter) == 'true')
 
         open_orders = Order.open_objects.filter(
             wallet__account=self.request.user.account, stop_loss__isnull=True, **filters
