@@ -4,7 +4,7 @@ from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.response import Response
 
 from accounts.models import User
-from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
+from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from ledger.models import Network
 
 
@@ -15,7 +15,7 @@ class InputAddressSerializer(serializers.Serializer):
 
 class DepositAddressView(RetrieveAPIView):
     serializer_class = InputAddressSerializer
-    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
+    throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
 
     def retrieve(self, request, *args, **kwargs):
         if request.user.level < User.LEVEL2:

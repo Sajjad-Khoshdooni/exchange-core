@@ -9,9 +9,9 @@ class SustainedRateThrottle(UserRateThrottle):
     scope = 'sustained'
 
 
-class BursApiRateThrottle(UserRateThrottle):
+class BursAPIRateThrottle(UserRateThrottle):
     scope = 'burst_api'
 
 
-class SustaineApiRatethrottle(UserRateThrottle):
+class SustainedAPIRateThrottle(UserRateThrottle):
     scope = 'sustained_api'

@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.models import User
-from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
+from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from accounts.authentication import CustomTokenAuthentication
 from market.models import PairSymbol
 from market.serializers.symbol_serializer import SymbolSerializer, SymbolBreifStatsSerializer, SymbolStatsSerializer
@@ -52,7 +52,7 @@ class SymbolListAPIView(ListAPIView):
 class SymbolDetailedStatsAPIView(RetrieveAPIView):
     authentication_classes = ()
     permission_classes = ()
-    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
+    throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
 
     serializer_class = SymbolStatsSerializer
     queryset = PairSymbol.objects.all()
