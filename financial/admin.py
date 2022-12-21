@@ -25,10 +25,11 @@ from ledger.utils.price import get_tether_irt_price, BUY, SELL
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
     list_display = ('name', 'type', 'merchant_id', 'active', 'active_for_staff', 'get_total_wallet_irt_value',
-                    'min_deposit_amount', 'max_deposit_amount')
-    list_editable = ('active', 'active_for_staff', 'min_deposit_amount', 'max_deposit_amount')
-    readonly_fields = ('get_total_wallet_irt_value',)
+                    'get_min_deposit_amount', 'get_max_deposit_amount')
+    list_editable = ('active', 'active_for_staff', )
+    readonly_fields = ('get_total_wallet_irt_value', 'get_min_deposit_amount', 'get_max_deposit_amount')
 
+    @admin.display(description='balance')
     def get_total_wallet_irt_value(self, gateway: Gateway):
         if not gateway.type:
             return
@@ -40,7 +41,13 @@ class GatewayAdmin(admin.ModelAdmin):
         except:
             return
 
-    get_total_wallet_irt_value.short_description = 'موجودی'
+    @admin.display(description='min deposit')
+    def get_min_deposit_amount(self, gateway: Gateway):
+        return humanize_number(Decimal(gateway.min_deposit_amount))
+
+    @admin.display(description='max deposit')
+    def get_max_deposit_amount(self, gateway: Gateway):
+        return humanize_number(Decimal(gateway.max_deposit_amount))
 
 
 @admin.register(FiatTransaction)
