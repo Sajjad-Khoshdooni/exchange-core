@@ -148,6 +148,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transfer
         fields = ('amount', 'address', 'coin', 'network', 'code', 'address_book_id', 'memo', 'code_2fa')
+        ref_name = 'Withdraw Serializer'
 
 
 class WithdrawView(CreateAPIView):
