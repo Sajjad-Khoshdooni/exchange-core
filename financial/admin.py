@@ -24,8 +24,9 @@ from ledger.utils.price import get_tether_irt_price, BUY, SELL
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'merchant_id', 'active', 'active_for_staff', 'get_total_wallet_irt_value')
-    list_editable = ('active', 'active_for_staff')
+    list_display = ('name', 'type', 'merchant_id', 'active', 'active_for_staff', 'get_total_wallet_irt_value',
+                    'min_deposit_amount', 'max_deposit_amount')
+    list_editable = ('active', 'active_for_staff', 'min_deposit_amount', 'max_deposit_amount')
     readonly_fields = ('get_total_wallet_irt_value',)
 
     def get_total_wallet_irt_value(self, gateway: Gateway):
