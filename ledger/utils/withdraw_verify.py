@@ -35,4 +35,4 @@ def get_withdraw_risks(transfer: Transfer):
 
     devices = LoginActivity.objects.filter(user=user).values('device').distinct().count()
     if devices > 1:
-        
+        pass
