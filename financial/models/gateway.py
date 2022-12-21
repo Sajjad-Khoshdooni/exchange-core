@@ -33,6 +33,8 @@ class Gateway(models.Model):
     merchant_id = models.CharField(max_length=128)
     active = models.BooleanField(default=False)
     active_for_staff = models.BooleanField(default=False)
+    min_deposit_amount = models.PositiveIntegerField(default=10000)
+    max_deposit_amount = models.PositiveIntegerField(default=50000000)
 
     def clean(self):
         if not self.active and not Gateway.objects.filter(active=True).exclude(id=self.id):

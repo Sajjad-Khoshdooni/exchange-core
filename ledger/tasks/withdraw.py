@@ -5,7 +5,7 @@ from django.conf import settings
 
 from ledger.models import Transfer
 from ledger.utils.provider import get_provider_requester
-from ledger.withdraw.exchange import handle_provider_withdraw
+from ledger.withdraw.exchange import handle_provider_withdraw, change_to_manual
 
 logger = logging.getLogger(__name__)
 
@@ -81,10 +81,13 @@ def create_withdraw(transfer_id: int):
     elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
         logger.info('withdraw switch %s %s' % (transfer.id, resp_data))
 
-        transfer.source = Transfer.PROVIDER
-        transfer.save(update_fields=['source'])
+        if transfer.network_asset.allow_provider_withdraw:
+            transfer.source = Transfer.PROVIDER
+            transfer.save(update_fields=['source'])
+            create_provider_withdraw(transfer_id=transfer.id)
+        else:
+            change_to_manual(transfer)
 
-        create_provider_withdraw(transfer_id=transfer.id)
     else:
         logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
 

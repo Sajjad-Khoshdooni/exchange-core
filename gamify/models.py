@@ -84,6 +84,18 @@ class Achievement(models.Model):
     amount = get_amount_field()
     voucher = models.BooleanField(default=False)
 
+    def get_prize_achievement_message(self, prize: Prize):
+
+        if not self.voucher:
+            template = 'جایزه {amount} {symbol} به شما تعلق گرفت. برای دریافت، کلیک کنید.'
+        else:
+            template = 'جایزه تخفیف کارمزد تا سقف {amount} {symbol} به شما تعلق گرفت. برای دریافت، کلیک کنید.'
+
+        return template.format(
+            amount=humanize_number(prize.asset.get_presentation_amount(prize.amount)),
+            symbol=self.asset.name_fa
+        )
+
     def achieved(self, account: Account):
         return Prize.objects.filter(account=account, achievement=self).exists()
 
@@ -108,16 +120,12 @@ class Achievement(models.Model):
             )
 
             if created:
-                title = 'جایزه به شما تعلق گرفت.'
-                description = 'جایزه {} {} به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
-                    humanize_number(prize.asset.get_presentation_amount(prize.amount)),
-                    self.asset.name_fa
-                )
+                title = 'دریافت جایزه'
 
                 Notification.send(
                     recipient=account.user,
                     title=title,
-                    message=description,
+                    message=self.get_prize_achievement_message(prize),
                     level=Notification.SUCCESS,
                     link='/account/tasks'
                 )
