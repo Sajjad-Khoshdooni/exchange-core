@@ -49,7 +49,8 @@ class SymbolListAPIView(ListAPIView):
             ctx['bookmarks'] = []
 
         if self.request.query_params.get('stats') == '1':
-            last_trades_qs = Trade.objects.exclude(trade_source=Trade.OTC).order_by('symbol', '-created')
+            last_trades_qs = Trade.objects.filter(symbol__enable=True).exclude(trade_source=Trade.OTC).order_by(
+                'symbol', '-created')
             previous_trades_qs = last_trades_qs.filter(created__lte=timezone.now() - timedelta(hours=24))
             ctx['last_trades'] = {t.symbol_id: t.price for t in last_trades_qs.distinct('symbol')}
             ctx['previous_trades'] = {t.symbol_id: t.price for t in previous_trades_qs.distinct('symbol')}
