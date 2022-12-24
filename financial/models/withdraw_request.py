@@ -191,23 +191,25 @@ class FiatWithdrawRequest(models.Model):
         )
 
     def change_status(self, new_status: str):
-        if self.status == new_status:
-            return
-
-        assert self.status not in (CANCELED, self.DONE)
-
         with WalletPipeline() as pipeline:  # type: WalletPipeline
+            withdraw = FiatWithdrawRequest.objects.select_related().get(id=self.id)
+
+            if withdraw.status == new_status:
+                return
+
+            assert withdraw.status not in (self.CANCELED, self.DONE)
+
             if new_status in (self.CANCELED, self.DONE):
-                pipeline.release_lock(self.group_id)
+                pipeline.release_lock(withdraw.group_id)
 
             if new_status == DONE:
-                self.build_trx(pipeline)
+                withdraw.build_trx(pipeline)
 
             if new_status == self.PENDING:
-                self.withdraw_datetime = timezone.now()
+                withdraw.withdraw_datetime = timezone.now()
 
-            self.status = new_status
-            self.save()
+            withdraw.status = new_status
+            withdraw.save(update_fields=['status'])
 
         self.alert_withdraw_verify_status()
 
