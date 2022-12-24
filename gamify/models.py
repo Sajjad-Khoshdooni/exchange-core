@@ -1,6 +1,7 @@
 import logging
 
 from django.db import models
+from django.utils import timezone
 
 from accounts.models import Notification, Account, TrafficSource
 from ledger.models import Prize, Asset
@@ -60,6 +61,10 @@ class Mission(models.Model):
     active = models.BooleanField(default=True)
 
     def achievable(self, account: Account):
+        if self.achievement.voucher:
+            if Prize.get_voucher_expiration(account) <= timezone.now():
+                return False
+
         if not self.achievement.achieved(account):
             return self.finished(account)
 
@@ -101,14 +106,12 @@ class Achievement(models.Model):
 
     def achieve_prize(self, account: Account):
         price = get_trading_price_usdt(Asset.SHIB, SELL, raw_price=True)
+        value = 0
+
+        if not self.voucher:
+            value = self.amount * price
 
         with WalletPipeline() as pipeline:
-
-            value = 0
-
-            if not self.voucher:
-                value = self.amount * price
-
             prize, created = Prize.objects.get_or_create(
                 account=account,
                 achievement=self,

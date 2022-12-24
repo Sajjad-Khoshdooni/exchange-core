@@ -44,7 +44,7 @@ class Prize(models.Model):
 
         if self.achievement.voucher:
             market = Wallet.VOUCHER
-            expiration = self.account.user.date_joined + timedelta(days=30)
+            expiration = self.get_voucher_expiration(self.account)
         else:
             market = Wallet.SPOT
             expiration = None
@@ -56,6 +56,10 @@ class Prize(models.Model):
             amount=self.amount,
             scope=Trx.PRIZE
         )
+
+    @classmethod
+    def get_voucher_expiration(cls, account: Account):
+        return account.user.date_joined + timedelta(days=30)
 
     def __str__(self):
         return '%s %s %s' % (self.account, self.amount, self.asset)
