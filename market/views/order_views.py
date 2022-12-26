@@ -61,9 +61,10 @@ class OrderViewSet(mixins.CreateModelMixin,
         filters = {}
         if variant:
             filters = {'wallet__variant': variant}
-        elif self.request.get('agent') and self.request.get('strategy'):
+        elif self.request.query_params.get('agent') and self.request.query_params.get('strategy'):
             reserve_wallet = ReserveWallet.objects.filter(
-                request_id=f'strategy:{self.request.get("strategy")}:{self.request.get("agent")}').first()
+                request_id=f'strategy:{self.request.query_params.get("strategy")}:{self.request.query_params.get("agent")}'
+            ).first()
             if reserve_wallet:
                 filters = {'wallet__variant': reserve_wallet.group_id}
 
