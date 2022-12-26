@@ -183,13 +183,14 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'national_code_verified': M.superuser | ~M('national_code_verified'),
         'birth_date_verified': M.superuser | M.is_none('birth_date_verified'),
         'withdraw_before_48h_option': True,
-        'can_withdraw': True
+        'can_withdraw': True,
+        'withdraw_limit_whitelist': True,
+        'withdraw_risk_level_multiplier': True,
     }
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'national_code', 'email', 'phone', 'birth_date',
-
                                          'get_selfie_image', 'archived',
                                          'get_user_reject_reason', 'get_source_medium', 'promotion'
                                          )}),
@@ -203,13 +204,13 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             'fields': (
                 'is_active', 'is_staff', 'is_superuser',
                 'groups', 'user_permissions', 'show_margin', 'show_strategy_bot', 'show_community', 'show_staking',
-                'withdraw_before_48h_option', 'can_withdraw'
+                'withdraw_before_48h_option', 'can_withdraw',
             ),
         }),
         (_('Important dates'), {'fields': (
             'get_last_login_jalali', 'get_date_joined_jalali', 'get_first_fiat_deposit_date_jalali',
             'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali', 'get_selfie_image_uploaded',
-            'margin_quiz_pass_date'
+            'margin_quiz_pass_date', 'withdraw_limit_whitelist', 'withdraw_risk_level_multiplier'
         )}),
         (_('لینک های مهم'), {
             'fields': (

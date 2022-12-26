@@ -71,6 +71,8 @@ class Transfer(models.Model):
 
     comment = models.TextField(blank=True, verbose_name='نظر')
 
+    risks = models.JSONField(null=True, blank=True)
+
     @property
     def asset(self):
         return self.wallet.asset
@@ -227,9 +229,6 @@ class Transfer(models.Model):
             )
 
             pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
-
-        # from ledger.tasks import create_withdraw
-        # create_withdraw(transfer.id)
 
         from ledger.utils.withdraw_verify import auto_withdraw_verify
 
