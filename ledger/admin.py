@@ -364,7 +364,7 @@ class TransferAdmin(AdvancedAdmin):
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
     readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt', 'created', 'accepted_datetime',
-                       'finished_datetime')
+                       'finished_datetime', 'risks')
 
     actions = ('accept_withdraw', 'reject_withdraw')
 
