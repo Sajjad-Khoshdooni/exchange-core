@@ -28,6 +28,7 @@ class OrderSerializer(serializers.ModelSerializer):
     filled_price = serializers.SerializerMethodField()
     trigger_price = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
+    allow_cancel = serializers.SerializerMethodField()
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
@@ -151,10 +152,15 @@ class OrderSerializer(serializers.ModelSerializer):
         price = Decimal((fills_value or 0)) / amount
         return decimal_to_str(floor_precision(price, order.symbol.tick_size))
 
+    def get_allow_cancel(self, instance: Order):
+        if instance.wallet.variant:
+            return False
+        return True
+
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
-                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price')
+                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel')
         read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},
