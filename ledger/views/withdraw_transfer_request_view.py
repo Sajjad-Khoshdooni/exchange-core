@@ -23,6 +23,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transfer
         fields = ['status', 'requester_id', 'trx_hash', 'block_hash', 'block_number']
+        ref_name = 'Withdraw Update Serializer'
 
     def create(self, validated_data):
         requester_id = validated_data.get('id')
