@@ -204,13 +204,13 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             'fields': (
                 'is_active', 'is_staff', 'is_superuser',
                 'groups', 'user_permissions', 'show_margin', 'show_strategy_bot', 'show_community', 'show_staking',
-                'withdraw_before_48h_option', 'can_withdraw',
+                'withdraw_before_48h_option', 'can_withdraw', 'withdraw_limit_whitelist', 'withdraw_risk_level_multiplier'
             ),
         }),
         (_('Important dates'), {'fields': (
             'get_last_login_jalali', 'get_date_joined_jalali', 'get_first_fiat_deposit_date_jalali',
             'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali', 'get_selfie_image_uploaded',
-            'margin_quiz_pass_date', 'withdraw_limit_whitelist', 'withdraw_risk_level_multiplier'
+            'margin_quiz_pass_date',
         )}),
         (_('لینک های مهم'), {
             'fields': (
