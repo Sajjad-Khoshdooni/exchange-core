@@ -56,9 +56,12 @@ class OrderViewSet(mixins.CreateModelMixin,
 
     def get_queryset(self):
         account, variant = self.get_account_variant(self.request)
+        filters = {}
+        if variant:
+            filters = {'wallet__variant': variant}
         return Order.objects.filter(
             wallet__account=account,
-            wallet__variant=variant
+            **filters
         ).select_related('symbol', 'wallet', 'stop_loss').order_by('-created')
 
     def get_serializer_context(self):
