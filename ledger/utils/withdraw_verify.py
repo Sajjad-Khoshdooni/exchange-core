@@ -71,8 +71,8 @@ def get_withdraw_risks(transfer: Transfer) -> list:
         risks.append(
             RiskFactor(
                 reason=RiskFactor.DAY_HIGH_WITHDRAW,
-                value=current_day_withdraw_value,
-                expected=safe_daily_withdraw_value,
+                value=float(current_day_withdraw_value),
+                expected=float(safe_daily_withdraw_value),
             )
         )
 
@@ -93,8 +93,8 @@ def get_withdraw_risks(transfer: Transfer) -> list:
             risks.append(
                 RiskFactor(
                     reason=RiskFactor.WITHDRAW_VALUE_PEAK,
-                    value=current_day_withdraw_value,
-                    expected=max_withdraw_value * 2
+                    value=float(current_day_withdraw_value),
+                    expected=float(max_withdraw_value * 2)
                 )
             )
 
@@ -107,7 +107,7 @@ def get_withdraw_risks(transfer: Transfer) -> list:
         risks.append(
             RiskFactor(
                 reason=RiskFactor.HIGH_DEPOSITS_VALUE,
-                value=deposits_value,
+                value=float(deposits_value),
                 expected=SAFE_CURRENT_DEPOSITS_VALUE
             )
         )
