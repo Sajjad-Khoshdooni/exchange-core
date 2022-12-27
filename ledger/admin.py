@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F
 from django.utils import timezone
+from django.utils.safestring import mark_safe
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 
 from accounts.admin_guard import M
@@ -364,7 +365,8 @@ class TransferAdmin(AdvancedAdmin):
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
     readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt', 'created', 'accepted_datetime',
-                       'finished_datetime', 'risks')
+                       'finished_datetime', 'get_risks')
+    exclude = ('risks', )
 
     actions = ('accept_withdraw', 'reject_withdraw')
 
@@ -420,6 +422,19 @@ class TransferAdmin(AdvancedAdmin):
             passed = timezone.now() - last_payment.created
             rem = timedelta(days=3) - passed
             return '%s روز %s ساعت %s دقیقه' % (rem.days, rem.seconds // 3600, rem.seconds % 3600 // 60)
+
+    @admin.display(description='risks')
+    def get_risks(self, transfer):
+        if not transfer.risks:
+            return
+        html = '<table dir="ltr"><tr><th>Factor</th><th>Value</th><th>Expected</th></tr>'
+
+        for risk in transfer.risks:
+            html += '<tr><td>{reason}</td><td>{value}</td><td>{expected}</td></tr>'.format(**risk)
+
+        html += '</table>'
+
+        return mark_safe(html)
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw(self, request, queryset):
