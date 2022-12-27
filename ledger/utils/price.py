@@ -75,7 +75,7 @@ SIDE_MAP = {
 }
 
 
-BUSD_COINS = ('HNT', )
+BUSD_COINS = ('HNT', 'MIR')
 
 
 def get_redis_price_key(coin: str):
