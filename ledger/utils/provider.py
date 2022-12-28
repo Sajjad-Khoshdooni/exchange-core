@@ -105,7 +105,7 @@ class ProviderRequester:
         result = self._collect_api(path, method, data)
 
         if cache_timeout and result.success:
-            cache.set(cache_key, result, cache_timeout)
+            cache.set(cache_key, result.data, cache_timeout)
 
         return result
 
