@@ -61,10 +61,6 @@ class Mission(models.Model):
     active = models.BooleanField(default=True)
 
     def achievable(self, account: Account):
-        if self.achievement.voucher:
-            if Prize.get_voucher_expiration(account) <= timezone.now():
-                return False
-
         if not self.achievement.achieved(account):
             return self.finished(account)
 
