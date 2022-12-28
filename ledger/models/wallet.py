@@ -176,11 +176,16 @@ class Wallet(models.Model):
                 scope=Trx.SEIZE
             )
 
-    def reserve_funds(self, amount: Decimal):
+    def reserve_funds(self, amount: Decimal, request_id: str):
         assert self.market in (Wallet.SPOT, Wallet.MARGIN)
         assert self.variant is None  # means its not reserved wallet
 
         from ledger.models import Trx
+
+        if request_id:
+            existing_reserve = ReserveWallet.objects.filter(request_id=request_id).first()
+            if existing_reserve:
+                return existing_reserve.request_id
 
         if self.has_balance(amount, raise_exception=True):
             group_id = uuid4()
@@ -202,7 +207,8 @@ class Wallet(models.Model):
                     sender=self,
                     receiver=child_wallet,
                     amount=amount,
-                    group_id=group_id
+                    group_id=group_id,
+                    request_id=request_id,
                 )
                 return group_id
 
@@ -217,6 +223,12 @@ class ReserveWallet(models.Model):
     group_id = models.UUIDField(default=uuid4, db_index=True)
 
     refund_completed = models.BooleanField(default=False)
+
+    request_id = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+    )
 
     def refund(self):
         if self.refund_completed:

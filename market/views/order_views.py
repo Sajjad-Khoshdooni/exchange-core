@@ -15,6 +15,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from accounts.authentication import CustomTokenAuthentication
 from accounts.views.jwt_views import DelegatedAccountMixin, user_has_delegate_permission
+from ledger.models.wallet import ReserveWallet
 from market.models import Order, CancelRequest
 from market.models import StopLoss, Trade
 from market.serializers.cancel_request_serializer import CancelRequestSerializer
@@ -56,9 +57,20 @@ class OrderViewSet(mixins.CreateModelMixin,
 
     def get_queryset(self):
         account, variant = self.get_account_variant(self.request)
+
+        filters = {}
+        if variant:
+            filters = {'wallet__variant': variant}
+        elif self.request.query_params.get('agent') and self.request.query_params.get('strategy'):
+            reserve_wallet = ReserveWallet.objects.filter(
+                request_id=f'strategy:{self.request.query_params.get("strategy")}:{self.request.query_params.get("agent")}'
+            ).first()
+            if reserve_wallet:
+                filters = {'wallet__variant': reserve_wallet.group_id}
+
         return Order.objects.filter(
             wallet__account=account,
-            wallet__variant=variant
+            **filters
         ).select_related('symbol', 'wallet', 'stop_loss').order_by('-created')
 
     def get_serializer_context(self):
