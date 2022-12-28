@@ -14,6 +14,7 @@ from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.admin_guard.html_tags import anchor_tag
 from accounts.models import Account
 from accounts.utils.admin import url_to_edit_object
+from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken
@@ -23,6 +24,7 @@ from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_trading_price_usdt, SELL
 from ledger.utils.provider import HEDGE, get_provider_requester
+from ledger.utils.withdraw_verify import RiskFactor
 
 
 @admin.register(models.Asset)
@@ -360,7 +362,7 @@ class TransferAdmin(AdvancedAdmin):
 
     list_display = (
         'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
-        'get_total_volume_usdt', 'get_remaining_time_to_pass_72h',
+        'get_total_volume_usdt', 'get_remaining_time_to_pass_72h', 'get_jalali_created'
     )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
@@ -396,6 +398,10 @@ class TransferAdmin(AdvancedAdmin):
     def get_asset(self, transfer: models.Transfer):
         return transfer.wallet.asset
 
+    @admin.display(description='created jalali')
+    def get_jalali_created(self, transfer: models.Transfer):
+        return gregorian_to_jalali_datetime_str(transfer.created)
+
     @admin.display(description='User')
     def get_user(self, transfer: models.Transfer):
         user = transfer.wallet.account.user
@@ -427,10 +433,12 @@ class TransferAdmin(AdvancedAdmin):
     def get_risks(self, transfer):
         if not transfer.risks:
             return
-        html = '<table dir="ltr"><tr><th>Factor</th><th>Value</th><th>Expected</th></tr>'
+        html = '<table dir="ltr"><tr><th>Factor</th><th>Value</th><th>Expected</th><th>Whitelist</th></tr>'
 
         for risk in transfer.risks:
-            html += '<tr><td>{reason}</td><td>{value}</td><td>{expected}</td></tr>'.format(**risk)
+            html += '<tr><td>{reason}</td><td>{value}</td><td>{expected}</td><td>{whitelist}</td></tr>'.format(
+                **RiskFactor(**risk).__dict__
+            )
 
         html += '</table>'
 

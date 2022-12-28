@@ -7,6 +7,7 @@ from django.utils import timezone
 from accounts.models.login_activity import LoginActivity
 from ledger.models import Transfer
 
+WHITELIST_DAILY_WITHDRAW_VALUE = 50
 SAFE_DAILY_WITHDRAW_VALUE = 150
 SAFE_CURRENT_DEPOSITS_VALUE = 500
 SAFE_CURRENT_TRANSFERS_COUNT = 6
@@ -24,6 +25,9 @@ def auto_withdraw_verify(transfer: Transfer) -> bool:
         transfer.risks = list(map(dataclasses.asdict, risks))
         transfer.save(update_fields=['risks'])
 
+        if risks[0].whitelist:
+            return True
+
     return not bool(risks)
 
 
@@ -39,6 +43,7 @@ class RiskFactor:
     reason: str
     value: float
     expected: float
+    whitelist: bool = False
 
 
 def get_withdraw_risks(transfer: Transfer) -> list:
@@ -51,21 +56,14 @@ def get_withdraw_risks(transfer: Transfer) -> list:
 
     withdraws = transfers.filter(deposit=False)
 
-    devices = LoginActivity.objects.filter(user=user).values('device').distinct().count()
-    if devices > 1:
-        risks.append(
-            RiskFactor(
-                reason=RiskFactor.MULTIPLE_DEVICES,
-                value=devices,
-                expected=1,
-            )
-        )
-
     current_day_withdraw_value = withdraws.filter(
         created__gte=timezone.now() - timedelta(days=1)
     ).aggregate(value=Sum('usdt_value'))['value'] or 0
 
-    safe_daily_withdraw_value = SAFE_DAILY_WITHDRAW_VALUE * transfer.wallet.account.user.withdraw_risk_level_multiplier
+    account_safety_multiplier = transfer.wallet.account.user.withdraw_risk_level_multiplier
+
+    safe_daily_withdraw_value = SAFE_DAILY_WITHDRAW_VALUE * account_safety_multiplier
+    whitelist_daily_withdraw_value = WHITELIST_DAILY_WITHDRAW_VALUE * account_safety_multiplier
 
     if current_day_withdraw_value > safe_daily_withdraw_value:
         risks.append(
@@ -73,6 +71,25 @@ def get_withdraw_risks(transfer: Transfer) -> list:
                 reason=RiskFactor.DAY_HIGH_WITHDRAW,
                 value=float(current_day_withdraw_value),
                 expected=float(safe_daily_withdraw_value),
+            )
+        )
+    elif current_day_withdraw_value <= whitelist_daily_withdraw_value:
+        return [
+            RiskFactor(
+                reason=RiskFactor.DAY_HIGH_WITHDRAW,
+                value=float(current_day_withdraw_value),
+                expected=float(whitelist_daily_withdraw_value),
+                whitelist=True
+            )
+        ]
+
+    devices = LoginActivity.objects.filter(user=user).values('device').distinct().count()
+    if devices > 1:
+        risks.append(
+            RiskFactor(
+                reason=RiskFactor.MULTIPLE_DEVICES,
+                value=devices,
+                expected=1,
             )
         )
 
