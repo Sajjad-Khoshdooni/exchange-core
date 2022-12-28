@@ -84,10 +84,13 @@ def get_withdraw_risks(transfer: Transfer) -> list:
                 expected=0
             )
         )
-    else:
-        max_withdraw_value = withdraws.filter(
-            created__range=(timezone.now() - timedelta(days=31), timezone.now() - timedelta(days=1))
-        ).aggregate(value=Max('usdt_value'))['value'] or 0
+
+    current_withdraws = withdraws.filter(
+        created__range=(timezone.now() - timedelta(days=31), timezone.now() - timedelta(days=1))
+    )
+
+    if current_withdraws.count() > 2:
+        max_withdraw_value = current_withdraws.aggregate(value=Max('usdt_value'))['value'] or 0
 
         if current_day_withdraw_value > max_withdraw_value * 2:
             risks.append(
