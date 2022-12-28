@@ -97,7 +97,7 @@ class ProviderRequester:
     def collect_api(self, path: str, method: str = 'GET', data: dict = None, cache_timeout: int = None) -> Response:
         cache_key = None
         if cache_timeout:
-            cache_key = 'provider:' + get_cache_func_key(path, method, data)
+            cache_key = 'provider:' + get_cache_func_key(self.__class__, path, method, data)
             cached_result = cache.get(cache_key)
             if cached_result is not None:
                 return Response(data=cached_result)
