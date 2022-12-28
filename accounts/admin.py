@@ -204,7 +204,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             'fields': (
                 'is_active', 'is_staff', 'is_superuser',
                 'groups', 'user_permissions', 'show_margin', 'show_strategy_bot', 'show_community', 'show_staking',
-                'withdraw_before_48h_option', 'can_withdraw', 'withdraw_limit_whitelist', 'withdraw_risk_level_multiplier'
+                'withdraw_before_48h_option', 'can_withdraw', 'withdraw_limit_whitelist',
+                'withdraw_risk_level_multiplier'
             ),
         }),
         (_('Important dates'), {'fields': (
