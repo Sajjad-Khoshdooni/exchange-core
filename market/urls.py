@@ -9,7 +9,7 @@ router.register(r'^orders', OrderViewSet, basename='order')
 router.register(r'^stop-loss-orders', StopLossViewSet, basename='stop_loss')
 
 urlpatterns = [
-    path('irt/info/', MarketInfoView.as_view()),
+    path('irt/info/', cache_page(60)(MarketInfoView.as_view())),
     path('depth/<str:symbol>/', OrderBookAPIView.as_view()),
     path('orders/cancel/', CancelOrderAPIView.as_view()),
     path('symbols/<str:name>/', SymbolDetailedStatsAPIView.as_view()),
