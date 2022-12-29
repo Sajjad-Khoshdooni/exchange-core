@@ -24,7 +24,6 @@ HOST_URL = config('HOST_URL', default='https://api.raastin.com')
 PANEL_URL = config('PANEL_URL', default='https://raastin.com')
 
 CELERY_TASK_ALWAYS_EAGER = config('CELERY_ALWAYS_EAGER', default=False)
-CELERYD_POOL = 'gevent'
 
 # Application definition
 
