@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F
 from django.utils import timezone
+from django.utils.safestring import mark_safe
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 
 from accounts.admin_guard import M
@@ -13,6 +14,7 @@ from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.admin_guard.html_tags import anchor_tag
 from accounts.models import Account
 from accounts.utils.admin import url_to_edit_object
+from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken
@@ -22,6 +24,7 @@ from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_trading_price_usdt, SELL
 from ledger.utils.provider import HEDGE, get_provider_requester
+from ledger.utils.withdraw_verify import RiskFactor
 
 
 @admin.register(models.Asset)
@@ -359,12 +362,13 @@ class TransferAdmin(AdvancedAdmin):
 
     list_display = (
         'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
-        'get_total_volume_usdt', 'get_remaining_time_to_pass_72h',
+        'get_total_volume_usdt', 'get_remaining_time_to_pass_72h', 'get_jalali_created'
     )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
     readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt', 'created', 'accepted_datetime',
-                       'finished_datetime')
+                       'finished_datetime', 'get_risks')
+    exclude = ('risks', )
 
     actions = ('accept_withdraw', 'reject_withdraw')
 
@@ -394,6 +398,10 @@ class TransferAdmin(AdvancedAdmin):
     def get_asset(self, transfer: models.Transfer):
         return transfer.wallet.asset
 
+    @admin.display(description='created jalali')
+    def get_jalali_created(self, transfer: models.Transfer):
+        return gregorian_to_jalali_datetime_str(transfer.created)
+
     @admin.display(description='User')
     def get_user(self, transfer: models.Transfer):
         user = transfer.wallet.account.user
@@ -420,6 +428,21 @@ class TransferAdmin(AdvancedAdmin):
             passed = timezone.now() - last_payment.created
             rem = timedelta(days=3) - passed
             return '%s روز %s ساعت %s دقیقه' % (rem.days, rem.seconds // 3600, rem.seconds % 3600 // 60)
+
+    @admin.display(description='risks')
+    def get_risks(self, transfer):
+        if not transfer.risks:
+            return
+        html = '<table dir="ltr"><tr><th>Factor</th><th>Value</th><th>Expected</th><th>Whitelist</th></tr>'
+
+        for risk in transfer.risks:
+            html += '<tr><td>{reason}</td><td>{value}</td><td>{expected}</td><td>{whitelist}</td></tr>'.format(
+                **RiskFactor(**risk).__dict__
+            )
+
+        html += '</table>'
+
+        return mark_safe(html)
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw(self, request, queryset):

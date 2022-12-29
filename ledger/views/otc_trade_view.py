@@ -152,10 +152,10 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         conf = otc_request.get_trade_config()
         return conf.cash.symbol
 
-    def get_fee(self, otc_request: OTCRequest):
+    def get_fee(self, otc_request: OTCRequest) -> Decimal:
         voucher = otc_request.account.get_voucher_wallet()
         if voucher:
-            return 0
+            return Decimal(0)
         else:
             return DEFAULT_TAKER_FEE
 

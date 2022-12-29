@@ -10,6 +10,7 @@ from typing import List, Dict, Union
 import requests
 from decouple import config
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Sum
 from pydantic.decorator import validate_arguments
 from urllib3.exceptions import ReadTimeoutError
@@ -17,6 +18,7 @@ from urllib3.exceptions import ReadTimeoutError
 from accounts.verifiers.jibit import Response
 from ledger.exceptions import HedgeError
 from ledger.models import Asset, Network, Wallet, Transfer
+from ledger.utils.cache import get_cache_func_key
 from ledger.utils.fields import DONE
 from ledger.utils.precision import floor_precision
 from ledger.utils.price import SELL, BUY, get_trading_price_usdt
@@ -92,7 +94,22 @@ class CoinInfo:
 
 
 class ProviderRequester:
-    def collect_api(self, path: str, method: str = 'GET', data: dict = None) -> Response:
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, cache_timeout: int = None) -> Response:
+        cache_key = None
+        if cache_timeout:
+            cache_key = 'provider:' + get_cache_func_key(self.__class__, path, method, data)
+            cached_result = cache.get(cache_key)
+            if cached_result is not None:
+                return Response(data=cached_result)
+
+        result = self._collect_api(path, method, data)
+
+        if cache_timeout and result.success:
+            cache.set(cache_key, result.data, cache_timeout)
+
+        return result
+
+    def _collect_api(self, path: str, method: str = 'GET', data: dict = None) -> Response:
         if data is None:
             data = {}
 
@@ -176,7 +193,7 @@ class ProviderRequester:
         return system_balance + orders_diff
 
     def get_market_info(self, asset: Asset) -> MarketInfo:
-        resp = self.collect_api('/api/v1/market/', data={'coin': asset.symbol})
+        resp = self.collect_api('/api/v1/market/', data={'coin': asset.symbol}, cache_timeout=300)
         return MarketInfo(coin=asset.symbol, **resp.data)
 
     def get_spot_balance_map(self, exchange: str, market: str = 'trade') -> dict:
@@ -190,7 +207,7 @@ class ProviderRequester:
         return resp.data
 
     def get_network_info(self, asset: Asset, network: Network) -> NetworkInfo:
-        resp = self.collect_api('/api/v1/networks/', data={'coin': asset.symbol, 'network': network.symbol})
+        resp = self.collect_api('/api/v1/networks/', data={'coin': asset.symbol, 'network': network.symbol}, cache_timeout=300)
         if resp.success:
             return NetworkInfo(**resp.data)
 
@@ -327,7 +344,7 @@ class ProviderRequester:
         if coins:
             data['coins'] = ','.join(coins)
 
-        resp = self.collect_api('/api/v1/coins/info/', data=data)
+        resp = self.collect_api('/api/v1/coins/info/', data=data, cache_timeout=300)
 
         if not resp.success:
             return {}

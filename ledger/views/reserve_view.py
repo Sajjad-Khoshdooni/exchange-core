@@ -22,13 +22,14 @@ class ReserveWalletSerializer(serializers.Serializer):
     account_id = serializers.IntegerField()
     amount = get_serializer_amount_field()
     asset = serializers.CharField()
+    request_id = serializers.CharField()
     market = serializers.CharField(default=Wallet.SPOT)
 
     def create(self, validated_data):
         account = Account.objects.get(id=validated_data['account_id'])
         src_wallet = Asset.get(validated_data['asset']).get_wallet(account, validated_data['market'])
         try:
-            return src_wallet.reserve_funds(Decimal(validated_data['amount']))
+            return src_wallet.reserve_funds(Decimal(validated_data['amount']), validated_data['request_id'])
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
 

@@ -1,6 +1,7 @@
 import logging
 
 from django.db import models
+from django.utils import timezone
 
 from accounts.models import Notification, Account, TrafficSource
 from ledger.models import Prize, Asset
@@ -101,14 +102,12 @@ class Achievement(models.Model):
 
     def achieve_prize(self, account: Account):
         price = get_trading_price_usdt(Asset.SHIB, SELL, raw_price=True)
+        value = 0
+
+        if not self.voucher:
+            value = self.amount * price
 
         with WalletPipeline() as pipeline:
-
-            value = 0
-
-            if not self.voucher:
-                value = self.amount * price
-
             prize, created = Prize.objects.get_or_create(
                 account=account,
                 achievement=self,

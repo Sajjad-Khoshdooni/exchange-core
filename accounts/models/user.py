@@ -141,6 +141,12 @@ class User(AbstractUser):
 
     can_withdraw = models.BooleanField(default=True)
 
+    withdraw_limit_whitelist = models.BooleanField(default=False)
+    withdraw_risk_level_multiplier = models.PositiveIntegerField(
+        default=1,
+        choices=((1, 1), (2, 2), (3, 3), (5, 5), (10, 10), (20, 20), (40, 40))
+    )
+
     promotion = models.CharField(max_length=256, blank=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
 
     @property

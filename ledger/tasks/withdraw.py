@@ -41,7 +41,7 @@ def update_provider_withdraw():
         status = data.status
 
         if status == transfer.CANCELED:
-            transfer.reject()
+            change_to_manual(transfer)
 
         elif status == transfer.DONE:
             transfer.accept(data.tx_id)
