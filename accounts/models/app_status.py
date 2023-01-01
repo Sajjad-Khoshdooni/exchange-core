@@ -3,7 +3,7 @@ from django.db import models
 
 class AppStatus(models.Model):
 
-    active = models.BooleanField(default=True, unique=True)
+    active = models.BooleanField(default=True)
 
     latest_version = models.PositiveIntegerField(default=1)
     force_update_version = models.PositiveIntegerField(default=0)
