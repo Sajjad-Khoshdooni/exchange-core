@@ -34,7 +34,7 @@ def close_margin_account(user: User):
         return
 
     with WalletPipeline() as pipeline:
-        for wallet in Wallet.objects.filter(balance__gt=0, market=Wallet.MARGIN):
+        for wallet in Wallet.objects.filter(account=user.account, balance__gt=0, market=Wallet.MARGIN):
             pipeline.new_trx(
                 sender=wallet,
                 receiver=wallet.asset.get_wallet(wallet.account),
