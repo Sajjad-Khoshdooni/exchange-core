@@ -52,6 +52,7 @@ class Trx(models.Model):
     STAKE = 'st'
     FIX = 'fx'
     STAKE_FEE = 'sf'
+    CLOSE_MARGIN = 'cm'
 
     created = models.DateTimeField(auto_now_add=True)
 
