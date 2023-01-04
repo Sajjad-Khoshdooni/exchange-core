@@ -53,7 +53,7 @@ class OrderBookAPIView(APIView):
 
         if not request.auth and request.user and not request.user.is_anonymous:
             open_orders = {
-                (order['side'], decimal_to_str(floor_precision(order['price'], symbol.tick_size))): True for order in
+                (order['side'], str(floor_precision(order['price'], symbol.tick_size))): True for order in
                 Order.open_objects.filter(
                     symbol=symbol, wallet__account=self.request.user.account
                 ).values('side', 'price')
