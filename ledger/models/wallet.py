@@ -148,8 +148,8 @@ class Wallet(models.Model):
 
         return can
 
-    def airdrop(self, amount: Decimal):
-        assert settings.DEBUG_OR_TESTING
+    def airdrop(self, amount: Decimal, i_am_sure: bool = False):
+        assert settings.DEBUG_OR_TESTING or i_am_sure
 
         from ledger.models import Trx
         from uuid import uuid4
