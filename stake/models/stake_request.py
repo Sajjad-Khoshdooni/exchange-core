@@ -37,7 +37,7 @@ class StakeRequest(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.stake_option.__str__() + ' ' + str(self.account_id)
+        return str(self.stake_option) + ' ' + str(self.account_id)
 
     def get_locked_amount(self) -> Decimal:
         locked_revenue = \
