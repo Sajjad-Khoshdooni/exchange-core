@@ -40,7 +40,7 @@ def close_staking(user: User):
             Notification.send(
                 recipient=user,
                 title='لغو استیکینگ',
-                message='مقدار %s %s به حساب نقدی‌تان اضافه شد.' % (get_presentation_amount(stake.amount), stake.stake_option.asset.name_fa)
+                message='مقدار %s %s به حساب نقدی‌تان اضافه شد.' % (get_presentation_amount(amount), stake.stake_option.asset.name_fa)
             )
 
     user.show_staking = False
