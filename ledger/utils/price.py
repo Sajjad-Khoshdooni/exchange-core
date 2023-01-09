@@ -39,8 +39,8 @@ def get_redis_side(side: str):
 
 
 @cache_for(300)
-def get_spread(coin: str, side: str, value: Decimal = None) -> Decimal:
-    from ledger.models import CategorySpread, Asset
+def get_spread(coin: str, side: str, value: Decimal = None, base_coin: str = None) -> Decimal:
+    from ledger.models import CategorySpread, Asset, MarketSpread
 
     asset = Asset.get(coin)
     step = CategorySpread.get_step(value)
@@ -48,6 +48,12 @@ def get_spread(coin: str, side: str, value: Decimal = None) -> Decimal:
     category = asset.spread_category
 
     spread = CategorySpread.objects.filter(category=category, step=step, side=side).first()
+
+    if base_coin == IRT:
+        market_spread = MarketSpread.objects.filter(step=step, side=side).first()
+
+        if market_spread:
+            spread += market_spread.spread
 
     if not spread:
         logger.warning("No category spread defined for %s step = %s, side = %s" % (category, step, side))
@@ -239,14 +245,15 @@ def get_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
 
 
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
-                           gap: Union[Decimal, None] = None, allow_stale: bool = False) -> Decimal:
+                           gap: Union[Decimal, None] = None, allow_stale: bool = False,
+                           base_coin: str = None) -> Decimal:
     if coin == IRT:
         return 1 / get_tether_irt_price(get_other_side(side), allow_stale=allow_stale)
 
     if gap:
         spread = gap
     else:
-        spread = get_spread(coin, side, value) / 100
+        spread = get_spread(coin, side, value=value, base_coin=base_coin) / 100
 
     if config('AUTO_SPREAD_SHEER', cast=bool, default=False):
         spread_sheer = Decimal('0.5')
@@ -278,7 +285,7 @@ def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: 
 
     tether = get_tether_irt_price(side)
     price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether, gap=gap,
-                                   allow_stale=allow_stale)
+                                   allow_stale=allow_stale, base_coin=IRT)
 
     if price:
         return price * tether

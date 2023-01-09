@@ -68,3 +68,26 @@ class CategorySpread(models.Model):
             return 4
         else:
             return 5
+
+
+class MarketSpread(models.Model):
+    BUY, SELL = 'buy', 'sell'
+    SIDE_CHOICES = [(BUY, 'bid'), (SELL, 'ask')]
+
+    side = models.CharField(max_length=8, choices=SIDE_CHOICES)
+
+    step = models.PositiveIntegerField(
+        choices=[(1, '0$ - 3$'), (2, '3$ - 10$'), (3, '10$ - 1000$'), (4, '1000$ - 2000$'), (5, '> 2000$')],
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
+
+    spread = get_amount_field(
+        validators=(MinValueValidator(Decimal('0.1')), MaxValueValidator(15))
+    )
+
+    constraints = [
+        UniqueConstraint(
+            fields=['side', 'step'], condition=Q(category__isnull=True),
+            name='market_spread_uniqueness_for_null_category',
+        ),
+    ]
