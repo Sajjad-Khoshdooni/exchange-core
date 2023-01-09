@@ -14,7 +14,8 @@ class AssetSpreadCategory(models.Model):
         return self.name
 
     class Meta:
-        verbose_name = verbose_name_plural = 'دسته‌بندی اسپرید'
+        verbose_name = 'Spread Category'
+        verbose_name_plural = 'Spread Categories'
 
 
 class CategorySpread(models.Model):
@@ -39,7 +40,7 @@ class CategorySpread(models.Model):
         return '%s %s step: %s = %s' % (self.category, self.side, self.step, self.spread)
 
     class Meta:
-        verbose_name = verbose_name_plural = 'اسپرید'
+        verbose_name = verbose_name_plural = 'Asset Spread'
 
         unique_together = [
             ('category', 'side', 'step'),
@@ -86,6 +87,8 @@ class MarketSpread(models.Model):
     )
 
     class Meta:
+        verbose_name = verbose_name_plural = 'Market Spread'
+
         constraints = [
             UniqueConstraint(
                 fields=['side', 'step'], condition=Q(category__isnull=True),
