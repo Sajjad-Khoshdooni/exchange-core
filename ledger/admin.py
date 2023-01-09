@@ -537,7 +537,7 @@ class AssetSpreadCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(models.MarketSpread)
 class MarketSpreadAdmin(admin.ModelAdmin):
-    list_display = ('step', 'side', 'spread')
+    list_display = ('id', 'step', 'side', 'spread')
     list_editable = ('side', 'step', 'spread')
     ordering = ('step', 'side')
     list_filter = ('side', 'step')
