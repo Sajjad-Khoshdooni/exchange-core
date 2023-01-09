@@ -82,7 +82,7 @@ class MarketSpread(models.Model):
     )
 
     spread = get_amount_field(
-        validators=(MinValueValidator(Decimal('0.1')), MaxValueValidator(15))
+        validators=(MinValueValidator(0), MaxValueValidator(15))
     )
 
     constraints = [
