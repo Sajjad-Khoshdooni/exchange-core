@@ -85,9 +85,13 @@ class MarketSpread(models.Model):
         validators=(MinValueValidator(0), MaxValueValidator(15))
     )
 
-    constraints = [
-        UniqueConstraint(
-            fields=['side', 'step'], condition=Q(category__isnull=True),
-            name='market_spread_uniqueness_for_null_category',
-        ),
-    ]
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['side', 'step'], condition=Q(category__isnull=True),
+                name='market_spread_uniqueness_for_null_category',
+            ),
+        ]
+
+    def __str__(self):
+        return '%s step: %s = %s' % (self.side, self.step, self.spread)
