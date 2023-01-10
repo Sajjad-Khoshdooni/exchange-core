@@ -91,8 +91,8 @@ class MarketSpread(models.Model):
 
         constraints = [
             UniqueConstraint(
-                fields=['side', 'step'], condition=Q(category__isnull=True),
-                name='market_spread_uniqueness_for_null_category',
+                fields=['side', 'step'],
+                name='market_spread_uniqueness',
             ),
         ]
 
