@@ -291,7 +291,7 @@ class ZibalChannel(FiatWithdraw):
                 'bankAccount': receiver.iban,
                 'uniqueCode': request_id,
                 'wageFeeMode': 2,
-                'checkoutDelay': checkout_delay,
+                'checkoutDelay': 0,
                 'showTime': True
             })
         except ServerError as e:
