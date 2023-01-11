@@ -19,14 +19,14 @@ class TaskSerializer(serializers.ModelSerializer):
 class BannerAlertAPIView(APIView):
     def get(self, request):
 
-        # return Response({
-        #     'banner': {
-        #         'text': 'کاربران گرامی، در حال حاضر مشکلی در ارتباز  وجود دارد. لذا ممکن است تا چند ساعت آینده امکان واریز ریالی نداشته باشید.',
-        #         'btn_link': '/fdsfds',
-        #         'btn_title': '',
-        #         'level': 'warning'
-        #     }
-        # })
+        return Response({
+            'banner': {
+                'text': 'کاربران گرامی، در حال حاضر مشکلی در ارتباز  وجود دارد. لذا ممکن است تا چند ساعت آینده امکان واریز ریالی نداشته باشید.',
+                'btn_link': None,
+                'btn_title': '',
+                'level': 'warning'
+            }
+        })
 
         return Response({
             'banner': self.get_alert_condition()
