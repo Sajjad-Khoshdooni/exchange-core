@@ -111,6 +111,9 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         request = self.context['request']
         account = request.user.account
 
+        if not account.user.can_trade:
+            raise ValidationError('در حال حاضر امکان معامله وجود ندارد.')
+
         from_asset = validated_data['from_asset']
         to_asset = validated_data['to_asset']
 
@@ -205,6 +208,9 @@ class OTCTradeSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         token = validated_data['token']
         request = self.context['request']
+
+        if not request.user.can_trade:
+            raise ValidationError('در حال حاضر امکان معامله وجود ندارد.')
 
         otc_request = get_object_or_404(OTCRequest, token=token, account=request.user.account)
 

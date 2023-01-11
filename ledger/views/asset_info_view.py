@@ -196,7 +196,6 @@ class AssetsViewSet(ModelViewSet):
         return options[key]
 
     def get_serializer_class(self):
-        print(self.get_options('extra_info'))
         return AssetSerializerBuilder.create_serializer(
             prices=self.get_options('prices'),
             extra_info=self.get_options('extra_info')

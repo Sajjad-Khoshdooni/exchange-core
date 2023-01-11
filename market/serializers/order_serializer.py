@@ -38,6 +38,10 @@ class OrderSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        user = self.context['request'].user
+        if not user.can_trade:
+            raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
+
         symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
         if validated_data['fill_type'] == Order.LIMIT:
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])

@@ -140,6 +140,7 @@ class User(AbstractUser):
     )
 
     can_withdraw = models.BooleanField(default=True)
+    can_trade = models.BooleanField(default=True)
 
     withdraw_limit_whitelist = models.BooleanField(default=False)
     withdraw_risk_level_multiplier = models.PositiveIntegerField(
