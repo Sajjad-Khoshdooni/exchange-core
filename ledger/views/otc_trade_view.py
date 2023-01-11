@@ -1,5 +1,6 @@
 from decimal import Decimal, ConversionSyntax
 
+from django.conf import settings
 from django.db.models import Sum
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -111,7 +112,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         request = self.context['request']
         account = request.user.account
 
-        if not account.user.can_trade:
+        if not settings.TRADE_ENABLE or not account.user.can_trade:
             raise ValidationError('در حال حاضر امکان معامله وجود ندارد.')
 
         from_asset = validated_data['from_asset']
@@ -209,7 +210,7 @@ class OTCTradeSerializer(serializers.ModelSerializer):
         token = validated_data['token']
         request = self.context['request']
 
-        if not request.user.can_trade:
+        if not settings.TRADE_ENABLE or not request.user.can_trade:
             raise ValidationError('در حال حاضر امکان معامله وجود ندارد.')
 
         otc_request = get_object_or_404(OTCRequest, token=token, account=request.user.account)
