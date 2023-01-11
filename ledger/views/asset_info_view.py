@@ -15,7 +15,6 @@ from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict, get_trading_price_usdt
-from ledger.utils.price_manager import PriceManager
 from ledger.utils.provider import CoinInfo, get_provider_requester
 
 
@@ -229,10 +228,6 @@ class AssetsViewSet(ModelViewSet):
             raise Http404()
 
         return asset
-
-    def get(self, *args, **kwargs):
-        with PriceManager(fetch_all=True, allow_stale=True):
-            return super().get(*args, **kwargs)
 
 
 class AssetOverViewSerializer(serializers.Serializer):

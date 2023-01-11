@@ -11,7 +11,6 @@ from django.conf import settings
 from redis import Redis
 
 from ledger.utils.cache import cache_for
-from ledger.utils.price_manager import PriceManager
 
 logger = logging.getLogger(__name__)
 
@@ -179,11 +178,6 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
 
 def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
               now: datetime = None, allow_stale: bool = False) -> Decimal:
-    if PriceManager.active():
-        price = PriceManager.get_price(coin, side)
-        if price is not None:
-            return price
-
     prices = get_prices_dict([coin], side, exchange, market_symbol, now, allow_stale=allow_stale)
 
     if prices:
@@ -206,11 +200,6 @@ def get_price_tether_irt_nobitex():
 
 
 def get_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
-    if PriceManager.active():
-        price = PriceManager.get_tether_price(side)
-        if price is not None:
-            return price
-
     price = price_redis.hget('price:usdtirt', SIDE_MAP[side])
     if price:
         return Decimal(price)
