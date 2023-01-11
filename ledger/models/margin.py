@@ -125,7 +125,7 @@ class MarginLoan(models.Model):
 
 
 class CloseRequest(models.Model):
-    LIQUIDATION, USER = 'liquid', 'user'
+    LIQUIDATION, USER, SYSTEM = 'liquid', 'user', 'system'
 
     created = get_created_field()
     group_id = get_group_id_field()
@@ -134,7 +134,7 @@ class CloseRequest(models.Model):
     margin_level = get_amount_field()
 
     reason = models.CharField(
-        max_length=8, choices=[(LIQUIDATION, LIQUIDATION), (USER, USER)]
+        max_length=8, choices=[(LIQUIDATION, LIQUIDATION), (USER, USER), (SYSTEM, SYSTEM)]
     )
 
     status = get_status_field()
@@ -169,3 +169,5 @@ class CloseRequest(models.Model):
 
         close_request.status = DONE
         close_request.save()
+
+        return close_request

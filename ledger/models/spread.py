@@ -14,7 +14,8 @@ class AssetSpreadCategory(models.Model):
         return self.name
 
     class Meta:
-        verbose_name = verbose_name_plural = 'دسته‌بندی اسپرید'
+        verbose_name = 'Spread Category'
+        verbose_name_plural = 'Spread Categories'
 
 
 class CategorySpread(models.Model):
@@ -39,7 +40,7 @@ class CategorySpread(models.Model):
         return '%s %s step: %s = %s' % (self.category, self.side, self.step, self.spread)
 
     class Meta:
-        verbose_name = verbose_name_plural = 'اسپرید'
+        verbose_name = verbose_name_plural = 'Asset Spread'
 
         unique_together = [
             ('category', 'side', 'step'),
@@ -68,3 +69,32 @@ class CategorySpread(models.Model):
             return 4
         else:
             return 5
+
+
+class MarketSpread(models.Model):
+    BUY, SELL = 'buy', 'sell'
+    SIDE_CHOICES = [(BUY, 'bid'), (SELL, 'ask')]
+
+    side = models.CharField(max_length=8, choices=SIDE_CHOICES)
+
+    step = models.PositiveIntegerField(
+        choices=[(1, '0$ - 3$'), (2, '3$ - 10$'), (3, '10$ - 1000$'), (4, '1000$ - 2000$'), (5, '> 2000$')],
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
+
+    spread = get_amount_field(
+        validators=(MinValueValidator(0), MaxValueValidator(15))
+    )
+
+    class Meta:
+        verbose_name = verbose_name_plural = 'Market Spread'
+
+        constraints = [
+            UniqueConstraint(
+                fields=['side', 'step'],
+                name='market_spread_uniqueness',
+            ),
+        ]
+
+    def __str__(self):
+        return '%s step: %s = %s' % (self.side, self.step, self.spread)

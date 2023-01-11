@@ -110,7 +110,7 @@ def get_withdraw_risks(transfer: Transfer) -> list:
         max_withdraw_value = current_withdraws.aggregate(value=Max('usdt_value'))['value'] or 0
         expected_withdraw_value = max_withdraw_value * 2
 
-        if current_day_withdraw_value > expected_withdraw_value:
+        if transfer.usdt_value > max(expected_withdraw_value, 50):
             risks.append(
                 RiskFactor(
                     reason=RiskFactor.WITHDRAW_VALUE_PEAK,

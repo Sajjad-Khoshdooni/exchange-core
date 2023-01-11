@@ -37,7 +37,7 @@ class StakeRequest(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.stake_option.__str__() + ' ' + str(self.account_id)
+        return str(self.stake_option) + ' ' + str(self.account_id)
 
     def get_locked_amount(self) -> Decimal:
         locked_revenue = \
@@ -64,7 +64,8 @@ class StakeRequest(models.Model):
         valid_change_status = [
             (self.PROCESS, self.PENDING), (self.PROCESS, self.DONE), (self.PROCESS, self.CANCEL_COMPLETE),
             (self.PENDING, self.DONE), (self.PENDING, self.CANCEL_PROCESS),
-            (self.DONE, self.CANCEL_PROCESS), (self.CANCEL_PROCESS, self.CANCEL_PENDING),
+            (self.DONE, self.CANCEL_PROCESS),
+            (self.PROCESS, self.CANCEL_PENDING), (self.PENDING, self.CANCEL_PENDING), (self.CANCEL_PROCESS, self.CANCEL_PENDING),
             (self.CANCEL_PENDING, self.CANCEL_COMPLETE), (self.CANCEL_PROCESS, self.CANCEL_COMPLETE),
             (self.DONE, self.FINISHED),
         ]

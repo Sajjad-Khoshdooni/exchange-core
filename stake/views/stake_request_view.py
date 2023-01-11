@@ -63,6 +63,9 @@ class StakeRequestSerializer(serializers.ModelSerializer):
         amount = validated_data['amount']
         user = validated_data['user']
 
+        if not user.show_staking:
+            raise ValidationError('امکان سرمایه‌گذاری وجود ندارد.')
+
         account = user.account
         asset = stake_option.asset
 

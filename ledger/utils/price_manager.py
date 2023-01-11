@@ -1,6 +1,4 @@
 import logging
-from datetime import datetime
-from decimal import Decimal
 
 from ledger.utils.cache import cache_for
 
@@ -82,3 +80,8 @@ class PriceManager:
     @classmethod
     def get_tether_price(cls, side: str):
         return cls._tether_prices.get(side)
+
+
+class PriceHolder:
+    def __init__(self, fetch_all: bool = False, side: str = None, coins: list = None, allow_stale: bool = True):
+        pass

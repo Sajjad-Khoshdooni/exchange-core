@@ -184,6 +184,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'birth_date_verified': M.superuser | M.is_none('birth_date_verified'),
         'withdraw_before_48h_option': True,
         'can_withdraw': True,
+        'can_trade': True,
         'withdraw_limit_whitelist': True,
         'withdraw_risk_level_multiplier': True,
     }
@@ -204,7 +205,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             'fields': (
                 'is_active', 'is_staff', 'is_superuser',
                 'groups', 'user_permissions', 'show_margin', 'show_strategy_bot', 'show_community', 'show_staking',
-                'withdraw_before_48h_option', 'can_withdraw', 'withdraw_limit_whitelist',
+                'withdraw_before_48h_option', 'can_trade', 'can_withdraw', 'withdraw_limit_whitelist',
                 'withdraw_risk_level_multiplier'
             ),
         }),

@@ -11,7 +11,6 @@ from django.conf import settings
 from redis import Redis
 
 from ledger.utils.cache import cache_for
-from ledger.utils.price_manager import PriceManager
 
 logger = logging.getLogger(__name__)
 
@@ -39,21 +38,30 @@ def get_redis_side(side: str):
 
 
 @cache_for(300)
-def get_spread(coin: str, side: str, value: Decimal = None) -> Decimal:
-    from ledger.models import CategorySpread, Asset
+def get_spread(coin: str, side: str, value: Decimal = None, base_coin: str = None) -> Decimal:
+    from ledger.models import CategorySpread, Asset, MarketSpread
 
     asset = Asset.get(coin)
     step = CategorySpread.get_step(value)
 
     category = asset.spread_category
 
-    spread = CategorySpread.objects.filter(category=category, step=step, side=side).first()
+    asset_spread = CategorySpread.objects.filter(category=category, step=step, side=side).first()
+    spread = 0
 
-    if not spread:
+    if not asset_spread:
         logger.warning("No category spread defined for %s step = %s, side = %s" % (category, step, side))
-        spread = CategorySpread()
+        asset_spread = CategorySpread()
 
-    return spread.spread
+    spread = asset_spread.spread
+
+    if base_coin == IRT:
+        market_spread = MarketSpread.objects.filter(step=step, side=side).first()
+
+        if market_spread:
+            spread += market_spread.spread
+
+    return spread
 
 
 def get_other_side(side: str):
@@ -170,11 +178,6 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
 
 def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
               now: datetime = None, allow_stale: bool = False) -> Decimal:
-    if PriceManager.active():
-        price = PriceManager.get_price(coin, side)
-        if price is not None:
-            return price
-
     prices = get_prices_dict([coin], side, exchange, market_symbol, now, allow_stale=allow_stale)
 
     if prices:
@@ -197,11 +200,6 @@ def get_price_tether_irt_nobitex():
 
 
 def get_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
-    if PriceManager.active():
-        price = PriceManager.get_tether_price(side)
-        if price is not None:
-            return price
-
     price = price_redis.hget('price:usdtirt', SIDE_MAP[side])
     if price:
         return Decimal(price)
@@ -239,14 +237,15 @@ def get_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
 
 
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
-                           gap: Union[Decimal, None] = None, allow_stale: bool = False) -> Decimal:
+                           gap: Union[Decimal, None] = None, allow_stale: bool = False,
+                           base_coin: str = None) -> Decimal:
     if coin == IRT:
         return 1 / get_tether_irt_price(get_other_side(side), allow_stale=allow_stale)
 
     if gap:
         spread = gap
     else:
-        spread = get_spread(coin, side, value) / 100
+        spread = get_spread(coin, side, value=value, base_coin=base_coin) / 100
 
     if config('AUTO_SPREAD_SHEER', cast=bool, default=False):
         spread_sheer = Decimal('0.5')
@@ -278,7 +277,7 @@ def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: 
 
     tether = get_tether_irt_price(side)
     price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether, gap=gap,
-                                   allow_stale=allow_stale)
+                                   allow_stale=allow_stale, base_coin=IRT)
 
     if price:
         return price * tether

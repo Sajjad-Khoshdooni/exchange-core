@@ -7,7 +7,6 @@ from django.utils import timezone
 
 from accounts.models import User
 from ledger.utils.price import BUY
-from ledger.utils.price_manager import PriceManager
 
 
 class Account(models.Model):
@@ -91,12 +90,11 @@ class Account(models.Model):
 
         total = Decimal('0')
 
-        with PriceManager(fetch_all=True):
-            for wallet in wallets:
-                balance = wallet.get_balance_usdt(side)
+        for wallet in wallets:
+            balance = wallet.get_balance_usdt(side)
 
-                if balance:
-                    total += balance
+            if balance:
+                total += balance
 
         return total
 
@@ -112,15 +110,14 @@ class Account(models.Model):
 
         total = Decimal('0')
 
-        with PriceManager(fetch_all=True):
-            for wallet in wallets:
-                if wallet.balance == 0:
-                    continue
+        for wallet in wallets:
+            if wallet.balance == 0:
+                continue
 
-                balance = wallet.get_balance_irt(side)
+            balance = wallet.get_balance_irt(side)
 
-                if balance:
-                    total += balance
+            if balance:
+                total += balance
 
         return total
 

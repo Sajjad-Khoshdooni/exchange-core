@@ -6,7 +6,6 @@ from typing import List, Dict
 from accounts.models import Account
 from ledger.models import Wallet, Asset
 from ledger.utils.price import SELL, BUY
-from ledger.utils.price_manager import PriceManager
 
 TRANSFER_OUT_BLOCK_ML = Decimal('2')
 BORROW_BLOCK_ML = Decimal('1.5')  # leverage = 3
@@ -30,14 +29,13 @@ class MarginInfo:
         total_assets = Decimal()
         total_debt = Decimal()
 
-        with PriceManager(fetch_all=True):
-            for wallet in wallets:
-                if wallet.market == Wallet.MARGIN:
-                    balance = wallet.get_balance_usdt(BUY)
-                    total_assets += balance
-                else:
-                    balance = wallet.get_balance_usdt(SELL)
-                    total_debt += balance
+        for wallet in wallets:
+            if wallet.market == Wallet.MARGIN:
+                balance = wallet.get_balance_usdt(BUY)
+                total_assets += balance
+            else:
+                balance = wallet.get_balance_usdt(SELL)
+                total_debt += balance
 
         return MarginInfo(
             total_debt=-total_debt,
@@ -78,12 +76,11 @@ def get_bulk_margin_info(accounts: List[Account]) -> Dict[Account, MarginInfo]:
     total_assets = defaultdict(Decimal)
     total_debt = defaultdict(Decimal)
 
-    with PriceManager(fetch_all=True):
-        for wallet in wallets:
-            if wallet.market == Wallet.MARGIN:
-                total_assets[wallet.account_id] += wallet.get_balance_usdt(BUY)
-            else:
-                total_debt[wallet.account_id] += wallet.get_balance_usdt(SELL)
+    for wallet in wallets:
+        if wallet.market == Wallet.MARGIN:
+            total_assets[wallet.account_id] += wallet.get_balance_usdt(BUY)
+        else:
+            total_debt[wallet.account_id] += wallet.get_balance_usdt(SELL)
 
     for account in accounts:
         mapping[account] = MarginInfo(

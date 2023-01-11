@@ -16,7 +16,6 @@ from ledger.models.asset import Asset
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.precision import get_presentation_amount, get_precision
 from ledger.utils.price import get_trading_price_irt, BUY, SELL, get_prices_dict
-from ledger.utils.price_manager import PriceManager
 
 logger = logging.getLogger(__name__)
 
@@ -257,25 +256,24 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
         return Asset.objects.filter(Q(enable=True) | Q(id__in=disabled_assets))
 
     def list(self, request, *args, **kwargs):
-        with PriceManager(fetch_all=True, allow_stale=True):
-            queryset = self.get_queryset()
+        queryset = self.get_queryset()
 
-            symbols = [a.symbol for a in queryset]
-            get_prices_dict(coins=symbols, side='buy')
-            get_prices_dict(coins=symbols, side='sell')
+        symbols = [a.symbol for a in queryset]
+        get_prices_dict(coins=symbols, side='buy')
+        get_prices_dict(coins=symbols, side='sell')
 
-            serializer = self.get_serializer(queryset, many=True)
-            data = serializer.data
+        serializer = self.get_serializer(queryset, many=True)
+        data = serializer.data
 
-            pin_to_top_wallets = list(filter(lambda w: w['pin_to_top'], data))
-            with_balance_wallets = list(filter(lambda w: w['balance'] != '0' and not w['pin_to_top'], data))
-            without_balance_wallets = list(filter(lambda w: w['balance'] == '0' and not w['pin_to_top'], data))
+        pin_to_top_wallets = list(filter(lambda w: w['pin_to_top'], data))
+        with_balance_wallets = list(filter(lambda w: w['balance'] != '0' and not w['pin_to_top'], data))
+        without_balance_wallets = list(filter(lambda w: w['balance'] == '0' and not w['pin_to_top'], data))
 
-            wallets = pin_to_top_wallets + sorted(
-                with_balance_wallets,
-                key=lambda w: Decimal(w['balance_irt'] or 0),
-                reverse=True
-            ) + without_balance_wallets
+        wallets = pin_to_top_wallets + sorted(
+            with_balance_wallets,
+            key=lambda w: Decimal(w['balance_irt'] or 0),
+            reverse=True
+        ) + without_balance_wallets
 
         return Response(wallets)
 

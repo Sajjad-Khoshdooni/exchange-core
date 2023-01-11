@@ -535,6 +535,14 @@ class AssetSpreadCategoryAdmin(admin.ModelAdmin):
     list_display = ('name', )
 
 
+@admin.register(models.MarketSpread)
+class MarketSpreadAdmin(admin.ModelAdmin):
+    list_display = ('id', 'step', 'side', 'spread')
+    list_editable = ('side', 'step', 'spread')
+    ordering = ('step', 'side')
+    list_filter = ('side', 'step')
+
+
 @admin.register(models.PNLHistory)
 class PNLHistoryAdmin(admin.ModelAdmin):
     list_display = ('date', 'account', 'market', 'base_asset', 'snapshot_balance', 'profit')

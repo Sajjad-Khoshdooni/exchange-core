@@ -85,7 +85,7 @@ class StakeRequestAdmin(admin.ModelAdmin):
 
     @admin.action(description='بردن به حالت لغو در حال انجام', permissions=['view'])
     def stake_request_cancel_processing(self, request, queryset):
-        queryset = queryset.filter(status=StakeRequest.CANCEL_PROCESS)
+        queryset = queryset.filter(status__in=(StakeRequest.PROCESS, StakeRequest.PENDING, StakeRequest.CANCEL_PROCESS))
         for stake_request in queryset:
             stake_request.change_status(StakeRequest.CANCEL_PENDING)
 
