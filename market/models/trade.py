@@ -51,7 +51,7 @@ class Trade(models.Model):
     price = get_amount_field()
     is_maker = models.BooleanField()
 
-    group_id = get_group_id_field()
+    group_id = get_group_id_field(db_index=True)
 
     base_amount = get_amount_field()  # = amount * price
     fee_amount = get_amount_field()
