@@ -53,6 +53,7 @@ class Trx(models.Model):
     FIX = 'fx'
     STAKE_FEE = 'sf'
     CLOSE_MARGIN = 'cm'
+    DEBT_CLEAR = 'dc'
 
     created = models.DateTimeField(auto_now_add=True)
 
