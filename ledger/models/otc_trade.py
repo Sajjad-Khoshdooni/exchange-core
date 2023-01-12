@@ -154,7 +154,7 @@ class OTCTrade(models.Model):
             self.save(update_fields=['status'])
 
             for trx in Trx.objects.filter(group_id=self.group_id):
-                if trx.receiver.balance >= trx.amount:
+                if trx.receiver.has_balance(trx.amount):
                     pipeline.new_trx(
                         sender=trx.receiver,
                         receiver=trx.sender,
