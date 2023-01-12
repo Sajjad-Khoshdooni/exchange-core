@@ -49,7 +49,7 @@ class AssetOverview:
 
         wallets = Wallet.objects.filter(
             account__type=Account.ORDINARY
-        ).exclude(market=Wallet.VOUCHER).values('asset__symbol').annotate(amount=Sum('balance'))
+        ).exclude(market__in=(Wallet.VOUCHER, Wallet.DEBT)).values('asset__symbol').annotate(amount=Sum('balance'))
         self._users_per_asset_balances = {w['asset__symbol']: w['amount'] for w in wallets}
 
         self._valid_symbols = set(Asset.objects.filter(enable=True).values_list('symbol', flat=True))
