@@ -108,7 +108,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         prices = self.context.get('prices_sell')
 
         if prices:
-            return prices.get(asset.symbol) * self.context.get('tether_irt_sell', 0)
+            return prices.get(asset.symbol, 1) * self.context.get('tether_irt_sell', 1)
 
         price = get_trading_price_irt(asset.symbol, SELL, allow_stale=True)
         return asset.get_presentation_price_irt(price)
@@ -120,7 +120,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         prices = self.context.get('prices_buy')
 
         if prices:
-            return prices.get(asset.symbol) * self.context.get('tether_irt_buy', 0)
+            return prices.get(asset.symbol, 1) * self.context.get('tether_irt_buy', 1)
 
         price = get_trading_price_irt(asset.symbol, BUY, allow_stale=True)
         return asset.get_presentation_price_irt(price)
