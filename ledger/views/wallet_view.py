@@ -15,7 +15,7 @@ from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCT
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.precision import get_presentation_amount, get_precision
-from ledger.utils.price import get_trading_price_irt, BUY, SELL, get_prices_dict
+from ledger.utils.price import get_trading_price_irt, BUY, SELL, get_prices_dict, get_tether_irt_price
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if asset.symbol == asset.IRT:
             return ''
 
-        prices = self.context.get('prices_sell')
+        prices = self.context.get('prices_sell') * self.context.get('tether_irt_sell', 0)
 
         if prices:
             return prices.get(asset.symbol)
@@ -120,7 +120,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         prices = self.context.get('prices_buy')
 
         if prices:
-            return prices.get(asset.symbol)
+            return prices.get(asset.symbol) * self.context.get('tether_irt_buy', 0)
 
         price = get_trading_price_irt(asset.symbol, BUY, allow_stale=True)
         return asset.get_presentation_price_irt(price)
@@ -252,6 +252,8 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
 
             ctx['prices_buy'] = get_prices_dict(coins=coins, side=BUY, allow_stale=True)
             ctx['prices_sell'] = get_prices_dict(coins=coins, side=SELL, allow_stale=True)
+            ctx['tether_irt_buy'] = get_tether_irt_price(BUY, allow_stale=True)
+            ctx['tether_irt_sell'] = get_tether_irt_price(SELL, allow_stale=True)
 
         return ctx
 
