@@ -154,7 +154,7 @@ class OTCTrade(models.Model):
             self.save(update_fields=['status'])
 
             for trx in Trx.objects.filter(group_id=self.group_id):
-                try:
+                if trx.receiver.balance >= trx.amount:
                     pipeline.new_trx(
                         sender=trx.receiver,
                         receiver=trx.sender,
@@ -162,7 +162,7 @@ class OTCTrade(models.Model):
                         group_id=trx.group_id,
                         scope=Trx.REVERT
                     )
-                except IntegrityError:
+                else:
                     pipeline.new_trx(
                         sender=trx.receiver.asset.get_wallet(trx.receiver.account, market=Wallet.DEBT),
                         receiver=trx.sender,
