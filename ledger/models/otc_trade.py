@@ -2,7 +2,7 @@ import logging
 from decimal import Decimal
 from uuid import uuid4
 
-from django.db import models
+from django.db import models, IntegrityError
 
 from accounts.models import Account
 from ledger.exceptions import AbruptDecrease, HedgeError
@@ -154,7 +154,7 @@ class OTCTrade(models.Model):
             self.save(update_fields=['status'])
 
             for trx in Trx.objects.filter(group_id=self.group_id):
-                if trx.receiver.has_balance(trx.amount):
+                try:
                     pipeline.new_trx(
                         sender=trx.receiver,
                         receiver=trx.sender,
@@ -162,7 +162,7 @@ class OTCTrade(models.Model):
                         group_id=trx.group_id,
                         scope=Trx.REVERT
                     )
-                else:
+                except IntegrityError:
                     pipeline.new_trx(
                         sender=trx.receiver.asset.get_wallet(trx.receiver.account, market=Wallet.DEBT),
                         receiver=trx.sender,
