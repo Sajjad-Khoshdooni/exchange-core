@@ -18,6 +18,7 @@ from ledger.models import Asset, Network, Transfer, NetworkAsset, AddressBook
 from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
 from ledger.utils.price import get_trading_price_irt, BUY
+from ledger.utils.withdraw_verify import can_withdraw
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
@@ -32,13 +33,13 @@ class WithdrawSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         user = self.context['request'].user
 
-        if config('WITHDRAW_ENABLE', '1') == '0' or not user.can_withdraw:
+        if not can_withdraw(user.account):
             raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
 
         account = user.account
         api = self.context.get('api')
-        if attrs['address_book_id'] and (not api):
 
+        if attrs['address_book_id'] and (not api):
             address_book = get_object_or_404(AddressBook, id=attrs['address_book_id'], account=account)
 
             address = address_book.address

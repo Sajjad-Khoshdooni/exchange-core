@@ -367,3 +367,4 @@ BRAND = config('BRAND', default='')
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 2000
 
 TRADE_ENABLE = config('TRADE_ENABLE', cast=bool, default=True)
+WITHDRAW_ENABLE = config('WITHDRAW_ENABLE', cast=bool, default=True)

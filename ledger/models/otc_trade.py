@@ -6,7 +6,7 @@ from django.db import models
 
 from accounts.models import Account
 from ledger.exceptions import AbruptDecrease, HedgeError
-from ledger.models import OTCRequest, Trx
+from ledger.models import OTCRequest, Trx, Wallet
 from ledger.utils.price import SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.exceptions import NegativeGapRevenue
@@ -154,13 +154,22 @@ class OTCTrade(models.Model):
             self.save(update_fields=['status'])
 
             for trx in Trx.objects.filter(group_id=self.group_id):
-                pipeline.new_trx(
-                    sender=trx.receiver,
-                    receiver=trx.sender,
-                    amount=trx.amount,
-                    group_id=trx.group_id,
-                    scope=Trx.REVERT
-                )
+                if trx.receiver.has_balance(trx.amount):
+                    pipeline.new_trx(
+                        sender=trx.receiver,
+                        receiver=trx.sender,
+                        amount=trx.amount,
+                        group_id=trx.group_id,
+                        scope=Trx.REVERT
+                    )
+                else:
+                    pipeline.new_trx(
+                        sender=trx.receiver.asset.get_wallet(trx.receiver.account, market=Wallet.DEBT),
+                        receiver=trx.sender,
+                        amount=trx.amount,
+                        group_id=trx.group_id,
+                        scope=Trx.REVERT
+                    )
 
             from market.models import Trade
             Trade.objects.filter(group_id=self.group_id).update(status=Trade.REVERT)

@@ -23,6 +23,7 @@ from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
 from ledger.utils.wallet_pipeline import WalletPipeline
+from ledger.utils.withdraw_verify import can_withdraw
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = self.context['request'].user
 
-        if config('WITHDRAW_ENABLE', '1') == '0' or not user.can_withdraw:
+        if not can_withdraw(user.account):
             raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
 
         if user.level < user.LEVEL2:

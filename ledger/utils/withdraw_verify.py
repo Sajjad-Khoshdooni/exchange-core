@@ -1,11 +1,13 @@
 import dataclasses
 from datetime import timedelta
 
+from django.conf import settings
 from django.db.models import Sum, Max
 from django.utils import timezone
 
+from accounts.models import Account
 from accounts.models.login_activity import LoginActivity
-from ledger.models import Transfer
+from ledger.models import Transfer, Wallet
 
 WHITELIST_DAILY_WITHDRAW_VALUE = 50
 SAFE_DAILY_WITHDRAW_VALUE = 150
@@ -147,3 +149,13 @@ def get_withdraw_risks(transfer: Transfer) -> list:
         )
 
     return risks
+
+
+def can_withdraw(account: Account):
+    if not settings.WITHDRAW_ENABLE or not account.user.can_withdraw:
+        return False
+
+    if Wallet.objects.filter(account=account, market=Wallet.DEBT, balance__lt=0):
+        return False
+
+    return True
