@@ -303,11 +303,6 @@ class Transfer(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(
-                fields=["trx_hash", "network", "deposit"],
-                name="unique_transfer_tx_hash_network",
-                condition=Q(status__in=["pending", "done"]),
-            ),
             CheckConstraint(check=Q(amount__gte=0, fee_amount__gte=0), name='check_ledger_transfer_amounts', ),
         ]
 
