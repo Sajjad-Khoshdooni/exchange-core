@@ -105,10 +105,10 @@ class AssetListSerializer(serializers.ModelSerializer):
         if asset.symbol == asset.IRT:
             return ''
 
-        prices = self.context.get('prices_sell') * self.context.get('tether_irt_sell', 0)
+        prices = self.context.get('prices_sell')
 
         if prices:
-            return prices.get(asset.symbol)
+            return prices.get(asset.symbol) * self.context.get('tether_irt_sell', 0)
 
         price = get_trading_price_irt(asset.symbol, SELL, allow_stale=True)
         return asset.get_presentation_price_irt(price)
