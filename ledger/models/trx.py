@@ -18,7 +18,7 @@ class FakeTrx:
     sender: Wallet
     receiver: Wallet
     amount: Decimal = 0
-    group_id: Union[str,UUID] = '00000000-0000-0000-0000-000000000000'
+    group_id: Union[str, UUID] = '00000000-0000-0000-0000-000000000000'
     scope: str = ''
 
     def save(self):

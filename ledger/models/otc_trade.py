@@ -161,3 +161,9 @@ class OTCTrade(models.Model):
                     group_id=trx.group_id,
                     scope=Trx.REVERT
                 )
+
+            from market.models import Trade
+            Trade.objects.filter(group_id=self.group_id).update(status=Trade.REVERT)
+
+    def __str__(self):
+        return '%s [%s]' % (self.otc_request, self.status)

@@ -31,14 +31,12 @@ class FillOrderTrxs:
 
 
 class Trade(models.Model):
-    OTC = 'otc'
-    SYSTEM = 'system'
-    SYSTEM_MAKER = 'sys-make'
-    SYSTEM_TAKER = 'sys-take'
-    MARKET = 'market'
+    OTC, SYSTEM, SYSTEM_MAKER, SYSTEM_TAKER, MARKET = 'otc', 'system', 'sys-make', 'sys-take', 'market'
+    SOURCE_CHOICES = (OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'), (SYSTEM_MAKER, SYSTEM_MAKER), \
+                     (SYSTEM_TAKER, SYSTEM_TAKER)
 
-    SOURCE_CHOICES = ((OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'), (SYSTEM_MAKER, SYSTEM_MAKER),
-                      (SYSTEM_TAKER, SYSTEM_TAKER))
+    DONE, REVERT = 'd', 'r'
+    STATUS_CHOICES = (DONE, 'done'), (REVERT, 'revert')
 
     created = models.DateTimeField(auto_now_add=True)
     symbol = models.ForeignKey(PairSymbol, on_delete=models.CASCADE)
@@ -46,6 +44,7 @@ class Trade(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='trades')
     account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
 
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default=DONE, db_index=True)
     side = models.CharField(max_length=8, choices=Order.ORDER_CHOICES)
 
     amount = get_amount_field()
@@ -235,7 +234,7 @@ class Trade(models.Model):
                 "max(price) as high, min(price) as low, "
                 "sum(amount) as volume, "
                 "(date_trunc('seconds', (created - (timestamptz 'epoch' - interval %s)) / %s) * %s + (timestamptz 'epoch' - interval %s)) as tf "
-                "from market_trade where symbol_id = %s and side = 'buy' and trade_source != 'otc' and created between %s and %s group by tf order by tf",
+                "from market_trade where symbol_id = %s and side = 'buy' and status = 'd' and trade_source != 'otc' and created between %s and %s group by tf order by tf",
                 [tf_shift, interval_in_secs, interval_in_secs, tf_shift, symbol_id, start, end]
             )
         ]

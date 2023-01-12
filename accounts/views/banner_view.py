@@ -33,6 +33,7 @@ class BannerAlertAPIView(APIView):
         })
 
     def get_alert_condition(self):
+        return
         account = self.request.user.account
         task = None
 
