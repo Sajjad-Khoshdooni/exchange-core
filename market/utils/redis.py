@@ -70,3 +70,65 @@ def get_as_dict(symbol_id, key):
     if None in as_dict.values():
         return
     return as_dict
+
+
+class MarketCacheHandler:
+    _client = market_redis
+
+    SET_IF_HIGHER = 'setifhigher'
+    SET_IF_LOWER = 'setiflower'
+
+    _funcs_dict = {
+        SET_IF_HIGHER: '''
+                        local c = tonumber(redis.call('get', KEYS[1])); if c then if tonumber(ARGV[1]) > c then 
+                        redis.call('set', KEYS[1], ARGV[1]) return tonumber(ARGV[1]) - c else return 0 end else 
+                        return redis.call('set', KEYS[1], ARGV[1]) end
+                       ''',
+        SET_IF_LOWER: '''
+                        local c = tonumber(redis.call('get', KEYS[1])); if c then if tonumber(ARGV[1]) > c then 
+                        redis.call('set', KEYS[1], ARGV[1]) return tonumber(ARGV[1]) - c else return 0 end else 
+                        return redis.call('set', KEYS[1], ARGV[1]) end
+                       ''',
+    }
+
+    @classmethod
+    def set_if_lower(cls, k, v):
+        return cls._call(cls.SET_IF_LOWER, **{k: v})
+
+    @classmethod
+    def set_if_higher(cls, k, v):
+        return cls._call(cls.SET_IF_HIGHER, **{k: v})
+
+    @classmethod
+    def _call(cls, func_name, **kwargs):
+        inputs = list(sum(kwargs.items(), ()))
+        return cls._client.evalsha(cls._load_script(func_name), int(len(inputs) / 2), *inputs)
+
+    @classmethod
+    def _load_script(cls, func_name):
+        func_sha = cls._client.get(f'utils:func:{func_name}')
+        if not func_sha:
+            func_sha = cls._register_script(func_name)
+            cls._client.set(f'utils:func:{func_name}', func_sha)
+        return func_sha
+
+    @classmethod
+    def _register_script(cls, func_name):
+        if func_name in cls._funcs_dict:
+            return cls._client.script_load(cls._funcs_dict[func_name])
+        raise NotImplementedError
+
+    @classmethod
+    def update_bid_ask(cls, order):
+        from market.models import Order
+        if order.status != Order.NEW:
+            return
+
+        order_type = f':{order.type}' if order.type else ''
+        if order.side == Order.BUY:
+            is_updated = cls.set_if_higher(f'market:depth:{order.symbol.name}:{order.side}{order_type}', order.price)
+        else:
+            is_updated = cls.set_if_lower(f'market:depth:{order.symbol.name}:{order.side}{order_type}', order.price)
+
+        if bool(is_updated):
+            market_redis.publish(f'market:depth:{order.symbol.name}:{order.side}', order.price)
