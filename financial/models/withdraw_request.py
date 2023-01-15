@@ -209,10 +209,10 @@ class FiatWithdrawRequest(models.Model):
             self.status = new_status
             self.save(update_fields=['status'])
 
-            if (old_status, new_status) in (self.INIT, self.PROCESSING):
-                from financial.tasks import process_withdraw
-                freeze_time = max(0, FiatWithdrawRequest.FREEZE_TIME - (timezone.now() - self.created).total_seconds())
-                process_withdraw.s(self.id).apply_async(countdown=freeze_time)
+        if (old_status, new_status) in (self.INIT, self.PROCESSING):
+            from financial.tasks import process_withdraw
+            freeze_time = max(0, FiatWithdrawRequest.FREEZE_TIME - (timezone.now() - self.created).total_seconds())
+            process_withdraw.s(self.id).apply_async(countdown=freeze_time)
 
         self.alert_withdraw_verify_status()
 

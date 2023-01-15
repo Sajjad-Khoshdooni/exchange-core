@@ -4,7 +4,7 @@ from django.db import transaction
 from financial.models import FiatWithdrawRequest
 
 
-@shared_task(queue='transfer')
+@shared_task(queue='finance')
 def process_withdraw(withdraw_request_id: int):
     with transaction.atomic():
         withdraw_request = FiatWithdrawRequest.objects.select_for_update().get(id=withdraw_request_id)
