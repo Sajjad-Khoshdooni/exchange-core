@@ -126,6 +126,13 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
         for fiat_withdraw in valid_qs:
             fiat_withdraw.create_withdraw_request()
 
+    @admin.action(description='تایید برداشت', permissions=['view'])
+    def resend_withdraw_request(self, request, queryset):
+        valid_qs = queryset.filter(status=FiatWithdrawRequest.INIT)
+
+        for fiat_withdraw in valid_qs:
+            fiat_withdraw.change_status(FiatWithdrawRequest.PROCESSING)
+
     def save_model(self, request, obj: FiatWithdrawRequest, form, change):
         if obj.id:
             old = FiatWithdrawRequest.objects.get(id=obj.id)

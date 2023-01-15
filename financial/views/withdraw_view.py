@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 
+from decouple import config
 from django.conf import settings
 from django.db.models import Sum
 from django.utils import timezone
@@ -11,7 +12,6 @@ from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
-from decouple import config
 
 from accounts.models import VerificationCode
 from accounts.permissions import IsBasicVerified
@@ -20,6 +20,7 @@ from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
+from financial.utils.withdraw_verify import auto_verify
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -101,13 +102,19 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         try:
             with WalletPipeline() as pipeline:  # type: WalletPipeline
                 withdraw_request = FiatWithdrawRequest.objects.create(
+                    status=FiatWithdrawRequest.INIT,
                     amount=withdraw_amount,
                     fee_amount=fee_amount,
                     bank_account=bank_account,
                     withdraw_channel=config('WITHDRAW_CHANNEL')
                 )
 
-                pipeline.new_lock(key=withdraw_request.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
+                pipeline.new_lock(
+                    key=withdraw_request.group_id,
+                    wallet=wallet,
+                    amount=amount,
+                    reason=WalletPipeline.WITHDRAW
+                )
 
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست'})
@@ -115,10 +122,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         if otp_code:
             otp_code.set_code_used()
 
-        from financial.tasks import process_withdraw
-
-        if not settings.DEBUG_OR_TESTING_OR_STAGING:
-            process_withdraw.s(withdraw_request.id).apply_async(countdown=FiatWithdrawRequest.FREEZE_TIME)
+        if auto_verify(withdraw_request) and not settings.DEBUG_OR_TESTING_OR_STAGING:
+            withdraw_request.change_status(FiatWithdrawRequest.PROCESSING)
 
         return withdraw_request
 

@@ -15,7 +15,7 @@ from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
-from ledger.utils.fields import DONE, get_group_id_field, PENDING, CANCELED
+from ledger.utils.fields import get_group_id_field, PENDING, CANCELED
 from ledger.utils.precision import humanize_number
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class FiatWithdrawRequest(models.Model):
-    PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
+    INIT, PROCESSING, PENDING, CANCELED, DONE = 'init', 'process', 'pending', 'canceled', 'done'
 
     MANUAL, ZIBAL, PAYIR, ZARINPAL, JIBIT = 'manual', 'zibal', 'payir', 'zarinpal', 'jibit'
     CHANEL_CHOICES = ((ZIBAL, ZIBAL), (PAYIR, PAYIR), (JIBIT, JIBIT), (MANUAL, MANUAL))
@@ -39,9 +39,9 @@ class FiatWithdrawRequest(models.Model):
     fee_amount = models.PositiveIntegerField(verbose_name='کارمزد')
 
     status = models.CharField(
-        default=PROCESSING,
+        default=INIT,
         max_length=10,
-        choices=[(PROCESSING, 'در حال پردازش'), (PENDING, 'در انتظار'), (DONE, 'انجام شده'), (CANCELED, 'لغو شده')]
+        choices=[(INIT, INIT), (PROCESSING, PROCESSING), (PENDING, PENDING), (DONE, DONE), (CANCELED, CANCELED)]
     )
 
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
@@ -140,11 +140,8 @@ class FiatWithdrawRequest(models.Model):
 
         logger.info(f'FiatRequest {self.id} status: {status}')
 
-        if status == FiatWithdraw.DONE:
-            self.change_status(FiatWithdrawRequest.DONE)
-
-        elif status == FiatWithdraw.CANCELED:
-            self.change_status(FiatWithdrawRequest.CANCELED)
+        if status in (FiatWithdraw.DONE, FiatWithdraw.CANCELED):
+            self.change_status(status)
 
     def alert_withdraw_verify_status(self):
         user = self.bank_account.user
@@ -191,29 +188,36 @@ class FiatWithdrawRequest(models.Model):
         )
 
     def change_status(self, new_status: str):
-        if self.status == new_status:
+        old_status = self.status
+
+        if old_status == new_status:
             return
 
-        assert self.status not in (CANCELED, self.DONE)
+        assert old_status not in (CANCELED, self.DONE)
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             if new_status in (self.CANCELED, self.DONE):
                 pipeline.release_lock(self.group_id)
 
-            if new_status == DONE:
+            if (old_status, new_status) in (self.PROCESSING, self.PENDING):
+                self.withdraw_datetime = timezone.now()
+            elif new_status == self.DONE:
                 self.build_trx(pipeline)
 
-            if new_status == self.PENDING:
-                self.withdraw_datetime = timezone.now()
-
             self.status = new_status
-            self.save()
+            self.save(update_fields=['status'])
+
+            if (old_status, new_status) in (self.INIT, self.PROCESSING):
+                from financial.tasks import process_withdraw
+                freeze_time = max(0, FiatWithdrawRequest.FREEZE_TIME - (timezone.now() - self.created).total_seconds())
+                process_withdraw.s(self.id).apply_async(countdown=freeze_time)
 
         self.alert_withdraw_verify_status()
 
     def clean(self):
-
-        old = self.id and FiatWithdrawRequest.objects.get(id=self.id)
+        old = None
+        if self.id:
+            old = FiatWithdrawRequest.objects.get(id=self.id)
 
         if old and old.status in (FiatWithdrawRequest.DONE, FiatWithdrawRequest.CANCELED) and\
                 self.status != old.status:

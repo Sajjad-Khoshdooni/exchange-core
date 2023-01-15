@@ -1,15 +1,18 @@
-from financial.models import FiatWithdrawRequest
 from celery import shared_task
+from django.db import transaction
+
+from financial.models import FiatWithdrawRequest
 
 
 @shared_task(queue='transfer')
 def process_withdraw(withdraw_request_id: int):
-    withdraw_request = FiatWithdrawRequest.objects.get(id=withdraw_request_id)
+    with transaction.atomic():
+        withdraw_request = FiatWithdrawRequest.objects.select_for_update().get(id=withdraw_request_id)
 
-    if withdraw_request.status != FiatWithdrawRequest.PROCESSING:
-        return
+        if withdraw_request.status != FiatWithdrawRequest.PROCESSING:
+            return
 
-    withdraw_request.create_withdraw_request()
+        withdraw_request.create_withdraw_request()
 
 
 @shared_task(queue='finance')
