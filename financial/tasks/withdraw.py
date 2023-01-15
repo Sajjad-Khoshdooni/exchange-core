@@ -17,7 +17,5 @@ def process_withdraw(withdraw_request_id: int):
 
 @shared_task(queue='finance')
 def update_withdraw_status():
-    withdraws = FiatWithdrawRequest.objects.filter(status=FiatWithdrawRequest.PENDING)
-
-    for withdraw in withdraws:
+    for withdraw in FiatWithdrawRequest.objects.filter(status=FiatWithdrawRequest.PENDING):
         withdraw.update_status()

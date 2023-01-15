@@ -55,6 +55,8 @@ class FiatWithdrawRequest(models.Model):
 
     withdraw_channel = models.CharField(max_length=10, choices=CHANEL_CHOICES, default=PAYIR)
 
+    risks = models.JSONField(null=True, blank=True)
+
     @property
     def total_amount(self):
         return self.amount + self.fee_amount

@@ -41,6 +41,8 @@ class RiskFactor:
     WITHDRAW_VALUE_PEAK = 'withdraw-value-peak'
     HIGH_DEPOSITS_VALUE = 'high-deposits-value'
     HIGH_TRANSFERS_COUNT = 'high-transfers-count'
+    MISMATCH_OUTPUT_INPUT = 'mismatch-output-input'
+    HIGH_WITHDRAW = 'high-withdraw'
 
     reason: str
     value: float

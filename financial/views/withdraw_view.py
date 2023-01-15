@@ -20,7 +20,7 @@ from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
-from financial.utils.withdraw_verify import auto_verify
+from financial.utils.withdraw_verify import auto_verify_fiat_withdraw
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -122,7 +122,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         if otp_code:
             otp_code.set_code_used()
 
-        if auto_verify(withdraw_request) and not settings.DEBUG_OR_TESTING_OR_STAGING:
+        if auto_verify_fiat_withdraw(withdraw_request) and not settings.DEBUG_OR_TESTING_OR_STAGING:
             withdraw_request.change_status(FiatWithdrawRequest.PROCESSING)
 
         return withdraw_request
