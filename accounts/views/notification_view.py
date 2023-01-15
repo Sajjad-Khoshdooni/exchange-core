@@ -40,7 +40,7 @@ class NotificationViewSet(ModelViewSet):
     def get_queryset(self):
         notifications = Notification.objects.filter(
             recipient=self.request.user
-        ).order_by('created')
+        ).order_by('-created')
 
         if self.action == 'list':
             query_params = self.request.query_params
@@ -56,7 +56,7 @@ class UnreadAllNotificationView(APIView):
     def patch(self, request):
         read = request.data.get('read')
 
-        if read != True:
+        if read:
             raise ValidationError({'read': 'should be true!'})
 
         Notification.objects.filter(recipient=request.user).update(read=True)
