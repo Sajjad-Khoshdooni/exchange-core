@@ -40,7 +40,7 @@ class NotificationViewSet(ModelViewSet):
     def get_queryset(self):
         notifications = Notification.objects.filter(
             recipient=self.request.user
-        )
+        ).order_by('created')
 
         if self.action == 'list':
             query_params = self.request.query_params
