@@ -92,7 +92,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'withdraw_channel', 'ref_id')
 
-    actions = ('resend_withdraw_request', )
+    actions = ('resend_withdraw_request', 'accept_withdraw_request')
 
     @admin.display(description='نام و نام خانوادگی')
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
@@ -127,7 +127,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
             fiat_withdraw.create_withdraw_request()
 
     @admin.action(description='تایید برداشت', permissions=['view'])
-    def resend_withdraw_request(self, request, queryset):
+    def accept_withdraw_request(self, request, queryset):
         valid_qs = queryset.filter(status=FiatWithdrawRequest.INIT)
 
         for fiat_withdraw in valid_qs:
