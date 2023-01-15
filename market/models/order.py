@@ -24,6 +24,8 @@ from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_pri
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
 from market.models.referral_trx import ReferralTrx
+from market.utils.redis import MarketCacheHandler
+
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +114,7 @@ class Order(models.Model):
             self.status = self.CANCELED
             self.save(update_fields=['status'])
             pipeline.release_lock(key=self.group_id)
+            MarketCacheHandler.update_order_status(self)
 
     @property
     def base_wallet(self):
@@ -357,6 +360,7 @@ class Order(models.Model):
             if match_amount == matching_order.unfilled_amount:  # unfilled_amount reduced in DB but not updated here :)
                 matching_order.status = Order.FILLED
                 matching_order.save(update_fields=['status'])
+                MarketCacheHandler.update_order_status(matching_order)
 
             if unfilled_amount == 0:
                 self.status = Order.FILLED

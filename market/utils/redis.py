@@ -1,5 +1,6 @@
 from datetime import timedelta
 from random import randint
+import re
 
 from django.conf import settings
 from django.utils import timezone
@@ -131,4 +132,10 @@ class MarketCacheHandler:
             is_updated = cls.set_if_lower(f'market:depth:{order.symbol.name}:{order.side}{order_type}', order.price)
 
         if bool(is_updated):
-            market_redis.publish(f'market:depth:{order.symbol.name}:{order.side}', order.price)
+            market_redis.publish(f'market:depth:{order.symbol.name}:{order.side}{order_type}', order.price)
+
+    @classmethod
+    def update_order_status(cls, order):
+        if not market_redis.exists(f'ws:market:orders:{order.wallet.account_id}'):
+            return
+        market_redis.publish(f'market:orders:{order.symbol.name}:{order.wallet.account_id}:{order.id}', order.status)
