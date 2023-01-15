@@ -16,7 +16,7 @@ from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
     FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost, Investment, InvestmentRevenue, \
     FiatHedgeTrx
-from financial.tasks import verify_bank_card_task, verify_bank_account_task
+from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.precision import humanize_number, get_presentation_amount
 from ledger.utils.price import get_tether_irt_price, BUY, SELL
@@ -132,6 +132,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 
         for fiat_withdraw in valid_qs:
             fiat_withdraw.change_status(FiatWithdrawRequest.PROCESSING)
+            process_withdraw(fiat_withdraw.id)
 
     def save_model(self, request, obj: FiatWithdrawRequest, form, change):
         if obj.id:
