@@ -1,4 +1,4 @@
-from decimal import Decimal, ConversionSyntax
+from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.db.models import Sum
@@ -14,7 +14,7 @@ from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired
 from ledger.utils.fields import get_serializer_amount_field
-from ledger.utils.price import SELL, get_tether_irt_price, BUY
+from ledger.utils.price import SELL, get_tether_irt_price
 from market.models.pair_symbol import DEFAULT_TAKER_FEE
 
 
@@ -30,7 +30,7 @@ class OTCInfoView(APIView):
 
             to_amount = request.query_params.get('to_amount')
             to_amount = to_amount and Decimal(to_amount)
-        except ConversionSyntax:
+        except InvalidOperation:
             raise ValidationError({
                 'amount': 'مقدار نامعتبر است.'
             })
