@@ -47,7 +47,6 @@ def get_spread(coin: str, side: str, value: Decimal = None, base_coin: str = Non
     category = asset.spread_category
 
     asset_spread = CategorySpread.objects.filter(category=category, step=step, side=side).first()
-    spread = 0
 
     if not asset_spread:
         logger.warning("No category spread defined for %s step = %s, side = %s" % (category, step, side))
