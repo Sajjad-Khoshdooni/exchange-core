@@ -1,15 +1,12 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from django.db.models import Sum
 from django.utils import timezone
 
 from accounts.models import User
-
 from ledger.models import Transfer
 from ledger.utils.fields import CANCELED
 from ledger.utils.price import get_trading_price_irt, BUY
-from ledger.utils.price_manager import PriceManager
-
 
 MILLION = 10 ** 6
 
@@ -51,7 +48,7 @@ def get_crypto_withdraw_irt_value(user: User):
     start_of_day = get_start_of_day()
 
     crypto_withdraws = Transfer.objects.filter(
-        deposit=False, hidden=False, is_fee=False,
+        deposit=False,
         wallet__account__user=user,
         created__gte=start_of_day
     ).exclude(
@@ -64,9 +61,8 @@ def get_crypto_withdraw_irt_value(user: User):
 
     crypto_amount = 0
 
-    with PriceManager(coins=list(crypto_withdraws.keys())):
-        for symbol, amount in crypto_withdraws.items():
-            crypto_amount += get_trading_price_irt(symbol, BUY, raw_price=True) * amount
+    for symbol, amount in crypto_withdraws.items():
+        crypto_amount += get_trading_price_irt(symbol, BUY, raw_price=True) * amount
 
     return crypto_amount
 

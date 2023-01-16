@@ -5,8 +5,8 @@ import requests
 from django.core.cache import caches
 from django.utils import timezone
 from urllib3.exceptions import ReadTimeoutError
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
+from decouple import config
 
 from accounts.models import FinotechRequest
 from accounts.utils.validation import gregorian_to_jalali_date_str
@@ -41,11 +41,11 @@ class FinotechRequester:
             url='https://apibeta.finnotech.ir/dev/v2/oauth2/token',
             data={
                 'grant_type': 'client_credentials',
-                'nid': secret('FINOTECH_OWNER_NATIONAL_ID'),
+                'nid': config('FINOTECH_OWNER_NATIONAL_ID'),
                 'scopes': ','.join(scopes)
             },
             headers={
-                'Authorization': secret('FINOTECH_AUTH_TOKEN')
+                'Authorization': config('FINOTECH_AUTH_TOKEN')
             }
         )
 

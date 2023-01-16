@@ -1,4 +1,3 @@
-import time
 from decimal import Decimal
 
 from django.db.models import Min
@@ -12,12 +11,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from collector.models import CoinMarketCap
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict
-from ledger.utils.price_manager import PriceManager
+from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict, get_trading_price_usdt
+from ledger.utils.provider import CoinInfo, get_provider_requester
 
 
 class AssetSerializerBuilder(AssetSerializerMini):
@@ -41,6 +39,9 @@ class AssetSerializerBuilder(AssetSerializerMini):
     min_withdraw_fee = serializers.SerializerMethodField()
     market_irt_enable = serializers.SerializerMethodField()
 
+    can_deposit = serializers.SerializerMethodField()
+    can_withdraw = serializers.SerializerMethodField()
+
     class Meta:
         model = Asset
         fields = ()
@@ -51,8 +52,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
     def get_bookmark_assets(self, asset: Asset):
         return asset.id in self.context['bookmark_assets']
 
-    def get_cap(self, asset) -> CoinMarketCap:
-        return self.context['cap_info'].get(asset.symbol)
+    def get_cap(self, asset) -> CoinInfo:
+        return self.context['cap_info'].get(asset.symbol, CoinInfo())
 
     def get_price_usdt(self, asset: Asset):
         prices = self.context['prices']
@@ -83,67 +84,52 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return min_withdraw['min']
 
     def get_trend_url(self, asset: Asset):
-        cap = self.get_cap(asset)
-
-        if cap:
-            return 'https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/%d.svg?v=%s' % \
-                   (cap.internal_id, str(int(time.time()) // 3600))
-        else:
-            return '/'
+        return self.get_cap(asset).weekly_trend_url
 
     def get_change_24h(self, asset: Asset):
-        cap = self.get_cap(asset)
-
-        if cap:
-            return cap.change_24h
+        return self.get_cap(asset).change_24h
 
     def get_volume_24h(self, asset: Asset):
-        cap = self.get_cap(asset)
-
-        if cap:
-            return int(cap.volume_24h)
+        return self.get_cap(asset).volume_24h
 
     def get_change_7d(self, asset: Asset):
-        cap = self.get_cap(asset)
-
-        if cap:
-            return cap.change_7d
+        return self.get_cap(asset).change_7d
 
     def get_high_24h(self, asset: Asset):
         cap = self.get_cap(asset)
-
-        if cap:
-            return asset.get_presentation_price_usdt(Decimal(cap.high_24h))
+        return asset.get_presentation_price_usdt(Decimal(cap.high_24h))
 
     def get_low_24h(self, asset: Asset):
         cap = self.get_cap(asset)
-
-        if cap:
-            return asset.get_presentation_price_usdt(Decimal(cap.low_24h))
+        return asset.get_presentation_price_usdt(Decimal(cap.low_24h))
 
     def get_change_1h(self, asset: Asset):
-        cap = self.get_cap(asset)
-
-        if cap:
-            return cap.change_1h
+        return self.get_cap(asset).change_1h
 
     def get_cmc_rank(self, asset: Asset):
-        cap = self.get_cap(asset)
-
-        if cap:
-            return int(cap.cmc_rank)
+        return self.get_cap(asset).cmc_rank
 
     def get_market_cap(self, asset: Asset):
-        cap = self.get_cap(asset)
-
-        if cap:
-            return cap.market_cap
+        return self.get_cap(asset).market_cap
 
     def get_circulating_supply(self, asset: Asset):
-        cap = self.get_cap(asset)
+        return self.get_cap(asset).circulating_supply
 
-        if cap:
-            return int(cap.circulating_supply)
+    def get_can_deposit(self, asset: Asset):
+        return NetworkAsset.objects.filter(
+            asset=asset,
+            can_deposit=True,
+            hedger_deposit_enable=True,
+            network__can_deposit=True
+        ).exists()
+
+    def get_can_withdraw(self, asset: Asset):
+        return NetworkAsset.objects.filter(
+            asset=asset,
+            can_withdraw=True,
+            hedger_withdraw_enable=True,
+            network__can_withdraw=True
+        ).exists()
 
     @classmethod
     def create_serializer(cls,  prices: bool = True, extra_info: bool = True):
@@ -157,7 +143,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
             new_fields = [
                 'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
                 'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
-                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee'
+                'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee', 'can_deposit', 'can_withdraw',
+                'market_irt_enable'
             ]
 
         class Serializer(cls):
@@ -188,15 +175,9 @@ class AssetsViewSet(ModelViewSet):
 
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
-
-            symbol_translation_reversed = {v: k for (k, v) in CoinMarketCap.SYMBOL_TRANSLATION.items()}
-
-            to_search_symbols = list(map(lambda s: symbol_translation_reversed.get(s, s), symbols))
-            caps = CoinMarketCap.objects.filter(symbol__in=to_search_symbols)
-            ctx['cap_info'] = {CoinMarketCap.SYMBOL_TRANSLATION.get(cap.symbol, cap.symbol): cap for cap in caps}
-
+            ctx['cap_info'] = get_provider_requester().get_coins_info(symbols)
             ctx['prices'] = get_prices_dict(coins=symbols, side=BUY, allow_stale=True)
-            ctx['tether_irt'] = get_tether_irt_price(BUY)
+            ctx['tether_irt'] = get_tether_irt_price(BUY, allow_stale=True)
 
         return ctx
 
@@ -214,19 +195,13 @@ class AssetsViewSet(ModelViewSet):
         return options[key]
 
     def get_serializer_class(self):
-        print(self.get_options('extra_info'))
         return AssetSerializerBuilder.create_serializer(
             prices=self.get_options('prices'),
             extra_info=self.get_options('extra_info')
         )
 
     def get_queryset(self):
-        if self.request.user.is_superuser:
-            queryset = Asset.candid_objects.all()
-        else:
-            queryset = Asset.live_objects.all()
-
-        queryset = queryset.filter(trade_enable=True)
+        queryset = Asset.live_objects.filter(trade_enable=True)
 
         if self.get_options('category'):
             category = get_object_or_404(CoinCategory, name=self.get_options('category'))
@@ -254,10 +229,6 @@ class AssetsViewSet(ModelViewSet):
 
         return asset
 
-    def get(self, *args, **kwargs):
-        with PriceManager():
-            return super().get(*args, **kwargs)
-
 
 class AssetOverViewSerializer(serializers.Serializer):
 
@@ -279,39 +250,36 @@ class AssetOverviewAPIView(APIView):
     permission_classes = []
 
     @classmethod
-    def set_price(cls, coins: list, price: dict, tether_irt: Decimal):
+    def set_price(cls, coins: list):
         for coin in coins:
-            coin['price_usdt'] = price[coin['symbol']]
-
-            if coin['price_usdt']:
-                coin['price_irt'] = tether_irt * coin['price_usdt']
+            coin['price_usdt'] = get_trading_price_usdt(coin['symbol'], side=BUY)
             coin['market_irt_enable'] = coin['symbol'] in get_irt_market_asset_symbols()
-
-            coin.update(AssetSerializerMini(Asset.objects.get(symbol=coin['symbol'])).data)
+            coin.update(AssetSerializerMini(Asset.get(symbol=coin['symbol'])).data)
 
     def get(self, request):
-        symbols = Asset.live_objects.exclude(symbol__in=['IRT', 'IOTA'])
+        coins = list(Asset.live_objects.values_list('symbol', flat=True))
+        caps = get_provider_requester().get_coins_info(coins).values()
 
-        list_symbol = list(symbols.values_list('symbol', flat=True))
-        newest_coin = list(symbols.filter(new_coin=True))
+        def coin_info_to_dict(info: CoinInfo):
+            return {
+                'symbol': info.coin,
+                'change_24h': info.change_24h
+            }
 
-        caps = CoinMarketCap.objects.filter(symbol__in=list_symbol)
+        high_volume = list(map(coin_info_to_dict, sorted(caps, key=lambda cap: cap.volume_24h, reverse=True)[:3]))
+        AssetOverviewAPIView.set_price(high_volume)
 
-        price = get_prices_dict(coins=list_symbol, side=BUY, allow_stale=True)
-        tether_irt = get_tether_irt_price(BUY, allow_stale=True)
+        high_24h_change = list(map(coin_info_to_dict, sorted(caps, key=lambda cap: cap.change_24h, reverse=True)[:3]))
+        AssetOverviewAPIView.set_price(high_24h_change)
 
-        high_volume = list(caps.order_by('-volume_24h').values('symbol', 'change_24h'))[:3]
-        AssetOverviewAPIView.set_price(high_volume, price, tether_irt)
-
-        high_24h_change = list(caps.order_by('-change_24h').values('symbol', 'change_24h'))[:3]
-
-        AssetOverviewAPIView.set_price(high_24h_change, price, tether_irt)
-
-        new = list(caps.filter(symbol__in=newest_coin).values('symbol', 'change_24h'))[:3]
-        AssetOverviewAPIView.set_price(new, price, tether_irt)
+        newest_coin_symbols = list(Asset.live_objects.exclude(
+            symbol__in=['IRT', 'IOTA']
+        ).filter(new_coin=True).values_list('symbol', flat=True))[:3]
+        newest = list(map(coin_info_to_dict, filter(lambda cap: cap.coin in newest_coin_symbols, caps)))
+        AssetOverviewAPIView.set_price(newest)
 
         return Response({
             'high_volume': high_volume,
             'high_24h_change': high_24h_change,
-            'newest': new
+            'newest': newest
         })

@@ -1,6 +1,8 @@
+import logging
 from decimal import Decimal
 
 from django.conf import settings
+from django.db.models import Q
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
 from rest_framework.generics import get_object_or_404
@@ -8,13 +10,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
+from accounts.views.jwt_views import DelegatedAccountMixin
 from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCTrade
 from ledger.models.asset import Asset
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.precision import get_presentation_amount, get_precision
-from ledger.utils.price import get_trading_price_irt, BUY, SELL
-from ledger.utils.price_manager import PriceManager
-import logging
+from ledger.utils.price import get_trading_price_irt, BUY, SELL, get_prices_dict, get_tether_irt_price
 
 logger = logging.getLogger(__name__)
 
@@ -104,12 +105,22 @@ class AssetListSerializer(serializers.ModelSerializer):
         if asset.symbol == asset.IRT:
             return ''
 
+        prices = self.context.get('prices_sell')
+
+        if prices:
+            return (prices.get(asset.symbol) or 1) * self.context.get('tether_irt_sell', 1)
+
         price = get_trading_price_irt(asset.symbol, SELL, allow_stale=True)
         return asset.get_presentation_price_irt(price)
 
     def get_buy_price_irt(self, asset: Asset):
         if asset.symbol == asset.IRT:
             return ''
+
+        prices = self.context.get('prices_buy')
+
+        if prices:
+            return (prices.get(asset.symbol) or 1) * self.context.get('tether_irt_buy', 1)
 
         price = get_trading_price_irt(asset.symbol, BUY, allow_stale=True)
         return asset.get_presentation_price_irt(price)
@@ -132,7 +143,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         ).exists()
 
     def get_logo(self, asset: Asset):
-        return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
+        return settings.MINIO_STORAGE_STATIC_URL + '/coins/%s.png' % asset.symbol
 
     def get_original_symbol(self, asset: Asset):
         return asset.original_symbol or asset.symbol
@@ -227,13 +238,23 @@ class AssetRetrieveSerializer(AssetListSerializer):
         fields = (*AssetListSerializer.Meta.fields, 'networks')
 
 
-class WalletViewSet(ModelViewSet):
+class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-        wallets = Wallet.objects.filter(account=self.request.user.account, market=Wallet.SPOT, variant__isnull=True)
+        account, variant = self.get_account_variant(self.request)
+        wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT, variant=variant)
         ctx['asset_to_wallet'] = {wallet.asset_id: wallet for wallet in wallets}
         ctx['enable_irt_market_list'] = get_irt_market_asset_symbols()
+
+        if self.action == 'list':
+            coins = list(self.get_queryset().values_list('symbol', flat=True))
+
+            ctx['prices_buy'] = get_prices_dict(coins=coins, side=BUY, allow_stale=True)
+            ctx['prices_sell'] = get_prices_dict(coins=coins, side=SELL, allow_stale=True)
+            ctx['tether_irt_buy'] = get_tether_irt_price(BUY, allow_stale=True)
+            ctx['tether_irt_sell'] = get_tether_irt_price(SELL, allow_stale=True)
+
         return ctx
 
     def get_serializer_class(self):
@@ -246,33 +267,42 @@ class WalletViewSet(ModelViewSet):
         return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper())
 
     def get_queryset(self):
-        if self.request.user.is_superuser:
-            return Asset.candid_objects.all()
-        else:
-            return Asset.live_objects.all()
+        disabled_assets = Wallet.objects.filter(
+            account=self.request.user.account,
+            asset__enable=False
+        ).exclude(balance=0).values_list('asset_id', flat=True)
+
+        return Asset.objects.filter(Q(enable=True) | Q(id__in=disabled_assets))
 
     def list(self, request, *args, **kwargs):
-        with PriceManager(fetch_all=True, allow_stale=True):
-            queryset = self.get_queryset()
+        queryset = self.get_queryset()
 
-            serializer = self.get_serializer(queryset, many=True)
-            data = serializer.data
+        symbols = [a.symbol for a in queryset]
+        get_prices_dict(coins=symbols, side='buy')
+        get_prices_dict(coins=symbols, side='sell')
 
-            pin_to_top_wallets = list(filter(lambda w: w['pin_to_top'], data))
-            with_balance_wallets = list(filter(lambda w: w['balance'] != '0' and not w['pin_to_top'], data))
-            without_balance_wallets = list(filter(lambda w: w['balance'] == '0' and not w['pin_to_top'], data))
+        serializer = self.get_serializer(queryset, many=True)
+        data = serializer.data
 
-            wallets = pin_to_top_wallets + sorted(with_balance_wallets, key=lambda w: Decimal(w['balance_irt'] or 0), reverse=True) + without_balance_wallets
+        pin_to_top_wallets = list(filter(lambda w: w['pin_to_top'], data))
+        with_balance_wallets = list(filter(lambda w: w['balance'] != '0' and not w['pin_to_top'], data))
+        without_balance_wallets = list(filter(lambda w: w['balance'] == '0' and not w['pin_to_top'], data))
+
+        wallets = pin_to_top_wallets + sorted(
+            with_balance_wallets,
+            key=lambda w: Decimal(w['balance_irt'] or 0),
+            reverse=True
+        ) + without_balance_wallets
 
         return Response(wallets)
 
 
-class WalletBalanceView(APIView):
+class WalletBalanceView(APIView, DelegatedAccountMixin):
     def get(self, request, *args, **kwargs):
         market = request.query_params.get('market', Wallet.SPOT)
         asset = get_object_or_404(Asset, symbol=kwargs['symbol'].upper())
-
-        wallet = asset.get_wallet(request.user.account, market=market)
+        account, variant = self.get_account_variant(self.request)
+        wallet = asset.get_wallet(account, market=market, variant=variant)
 
         return Response({
             'symbol': asset.symbol,
@@ -336,10 +366,16 @@ class ConvertDustView(APIView):
     def post(self, *args):
         account = self.request.user.account
         IRT = Asset.get(Asset.IRT)
-        spot_wallets = Wallet.objects.filter(account=account, market=Wallet.SPOT, balance__gt=0).exclude(asset=IRT)
+        spot_wallets = Wallet.objects.filter(
+            account=account, market=Wallet.SPOT, balance__gt=0, variant__isnull=True).exclude(asset=IRT)
 
         for wallet in spot_wallets:
-            if Decimal(0) < wallet.get_free_irt() < Decimal('100000'):
+            free_irt_value = wallet.get_free_irt()
+
+            if not free_irt_value:
+                continue
+
+            if Decimal(0) < free_irt_value < Decimal('100000'):
                 logger.info('Converting dust %s' % wallet)
 
                 request = OTCRequest.new_trade(

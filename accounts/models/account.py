@@ -7,7 +7,6 @@ from django.utils import timezone
 
 from accounts.models import User
 from ledger.utils.price import BUY
-from ledger.utils.price_manager import PriceManager
 
 
 class Account(models.Model):
@@ -87,13 +86,14 @@ class Account(models.Model):
     def get_total_balance_usdt(self, market: str, side: str):
         from ledger.models import Wallet, Asset
 
-        wallets = Wallet.objects.filter(account=self, market=market).exclude(asset__symbol=Asset.IRT)
+        wallets = Wallet.objects.filter(account=self, market=market).exclude(asset__symbol=Asset.IRT).prefetch_related('asset')
 
         total = Decimal('0')
 
-        with PriceManager(coins=list(wallets.values_list('asset__symbol', flat=True))):
-            for wallet in wallets:
-                balance = wallet.get_balance_usdt(side)
+        for wallet in wallets:
+            balance = wallet.get_balance_usdt(side)
+
+            if balance:
                 total += balance
 
         return total
@@ -101,19 +101,22 @@ class Account(models.Model):
     def get_total_balance_irt(self, market: str = None, side: str = BUY):
         from ledger.models import Wallet
 
-        wallets = Wallet.objects.filter(account=self)
+        wallets = Wallet.objects.filter(account=self).prefetch_related('asset')
 
         if market:
             wallets = wallets.filter(market=market)
+        else:
+            wallets = wallets.exclude(market=Wallet.VOUCHER)
 
         total = Decimal('0')
 
-        with PriceManager(fetch_all=True):
-            for wallet in wallets:
-                if wallet.balance == 0:
-                    continue
+        for wallet in wallets:
+            if wallet.balance == 0:
+                continue
 
-                balance = wallet.get_balance_irt(side)
+            balance = wallet.get_balance_irt(side)
+
+            if balance:
                 total += balance
 
         return total
@@ -141,10 +144,6 @@ class Account(models.Model):
     def airdrop(self, asset, amount: Union[Decimal, int]):
         wallet = asset.get_wallet(self)
         wallet.airdrop(amount)
-
-    def has_debt(self) -> bool:
-        from ledger.models import Wallet
-        return Wallet.objects.filter(account=self, market=Wallet.LOAN, balance__lt=0).exists()
 
     class Meta:
         constraints = [

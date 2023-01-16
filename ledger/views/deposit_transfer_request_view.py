@@ -1,9 +1,10 @@
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404
 
-from accounts.views.authentication import CustomTokenAuthentication
-from ledger.models import Network, Asset, DepositAddress, AddressKey
+from accounts.authentication import CustomTokenAuthentication
+from ledger.models import Network, Asset, DepositAddress, AddressKey, NetworkAsset
 from ledger.models.transfer import Transfer
 from ledger.requester.architecture_requester import request_architecture
 from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt, SELL
@@ -46,6 +47,11 @@ class DepositSerializer(serializers.ModelSerializer):
         asset = Asset.objects.get(symbol=validated_data.get('coin'))
         wallet = asset.get_wallet(deposit_address.address_key.account)
 
+        network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
+
+        if not network_asset.can_deposit_enabled():
+            raise ValidationError({'deposit_enable': 'false'})
+
         status = validated_data.get('status')
 
         if status not in (Transfer.PENDING, Transfer.DONE, Transfer.CANCELED):
@@ -67,11 +73,17 @@ class DepositSerializer(serializers.ModelSerializer):
                 return prev_transfer
 
             if (prev_transfer.status, status) not in valid_transitions:
-                raise ValidationError({'status': 'invalid status transition (%s -> %s)' % (prev_transfer.status, status)})
+                raise ValidationError({
+                    'status': 'invalid status transition (%s -> %s)' % (prev_transfer.status, status)
+                })
 
             with WalletPipeline() as pipeline:
                 prev_transfer.status = status
-                prev_transfer.save(update_fields=['status'])
+
+                if status in (Transfer.CANCELED, Transfer.DONE):
+                    prev_transfer.finished_datetime = timezone.now()
+
+                prev_transfer.save(update_fields=['status', 'finished_datetime'])
 
                 if status == Transfer.DONE:
                     prev_transfer.build_trx(pipeline)
@@ -87,26 +99,32 @@ class DepositSerializer(serializers.ModelSerializer):
 
             with WalletPipeline() as pipeline:
                 transfer, _ = Transfer.objects.get_or_create(
-                    network=network,
-                    trx_hash=validated_data.get('trx_hash'),
                     deposit=True,
-                    deposit_address=deposit_address,
-                    amount=amount,
-                    block_hash=validated_data.get('block_hash'),
-                    block_number=validated_data.get('block_number'),
-                    out_address=sender_address,
+                    trx_hash=validated_data.get('trx_hash'),
+                    network=network,
                     wallet=wallet,
-                    usdt_value=amount * price_usdt,
-                    irt_value=amount * price_irt,
+                    deposit_address=deposit_address,
+                    out_address=sender_address,
+                    defaults={
+                        'amount': amount,
+                        'block_hash': validated_data.get('block_hash'),
+                        'block_number': validated_data.get('block_number'),
+                        'usdt_value': amount * price_usdt,
+                        'irt_value': amount * price_irt,
+                    }
                 )
 
                 transfer.status = status
-                transfer.save(update_fields=['status'])
+
+                if status in (Transfer.CANCELED, Transfer.DONE):
+                    transfer.finished_datetime = timezone.now()
+
+                transfer.save(update_fields=['status', 'finished_datetime'])
 
                 if status == Transfer.DONE:
                     transfer.build_trx(pipeline)
 
-                transfer.alert_user()
+            transfer.alert_user()
 
             return transfer
 

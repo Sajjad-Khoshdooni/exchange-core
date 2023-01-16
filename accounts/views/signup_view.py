@@ -1,3 +1,6 @@
+import logging
+import random
+
 from django.contrib.auth import login
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
@@ -7,7 +10,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import User, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode
@@ -15,6 +18,14 @@ from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
 from accounts.utils.validation import set_login_activity
 from accounts.validators import mobile_number_validator, password_validator
+from experiment.models.experiment import Experiment
+from experiment.models.link import Link
+from experiment.models.variant import Variant
+from experiment.models.variant_user import VariantUser
+from experiment.utils.exceptions import TokenCreationError
+
+
+logger = logging.getLogger(__name__)
 
 
 class InitiateSignupSerializer(serializers.Serializer):
@@ -70,7 +81,7 @@ class SignupSerializer(serializers.Serializer):
 
         phone = otp_code.phone
         # otp_code.set_token_used()
-        promotion = validated_data.get('promotion') or User.SHIB
+        promotion = validated_data.get('promotion') or ''
 
         user = User.objects.create_user(
             username=phone,
@@ -97,6 +108,17 @@ class SignupSerializer(serializers.Serializer):
         utm = validated_data.get('utm') or {}
 
         self.create_traffic_source(user, utm)
+
+        try:
+            self.user_experiment_assign(user)
+        except Exception as e:
+            logger.exception(
+                'Experiment assigning failed',
+                extra={
+                    'exp': e,
+                    'user': user
+                }
+            )
 
         return user
 
@@ -144,6 +166,31 @@ class SignupSerializer(serializers.Serializer):
             ip=get_client_ip(self.context['request']),
             user_agent=self.context['request'].META['HTTP_USER_AGENT'][:256],
         )
+
+    @classmethod
+    def user_experiment_assign(cls, user):
+        for experiment in Experiment.objects.filter(active=True):
+            variant_list = Variant.objects.filter(experiment=experiment).order_by('id')
+            variant = variant_list[random.randint(0, 1)]  # todo :: generalize
+
+            if variant is None:
+                return
+
+            link = None
+            if variant.type == Variant.SMS_NOTIF:
+                try:
+                    link = Link.create(user=user)
+                except TokenCreationError:
+                    logger.info('TokenCreationError', extra={
+                        'user': user.id
+                    })
+                    return
+
+            VariantUser.objects.create(
+                variant=variant,
+                user=user,
+                link=link
+            )
 
 
 class SignupView(CreateAPIView):

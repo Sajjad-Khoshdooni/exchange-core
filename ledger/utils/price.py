@@ -6,14 +6,15 @@ from json import JSONDecodeError
 from typing import Dict, List, Union
 
 import requests
-from yekta_config.config import config
+from decouple import config
+from django.conf import settings
+from redis import Redis
 
-from collector.price.grpc_client import gRPCClient
-from collector.utils.price import price_redis
 from ledger.utils.cache import cache_for
-from ledger.utils.price_manager import PriceManager
 
 logger = logging.getLogger(__name__)
+
+price_redis = Redis.from_url(settings.PRICE_CACHE_LOCATION, decode_responses=True)
 
 
 BINANCE = 'binance'
@@ -37,21 +38,30 @@ def get_redis_side(side: str):
 
 
 @cache_for(300)
-def get_spread(coin: str, side: str, value: Decimal = None) -> Decimal:
-    from ledger.models import CategorySpread, Asset
+def get_spread(coin: str, side: str, value: Decimal = None, base_coin: str = None) -> Decimal:
+    from ledger.models import CategorySpread, Asset, MarketSpread
 
     asset = Asset.get(coin)
     step = CategorySpread.get_step(value)
 
     category = asset.spread_category
 
-    spread = CategorySpread.objects.filter(category=category, step=step, side=side).first()
+    asset_spread = CategorySpread.objects.filter(category=category, step=step, side=side).first()
+    spread = 0
 
-    if not spread:
+    if not asset_spread:
         logger.warning("No category spread defined for %s step = %s, side = %s" % (category, step, side))
-        spread = CategorySpread()
+        asset_spread = CategorySpread()
 
-    return spread.spread
+    spread = asset_spread.spread
+
+    if base_coin == IRT:
+        market_spread = MarketSpread.objects.filter(step=step, side=side).first()
+
+        if market_spread:
+            spread += market_spread.spread
+
+    return spread
 
 
 def get_other_side(side: str):
@@ -73,58 +83,16 @@ SIDE_MAP = {
 }
 
 
-def get_binance_price_stream(coin: str):
-    from provider.exchanges import BinanceSpotHandler
-    return BinanceSpotHandler().get_trading_symbol(coin).lower()
+BUSD_COINS = ('HNT', 'MIR')
 
 
-def get_tether_price_irt_grpc(side: str, now: datetime = None, delay: int = 600):
-    coins = 'USDT'
-    symbol_to_coins = {
-        coins + IRT: coins
-    }
-
-    if not now:
-        _now = datetime.now()
+def get_redis_price_key(coin: str):
+    if coin in BUSD_COINS:
+        base = 'busd'
     else:
-        _now = now
+        base = 'usdt'
 
-    grpc_client = gRPCClient()
-    timestamp = int((_now.timestamp() - delay) * 1000)
-
-    order_by = ('symbol', '-timestamp')
-    distinct = ('symbol',)
-    values = ('symbol', 'price')
-
-    orders = grpc_client.get_current_orders(
-        exchange=NOBITEX,
-        symbols=tuple(symbol_to_coins.keys()),
-        position=0,
-        type=side,
-        timestamp=timestamp,
-        order_by=order_by,
-        distinct=distinct,
-        values=values,
-    ).orders
-
-    grpc_client.channel.close()
-
-    if not orders:
-        return
-
-    return Decimal(Price(coin='USDT', price=Decimal(orders[0].price), side=side).price) // 10
-
-
-def get_avg_tether_price_irt_grpc(start_timestamp, end_timestamp):
-    grpc_client = gRPCClient()
-    response = grpc_client.get_trades_average_price_by_time(
-        min_timestamp=start_timestamp,
-        max_timestamp=end_timestamp,
-        symbol='USDTIRT',
-        exchange=NOBITEX
-    ).value
-    grpc_client.channel.close()
-    return Decimal(response / 10)
+    return 'price:' + coin.lower() + base
 
 
 def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
@@ -174,7 +142,7 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
 
     pipe = price_redis.pipeline(transaction=False)
     for c in coins:
-        name = 'bin:' + get_binance_price_stream(c)
+        name = get_redis_price_key(c)
         pipe.hgetall(name)
 
     prices = pipe.execute()
@@ -183,7 +151,7 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
         price_dict = prices[i] or {}
 
         if allow_stale and not price_dict:
-            name = 'bin:' + get_binance_price_stream(c) + ':stale'
+            name = get_redis_price_key(c) + ':stale'
             price_dict = price_redis.hgetall(name)
 
             # logger.error('{} price fallback to stale'.format(c))
@@ -205,20 +173,11 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
                     now: datetime = None, allow_stale: bool = False) -> Dict[str, Decimal]:
     results = _fetch_prices(coins, side, exchange, now, allow_stale=allow_stale)
 
-    if PriceManager.active():
-        for r in results:
-            PriceManager.set_price(r.coin, r.side, exchange, market_symbol, now, r.price)
-
     return {r.coin: r.price for r in results}
 
 
 def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
               now: datetime = None, allow_stale: bool = False) -> Decimal:
-    if PriceManager.active():
-        price = PriceManager.get_price(coin, side, exchange, market_symbol, now)
-        if price is not None:
-            return price
-
     prices = get_prices_dict([coin], side, exchange, market_symbol, now, allow_stale=allow_stale)
 
     if prices:
@@ -228,7 +187,7 @@ def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str 
 
 
 def get_price_tether_irt_nobitex():
-    resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=2)
+    resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=10, verify=False)
     data = resp.json()
     status = data['status']
 
@@ -240,8 +199,8 @@ def get_price_tether_irt_nobitex():
     return data
 
 
-def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = False) -> Decimal:
-    price = price_redis.hget('usdtirt', SIDE_MAP[side])
+def get_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
+    price = price_redis.hget('price:usdtirt', SIDE_MAP[side])
     if price:
         return Decimal(price)
 
@@ -253,16 +212,18 @@ def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = Fa
 
     except (requests.exceptions.ConnectionError, TimeoutError, TypeError, JSONDecodeError, KeyError):
         try:
-            price = get_tether_price_irt_grpc(side=side, now=now)
+            from ledger.utils.provider import get_provider_requester
+            provider = get_provider_requester()
+            price = provider.get_price('USDTIRT', side=side)
 
             if not price:
                 if allow_stale:
-                    return get_tether_price_irt_grpc(side=side, now=now, delay=DAY)
+                    return provider.get_price('USDTIRT', side=side, delay=DAY)
                 else:
                     raise
         except:
             if allow_stale:
-                price = price_redis.hget('usdtirt:stale', get_redis_side(side))
+                price = price_redis.hget('price:usdtirt:stale', get_redis_side(side))
                 logger.error('usdt irt price fallback to stale')
 
                 if price:
@@ -272,28 +233,21 @@ def get_tether_irt_price(side: str, now: datetime = None, allow_stale: bool = Fa
             else:
                 raise
 
-    pipe = price_redis.pipeline(transaction=False)
-    pipe.hset(name='usdtirt', mapping={get_redis_side(side): str(price)})
-    pipe.hset(name='usdtirt:stale', mapping={get_redis_side(side): str(price)})
-    pipe.expire('usdtirt', 10)
-    pipe.expire('usdtirt:stale', DAY)
-
-    pipe.execute()
-
     return price
 
 
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
-                           gap: Union[Decimal, None] = None, allow_stale: bool = False) -> Decimal:
+                           gap: Union[Decimal, None] = None, allow_stale: bool = False,
+                           base_coin: str = None) -> Decimal:
     if coin == IRT:
         return 1 / get_tether_irt_price(get_other_side(side), allow_stale=allow_stale)
 
     if gap:
         spread = gap
     else:
-        spread = get_spread(coin, side, value) / 100
+        spread = get_spread(coin, side, value=value, base_coin=base_coin) / 100
 
-    if config('AUTO_SPREED_SHEER', cast=bool, default=False):
+    if config('AUTO_SPREAD_SHEER', cast=bool, default=False):
         spread_sheer = Decimal('0.5')
     else:
         spread_sheer = 0
@@ -323,7 +277,7 @@ def get_trading_price_irt(coin: str, side: str, raw_price: bool = False, value: 
 
     tether = get_tether_irt_price(side)
     price = get_trading_price_usdt(coin, side, raw_price, value=value and value / tether, gap=gap,
-                                   allow_stale=allow_stale)
+                                   allow_stale=allow_stale, base_coin=IRT)
 
     if price:
         return price * tether

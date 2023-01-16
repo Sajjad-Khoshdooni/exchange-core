@@ -9,7 +9,7 @@ class Image(models.Model):
     image = models.ImageField()
 
     def get_absolute_image_url(self):
-        return settings.HOST_URL + self.image.url
+        return self.image.url
 
     def __str__(self):
         return self.get_absolute_image_url()
@@ -19,14 +19,12 @@ class Banner(models.Model):
     title = models.CharField(max_length=64)
     image = models.ImageField()
     link = models.CharField(max_length=256)
+    app_link = models.CharField(max_length=256, blank=True)
     active = models.BooleanField(default=True)
     order = models.PositiveSmallIntegerField()
 
-    def get_absolute_image_url(self):
-        return settings.HOST_URL + self.image.url
-
     def __str__(self):
-        return self.get_absolute_image_url()
+        return self.image.url
 
     class Meta:
         ordering = ('order', )

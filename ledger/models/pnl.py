@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 from decimal import Decimal
 
@@ -8,6 +9,9 @@ from accounts.models import Account
 from ledger.models import Wallet, Asset, Trx
 from ledger.utils.fields import get_amount_field
 from ledger.utils.price import get_trading_price_usdt, BUY
+
+
+logger = logging.getLogger(__name__)
 
 
 class PNLHistory(models.Model):
@@ -39,6 +43,13 @@ class PNLHistory(models.Model):
                 return 1 / usdt_price
             return get_trading_price_usdt(coin, BUY, raw_price=True)
 
+        missing_price_coins = list(filter(
+            lambda coin: not get_price(coin),
+            set(account_wallets.keys()).union(set(account_input_outputs.keys())))
+        )
+        if missing_price_coins:
+            raise Exception(f'Missing coin prices for {missing_price_coins}')
+
         snapshot_balance = sum(map(
             lambda coin_amount: Decimal(get_price(coin_amount[0])) * coin_amount[1], account_wallets.items()
         ))
@@ -60,7 +71,8 @@ class PNLHistory(models.Model):
         return {
             (wallet['wallet_market'], wallet['account'], wallet['asset__symbol']): wallet['total_balance'] for
             wallet in Wallet.objects.filter(
-                account__type=Account.ORDINARY
+                account__type=Account.ORDINARY,
+                asset__enable=True,
             ).exclude(balance=0).annotate(
                 wallet_market=Case(When(market=Wallet.LOAN, then=V(Wallet.MARGIN)), default='market')
             ).values('wallet_market', 'account', 'asset__symbol').annotate(total_balance=Sum('balance')).values(
@@ -73,9 +85,10 @@ class PNLHistory(models.Model):
         datetime_filter = {'created__range': (start, end)} if start else {}
         in_out_dict = defaultdict(Decimal)
         in_out_trxs = Trx.objects.filter(
+            sender__asset__enable=True,
             **datetime_filter
         ).exclude(
-            scope__in=(Trx.TRADE, Trx.COMMISSION, Trx.PRIZE, Trx.STAKE_REVENUE)
+            scope__in=(Trx.TRADE, Trx.COMMISSION, Trx.PRIZE, Trx.STAKE_REVENUE, Trx.STAKE)
         ).annotate(asset=F('sender__asset__symbol')).values(
             'sender__market', 'receiver__market', 'asset', 'sender__account', 'receiver__account'
         ).annotate(total_amount=Sum('amount'))

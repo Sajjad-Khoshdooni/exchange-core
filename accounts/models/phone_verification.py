@@ -7,7 +7,7 @@ from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
-from yekta_config.config import config
+from decouple import config
 
 from accounts.utils.validation import generate_random_code, PHONE_MAX_LENGTH, fifteen_minutes_later_datetime, MINUTES
 
@@ -109,8 +109,7 @@ class VerificationCode(models.Model):
             logger.info('[OTP] Ignored sending otp to kavenegar due to blacklist')
             return
 
-        if not settings.DEBUG_OR_TESTING:
-
+        if not settings.DEBUG_OR_TESTING_OR_STAGING:
             any_recent_code = VerificationCode.objects.filter(
                 phone=phone,
                 created__gte=timezone.now() - timedelta(minutes=2),
@@ -162,7 +161,7 @@ class VerificationCode(models.Model):
                     phone=phone,
                     template='69129',
                     params={
-                        'brand': config('BRAND'),
+                        'brand': settings.BRAND,
                         'code': otp_code.code
                     }
                 )

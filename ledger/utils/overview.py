@@ -1,4 +1,3 @@
-from collections import defaultdict
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -11,65 +10,58 @@ from ledger.models import Asset, Wallet, Transfer, Prize
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
 from ledger.utils.cache import cache_for
 from ledger.utils.price import SELL, get_prices_dict, get_tether_irt_price, BUY, PriceFetchError
-from provider.exchanges import BinanceFuturesHandler, BinanceSpotHandler, ExchangeHandler
-from provider.exchanges.interface.kucoin_interface import KucoinSpotHandler
-from provider.exchanges.interface.mexc_interface import MexcSpotHandler
+from ledger.utils.provider import get_provider_requester, BINANCE, KUCOIN, MEXC, CoinOrders
 
 
 @cache_for(60)
-def get_internal_asset_deposits():
+def get_internal_asset_deposits() -> dict:
     assets = InternalAssetsRequester().get_assets()
+
+    if not assets:
+        return {}
+
     return {
         asset['coin']: Decimal(asset['amount']) for asset in assets
     }
 
 
 class AssetOverview:
-    def __init__(self, strict: bool = True):
+    def __init__(self, strict: bool = True, calculated_hedge: bool = False):
         self._strict = strict
-        self._future = BinanceFuturesHandler().get_account_details()
+        self._coin_total_orders = None
+        self.provider = get_provider_requester()
+
+        if calculated_hedge:
+            self._coin_total_orders = {
+                coin_order.coin: coin_order for coin_order in self.provider.get_total_orders_amount_sum()
+            }
+
+        self._binance_futures = self.provider.get_futures_info(BINANCE)
+        self._disabled_assets = set(Asset.objects.filter(enable=False).values_list('symbol', flat=True))
 
         self._future_positions = {
-            pos['symbol']: pos for pos in self._future['positions']
+            pos['coin']: pos for pos in self._binance_futures.get('positions', [])
         }
 
-        wallets = Wallet.objects.filter(account__type=Account.ORDINARY).values('asset__symbol').annotate(amount=Sum('balance'))
+        self._binance_spot_balance_map = self.provider.get_spot_balance_map(BINANCE)
+        self._kucoin_spot_balance_map = self.provider.get_spot_balance_map(KUCOIN)
+        self._mexc_spot_balance_map = self.provider.get_spot_balance_map(MEXC)
+
+        wallets = Wallet.objects.filter(
+            account__type=Account.ORDINARY
+        ).exclude(market__in=(Wallet.VOUCHER, Wallet.DEBT)).values('asset__symbol').annotate(amount=Sum('balance'))
         self._users_per_asset_balances = {w['asset__symbol']: w['amount'] for w in wallets}
 
         self._valid_symbols = set(Asset.objects.filter(enable=True).values_list('symbol', flat=True))
 
         self.prices = get_prices_dict(
-            coins=list(Asset.candid_objects.values_list('symbol', flat=True)),
+            coins=list(Asset.live_objects.values_list('symbol', flat=True)),
             side=SELL,
             allow_stale=True
         )
         self.prices[Asset.IRT] = 1 / get_tether_irt_price(BUY)
 
         self.usdt_irt = get_tether_irt_price(SELL)
-
-        binance_balances_list = BinanceSpotHandler().get_account_details()['balances']
-        self._binance_spot_balance_map = {b['asset']: float(b['free']) for b in binance_balances_list}
-
-        kucoin_balances_list = KucoinSpotHandler().get_account_details()
-        kucoin_spot_balances = defaultdict(Decimal)
-
-        for b in kucoin_balances_list:
-            if b['type'] in ['trade', 'main']:
-                kucoin_spot_balances[b['currency']] += Decimal(b['balance'])
-
-        self._kucoin_spot_balance_map = {
-            ExchangeHandler.rename_original_coin_to_internal(symbol):
-                amount / ExchangeHandler.get_coin_coefficient(symbol)
-            for symbol, amount in kucoin_spot_balances.items()
-        }
-
-        mexc_balance_list = MexcSpotHandler().get_account_details()
-
-        self._mexc_spot_balance_map = {
-            ExchangeHandler.rename_original_coin_to_internal((b['asset'])):
-                float(Decimal(b['free']) / ExchangeHandler.get_coin_coefficient(b['asset']))
-            for b in mexc_balance_list.get('balances', [])
-        }
 
         self._internal_deposits = get_internal_asset_deposits()
 
@@ -111,17 +103,25 @@ class AssetOverview:
 
     @property
     def total_initial_margin(self):
-        return float(self._future['totalInitialMargin'])
+        return float(self._binance_futures['total_initial_margin'])
 
     @property
     def total_maintenance_margin(self):
-        return float(self._future['totalMaintMargin'])
+        return float(self._binance_futures['total_maint_margin'])
 
     @property
     def total_margin_balance(self):
-        return float(self._future['totalMarginBalance'])
+        return float(self._binance_futures['total_margin_balance'])
+
+    def get_calculated_hedge(self, asset: Asset):
+        assert self._coin_total_orders is not None
+        coin_orders = self._coin_total_orders.get(asset.symbol, CoinOrders(coin=asset.symbol, buy=Decimal(), sell=Decimal()))
+        return self.provider.get_hedge_amount(asset, coin_orders)
 
     def get_price(self, symbol: str) -> Decimal:
+        if symbol in self._disabled_assets:
+            return Decimal(0)
+
         price = self.prices.get(symbol)
 
         if self._strict and price is None:
@@ -137,20 +137,10 @@ class AssetOverview:
         return self._internal_deposits.get(asset.symbol, 0)
 
     def get_futures_available_usdt(self):
-        return self._future['availableBalance']
+        return self._binance_futures['available_balance']
 
     def get_future_position_amount(self, asset: Asset):
-        if asset.symbol == Asset.USDT:
-            return self._future['availableBalance']
-
-        handler = asset.get_hedger()
-        symbol = handler.get_trading_symbol(asset.future_symbol)
-        amount = float(self._future_positions.get(symbol, {}).get('positionAmt', 0))
-
-        if asset.symbol == Asset.SHIB:
-            amount *= 1000
-
-        return amount
+        return self._future_positions.get(asset.symbol, {}).get('balance', 0)
 
     def get_binance_spot_amount(self, asset: Asset) -> float:
         return self._binance_spot_balance_map.get(asset.symbol, 0)
@@ -186,8 +176,7 @@ class AssetOverview:
         return value
 
     def get_future_position_value(self, asset: Asset):
-        handler = asset.get_hedger()
-        return float(self._future_positions.get(handler.get_trading_symbol(asset.future_symbol), {}).get('notional', 0))
+        return float(self._future_positions.get(asset.symbol, {}).get('notional', 0))
 
     def get_total_cash(self) -> Decimal:
         value = Decimal(0)
@@ -259,7 +248,7 @@ class AssetOverview:
     def get_all_users_asset_value(self) -> Decimal:
         value = Decimal(0)
 
-        for asset in Asset.candid_objects.all():
+        for asset in Asset.live_objects.all():
             value += self.get_users_asset_value(asset)
 
         pending_withdraws = FiatWithdrawRequest.objects.filter(
@@ -275,12 +264,12 @@ class AssetOverview:
 
     def get_total_hedge_value(self):
         return sum([
-            abs(self.get_hedge_value(asset) or 0) for asset in Asset.candid_objects.exclude(hedge_method=Asset.HEDGE_NONE)
+            abs(self.get_hedge_value(asset) or 0) for asset in Asset.live_objects.filter(hedge=True)
         ])
 
     def get_cumulated_hedge_value(self):
         return abs(sum([
-            self.get_hedge_value(asset) for asset in Asset.candid_objects.exclude(hedge_method=Asset.HEDGE_NONE)
+            self.get_hedge_value(asset) for asset in Asset.live_objects.filter(hedge=True)
         ]))
 
     def get_binance_balance(self, asset: Asset) -> Decimal:
@@ -336,7 +325,11 @@ class AssetOverview:
         non_deposited_wallets = Wallet.objects.filter(
             account__type=Account.ORDINARY,
             account__user__first_fiat_deposit_date__isnull=True
-        ).exclude(account__in=transferred_accounts).values('asset__symbol').annotate(amount=Sum('balance'))
+        ).exclude(
+            market=Wallet.VOUCHER
+        ).exclude(
+            account__in=transferred_accounts
+        ).values('asset__symbol').annotate(amount=Sum('balance'))
 
         return {w['asset__symbol']: w['amount'] for w in non_deposited_wallets}
 

@@ -54,7 +54,7 @@ class Create2FaQrCodeAPIView(APIView):
             token=token,
             qrcode=qrcode_address
         )
-        return Response({'qrcode_link': settings.HOST_URL + settings.MEDIA_URL + qrcode_address})
+        return Response({'qrcode_link': settings.MINIO_STORAGE_MEDIA_URL + qrcode_address})
 
     def delete(self, request, *args, **kwargs):
         user = request.user

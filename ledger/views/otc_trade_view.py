@@ -1,5 +1,6 @@
-from decimal import Decimal
+from decimal import Decimal, ConversionSyntax
 
+from django.conf import settings
 from django.db.models import Sum
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -8,10 +9,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease
+from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease, HedgeError
 from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
-from ledger.models.otc_trade import TokenExpired, ProcessingError
+from ledger.models.otc_trade import TokenExpired
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.price import SELL, get_tether_irt_price, BUY
 from market.models.pair_symbol import DEFAULT_TAKER_FEE
@@ -23,8 +24,13 @@ class OTCInfoView(APIView):
         from_symbol = request.query_params.get('from')
         to_symbol = request.query_params.get('to')
 
-        from_amount = Decimal(request.query_params.get('from_amount', 0))
-        to_amount = Decimal(request.query_params.get('to_amount', 0))
+        try:
+            from_amount = Decimal(request.query_params.get('from_amount') or 0)
+            to_amount = Decimal(request.query_params.get('to_amount') or 0)
+        except ConversionSyntax:
+            raise ValidationError({
+                'amount': 'مقدار نامعتبر است.'
+            })
 
         from_asset = get_object_or_404(Asset, symbol=from_symbol)
         to_asset = get_object_or_404(Asset, symbol=to_symbol)
@@ -106,6 +112,9 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         request = self.context['request']
         account = request.user.account
 
+        if not settings.TRADE_ENABLE or not account.user.can_trade:
+            raise ValidationError('در حال حاضر امکان معامله وجود ندارد.')
+
         from_asset = validated_data['from_asset']
         to_asset = validated_data['to_asset']
 
@@ -147,10 +156,10 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         conf = otc_request.get_trade_config()
         return conf.cash.symbol
 
-    def get_fee(self, otc_request: OTCRequest):
+    def get_fee(self, otc_request: OTCRequest) -> Decimal:
         voucher = otc_request.account.get_voucher_wallet()
         if voucher:
-            return 0
+            return Decimal(0)
         else:
             return DEFAULT_TAKER_FEE
 
@@ -201,6 +210,9 @@ class OTCTradeSerializer(serializers.ModelSerializer):
         token = validated_data['token']
         request = self.context['request']
 
+        if not settings.TRADE_ENABLE or not request.user.can_trade:
+            raise ValidationError('در حال حاضر امکان معامله وجود ندارد.')
+
         otc_request = get_object_or_404(OTCRequest, token=token, account=request.user.account)
 
         otc_trade = OTCTrade.objects.filter(otc_request=otc_request).first()
@@ -217,7 +229,7 @@ class OTCTradeSerializer(serializers.ModelSerializer):
             raise ValidationError(str(e))
         except AbruptDecrease as e:
             raise ValidationError('مشکلی در ثبت سفارش رخ داد. لطفا دوباره تلاش کنید.')
-        except ProcessingError as e:
+        except HedgeError as e:
             raise ValidationError('مشکلی در پردازش سفارش رخ داد.')
 
 

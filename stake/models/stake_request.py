@@ -4,6 +4,7 @@ from django.db import models
 from django.db.models import Sum
 
 from accounts.models import Account
+from accounts.tasks import send_message_by_kavenegar
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
@@ -15,11 +16,13 @@ from stake.models import StakeOption
 
 class StakeRequest(models.Model):
 
-    PROCESS, PENDING, DONE = 'process', 'pending', 'done'
+    PROCESS, PENDING, DONE, FINISHED = 'process', 'pending', 'done', 'finished'
     CANCEL_PROCESS, CANCEL_PENDING, CANCEL_COMPLETE = 'cancel_process', 'cancel_pending', 'cancel_complete'
 
-    STATUS_CHOICE = ((PROCESS, PROCESS), (PENDING, PENDING), (DONE, DONE), (CANCEL_PROCESS, CANCEL_PROCESS),
-                     (CANCEL_PENDING, CANCEL_PENDING), (CANCEL_COMPLETE, CANCEL_COMPLETE))
+    STATUS_CHOICE = (
+        (PROCESS, PROCESS), (PENDING, PENDING), (DONE, DONE), (CANCEL_PROCESS, CANCEL_PROCESS),
+        (CANCEL_PENDING, CANCEL_PENDING), (CANCEL_COMPLETE, CANCEL_COMPLETE), (FINISHED, FINISHED)
+    )
 
     status = models.CharField(choices=STATUS_CHOICE, max_length=16, default=PROCESS)
 
@@ -34,14 +37,13 @@ class StakeRequest(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.stake_option.__str__() + ' ' + str(self.account_id)
+        return str(self.stake_option) + ' ' + str(self.account_id)
 
     def get_locked_amount(self) -> Decimal:
         locked_revenue = \
             self.stakerevenue_set.filter(wallet_source=Wallet.STAKE).aggregate(amount=Sum('revenue'))['amount'] or 0
 
         return self.amount + locked_revenue
-
 
     def send_email_for_staking(self, user_email: str, template: str):
         if user_email:
@@ -60,20 +62,19 @@ class StakeRequest(models.Model):
         user_email = account.user.email
 
         valid_change_status = [
-            (self.PROCESS, self.PENDING), (self.PROCESS, self.CANCEL_COMPLETE),
+            (self.PROCESS, self.PENDING), (self.PROCESS, self.DONE), (self.PROCESS, self.CANCEL_COMPLETE),
             (self.PENDING, self.DONE), (self.PENDING, self.CANCEL_PROCESS),
-            (self.DONE, self.CANCEL_PROCESS), (self.CANCEL_PROCESS, self.CANCEL_PENDING),
-            (self.CANCEL_PENDING, self.CANCEL_COMPLETE), (self.CANCEL_PROCESS, self.CANCEL_COMPLETE)
-        ]
-        valid_cancellation_status = [
-            (self.PROCESS, self.CANCEL_COMPLETE),
-            (self.CANCEL_PROCESS, self.CANCEL_COMPLETE),
-            (self.CANCEL_PENDING, self.CANCEL_COMPLETE)
+            (self.DONE, self.CANCEL_PROCESS),
+            (self.PROCESS, self.CANCEL_PENDING), (self.PENDING, self.CANCEL_PENDING), (self.CANCEL_PROCESS, self.CANCEL_PENDING),
+            (self.CANCEL_PENDING, self.CANCEL_COMPLETE), (self.CANCEL_PROCESS, self.CANCEL_COMPLETE),
+            (self.DONE, self.FINISHED),
         ]
 
         assert (old_status, new_status) in valid_change_status, 'invalid change_status'
 
-        if (old_status, new_status) in valid_cancellation_status:
+        if new_status == self.CANCEL_COMPLETE and \
+                old_status in [self.PROCESS, self.CANCEL_PROCESS, self.CANCEL_PENDING]:
+
             spot_wallet = asset.get_wallet(account)
             stake_wallet = asset.get_wallet(account=account, market=Wallet.STAKE)
 
@@ -104,8 +105,31 @@ class StakeRequest(models.Model):
 
             self.send_email_for_staking(user_email=user_email, template=email.SCOPE_CANCEL_STAKE)
 
-        elif (old_status, new_status) == (self.PENDING, self.DONE):
-            from accounts.tasks import send_message_by_kavenegar
+        elif (old_status, new_status) == (self.DONE, self.FINISHED):
+            spot_wallet = asset.get_wallet(account)
+            stake_wallet = asset.get_wallet(account=account, market=Wallet.STAKE)
+
+            with WalletPipeline() as pipeline:
+                amount = self.get_locked_amount()
+
+                pipeline.new_trx(
+                    group_id=self.group_id,
+                    sender=stake_wallet,
+                    receiver=spot_wallet,
+                    amount=amount,
+                    scope=Trx.STAKE
+                )
+                self.status = new_status
+                self.save()
+
+            send_message_by_kavenegar(
+                phone=account.user.phone,
+                token=asset.name_fa,
+                send_type='sms',
+                template='staking-finished'
+            )
+
+        elif (old_status, new_status) in [(self.PROCESS, self.DONE), (self.PENDING, self.DONE)]:
             self.status = new_status
             self.save()
             self.send_email_for_staking(user_email=user_email, template=email.SCOPE_DONE_STAKE)

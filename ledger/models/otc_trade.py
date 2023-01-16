@@ -2,14 +2,14 @@ import logging
 from decimal import Decimal
 from uuid import uuid4
 
-from django.db import models
+from django.db import models, IntegrityError
 
 from accounts.models import Account
-from ledger.exceptions import AbruptDecrease
-from ledger.models import OTCRequest, Trx
+from ledger.exceptions import AbruptDecrease, HedgeError
+from ledger.models import OTCRequest, Trx, Wallet
 from ledger.utils.price import SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
-from provider.models import ProviderOrder
+from market.exceptions import NegativeGapRevenue
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +18,8 @@ class TokenExpired(Exception):
     pass
 
 
-class ProcessingError(Exception):
-    pass
-
-
 class OTCTrade(models.Model):
-    PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
+    PENDING, CANCELED, DONE, REVERT = 'pending', 'canceled', 'done', 'revert'
 
     created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
     otc_request = models.OneToOneField('ledger.OTCRequest', on_delete=models.PROTECT)
@@ -33,7 +29,7 @@ class OTCTrade(models.Model):
     status = models.CharField(
         default=PENDING,
         max_length=8,
-        choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
+        choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE), (REVERT, REVERT)],
         verbose_name='وضعیت'
     )
 
@@ -99,42 +95,39 @@ class OTCTrade(models.Model):
         return otc_trade
 
     def hedge_and_finalize(self):
-        conf = self.otc_request.get_trade_config()
 
         if self.otc_request.account.is_ordinary_user():
             try:
-                hedged = ProviderOrder.try_hedge_for_new_order(
-                    asset=conf.coin,
-                    side=conf.side,
-                    amount=conf.coin_amount,
-                    scope=ProviderOrder.TRADE
-                )
-            except:
+                self.accept()
+            except (HedgeError, NegativeGapRevenue):
                 logger.exception('Error in hedging otc request')
-                hedged = False
-        else:
-            hedged = True
-
-        if hedged:
-            self.accept()
-        else:
-            self.cancel()
-
-        if not hedged:
-            raise ProcessingError
+                self.cancel()
+                raise
 
     def cancel(self):
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             pipeline.release_lock(self.group_id)
             self.change_status(self.CANCELED)
 
-    def accept(self):
+    def accept(self, hedge: bool = True):
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             pipeline.release_lock(self.group_id)
             from market.models import Trade
             self.change_status(self.DONE)
             self.create_ledger(pipeline)
             Trade.create_for_otc_trade(self, pipeline)
+
+            if hedge:
+                conf = self.otc_request.get_trade_config()
+
+                from ledger.utils.provider import TRADE, get_provider_requester
+                get_provider_requester().try_hedge_new_order(
+                    request_id='otc:%s' % self.id,
+                    asset=conf.coin,
+                    side=conf.side,
+                    amount=conf.coin_amount,
+                    scope=TRADE
+                )
 
     @classmethod
     def check_abrupt_decrease(cls, otc_request: OTCRequest):
@@ -154,3 +147,32 @@ class OTCTrade(models.Model):
         if rate > threshold:
             logger.error('otc failed because of abrupt change!')
             raise AbruptDecrease()
+
+    def revert(self):
+        with WalletPipeline() as pipeline:
+            self.status = self.REVERT
+            self.save(update_fields=['status'])
+
+            for trx in Trx.objects.filter(group_id=self.group_id):
+                if trx.receiver.has_balance(trx.amount):
+                    pipeline.new_trx(
+                        sender=trx.receiver,
+                        receiver=trx.sender,
+                        amount=trx.amount,
+                        group_id=trx.group_id,
+                        scope=Trx.REVERT
+                    )
+                else:
+                    pipeline.new_trx(
+                        sender=trx.receiver.asset.get_wallet(trx.receiver.account, market=Wallet.DEBT),
+                        receiver=trx.sender,
+                        amount=trx.amount,
+                        group_id=trx.group_id,
+                        scope=Trx.REVERT
+                    )
+
+            from market.models import Trade
+            Trade.objects.filter(group_id=self.group_id).update(status=Trade.REVERT)
+
+    def __str__(self):
+        return '%s [%s]' % (self.otc_request, self.status)

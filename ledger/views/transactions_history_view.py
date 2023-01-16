@@ -5,8 +5,8 @@ from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
-from accounts.views.authentication import CustomTokenAuthentication
+from accounts.authentication import CustomTokenAuthentication
+from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from ledger.models import Transfer
 from ledger.models.asset import AssetSerializerMini
 
@@ -44,7 +44,7 @@ class WithdrawHistoryView(ListAPIView):
 
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
 
-    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
+    throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
 
     serializer_class = TransferSerializer
     pagination_class = LimitOffsetPagination
@@ -58,7 +58,6 @@ class WithdrawHistoryView(ListAPIView):
         queryset = Transfer.objects.filter(
             wallet__account=self.request.user.account,
             deposit=False,
-            hidden=False,
         ).order_by('-created')
 
         if 'coin' in query_params:
@@ -68,7 +67,7 @@ class WithdrawHistoryView(ListAPIView):
 
 
 class DepositHistoryView(WithdrawHistoryView):
-    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
+    throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
 
     def get_queryset(self):
         query_params = self.request.query_params
@@ -76,7 +75,6 @@ class DepositHistoryView(WithdrawHistoryView):
         queryset = Transfer.objects.filter(
             wallet__account=self.request.user.account,
             deposit=True,
-            hidden=False,
         ).order_by('-created')
 
         if 'coin' in query_params:

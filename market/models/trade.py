@@ -16,6 +16,7 @@ from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, precision_to_step, decimal_to_str
 from ledger.utils.price import get_tether_irt_price, BUY, get_trading_price_irt, get_trading_price_usdt, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
+from market.exceptions import NegativeGapRevenue
 from market.models import Order, PairSymbol
 
 logger = logging.getLogger(__name__)
@@ -30,14 +31,12 @@ class FillOrderTrxs:
 
 
 class Trade(models.Model):
-    OTC = 'otc'
-    SYSTEM = 'system'
-    SYSTEM_MAKER = 'sys-make'
-    SYSTEM_TAKER = 'sys-take'
-    MARKET = 'market'
+    OTC, SYSTEM, SYSTEM_MAKER, SYSTEM_TAKER, MARKET = 'otc', 'system', 'sys-make', 'sys-take', 'market'
+    SOURCE_CHOICES = (OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'), (SYSTEM_MAKER, SYSTEM_MAKER), \
+                     (SYSTEM_TAKER, SYSTEM_TAKER)
 
-    SOURCE_CHOICES = ((OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'), (SYSTEM_MAKER, SYSTEM_MAKER),
-                      (SYSTEM_TAKER, SYSTEM_TAKER))
+    DONE, REVERT = 'd', 'r'
+    STATUS_CHOICES = (DONE, 'done'), (REVERT, 'revert')
 
     created = models.DateTimeField(auto_now_add=True)
     symbol = models.ForeignKey(PairSymbol, on_delete=models.CASCADE)
@@ -46,13 +45,14 @@ class Trade(models.Model):
     order_status = models.CharField(max_length=8)
     account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
 
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default=DONE, db_index=True)
     side = models.CharField(max_length=8, choices=Order.ORDER_CHOICES)
 
     amount = get_amount_field()
     price = get_amount_field()
     is_maker = models.BooleanField()
 
-    group_id = get_group_id_field()
+    group_id = get_group_id_field(db_index=True)
 
     base_amount = get_amount_field()  # = amount * price
     fee_amount = get_amount_field()
@@ -201,7 +201,31 @@ class Trade(models.Model):
         }
 
     @classmethod
+    def get_grouped_by_count(cls, symbol_id: int, interval_in_secs: int, start: datetime, end: datetime,
+                             count_back=None):
+        results = Trade.get_grouped_by_interval(symbol_id, interval_in_secs, start, end)
+        if not count_back:
+            return results
+        # TODO: clean it later.
+        try_count = 0
+        while try_count < 3 and len(results) < count_back:
+            try_count += 1
+            shift = (end - start) * try_count
+            older_results = Trade.get_grouped_by_interval(symbol_id, interval_in_secs, start - shift, end - shift)
+            results = older_results[(len(results)) - count_back:] + results
+        return results
+
+    @classmethod
     def get_grouped_by_interval(cls, symbol_id: int, interval_in_secs: int, start: datetime, end: datetime):
+        from market.utils.datetime_utils import ceil_date, floor_date
+        if interval_in_secs <= 3600:
+            round_func = ceil_date
+            tf_shift = '30 min'
+        else:
+            round_func = floor_date
+            tf_shift = '0 sec'
+        start = round_func(start, seconds=interval_in_secs)
+        end = round_func(end, seconds=interval_in_secs)
         return [
             {'timestamp': group.tf, 'open': group.open[1], 'high': group.high, 'low': group.low,
              'close': group.close[1], 'volume': group.volume}
@@ -210,9 +234,9 @@ class Trade(models.Model):
                 "min(array[id, price]) as open, max(array[id, price]) as close, "
                 "max(price) as high, min(price) as low, "
                 "sum(amount) as volume, "
-                "(date_trunc('seconds', (created - (timestamptz 'epoch' - interval '30 min')) / %s) * %s + (timestamptz 'epoch' - interval '30 min')) as tf "
-                "from market_trade where symbol_id = %s and side = 'buy' and trade_source != 'otc' and created between %s and %s group by tf order by tf",
-                [interval_in_secs, interval_in_secs, symbol_id, start, end]
+                "(date_trunc('seconds', (created - (timestamptz 'epoch' - interval %s)) / %s) * %s + (timestamptz 'epoch' - interval %s)) as tf "
+                "from market_trade where symbol_id = %s and side = 'buy' and status = 'd' and trade_source != 'otc' and created between %s and %s group by tf order by tf",
+                [tf_shift, interval_in_secs, interval_in_secs, tf_shift, symbol_id, start, end]
             )
         ]
 
@@ -244,6 +268,7 @@ class Trade(models.Model):
             price=price,
             side=Order.get_opposite_side(config.side),
             fill_type=Order.MARKET,
+            filled_amount=amount,
             status=Order.FILLED,
         )
         taker_wallet = symbol.asset.get_wallet(otc_trade.otc_request.account, market=otc_trade.otc_request.market)
@@ -254,6 +279,7 @@ class Trade(models.Model):
             price=price,
             side=config.side,
             fill_type=Order.MARKET,
+            filled_amount=amount,
             status=Order.FILLED,
         )
 
@@ -342,11 +368,14 @@ class Trade(models.Model):
             return 0
 
         if self.side == BUY:
-            return self.irt_value * self.fee_amount / self.amount
+            return self.amount and self.irt_value * self.fee_amount / self.amount
         else:
-            return self.irt_value * self.fee_amount / self.base_amount
+            return self.base_amount and self.irt_value * self.fee_amount / self.base_amount
 
     def set_gap_revenue(self):
+        if settings.DEBUG_OR_TESTING:
+            return
+
         self.gap_revenue = 0
 
         fee = self.get_fee_irt_value()
@@ -377,6 +406,9 @@ class Trade(models.Model):
 
         if base_asset.symbol == Asset.USDT:
             self.gap_revenue *= get_tether_irt_price(side=reverse_side)
+
+        if self.gap_revenue < 0:
+            raise NegativeGapRevenue
 
         self.gap_revenue += fee
 

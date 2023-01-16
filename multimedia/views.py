@@ -27,7 +27,7 @@ class ImageCreateView(CreateAPIView):
 class BannerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Banner
-        fields = ('id', 'title', 'image', 'link')
+        fields = ('id', 'title', 'image', 'link', 'app_link')
 
 
 class BannerListView(ListAPIView):

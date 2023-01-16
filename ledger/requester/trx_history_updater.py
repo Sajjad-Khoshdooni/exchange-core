@@ -2,17 +2,17 @@ import requests
 import logging
 from django.conf import settings
 
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
+from decouple import config
 
 logger = logging.getLogger(__name__)
 
 
 class UpdateTrxHistory:
     def __init__(self):
-        self.url = config('BLOCKLINK_BASE_URL') + '/api/v1/tracker/address/update/'
+        self.url = config('BLOCKLINK_BASE_URL', default='https://blocklink.raastin.com') + '/api/v1/tracker/address/update/'
         self.header = {
-            'Authorization': secret('BLOCKLINK_TOKEN')
+            'Authorization': config('BLOCKLINK_TOKEN')
         }
 
     def update_history(self, deposit_address):
@@ -24,4 +24,4 @@ class UpdateTrxHistory:
             'network': deposit_address.network.symbol
         }
 
-        requests.put(url=self.url, headers=self.header, data=data)
+        requests.put(url=self.url, headers=self.header, data=data, timeout=10)

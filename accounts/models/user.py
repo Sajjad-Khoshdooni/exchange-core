@@ -26,7 +26,7 @@ class User(AbstractUser):
 
     INIT, PENDING, REJECTED, VERIFIED = 'init', 'pending', 'rejected', 'verified'
 
-    SHIB, VOUCHER = 'shib', 'voucher'
+    SHIB, VOUCHER = 'true', 'voucher'
 
     USERNAME_FIELD = 'phone'
 
@@ -45,6 +45,8 @@ class User(AbstractUser):
         verbose_name='شماره موبایل',
         unique=True,
         db_index=True,
+        null=True,
+        blank=True,
         error_messages={
             'unique': 'شماره موبایل وارد شده از قبل در سیستم موجود است.'
         }
@@ -127,6 +129,8 @@ class User(AbstractUser):
 
     show_margin = models.BooleanField(default=True, verbose_name='امکان مشاهده حساب تعهدی')
     show_strategy_bot = models.BooleanField(default=False, verbose_name='امکان مشاهده ربات')
+    show_community = models.BooleanField(default=False, verbose_name='امکان مشاهده کامیونیتی')
+    show_staking = models.BooleanField(default=False, verbose_name='امکان مشاهده سرمایه‌گذاری')
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
 
@@ -135,12 +139,14 @@ class User(AbstractUser):
         verbose_name='امکان برداشت وجه پیش از سپری شدن ۴۸ ساعت از اولین واریز',
     )
 
-    allow_level1_crypto_withdraw = models.BooleanField(
-        default=False,
-        verbose_name='امکان برداشت رمزارز در سطح ۱',
-    )
-
     can_withdraw = models.BooleanField(default=True)
+    can_trade = models.BooleanField(default=True)
+
+    withdraw_limit_whitelist = models.BooleanField(default=False)
+    withdraw_risk_level_multiplier = models.PositiveIntegerField(
+        default=1,
+        choices=((1, 1), (2, 2), (3, 3), (5, 5), (10, 10), (20, 20), (40, 40))
+    )
 
     promotion = models.CharField(max_length=256, blank=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
 

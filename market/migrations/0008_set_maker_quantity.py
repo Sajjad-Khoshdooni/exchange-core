@@ -6,16 +6,14 @@ from django.db import migrations
 
 from ledger.utils.precision import floor_precision
 from ledger.utils.price import get_trading_price_usdt, BUY
-from ledger.utils.price_manager import PriceManager
 
 
 def set_maker_quantities(apps, schema_editor):
     PairSymbol = apps.get_model('market', 'PairSymbol')
-    with PriceManager(fetch_all=True):
-        for symbol in PairSymbol.objects.filter(asset__enable=True):
-            symbol.maker_amount = floor_precision(
-                (Decimal(400) / get_trading_price_usdt(symbol.asset.symbol, BUY, raw_price=True)), symbol.step_size)
-            symbol.save()
+    for symbol in PairSymbol.objects.filter(asset__enable=True):
+        symbol.maker_amount = floor_precision(
+            (Decimal(400) / get_trading_price_usdt(symbol.asset.symbol, BUY, raw_price=True)), symbol.step_size)
+        symbol.save()
 
 
 class Migration(migrations.Migration):

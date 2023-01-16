@@ -3,13 +3,11 @@ import time
 from datetime import timedelta
 
 from celery import shared_task
-from django.db.models import Avg, Count
+from django.conf import settings
 from django.utils import timezone
 
 from accounts.models import User, ExternalNotification
-from accounts.utils.push_notif import send_push_notif, IMAGE_200K_SHIB
-from collector.models import CoinMarketCap
-from ledger.models import Prize, Asset
+from accounts.utils.push_notif import send_push_notif
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +54,7 @@ def retention_leads_to_signup():
 
 def trigger_token(token):
     from accounts.models import FirebaseToken
+    IMAGE_200K_SHIB = settings.MINIO_STORAGE_STATIC_URL + '/ads/shiba-prize.png'
 
     templates = {
         FirebaseToken.STATE_1: {
@@ -151,35 +150,35 @@ def retention_actions():
             time.sleep(1)
 
 
-@shared_task(queue='retention')
-def retention_missing_users():
-
-    all_symbols = list(Asset.objects.filter(enable=True).values_list('symbol', flat=True))
-
-    top_gainers = CoinMarketCap.objects.filter(
-        symbol__in=all_symbols,
-        change_24h__gte=1
-    ).order_by('-change_24h').values_list('change_24h', flat=True)[:10].aggregate(avg=Avg('change_24h'), count=Count('*'))
-
-    avg_gain = round(top_gainers.get('avg', 0))
-    count = top_gainers.get('count', 0)
-
-    def params_converter(params):
-        return {
-            **params,
-            'name': params['name'].format({
-                'count': count,
-                'percent': avg_gain
-            })
-        }
-
-    if avg_gain >= 5 and count >= 5:
-        recently_sent_users = ExternalNotification.objects.filter(
-            created__gte=timezone.now() - timedelta(days=7)
-        ).values_list('user', flat=True).distinct()
-
-        users = User.objects.filter()
-
-        for user in users:
-            ExternalNotification.send_sms(user, ExternalNotification.SCOPE_TOP_GAINERS, params_converter)
-
+# @shared_task(queue='retention')
+# def retention_missing_users():
+#
+#     all_symbols = list(Asset.objects.filter(enable=True).values_list('symbol', flat=True))
+#
+#     top_gainers = CoinMarketCap.objects.filter(
+#         symbol__in=all_symbols,
+#         change_24h__gte=1
+#     ).order_by('-change_24h').values_list('change_24h', flat=True)[:10].aggregate(avg=Avg('change_24h'), count=Count('*'))
+#
+#     avg_gain = round(top_gainers.get('avg', 0))
+#     count = top_gainers.get('count', 0)
+#
+#     def params_converter(params):
+#         return {
+#             **params,
+#             'name': params['name'].format({
+#                 'count': count,
+#                 'percent': avg_gain
+#             })
+#         }
+#
+#     if avg_gain >= 5 and count >= 5:
+#         recently_sent_users = ExternalNotification.objects.filter(
+#             created__gte=timezone.now() - timedelta(days=7)
+#         ).values_list('user', flat=True).distinct()
+#
+#         users = User.objects.filter()
+#
+#         for user in users:
+#             ExternalNotification.send_sms(user, ExternalNotification.SCOPE_TOP_GAINERS, params_converter)
+#

@@ -1,6 +1,7 @@
 import logging
 
 from django.db import models
+from django.utils import timezone
 
 from accounts.models import Notification, Account, TrafficSource
 from ledger.models import Prize, Asset
@@ -13,11 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 class MissionJourney(models.Model):
-    DEFAULT, VOUCHER = 'default', 'voucher'
+    SHIB, VOUCHER = 'true', 'voucher'
 
     name = models.CharField(max_length=64)
     active = models.BooleanField(default=False)
-    promotion = models.CharField(max_length=8, unique=True, choices=((DEFAULT, DEFAULT), (VOUCHER, VOUCHER)))
+    promotion = models.CharField(max_length=8, unique=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
+
+    default = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name
@@ -26,7 +29,7 @@ class MissionJourney(models.Model):
     def get_journey(cls, account: Account) -> 'MissionJourney':
         journey = MissionJourney.objects.filter(promotion=account.user.promotion, active=True).first()
         if not journey:
-            default_journey = MissionJourney.objects.filter(active=True, promotion=cls.DEFAULT).first()
+            default_journey = MissionJourney.objects.filter(active=True, default=True).first()
             return default_journey
         else:
             return journey
@@ -82,19 +85,29 @@ class Achievement(models.Model):
     amount = get_amount_field()
     voucher = models.BooleanField(default=False)
 
+    def get_prize_achievement_message(self, prize: Prize):
+
+        if not self.voucher:
+            template = 'جایزه {amount} {symbol} به شما تعلق گرفت. برای دریافت، کلیک کنید.'
+        else:
+            template = 'جایزه تخفیف کارمزد تا سقف {amount} {symbol} به شما تعلق گرفت. برای دریافت، کلیک کنید.'
+
+        return template.format(
+            amount=humanize_number(prize.asset.get_presentation_amount(prize.amount)),
+            symbol=self.asset.name_fa
+        )
+
     def achieved(self, account: Account):
         return Prize.objects.filter(account=account, achievement=self).exists()
 
     def achieve_prize(self, account: Account):
         price = get_trading_price_usdt(Asset.SHIB, SELL, raw_price=True)
+        value = 0
+
+        if not self.voucher:
+            value = self.amount * price
 
         with WalletPipeline() as pipeline:
-
-            value = 0
-
-            if not self.voucher:
-                value = self.amount * price
-
             prize, created = Prize.objects.get_or_create(
                 account=account,
                 achievement=self,
@@ -106,42 +119,15 @@ class Achievement(models.Model):
             )
 
             if created:
-                title = 'جایزه به شما تعلق گرفت.'
-                description = 'جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
-                    humanize_number(prize.asset.get_presentation_amount(prize.amount))
-                )
+                title = 'دریافت جایزه'
 
                 Notification.send(
                     recipient=account.user,
                     title=title,
-                    message=description,
+                    message=self.get_prize_achievement_message(prize),
                     level=Notification.SUCCESS,
                     link='/account/tasks'
                 )
-
-            # if self.mission == Prize.TRADE_PRIZE_STEP1 and account.referred_by:
-            #     prize, created = Prize.objects.get_or_create(
-            #         account=account.referred_by.owner,
-            #         scope=Prize.REFERRAL_TRADE_2M_PRIZE,
-            #         variant=str(account.id),
-            #         defaults={
-            #             'amount': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE],
-            #             'asset': Asset.get(Asset.SHIB),
-            #             'value': Prize.PRIZE_AMOUNTS[Prize.REFERRAL_TRADE_2M_PRIZE] * price
-            #         }
-            #     )
-            #
-            #     if created:
-            #         prize.build_trx(pipeline)
-            #         Notification.send(
-            #             recipient=account.referred_by.owner.user,
-            #             title='جایزه به شما تعلق گرفت.',
-            #             message='جایزه {} شیبا به شما تعلق گرفت. برای دریافت جایزه، کلیک کنید.'.format(
-            #                 humanize_number(prize.asset.get_presentation_amount(prize.amount))
-            #             ),
-            #             level=Notification.SUCCESS,
-            #             link='/account/tasks'
-            #         )
 
     def __str__(self):
         kind = ''
@@ -172,6 +158,7 @@ class Task(models.Model):
 
     title = models.CharField(max_length=32)
     link = models.CharField(max_length=32)
+    app_link = models.CharField(max_length=256, default='')
     description = models.CharField(max_length=128)
     level = models.CharField(max_length=8, choices=Notification.LEVEL_CHOICES, default=Notification.WARNING)
 
@@ -200,3 +187,6 @@ class Task(models.Model):
 
     class Meta:
         ordering = ('order', )
+
+    def __str__(self):
+        return '%s / %s' % (self.mission.name, self.type)

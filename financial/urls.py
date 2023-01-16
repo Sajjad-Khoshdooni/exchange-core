@@ -2,7 +2,7 @@ from django.urls import path
 
 from financial.views import PaymentRequestView, ZarinpalCallbackView, BankCardView, PaymentHistoryView, \
     WithdrawRequestView, WithdrawHistoryView, BankAccountView, PaydotirCallbackView, ZibalCallbackView, \
-    ProxyPaymentRedirectView, JibitCallbackView
+    ProxyPaymentRedirectView, JibitCallbackView, GatewayInfoView
 
 urlpatterns = [
     path('payment/request/', PaymentRequestView.as_view()),
@@ -35,4 +35,5 @@ urlpatterns = [
         'delete': 'destroy'
     })),
     path('withdraw/list/', WithdrawHistoryView.as_view()),
+    path('gateways/active/', GatewayInfoView.as_view()),
 ]

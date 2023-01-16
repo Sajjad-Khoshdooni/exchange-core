@@ -1,5 +1,6 @@
 import logging
 
+from decimal import Decimal
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -47,8 +48,14 @@ class CancelRequestSerializer(serializers.ModelSerializer):
                 if order:
                     return self.cancel_order(order, validated_data)
                 else:
+                    if stop_loss.price:
+                        order_price = stop_loss.price
+                    else:
+                        conservative_factor = Decimal('1.01') if stop_loss.side == Order.BUY else Decimal(1)
+                        order_price = stop_loss.trigger_price * conservative_factor
+
                     release_amount = Order.get_to_lock_amount(
-                        stop_loss.unfilled_amount, stop_loss.price, stop_loss.side
+                        stop_loss.unfilled_amount, order_price, stop_loss.side
                     )
                     pipeline.release_lock(key=stop_loss.group_id, amount=release_amount)
                     # faking cancel request creation

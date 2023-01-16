@@ -8,16 +8,17 @@ from rest_framework.generics import get_object_or_404, CreateAPIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.models import VerificationCode
-from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
+from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
 from accounts.verifiers.legal import is_48h_rule_passed
-from accounts.views.authentication import CustomTokenAuthentication
+from accounts.authentication import CustomTokenAuthentication
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Network, Transfer, NetworkAsset, AddressBook
 from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
 from ledger.utils.price import get_trading_price_irt, BUY
+from ledger.utils.withdraw_verify import can_withdraw
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
@@ -29,20 +30,16 @@ class WithdrawSerializer(serializers.ModelSerializer):
     memo = serializers.CharField(write_only=True, required=False, allow_blank=True)
     code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
-
     def validate(self, attrs):
         user = self.context['request'].user
 
-        if config('WITHDRAW_ENABLE', '1') == '0' or not user.can_withdraw:
+        if not can_withdraw(user.account):
             raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
-
-        if user.level < user.LEVEL2 and not user.allow_level1_crypto_withdraw:
-            raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
 
         account = user.account
         api = self.context.get('api')
-        if attrs['address_book_id'] and (not api):
 
+        if attrs['address_book_id'] and (not api):
             address_book = get_object_or_404(AddressBook, id=attrs['address_book_id'], account=account)
 
             address = address_book.address
@@ -51,8 +48,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
             if address_book.asset:
                 asset = address_book.asset
             else:
-                if not 'coin' in attrs:
+                if 'coin' not in attrs:
                     raise ValidationError('رمزارزی انتخاب نشده است.')
+
                 asset = get_object_or_404(Asset, symbol=attrs['coin'])
         else:
             if 'coin' not in attrs:
@@ -111,14 +109,17 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if not wallet.has_balance(amount):
             raise ValidationError('موجودی کافی نیست.')
 
-        if not check_withdraw_laundering(wallet=wallet, amount=amount):
+        if asset.enable and not check_withdraw_laundering(wallet=wallet, amount=amount):
             raise ValidationError(
                 'در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید. لطفا احراز هویت سطح ۳ را انجام دهید.')
 
-        irt_value = get_trading_price_irt(asset.symbol, BUY, raw_price=False) * amount
+        price = get_trading_price_irt(asset.symbol, BUY, raw_price=False)
 
-        if user_reached_crypto_withdraw_limit(user, irt_value):
-            raise ValidationError({'amount': 'شما به سقف برداشت رمزارزی خورده اید.'})
+        if price:
+            irt_value = price * amount
+
+            if user_reached_crypto_withdraw_limit(user, irt_value):
+                raise ValidationError({'amount': 'شما به سقف برداشت رمزارزی خورده اید.'})
 
         if not api:
             otp_code.set_code_used()
@@ -148,11 +149,12 @@ class WithdrawSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transfer
         fields = ('amount', 'address', 'coin', 'network', 'code', 'address_book_id', 'memo', 'code_2fa')
+        ref_name = 'Withdraw Serializer'
 
 
 class WithdrawView(CreateAPIView):
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
-    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
+    throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
     serializer_class = WithdrawSerializer
     queryset = Transfer.objects.all()
 

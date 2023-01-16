@@ -10,8 +10,7 @@ from accounts.models import Account
 from ledger.models import Asset
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.precision import get_presentation_amount, floor_precision, decimal_to_str
-from market.models import PairSymbol, Trade
-
+from market.models import PairSymbol, Trade, Order
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +48,11 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
     margin_enable = serializers.SerializerMethodField()
 
     def get_price(self, symbol: PairSymbol):
+        last_trades = self.context.get('last_trades')
+        if last_trades:
+            last_trade_price = last_trades.get(symbol.id)
+            return last_trade_price or None
+
         last_trade = Trade.get_last(symbol=symbol)
         if last_trade:
             return last_trade.format_values()['price']
@@ -59,13 +63,19 @@ class SymbolBreifStatsSerializer(serializers.ModelSerializer):
     def get_margin_enable(self, pair_symbol: PairSymbol):
         return pair_symbol.base_asset.symbol == Asset.USDT and pair_symbol.asset.margin_enable
 
-    @staticmethod
-    def get_change_value_pairs(symbol: PairSymbol):
+    def get_change_value_pairs(self, symbol: PairSymbol):
+        previous_trades = self.context.get('previous_trades')
+        last_trades = self.context.get('last_trades')
+        if previous_trades and last_trades:
+            previous_trade_price = previous_trades.get(symbol.id)
+            last_trade_price = last_trades.get(symbol.id)
+            if not (previous_trade_price and last_trade_price):
+                return None, None
+            return last_trade_price, previous_trade_price
+
         previous_trade = Trade.get_last(symbol=symbol, max_datetime=timezone.now() - timedelta(hours=24))
-        if not previous_trade:
-            return None, None
         last_trade = Trade.get_last(symbol=symbol)
-        if not last_trade:
+        if not (previous_trade and last_trade):
             return None, None
         return last_trade.price, previous_trade.price
 
@@ -118,6 +128,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
+            side=Order.BUY,
         ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum('amount'))['total_amount']
         if total_amount:
             return decimal_to_str(floor_precision(total_amount, symbol.step_size))
@@ -127,6 +138,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
+            side=Order.BUY,
         ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum('base_amount'))['total_amount']
         if total_amount:
             return decimal_to_str(floor_precision(total_amount))

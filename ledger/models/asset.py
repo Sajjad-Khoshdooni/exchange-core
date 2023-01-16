@@ -21,41 +21,15 @@ class LiveAssetManager(models.Manager):
         return super().get_queryset().filter(enable=True)
 
 
-class CandidAssetManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().exclude(enable=False, candidate=False)
-
-
 class Asset(models.Model):
     IRT = 'IRT'
     USDT = 'USDT'
     SHIB = 'SHIB'
 
-    HEDGE_NONE = ''
-    HEDGE_BINANCE_FUTURE = 'binance-future'
-    HEDGE_BINANCE_SPOT = 'binance-spot'
-
-    HEDGE_KUCOIN_FUTURE = 'kucoin-future'
-    HEDGE_KUCOIN_SPOT = 'kucoin-spot'
-
-    HEDGE_MEXC_SPOT = 'mexc-spot'
-    HEDGE_MEXC_FUTURES = 'mexc-future'
-
-    HEDGE_METHOD_CHOICE = (
-        (HEDGE_KUCOIN_SPOT, HEDGE_KUCOIN_SPOT),
-        (HEDGE_KUCOIN_FUTURE, HEDGE_KUCOIN_FUTURE),
-        (HEDGE_BINANCE_SPOT, HEDGE_BINANCE_SPOT),
-        (HEDGE_BINANCE_FUTURE, HEDGE_BINANCE_FUTURE),
-        (HEDGE_MEXC_SPOT, HEDGE_MEXC_SPOT),
-        (HEDGE_MEXC_FUTURES, HEDGE_MEXC_FUTURES),
-        (HEDGE_NONE, HEDGE_NONE)
-    )
-
     PRECISION = 8
 
     objects = models.Manager()
     live_objects = LiveAssetManager()
-    candid_objects = CandidAssetManager()
 
     name = models.CharField(max_length=32, blank=True)
     name_fa = models.CharField(max_length=32, blank=True)
@@ -81,8 +55,7 @@ class Asset(models.Model):
     pin_to_top = models.BooleanField(default=False)
 
     trade_enable = models.BooleanField(default=True)
-    hedge_method = models.CharField(max_length=32, default=HEDGE_BINANCE_FUTURE, choices=HEDGE_METHOD_CHOICE, blank=True)
-    candidate = models.BooleanField(default=False)
+    hedge = models.BooleanField(default=True)
 
     margin_enable = models.BooleanField(default=False)
     spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.PROTECT, null=True, blank=True)
@@ -171,10 +144,6 @@ class Asset(models.Model):
         else:
             return self.symbol
 
-    def get_hedger(self):
-        from provider.exchanges import ExchangeHandler
-        return ExchangeHandler.get_handler(name=self.hedge_method)
-
 
 class AssetSerializer(serializers.ModelSerializer):
     class Meta:
@@ -196,7 +165,7 @@ class AssetSerializerMini(serializers.ModelSerializer):
         return get_precision(asset.trade_quantity_step)
 
     def get_logo(self, asset: Asset):
-        return settings.HOST_URL + '/static/coins/%s.png' % asset.symbol
+        return settings.MINIO_STORAGE_STATIC_URL + '/coins/%s.png' % asset.symbol
 
     def get_original_symbol(self, asset: Asset):
         return asset.original_symbol or asset.symbol
@@ -220,4 +189,3 @@ class CoinField(serializers.CharField):
             return
         else:
             return Asset.get(symbol=data)
-

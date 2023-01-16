@@ -3,13 +3,12 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.views.generic import TemplateView
-from yekta_config.config import config
-
-from accounts.views.dashboard import dashboard
-from rest_framework import permissions
-from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
+from rest_framework import permissions
 
+from accounts.views import HealthView
+from accounts.views.dashboard import dashboard
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -26,13 +25,14 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/v1/health/ready/', HealthView.as_view()),
     path('api/v1/accounts/', include('accounts.urls')),
     path('api/v1/media/', include('multimedia.urls')),
     path('api/v1/finance/', include(('financial.urls', 'financial'), 'finance', )),
     path('api/v1/market/', include('market.urls')),
-    path('api/v1/collector/', include('collector.urls')),
     path('api/v1/stake/', include('stake.urls')),
     path('api/v1/gamify/', include('gamify.urls')),
+    path('api/v1/experiment/', include('experiment.urls')),
     path('api/', include('ledger.urls')),
     path('hijack/', include('hijack.urls')),
     path('robots.txt', TemplateView.as_view(template_name="robots.txt", content_type="text/plain")),
@@ -40,7 +40,7 @@ urlpatterns = [
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-if config('STAGING', default=False, cast=bool):
+if settings.STAGING:
     urlpatterns += [
         re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0),
             name='schema-json'),

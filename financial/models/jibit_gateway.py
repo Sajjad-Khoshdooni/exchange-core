@@ -2,8 +2,8 @@ import requests
 from django.conf import settings
 from django.core.cache import caches
 from rest_framework.reverse import reverse
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
+from decouple import config
 
 from financial.models import Gateway, BankCard, PaymentRequest, Payment
 from financial.models.gateway import GatewayFailed, logger
@@ -15,7 +15,7 @@ JIBIT_GATEWAY_ACCESS_KEY = 'jibit_gateway_key'
 
 
 class JibitGateway(Gateway):
-    BASE_URL = 'https://napi.jibit.ir/ppg'
+    BASE_URL = 'https://napi.jibit.cloud/ppg'
 
     def _get_token(self, force_renew: bool = False):
         if not force_renew:
@@ -26,8 +26,8 @@ class JibitGateway(Gateway):
         resp = requests.post(
             url=self.BASE_URL + '/v3/tokens',
             json={
-                'apiKey': secret('JIBIT_PAYMENT_API_KEY'),
-                'secretKey': secret('JIBIT_PAYMENT_SECRET_KEY'),
+                'apiKey': config('JIBIT_PAYMENT_API_KEY'),
+                'secretKey': config('JIBIT_PAYMENT_SECRET_KEY'),
             },
             timeout=30,
             # proxies={
@@ -91,7 +91,7 @@ class JibitGateway(Gateway):
 
     @classmethod
     def get_payment_url(cls, authority: str):
-        return 'https://napi.jibit.ir/ppg/v3/purchases/{}/payments'.format(authority)
+        return 'https://napi.jibit.cloud/ppg/v3/purchases/{}/payments'.format(authority)
 
     def _verify(self, payment: Payment):
         payment_request = payment.payment_request
@@ -109,15 +109,13 @@ class JibitGateway(Gateway):
         if status in ('SUCCESSFUL', 'ALREADY_VERIFIED'):
             with WalletPipeline() as pipeline:
                 payment.status = DONE
-                payment.ref_status = status
-                payment.save()
+                payment.save(update_fields=['status', 'ref_status'])
 
                 payment.accept(pipeline)
 
         else:
             payment.status = CANCELED
-            payment.ref_status = status
-            payment.save()
+            payment.save(update_fields=['status', 'ref_status'])
 
     class Meta:
         proxy = True

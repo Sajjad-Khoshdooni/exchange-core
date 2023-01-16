@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Case, When, Sum, F
+from django.db.models import Case, When, Sum, F, IntegerField
 
 from financial.validators import iban_validator
 
@@ -16,7 +16,8 @@ class Account(models.Model):
         return self.accounttransaction_set.annotate(
             real=Case(
                 When(type='w', then=-F('amount')),
-                default=F('amount')
+                default=F('amount'),
+                output_field=IntegerField()
             )
         ).aggregate(s=Sum('real'))['s'] or 0
 

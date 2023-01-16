@@ -3,14 +3,18 @@ from decimal import Decimal
 from typing import Union
 from uuid import uuid4
 
+from decouple import config
+from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import UniqueConstraint, Q
-from yekta_config.config import config
+from django.utils import timezone
 
 from accounts.models import Account, Notification
 from accounts.utils import email
+from accounts.utils.admin import url_to_edit_object
 from accounts.utils.push_notif import send_push_notif_to_user
+from accounts.utils.telegram import send_support_message
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
 from ledger.utils.fields import get_amount_field, get_address_field
@@ -22,10 +26,16 @@ logger = logging.getLogger(__name__)
 
 
 class Transfer(models.Model):
-    PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
-    SELF, INTERNAL, BINANCE, KUCOIN = 'self', 'internal', 'binance', 'kucoin'
+    INIT, PROCESSING, PENDING, CANCELED, DONE = 'init', 'process', 'pending', 'canceled', 'done'
+    STATUS_CHOICES = (INIT, INIT), (PROCESSING, PROCESSING), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)
+
+    SELF, INTERNAL, PROVIDER, MANUAL = 'self', 'internal', 'provider', 'manual'
+    SOURCE_CHOICES = (SELF, SELF), (INTERNAL, INTERNAL), (PROVIDER, PROVIDER), (MANUAL, MANUAL)
 
     created = models.DateTimeField(auto_now_add=True)
+    accepted_datetime = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    finished_datetime = models.DateTimeField(null=True, blank=True)
+
     group_id = models.UUIDField(default=uuid4, db_index=True)
     deposit_address = models.ForeignKey('ledger.DepositAddress', on_delete=models.CASCADE, null=True, blank=True)
     network = models.ForeignKey('ledger.Network', on_delete=models.CASCADE)
@@ -39,7 +49,7 @@ class Transfer(models.Model):
     status = models.CharField(
         default=PROCESSING,
         max_length=8,
-        choices=[(PROCESSING, PROCESSING), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
+        choices=STATUS_CHOICES,
         db_index=True
     )
 
@@ -50,21 +60,18 @@ class Transfer(models.Model):
     out_address = get_address_field()
     memo = models.CharField(max_length=64, blank=True)
 
-    is_fee = models.BooleanField(default=False)
-
     source = models.CharField(
         max_length=8,
         default=SELF,
-        choices=((SELF, SELF), (INTERNAL, INTERNAL), (BINANCE, BINANCE), (KUCOIN, KUCOIN))
+        choices=SOURCE_CHOICES
     )
-    provider_transfer = models.OneToOneField(to='provider.ProviderTransfer', on_delete=models.PROTECT, null=True,
-                                             blank=True)
-    handling = models.BooleanField(default=False)
-
-    hidden = models.BooleanField(default=False)
 
     irt_value = get_amount_field(default=Decimal(0))
     usdt_value = get_amount_field(default=Decimal(0))
+
+    comment = models.TextField(blank=True, verbose_name='نظر')
+
+    risks = models.JSONField(null=True, blank=True)
 
     @property
     def asset(self):
@@ -73,6 +80,10 @@ class Transfer(models.Model):
     @property
     def total_amount(self):
         return self.amount + self.fee_amount
+
+    @property
+    def network_asset(self):
+        return NetworkAsset.objects.get(network=self.network, asset=self.asset)
 
     def get_explorer_link(self) -> str:
         if not self.trx_hash:
@@ -84,10 +95,6 @@ class Transfer(models.Model):
         return self.network.explorer_link.format(hash=self.trx_hash)
 
     def build_trx(self, pipeline: WalletPipeline):
-        if self.hidden or (self.deposit and self.is_fee):
-            logger.info(f'Creating Trx for transfer id: {self.id} ignored.')
-            return
-
         asset = self.wallet.asset
         out_wallet = asset.get_wallet(Account.out())
 
@@ -138,8 +145,8 @@ class Transfer(models.Model):
 
         group_id = uuid4()
 
-        price_usdt = get_trading_price_usdt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL)
-        price_irt = get_trading_price_irt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL)
+        price_usdt = get_trading_price_usdt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL) or 0
+        price_irt = get_trading_price_irt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL) or 0
 
         with WalletPipeline() as pipeline:
             pipeline.new_trx(
@@ -203,11 +210,12 @@ class Transfer(models.Model):
 
         commission = network_asset.withdraw_fee
 
-        price_usdt = get_trading_price_usdt(coin=wallet.asset.symbol, raw_price=True, side=SELL)
-        price_irt = get_trading_price_irt(coin=wallet.asset.symbol, raw_price=True, side=SELL)
+        price_usdt = get_trading_price_usdt(coin=wallet.asset.symbol, raw_price=True, side=SELL) or 0
+        price_irt = get_trading_price_irt(coin=wallet.asset.symbol, raw_price=True, side=SELL) or 0
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             transfer = Transfer.objects.create(
+                status=Transfer.INIT,
                 wallet=wallet,
                 network=network,
                 amount=amount - commission,
@@ -222,15 +230,23 @@ class Transfer(models.Model):
 
             pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
 
-        from ledger.tasks import create_withdraw
-        create_withdraw(transfer.id)
+        from ledger.utils.withdraw_verify import auto_withdraw_verify
+
+        if auto_withdraw_verify(transfer):
+            transfer.status = Transfer.PROCESSING
+            transfer.save(update_fields=['status'])
+
+        send_support_message(
+            message='New withdraw %s' % transfer,
+            link=url_to_edit_object(transfer)
+        )
 
         return transfer
 
     def alert_user(self):
         user = self.wallet.account.user
 
-        if self.status == Transfer.DONE and not self.hidden and user and user.is_active:
+        if self.status == Transfer.DONE and user and user.is_active:
             sent_amount = self.asset.get_presentation_amount(self.amount)
             user_email = self.wallet.account.user.email
             if self.deposit:
@@ -260,20 +276,39 @@ class Transfer(models.Model):
                         'wallet_asset': self.wallet.asset.symbol,
                         'withdraw_address': self.out_address,
                         'trx_hash': self.trx_hash,
-                        'brand': config('BRAND'),
-                        'panel_url': config('PANEL_URL'),
+                        'brand': settings.BRAND,
+                        'panel_url': settings.PANEL_URL,
                         'logo_elastic_url': config('LOGO_ELASTIC_URL'),
                     }
                 )
 
+    def accept(self, tx_id: str):
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
+            self.status = self.DONE
+            self.finished_datetime = timezone.now()
+            self.trx_hash = tx_id
+            self.save(update_fields=['status', 'trx_hash', 'finished_datetime'])
+
+            pipeline.release_lock(self.group_id)
+            self.build_trx(pipeline)
+
+        self.alert_user()
+
+    def reject(self):
+        with WalletPipeline() as pipeline:
+            pipeline.release_lock(self.group_id)
+            self.status = self.CANCELED
+            self.finished_datetime = timezone.now()
+            self.save(update_fields=['status', 'finished_datetime'])
+
     class Meta:
         constraints = [
-            UniqueConstraint(
-                fields=["trx_hash", "network", "deposit"],
-                name="unique_transfer_tx_hash_network",
-                condition=Q(status__in=["pending", "done"]),
-            ),
             CheckConstraint(check=Q(amount__gte=0, fee_amount__gte=0), name='check_ledger_transfer_amounts', ),
+            UniqueConstraint(
+                fields=('trx_hash', 'network', 'wallet', 'deposit_address', 'out_address'),
+                condition=Q(trx_hash__isnull=False, source='self'),
+                name='unique_ledger_transfer_trx_hash_addresses',
+            ),
         ]
 
     def __str__(self):

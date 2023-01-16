@@ -4,8 +4,8 @@ import requests
 from celery import shared_task
 from django.conf import settings
 from kavenegar import KavenegarAPI, APIException, HTTPException
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
+from decouple import config
 
 from accounts.verifiers.finotech import token_cache
 
@@ -17,13 +17,13 @@ SMS_IR_TOKEN_KEY = 'sms-ir-token'
 
 @shared_task(queue='sms')
 def send_message_by_kavenegar(phone: str, template: str, token: str, send_type: str = 'sms'):
-    if settings.DEBUG_OR_TESTING:
+    if settings.DEBUG_OR_TESTING_OR_STAGING:
         return
 
     if settings.BRAND_EN != 'Raastin':
         template = settings.BRAND_EN.lower() + '-' + template
 
-    api_key = settings.KAVENEGAR_KEY
+    api_key = config('KAVENEGAR_KEY')
 
     try:
         api = KavenegarAPI(apikey=api_key)
@@ -51,7 +51,7 @@ def get_sms_ir_token():
         timeout=15,
         data={
             'UserApiKey': config('SMS_IR_API_KEY'),
-            'SecretKey': secret('SMS_IR_API_SECRET'),
+            'SecretKey': config('SMS_IR_API_SECRET'),
         }
     )
 
@@ -75,11 +75,49 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
         url='https://RestfulSms.com/api/UltraFastSend',
         json={
             "ParameterArray": param_array,
-            "Mobile":phone,
+            "Mobile": phone,
             "TemplateId": template
         },
         headers={
             'x-sms-ir-secure-token': get_sms_ir_token()
+        }
+    )
+
+    data = resp.json()
+    print(data)
+
+    if not resp.ok:
+        return
+
+    if not data['IsSuccessful']:
+        logger.error('Failed to send sms via sms.ir', extra={
+            'phone': phone,
+            'template': template,
+            'params': params,
+            'data': data
+        })
+
+        return
+
+    return data
+
+
+@shared_task(queue='sms')
+def send_message_by_sms_ir2(phone: str, template: str, params: dict):
+    param_array = [
+        {"name": key, "value": value} for (key, value) in params.items()
+    ]
+
+    resp = requests.post(
+        url='https://api.sms.ir/v1/send/verify',
+        json={
+            "mobile": phone,
+            "templateId": template,
+            "parameters": param_array,
+        },
+        headers={
+            'X-API-KEY': secret('SMS_IR2_API_KEY'),
+            'ACCEPT': 'application/json'
         }
     )
 
@@ -88,7 +126,7 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
 
     data = resp.json()
 
-    if not data['IsSuccessful']:
+    if data['status'] == 0:
         logger.error('Failed to send sms via sms.ir', extra={
             'phone': phone,
             'template': template,

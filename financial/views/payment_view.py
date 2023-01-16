@@ -8,6 +8,7 @@ from accounts.permissions import IsBasicVerified
 from financial.models import BankCard, PaymentRequest, Payment
 from financial.models.bank_card import BankCardSerializer
 from financial.models.gateway import GatewayFailed
+from ledger.utils.precision import humanize_number
 
 
 class PaymentRequestSerializer(serializers.ModelSerializer):
@@ -30,6 +31,12 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
 
         from financial.models import Gateway
         gateway = Gateway.get_active(user)
+
+        if amount < gateway.min_deposit_amount:
+            raise ValidationError('حداقل میزان واریز {} تومان است.'.format(humanize_number(gateway.min_deposit_amount)))
+
+        if amount > gateway.max_deposit_amount:
+            raise ValidationError('حداکثر میزان واریز {} تومان است.'.format(humanize_number(gateway.max_deposit_amount)))
 
         try:
             return gateway.create_payment_request(bank_card=bank_card, amount=amount, source=source)

@@ -1,10 +1,11 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.db import models
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils import timezone
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import Account
 from accounts.models import Notification
@@ -45,13 +46,11 @@ class PaymentRequest(models.Model):
 
 
 class Payment(models.Model):
-    APP_DEEP_LINK = config('APP_DEEP_LINK')
-    PANEL_URL = config('PANEL_URL')
     SUCCESS_URL = '/checkout/success'
     FAIL_URL = '/checkout/fail'
     SUCCESS_PAYMENT_FAIL_FAST_bUY = '/checkout/fail_trade'
 
-    created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(auto_now_add=True, db_index=True)
     modified = models.DateTimeField(auto_now=True)
 
     PENDING, SUCCESS, FAIL = 'pending', 'success', 'fail'
@@ -85,10 +84,10 @@ class Payment(models.Model):
                 template=email.SCOPE_PAYMENT,
                 context={
                     'payment_amount': payment_amont,
-                    'brand': config('BRAND'),
-                    'panel_url': config('PANEL_URL'),
+                    'brand': settings.BRAND,
+                    'panel_url': settings.PANEL_URL,
                     'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-                         }
+                }
             )
 
     def accept(self, pipeline: WalletPipeline):
@@ -123,11 +122,11 @@ class Payment(models.Model):
         if source == desktop:
             if self.status == DONE:
                 if fast_by_token and fast_by_token.status != FastBuyToken.DONE:
-                    return self.PANEL_URL + self.SUCCESS_PAYMENT_FAIL_FAST_bUY
+                    return settings.PANEL_URL + self.SUCCESS_PAYMENT_FAIL_FAST_bUY
                 else:
-                    return self.PANEL_URL + self.SUCCESS_URL
+                    return settings.PANEL_URL + self.SUCCESS_URL
             else:
-                return self.PANEL_URL + self.FAIL_URL
+                return settings.PANEL_URL + self.FAIL_URL
         else:
             if self.status == DONE:
                 if fast_by_token and fast_by_token.status != FastBuyToken.DONE:

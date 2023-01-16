@@ -2,6 +2,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import ModelViewSet
 
+from accounts.models import User
 from financial.models.bank_card import BankCardSerializer, BankCard
 
 
@@ -14,6 +15,9 @@ class BankCardView(ModelViewSet):
         return BankCard.live_objects.filter(user=self.request.user, deleted=False)
 
     def perform_create(self, serializer):
+        if self.request.user.level < User.LEVEL2:
+            raise ValidationError('برای افزودن شماره کارت ابتدا احراز هویت کنید.')
+
         serializer.save(user=self.request.user)
 
     def perform_destroy(self, bank_card: BankCard):

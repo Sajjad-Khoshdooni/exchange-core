@@ -1,24 +1,25 @@
+import json
+
 import requests
+from decouple import config
 from django.conf import settings
 from oauth2client.service_account import ServiceAccountCredentials
-from yekta_config.config import config
 
 from accounts.models import User
 
 
 def _get_access_token():
-    SCOPES = ['https://www.googleapis.com/auth/firebase.messaging']
+    scopes = ['https://www.googleapis.com/auth/firebase.messaging']
+    firebase_json = json.loads(config('FIREBASE_SECRET_JSON'))
 
-    file_path = config('FIREBASE_SECRET_FILE_PATH')
-
-    credentials = ServiceAccountCredentials.from_json_keyfile_name(file_path, SCOPES)
+    credentials = ServiceAccountCredentials._from_parsed_json_keyfile(firebase_json, scopes)
     access_token_info = credentials.get_access_token()
 
     return access_token_info.access_token
 
 
 def send_push_notif_to_user(user: User, title: str, body: str, image: str = None, link: str = None):
-    if settings.DEBUG_OR_TESTING:
+    if settings.DEBUG_OR_TESTING_OR_STAGING:
         return
 
     from accounts.models import FirebaseToken
@@ -87,7 +88,7 @@ def alert_shib_prize_to_signup(token: str):
         token=token,
         title='تا ۲۰۰,۰۰۰ شیبا هدیه بگیرید',
         body=to_signup_message.strip(),
-        image=settings.HOST_URL + '/static/ads/shiba-prize.png',
+        image=settings.MINIO_STORAGE_STATIC_URL + '/ads/shiba-prize.png',
         link='https://raastin.com/auth/register?rewards=true&utm_source=push&utm_medium=push&utm_campaign=signup'
     )
 
@@ -130,10 +131,10 @@ to_trade_message = """
 """
 
 
-IMAGE_200K_SHIB = settings.HOST_URL + '/static/ads/shiba-prize.png'
-
 
 def alert_shib_prize_to_engagement(user: User):
+    IMAGE_200K_SHIB = settings.MINIO_STORAGE_STATIC_URL + '/ads/shiba-prize.png'
+
     return send_push_notif_to_user(
         user=user,
         title='تا ۲۰۰,۰۰۰ شیبا هدیه بگیرید',

@@ -1,17 +1,17 @@
 import requests
 from django.conf import settings
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
+from decouple import config
 
 
 class RequestWithdraw:
     def __init__(self):
         self.header = {
-            'Authorization': secret('BLOCKLINK_TOKEN')
+            'Authorization': config('BLOCKLINK_TOKEN')
         }
 
     def withdraw_from_hot_wallet(self, receiver_address, amount, network, asset, transfer_id):
-        if settings.DEBUG_OR_TESTING:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             return
 
         data = {
@@ -22,6 +22,6 @@ class RequestWithdraw:
             'requester_id': transfer_id  # todo: use transfer_id
         }
 
-        url = config('BLOCKLINK_BASE_URL') + '/api/v1/withdraw/'
+        url = config('BLOCKLINK_BASE_URL', default='https://blocklink.raastin.com') + '/api/v1/withdraw/'
 
-        return requests.post(data=data, url=url, headers=self.header)
+        return requests.post(data=data, url=url, headers=self.header, timeout=15)

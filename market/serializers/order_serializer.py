@@ -28,6 +28,7 @@ class OrderSerializer(serializers.ModelSerializer):
     filled_price = serializers.SerializerMethodField()
     trigger_price = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
+    allow_cancel = serializers.SerializerMethodField()
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
@@ -37,6 +38,10 @@ class OrderSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        user = self.context['request'].user
+        if not settings.TRADE_ENABLE or not user.can_trade:
+            raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
+
         symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
         if validated_data['fill_type'] == Order.LIMIT:
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
@@ -151,10 +156,15 @@ class OrderSerializer(serializers.ModelSerializer):
         price = Decimal((fills_value or 0)) / amount
         return decimal_to_str(floor_precision(price, order.symbol.tick_size))
 
+    def get_allow_cancel(self, instance: Order):
+        if instance.wallet.variant:
+            return False
+        return True
+
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
-                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price')
+                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel')
         read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},

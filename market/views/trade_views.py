@@ -6,7 +6,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.request import Request
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from accounts.throttle import BursApiRateThrottle, SustaineApiRatethrottle
+from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from market.models import Trade
 from market.serializers.trade_serializer import TradeSerializer, AccountTradeSerializer
 
@@ -38,11 +38,14 @@ class AccountTradeHistoryView(ListAPIView):
         market = self.request.query_params.get('market')
         if not market:
             return Trade.objects.filter(
-                account=self.request.user.account
+                account=self.request.user.account,
+                status=Trade.DONE,
             ).select_related('symbol', 'symbol__asset', 'symbol__base_asset', 'order__wallet').order_by('-created')
 
         return Trade.objects.filter(
-            account=self.request.user.account, maker_order__wallet__market=market
+            account=self.request.user.account,
+            maker_order__wallet__market=market,
+            status=Trade.DONE,
         ).select_related('symbol', 'symbol__asset', 'symbol__base_asset', 'order__wallet').order_by('-created')
 
     def get_serializer_context(self):
@@ -70,8 +73,8 @@ class TradeHistoryView(ListAPIView):
     authentication_classes = ()
     permission_classes = ()
     pagination_class = LimitOffsetPagination
-    throttle_classes = [BursApiRateThrottle, SustaineApiRatethrottle]
-    queryset = Trade.objects.filter(is_maker=True).exclude(trade_source=Trade.OTC).order_by('-created')
+    throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
+    queryset = Trade.objects.filter(is_maker=True, status=Trade.DONE).exclude(trade_source=Trade.OTC).order_by('-created')
     serializer_class = TradeSerializer
 
     filter_backends = [DjangoFilterBackend]

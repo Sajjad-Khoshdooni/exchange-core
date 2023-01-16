@@ -10,8 +10,7 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.email import SCOPE_MARGIN_LIQUIDATION_FINISHED
 from accounts.utils.telegram import send_support_message
 from ledger.margin.margin_info import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD, \
-    MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD
-from ledger.margin.margin_info import MarginInfo
+    MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD, get_bulk_margin_info
 from ledger.models import Wallet
 from ledger.models.margin import CloseRequest
 
@@ -25,8 +24,7 @@ def check_margin_level():
 
     status = 0
 
-    for account in accounts:
-        margin_info = MarginInfo.get(account)
+    for account, margin_info in get_bulk_margin_info(accounts).items():
         margin_level = margin_info.get_margin_level()
 
         logger.info('margin_level for account=%d is %s' % (account.id, margin_level))

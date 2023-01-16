@@ -9,14 +9,14 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from yekta_config import secret
+from decouple import config
 
 from accounts.models import Account
-from accounts.views.authentication import CustomTokenAuthentication
+from accounts.authentication import CustomTokenAuthentication
 
 
 def user_has_delegate_permission(user):
-    return str(user.id) in secret('DELEGATION_PERMITTED_USERS', '').split(',')
+    return str(user.id) in config('DELEGATION_PERMITTED_USERS', '').split(',')
 
 
 class DelegatedAccountMixin:
@@ -39,7 +39,7 @@ class InternalTokenObtainPairSerializer(serializers.Serializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['mask'] = serializers.IntegerField(required=True)
-        self.fields['variant'] = serializers.CharField(required=True)
+        self.fields['variant'] = serializers.CharField(required=True, allow_null=True)
 
     @classmethod
     def get_token(cls, user, mask=None, variant=None):

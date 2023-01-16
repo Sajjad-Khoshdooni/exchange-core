@@ -3,7 +3,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import ModelViewSet
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import User, FinotechRequest
 from accounts.utils.similarity import clean_persian_name
@@ -116,7 +116,7 @@ class BasicInfoSerializer(serializers.ModelSerializer):
 
         from accounts.tasks import basic_verify_user
 
-        if not settings.DEBUG_OR_TESTING:
+        if not settings.DEBUG_OR_TESTING_OR_STAGING:
             basic_verify_user.s(user.id).apply_async(countdown=60)
 
         return user

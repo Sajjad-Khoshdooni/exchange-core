@@ -4,10 +4,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from accounts.views.authentication import CustomTokenAuthentication
-from financial.models import PaymentRequest, BankCard
+from accounts.authentication import CustomTokenAuthentication
+from financial.models import BankCard
 from financial.views.payment_view import PaymentRequestSerializer
-from ledger.models import Asset
 from ledger.models.asset import CoinField
 from ledger.models.fast_buy_token import FastBuyToken
 from ledger.utils.price import get_price, SELL

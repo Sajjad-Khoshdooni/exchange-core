@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
-from yekta_config.config import config
+from decouple import config
 
 from accounts.models import User
 from accounts.utils.email import send_email_by_template
@@ -93,7 +93,7 @@ class EmailVerificationCode(models.Model):
             user=user,
         )
 
-        if settings.DEBUG_OR_TESTING:
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
             print('[OTP] code for %s is: %s' % (otp_code.email, otp_code.code))
             return
 
@@ -102,11 +102,12 @@ class EmailVerificationCode(models.Model):
         send_email_by_template(
             recipient=email,
             template=template,
-            context={'otp_code': otp_code.code,
-                     'brand': config('BRAND'),
-                     'panel_url': config('PANEL_URL'),
-                     'logo_elastic_url': config('LOGO_ELASTIC_URL'),
-                     }
+            context={
+                'otp_code': otp_code.code,
+                'brand': settings.BRAND,
+                'panel_url': settings.PANEL_URL,
+                'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+            }
         )
 
     def set_code_used(self):

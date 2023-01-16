@@ -24,7 +24,6 @@ from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_pri
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
 from market.models.referral_trx import ReferralTrx
-from provider.models import ProviderOrder
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +178,7 @@ class Order(models.Model):
         if gap is None and last_trade_ts:
             spread_step = (time() - last_trade_ts) // 600
             gap = {
-                0: (get_spread(coin, side) / 100), 1: '0.0015', 2: '0.0008'
+                0: (get_spread(coin, side, base_coin=base_symbol) / 100), 1: '0.0015', 2: '0.0008'
             }.get(spread_step, '0.0008')
             boundary_price = get_trading_price(coin, side, gap=Decimal(gap))
             if spread_step != 0:
@@ -369,10 +368,12 @@ class Order(models.Model):
                     matching_order.save(update_fields=['status'])
 
             if unfilled_amount == 0:
-                with transaction.atomic():
-                    Trade.objects.filter(order_id=self.id).update(order_status=Order.FILLED)
-                    self.status = Order.FILLED
-                    self.save(update_fields=['status'])
+                self.status = Order.FILLED
+
+                if self.fill_type == Order.MARKET:
+                    pipeline.release_lock(self.group_id)
+
+                self.save(update_fields=['status'])
                 break
 
         if to_hedge_amount != 0:
@@ -382,15 +383,14 @@ class Order(models.Model):
                 to_hedge_amount = -to_hedge_amount
                 side = Order.SELL
 
-            placed_hedge_order = ProviderOrder.try_hedge_for_new_order(
+            from ledger.utils.provider import get_provider_requester, TRADE
+            get_provider_requester().try_hedge_new_order(
+                request_id='taker:%s' % self.id,
                 asset=self.wallet.asset,
                 side=side,
                 amount=to_hedge_amount,
-                scope=ProviderOrder.TRADE
+                scope=TRADE
             )
-
-            if not placed_hedge_order:
-                raise Exception('failed placing hedge order')
 
         if self.fill_type == Order.MARKET and self.status == Order.NEW:
             self.status = Order.CANCELED

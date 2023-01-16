@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from django.db import models
 from django.db.models import CheckConstraint, Q
+from django.utils import timezone
 
 from accounts.models import Account
 from ledger.models import Trx, Asset, Wallet
@@ -44,18 +45,28 @@ class Prize(models.Model):
 
         if self.achievement.voucher:
             market = Wallet.VOUCHER
-            expiration = self.account.user.date_joined + timedelta(days=30)
+            expiration = self.get_voucher_expiration(self.account)
         else:
             market = Wallet.SPOT
             expiration = None
 
+        receiver = self.asset.get_wallet(self.account, market=market, expiration=expiration)
+
         pipeline.new_trx(
             group_id=self.group_id,
             sender=self.asset.get_wallet(system),
-            receiver=self.asset.get_wallet(self.account, market=market, expiration=expiration),
+            receiver=receiver,
             amount=self.amount,
             scope=Trx.PRIZE
         )
+
+        if market == Wallet.VOUCHER and receiver.expiration < expiration:
+            receiver.expiration = expiration
+            receiver.save(update_fields=['expiration'])
+
+    @classmethod
+    def get_voucher_expiration(cls, account: Account):
+        return timezone.now() + timedelta(days=30)
 
     def __str__(self):
         return '%s %s %s' % (self.account, self.amount, self.asset)

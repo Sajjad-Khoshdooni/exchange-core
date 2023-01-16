@@ -4,12 +4,12 @@ from gamify import models
 
 @admin.register(models.MissionJourney)
 class MissionJourneyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'active')
-    list_editable = ('active', )
+    list_display = ('name', 'active', 'default')
+    list_editable = ('active', 'default')
 
 
 class TaskInline(admin.TabularInline):
-    fields = ('scope', 'type', 'max', 'title', 'link', 'description', 'level', 'order')
+    fields = ('scope', 'type', 'max', 'title', 'link', 'app_link', 'description', 'level', 'order')
     model = models.Task
     extra = 0
 

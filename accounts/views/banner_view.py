@@ -19,11 +19,21 @@ class TaskSerializer(serializers.ModelSerializer):
 class BannerAlertAPIView(APIView):
     def get(self, request):
 
+        # return Response({
+        #     'banner': {
+        #         'text': 'کاربران گرامی، به خاطر به‌روز‌رسانی سیستم امکان سفارش‌گذاری تا ساعت ۱۸ امروز وجود ندارد.',
+        #         'btn_link': None,
+        #         'btn_title': '',
+        #         'level': 'error'
+        #     }
+        # })
+
         return Response({
             'banner': self.get_alert_condition()
         })
 
     def get_alert_condition(self):
+        return
         account = self.request.user.account
         task = None
 

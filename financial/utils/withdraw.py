@@ -2,13 +2,14 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
+from typing import Union
 
 import pytz
 import requests
 from django.core.cache import caches
 from django.utils import timezone
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
+from decouple import config
 
 from financial.models import BankAccount, FiatWithdrawRequest, Gateway, Payment, PaymentRequest
 from financial.utils.withdraw_limit import is_holiday, time_in_range
@@ -17,6 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 class ServerError(Exception):
+    pass
+
+
+class ProviderError(Exception):
     pass
 
 
@@ -32,7 +37,8 @@ class Wallet:
 class Withdraw:
     tracking_id: str
     status: str
-    receive_datetime: datetime
+    receive_datetime: Union[datetime, None]
+    message: str = ''
 
 
 class FiatWithdraw:
@@ -87,7 +93,7 @@ class PayirChannel(FiatWithdraw):
         request_kwargs = {
             'url': url,
             'timeout': timeout,
-            'headers': {'Authorization': 'Bearer ' + secret('PAY_IR_TOKEN')},
+            'headers': {'Authorization': 'Bearer ' + config('PAY_IR_TOKEN')},
             # 'proxies': {
             #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
             #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -226,7 +232,7 @@ class ZibalChannel(FiatWithdraw):
         request_kwargs = {
             'url': url,
             'timeout': timeout,
-            'headers': {'Authorization': 'Bearer ' + secret('ZIBAL_TOKEN')},
+            'headers': {'Authorization': 'Bearer ' + config('ZIBAL_TOKEN')},
             # 'proxies': {
             #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
             #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -269,7 +275,9 @@ class ZibalChannel(FiatWithdraw):
         )
 
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
-        if receiver.bank in ['MELLI', 'SAMAN', 'EGHTESAD_NOVIN', 'PARSIAN', 'AYANDEH']:
+        paya_banks = []
+
+        if receiver.bank not in paya_banks:
             checkout_delay = -1
             status = FiatWithdrawRequest.DONE
         else:
@@ -283,19 +291,36 @@ class ZibalChannel(FiatWithdraw):
                 'bankAccount': receiver.iban,
                 'uniqueCode': request_id,
                 'wageFeeMode': 2,
-                'checkoutDelay': checkout_delay,
+                'checkoutDelay': 0,
                 'showTime': True
             })
         except ServerError as e:
             resp = e.args[0]
-            if 'این درخواست تسویه قبلا ثبت شده است' in resp.get('message', ''):
+            message = resp.get('message', '')
+
+            if 'این درخواست تسویه قبلا ثبت شده است' in message:
                 return Withdraw(
                     tracking_id='',
-                    status=FiatWithdrawRequest.DONE,
-                    receive_datetime=timezone.now() + timedelta(hours=3)
+                    status=FiatWithdrawRequest.PENDING,
+                    receive_datetime=timezone.now() + timedelta(hours=3),
+                    message=message,
+                )
+            elif 'این حساب مسدود شده و یا قابلیت واریز ندارد' in message:
+                return Withdraw(
+                    tracking_id='',
+                    status=FiatWithdrawRequest.CANCELED,
+                    receive_datetime=None,
+                    message=message,
+                )
+            elif 'باقی مانده سقف روزانه تسویه به این شبا' in message:
+                return Withdraw(
+                    tracking_id='',
+                    status=FiatWithdrawRequest.CANCELED,
+                    receive_datetime=None,
+                    message=message,
                 )
             else:
-                raise
+                raise ProviderError(message)
 
         receive_datetime = datetime.strptime(data['predictedCheckoutDate'], '%Y/%m/%d-%H:%M:%S')
 
@@ -307,7 +332,8 @@ class ZibalChannel(FiatWithdraw):
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
         data = self.collect_api(f'/v1/report/checkout/inquire', method='POST', data={
-            "checkoutRequestId": str(provider_id)
+            "walletId": self.get_wallet_id(),
+            'uniqueCode': str(request_id)
         })
 
         if data['type'] == 'canceledCheckout':
@@ -411,8 +437,8 @@ class JibitChannel(FiatWithdraw):
         resp = requests.post(
             url=cls.BASE_URL + '/v2/tokens/generate',
             json={
-                'apiKey': secret('JIBIT_GATEWAY-API_KEY'),
-                'secretKey': secret('JIBIT_GATEWAY_API_SECRET'),
+                'apiKey': config('JIBIT_GATEWAY-API_KEY'),
+                'secretKey': config('JIBIT_GATEWAY_API_SECRET'),
             },
             timeout=30,
             # proxies={
@@ -478,7 +504,7 @@ class JibitChannel(FiatWithdraw):
             id=wallet_id,
             name='main',
             balance=data['balance'] // 10,
-            free=data['settleableBalance'] //10
+            free=data['settleableBalance'] // 10
         )
 
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:

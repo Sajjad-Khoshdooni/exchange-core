@@ -6,8 +6,8 @@ import requests
 from django.core.cache import caches
 from django.utils import timezone
 from urllib3.exceptions import ReadTimeoutError
-from yekta_config import secret
-from yekta_config.config import config
+from decouple import config
+from decouple import config
 
 from accounts.models import FinotechRequest
 from accounts.utils.validation import gregorian_to_jalali_date_str
@@ -23,10 +23,11 @@ JIBIT_TOKEN_KEY = 'jibit-token'
 class Response:
     data: dict
     success: bool = True
+    status_code: int = 200
 
 
 class JibitRequester:
-    BASE_URL = 'https://napi.jibit.ir/ide'
+    BASE_URL = 'https://napi.jibit.cloud/ide'
 
     def __init__(self, user):
         self._user = user
@@ -40,8 +41,8 @@ class JibitRequester:
         resp = requests.post(
             url=self.BASE_URL + '/v1/tokens/generate',
             json={
-                'apiKey': secret('JIBIT_API_KEY'),
-                'secretKey': secret('JIBIT_API_SECRET'),
+                'apiKey': config('JIBIT_API_KEY'),
+                'secretKey': config('JIBIT_API_SECRET'),
             },
             timeout=30,
             # proxies={

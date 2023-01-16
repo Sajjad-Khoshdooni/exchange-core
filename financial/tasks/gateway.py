@@ -7,12 +7,12 @@ from financial.models import Gateway, Payment
 from financial.utils.withdraw import FiatWithdraw
 
 
-@shared_task(queue='financial')
+@shared_task(queue='finance')
 def handle_missing_payments():
     # update pending payments
     now = timezone.now()
 
-    pending_payments = Payment.objects.filter(status=Payment.PENDING, created__lte=now - timedelta(minutes=15))
+    pending_payments = Payment.objects.filter(status=Payment.PENDING, created__lte=now - timedelta(minutes=30))
 
     for payment in pending_payments:
         payment.payment_request.get_gateway().verify(payment)

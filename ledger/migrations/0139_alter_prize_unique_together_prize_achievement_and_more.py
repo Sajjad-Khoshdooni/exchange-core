@@ -21,7 +21,7 @@ def populate_achievement(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0089_trafficsource_promotion'),
+        ('accounts', '0088_alter_verificationcode_scope_auth2fa'),
         ('gamify', '0004_upgrade_achievements'),
         ('ledger', '0138_transfer_irt_value_transfer_usdt_value'),
     ]

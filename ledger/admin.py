@@ -1,19 +1,30 @@
+from datetime import timedelta
+from uuid import uuid4
+
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F
+from django.utils import timezone
+from django.utils.safestring import mark_safe
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
+from accounts.admin_guard.html_tags import anchor_tag
 from accounts.models import Account
+from accounts.utils.admin import url_to_edit_object
+from accounts.utils.validation import gregorian_to_jalali_datetime_str
+from financial.models import Payment
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken
+from ledger.utils.fields import DONE
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_trading_price_usdt, SELL
-from provider.models import ProviderOrder
+from ledger.utils.provider import HEDGE, get_provider_requester
+from ledger.utils.withdraw_verify import RiskFactor
 
 
 @admin.register(models.Asset)
@@ -34,12 +45,12 @@ class AssetAdmin(AdvancedAdmin):
         'get_total_asset', 'get_ledger_balance_users',
 
         'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
-        'order', 'trend', 'trade_enable', 'hedge_method',
+        'order', 'trend', 'trade_enable', 'hedge',
 
-        'candidate', 'margin_enable', 'new_coin', 'spread_category'
+        'margin_enable', 'new_coin', 'spread_category'
     )
-    list_filter = ('enable', 'trend', 'candidate', 'margin_enable', 'spread_category')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'candidate', 'margin_enable', 'new_coin')
+    list_filter = ('enable', 'trend', 'margin_enable', 'spread_category')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'new_coin', 'hedge')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('hedge_asset', )
@@ -47,7 +58,7 @@ class AssetAdmin(AdvancedAdmin):
     def changelist_view(self, request, extra_context=None):
 
         if not settings.DEBUG_OR_TESTING_OR_STAGING:
-            self.overview = AssetOverview(strict=False)
+            self.overview = AssetOverview(strict=False, calculated_hedge=True)
 
             context = {
                 'binance_initial_margin': round(self.overview.total_initial_margin, 2),
@@ -129,7 +140,7 @@ class AssetAdmin(AdvancedAdmin):
     get_hedge_amount.short_description = 'hedge amount'
 
     def get_calculated_hedge_amount(self, asset: Asset):
-        return asset.get_presentation_amount(ProviderOrder.get_hedge(asset))
+        return self.overview and asset.get_presentation_amount(self.overview.get_calculated_hedge(asset))
 
     get_calculated_hedge_amount.short_description = 'calc hedge amount'
 
@@ -145,19 +156,20 @@ class AssetAdmin(AdvancedAdmin):
 
     def get_hedge_threshold(self, asset: Asset):
         if asset.enable:
-            handler = asset.get_hedger()
-
-            if handler:
-                symbol = handler.get_trading_symbol(asset.symbol)
-                return handler.get_step_size(symbol)
+            info = get_provider_requester().get_market_info(asset)
+            return info.step_size
 
     get_hedge_threshold.short_description = 'hedge threshold'
 
     @admin.action(description='هج کردن رمزارزها', permissions=['view'])
     def hedge_asset(self, request, queryset):
-        assets = queryset.exclude(hedge_method=Asset.HEDGE_NONE, )
+        assets = queryset.filter(hedge=True)
         for asset in assets:
-            ProviderOrder.try_hedge_for_new_order(asset, ProviderOrder.HEDGE)
+            get_provider_requester().try_hedge_new_order(
+                request_id='manual:%s' % uuid4(),
+                asset=asset,
+                scope=HEDGE
+            )
 
 
 @admin.register(models.Network)
@@ -172,10 +184,10 @@ class NetworkAdmin(admin.ModelAdmin):
 @admin.register(models.NetworkAsset)
 class NetworkAssetAdmin(admin.ModelAdmin):
     list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'can_deposit', 'can_withdraw',
-                    'hedger_withdraw_enable')
+                    'allow_provider_withdraw', 'hedger_withdraw_enable')
     search_fields = ('asset__symbol', )
-    list_editable = ('can_deposit', 'can_withdraw', )
-    list_filter = ('network', )
+    list_editable = ('can_deposit', 'can_withdraw', 'allow_provider_withdraw')
+    list_filter = ('network', 'allow_provider_withdraw')
 
 
 class DepositAddressUserFilter(admin.SimpleListFilter):
@@ -243,6 +255,7 @@ class OTCTradeAdmin(admin.ModelAdmin):
     list_filter = (OTCUserFilter, 'status')
     search_fields = ('group_id', )
     readonly_fields = ('otc_request', )
+    actions = ('accept_trade', 'accept_trade_without_hedge', 'cancel_trade')
 
     def get_otc_trade_from_amount(self, otc_trade: models.OTCTrade):
         return humanize_number(
@@ -256,6 +269,21 @@ class OTCTradeAdmin(admin.ModelAdmin):
             otc_trade.otc_request.to_price_absolute_irt * otc_trade.otc_request.to_amount
         ))
     get_otc_trade_to_price_absolute_irt.short_description = 'ارزش ریالی'
+
+    @admin.action(description='تایید معامله')
+    def accept_trade(self, request, queryset):
+        for otc in queryset.filter(status='pending'):
+            otc.accept()
+
+    @admin.action(description='تایید معامله بدون هج')
+    def accept_trade_without_hedge(self, request, queryset):
+        for otc in queryset.filter(status='pending'):
+            otc.accept(hedge=False)
+
+    @admin.action(description='لغو معامله')
+    def cancel_trade(self, request, queryset):
+        for otc in queryset.filter(status='pending'):
+            otc.cancel()
 
 
 @admin.register(models.Trx)
@@ -325,24 +353,112 @@ class TransferUserFilter(SimpleListFilter):
 
 
 @admin.register(models.Transfer)
-class TransferAdmin(admin.ModelAdmin):
-    list_display = ('created', 'network', 'wallet', 'amount', 'fee_amount',
-                    'deposit', 'status', 'is_fee', 'source', 'get_total_volume_usdt',
-                    )
-    search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
-    list_filter = ('deposit', 'status', 'is_fee', 'source', 'status', TransferUserFilter,)
-    readonly_fields = ('deposit_address', 'network', 'wallet', 'provider_transfer', 'get_total_volume_usdt')
+class TransferAdmin(AdvancedAdmin):
+    default_edit_condition = M.superuser
 
+    fields_edit_conditions = {
+        'comment': True
+    }
+
+    list_display = (
+        'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
+        'get_total_volume_usdt', 'get_remaining_time_to_pass_72h', 'get_jalali_created'
+    )
+    search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
+    list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
+    readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt', 'created', 'accepted_datetime',
+                       'finished_datetime', 'get_risks')
+    exclude = ('risks', )
+
+    actions = ('accept_withdraw', 'reject_withdraw')
+
+    def save_model(self, request, obj: models.Transfer, form, change):
+        if obj.id and obj.status == models.Transfer.DONE and obj.trx_hash:
+            old = models.Transfer.objects.get(id=obj.id)
+
+            if old.status != models.Transfer.DONE:
+                old.accept(obj.trx_hash)
+
+        obj.save()
+
+    @admin.display(description='ارزش تتری')
     def get_total_volume_usdt(self, transfer: models.Transfer):
         price = get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
         if price:
-            return transfer.amount * price
+            return round(transfer.amount * price, 1)
 
-    get_total_volume_usdt.short_description = 'ارزش تتری'
+    def get_queryset(self, request):
+        queryset = super(TransferAdmin, self).get_queryset(request).select_related('wallet__account__user')
+
+        users = set(queryset.filter(deposit=False).values_list('wallet__account__user_id', flat=True))
+
+        return queryset
+
+    @admin.display(description='Asset')
+    def get_asset(self, transfer: models.Transfer):
+        return transfer.wallet.asset
+
+    @admin.display(description='created jalali')
+    def get_jalali_created(self, transfer: models.Transfer):
+        return gregorian_to_jalali_datetime_str(transfer.created)
+
+    @admin.display(description='User')
+    def get_user(self, transfer: models.Transfer):
+        user = transfer.wallet.account.user
+
+        if user:
+            link = url_to_edit_object(user)
+            return anchor_tag(user.phone, link)
+
+    @admin.display(description='Remaining 72h')
+    def get_remaining_time_to_pass_72h(self, transfer: models.Transfer):
+        if transfer.deposit:
+            return
+
+        user = transfer.wallet.account.user
+
+        last_payment = Payment.objects.filter(
+            created__gt=timezone.now() - timedelta(days=3),
+            created__lt=transfer.created,
+            status=DONE,
+            payment_request__bank_card__user=user
+        ).order_by('created').last()
+
+        if last_payment:
+            passed = timezone.now() - last_payment.created
+            rem = timedelta(days=3) - passed
+            return '%s روز %s ساعت %s دقیقه' % (rem.days, rem.seconds // 3600, rem.seconds % 3600 // 60)
+
+    @admin.display(description='risks')
+    def get_risks(self, transfer):
+        if not transfer.risks:
+            return
+        html = '<table dir="ltr"><tr><th>Factor</th><th>Value</th><th>Expected</th><th>Whitelist</th></tr>'
+
+        for risk in transfer.risks:
+            html += '<tr><td>{reason}</td><td>{value}</td><td>{expected}</td><td>{whitelist}</td></tr>'.format(
+                **RiskFactor(**risk).__dict__
+            )
+
+        html += '</table>'
+
+        return mark_safe(html)
+
+    @admin.action(description='تایید برداشت', permissions=['view'])
+    def accept_withdraw(self, request, queryset):
+        queryset.filter(status=models.Transfer.INIT).update(
+            status=models.Transfer.PROCESSING,
+            accepted_datetime=timezone.now(),
+        )
+
+    @admin.action(description='رد برداشت', permissions=['view'])
+    def reject_withdraw(self, request, queryset):
+        for transfer in queryset.filter(status=models.Transfer.INIT):
+            transfer.reject()
 
 
 class CryptoAccountTypeFilter(SimpleListFilter):
-    title = 'type' # or use _('country') for translated title
+    title = 'type'
     parameter_name = 'type'
 
     def lookups(self, request, model_admin):
@@ -372,10 +488,11 @@ class MarginLoanAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.CloseRequest)
-class MarginLiquidationAdmin(admin.ModelAdmin):
+class CloseRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'margin_level', 'group_id', 'status')
     search_fields = ('group_id',)
     list_filter = ('status', )
+    readonly_fields = ('account', 'created', 'group_id')
 
 
 @admin.register(models.AddressBook)
@@ -390,7 +507,7 @@ class PrizeAdmin(admin.ModelAdmin):
     readonly_fields = ('account', 'asset', )
 
     def get_asset_amount(self, prize: Prize):
-        return str(get_presentation_amount(prize.amount)) + str(prize.asset)
+        return '%s %s' % (get_presentation_amount(prize.amount), prize.asset)
 
     get_asset_amount.short_description = 'مقدار'
 
@@ -418,6 +535,14 @@ class AssetSpreadCategoryAdmin(admin.ModelAdmin):
     list_display = ('name', )
 
 
+@admin.register(models.MarketSpread)
+class MarketSpreadAdmin(admin.ModelAdmin):
+    list_display = ('id', 'step', 'side', 'spread')
+    list_editable = ('side', 'step', 'spread')
+    ordering = ('step', 'side')
+    list_filter = ('side', 'step')
+
+
 @admin.register(models.PNLHistory)
 class PNLHistoryAdmin(admin.ModelAdmin):
     list_display = ('date', 'account', 'market', 'base_asset', 'snapshot_balance', 'profit')
@@ -439,6 +564,7 @@ class SystemSnapshotAdmin(admin.ModelAdmin):
                     'investment', 'cash', 'prize', 'verified')
     ordering = ('-created', )
     actions = ('reject_histories', 'verify_histories')
+    readonly_fields = ('created', )
 
     @admin.action(description='رد', permissions=['change'])
     def reject_histories(self, request, queryset):

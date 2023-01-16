@@ -13,9 +13,10 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class Wallet(models.Model):
-    SPOT, MARGIN, LOAN, STAKE, VOUCHER = 'spot', 'margin', 'loan', 'stake', 'voucher'
-    MARKETS = (SPOT, MARGIN, LOAN, STAKE, VOUCHER)
-    MARKET_CHOICES = ((SPOT, SPOT), (MARGIN, MARGIN), (LOAN, LOAN), (STAKE, STAKE), (VOUCHER, VOUCHER))
+    SPOT, MARGIN, LOAN, STAKE, VOUCHER, DEBT = 'spot', 'margin', 'loan', 'stake', 'voucher', 'debt'
+    MARKETS = (SPOT, MARGIN, LOAN, STAKE, VOUCHER, DEBT)
+    MARKET_CHOICES = tuple((m, m) for m in MARKETS)
+    NEGATIVE_MARKETS = (LOAN, DEBT)
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -43,21 +44,24 @@ class Wallet(models.Model):
     class Meta:
         constraints = [
             UniqueConstraint(
-                fields=['account', 'asset', 'market'], condition=Q(variant__isnull=True),
                 name='uniqueness_without_variant_constraint',
+                fields=('account', 'asset', 'market'),
+                condition=Q(variant__isnull=True),
             ),
             UniqueConstraint(
-                fields=['account', 'asset', 'market', 'variant'], condition=Q(variant__isnull=False),
                 name='uniqueness_with_variant_constraint',
+                fields=('account', 'asset', 'market', 'variant'),
+                condition=Q(variant__isnull=False),
             ),
             CheckConstraint(
-                check=Q(check_balance=False) | (~Q(market='loan') & Q(balance__gte=0) & Q(balance__gte=F('locked'))) |
-                      (Q(market='loan') & Q(balance__lte=0) & Q(locked=0)),
-                name='valid_balance_constraint'
+                name='valid_balance_constraint',
+                check=Q(check_balance=False) |
+                      (~Q(market__in=('loan', 'debt')) & Q(balance__gte=0) & Q(balance__gte=F('locked'))) |
+                      (Q(market__in=('loan', 'debt')) & Q(balance__lte=0) & Q(locked=0)),
             ),
             CheckConstraint(
+                name='valid_locked_constraint',
                 check=Q(locked__gte=0),
-                name='valid_locked_constraint'
             ),
         ]
 
@@ -124,7 +128,7 @@ class Wallet(models.Model):
             return balance_usdt * tether_irt
 
     def has_balance(self, amount: Decimal, raise_exception: bool = False) -> bool:
-        assert amount >= 0 and self.market != Wallet.LOAN
+        assert amount >= 0 and self.market not in Wallet.NEGATIVE_MARKETS
 
         if not self.check_balance:
             can = True
@@ -137,17 +141,21 @@ class Wallet(models.Model):
         return can
 
     def has_debt(self, amount: Decimal, raise_exception: bool = False) -> bool:
-        assert amount <= 0 and self.market == Wallet.LOAN
+        assert amount <= 0 and self.market in Wallet.NEGATIVE_MARKETS
 
-        can = -self.get_free() >= -amount
+        can = -self.balance >= -amount
 
         if raise_exception and not can:
             raise InsufficientDebt()
 
         return can
 
-    def airdrop(self, amount: Decimal):
-        assert settings.DEBUG_OR_TESTING
+    def has_any_debt(self) -> bool:
+        assert self.market in Wallet.NEGATIVE_MARKETS
+        return self.balance < 0
+
+    def airdrop(self, amount: Decimal, i_am_sure: bool = False):
+        assert settings.DEBUG_OR_TESTING or i_am_sure
 
         from ledger.models import Trx
         from uuid import uuid4
@@ -174,11 +182,16 @@ class Wallet(models.Model):
                 scope=Trx.SEIZE
             )
 
-    def reserve_funds(self, amount: Decimal):
+    def reserve_funds(self, amount: Decimal, request_id: str):
         assert self.market in (Wallet.SPOT, Wallet.MARGIN)
         assert self.variant is None  # means its not reserved wallet
 
         from ledger.models import Trx
+
+        if request_id:
+            existing_reserve = ReserveWallet.objects.filter(request_id=request_id).first()
+            if existing_reserve:
+                return existing_reserve.request_id
 
         if self.has_balance(amount, raise_exception=True):
             group_id = uuid4()
@@ -200,7 +213,8 @@ class Wallet(models.Model):
                     sender=self,
                     receiver=child_wallet,
                     amount=amount,
-                    group_id=group_id
+                    group_id=group_id,
+                    request_id=request_id,
                 )
                 return group_id
 
@@ -215,6 +229,12 @@ class ReserveWallet(models.Model):
     group_id = models.UUIDField(default=uuid4, db_index=True)
 
     refund_completed = models.BooleanField(default=False)
+
+    request_id = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+    )
 
     def refund(self):
         if self.refund_completed:

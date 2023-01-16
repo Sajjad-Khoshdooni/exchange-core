@@ -36,7 +36,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
         wallet = asset.get_wallet(user.account)
 
         if not stake_option.enable:
-            raise ValidationError('امکان استفاده از این اپشن در حال حاضر وجود ندارد.')
+            raise ValidationError('امکان استفاده از این گزینه در حال حاضر وجود ندارد.')
 
         if stake_option.get_free_cap_amount() < amount:
             raise ValidationError('مقدار درخواست شده برای سرمایه گذاری بیشتر از حجم خالی باقی مانده است.')
@@ -62,6 +62,9 @@ class StakeRequestSerializer(serializers.ModelSerializer):
         stake_option = validated_data['stake_option']
         amount = validated_data['amount']
         user = validated_data['user']
+
+        if not user.show_staking:
+            raise ValidationError('امکان سرمایه‌گذاری وجود ندارد.')
 
         account = user.account
         asset = stake_option.asset

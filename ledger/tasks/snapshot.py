@@ -3,14 +3,14 @@ from django.utils import timezone
 
 from ledger.models import SystemSnapshot, Asset, AssetSnapshot
 from ledger.utils.overview import AssetOverview
-from provider.models import ProviderOrder
+from ledger.utils.provider import get_provider_requester
 
 
 @shared_task(queue='history')
 def create_snapshot():
     now = timezone.now()
 
-    overview = AssetOverview()
+    overview = AssetOverview(calculated_hedge=True)
 
     system_snapshot = SystemSnapshot(
         created=now,
@@ -45,7 +45,7 @@ def create_snapshot():
 
     asset_snapshots = []
 
-    for asset in Asset.candid_objects.all():
+    for asset in Asset.live_objects.all():
         asset_snapshots.append(
             AssetSnapshot(
                 created=now,
@@ -53,7 +53,7 @@ def create_snapshot():
                 price=overview.prices.get(asset.symbol) or 0,
                 hedge_amount=overview.get_hedge_amount(asset),
                 hedge_value=overview.get_hedge_value(asset),
-                calc_hedge_amount=ProviderOrder.get_hedge(asset),
+                calc_hedge_amount=overview.get_calculated_hedge(asset),
 
                 total_amount=overview.get_total_assets(asset),
                 users_amount=overview.get_users_asset_amount(asset),

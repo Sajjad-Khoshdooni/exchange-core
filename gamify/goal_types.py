@@ -28,12 +28,19 @@ class DepositGoal(BaseGoalType):
     name = Task.DEPOSIT
 
     def get_progress(self, account: Account):
-        fiat_deposit = PaymentRequest.objects.filter(payment__status=DONE).aggregate(sum=Sum('amount'))['sum'] or 0
+        fiat_deposit = PaymentRequest.objects.filter(
+            payment__status=DONE,
+            bank_card__user=account.user
+        ).aggregate(sum=Sum('amount'))['sum'] or 0
 
         if fiat_deposit >= self.task.max:
             return fiat_deposit
 
-        crypto_deposit = Transfer.objects.filter(deposit=True, status=DONE).aggregate(sum=Sum('irt_value'))['sum'] or 0
+        crypto_deposit = Transfer.objects.filter(
+            wallet__account=account,
+            deposit=True,
+            status=DONE
+        ).aggregate(sum=Sum('irt_value'))['sum'] or 0
 
         return fiat_deposit + crypto_deposit
 
