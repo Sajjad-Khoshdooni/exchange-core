@@ -38,9 +38,9 @@ class OTCInfoView(APIView):
         otc = OTCRequest(
             from_asset=from_asset,
             to_asset=to_asset,
-            from_amount=from_amount,
-            to_amount=to_amount,
         )
+
+        otc.set_amounts(from_amount=from_amount, to_amount=to_amount)
 
         to_price = otc.get_to_price()
         config = otc.get_trade_config()
