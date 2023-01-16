@@ -25,8 +25,8 @@ class OTCInfoView(APIView):
         to_symbol = request.query_params.get('to')
 
         try:
-            from_amount = Decimal(request.query_params.get('from_amount') or 0)
-            to_amount = Decimal(request.query_params.get('to_amount') or 0)
+            from_amount = Decimal(request.query_params.get('from_amount'))
+            to_amount = Decimal(request.query_params.get('to_amount'))
         except ConversionSyntax:
             raise ValidationError({
                 'amount': 'مقدار نامعتبر است.'
@@ -40,7 +40,11 @@ class OTCInfoView(APIView):
             to_asset=to_asset,
         )
 
-        otc.set_amounts(from_amount=from_amount, to_amount=to_amount)
+        if from_amount and to_amount:
+            raise ValidationError({'amount': 'دقیقا یکی از این مقدایر می‌تواند پر باشد.'})
+
+        if from_amount or to_amount:
+            otc.set_amounts(from_amount=from_amount, to_amount=to_amount)
 
         to_price = otc.get_to_price()
         config = otc.get_trade_config()
