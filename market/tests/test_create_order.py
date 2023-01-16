@@ -9,7 +9,7 @@ from ledger.models import Asset, Trx, Wallet
 from ledger.utils.test import new_account
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol, Trade, Order
-from market.utils import new_order, cancel_order
+from market.utils import new_order
 
 
 # todo: check referral for USDTIRT
@@ -198,7 +198,7 @@ class CreateOrderTestCase(TestCase):
         order_10 = new_order(self.btcirt, Account.system(), 20, 200000, Order.SELL)
         order_11 = new_order(self.btcirt, Account.system(), 10, 200005, Order.BUY)
 
-        cancel_order(order_10)
+        order_10.cancel()
 
         order_10.refresh_from_db(), order_11.refresh_from_db()
 
@@ -218,7 +218,7 @@ class CreateOrderTestCase(TestCase):
         order_12 = new_order(self.btcirt, Account.system(), 20, 200000, Order.SELL)
         order_13 = new_order(self.btcirt, Account.system(), 20, 200005, Order.BUY)
 
-        cancel_order(order_12)
+        order_12.cancel()
 
         order_12.refresh_from_db(), order_13.refresh_from_db()
 
@@ -236,7 +236,7 @@ class CreateOrderTestCase(TestCase):
     def test_cancel_before_fill(self):
 
         order_14 = new_order(self.btcirt, Account.system(), 20, 200000, Order.SELL)
-        cancel_order(order_14)
+        order_14.cancel()
         order_15 = new_order(self.btcirt, Account.system(), 20, 200000, Order.BUY)
 
         order_14.refresh_from_db(), order_15.refresh_from_db()

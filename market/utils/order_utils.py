@@ -2,34 +2,16 @@ import logging
 from collections import defaultdict
 from decimal import Decimal
 from typing import Union
+from uuid import UUID
 
-from django.db import transaction
 from django.db.models import Max, Min, F, Q, OuterRef, Subquery, DecimalField, Sum
 
 from accounts.models import Account
 from ledger.models import Wallet, Asset
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order, CancelRequest, PairSymbol
-from uuid import UUID
+from market.models import Order, PairSymbol
 
 logger = logging.getLogger(__name__)
-
-
-def cancel_order(order: Order) -> CancelRequest:
-    request = CancelRequest.objects.create(order=order, order_status=order.status)
-    order.cancel()
-
-    return request
-
-
-def cancel_orders(orders):
-    if not orders:
-        return
-
-    with transaction.atomic():
-        for order in orders:
-            CancelRequest.objects.create(order=order, order_status=order.status)
-            order.cancel()
 
 
 def get_open_orders(wallet: Wallet):

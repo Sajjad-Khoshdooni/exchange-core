@@ -103,16 +103,7 @@ class Order(models.Model):
     open_objects = OpenOrderManager()
 
     def cancel(self):
-        self.refresh_from_db()
-
-        if self.status == self.FILLED:
-            return
-        from market.models import Trade, CancelRequest
-
         with WalletPipeline() as pipeline:  # type: WalletPipeline
-            CancelRequest.objects.filter(order_id=self.id, order_status=self.status).update(order_status=Order.CANCELED)
-            Trade.objects.filter(order_id=self.id, order_status=self.status).update(order_status=Order.CANCELED)
-
             self.status = self.CANCELED
             self.save(update_fields=['status'])
             pipeline.release_lock(key=self.group_id)
@@ -254,7 +245,7 @@ class Order(models.Model):
         cache.set(key, 1, 10)
 
         to_cancel_orders = Order.open_objects.filter(
-            symbol=self.symbol, cancel_request__isnull=False
+            symbol=self.symbol
         )
         self.cancel_orders(to_cancel_orders)
 

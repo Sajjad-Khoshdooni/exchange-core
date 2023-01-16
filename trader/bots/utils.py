@@ -4,6 +4,7 @@ from collections import defaultdict
 from decimal import Decimal
 from time import time
 
+from django.db import transaction
 from django.db.models import Max, Min
 
 from accounts.models import Account
@@ -12,7 +13,7 @@ from ledger.utils.precision import floor_precision
 from ledger.utils.price import get_trading_price_irt, get_trading_price_usdt, SELL, BUY
 from market.models import PairSymbol, Order
 from market.utils import new_order
-from market.utils.order_utils import get_market_top_prices, cancel_orders
+from market.utils.order_utils import get_market_top_prices
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +156,9 @@ def get_time_based_factor(interval):
 
 
 def place_carrot_order(symbol: PairSymbol, account: Account, side, top_user_price, top_opposite_user_price):
-    cancel_orders(Order.open_objects.filter(wallet__account=account, symbol=symbol, side=side))
+    with transaction.atomic():
+        Order.cancel_orders(Order.open_objects.filter(wallet__account=account, symbol=symbol, side=side))
+
     min_precision = Order.get_rounding_precision(top_user_price, symbol.tick_size)
     random_precision = random.randint(min_precision, symbol.tick_size)
 

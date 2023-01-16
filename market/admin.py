@@ -88,8 +88,7 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(CancelRequest)
 class CancelRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'order')
-    readonly_fields = ('order',)
+    list_display = ('created', 'order_group_id')
 
 
 @admin.register(Trade)
