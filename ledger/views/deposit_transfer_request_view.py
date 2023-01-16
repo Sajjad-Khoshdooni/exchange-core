@@ -73,7 +73,9 @@ class DepositSerializer(serializers.ModelSerializer):
                 return prev_transfer
 
             if (prev_transfer.status, status) not in valid_transitions:
-                raise ValidationError({'status': 'invalid status transition (%s -> %s)' % (prev_transfer.status, status)})
+                raise ValidationError({
+                    'status': 'invalid status transition (%s -> %s)' % (prev_transfer.status, status)
+                })
 
             with WalletPipeline() as pipeline:
                 prev_transfer.status = status
@@ -97,17 +99,19 @@ class DepositSerializer(serializers.ModelSerializer):
 
             with WalletPipeline() as pipeline:
                 transfer, _ = Transfer.objects.get_or_create(
-                    network=network,
-                    trx_hash=validated_data.get('trx_hash'),
                     deposit=True,
-                    deposit_address=deposit_address,
-                    amount=amount,
-                    block_hash=validated_data.get('block_hash'),
-                    block_number=validated_data.get('block_number'),
-                    out_address=sender_address,
+                    trx_hash=validated_data.get('trx_hash'),
+                    network=network,
                     wallet=wallet,
-                    usdt_value=amount * price_usdt,
-                    irt_value=amount * price_irt,
+                    deposit_address=deposit_address,
+                    out_address=sender_address,
+                    defaults={
+                        'amount': amount,
+                        'block_hash': validated_data.get('block_hash'),
+                        'block_number': validated_data.get('block_number'),
+                        'usdt_value': amount * price_usdt,
+                        'irt_value': amount * price_irt,
+                    }
                 )
 
                 transfer.status = status
@@ -120,7 +124,7 @@ class DepositSerializer(serializers.ModelSerializer):
                 if status == Transfer.DONE:
                     transfer.build_trx(pipeline)
 
-                transfer.alert_user()
+            transfer.alert_user()
 
             return transfer
 

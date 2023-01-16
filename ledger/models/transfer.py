@@ -304,6 +304,11 @@ class Transfer(models.Model):
     class Meta:
         constraints = [
             CheckConstraint(check=Q(amount__gte=0, fee_amount__gte=0), name='check_ledger_transfer_amounts', ),
+            UniqueConstraint(
+                fields=('trx_hash', 'network', 'wallet', 'deposit_address', 'out_address'),
+                condition=Q(trx_hash__isnull=False),
+                name='unique_ledger_transfer_trx_hash_addresses',
+            ),
         ]
 
     def __str__(self):
