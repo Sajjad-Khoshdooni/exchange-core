@@ -25,8 +25,11 @@ class OTCInfoView(APIView):
         to_symbol = request.query_params.get('to')
 
         try:
-            from_amount = Decimal(request.query_params.get('from_amount'))
-            to_amount = Decimal(request.query_params.get('to_amount'))
+            from_amount = request.query_params.get('from_amount')
+            from_amount = from_amount and Decimal(from_amount)
+
+            to_amount = request.query_params.get('to_amount')
+            to_amount = to_amount and Decimal(to_amount)
         except ConversionSyntax:
             raise ValidationError({
                 'amount': 'مقدار نامعتبر است.'
