@@ -20,6 +20,7 @@ from financial.tasks import verify_bank_card_task, verify_bank_account_task, pro
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.precision import humanize_number, get_presentation_amount
 from ledger.utils.price import get_tether_irt_price, BUY, SELL
+from ledger.utils.withdraw_verify import RiskFactor
 
 
 @admin.register(Gateway)
@@ -78,7 +79,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'bank_account',
-         'ref_doc', 'get_withdraw_request_receive_time', 'provider_withdraw_id', 'risks')}),
+         'ref_doc', 'get_withdraw_request_receive_time', 'provider_withdraw_id', 'get_risks')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
                                       'get_user')}),
         ('نظر', {'fields': ('comment',)})
@@ -86,7 +87,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     list_filter = ('status', UserRialWithdrawRequestFilter, )
     ordering = ('-created', )
     readonly_fields = (
-        'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount',
+        'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount', 'get_risks',
         'get_withdraw_request_user', 'withdraw_channel', 'get_withdraw_request_receive_time', 'get_user'
     )
 
@@ -106,6 +107,25 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     @admin.display(description='شماره شبا')
     def get_withdraw_request_iban(self, withdraw_request: FiatWithdrawRequest):
         return withdraw_request.bank_account.iban
+
+    @admin.display(description='risks')
+    def get_risks(self, transfer):
+        if not transfer.risks:
+            return
+        html = '<table dir="ltr"><tr><th>Factor</th><th>Value</th><th>Expected</th><th>Whitelist</th></tr>'
+
+        for risk in transfer.risks:
+            risk_dict = RiskFactor(**risk).__dict__
+            risk_dict['value'] = humanize_number(risk_dict['value'])
+            risk_dict['expected'] = humanize_number(risk_dict['expected'])
+
+            html += '<tr><td>{reason}</td><td>{value}</td><td>{expected}</td><td>{whitelist}</td></tr>'.format(
+                **risk_dict
+            )
+
+        html += '</table>'
+
+        return mark_safe(html)
 
     def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
         if withdraw.receive_datetime:
