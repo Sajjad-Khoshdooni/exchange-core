@@ -169,6 +169,8 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
         return fiat_withdraw_request.receive_datetime
 
     def get_status(self, withdraw: FiatWithdrawRequest):
+        if withdraw.status == FiatWithdrawRequest.INIT:
+            return FiatWithdrawRequest.PROCESSING
         if withdraw.status == FiatWithdrawRequest.PENDING:
             return FiatWithdrawRequest.DONE
         else:
