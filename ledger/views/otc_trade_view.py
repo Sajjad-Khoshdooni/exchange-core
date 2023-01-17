@@ -49,7 +49,7 @@ class OTCInfoView(APIView):
             raise ValidationError({'amount': 'دقیقا یکی از این مقدایر می‌تواند پر باشد.'})
 
         if from_amount or to_amount:
-            otc.set_amounts(from_amount=from_amount, to_amount=to_amount)
+            otc.set_amounts(from_amount=from_amount, to_amount=to_amount, allow_dust=True)
 
         to_price = otc.get_to_price()
         config = otc.get_trade_config()
