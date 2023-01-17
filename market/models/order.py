@@ -268,6 +268,9 @@ class Order(models.Model):
 
         to_hedge_amount = Decimal(0)
 
+        tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
+            get_tether_irt_price(self.BUY)
+
         for matching_order in matching_orders:
             trade_price = matching_order.price
             if (self.side == Order.BUY and self.price < trade_price) or (
@@ -333,8 +336,6 @@ class Order(models.Model):
 
             trade_trxs = trades_pair.maker.create_trade_trxs(pipeline, self)
 
-            tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
-                get_tether_irt_price(self.BUY)
             for trade in trades_pair:
                 trade.set_amounts(trade_trxs)
                 fee_trx = trade_trxs.maker_fee if trade.is_maker else trade_trxs.taker_fee
@@ -391,7 +392,7 @@ class Order(models.Model):
         ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referrals))
         Trade.objects.bulk_create(trades)
 
-        Trade.create_hedge_fiat_trxs(trades)
+        Trade.create_hedge_fiat_trxs(trades, tether_irt)
 
         # updating trade_volume_irt of accounts
         for trade in trades:
