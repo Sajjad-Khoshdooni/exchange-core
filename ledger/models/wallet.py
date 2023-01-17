@@ -127,10 +127,10 @@ class Wallet(models.Model):
         if balance_usdt is not None:
             return balance_usdt * tether_irt
 
-    def has_balance(self, amount: Decimal, raise_exception: bool = False) -> bool:
+    def has_balance(self, amount: Decimal, raise_exception: bool = False, check_system_wallets: bool = False) -> bool:
         assert amount >= 0 and self.market not in Wallet.NEGATIVE_MARKETS
 
-        if not self.check_balance:
+        if not check_system_wallets and not self.check_balance:
             can = True
         else:
             can = self.get_free() >= amount
