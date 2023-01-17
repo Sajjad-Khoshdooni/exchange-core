@@ -179,12 +179,12 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
 
-LANGUAGE_CODE = 'fa-IR'
+LANGUAGE_CODE = config('LOCALE', default='fa-IR')
 LOCALE_PATHS = [
     os.path.join(BASE_DIR, 'locale/'),
 ]
 
-TIME_ZONE = 'Asia/Tehran'
+TIME_ZONE = config('TIME_ZONE', default='Asia/Tehran')
 
 USE_I18N = True
 
