@@ -93,7 +93,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         if user_reached_fiat_withdraw_limit(user, amount):
             logger.info('FiatRequest rejected due to max withdraw limit reached. user=%s' % user.id)
-            raise ValidationError({'amount': 'شما به سقف برداشت ریالی خود رسیده اید.'})
+            raise ValidationError({'amount': 'شما به سقف برداشت ریالی خورده اید.'})
 
         # fee_amount = min(4000, int(amount * 0.01))
         fee_amount = 5000

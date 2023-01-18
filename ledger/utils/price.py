@@ -236,28 +236,6 @@ def get_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
     return price
 
 
-@dataclass
-class Price:
-    coin: str
-    base: str
-    side: str
-    price: Decimal
-    price_usdt: Decimal
-
-
-def get_trading_price_info(coin: str, base_coin: str, side: str, value: Decimal = 0,
-                           spread: Union[Decimal, None] = None, allow_stale: bool = False):
-
-    if spread is None:
-        spread = get_spread()
-
-    return Price(
-        coin=coin,
-        base=base_coin,
-        side=side,
-    )
-
-
 def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value: Decimal = 0,
                            gap: Union[Decimal, None] = None, allow_stale: bool = False,
                            base_coin: str = None) -> Decimal:
@@ -269,14 +247,19 @@ def get_trading_price_usdt(coin: str, side: str, raw_price: bool = False, value:
     else:
         spread = get_spread(coin, side, value=value, base_coin=base_coin) / 100
 
+    if config('AUTO_SPREAD_SHEER', cast=bool, default=False):
+        spread_sheer = Decimal('0.5')
+    else:
+        spread_sheer = 0
+
     if raw_price:
         multiplier = 1
     else:
         if side == BUY:
 
-            multiplier = 1 - spread
+            multiplier = 1 - spread * (1 - spread_sheer)
         else:
-            multiplier = 1 + spread
+            multiplier = 1 + spread * (1 + spread_sheer)
 
     price = get_price(coin, side, allow_stale=allow_stale)
 
