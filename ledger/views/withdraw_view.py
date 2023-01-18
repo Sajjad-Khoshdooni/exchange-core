@@ -119,7 +119,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             irt_value = price * amount
 
             if user_reached_crypto_withdraw_limit(user, irt_value):
-                raise ValidationError({'amount': 'شما به سقف برداشت رمزارزی خورده اید.'})
+                raise ValidationError({'amount': 'شما به سقف برداشت رمزارزی خود رسیده اید.'})
 
         if not api:
             otp_code.set_code_used()
