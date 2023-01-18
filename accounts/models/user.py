@@ -150,7 +150,7 @@ class User(AbstractUser):
 
     promotion = models.CharField(max_length=256, blank=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
 
-    custom_crypto_withdraw_ceil = models.PositiveIntegerField(null=True, blank=True)
+    custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
 
     @property
     def kyc_bank_card(self):
