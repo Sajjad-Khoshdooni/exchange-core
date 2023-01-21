@@ -8,7 +8,7 @@ from accounts.utils.test import create_referral, set_referred_by
 from ledger.models import Trx, Asset
 from ledger.utils.test import new_account
 from market.models import PairSymbol, Order, ReferralTrx, Trade
-from market.utils import new_order
+from market.utils.order_utils import new_order
 
 
 class ReferralTestCase(TestCase):
@@ -42,7 +42,7 @@ class ReferralTestCase(TestCase):
 
         order_1.refresh_from_db(), order_2.refresh_from_db()
 
-        trade = Trade.objects.get(order=order_1)
+        trade = Trade.objects.get(order_id=order_1.id)
 
         trx_referral = Trx.objects.get(
             group_id=trade.group_id,
@@ -81,7 +81,7 @@ class ReferralTestCase(TestCase):
 
         order_3.refresh_from_db(), order_4.refresh_from_db()
 
-        trade = Trade.objects.get(order=order_3)
+        trade = Trade.objects.get(order_id=order_3.id)
 
         trx_referral = Trx.objects.get(
             group_id=trade.group_id,
@@ -120,8 +120,8 @@ class ReferralTestCase(TestCase):
 
         order_5.refresh_from_db(), order_6.refresh_from_db(), order_7.refresh_from_db(), order_8.refresh_from_db()
 
-        trade = Trade.objects.get(order=order_5)
-        trade_2 = Trade.objects.get(order=order_7)
+        trade = Trade.objects.get(order_id=order_5.id)
+        trade_2 = Trade.objects.get(order_id=order_7.id)
 
         trx_referral = Trx.objects.get(
             group_id=trade.group_id,

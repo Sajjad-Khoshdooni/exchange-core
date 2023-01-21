@@ -116,11 +116,11 @@ class WalletPipeline(Atomic):
         from ledger.models.trx import Trx
         assert sender.asset == receiver.asset
 
-        # ignore system vs system trx
-        if sender.account.is_system() and receiver.account.is_system():
+        if amount == 0 or int(amount * 10 ** AMOUNT_PRECISION) == 0 or sender == receiver:
             return
 
-        if int(amount * 10 ** AMOUNT_PRECISION) == 0 or sender == receiver:
+        # ignore system vs system trx
+        if sender.account.is_system() and receiver.account.is_system():
             return
 
         self._trxs.append(Trx(

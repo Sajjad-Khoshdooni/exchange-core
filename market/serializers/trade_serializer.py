@@ -11,11 +11,10 @@ from market.models import Trade, Order
 class AccountTradeSerializer(serializers.ModelSerializer):
     coin = serializers.CharField(source='symbol.asset.symbol')
     pair = serializers.CharField(source='symbol.base_asset.symbol')
-    pair_amount = serializers.CharField(source='base_amount')
-    market = serializers.SerializerMethodField()
+    pair_amount = serializers.SerializerMethodField()
 
-    def get_market(self, instance: Trade):
-        return instance.order.wallet.market
+    def get_pair_amount(self, trade: Trade):
+        return trade.price * trade.amount
 
     def to_representation(self, trade: Trade):
         data = super(AccountTradeSerializer, self).to_representation(trade)
@@ -43,11 +42,15 @@ class AccountTradeSerializer(serializers.ModelSerializer):
 class TradeSerializer(AccountTradeSerializer):
     coin = serializers.CharField(source='symbol.asset.symbol')
     pair = serializers.CharField(source='symbol.base_asset.symbol')
-    pair_amount = serializers.CharField(source='base_amount')
     is_buyer_maker = serializers.SerializerMethodField()
 
     asset = AssetSerializerMini(source='symbol.asset', read_only=True)
     base_asset = AssetSerializerMini(source='symbol.base_asset', read_only=True)
+
+    pair_amount = serializers.SerializerMethodField()
+
+    def get_pair_amount(self, trade: Trade):
+        return trade.price * trade.amount
 
     @classmethod
     def get_is_buyer_maker(cls, instance: Trade):
