@@ -21,14 +21,14 @@ def produce_users_analytics(user_ids: list):
     crypto_deposit_volume = transfers.aggregate(value=Sum('irt_value'))['value'] or 0
     fiat_deposit_volume = payments.aggregate(value=Sum('payment_request__amount'))['value'] or 0
 
-    trades = Trade.objects.filter(order__wallet__account__user_id__in=users)
+    trades = Trade.objects.filter(account__user_id__in=users)
 
     data = {
         'users': len(user_ids),
         'verified': users.filter(level__gt=User.LEVEL1).count(),
         'deposited': len(with_deposit_users),
         'deposit_value': fiat_deposit_volume + crypto_deposit_volume,
-        'traders': len(set(trades.values_list('order__wallet__account__user_id', flat=True))),
+        'traders': len(set(trades.values_list('account__user_id', flat=True))),
         'trade_volume': trades.aggregate(value=Sum('irt_value'))['value'] or 0,
         'trade_revenue': trades.aggregate(value=Sum('gap_revenue'))['value'] or 0,
     }

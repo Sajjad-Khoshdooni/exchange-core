@@ -22,8 +22,9 @@ class CancelRequestSerializer(serializers.ModelSerializer):
     def cancel_order(order: Order, validated_data):
         try:
             with transaction.atomic():
-                cancel_request = order.cancel()
-                CancelRequest.objects.create(order_group_id=order.group_id)
+                req, created = CancelRequest.objects.get_or_create(order_id=order.id)
+                if created:
+                    cancel_request = order.cancel()
         except Exception as e:
             logger.error('failed canceling order', extra={'exp': e, 'order': validated_data})
             if settings.DEBUG_OR_TESTING_OR_STAGING:
@@ -60,7 +61,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
                     pipeline.release_lock(key=stop_loss.group_id, amount=release_amount)
                     # faking cancel request creation
                     fake_order = Order(id=instance_id)
-                    return CancelRequest(order=fake_order, order_status=fake_order.status, created=timezone.now())
+                    return CancelRequest(order=fake_order, created=timezone.now())
         else:
             order = Order.open_objects.filter(
                 wallet__account=self.context['account'],

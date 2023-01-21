@@ -12,8 +12,7 @@ from ledger.models import Asset
 from ledger.utils.precision import floor_precision
 from ledger.utils.price import get_trading_price_irt, get_trading_price_usdt, SELL, BUY
 from market.models import PairSymbol, Order
-from market.utils import new_order
-from market.utils.order_utils import get_market_top_prices
+from market.utils.order_utils import get_market_top_prices, new_order
 
 logger = logging.getLogger(__name__)
 

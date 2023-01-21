@@ -88,14 +88,14 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(CancelRequest)
 class CancelRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'order_group_id')
+    list_display = ('created', 'order_id')
 
 
 @admin.register(Trade)
 class TradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'symbol', 'amount', 'price', 'gap_revenue', 'hedge_price', 'side', 'trade_source', 'irt_value', 'account')
+    list_display = ('created', 'symbol', 'amount', 'price', 'gap_revenue', 'hedge_price', 'side', 'trade_source', 'account')
     list_filter = ('trade_source', UserTradeFilter)
-    readonly_fields = ('symbol', 'order', 'account')
+    readonly_fields = ('symbol', 'order_id', 'account')
     search_fields = ('symbol__name', )
 
 

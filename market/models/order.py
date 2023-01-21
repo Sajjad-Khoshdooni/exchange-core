@@ -11,7 +11,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models, transaction
-from django.db.models import Sum, F, Q, Max, Min, CheckConstraint, QuerySet
+from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet
 
 from accounts.models import Notification
 from ledger.models import Wallet
@@ -23,7 +23,6 @@ from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_pri
     get_spread
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
-from market.models.referral_trx import ReferralTrx
 
 logger = logging.getLogger(__name__)
 
@@ -103,26 +102,24 @@ class Order(models.Model):
     open_objects = OpenOrderManager()
 
     def cancel(self):
+        # to increase performance
+        if self.status != self.NEW:
+            return
+
         with WalletPipeline() as pipeline:  # type: WalletPipeline
-            self.status = self.CANCELED
-            self.save(update_fields=['status'])
-            pipeline.release_lock(key=self.group_id)
+            order = Order.objects.select_for_update().get(id=self.id)
+            if order.status != self.NEW:
+                return
+
+            order.status = self.CANCELED
+            order.save(update_fields=['status'])
+            pipeline.release_lock(key=order.group_id)
 
     @property
     def base_wallet(self):
         return self.symbol.base_asset.get_wallet(
             self.wallet.account, self.wallet.market, variant=self.wallet.variant
         )
-
-    @property
-    def filled_price(self):
-        fills_amount, fills_value = self.trades.all().annotate(
-            value=F('amount') * F('price')).aggregate(sum_amount=Sum('amount'), sum_value=Sum('value')).values()
-        amount = Decimal((fills_amount or 0))
-        if not amount:
-            return None
-        price = Decimal((fills_value or 0)) / amount
-        return floor_precision(price, self.symbol.tick_size)
 
     @property
     def unfilled_amount(self):
@@ -227,6 +224,8 @@ class Order(models.Model):
         pipeline.release_lock(key=self.group_id, amount=release_amount)
 
     def make_match(self, pipeline: WalletPipeline, overriding_fill_amount: Union[Decimal, None]):
+        from market.utils.trade import register_transactions, TradesPair
+
         key = 'mm-cc-%s' % self.symbol.name
         log_prefix = 'MM %s: ' % self.symbol.name
 
@@ -244,11 +243,6 @@ class Order(models.Model):
 
         cache.set(key, 1, 10)
 
-        to_cancel_orders = Order.open_objects.filter(
-            symbol=self.symbol
-        )
-        self.cancel_orders(to_cancel_orders)
-
         opp_side = self.get_opposite_side(self.side)
 
         operator = 'lte' if self.side == Order.BUY else 'gte'
@@ -259,7 +253,8 @@ class Order(models.Model):
         unfilled_amount = overriding_fill_amount or self.unfilled_amount
 
         trades = []
-        referrals = []
+
+        tether_irt = get_tether_irt_price(self.BUY)
 
         to_hedge_amount = Decimal(0)
 
@@ -277,7 +272,7 @@ class Order(models.Model):
             base_irt_price = 1
 
             if self.symbol.base_asset.symbol == Asset.USDT:
-                base_irt_price = get_tether_irt_price(self.side)
+                base_irt_price = tether_irt
 
             taker_is_system = self.wallet.account.is_system()
             maker_is_system = matching_order.wallet.account.is_system()
@@ -291,13 +286,12 @@ class Order(models.Model):
 
             trade_source = source_map[maker_is_system, taker_is_system]
 
-            trades_pair = Trade.init_pair(
-                symbol=self.symbol,
+            trades_pair = TradesPair.init_pair(
                 taker_order=self,
                 maker_order=matching_order,
                 amount=match_amount,
                 price=trade_price,
-                irt_value=base_irt_price * trade_price * match_amount,
+                base_irt_price=base_irt_price,
                 trade_source=trade_source,
                 group_id=uuid4()
             )
@@ -319,24 +313,15 @@ class Order(models.Model):
                     )
                 )
 
-            if trade_source == Trade.SYSTEM_TAKER and not self.wallet.account.primary:
-                if trades_pair.maker.gap_revenue < trades_pair.maker.irt_value * Decimal('0.001'):
-                    raise CancelOrder('Non primary system is being taker! dangerous.')
-
             self.release_lock(pipeline, match_amount)
             matching_order.release_lock(pipeline, match_amount)
 
-            trade_trxs = trades_pair.maker.create_trade_trxs(pipeline, self)
+            register_transactions(pipeline, pair=trades_pair)
 
-            tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
-                get_tether_irt_price(self.BUY)
-            for trade in trades_pair:
-                trade.set_amounts(trade_trxs)
-                fee_trx = trade_trxs.maker_fee if trade.is_maker else trade_trxs.taker_fee
-                referrals.append(trade.create_referral(pipeline, fee_trx, tether_irt))
+            for trade in trades_pair.trades:
                 trade.set_gap_revenue()
 
-            trades.extend(trades_pair)
+            trades.extend(trades_pair.trades)
 
             self.update_filled_amount((self.id, matching_order.id), match_amount)
 
@@ -351,11 +336,7 @@ class Order(models.Model):
             unfilled_amount -= match_amount
             if match_amount == matching_order.unfilled_amount:  # unfilled_amount reduced in DB but not updated here :)
                 with transaction.atomic():
-                    Trade.objects.filter(order_id=matching_order.id).update(order_status=Order.FILLED)
                     matching_order.status = Order.FILLED
-                    for trade in trades:
-                        if trade.order_id == matching_order.id:
-                            trade.order_status = matching_order.status
                     matching_order.save(update_fields=['status'])
 
             if unfilled_amount == 0:
@@ -388,11 +369,6 @@ class Order(models.Model):
             pipeline.release_lock(self.group_id)
             self.save(update_fields=['status'])
 
-        for trade in trades:
-            if trade.order_id == self.id:
-                trade.order_status = self.status
-
-        ReferralTrx.objects.bulk_create(filter(lambda referral: referral, referrals))
         Trade.objects.bulk_create(trades)
 
         Trade.create_hedge_fiat_trxs(trades)

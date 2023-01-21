@@ -40,13 +40,13 @@ class AccountTradeHistoryView(ListAPIView):
             return Trade.objects.filter(
                 account=self.request.user.account,
                 status=Trade.DONE,
-            ).select_related('symbol', 'symbol__asset', 'symbol__base_asset', 'order__wallet').order_by('-created')
+            ).select_related('symbol', 'symbol__asset', 'symbol__base_asset').order_by('-created')
 
         return Trade.objects.filter(
             account=self.request.user.account,
-            maker_order__wallet__market=market,
+            market=market,
             status=Trade.DONE,
-        ).select_related('symbol', 'symbol__asset', 'symbol__base_asset', 'order__wallet').order_by('-created')
+        ).select_related('symbol', 'symbol__asset', 'symbol__base_asset').order_by('-created')
 
     def get_serializer_context(self):
         return {

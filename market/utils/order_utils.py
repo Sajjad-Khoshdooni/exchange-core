@@ -14,12 +14,6 @@ from market.models import Order, PairSymbol
 logger = logging.getLogger(__name__)
 
 
-def get_open_orders(wallet: Wallet):
-    return Order.open_objects.filter(
-        wallet=wallet,
-    )
-
-
 class MinTradeError(Exception):
     pass
 
