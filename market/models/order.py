@@ -118,7 +118,7 @@ class Order(models.Model):
     @property
     def base_wallet(self):
         return self.symbol.base_asset.get_wallet(
-            self.wallet.account, self.wallet.market, variant=self.wallet.variant
+            account=self.wallet.account, market=self.wallet.market, variant=self.wallet.variant
         )
 
     @property
@@ -270,9 +270,12 @@ class Order(models.Model):
                 continue
 
             base_irt_price = 1
+            base_usdt_price = 1
 
             if self.symbol.base_asset.symbol == Asset.USDT:
                 base_irt_price = tether_irt
+            else:
+                base_usdt_price = 1 / tether_irt
 
             taker_is_system = self.wallet.account.is_system()
             maker_is_system = matching_order.wallet.account.is_system()
@@ -292,6 +295,7 @@ class Order(models.Model):
                 amount=match_amount,
                 price=trade_price,
                 base_irt_price=base_irt_price,
+                base_usdt_price=base_usdt_price,
                 trade_source=trade_source,
                 group_id=uuid4()
             )

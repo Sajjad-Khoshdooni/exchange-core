@@ -23,8 +23,10 @@ class TradesPair:
         return [self.maker_trade, self.taker_trade]
 
     @classmethod
-    def init_pair(cls, maker_order: Order, taker_order: Order, amount: Decimal, price: Decimal, base_irt_price: Decimal,
-                  trade_source: str, group_id: UUID):
+    def init_pair(cls, maker_order: Order, taker_order: Order, amount: Decimal, price: Decimal, trade_source: str,
+                  base_irt_price: Decimal, base_usdt_price: Decimal, group_id: UUID):
+
+        assert maker_order.symbol == taker_order.symbol
 
         maker_trade = Trade(
             symbol=maker_order.symbol,
@@ -36,6 +38,7 @@ class TradesPair:
             amount=amount,
             price=price,
             base_irt_price=base_irt_price,
+            base_usdt_price=base_usdt_price,
             group_id=group_id
         )
 
@@ -49,6 +52,7 @@ class TradesPair:
             amount=amount,
             price=price,
             base_irt_price=base_irt_price,
+            base_usdt_price=base_usdt_price,
             group_id=group_id
         )
 
@@ -71,54 +75,43 @@ class FakeTrx:
 
 def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade: bool = False):
 
-    trade_trx = _register_trade_transaction(pipeline, pair=pair, fake=fake_trade)
-    base_trx = _register_trade_base_transaction(pipeline, pair=pair, fake=fake_trade)
-
-    # make sure sender and receiver wallets have same market
-    assert trade_trx.sender.market == base_trx.receiver.market
-    assert trade_trx.receiver.market == base_trx.sender.market
+    if not fake_trade:
+        _register_trade_transaction(pipeline, pair=pair)
+        _register_trade_base_transaction(pipeline, pair=pair)
 
     pair.taker_trade.fee_amount = _register_fee_transaction(pipeline, pair.taker_order, pair.taker_trade)
     pair.maker_trade.fee_amount = _register_fee_transaction(pipeline, pair.maker_order, pair.maker_trade)
 
 
-def _register_trade_transaction(pipeline: WalletPipeline, pair: TradesPair, fake: bool = False) -> FakeTrx:
+def _register_trade_transaction(pipeline: WalletPipeline, pair: TradesPair):
 
     if pair.maker_order.side == Order.BUY:
         sender, receiver = pair.taker_order.wallet, pair.maker_order.wallet
     else:
         sender, receiver = pair.maker_order.wallet, pair.taker_order.wallet
-    trx_data = {
-        'sender': sender,
-        'receiver': receiver,
-        'amount': pair.maker_trade.amount,
-        'group_id': pair.maker_trade.group_id,
-        'scope': Trx.TRADE,
-    }
 
-    if not fake:
-        pipeline.new_trx(**trx_data)
-
-    return FakeTrx(**trx_data)
+    pipeline.new_trx(
+        sender=sender,
+        receiver=receiver,
+        amount=pair.maker_trade.amount,
+        group_id=pair.maker_trade.group_id,
+        scope=Trx.TRADE
+    )
 
 
-def _register_trade_base_transaction(pipeline: WalletPipeline, pair: TradesPair, fake: bool = False) -> FakeTrx:
+def _register_trade_base_transaction(pipeline: WalletPipeline, pair: TradesPair):
     if pair.maker_order.side == Order.SELL:
         sender, receiver = pair.taker_order.base_wallet, pair.maker_order.base_wallet
     else:
         sender, receiver = pair.maker_order.base_wallet, pair.taker_order.base_wallet
 
-    trx_data = {
-        'sender': sender,
-        'receiver': receiver,
-        'amount': pair.maker_trade.amount * pair.maker_trade.price,
-        'group_id': pair.maker_trade.group_id,
-        'scope': Trx.TRADE,
-    }
-    if not fake:
-        pipeline.new_trx(**trx_data)
-
-    return FakeTrx(**trx_data)
+    pipeline.new_trx(
+        sender=sender,
+        receiver=receiver,
+        amount=pair.maker_trade.amount * pair.maker_trade.price,
+        group_id=pair.maker_trade.group_id,
+        scope=Trx.TRADE
+    )
 
 
 def _register_fee_transaction(pipeline: WalletPipeline, order: Order, trade: Trade) -> Decimal:

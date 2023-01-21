@@ -185,9 +185,14 @@ class Trade(models.Model):
         )
 
         base_irt_price = 1
+        base_usdt_price = 1
+
+        usdt_irt = get_tether_irt_price(BUY)
 
         if symbol.base_asset.symbol == Asset.USDT:
-            base_irt_price = get_tether_irt_price(BUY)
+            base_irt_price = usdt_irt
+        else:
+            base_usdt_price = 1 / usdt_irt
 
         trades_pair = TradesPair.init_pair(
             taker_order=taker_order,
@@ -195,6 +200,7 @@ class Trade(models.Model):
             amount=amount,
             price=price,
             base_irt_price=base_irt_price,
+            base_usdt_price=base_usdt_price,
             trade_source=Trade.OTC,
             group_id=otc_trade.group_id,
         )
