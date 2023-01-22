@@ -69,11 +69,11 @@ def create_users_trades(start: datetime.date, end: datetime.date, upload: bool =
     trades = Trade.objects.filter(
         created__range=(start, end),
         symbol__base_asset=Asset.get(Asset.IRT),
-        order__wallet__account__user__level__gt=User.LEVEL1,
+        account__user__level__gt=User.LEVEL1,
     ).exclude(trade_source=Trade.SYSTEM).exclude(gap_revenue=0).annotate(
-        user_id=F('order__wallet__account__user_id'),
-        user_name=Concat('order__wallet__account__user__first_name', Value(' '), 'order__wallet__account__user__last_name'),
-        user_national_code=F('order__wallet__account__user__national_code'),
+        user_id=F('account__user_id'),
+        user_name=Concat('account__user__first_name', Value(' '), 'account__user__last_name'),
+        user_national_code=F('account__user__national_code'),
     ).values('user_id', 'user_name', 'user_national_code', 'side').annotate(value=Sum('irt_value') * 10).order_by('user_id', 'side')
 
     file_path = '/tmp/accounting/weekly_users_{}_{}.csv'.format(str(start), str(end))
@@ -234,13 +234,13 @@ def create_trades_details(start: datetime.date, end: datetime.date, upload: bool
         trade_source=Trade.SYSTEM
     ).exclude(
         gap_revenue=0
-    ).order_by('id').prefetch_related('order__wallet__account__user', 'order__symbol__asset')
+    ).order_by('id').prefetch_related('account__user', 'symbol__asset')
 
     trades_list = []
 
     for t in trades:
-        user = t.order.wallet.account.user
-        asset = t.order.symbol.asset
+        user = t.account.user
+        asset = t.symbol.asset
 
         trades_list.append({
             'id': t.id,

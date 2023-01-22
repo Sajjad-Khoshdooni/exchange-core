@@ -1,7 +1,7 @@
 import logging
 
 from datetime import timedelta
-from django.db.models import Max, Min, Sum
+from django.db.models import Max, Min, Sum, F
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
@@ -139,7 +139,7 @@ class SymbolStatsSerializer(SymbolBreifStatsSerializer):
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
             side=Order.BUY,
-        ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum('base_amount'))['total_amount']
+        ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum(F('amount') * F('price')))['total_amount']
         if total_amount:
             return decimal_to_str(floor_precision(total_amount))
 

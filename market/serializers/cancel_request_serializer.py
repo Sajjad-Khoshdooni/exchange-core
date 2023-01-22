@@ -10,7 +10,6 @@ from rest_framework.exceptions import APIException, NotFound, PermissionDenied
 
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import CancelRequest, Order, StopLoss
-from market.utils import cancel_order
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +22,9 @@ class CancelRequestSerializer(serializers.ModelSerializer):
     def cancel_order(order: Order, validated_data):
         try:
             with transaction.atomic():
-                cancel_request = cancel_order(order)
+                req, created = CancelRequest.objects.get_or_create(order_id=order.id)
+                if created:
+                    cancel_request = order.cancel()
         except Exception as e:
             logger.error('failed canceling order', extra={'exp': e, 'order': validated_data})
             if settings.DEBUG_OR_TESTING_OR_STAGING:
