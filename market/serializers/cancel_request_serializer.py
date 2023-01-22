@@ -24,13 +24,13 @@ class CancelRequestSerializer(serializers.ModelSerializer):
             with transaction.atomic():
                 req, created = CancelRequest.objects.get_or_create(order_id=order.id)
                 if created:
-                    cancel_request = order.cancel()
+                    order.cancel()
         except Exception as e:
             logger.error('failed canceling order', extra={'exp': e, 'order': validated_data})
             if settings.DEBUG_OR_TESTING_OR_STAGING:
                 raise e
             raise APIException(_('Could not cancel order'))
-        return cancel_request
+        return req
 
     def create(self, validated_data):
         instance_id = validated_data.pop('order')['id']
