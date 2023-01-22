@@ -9,29 +9,30 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('market', '0034_trade_status'),
+        ('market', '0035_alter_trade_group_id'),
     ]
 
     operations = [
-        migrations.RenameField(
-            model_name='cancelrequest',
-            old_name='order',
-            new_name='order_id',
-        ),
         migrations.AlterField(
             model_name='cancelrequest',
-            name='order_id',
+            name='order',
             field=models.PositiveIntegerField(unique=True),
         ),
         migrations.RenameField(
-            model_name='trade',
+            model_name='cancelrequest',
             old_name='order',
             new_name='order_id',
         ),
+
         migrations.AlterField(
             model_name='trade',
-            name='order_id',
+            name='order',
             field=models.PositiveIntegerField(db_index=True),
+        ),
+        migrations.RenameField(
+            model_name='trade',
+            old_name='order',
+            new_name='order_id',
         ),
 
         migrations.AddField(
@@ -45,11 +46,6 @@ class Migration(migrations.Migration):
             name='market',
             field=models.CharField(choices=[('spot', 'spot'), ('margin', 'margin'), ('loan', 'loan'), ('stake', 'stake'), ('voucher', 'voucher'), ('debt', 'debt')], default='spot', max_length=8),
             preserve_default=False,
-        ),
-        migrations.AlterField(
-            model_name='trade',
-            name='group_id',
-            field=models.UUIDField(db_index=True, default=uuid.uuid4, editable=False),
         ),
         migrations.RemoveConstraint(
             model_name='trade',
