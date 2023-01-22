@@ -12,23 +12,22 @@ LOCK TABLE market_order IN ACCESS EXCLUSIVE MODE;
 --
 -- Name: RENAME table and indexes
 --
+ALTER TABLE market_order rename to market_order_old;
 
-alter table market_order rename to old_market_order;
-
-ALTER SEQUENCE market_order_id_seq RENAME TO old_market_order_id_seq;
+ALTER SEQUENCE market_order_id_seq RENAME TO market_order_old_id_seq;
 
 ALTER INDEX market_new_orders_price_idx RENAME TO old_market_new_orders_price_idx;
 ALTER INDEX market_orde_symbol__128462_idx RENAME TO old_market_orde_symbol__128462_idx;
 ALTER INDEX market_orde_symbol__4fd1e4_idx RENAME TO old_market_orde_symbol__4fd1e4_idx;
-ALTER INDEX market_order_stop_loss_id_cb8641f6 RENAME TO old_market_order_stop_loss_id_cb8641f6;
-ALTER INDEX market_order_symbol_id_5d6fd3ba RENAME TO old_market_order_symbol_id_5d6fd3ba;
-ALTER INDEX market_order_wallet_id_8de9f147 RENAME TO old_market_order_wallet_id_8de9f147;
+ALTER INDEX market_order_stop_loss_id_cb8641f6 RENAME TO market_order_old_stop_loss_id_cb8641f6;
+ALTER INDEX market_order_symbol_id_5d6fd3ba RENAME TO market_order_old_symbol_id_5d6fd3ba;
+ALTER INDEX market_order_wallet_id_8de9f147 RENAME TO market_order_old_wallet_id_8de9f147;
 
-ALTER TABLE old_market_order RENAME CONSTRAINT market_order_stop_loss_id_cb8641f6_fk_market_stoploss_id to old_market_order_stop_loss_id_cb8641f6_fk_market_stoploss_id;
-ALTER TABLE old_market_order RENAME CONSTRAINT market_order_symbol_id_5d6fd3ba_fk_market_pairsymbol_id to old_market_order_symbol_id_5d6fd3ba_fk_market_pairsymbol_id;
-ALTER TABLE old_market_order RENAME CONSTRAINT market_order_wallet_id_8de9f147_fk_ledger_wallet_id to old_market_order_wallet_id_8de9f147_fk_ledger_wallet_id;
+ALTER TABLE market_order_old RENAME CONSTRAINT market_order_stop_loss_id_cb8641f6_fk_market_stoploss_id to market_order_old_stop_loss_id_cb8641f6_fk_market_stoploss_id;
+ALTER TABLE market_order_old RENAME CONSTRAINT market_order_symbol_id_5d6fd3ba_fk_market_pairsymbol_id to market_order_old_symbol_id_5d6fd3ba_fk_market_pairsymbol_id;
+ALTER TABLE market_order_old RENAME CONSTRAINT market_order_wallet_id_8de9f147_fk_ledger_wallet_id to market_order_old_wallet_id_8de9f147_fk_ledger_wallet_id;
 
-ALTER TABLE old_market_order RENAME CONSTRAINT market_order_pkey to old_market_order_pkey;
+ALTER TABLE market_order_old RENAME CONSTRAINT market_order_pkey to market_order_old_pkey;
 
 
 --
@@ -89,8 +88,8 @@ CREATE TABLE market_order_status_finished PARTITION OF market_order for values i
 --
 -- Name: Fill Partitions
 --
-INSERT INTO market_order_status_new SELECT * from old_market_order where status='new';
-INSERT INTO market_order_status_finished SELECT * from old_market_order where status in ('canceled', 'filled');
+INSERT INTO market_order_status_new SELECT * from market_order_old where status='new';
+INSERT INTO market_order_status_finished SELECT * from market_order_old where status in ('canceled', 'filled');
 
 
 COMMIT TRANSACTION;
@@ -99,42 +98,27 @@ COMMIT TRANSACTION;
 rename_old_sql = '''
 BEGIN TRANSACTION;
 LOCK TABLE market_order IN ACCESS EXCLUSIVE MODE;
---
+
 -- Name: RENAME table and indexes
 --
-alter table market_order rename to market_order_new;
+DROP table market_order;
+ALTER TABLE market_order_old RENAME to market_order;
 
-ALTER SEQUENCE market_order_id_seq RENAME TO new_market_order_id_seq;
-ALTER INDEX market_new_orders_price_idx RENAME TO new_market_new_orders_price_idx;
-ALTER INDEX market_orde_symbol__128462_idx RENAME TO new_market_orde_symbol__128462_idx;
-ALTER INDEX market_orde_symbol__4fd1e4_idx RENAME TO new_market_orde_symbol__4fd1e4_idx;
-ALTER INDEX market_order_stop_loss_id_cb8641f6 RENAME TO new_market_order_stop_loss_id_cb8641f6;
-ALTER INDEX market_order_symbol_id_5d6fd3ba RENAME TO new_market_order_symbol_id_5d6fd3ba;
-ALTER INDEX market_order_wallet_id_8de9f147 RENAME TO new_market_order_wallet_id_8de9f147;
-ALTER TABLE market_order_new RENAME CONSTRAINT market_order_stop_loss_id_cb8641f6_fk_market_stoploss_id to new_market_order_stop_loss_id_cb8641f6_fk_market_stoploss_id;
-ALTER TABLE market_order_new RENAME CONSTRAINT market_order_symbol_id_5d6fd3ba_fk_market_pairsymbol_id to new_market_order_symbol_id_5d6fd3ba_fk_market_pairsymbol_id;
-ALTER TABLE market_order_new RENAME CONSTRAINT market_order_wallet_id_8de9f147_fk_ledger_wallet_id to new_market_order_wallet_id_8de9f147_fk_ledger_wallet_id;
-ALTER TABLE market_order_new RENAME CONSTRAINT market_order_pkey to new_market_order_pkey;
+ALTER SEQUENCE market_order_old_id_seq RENAME TO market_order_id_seq;
 
---
--- Name: RENAME old table and indexes
---
-alter table old_market_order rename to market_order;
-
-DROP SEQUENCE old_market_order_id_seq=;
-DROP INDEX old_market_new_orders_price_idx RENAME TO market_new_orders_price_idx;
-DROP INDEX old_market_orde_symbol__128462_idx RENAME TO market_orde_symbol__128462_idx;
-DROP INDEX old_market_orde_symbol__4fd1e4_idx RENAME TO market_orde_symbol__4fd1e4_idx;
-DROP INDEX old_market_order_stop_loss_id_cb8641f6 RENAME TO market_order_stop_loss_id_cb8641f6;
-DROP INDEX old_market_order_symbol_id_5d6fd3ba RENAME TO market_order_symbol_id_5d6fd3ba;
-DROP INDEX old_market_order_wallet_id_8de9f147 RENAME TO market_order_wallet_id_8de9f147;
-ALTER TABLE market_order DROP CONSTRAINT old_market_order_stop_loss_id_cb8641f6_fk_market_stoploss_id;
-ALTER TABLE market_order DROP CONSTRAINT old_market_order_symbol_id_5d6fd3ba_fk_market_pairsymbol_id;
-ALTER TABLE market_order DROP CONSTRAINT old_market_order_wallet_id_8de9f147_fk_ledger_wallet_id;
-ALTER TABLE market_order DROP CONSTRAINT old_market_order_pkey;
+ALTER INDEX old_market_new_orders_price_idx RENAME TO market_new_orders_price_idx;
+ALTER INDEX old_market_orde_symbol__128462_idx RENAME TO market_orde_symbol__128462_idx;
+ALTER INDEX old_market_orde_symbol__4fd1e4_idx RENAME TO market_orde_symbol__4fd1e4_idx;
+ALTER INDEX market_order_old_stop_loss_id_cb8641f6 RENAME TO market_order_stop_loss_id_cb8641f6;
+ALTER INDEX market_order_old_symbol_id_5d6fd3ba RENAME TO market_order_symbol_id_5d6fd3ba;
+ALTER INDEX market_order_old_wallet_id_8de9f147 RENAME TO market_order_wallet_id_8de9f147;
 
 
-DROP table market_order_new;
+ALTER TABLE market_order RENAME CONSTRAINT market_order_old_stop_loss_id_cb8641f6_fk_market_stoploss_id to market_order_stop_loss_id_cb8641f6_fk_market_stoploss_id;
+ALTER TABLE market_order RENAME CONSTRAINT market_order_old_symbol_id_5d6fd3ba_fk_market_pairsymbol_id to market_order_symbol_id_5d6fd3ba_fk_market_pairsymbol_id;
+ALTER TABLE market_order RENAME CONSTRAINT market_order_old_wallet_id_8de9f147_fk_ledger_wallet_id to market_order_wallet_id_8de9f147_fk_ledger_wallet_id;
+
+ALTER TABLE market_order RENAME CONSTRAINT market_order_old_pkey to market_order_pkey;
 
 COMMIT TRANSACTION;
 '''
