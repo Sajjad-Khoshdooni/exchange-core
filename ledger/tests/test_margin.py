@@ -11,7 +11,7 @@ from ledger.tasks import check_margin_level
 from ledger.utils.price import BUY
 from ledger.utils.test import new_account, set_price
 from market.models import PairSymbol
-from market.utils import new_order
+from market.utils.order_utils import new_order
 
 USDT_IRT_PRICE = 20000
 XRP_USDT_PRICE = 2

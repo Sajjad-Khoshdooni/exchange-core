@@ -1,4 +1,4 @@
-from django.db import models, transaction
+from django.db import models
 
 from accounts.models import Account
 from ledger.models import Trx, Asset

@@ -1,38 +1,12 @@
 import logging
-from dataclasses import dataclass
-from decimal import Decimal
-from typing import Union
-from uuid import uuid4, UUID
+from uuid import uuid4
 
 from django.db import models
 from django.db.models import CheckConstraint, Q
 
-from ledger.models import Wallet
 from ledger.utils.fields import get_amount_field
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class FakeTrx:
-    sender: Wallet
-    receiver: Wallet
-    amount: Decimal = 0
-    group_id: Union[str, UUID] = '00000000-0000-0000-0000-000000000000'
-    scope: str = ''
-
-    def save(self):
-        logger.info('ignoring saving null trx')
-
-    @classmethod
-    def from_trx(cls, trx: 'Trx') -> 'FakeTrx':
-        if isinstance(trx, FakeTrx):
-            return trx
-
-        return FakeTrx(sender=trx.sender, receiver=trx.receiver, amount=trx.amount)
-
-    def to_trx(self) -> 'Trx':
-        return Trx(sender=self.sender, receiver=self.receiver, amount=self.amount, group_id=self.group_id, scope=self.scope)
 
 
 class Trx(models.Model):
