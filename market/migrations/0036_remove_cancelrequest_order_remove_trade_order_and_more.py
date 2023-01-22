@@ -13,25 +13,26 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameField(
-            model_name='cancelrequest',
-            old_name='order',
-            new_name='order_id',
-        ),
         migrations.AlterField(
             model_name='cancelrequest',
-            name='order_id',
+            name='order',
             field=models.PositiveIntegerField(unique=True),
         ),
         migrations.RenameField(
-            model_name='trade',
+            model_name='cancelrequest',
             old_name='order',
             new_name='order_id',
         ),
+
         migrations.AlterField(
             model_name='trade',
-            name='order_id',
+            name='order',
             field=models.PositiveIntegerField(db_index=True),
+        ),
+        migrations.RenameField(
+            model_name='trade',
+            old_name='order',
+            new_name='order_id',
         ),
 
         migrations.AddField(
