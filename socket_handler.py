@@ -18,6 +18,7 @@ from accounts.models.custom_token import CustomToken
 DEPTH_CLIENTS = []
 ORDERS_STATUS_CLIENTS = {}
 
+
 async def add_client(websocket):
     is_added = False
     while True:
@@ -55,6 +56,7 @@ market_redis = aioredis.from_url(settings.MARKET_CACHE_LOCATION, decode_response
 
 depth_pubsub = market_redis.pubsub()
 
+
 async def broadcast_to_all():
     await depth_pubsub.psubscribe('market:depth:*')
     async for raw_message in depth_pubsub.listen():
@@ -66,6 +68,7 @@ async def broadcast_to_all():
         websockets.broadcast(DEPTH_CLIENTS, raw_message['data'])
 
 status_pubsub = market_redis.pubsub()
+
 
 async def send_users_orders_status():
     await status_pubsub.psubscribe('market:orders:*')

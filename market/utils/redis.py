@@ -92,18 +92,19 @@ class MarketCacheHandler:
                        ''',
     }
 
-    @classmethod
-    def set_if_lower(cls, k, v):
-        return cls._call(cls.SET_IF_LOWER, **{k: v})
+    def __init__(self):
+        self.pipeline = self._client.pipeline()
+        self.market_pipeline = market_redis.pipeline()
 
-    @classmethod
-    def set_if_higher(cls, k, v):
-        return cls._call(cls.SET_IF_HIGHER, **{k: v})
+    def set_if_lower(self, k, v):
+        return self._call(self.SET_IF_LOWER, **{k: v})
 
-    @classmethod
-    def _call(cls, func_name, **kwargs):
+    def set_if_higher(self, k, v):
+        return self._call(self.SET_IF_HIGHER, **{k: v})
+
+    def _call(self, func_name, **kwargs):
         inputs = list(sum(kwargs.items(), ()))
-        return cls._client.evalsha(cls._load_script(func_name), int(len(inputs) / 2), *inputs)
+        return self.pipeline.evalsha(self._load_script(func_name), int(len(inputs) / 2), *inputs)
 
     @classmethod
     def _load_script(cls, func_name):
@@ -119,23 +120,35 @@ class MarketCacheHandler:
             return cls._client.script_load(cls._funcs_dict[func_name])
         raise NotImplementedError
 
-    @classmethod
-    def update_bid_ask(cls, order):
+    def update_bid_ask(self, order):
+        if not order:
+            return
         from market.models import Order
         if order.status != Order.NEW:
             return
 
-        order_type = f':{order.type}' if order.type else ''
         if order.side == Order.BUY:
-            is_updated = cls.set_if_higher(f'market:depth:{order.symbol.name}:{order.side}{order_type}', order.price)
+            is_updated = self.set_if_higher(f'market:depth:{order.symbol.name}:{order.side}', order.price)
         else:
-            is_updated = cls.set_if_lower(f'market:depth:{order.symbol.name}:{order.side}{order_type}', order.price)
+            is_updated = self.set_if_lower(f'market:depth:{order.symbol.name}:{order.side}', order.price)
 
         if bool(is_updated):
-            market_redis.publish(f'market:depth:{order.symbol.name}:{order.side}{order_type}', order.price)
+            self.market_pipeline.publish(f'market:depth:{order.symbol.name}:{order.side}', order.price)
 
-    @classmethod
-    def update_order_status(cls, order):
-        if not market_redis.exists(f'ws:market:orders:{order.wallet.account_id}'):
-            return
-        market_redis.publish(f'market:orders:{order.symbol.name}:{order.wallet.account_id}:{order.id}', order.status)
+    # @classmethod
+    # def update_trades(cls, account_id, order_id, trades):
+    #     if not trades:
+    #         return
+    #     if not market_redis.exists(f'ws:market:orders:{account_id}'):
+    #         return
+    #     for trade in trades:
+    #         market_redis.publish(f'market:orders:{trade.symbol.name}:{account_id}:{order_id}', trade.order_id)
+
+    def update_order_status(self, order):
+        self.market_pipeline.publish(f'market:orders:status:{order.symbol.name}', f'{order.side}-{order.price}-{order.status}')
+
+    def execute(self):
+        if self.pipeline:
+            self.pipeline.execute()
+        if self.market_pipeline:
+            self.market_pipeline.execute()
