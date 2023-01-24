@@ -54,18 +54,18 @@ app.conf.beat_schedule = {
     # market tasks
     'create depth orders': {
         'task': 'market.tasks.market_maker.create_depth_orders',
-        'schedule': 30 * TASK_MULTIPLIER,
+        'schedule': 60 * TASK_MULTIPLIER,
         'options': {
             'queue': 'market',
-            'expire': 30 * TASK_MULTIPLIER
+            'expire': 60 * TASK_MULTIPLIER
         },
     },
     'update maker orders': {
         'task': 'market.tasks.market_maker.update_maker_orders',
-        'schedule': 10 * TASK_MULTIPLIER,
+        'schedule': 20 * TASK_MULTIPLIER,
         'options': {
             'queue': 'market',
-            'expire': 10 * TASK_MULTIPLIER
+            'expire': 20 * TASK_MULTIPLIER
         },
     },
     'handle open stop loss': {

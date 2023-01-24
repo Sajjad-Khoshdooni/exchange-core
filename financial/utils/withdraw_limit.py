@@ -72,7 +72,8 @@ def user_reached_fiat_withdraw_limit(user: User, irt_value) -> bool:
 
 
 def user_reached_crypto_withdraw_limit(user: User, irt_value) -> bool:
-    return get_crypto_withdraw_irt_value(user) + irt_value > CRYPTO_WITHDRAW_LIMIT[user.level]
+    ceil = user.custom_crypto_withdraw_ceil or CRYPTO_WITHDRAW_LIMIT[user.level]
+    return get_crypto_withdraw_irt_value(user) + irt_value > ceil
 
 
 def time_in_range(start, end, time):

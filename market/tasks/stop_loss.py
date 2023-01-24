@@ -6,7 +6,7 @@ from django.utils import timezone
 from market.models import Order, Trade
 from market.models.order import CancelOrder
 from market.models.stop_loss import StopLoss
-from market.utils import new_order
+from market.utils.order_utils import new_order
 from market.utils.redis import set_top_prices
 
 logger = logging.getLogger(__name__)

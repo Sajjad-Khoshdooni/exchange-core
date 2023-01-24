@@ -38,12 +38,15 @@ class AccountTradeHistoryView(ListAPIView):
         market = self.request.query_params.get('market')
         if not market:
             return Trade.objects.filter(
-                account=self.request.user.account
-            ).select_related('symbol', 'symbol__asset', 'symbol__base_asset', 'order__wallet').order_by('-created')
+                account=self.request.user.account,
+                status=Trade.DONE,
+            ).select_related('symbol', 'symbol__asset', 'symbol__base_asset').order_by('-created')
 
         return Trade.objects.filter(
-            account=self.request.user.account, maker_order__wallet__market=market
-        ).select_related('symbol', 'symbol__asset', 'symbol__base_asset', 'order__wallet').order_by('-created')
+            account=self.request.user.account,
+            market=market,
+            status=Trade.DONE,
+        ).select_related('symbol', 'symbol__asset', 'symbol__base_asset').order_by('-created')
 
     def get_serializer_context(self):
         return {
@@ -71,7 +74,7 @@ class TradeHistoryView(ListAPIView):
     permission_classes = ()
     pagination_class = LimitOffsetPagination
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
-    queryset = Trade.objects.filter(is_maker=True).exclude(trade_source=Trade.OTC).order_by('-created')
+    queryset = Trade.objects.filter(is_maker=True, status=Trade.DONE).exclude(trade_source=Trade.OTC).order_by('-created')
     serializer_class = TradeSerializer
 
     filter_backends = [DjangoFilterBackend]

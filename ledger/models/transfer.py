@@ -198,7 +198,7 @@ class Transfer(models.Model):
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str, memo: str = ''):
         assert wallet.asset.symbol != Asset.IRT
         assert wallet.account.is_ordinary_user()
-        wallet.has_balance(amount, raise_exception=True)
+        wallet.has_balance(amount, raise_exception=True, check_system_wallets=True)
 
         fast_forward = cls.check_fast_forward(sender_wallet=wallet, network=network, amount=amount, address=address)
 
@@ -303,12 +303,12 @@ class Transfer(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(
-                fields=["trx_hash", "network", "deposit"],
-                name="unique_transfer_tx_hash_network",
-                condition=Q(status__in=["pending", "done"]),
-            ),
             CheckConstraint(check=Q(amount__gte=0, fee_amount__gte=0), name='check_ledger_transfer_amounts', ),
+            UniqueConstraint(
+                fields=('trx_hash', 'network', 'wallet', 'deposit_address', 'out_address'),
+                condition=Q(trx_hash__isnull=False, source='self'),
+                name='unique_ledger_transfer_trx_hash_addresses',
+            ),
         ]
 
     def __str__(self):

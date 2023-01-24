@@ -177,7 +177,7 @@ class AssetsViewSet(ModelViewSet):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
             ctx['cap_info'] = get_provider_requester().get_coins_info(symbols)
             ctx['prices'] = get_prices_dict(coins=symbols, side=BUY, allow_stale=True)
-            ctx['tether_irt'] = get_tether_irt_price(BUY)
+            ctx['tether_irt'] = get_tether_irt_price(BUY, allow_stale=True)
 
         return ctx
 

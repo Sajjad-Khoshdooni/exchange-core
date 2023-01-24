@@ -2,11 +2,11 @@ import logging
 from decimal import Decimal
 from uuid import uuid4
 
-from django.db import models
+from django.db import models, IntegrityError
 
 from accounts.models import Account
 from ledger.exceptions import AbruptDecrease, HedgeError
-from ledger.models import OTCRequest, Trx
+from ledger.models import OTCRequest, Trx, Wallet
 from ledger.utils.price import SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.exceptions import NegativeGapRevenue
@@ -19,7 +19,7 @@ class TokenExpired(Exception):
 
 
 class OTCTrade(models.Model):
-    PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
+    PENDING, CANCELED, DONE, REVERT = 'pending', 'canceled', 'done', 'revert'
 
     created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
     otc_request = models.OneToOneField('ledger.OTCRequest', on_delete=models.PROTECT)
@@ -29,7 +29,7 @@ class OTCTrade(models.Model):
     status = models.CharField(
         default=PENDING,
         max_length=8,
-        choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)],
+        choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE), (REVERT, REVERT)],
         verbose_name='وضعیت'
     )
 
@@ -147,3 +147,32 @@ class OTCTrade(models.Model):
         if rate > threshold:
             logger.error('otc failed because of abrupt change!')
             raise AbruptDecrease()
+
+    def revert(self):
+        with WalletPipeline() as pipeline:
+            self.status = self.REVERT
+            self.save(update_fields=['status'])
+
+            for trx in Trx.objects.filter(group_id=self.group_id):
+                if trx.receiver.has_balance(trx.amount):
+                    pipeline.new_trx(
+                        sender=trx.receiver,
+                        receiver=trx.sender,
+                        amount=trx.amount,
+                        group_id=trx.group_id,
+                        scope=Trx.REVERT
+                    )
+                else:
+                    pipeline.new_trx(
+                        sender=trx.receiver.asset.get_wallet(trx.receiver.account, market=Wallet.DEBT),
+                        receiver=trx.sender,
+                        amount=trx.amount,
+                        group_id=trx.group_id,
+                        scope=Trx.REVERT
+                    )
+
+            from market.models import Trade
+            Trade.objects.filter(group_id=self.group_id).update(status=Trade.REVERT)
+
+    def __str__(self):
+        return '%s [%s]' % (self.otc_request, self.status)

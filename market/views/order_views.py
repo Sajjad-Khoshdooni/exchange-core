@@ -105,15 +105,19 @@ class OpenOrderListAPIView(APIView):
         open_orders = Order.open_objects.filter(
             wallet__account=self.request.user.account, stop_loss__isnull=True, **filters
         ).select_related('symbol', 'wallet',)
+
         open_stop_losses = StopLoss.open_objects.filter(
             wallet__account=self.request.user.account, **filters
         ).select_related('symbol', 'wallet')
+
         serialized_orders = OrderStopLossSerializer(open_orders, many=True, context=context)
         serialized_stop_losses = OrderStopLossSerializer(open_stop_losses, many=True, context=context)
-        DATE_PATTERN = '%Y-%m-%dT%H:%M:%S.%f%z'
+
+        date_pattern = '%Y-%m-%dT%H:%M:%S.%f%z'
+
         sorted_results = sorted(
             (serialized_orders.data + serialized_stop_losses.data),
-            key=lambda obj: datetime.strptime(obj['created'], DATE_PATTERN), reverse=True
+            key=lambda obj: datetime.strptime(obj['created'], date_pattern), reverse=True
         )
         return Response(sorted_results)
 

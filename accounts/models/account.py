@@ -145,10 +145,6 @@ class Account(models.Model):
         wallet = asset.get_wallet(self)
         wallet.airdrop(amount)
 
-    def has_debt(self) -> bool:
-        from ledger.models import Wallet
-        return Wallet.objects.filter(account=self, market=Wallet.LOAN, balance__lt=0).exists()
-
     class Meta:
         constraints = [
             UniqueConstraint(

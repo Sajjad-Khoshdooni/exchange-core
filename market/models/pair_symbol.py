@@ -53,13 +53,13 @@ class PairSymbol(models.Model):
             CheckConstraint(check=Q(min_trade_quantity__gte=0, max_trade_quantity__gte=0, maker_amount__gte=0), name='check_market_pairsymbol_amounts', ),
         ]
 
-    def get_maker_fee(self, account: Account):
+    def get_maker_fee(self, account: Account) -> Decimal:
         if account.get_voucher_wallet():
             return Decimal(0)
         else:
             return self.maker_fee
 
-    def get_taker_fee(self, account: Account):
+    def get_taker_fee(self, account: Account) -> Decimal:
         if account.get_voucher_wallet():
             return Decimal(0)
         else:

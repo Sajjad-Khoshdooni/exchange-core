@@ -13,9 +13,10 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class Wallet(models.Model):
-    SPOT, MARGIN, LOAN, STAKE, VOUCHER = 'spot', 'margin', 'loan', 'stake', 'voucher'
-    MARKETS = (SPOT, MARGIN, LOAN, STAKE, VOUCHER)
-    MARKET_CHOICES = ((SPOT, SPOT), (MARGIN, MARGIN), (LOAN, LOAN), (STAKE, STAKE), (VOUCHER, VOUCHER))
+    SPOT, MARGIN, LOAN, STAKE, VOUCHER, DEBT = 'spot', 'margin', 'loan', 'stake', 'voucher', 'debt'
+    MARKETS = (SPOT, MARGIN, LOAN, STAKE, VOUCHER, DEBT)
+    MARKET_CHOICES = tuple((m, m) for m in MARKETS)
+    NEGATIVE_MARKETS = (LOAN, DEBT)
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -54,8 +55,9 @@ class Wallet(models.Model):
             ),
             CheckConstraint(
                 name='valid_balance_constraint',
-                check=Q(check_balance=False) | (~Q(market='loan') & Q(balance__gte=0) & Q(balance__gte=F('locked'))) |
-                      (Q(market='loan') & Q(balance__lte=0) & Q(locked=0)),
+                check=Q(check_balance=False) |
+                      (~Q(market__in=('loan', 'debt')) & Q(balance__gte=0) & Q(balance__gte=F('locked'))) |
+                      (Q(market__in=('loan', 'debt')) & Q(balance__lte=0) & Q(locked=0)),
             ),
             CheckConstraint(
                 name='valid_locked_constraint',
@@ -125,10 +127,10 @@ class Wallet(models.Model):
         if balance_usdt is not None:
             return balance_usdt * tether_irt
 
-    def has_balance(self, amount: Decimal, raise_exception: bool = False) -> bool:
-        assert amount >= 0 and self.market != Wallet.LOAN
+    def has_balance(self, amount: Decimal, raise_exception: bool = False, check_system_wallets: bool = False) -> bool:
+        assert amount >= 0 and self.market not in Wallet.NEGATIVE_MARKETS
 
-        if not self.check_balance:
+        if not check_system_wallets and not self.check_balance:
             can = True
         else:
             can = self.get_free() >= amount
@@ -139,14 +141,18 @@ class Wallet(models.Model):
         return can
 
     def has_debt(self, amount: Decimal, raise_exception: bool = False) -> bool:
-        assert amount <= 0 and self.market == Wallet.LOAN
+        assert amount <= 0 and self.market in Wallet.NEGATIVE_MARKETS
 
-        can = -self.get_free() >= -amount
+        can = -self.balance >= -amount
 
         if raise_exception and not can:
             raise InsufficientDebt()
 
         return can
+
+    def has_any_debt(self) -> bool:
+        assert self.market in Wallet.NEGATIVE_MARKETS
+        return self.balance < 0
 
     def airdrop(self, amount: Decimal, i_am_sure: bool = False):
         assert settings.DEBUG_OR_TESTING or i_am_sure

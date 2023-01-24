@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 
+from decouple import config
 from django.conf import settings
 from django.db.models import Sum
 from django.utils import timezone
@@ -11,7 +12,6 @@ from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
-from decouple import config
 
 from accounts.models import VerificationCode
 from accounts.permissions import IsBasicVerified
@@ -20,9 +20,11 @@ from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest
 from financial.models.bank_card import BankAccount, BankAccountSerializer
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
+from financial.utils.withdraw_verify import auto_verify_fiat_withdraw
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset
 from ledger.utils.wallet_pipeline import WalletPipeline
+from ledger.utils.withdraw_verify import can_withdraw
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +40,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = self.context['request'].user
 
-        if config('WITHDRAW_ENABLE', '1') == '0' or not user.can_withdraw:
+        if not can_withdraw(user.account):
             raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
 
         if user.level < user.LEVEL2:
@@ -91,7 +93,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         if user_reached_fiat_withdraw_limit(user, amount):
             logger.info('FiatRequest rejected due to max withdraw limit reached. user=%s' % user.id)
-            raise ValidationError({'amount': 'شما به سقف برداشت ریالی خورده اید.'})
+            raise ValidationError({'amount': 'شما به سقف برداشت ریالی خود رسیده اید.'})
 
         # fee_amount = min(4000, int(amount * 0.01))
         fee_amount = 5000
@@ -100,13 +102,19 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         try:
             with WalletPipeline() as pipeline:  # type: WalletPipeline
                 withdraw_request = FiatWithdrawRequest.objects.create(
+                    status=FiatWithdrawRequest.INIT,
                     amount=withdraw_amount,
                     fee_amount=fee_amount,
                     bank_account=bank_account,
                     withdraw_channel=config('WITHDRAW_CHANNEL')
                 )
 
-                pipeline.new_lock(key=withdraw_request.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
+                pipeline.new_lock(
+                    key=withdraw_request.group_id,
+                    wallet=wallet,
+                    amount=amount,
+                    reason=WalletPipeline.WITHDRAW
+                )
 
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست'})
@@ -114,9 +122,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         if otp_code:
             otp_code.set_code_used()
 
-        from financial.tasks import process_withdraw
-
-        if not settings.DEBUG_OR_TESTING_OR_STAGING:
+        if auto_verify_fiat_withdraw(withdraw_request) and not settings.DEBUG_OR_TESTING_OR_STAGING:
+            withdraw_request.change_status(FiatWithdrawRequest.PROCESSING)
+            from financial.tasks import process_withdraw
             process_withdraw.s(withdraw_request.id).apply_async(countdown=FiatWithdrawRequest.FREEZE_TIME)
 
         return withdraw_request
@@ -161,6 +169,8 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
         return fiat_withdraw_request.receive_datetime
 
     def get_status(self, withdraw: FiatWithdrawRequest):
+        if withdraw.status == FiatWithdrawRequest.INIT:
+            return FiatWithdrawRequest.PROCESSING
         if withdraw.status == FiatWithdrawRequest.PENDING:
             return FiatWithdrawRequest.DONE
         else:

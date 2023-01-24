@@ -6,19 +6,13 @@ from django.db.models import Sum
 
 def populate_trade_volume_irt(apps, schema_editor):
     Account = apps.get_model('accounts', 'Account')
-    FillOrder = apps.get_model('market', 'FillOrder')
     Prize = apps.get_model('ledger', 'Prize')
     Asset = apps.get_model('ledger', 'Asset')
 
     asset = Asset.objects.get(symbol='SHIB')
 
-    maker_values = dict(FillOrder.objects.filter(maker_order__wallet__account__type=None).values('maker_order__wallet__account_id').annotate(
-        amount=Sum('irt_value')
-    ).values_list('maker_order__wallet__account_id', 'amount'))
-
-    taker_values = dict(FillOrder.objects.filter(taker_order__wallet__account__type=None).values('taker_order__wallet__account_id').annotate(
-        amount=Sum('irt_value')
-    ).values_list('taker_order__wallet__account_id', 'amount'))
+    maker_values = {}
+    taker_values = {}
 
     accounts = Account.objects.filter(id__in=set(maker_values) | set(taker_values))
     for account in accounts:

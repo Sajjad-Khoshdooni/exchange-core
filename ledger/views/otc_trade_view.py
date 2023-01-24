@@ -1,5 +1,6 @@
-from decimal import Decimal, ConversionSyntax
+from decimal import Decimal, InvalidOperation
 
+from django.conf import settings
 from django.db.models import Sum
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -13,7 +14,7 @@ from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired
 from ledger.utils.fields import get_serializer_amount_field
-from ledger.utils.price import SELL, get_tether_irt_price, BUY
+from ledger.utils.price import SELL, get_tether_irt_price
 from market.models.pair_symbol import DEFAULT_TAKER_FEE
 
 
@@ -24,9 +25,12 @@ class OTCInfoView(APIView):
         to_symbol = request.query_params.get('to')
 
         try:
-            from_amount = Decimal(request.query_params.get('from_amount') or 0)
-            to_amount = Decimal(request.query_params.get('to_amount') or 0)
-        except ConversionSyntax:
+            from_amount = request.query_params.get('from_amount')
+            from_amount = from_amount and Decimal(from_amount)
+
+            to_amount = request.query_params.get('to_amount')
+            to_amount = to_amount and Decimal(to_amount)
+        except InvalidOperation:
             raise ValidationError({
                 'amount': 'مقدار نامعتبر است.'
             })
@@ -40,6 +44,12 @@ class OTCInfoView(APIView):
             from_amount=from_amount,
             to_amount=to_amount,
         )
+
+        if from_amount and to_amount:
+            raise ValidationError({'amount': 'دقیقا یکی از این مقدایر می‌تواند پر باشد.'})
+
+        if from_amount or to_amount:
+            otc.set_amounts(from_amount=from_amount, to_amount=to_amount, allow_dust=True)
 
         to_price = otc.get_to_price()
         config = otc.get_trade_config()
@@ -111,7 +121,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         request = self.context['request']
         account = request.user.account
 
-        if not account.user.can_trade:
+        if not settings.TRADE_ENABLE or not account.user.can_trade:
             raise ValidationError('در حال حاضر امکان معامله وجود ندارد.')
 
         from_asset = validated_data['from_asset']
@@ -209,7 +219,7 @@ class OTCTradeSerializer(serializers.ModelSerializer):
         token = validated_data['token']
         request = self.context['request']
 
-        if not request.user.can_trade:
+        if not settings.TRADE_ENABLE or not request.user.can_trade:
             raise ValidationError('در حال حاضر امکان معامله وجود ندارد.')
 
         otc_request = get_object_or_404(OTCRequest, token=token, account=request.user.account)

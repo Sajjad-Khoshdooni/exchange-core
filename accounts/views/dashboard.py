@@ -27,8 +27,12 @@ def dashboard(request):
             archived=False
         ).count()
 
-        pending_or_reject_withdraw_requests = FiatWithdrawRequest.objects.filter(
-            status=User.PENDING,
+        init_withdraw_requests = FiatWithdrawRequest.objects.filter(
+            status=FiatWithdrawRequest.INIT,
+        ).count()
+
+        process_withdraw_requests = FiatWithdrawRequest.objects.filter(
+            status=FiatWithdrawRequest.PROCESSING,
         ).count()
 
         crypto_withdraw_count = Transfer.objects.filter(deposit=False, status=Transfer.INIT).count()
@@ -37,7 +41,8 @@ def dashboard(request):
             'user_count': user_count,
             'pending_or_reject_level_2_users': pending_or_reject_level_2_users,
             'pending_level_3_users': pending_level_3_users,
-            'pending_or_reject_withdraw_requests': pending_or_reject_withdraw_requests,
+            'init_withdraw_requests': init_withdraw_requests,
+            'process_withdraw_requests': process_withdraw_requests,
             'archived_users': users.filter(archived=True).count(),
             'shahkar_rejected': users.filter(level=User.LEVEL2, national_code_phone_verified=False).count(),
             'brand': settings.BRAND,

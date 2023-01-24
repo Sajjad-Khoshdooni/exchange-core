@@ -40,7 +40,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context['request'].user
-        if not user.can_trade:
+        if not settings.TRADE_ENABLE or not user.can_trade:
             raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
 
         symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
