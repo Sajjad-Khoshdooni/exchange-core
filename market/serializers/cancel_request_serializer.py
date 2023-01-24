@@ -33,7 +33,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
         return req
 
     def create(self, validated_data):
-        instance_id = validated_data.pop('order')['id']
+        instance_id = validated_data.pop('order_id')
         if instance_id.startswith('sl-'):
             stop_loss = StopLoss.open_objects.filter(
                 wallet__account=self.context['account'],
