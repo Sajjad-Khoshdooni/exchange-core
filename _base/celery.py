@@ -62,10 +62,10 @@ app.conf.beat_schedule = {
     },
     'update maker orders': {
         'task': 'market.tasks.market_maker.update_maker_orders',
-        'schedule': 20 * TASK_MULTIPLIER,
+        'schedule': 4 * TASK_MULTIPLIER,
         'options': {
             'queue': 'market',
-            'expire': 20 * TASK_MULTIPLIER
+            'expire': 5 * TASK_MULTIPLIER
         },
     },
     'handle open stop loss': {
@@ -102,14 +102,14 @@ app.conf.beat_schedule = {
     #     },
     # },
 
-    'check_margin_level': {
-        'task': 'ledger.tasks.margin.check_margin_level',
-        'schedule': 5 * TASK_MULTIPLIER,
-        'options': {
-            'queue': 'margin',
-            'expire': 5 * TASK_MULTIPLIER
-        },
-    },
+    # 'check_margin_level': {
+    #     'task': 'ledger.tasks.margin.check_margin_level',
+    #     'schedule': 5 * TASK_MULTIPLIER,
+    #     'options': {
+    #         'queue': 'margin',
+    #         'expire': 5 * TASK_MULTIPLIER
+    #     },
+    # },
 
     # 'retention_leads_to_signup': {
     #     'task': 'accounts.tasks.retention.retention_leads_to_signup',
