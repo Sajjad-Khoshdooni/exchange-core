@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'simple_history',
     'django_user_agents',
+
     'financial',
     'multimedia',
     'accounts',
@@ -215,6 +216,8 @@ if not DEBUG_OR_TESTING:
     MINIO_SECRET_KEY = config('MINIO_STORAGE_SECRET_KEY')
     MINIO_EXTERNAL_ENDPOINT_USE_HTTPS = True
     MINIO_USE_HTTPS = False
+    MINIO_CONSISTENCY_CHECK_ON_START = True
+
     MINIO_PRIVATE_BUCKETS = [
         'core-media',
     ]
