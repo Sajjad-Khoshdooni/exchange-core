@@ -378,6 +378,22 @@ class ProviderRequester:
         if resp.success:
             return Decimal(resp.data['price'])
 
+    def get_profiles(self) -> list:
+        resp = self.collect_api('/api/v1/profiles/')
+
+        if not resp.success:
+            return []
+
+        return resp.data
+
+    def get_balances(self, profile_id: int, market: str) -> Union[dict, None]:
+        resp = self.collect_api('/api/v1/{}/{}/balances/'.format(profile_id, market))
+
+        if not resp.success:
+            return
+
+        return resp.data
+
 
 class MockProviderRequester(ProviderRequester):
     def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:

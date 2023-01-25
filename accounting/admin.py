@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from accounting.models import Account, AccountTransaction, TransactionAttachment
+from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem
 from ledger.utils.precision import humanize_number
 
 
@@ -26,3 +26,13 @@ class AccountTransactionAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'amount', 'reason')
     readonly_fields = ('created', )
     inlines = (TransactionAttachmentTabularInline, )
+
+
+@admin.register(Vault)
+class VaultAdmin(admin.ModelAdmin):
+    list_display = ('name', 'type')
+
+
+@admin.register(VaultItem)
+class VaultItemAdmin(admin.ModelAdmin):
+    list_display = ('coin', 'vault', 'amount', 'updated')
