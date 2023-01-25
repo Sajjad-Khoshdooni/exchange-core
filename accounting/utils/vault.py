@@ -37,7 +37,7 @@ def update_provider_vaults(now: datetime, usdt_irt: Decimal):
 
             vault_data = []
 
-            balances_data = provider.get_balances(profile, market)
+            balances_data = provider.get_balances(profile_id, market)
             prices = get_prices_dict(coins=list(balances_data.keys()), side=BUY)
 
             if not balances_data:
