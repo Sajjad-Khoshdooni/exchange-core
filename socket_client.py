@@ -15,7 +15,7 @@ async def subscribe():
         while True:
             try:
                 msg = await websocket.recv()
-                print(msg)
+                print(type(msg))
             except ConnectionClosed:
                 print("Connection is Closed")
                 break

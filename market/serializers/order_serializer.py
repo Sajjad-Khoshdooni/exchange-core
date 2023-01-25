@@ -58,9 +58,8 @@ class OrderSerializer(serializers.ModelSerializer):
                 created_order = super(OrderSerializer, self).create(
                     {**validated_data, 'wallet': wallet, 'symbol': symbol}
                 )
-                trades = created_order.submit(pipeline, cache_handler=market_cache_handler)
-                created_order.refresh_from_db()
-                market_cache_handler.update_bid_ask(created_order)
+                created_order.submit(pipeline, cache_handler=market_cache_handler)
+                
             market_cache_handler.execute()
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))

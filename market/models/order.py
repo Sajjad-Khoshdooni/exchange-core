@@ -107,6 +107,8 @@ class Order(models.Model):
         if self.status != self.NEW:
             return
 
+        from market.utils.redis import MarketCacheHandler
+        cache_handler = MarketCacheHandler()
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             order = Order.objects.select_for_update().get(id=self.id)
             if order.status != self.NEW:
@@ -115,6 +117,8 @@ class Order(models.Model):
             order.status = self.CANCELED
             order.save(update_fields=['status'])
             pipeline.release_lock(key=order.group_id)
+            cache_handler.update_order_status(order)
+        cache_handler.execute()
 
     @property
     def base_wallet(self):
@@ -201,7 +205,9 @@ class Order(models.Model):
                         raise CancelOrder('Overriding fill amount is zero')
         else:
             overriding_fill_amount = self.acquire_lock(pipeline, check_balance=check_balance)
-        return self.make_match(pipeline, overriding_fill_amount, cache_handler=cache_handler)
+        trades = self.make_match(pipeline, overriding_fill_amount, cache_handler=cache_handler)
+        #TODO: push trade ids to market cache and ws
+        cache_handler.update_bid_ask(self)
 
     def acquire_lock(self, pipeline: WalletPipeline, check_balance: bool = True):
         to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
