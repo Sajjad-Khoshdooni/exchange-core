@@ -35,10 +35,7 @@ def update_maker_orders():
     for depth in depth_orders:
         open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
 
-    last_trades_ts = {
-        record['symbol']: record['last'].timestamp() for record in
-        Trade.objects.values('symbol').annotate(last=Max('created'))
-    }
+    last_trades_ts = dict(PairSymbol.objects.values('id', 'last_trade_time'))
 
     for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True, asset__enable=True):
         symbol_top_prices = {
