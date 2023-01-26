@@ -36,7 +36,7 @@ class Vault(models.Model):
         coins = []
 
         for vd in data:
-            if vd.balance > 0:
+            if vd.balance != 0:
                 VaultItem.objects.update_or_create(
                     vault=self,
                     coin=vd.coin,
