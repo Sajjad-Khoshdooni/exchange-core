@@ -35,4 +35,4 @@ class VaultAdmin(admin.ModelAdmin):
 
 @admin.register(VaultItem)
 class VaultItemAdmin(admin.ModelAdmin):
-    list_display = ('coin', 'vault', 'amount', 'updated')
+    list_display = ('coin', 'vault', 'balance', 'value_usdt', 'value_irt', 'updated')

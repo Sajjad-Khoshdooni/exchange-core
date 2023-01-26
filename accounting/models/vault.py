@@ -66,7 +66,7 @@ class VaultItem(models.Model):
 
     vault = models.ForeignKey(Vault, on_delete=models.CASCADE)
     coin = models.CharField(max_length=32, db_index=True)
-    amount = get_amount_field()
+    balance = get_amount_field()
     value_usdt = get_amount_field()
     value_irt = get_amount_field()
 
