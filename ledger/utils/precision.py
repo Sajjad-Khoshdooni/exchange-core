@@ -91,4 +91,4 @@ def normalize_fraction(d: Decimal):
 
 
 def humanize_presentation(num):
-    return humanize_number(get_presentation_amount(num))
+    return humanize_number(get_presentation_amount(num, precision=8))
