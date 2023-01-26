@@ -8,6 +8,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from market.models import Trade
+from market.pagination import FastLimitOffsetPagination
 from market.serializers.trade_serializer import TradeSerializer, AccountTradeSerializer
 
 
@@ -72,7 +73,7 @@ class AccountTradeHistoryView(ListAPIView):
 class TradeHistoryView(ListAPIView):
     authentication_classes = ()
     permission_classes = ()
-    pagination_class = LimitOffsetPagination
+    pagination_class = FastLimitOffsetPagination
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
     queryset = Trade.objects.filter(is_maker=True, status=Trade.DONE).exclude(trade_source=Trade.OTC).order_by('-created')
     serializer_class = TradeSerializer
