@@ -49,3 +49,17 @@ class TradeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Trade
         fields = ('created', 'amount', 'price', 'is_buyer_maker')
+
+    def to_representation(self, trade: Trade):
+        data = super().to_representation(trade)
+
+        amount = floor_precision(Decimal(data['amount']), trade.symbol.step_size)
+
+        if not amount:
+            amount = floor_precision(trade.symbol.min_trade_quantity, trade.symbol.step_size)
+
+        data['amount'] = str(amount)
+        data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), trade.symbol.tick_size))
+
+        return data
+
