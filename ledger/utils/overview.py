@@ -44,7 +44,7 @@ class AssetOverview:
 
         self.usdt_irt = get_tether_irt_price(SELL)
 
-        self.assets_map = {a.symbol: a for a in Asset.live_objects.all()}
+        self.assets_map = {a.symbol: a for a in Asset.objects.all()}
 
     def get_calculated_hedge(self, coin: str):
         assert self._coin_total_orders is not None
