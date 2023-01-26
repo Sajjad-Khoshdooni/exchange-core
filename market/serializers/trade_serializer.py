@@ -62,4 +62,3 @@ class TradeSerializer(serializers.ModelSerializer):
         data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), trade.symbol.tick_size))
 
         return data
-

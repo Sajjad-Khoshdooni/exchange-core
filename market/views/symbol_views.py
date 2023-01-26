@@ -14,7 +14,7 @@ from accounts.models import User
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from market.models import PairSymbol, Trade
 from market.serializers import BookMarkPairSymbolSerializer
-from market.serializers.symbol_serializer import SymbolSerializer, SymbolBreifStatsSerializer, SymbolStatsSerializer
+from market.serializers.symbol_serializer import SymbolSerializer, SymbolBriefStatsSerializer, SymbolStatsSerializer
 
 
 class SymbolFilter(django_filters.FilterSet):
@@ -36,7 +36,7 @@ class SymbolListAPIView(ListAPIView):
 
     def get_serializer_class(self):
         if self.request.query_params.get('stats') == '1':
-            return SymbolBreifStatsSerializer
+            return SymbolBriefStatsSerializer
         else:
             return SymbolSerializer
 
@@ -47,16 +47,6 @@ class SymbolListAPIView(ListAPIView):
             ctx['bookmarks'] = set(user.account.bookmark_market.values_list('id', flat=True))
         else:
             ctx['bookmarks'] = []
-
-        if self.request.query_params.get('stats') == '1':
-            last_trades_qs = Trade.objects.filter(
-                symbol__enable=True,
-                status=Trade.DONE
-            ).exclude(trade_source=Trade.OTC).order_by('symbol', '-created')
-
-            previous_trades_qs = last_trades_qs.filter(created__lte=timezone.now() - timedelta(hours=24))
-            ctx['last_trades'] = {t.symbol_id: t.price for t in last_trades_qs.distinct('symbol')}
-            ctx['previous_trades'] = {t.symbol_id: t.price for t in previous_trades_qs.distinct('symbol')}
 
         return ctx
 
