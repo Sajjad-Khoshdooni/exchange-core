@@ -70,7 +70,7 @@ def update_symbol_maker_orders(symbol, last_trade_ts):
     open_depth_orders_count = get_open_orders_count(symbol.id)
 
     depth_orders = Order.open_objects.filter(
-        symbol_id=symbol.id, type__in=(Order.DEPTH, Order.BOT)
+        symbol=symbol, type__in=(Order.DEPTH, Order.BOT)
     ).values('side').annotate(
         max_price=Max('price'), min_price=Min('price'), count=Count('*')
     )
