@@ -172,7 +172,7 @@ def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, mark
                     now: datetime = None, allow_stale: bool = False) -> Dict[str, Decimal]:
     results = _fetch_prices(coins, side, exchange, now, allow_stale=allow_stale)
 
-    return {r.coin: r.price for r in results}
+    return {r.coin: r.price for r in results if r.price}
 
 
 def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
