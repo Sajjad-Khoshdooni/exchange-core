@@ -62,7 +62,7 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
         last_prices = get_symbol_prices()
 
         yesterday_prices = last_prices['yesterday']
-        today_prices = last_prices['today']
+        today_prices = last_prices['last']
 
         previous_trade_price = yesterday_prices.get(symbol.id)
         last_trade_price = today_prices.get(symbol.id)
