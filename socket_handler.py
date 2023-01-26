@@ -3,9 +3,9 @@ import os
 from decimal import Decimal
 from django.core.wsgi import get_wsgi_application
 
-# from django.conf import settings
-# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "_base.settings")
-# application = get_wsgi_application()
+from django.conf import settings
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "_base.settings")
+application = get_wsgi_application()
 import json
 
 import asyncio
@@ -50,10 +50,9 @@ async def add_client(websocket, path):
             break
 
 
-start_server = websockets.serve(add_client, 'localhost', 6789)
+start_server = websockets.serve(add_client, '0.0.0.0', 6789)
 
-# market_redis = aioredis.from_url(settings.MARKET_CACHE_LOCATION, decode_responses=True)
-market_redis = aioredis.from_url('redis://127.0.0.1:6379/3', decode_responses=True)
+market_redis = aioredis.from_url(settings.MARKET_CACHE_LOCATION, decode_responses=True)
 
 depth_pubsub = market_redis.pubsub()
 
