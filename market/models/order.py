@@ -259,9 +259,6 @@ class Order(models.Model):
 
         to_hedge_amount = Decimal(0)
 
-        tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
-            get_tether_irt_price(self.BUY)
-
         for matching_order in matching_orders:
             trade_price = matching_order.price
             if (self.side == Order.BUY and self.price < trade_price) or (
@@ -383,7 +380,8 @@ class Order(models.Model):
 
         if trades:
             self.symbol.last_trade_time = timezone.now()
-            self.symbol.save(update_fields=['last_trade_time'])
+            self.symbol.last_trade_price = trades[-1].price
+            self.symbol.save(update_fields=['last_trade_time', 'last_trade_price'])
 
         # updating trade_volume_irt of accounts
         for trade in trades:

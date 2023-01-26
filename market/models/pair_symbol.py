@@ -35,6 +35,7 @@ class PairSymbol(models.Model):
     strategy_enable = models.BooleanField(default=False)
 
     last_trade_time = models.DateTimeField(null=True, blank=True)
+    last_trade_price = get_amount_field(null=True)
 
     @classmethod
     def get_by(cls, name):

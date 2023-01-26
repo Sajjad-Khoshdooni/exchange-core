@@ -11,7 +11,7 @@ from ledger.models import Asset
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.precision import get_presentation_amount, floor_precision, decimal_to_str
 from market.models import PairSymbol, Trade, Order
-from market.utils.price import get_last_trades
+from market.utils.price import get_symbol_prices
 
 logger = logging.getLogger(__name__)
 
@@ -49,11 +49,8 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
     margin_enable = serializers.SerializerMethodField()
 
     def get_price(self, symbol: PairSymbol):
-        return None
-
-        last_trades = get_last_trades()['today']
-        last_trade_price = last_trades.get(symbol.id)
-        return last_trade_price or None
+        last_prices = get_symbol_prices()['last']
+        return last_prices.get(symbol.id)
 
     def get_bookmark(self, pair_symbol: PairSymbol):
         return pair_symbol.id in self.context.get('bookmarks')
@@ -62,16 +59,17 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
         return pair_symbol.base_asset.symbol == Asset.USDT and pair_symbol.asset.margin_enable
 
     def get_change_value_pairs(self, symbol: PairSymbol):
-        return None, None
-        last_trades = get_last_trades()
+        last_prices = get_symbol_prices()
 
-        yesterday_trades = last_trades['yesterday']
-        today_trades = last_trades['today']
+        yesterday_prices = last_prices['yesterday']
+        today_prices = last_prices['today']
 
-        previous_trade_price = yesterday_trades.get(symbol.id)
-        last_trade_price = today_trades.get(symbol.id)
-        if not (previous_trade_price and last_trade_price):
+        previous_trade_price = yesterday_prices.get(symbol.id)
+        last_trade_price = today_prices.get(symbol.id)
+
+        if not previous_trade_price or not last_trade_price:
             return None, None
+
         return last_trade_price, previous_trade_price
 
     def get_change_percent(self, symbol: PairSymbol):
