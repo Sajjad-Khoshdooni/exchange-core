@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import Sum
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem
@@ -31,7 +32,20 @@ class AccountTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(Vault)
 class VaultAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type')
+    list_display = ('name', 'market', 'type', 'get_usdt', 'get_value')
+
+    @admin.display(description='usdt')
+    def get_usdt(self, vault: Vault):
+        item = VaultItem.objects.filter(vault=vault, coin='USDT').first()
+
+        if not item:
+            return 0
+        else:
+            return item.balance
+
+    @admin.display(description='value')
+    def get_value(self, vault: Vault):
+        return VaultItem.objects.filter(vault=vault).aggregate(sum=Sum('value_usdt'))['sum'] or 0
 
 
 @admin.register(VaultItem)
