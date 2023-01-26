@@ -1,4 +1,5 @@
 from django.contrib import admin
+from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem
 from ledger.utils.precision import humanize_number
@@ -34,7 +35,7 @@ class VaultAdmin(admin.ModelAdmin):
 
 
 @admin.register(VaultItem)
-class VaultItemAdmin(admin.ModelAdmin):
+class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ('coin', 'vault', 'balance', 'value_usdt', 'value_irt', 'updated')
     search_fields = ('coin', )
     list_filter = ('vault__name', 'vault__type', 'vault__market')
