@@ -12,6 +12,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db import models, transaction
 from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet
+from django.utils import timezone
 
 from accounts.models import Notification
 from ledger.models import Wallet
@@ -379,6 +380,10 @@ class Order(models.Model):
         Trade.objects.bulk_create(trades)
 
         Trade.create_hedge_fiat_trxs(trades, tether_irt)
+
+        if trades:
+            self.symbol.last_trade_time = timezone.now()
+            self.symbol.save(update_fields=['last_trade_time'])
 
         # updating trade_volume_irt of accounts
         for trade in trades:
