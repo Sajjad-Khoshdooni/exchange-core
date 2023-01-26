@@ -40,7 +40,7 @@ class PairSymbolAdmin(admin.ModelAdmin):
     list_display = ('name', 'enable', 'market_maker_enabled', 'maker_amount', 'taker_fee', 'maker_fee',)
     list_editable = ('enable',)
     list_filter = ('enable', BaseAssetFilter, 'market_maker_enabled',)
-    readonly_fields = ('name',)
+    readonly_fields = ('name', 'last_trade_time', 'last_trade_price')
     search_fields = ('name', )
     ordering = ('-enable', 'asset__order', 'base_asset__order')
 
