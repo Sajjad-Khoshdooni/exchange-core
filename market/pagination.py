@@ -3,6 +3,8 @@ from rest_framework.response import Response
 
 
 class FastLimitOffsetPagination(LimitOffsetPagination):
+    max_limit = 20
+
     def paginate_queryset(self, queryset, request, view=None):
         self.limit = self.get_limit(request)
         if self.limit is None:
