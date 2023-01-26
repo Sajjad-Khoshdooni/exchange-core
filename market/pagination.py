@@ -1,4 +1,7 @@
+from collections import OrderedDict
+
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.response import Response
 
 
 class FastLimitOffsetPagination(LimitOffsetPagination):
@@ -7,8 +10,13 @@ class FastLimitOffsetPagination(LimitOffsetPagination):
         if self.limit is None:
             return None
 
-        self.count = None
+        self.count = 10 ** 5
         self.offset = self.get_offset(request)
         self.request = request
 
         return list(queryset[self.offset:self.offset + self.limit])
+
+    def get_paginated_response(self, data):
+        return Response({
+            'results': data
+        })
