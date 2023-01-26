@@ -39,18 +39,8 @@ class AccountTradeSerializer(serializers.ModelSerializer):
         fields = ('created', 'coin', 'pair', 'side', 'amount', 'price', 'pair_amount', 'fee_amount', 'market')
 
 
-class TradeSerializer(AccountTradeSerializer):
-    coin = serializers.CharField(source='symbol.asset.symbol')
-    pair = serializers.CharField(source='symbol.base_asset.symbol')
+class TradeSerializer(serializers.ModelSerializer):
     is_buyer_maker = serializers.SerializerMethodField()
-
-    asset = AssetSerializerMini(source='symbol.asset', read_only=True)
-    base_asset = AssetSerializerMini(source='symbol.base_asset', read_only=True)
-
-    pair_amount = serializers.SerializerMethodField()
-
-    def get_pair_amount(self, trade: Trade):
-        return trade.price * trade.amount
 
     @classmethod
     def get_is_buyer_maker(cls, instance: Trade):
@@ -58,4 +48,4 @@ class TradeSerializer(AccountTradeSerializer):
 
     class Meta:
         model = Trade
-        fields = ('created', 'coin', 'pair', 'amount', 'price', 'pair_amount', 'is_buyer_maker', 'asset', 'base_asset')
+        fields = ('created', 'amount', 'price', 'is_buyer_maker')
