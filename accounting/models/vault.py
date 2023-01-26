@@ -27,7 +27,7 @@ class Vault(models.Model):
     key = models.CharField(max_length=128, blank=True)
 
     def __str__(self):
-        return self.name + ' ' + self.type
+        return '%s %s %s' % (self.type, self.name, self.market)
 
     class Meta:
         unique_together = ('key', 'type', 'market')

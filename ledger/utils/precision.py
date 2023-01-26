@@ -88,3 +88,7 @@ def normalize_fraction(d: Decimal):
     normalized = d.normalize()
     sign, digit, exponent = normalized.as_tuple()
     return normalized if exponent <= 0 else normalized.quantize(1)
+
+
+def humanize_presentation(num):
+    return humanize_number(get_presentation_amount(num))

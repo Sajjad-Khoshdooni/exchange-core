@@ -179,6 +179,14 @@ app.conf.beat_schedule = {
             'expire': 200
         }
     },
+    'create_vault_snapshot': {
+        'task': 'accounting.tasks.vault.update_vaults',
+        'schedule': crontab(minute='*/5'),
+        'options': {
+            'queue': 'vault',
+            'expire': 200
+        }
+    },
     # 'create_accounting_report': {
     #     'task': 'accounting.tasks.weekly_fiat_transfer.create_weekly_accounting_report',
     #     'schedule': crontab(hour=19, minute=30, day_of_week=6),
