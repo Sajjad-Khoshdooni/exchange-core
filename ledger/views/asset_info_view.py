@@ -57,7 +57,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
     def get_price_usdt(self, asset: Asset):
         prices = self.context['prices']
-        price = prices[asset.symbol]
+        price = prices.get(asset.symbol)
         if not price:
             return
 
@@ -65,7 +65,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
     def get_price_irt(self, asset: Asset):
         prices = self.context['prices']
-        price = prices[asset.symbol]
+        price = prices.get(asset.symbol)
         if not price:
             return
 
