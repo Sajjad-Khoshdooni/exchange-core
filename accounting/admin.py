@@ -36,3 +36,5 @@ class VaultAdmin(admin.ModelAdmin):
 @admin.register(VaultItem)
 class VaultItemAdmin(admin.ModelAdmin):
     list_display = ('coin', 'vault', 'balance', 'value_usdt', 'value_irt', 'updated')
+    search_fields = ('coin', )
+    list_filter = ('vault__name', 'vault__type', 'vault__market')

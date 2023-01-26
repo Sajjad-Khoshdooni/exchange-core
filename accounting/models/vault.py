@@ -1,5 +1,4 @@
 import dataclasses
-from datetime import datetime
 from decimal import Decimal
 from typing import List
 
@@ -51,7 +50,7 @@ class Vault(models.Model):
 
                 coins.append(vd.coin)
 
-        VaultItem.objects.filter(vault=self).exclude(coin=coins).update(
+        VaultItem.objects.filter(vault=self).exclude(coin__in=coins).update(
             balance=0,
             value_usdt=0,
             value_irt=0,
