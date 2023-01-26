@@ -320,15 +320,12 @@ class AssetOverview:
 
     @classmethod
     def get_non_deposited_accounts_per_asset_balance(cls) -> dict:
-        transferred_accounts = list(Transfer.objects.filter(deposit=True).values_list('wallet__account_id', flat=True))
-
         non_deposited_wallets = Wallet.objects.filter(
             account__type=Account.ORDINARY,
-            account__user__first_fiat_deposit_date__isnull=True
+            account__user__first_fiat_deposit_date__isnull=True,
+            account__user__first_crypto_deposit_date__isnull=True,
         ).exclude(
             market=Wallet.VOUCHER
-        ).exclude(
-            account__in=transferred_accounts
         ).values('asset__symbol').annotate(amount=Sum('balance'))
 
         return {w['asset__symbol']: w['amount'] for w in non_deposited_wallets}

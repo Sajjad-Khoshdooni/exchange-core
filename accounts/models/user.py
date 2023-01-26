@@ -94,6 +94,7 @@ class User(AbstractUser):
     )
 
     first_fiat_deposit_date = models.DateTimeField(blank=True, null=True, verbose_name='زمان اولین واریز ریالی')
+    first_crypto_deposit_date = models.DateTimeField(blank=True, null=True, verbose_name='زمان اولین واریز رمزارزی')
 
     selfie_image = models.OneToOneField(
         to='multimedia.Image',
