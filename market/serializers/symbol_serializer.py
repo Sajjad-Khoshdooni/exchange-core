@@ -49,6 +49,8 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
     margin_enable = serializers.SerializerMethodField()
 
     def get_price(self, symbol: PairSymbol):
+        return None
+
         last_trades = get_last_trades()['today']
         last_trade_price = last_trades.get(symbol.id)
         return last_trade_price or None
@@ -60,6 +62,7 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
         return pair_symbol.base_asset.symbol == Asset.USDT and pair_symbol.asset.margin_enable
 
     def get_change_value_pairs(self, symbol: PairSymbol):
+        return None, None
         last_trades = get_last_trades()
 
         yesterday_trades = last_trades['yesterday']
