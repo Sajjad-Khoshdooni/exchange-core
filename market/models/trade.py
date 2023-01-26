@@ -28,7 +28,7 @@ class Trade(models.Model):
     DONE, REVERT = 'd', 'r'
     STATUS_CHOICES = (DONE, 'done'), (REVERT, 'revert')
 
-    created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(auto_now_add=True, db_index=True)
     symbol = models.ForeignKey(PairSymbol, on_delete=models.CASCADE)
     account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
 
