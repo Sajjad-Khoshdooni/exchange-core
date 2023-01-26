@@ -54,16 +54,6 @@
         {% endif %}
         <div style="float: left; font-weight: bold;">HEDGE VALUE: {{ hedge_value }}</div>
         </br>
-        <div style="float: left; font-weight: bold;">Binance MARGIN RATIO: {{ binance_margin_ratio }}</div>
-        </br>
-        <div style="float: left; font-weight: bold;">Binance Spot Tether: {{ binance_spot_tether_amount }}</div>
-        </br>
-        <div style="float: left; font-weight: bold;">Kucoin Spot Tether: {{ kucoin_spot_tether_amount }}</div>
-        </br>
-        <div style="float: left; font-weight: bold;">Mexc Spot Tether: {{ mexc_spot_tether_amount }}</div>
-        </br>
-        </br>
-        </br>
         </br>
         <div style="float: left; font-weight: bold;">Total Assets: {{ total_assets_usdt }}</div>
         </br>
@@ -74,30 +64,7 @@
         <div style="float: left; font-weight: bold;">Users Assets: {{ users_usdt }}</div>
         </br>
         </br>
-
-        <div style="float: left; font-weight: bold;">Binance Futures: {{ binance_margin_balance }}</div>
-        </br>
-        <div style="float: left; font-weight: bold;">Binance Spot: {{ binance_spot_usdt }}</div>
-        </br>
-        <div style="float: left; font-weight: bold;">Kucoin Spot: {{ kucoin_spot_usdt }}</div>
-        </br>
-        <div style="float: left; font-weight: bold;">Mexc Spot: {{ mexc_spot_usdt }}</div>
-        </br>
-        <div style="float: left; font-weight: bold;">Internal value: {{ internal_usdt }}</div>
-        </br>
-        <div style="float: left; font-weight: bold;">Fiat IRT: {{ fiat_usdt }}$</div>
-        </br>
-        <div style="float: left; font-weight: bold;">Investment: {{ investment }}$</div>
-        </br>
-        <div style="float: left; font-weight: bold;">Cash: {{ cash }}$</div>
-      </br>
       <div style="float: left; font-weight: bold;">Margin Insurance: {{ margin_insurance_balance }}</div>
-        </br>
-        </br>
-
-        <div style="float: left; font-weight: bold;">BinanceF Initial Margin: {{ binance_initial_margin }}</div>
-        </br>
-        <div style="float: left; font-weight: bold;">BinanceF Maint Margin: {{ binance_maint_margin }}</div>
         </br>
         <div class="module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
             <div class="changelist-form-container">
