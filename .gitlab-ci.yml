@@ -95,9 +95,6 @@ raastin_deploy_production:
     - 'darkube deploy --token ${RAASTIN_CELERY_STOPLOSS_TOKEN}
       --app-id ${RAASTIN_CELERY_STOPLOSS_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
       --job-id "${CI_JOB_ID}"'
-    - 'darkube deploy --token ${RAASTIN_CELERY_MARGIN_TOKEN}
-      --app-id ${RAASTIN_CELERY_MARGIN_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
-      --job-id "${CI_JOB_ID}"'
     - 'darkube deploy --token ${RAASTIN_CELERY_TRANSFER_TOKEN}
       --app-id ${RAASTIN_CELERY_TRANSFER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
       --job-id "${CI_JOB_ID}"'
