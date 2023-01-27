@@ -211,7 +211,7 @@ class Trade(models.Model):
             trade.set_gap_revenue()
 
         Trade.objects.bulk_create(trades_pair.trades)
-        Trade.create_hedge_fiat_trxs(trades_pair.trades)
+        Trade.create_hedge_fiat_trxs(trades_pair.trades, current_tether_irt=usdt_irt)
 
         # updating trade_volume_irt of accounts
         accounts = [trades_pair.maker_trade.account, trades_pair.taker_trade.account]
@@ -296,7 +296,7 @@ class Trade(models.Model):
         return top_prices
 
     @classmethod
-    def create_hedge_fiat_trxs(cls, trades: List['Trade']):
+    def create_hedge_fiat_trxs(cls, trades: List['Trade'], current_tether_irt: Decimal):
         from financial.models import FiatHedgeTrx
         trxs = []
 
@@ -305,11 +305,21 @@ class Trade(models.Model):
                     ((trade.is_maker and trade.trade_source == cls.SYSTEM_TAKER) or
                      (not trade.is_maker and trade.trade_source in [cls.OTC, cls.SYSTEM_MAKER])):
 
-                hedge_price = get_trading_price_usdt(trade.symbol.asset.symbol, side=BUY, raw_price=True)
+                coin = trade.symbol.asset.symbol
 
-                usdt_price = get_tether_irt_price(BUY)
-                usdt_amount = hedge_price * trade.amount
-                irt_amount = usdt_amount * usdt_price
+                if coin == Asset.USDT:
+                    coin_usdt_price = 1
+                else:
+                    coin_usdt_price = get_trading_price_usdt(
+                        coin=coin,
+                        side=trade.side,
+                        value=trade.irt_value / current_tether_irt
+                    )
+
+                usdt_price = trade.price / coin_usdt_price
+
+                usdt_amount = trade.amount * coin_usdt_price
+                irt_amount = trade.amount * trade.price
 
                 if trade.side == BUY:
                     usdt_amount = -usdt_amount

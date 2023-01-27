@@ -354,7 +354,7 @@ class FiatHedgeTrxAdmin(admin.ModelAdmin):
 
     @admin.display(description='side')
     def get_side(self, fiat_hedge: FiatHedgeTrx):
-        return BUY if fiat_hedge.target_amount > 0 else SELL
+        return SELL if fiat_hedge.target_amount > 0 else BUY
 
     def changelist_view(self, request, extra_context=None):
 

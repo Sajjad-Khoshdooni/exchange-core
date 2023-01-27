@@ -24,6 +24,7 @@ from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_pri
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -106,6 +107,8 @@ class Order(models.Model):
         if self.status != self.NEW:
             return
 
+        from market.utils.redis import MarketCacheHandler
+        cache_handler = MarketCacheHandler()
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             order = Order.objects.select_for_update().get(id=self.id)
             if order.status != self.NEW:
@@ -114,6 +117,8 @@ class Order(models.Model):
             order.status = self.CANCELED
             order.save(update_fields=['status'])
             pipeline.release_lock(key=order.group_id)
+            cache_handler.update_order_status(order)
+        cache_handler.execute()
 
     @property
     def base_wallet(self):
@@ -189,7 +194,7 @@ class Order(models.Model):
     def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
         return amount * price if side == Order.BUY else amount
 
-    def submit(self, pipeline: WalletPipeline, check_balance: bool = True, is_stoploss: bool = False):
+    def submit(self, pipeline: WalletPipeline, check_balance: bool = True, is_stoploss: bool = False, cache_handler=None):
         overriding_fill_amount = None
         if is_stoploss:
             if self.side == Order.BUY:
@@ -200,7 +205,9 @@ class Order(models.Model):
                         raise CancelOrder('Overriding fill amount is zero')
         else:
             overriding_fill_amount = self.acquire_lock(pipeline, check_balance=check_balance)
-        self.make_match(pipeline, overriding_fill_amount)
+        trades = self.make_match(pipeline, overriding_fill_amount, cache_handler=cache_handler)
+        #TODO: push trade ids to market cache and ws
+        cache_handler.update_bid_ask(self)
 
     def acquire_lock(self, pipeline: WalletPipeline, check_balance: bool = True):
         to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
@@ -223,7 +230,7 @@ class Order(models.Model):
         release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side)
         pipeline.release_lock(key=self.group_id, amount=release_amount)
 
-    def make_match(self, pipeline: WalletPipeline, overriding_fill_amount: Union[Decimal, None]):
+    def make_match(self, pipeline: WalletPipeline, overriding_fill_amount: Union[Decimal, None], cache_handler=None):
         from market.utils.trade import register_transactions, TradesPair
 
         key = 'mm-cc-%s' % self.symbol.name
@@ -257,6 +264,9 @@ class Order(models.Model):
         tether_irt = get_tether_irt_price(self.BUY)
 
         to_hedge_amount = Decimal(0)
+
+        tether_irt = Decimal(1) if self.symbol.base_asset.symbol == self.symbol.base_asset.IRT else \
+            get_tether_irt_price(self.BUY)
 
         for matching_order in matching_orders:
             trade_price = matching_order.price
@@ -342,6 +352,8 @@ class Order(models.Model):
                 with transaction.atomic():
                     matching_order.status = Order.FILLED
                     matching_order.save(update_fields=['status'])
+                    if cache_handler:
+                        cache_handler.update_order_status(matching_order)
 
             if unfilled_amount == 0:
                 self.status = Order.FILLED
@@ -350,6 +362,8 @@ class Order(models.Model):
                     pipeline.release_lock(self.group_id)
 
                 self.save(update_fields=['status'])
+                if cache_handler:
+                    cache_handler.update_order_status(self)
                 break
 
         if to_hedge_amount != 0:
@@ -375,7 +389,7 @@ class Order(models.Model):
 
         Trade.objects.bulk_create(trades)
 
-        Trade.create_hedge_fiat_trxs(trades)
+        Trade.create_hedge_fiat_trxs(trades, tether_irt)
 
         # updating trade_volume_irt of accounts
         for trade in trades:
@@ -390,6 +404,7 @@ class Order(models.Model):
 
             cache.delete(key)
             logger.info(log_prefix + 'make match finished.')
+        return trades
 
     @classmethod
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):

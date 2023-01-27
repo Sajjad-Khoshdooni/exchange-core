@@ -118,6 +118,9 @@ class Achievement(models.Model):
                 }
             )
 
+            if self.voucher and not prize.redeemed:
+                prize.build_trx(pipeline)
+
             if created:
                 title = 'دریافت جایزه'
 

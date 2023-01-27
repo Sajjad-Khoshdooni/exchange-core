@@ -56,9 +56,7 @@ class UnreadAllNotificationView(APIView):
     def patch(self, request):
         read = request.data.get('read')
 
-        if read:
-            raise ValidationError({'read': 'should be true!'})
-
-        Notification.objects.filter(recipient=request.user).update(read=True)
+        if read is not None:
+            Notification.objects.filter(recipient=request.user).update(read=True)
 
         return Response('ok')

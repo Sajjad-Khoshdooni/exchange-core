@@ -198,7 +198,7 @@ class Transfer(models.Model):
     def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str, memo: str = ''):
         assert wallet.asset.symbol != Asset.IRT
         assert wallet.account.is_ordinary_user()
-        wallet.has_balance(amount, raise_exception=True)
+        wallet.has_balance(amount, raise_exception=True, check_system_wallets=True)
 
         fast_forward = cls.check_fast_forward(sender_wallet=wallet, network=network, amount=amount, address=address)
 
