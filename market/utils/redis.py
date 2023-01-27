@@ -128,12 +128,12 @@ class MarketCacheHandler:
             return
 
         if order.side == Order.BUY:
-            is_updated = self.set_if_higher(f'market:depth:{order.symbol.name}:{order.side}', order.price)
+            is_updated = self.set_if_higher(f'market:depth:{order.symbol.name}:{order.side}', str(order.price))
         else:
-            is_updated = self.set_if_lower(f'market:depth:{order.symbol.name}:{order.side}', order.price)
+            is_updated = self.set_if_lower(f'market:depth:{order.symbol.name}:{order.side}', str(order.price))
 
         if bool(is_updated):
-            self.market_pipeline.publish(f'market:depth:{order.symbol.name}:{order.side}', order.price)
+            self.market_pipeline.publish(f'market:depth:{order.symbol.name}:{order.side}', str(order.price))
 
     # @classmethod
     # def update_trades(cls, account_id, order_id, trades):
