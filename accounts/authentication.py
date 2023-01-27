@@ -44,8 +44,7 @@ class CustomTokenAuthentication(TokenAuthentication):
         try:
             token = model.objects.select_related('user').get(
                 Q(ip_list__contains=[request_ip]) | Q(ip_list__isnull=True),
-                key=key,
-                type=model.API
+                key=key
             )
 
         except model.DoesNotExist:
