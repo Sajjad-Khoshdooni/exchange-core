@@ -55,5 +55,7 @@ class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_filter = ('vault__name', 'vault__type', 'vault__market')
 
     def save_model(self, request, obj, form, change):
+        super(VaultItemAdmin, self).save_model(request, obj, form, change)
+
         obj.vault.real_value = VaultItem.objects.filter(vault=self).aggregate(value=Sum('value_usdt'))['value'] or 0
         obj.vault.save(update_fields=['real_value'])
