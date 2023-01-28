@@ -2,8 +2,10 @@ import logging
 from datetime import datetime
 from decimal import Decimal
 
+from django.utils import timezone
+
 from accounting.models import Vault
-from accounting.models.vault import VaultData
+from accounting.models.vault import VaultData, AssetPrice
 from financial.utils.stats import get_total_fiat_irt
 from ledger.models import Asset
 from ledger.utils.overview import get_internal_asset_deposits
@@ -131,3 +133,30 @@ def update_gateway_vaults(now: datetime, usdt_irt: Decimal):
 
 def update_cold_wallet_vaults(now: datetime, usdt_irt: Decimal):
     logger.info('updating cold wallet vaults')
+
+
+def update_asset_prices():
+    logger.info('updating asset prices')
+
+    prices = get_prices_dict(coins=list(Asset.live_objects.values_list('symbol', flat=True)), side=BUY)
+
+    existing_assets = AssetPrice.objects.filter(coin__in=prices)
+    existing_coins = set(existing_assets.values_list('coin', flat=True))
+
+    now = timezone.now()
+
+    missing_assets = []
+    for coin in set(prices) - existing_coins:
+        missing_assets.append(
+            AssetPrice(
+                updated=now,
+                coin=coin,
+                price=prices.get(coin)
+            )
+        )
+
+    for asset in existing_assets:
+        asset.price = prices.get(asset.coin)
+        asset.updated = now
+
+    AssetPrice.objects.bulk_update(existing_assets)
