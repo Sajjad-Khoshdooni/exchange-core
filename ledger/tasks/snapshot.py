@@ -38,12 +38,12 @@ def create_snapshot():
                 created=now,
                 asset=asset,
                 price=prices.get(asset.symbol, 0),
-                hedge_amount=overview.get_hedge_amount(asset),
-                hedge_value=overview.get_hedge_value(asset),
-                calc_hedge_amount=overview.get_calculated_hedge(asset),
+                hedge_amount=overview.get_hedge_amount(asset.symbol),
+                hedge_value=overview.get_hedge_value(asset.symbol),
+                calc_hedge_amount=overview.get_calculated_hedge(asset.symbol),
 
-                total_amount=overview.get_real_assets(asset),
-                users_amount=overview.get_users_asset_amount(asset),
+                total_amount=overview.get_real_assets(asset.symbol),
+                users_amount=overview.get_users_asset_amount(asset.symbol),
             )
         )
 
