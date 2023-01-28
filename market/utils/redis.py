@@ -109,7 +109,7 @@ class MarketCacheHandler:
     @classmethod
     def _load_script(cls, func_name):
         func_sha = cls._client.get(f'utils:func:{func_name}')
-        if not func_sha:
+        if not func_sha or not cls._client.script_exists(func_sha):
             func_sha = cls._register_script(func_name)
             cls._client.set(f'utils:func:{func_name}', func_sha)
         return func_sha
