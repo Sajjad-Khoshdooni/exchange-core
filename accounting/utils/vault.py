@@ -43,7 +43,7 @@ def update_provider_vaults(now: datetime, usdt_irt: Decimal):
                 continue
 
             balances = balances_data['balances']
-            real_value = balances['real_value'] and Decimal(balances['real_value'])
+            real_value = balances_data['real_value'] and Decimal(balances_data['real_value'])
 
             prices = get_prices_dict(coins=list(balances.keys()), side=BUY)
 
