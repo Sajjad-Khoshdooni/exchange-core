@@ -24,14 +24,21 @@ def update_provider_vaults(now: datetime, usdt_irt: Decimal):
 
         logger.info('updating provider profile = %d' % profile_id)
 
-        for market in Vault.MARKETS:
+        exchange = profile['exchange']
+
+        if exchange == 'binance':
+            markets = Vault.MARKETS
+        else:
+            markets = [Vault.SPOT]
+
+        for market in markets:
             vault, _ = Vault.objects.get_or_create(
                 type=Vault.PROVIDER,
                 market=market,
                 key=profile_id,
 
                 defaults={
-                    'name': '%s-%s' % (profile['exchange'], profile['scope'])
+                    'name': '%s-%s' % (exchange, profile['scope'])
                 }
             )
 
