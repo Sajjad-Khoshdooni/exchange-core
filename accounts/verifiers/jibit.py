@@ -133,7 +133,9 @@ class JibitRequester:
         req_object.response = resp_data
         req_object.status_code = resp.status_code
 
-        if resp.status_code < 500 and resp_data.get('code') not in ['card.provider_is_not_active']:
+        if resp.status_code in (403, 401) and resp.status_code < 500 and \
+                resp_data.get('code') not in ['card.provider_is_not_active']:
+
             req_object.search_key = search_key
 
         req_object.save()
