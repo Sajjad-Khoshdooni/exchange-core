@@ -62,6 +62,18 @@ def name_similarity(name1, name2):
 
         name1 = rotate_words(name1)
 
+    name1_parts = name1.split(' ')
+    name2_parts = name2.split(' ')
+
+    if len(name1_parts) != name2_parts:
+        small, long = name1_parts, name2_parts
+
+        if len(small) > len(long):
+            small, long = long, small
+
+        if str_similar_rate(' '.join(small), ' '.join(long[:len(small)])) >= NAME_SIMILARITY_THRESHOLD:
+            return True
+
     logger.info('verifying %s and %s is %s' % (name1, name2, False))
 
     return False
