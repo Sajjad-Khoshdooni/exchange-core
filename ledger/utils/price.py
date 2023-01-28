@@ -169,6 +169,12 @@ def get_prices_dict(coins: list, side: str = None, allow_stale: bool = False) ->
 
 
 def get_price(coin: str, side: str, allow_stale: bool = False) -> Decimal:
+    if coin == USDT:
+        return Decimal(1)
+
+    if coin == IRT:
+        return 1 / get_tether_irt_price(get_other_side(side))
+
     prices = get_prices_dict([coin], side, allow_stale=allow_stale)
 
     if prices:
