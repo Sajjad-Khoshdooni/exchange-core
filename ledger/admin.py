@@ -55,7 +55,7 @@ class AssetAdmin(AdvancedAdmin):
         context = {
             'hedge_value': round(self.overview.get_total_hedge_value(), 2),
             'margin_insurance_balance': self.overview.get_margin_insurance_balance(),
-            'binance_margin_ratio': round(self.overview.get_binance_margin_ratio(), 2),
+            # 'binance_margin_ratio': round(self.overview.get_binance_margin_ratio(), 2),
 
             'total_assets_usdt': round(self.overview.get_all_real_assets_value(), 0),
             'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
