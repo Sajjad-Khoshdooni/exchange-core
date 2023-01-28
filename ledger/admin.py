@@ -16,7 +16,7 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory, FastBuyToken
+from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network
 from ledger.utils.fields import DONE
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount, humanize_presentation
@@ -47,7 +47,7 @@ class AssetAdmin(AdvancedAdmin):
     list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'new_coin', 'hedge')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
-    actions = ('hedge_asset', )
+    actions = ('hedge_asset', 'create_network_infos')
 
     def changelist_view(self, request, extra_context=None):
         self.overview = AssetOverview(calculated_hedge=True)
@@ -105,6 +105,35 @@ class AssetAdmin(AdvancedAdmin):
                 asset=asset,
                 scope=HEDGE
             )
+
+    @admin.action(description='create network assets', permissions=['view'])
+    def create_network_infos(self, request, queryset):
+        from ledger.models import NetworkAsset
+
+        for asset in queryset:
+            networks_info = get_provider_requester().get_network_info(asset.symbol)
+
+            for info in networks_info:
+                network, _ = Network.objects.get_or_create(
+                    symbol=info.network,
+                    can_deposit=False,
+                    can_withdraw=False,
+                    address_regex=info.address_regex
+                )
+
+                ns, _ = NetworkAsset.objects.get_or_create(
+                    asset=asset,
+                    network=network,
+
+                    defaults={
+                        'withdraw_fee': info.withdraw_fee,
+                        'withdraw_min': info.withdraw_min,
+                        'withdraw_max': info.withdraw_max,
+                        'withdraw_precision': 0,
+                    }
+                )
+
+                ns.update_with_provider(info)
 
 
 @admin.register(models.Network)
