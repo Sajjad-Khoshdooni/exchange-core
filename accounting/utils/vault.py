@@ -159,4 +159,4 @@ def update_asset_prices():
         asset.price = prices.get(asset.coin)
         asset.updated = now
 
-    AssetPrice.objects.bulk_update(existing_assets)
+    AssetPrice.objects.bulk_update(existing_assets, ['price', 'updated'])
