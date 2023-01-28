@@ -18,6 +18,8 @@ class VaultData:
 
 
 class Vault(models.Model):
+    history = HistoricalRecords()
+
     TYPES = PROVIDER, GATEWAY, HOT_WALLET, COLD_WALLET, MANUAL = 'provider', 'gateway', 'hw', 'cw', 'manual'
     MARKETS = SPOT, FUTURES = 'spot', 'futures'
 
