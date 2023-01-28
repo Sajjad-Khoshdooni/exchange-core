@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class CancelRequestSerializer(serializers.ModelSerializer):
-    id = serializers.CharField(source='order.id')
+    id = serializers.CharField(source='order_id')
     canceled_at = serializers.CharField(source='created', read_only=True)
 
     @staticmethod
@@ -33,7 +33,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
         return req
 
     def create(self, validated_data):
-        instance_id = validated_data.pop('order')['id']
+        instance_id = validated_data.pop('order_id')
         if instance_id.startswith('sl-'):
             stop_loss = StopLoss.open_objects.filter(
                 wallet__account=self.context['account'],
@@ -60,8 +60,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
                     )
                     pipeline.release_lock(key=stop_loss.group_id, amount=release_amount)
                     # faking cancel request creation
-                    fake_order = Order(id=instance_id)
-                    return CancelRequest(order=fake_order, created=timezone.now())
+                    return CancelRequest(order_id=instance_id, created=timezone.now())
         else:
             order = Order.open_objects.filter(
                 wallet__account=self.context['account'],

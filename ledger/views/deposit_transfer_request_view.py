@@ -88,6 +88,10 @@ class DepositSerializer(serializers.ModelSerializer):
                 if status == Transfer.DONE:
                     prev_transfer.build_trx(pipeline)
 
+                    user = prev_transfer.wallet.account.user
+                    user.first_crypto_deposit_date = timezone.now()
+                    user.save(update_fields=['first_crypto_deposit_date'])
+
             prev_transfer.alert_user()
 
             return prev_transfer
@@ -123,6 +127,10 @@ class DepositSerializer(serializers.ModelSerializer):
 
                 if status == Transfer.DONE:
                     transfer.build_trx(pipeline)
+
+                    user = transfer.wallet.account.user
+                    user.first_crypto_deposit_date = timezone.now()
+                    user.save(update_fields=['first_crypto_deposit_date'])
 
             transfer.alert_user()
 

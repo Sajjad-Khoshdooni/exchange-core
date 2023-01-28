@@ -14,8 +14,7 @@ from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
-    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost, Investment, InvestmentRevenue, \
-    FiatHedgeTrx
+    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost, FiatHedgeTrx
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.precision import humanize_number, get_presentation_amount
@@ -375,29 +374,3 @@ class FiatHedgeTrxAdmin(admin.ModelAdmin):
         }
 
         return super().changelist_view(request, extra_context=context)
-
-
-class InvestmentRevenueInline(admin.TabularInline):
-    fields = ('created', 'amount', 'description', 'revenue')
-    readonly_fields = ('created', )
-    model = InvestmentRevenue
-    extra = 1
-
-
-@admin.register(Investment)
-class InvestmentAdmin(admin.ModelAdmin):
-    list_display = ('created', 'title', 'asset', 'get_total', 'get_amount', 'get_revenue', 'type')
-    inlines = [InvestmentRevenueInline]
-    list_filter = ('type', 'asset', )
-
-    @admin.display(description='amount', ordering='amount')
-    def get_amount(self, investment: Investment):
-        return humanize_number(get_presentation_amount(investment.get_base_amount()))
-
-    @admin.display(description='revenue')
-    def get_revenue(self, investment: Investment):
-        return humanize_number(get_presentation_amount(investment.get_revenue_amount()))
-
-    @admin.display(description='total')
-    def get_total(self, investment: Investment):
-        return humanize_number(get_presentation_amount(investment.get_total_amount()))

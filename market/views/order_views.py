@@ -4,7 +4,7 @@ import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, get_object_or_404
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -16,7 +16,7 @@ from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from accounts.authentication import CustomTokenAuthentication
 from accounts.views.jwt_views import DelegatedAccountMixin, user_has_delegate_permission
 from ledger.models.wallet import ReserveWallet
-from market.models import Order, CancelRequest
+from market.models import Order, CancelRequest, PairSymbol
 from market.models import StopLoss, Trade
 from market.serializers.cancel_request_serializer import CancelRequestSerializer
 from market.serializers.order_serializer import OrderSerializer
@@ -96,7 +96,8 @@ class OpenOrderListAPIView(APIView):
         side_filter = self.request.query_params.get('side')
         bot_filter = self.request.query_params.get('bot')
         if symbol_filter:
-            filters['symbol__name'] = symbol_filter.upper()
+            symbol = get_object_or_404(PairSymbol, name=symbol_filter.upper())
+            filters['symbol'] = symbol
         if side_filter:
             filters['side'] = side_filter
         if bot_filter:

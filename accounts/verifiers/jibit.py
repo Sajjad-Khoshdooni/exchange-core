@@ -1,6 +1,7 @@
 import datetime
 import logging
 from dataclasses import dataclass
+from typing import Union
 
 import requests
 from django.core.cache import caches
@@ -21,7 +22,7 @@ JIBIT_TOKEN_KEY = 'jibit-token'
 
 @dataclass
 class Response:
-    data: dict
+    data: Union[dict, list]
     success: bool = True
     status_code: int = 200
 

@@ -94,16 +94,13 @@ def get_redis_price_key(coin: str):
     return 'price:' + coin.lower() + base
 
 
-def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
-                  now: datetime = None, allow_stale: bool = False) -> List[Price]:
+def _fetch_prices(coins: list, side: str = None, allow_stale: bool = False) -> List[Price]:
     results = []
 
     if side:
         sides = [side]
     else:
         sides = [BUY, SELL]
-
-    assert exchange == BINANCE
 
     if USDT in coins:  # todo: check if market_symbol = USDT
         for s in sides:
@@ -136,9 +133,6 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
     if not coins:
         return results
 
-    if now:
-        raise NotImplemented
-
     pipe = price_redis.pipeline(transaction=False)
     for c in coins:
         name = get_redis_price_key(c)
@@ -168,16 +162,14 @@ def _fetch_prices(coins: list, side: str = None, exchange: str = BINANCE,
     return results
 
 
-def get_prices_dict(coins: list, side: str = None, exchange: str = BINANCE, market_symbol: str = USDT,
-                    now: datetime = None, allow_stale: bool = False) -> Dict[str, Decimal]:
-    results = _fetch_prices(coins, side, exchange, now, allow_stale=allow_stale)
+def get_prices_dict(coins: list, side: str = None, allow_stale: bool = False) -> Dict[str, Decimal]:
+    results = _fetch_prices(coins, side, allow_stale=allow_stale)
 
-    return {r.coin: r.price for r in results}
+    return {r.coin: r.price for r in results if r.price}
 
 
-def get_price(coin: str, side: str, exchange: str = BINANCE, market_symbol: str = USDT,
-              now: datetime = None, allow_stale: bool = False) -> Decimal:
-    prices = get_prices_dict([coin], side, exchange, market_symbol, now, allow_stale=allow_stale)
+def get_price(coin: str, side: str, allow_stale: bool = False) -> Decimal:
+    prices = get_prices_dict([coin], side, allow_stale=allow_stale)
 
     if prices:
         return prices[coin]

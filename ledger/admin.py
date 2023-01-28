@@ -1,7 +1,6 @@
 from datetime import timedelta
 from uuid import uuid4
 
-from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F
@@ -20,7 +19,7 @@ from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken
 from ledger.utils.fields import DONE
 from ledger.utils.overview import AssetOverview
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.precision import get_presentation_amount, humanize_presentation
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_trading_price_usdt, SELL
 from ledger.utils.provider import HEDGE, get_provider_requester
@@ -34,19 +33,14 @@ class AssetAdmin(AdvancedAdmin):
     fields_edit_conditions = {
         'order': True,
         'trend': True,
-        'bid_diff': True,
-        'ask_diff': True
     }
 
-    readonly_fields = ('get_calculated_hedge_amount', 'get_hedge_value', 'get_hedge_amount')
+    readonly_fields = ('get_calc_hedge_amount', 'get_hedge_value', 'get_hedge_amount')
 
     list_display = (
-        'symbol', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calculated_hedge_amount',
-        'get_total_asset', 'get_ledger_balance_users',
-
-        'get_future_amount', 'get_binance_spot_amount', 'get_internal_balance',
+        'symbol', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calc_hedge_amount',
+        'get_total_asset', 'get_users_balance',
         'order', 'trend', 'trade_enable', 'hedge',
-
         'margin_enable', 'new_coin', 'spread_category'
     )
     list_filter = ('enable', 'trend', 'margin_enable', 'spread_category')
@@ -56,38 +50,18 @@ class AssetAdmin(AdvancedAdmin):
     actions = ('hedge_asset', )
 
     def changelist_view(self, request, extra_context=None):
+        self.overview = AssetOverview(calculated_hedge=True)
 
-        if not settings.DEBUG_OR_TESTING_OR_STAGING:
-            self.overview = AssetOverview(strict=False, calculated_hedge=True)
+        context = {
+            'hedge_value': round(self.overview.get_total_hedge_value(), 2),
+            'margin_insurance_balance': self.overview.get_margin_insurance_balance(),
+            'binance_margin_ratio': round(self.overview.get_binance_margin_ratio(), 2),
 
-            context = {
-                'binance_initial_margin': round(self.overview.total_initial_margin, 2),
-                'binance_maint_margin': round(self.overview.total_maintenance_margin, 2),
-                'binance_margin_ratio': round(self.overview.margin_ratio, 2),
-                'hedge_value': round(self.overview.get_total_hedge_value(), 2),
-                'binance_spot_tether_amount': round(self.overview.get_binance_spot_amount(Asset.get(Asset.USDT)), 2),
-                'kucoin_spot_tether_amount': round(self.overview.get_kucoin_spot_amount(Asset.get(Asset.USDT)), 2),
-                'mexc_spot_tether_amount': round(self.overview.get_mexc_spot_amount(Asset.get(Asset.USDT)), 2),
-
-                'binance_spot_usdt': round(self.overview.get_binance_spot_total_value(), 2),
-                'kucoin_spot_usdt': round(self.overview.get_kucoin_spot_total_value(), 2),
-                'mexc_spot_usdt': round(self.overview.get_mexc_spot_total_value(), 2),
-
-                'binance_margin_balance': round(self.overview.total_margin_balance, 2),
-                'internal_usdt': round(self.overview.get_internal_usdt_value(), 2),
-                'fiat_usdt': round(self.overview.get_gateway_usdt(), 0),
-                'margin_insurance_balance': self.overview.get_margin_insurance_balance(),
-                'investment': round(self.overview.get_total_investment(), 0),
-                'cash': round(self.overview.get_total_cash(), 0),
-
-                'total_assets_usdt': round(self.overview.get_all_assets_usdt(), 0),
-                'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
-                'exchange_potential_usdt': round(self.overview.get_exchange_potential_usdt(), 0),
-                'users_usdt': round(self.overview.get_all_users_asset_value(), 0)
-            }
-        else:
-            self.overview = None
-            context = {}
+            'total_assets_usdt': round(self.overview.get_all_real_assets_value(), 0),
+            'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
+            'exchange_potential_usdt': round(self.overview.get_exchange_potential_usdt(), 0),
+            'users_usdt': round(self.overview.get_all_users_asset_value(), 0)
+        }
 
         return super().changelist_view(request, extra_context=context)
 
@@ -97,71 +71,32 @@ class AssetAdmin(AdvancedAdmin):
 
         return super(AssetAdmin, self).save_model(request, obj, form, change)
 
-    def get_ledger_balance_users(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(
-            self.overview.get_users_asset_amount(asset)
-        )
-
-    get_ledger_balance_users.short_description = 'users'
-
-    def get_users_usdt_value(self, asset: Asset):
-        return self.overview and round(self.overview.get_users_asset_value(asset), 2)
-
-    get_users_usdt_value.short_description = 'usdt_value'
-
+    @admin.display(description='users')
+    def get_users_balance(self, asset: Asset):
+        return humanize_presentation(self.overview.get_users_asset_amount(asset.symbol))
+    
+    @admin.display(description='total assets')
     def get_total_asset(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(self.overview.get_total_assets(asset))
+        return humanize_presentation(self.overview.get_real_assets(asset.symbol))
 
-    get_total_asset.short_description = 'total assets'
-
-    def get_future_amount(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(self.overview.get_future_position_amount(asset))
-
-    get_future_amount.short_description = 'future amount'
-
-    def get_future_value(self, asset: Asset):
-        return self.overview and round(self.overview.get_future_position_value(asset), 2)
-
-    get_future_value.short_description = 'future usdt'
-
-    def get_binance_spot_amount(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(self.overview.get_binance_spot_amount(asset))
-
-    get_binance_spot_amount.short_description = 'bin spot amount'
-
-    def get_internal_balance(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(self.overview.get_internal_deposits_balance(asset))
-
-    get_internal_balance.short_description = 'internal'
-
+    @admin.display(description='hedge amount')
     def get_hedge_amount(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(self.overview.get_hedge_amount(asset))
+        return humanize_presentation(self.overview.get_hedge_amount(asset.symbol))
 
-    get_hedge_amount.short_description = 'hedge amount'
+    @admin.display(description='calc hedge amount')
+    def get_calc_hedge_amount(self, asset: Asset):
+        return humanize_presentation(self.overview.get_calculated_hedge(asset.symbol))
 
-    def get_calculated_hedge_amount(self, asset: Asset):
-        return self.overview and asset.get_presentation_amount(self.overview.get_calculated_hedge(asset))
-
-    get_calculated_hedge_amount.short_description = 'calc hedge amount'
-
+    @admin.display(description='hedge value')
     def get_hedge_value(self, asset: Asset):
-        hedge_value = self.overview and self.overview.get_hedge_value(asset)
+        hedge_value = self.overview.get_hedge_value(asset.symbol)
 
         if hedge_value is not None:
             hedge_value = round(hedge_value, 2)
 
-        return hedge_value
+        return humanize_presentation(hedge_value)
 
-    get_hedge_value.short_description = 'hedge value'
-
-    def get_hedge_threshold(self, asset: Asset):
-        if asset.enable:
-            info = get_provider_requester().get_market_info(asset)
-            return info.step_size
-
-    get_hedge_threshold.short_description = 'hedge threshold'
-
-    @admin.action(description='هج کردن رمزارزها', permissions=['view'])
+    @admin.action(description='hedge assets', permissions=['view'])
     def hedge_asset(self, request, queryset):
         assets = queryset.filter(hedge=True)
         for asset in assets:
@@ -559,9 +494,7 @@ class CategorySpreadAdmin(admin.ModelAdmin):
 
 @admin.register(models.SystemSnapshot)
 class SystemSnapshotAdmin(admin.ModelAdmin):
-    list_display = ('created', 'total', 'users', 'exchange', 'exchange_potential', 'hedge', 'cumulated_hedge',
-                    'binance_futures', 'binance_spot', 'kucoin_spot', 'mexc_spot', 'internal', 'fiat_gateway',
-                    'investment', 'cash', 'prize', 'verified')
+    list_display = ('created', 'total', 'users', 'exchange', 'exchange_potential', 'hedge', 'prize')
     ordering = ('-created', )
     actions = ('reject_histories', 'verify_histories')
     readonly_fields = ('created', )

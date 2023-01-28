@@ -86,14 +86,14 @@ app.conf.beat_schedule = {
     #     },
     # },
 
-    'check_margin_level': {
-        'task': 'ledger.tasks.margin.check_margin_level',
-        'schedule': 5 * TASK_MULTIPLIER,
-        'options': {
-            'queue': 'margin',
-            'expire': 5 * TASK_MULTIPLIER
-        },
-    },
+    # 'check_margin_level': {
+    #     'task': 'ledger.tasks.margin.check_margin_level',
+    #     'schedule': 5 * TASK_MULTIPLIER,
+    #     'options': {
+    #         'queue': 'margin',
+    #         'expire': 5 * TASK_MULTIPLIER
+    #     },
+    # },
 
     # 'retention_leads_to_signup': {
     #     'task': 'accounts.tasks.retention.retention_leads_to_signup',
@@ -160,6 +160,14 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/5'),
         'options': {
             'queue': 'history',
+            'expire': 200
+        }
+    },
+    'create_vault_snapshot': {
+        'task': 'accounting.tasks.vault.update_vaults',
+        'schedule': crontab(minute='*/5'),
+        'options': {
+            'queue': 'vault',
             'expire': 200
         }
     },
