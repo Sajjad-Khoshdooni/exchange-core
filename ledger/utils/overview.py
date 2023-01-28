@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.db.models import Sum
 
-from accounting.models import VaultItem
+from accounting.models import VaultItem, Vault
 from accounts.models import Account
 from financial.models import FiatWithdrawRequest
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
@@ -60,7 +60,7 @@ class AssetOverview:
         return VaultItem.objects.filter(coin=coin).aggregate(balance=Sum('balance'))['balance'] or 0
 
     def get_all_real_assets_value(self):
-        return VaultItem.objects.aggregate(value=Sum('value_usdt'))['value'] or 0
+        return Vault.objects.aggregate(value=Sum('real_value'))['value'] or 0
 
     def get_hedge_amount(self, coin: str):
         return self.get_real_assets(coin) - self.users_balances.get(coin, 0)
