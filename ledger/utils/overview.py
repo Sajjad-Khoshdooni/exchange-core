@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.db.models import Sum
 
-from accounting.models import VaultItem, Vault
+from accounting.models import VaultItem, Vault, ReservedAsset
 from accounts.models import Account
 from financial.models import FiatWithdrawRequest
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
@@ -46,6 +46,8 @@ class AssetOverview:
 
         self.assets_map = {a.symbol: a for a in Asset.objects.all()}
 
+        self.reserved_assets = dict(ReservedAsset.objects.values_list('coin', 'amount'))
+
     def get_calculated_hedge(self, coin: str):
         assert self._coin_total_orders is not None
         coin_orders = self._coin_total_orders.get(coin, CoinOrders(coin=coin, buy=Decimal(), sell=Decimal()))
@@ -62,8 +64,11 @@ class AssetOverview:
     def get_all_real_assets_value(self):
         return Vault.objects.aggregate(value=Sum('real_value'))['value'] or 0
 
+    def get_reserved_assets_amount(self, coin: str):
+        return self.reserved_assets.get(coin, 0)
+
     def get_hedge_amount(self, coin: str):
-        return self.get_real_assets(coin) - self.users_balances.get(coin, 0)
+        return self.get_real_assets(coin) - self.users_balances.get(coin, 0) - self.get_reserved_assets_amount(coin)
 
     def get_hedge_value(self, coin: str) -> Decimal:
         amount = Decimal(self.get_hedge_amount(coin))

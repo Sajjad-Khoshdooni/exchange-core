@@ -84,3 +84,27 @@ class VaultItem(models.Model):
 
     def __str__(self):
         return '%s %s' % (self.vault, self.coin)
+
+
+class ReservedAsset(models.Model):
+    history = HistoricalRecords()
+
+    updated = models.DateTimeField(auto_now=True)
+
+    coin = models.CharField(max_length=32, unique=True)
+    amount = get_amount_field(validators=())
+
+    def __str__(self):
+        return self.coin
+
+
+class AssetPrice(models.Model):
+    history = HistoricalRecords()
+
+    updated = models.DateTimeField(auto_now=True)
+
+    coin = models.CharField(max_length=32, unique=True)
+    price = get_amount_field()
+
+    def __str__(self):
+        return self.coin

@@ -35,11 +35,11 @@ class AssetAdmin(AdvancedAdmin):
         'trend': True,
     }
 
-    readonly_fields = ('get_calc_hedge_amount', 'get_hedge_value', 'get_hedge_amount')
+    readonly_fields = ('get_calc_hedge_amount', 'get_hedge_value', 'get_hedge_amount', 'get_reserved_amount')
 
     list_display = (
         'symbol', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calc_hedge_amount',
-        'get_total_asset', 'get_users_balance',
+        'get_total_asset', 'get_users_balance', 'get_reserved_amount',
         'order', 'trend', 'trade_enable', 'hedge',
         'margin_enable', 'new_coin', 'spread_category'
     )
@@ -86,6 +86,10 @@ class AssetAdmin(AdvancedAdmin):
     @admin.display(description='calc hedge amount')
     def get_calc_hedge_amount(self, asset: Asset):
         return humanize_presentation(self.overview.get_calculated_hedge(asset.symbol))
+
+    @admin.display(description='reserved amount')
+    def get_reserved_amount(self, asset: Asset):
+        return humanize_presentation(self.overview.get_reserved_assets_amount(asset.symbol))
 
     @admin.display(description='hedge value')
     def get_hedge_value(self, asset: Asset):

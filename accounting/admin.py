@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.db.models import Sum
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem
+from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset
 from ledger.utils.precision import humanize_number
 
 
@@ -59,3 +59,9 @@ class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
         obj.vault.real_value = VaultItem.objects.filter(vault=obj.vault).aggregate(value=Sum('value_usdt'))['value'] or 0
         obj.vault.save(update_fields=['real_value'])
+
+
+@admin.register(ReservedAsset)
+class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    list_display = ('coin', 'amount', 'updated')
+    search_fields = ('coin', )
