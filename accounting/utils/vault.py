@@ -155,6 +155,8 @@ def update_asset_prices():
             )
         )
 
+    AssetPrice.objects.bulk_create(missing_assets)
+
     for asset in existing_assets:
         asset.price = prices.get(asset.coin)
         asset.updated = now
