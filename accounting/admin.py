@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.db.models import Sum
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset
+from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset, \
+    AssetPrice
 from ledger.utils.precision import humanize_number
 
 
@@ -62,6 +63,12 @@ class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
 
 @admin.register(ReservedAsset)
-class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+class ReservedAssetAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ('coin', 'amount', 'updated')
+    search_fields = ('coin', )
+
+
+@admin.register(AssetPrice)
+class AssetPriceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    list_display = ('coin', 'price', 'updated')
     search_fields = ('coin', )
