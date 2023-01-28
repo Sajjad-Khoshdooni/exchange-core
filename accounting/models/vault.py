@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import List
 
 from django.db import models
+from django.db.models import Sum
 from simple_history.models import HistoricalRecords
 
 from ledger.utils.fields import get_amount_field
@@ -26,13 +27,15 @@ class Vault(models.Model):
 
     key = models.CharField(max_length=128, blank=True)
 
+    real_value = get_amount_field(default=Decimal())
+
     def __str__(self):
         return '%s %s %s' % (self.type, self.name, self.market)
 
     class Meta:
         unique_together = ('key', 'type', 'market')
 
-    def update_vault_all_items(self, now, data: List[VaultData]):
+    def update_vault_all_items(self, now, data: List[VaultData], real_vault_value: Decimal = None):
         coins = []
 
         for vd in data:
@@ -56,6 +59,13 @@ class Vault(models.Model):
             value_irt=0,
             updated=now,
         )
+
+        if real_vault_value is not None:
+            self.real_value = real_vault_value
+        else:
+            self.real_value = VaultItem.objects.filter(vault=self).aggregate(value=Sum('value_usdt'))['value'] or 0
+
+        self.save(update_fields=['real_value'])
 
 
 class VaultItem(models.Model):

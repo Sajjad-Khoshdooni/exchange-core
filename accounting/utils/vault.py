@@ -38,12 +38,16 @@ def update_provider_vaults(now: datetime, usdt_irt: Decimal):
             vault_data = []
 
             balances_data = provider.get_balances(profile_id, market)
-            prices = get_prices_dict(coins=list(balances_data.keys()), side=BUY)
 
             if not balances_data:
                 continue
 
-            for coin, balance in balances_data.items():
+            balances = balances_data['balances']
+            real_value = balances['real_value'] and Decimal(balances['real_value'])
+
+            prices = get_prices_dict(coins=list(balances.keys()), side=BUY)
+
+            for coin, balance in balances.items():
                 balance = Decimal(balance)
                 value = balance * prices.get(coin, 0)
 
@@ -56,7 +60,7 @@ def update_provider_vaults(now: datetime, usdt_irt: Decimal):
                     )
                 )
 
-            vault.update_vault_all_items(now, vault_data)
+            vault.update_vault_all_items(now, vault_data, real_vault_value=real_value)
 
 
 def update_hot_wallet_vault(now: datetime, usdt_irt: Decimal):

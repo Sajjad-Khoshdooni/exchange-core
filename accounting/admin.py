@@ -32,7 +32,7 @@ class AccountTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(Vault)
 class VaultAdmin(admin.ModelAdmin):
-    list_display = ('name', 'market', 'type', 'get_usdt', 'get_value')
+    list_display = ('name', 'market', 'type', 'get_usdt', 'get_value', 'real_value')
 
     @admin.display(description='usdt')
     def get_usdt(self, vault: Vault):
@@ -53,3 +53,7 @@ class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ('coin', 'vault', 'balance', 'value_usdt', 'value_irt', 'updated')
     search_fields = ('coin', )
     list_filter = ('vault__name', 'vault__type', 'vault__market')
+
+    def save_model(self, request, obj, form, change):
+        obj.vault.real_value = VaultItem.objects.filter(vault=self).aggregate(value=Sum('value_usdt'))['value'] or 0
+        obj.vault.save(update_fields=['real_value'])
