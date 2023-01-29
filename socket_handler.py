@@ -86,6 +86,7 @@ trades_pubsub = market_redis.pubsub()
 async def broadcast_trades():
     await trades_pubsub.psubscribe('market:trades:*')
     async for raw_message in trades_pubsub.listen():
+        print(raw_message)
         if not raw_message:
             continue
         if not TRADES_CLIENTS:
@@ -123,4 +124,5 @@ loop = asyncio.get_event_loop()
 loop.run_until_complete(start_server)
 loop.create_task(broadcast_depth())
 loop.create_task(broadcast_orders_status())
+loop.create_task(broadcast_trades())
 loop.run_forever()
