@@ -1,7 +1,4 @@
-from datetime import timedelta
-
 import django_filters
-from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView, RetrieveAPIView
@@ -12,7 +9,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from accounts.authentication import CustomTokenAuthentication
 from accounts.models import User
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
-from market.models import PairSymbol, Trade
+from market.models import PairSymbol
 from market.serializers import BookMarkPairSymbolSerializer
 from market.serializers.symbol_serializer import SymbolSerializer, SymbolBriefStatsSerializer, SymbolStatsSerializer
 
