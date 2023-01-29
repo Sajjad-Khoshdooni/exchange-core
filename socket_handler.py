@@ -84,7 +84,7 @@ trades_pubsub = market_redis.pubsub()
 
 
 async def broadcast_trades():
-    await depth_pubsub.psubscribe('market:trades:*')
+    await trades_pubsub.psubscribe('market:trades:*')
     async for raw_message in trades_pubsub.listen():
         if not raw_message:
             continue
