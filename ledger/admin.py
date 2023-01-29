@@ -24,6 +24,7 @@ from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_trading_price_usdt, SELL
 from ledger.utils.provider import HEDGE, get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor
+from market.utils.fix import create_symbols_for_asset
 
 
 @admin.register(models.Asset)
@@ -47,7 +48,7 @@ class AssetAdmin(AdvancedAdmin):
     list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'new_coin', 'hedge')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
-    actions = ('hedge_asset', 'create_network_infos')
+    actions = ('hedge_asset', 'setup_asset')
 
     def changelist_view(self, request, extra_context=None):
         self.overview = AssetOverview(calculated_hedge=True)
@@ -113,8 +114,8 @@ class AssetAdmin(AdvancedAdmin):
                 scope=HEDGE
             )
 
-    @admin.action(description='create network assets', permissions=['view'])
-    def create_network_infos(self, request, queryset):
+    @admin.action(description='setup asset', permissions=['view'])
+    def setup_asset(self, request, queryset):
         from ledger.models import NetworkAsset
 
         for asset in queryset:
@@ -141,6 +142,8 @@ class AssetAdmin(AdvancedAdmin):
                 )
 
                 ns.update_with_provider(info)
+
+            create_symbols_for_asset(asset)
 
 
 @admin.register(models.Network)
