@@ -122,9 +122,11 @@ class AssetAdmin(AdvancedAdmin):
             for info in networks_info:
                 network, _ = Network.objects.get_or_create(
                     symbol=info.network,
-                    can_deposit=False,
-                    can_withdraw=False,
-                    address_regex=info.address_regex
+                    defaults={
+                        'can_deposit': False,
+                        'can_withdraw': False,
+                        'address_regex': info.address_regex
+                    }
                 )
 
                 ns, _ = NetworkAsset.objects.get_or_create(
