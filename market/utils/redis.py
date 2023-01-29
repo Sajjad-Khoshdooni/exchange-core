@@ -6,6 +6,8 @@ from django.conf import settings
 from django.utils import timezone
 from redis import Redis
 
+from ledger.utils.price import BUY
+
 prefix_top_price = 'market_top_price'
 prefix_top_depth_price = 'market_top_depth_price'
 prefix_orders_count = 'market_orders_count'
@@ -127,16 +129,18 @@ class MarketCacheHandler:
         if bool(is_updated):
             self.market_pipeline.publish(f'market:depth:{order.symbol.name}:{order.side}', str(order.price))
 
-    def update_trades(self, trades):
-        if not trades:
+    def update_trades(self, trade_pairs):
+        if not trade_pairs:
             return
         # if not market_redis.exists(f'ws:market:orders:{account_id}'):
         #     return
-        for trade in trades:
+        for pair in trade_pairs:
             # self.market_pipeline.publish(f'market:orders:{trade.symbol.name}:{account_id}:{order_id}', trade.order_id)
+            maker_trade, taker_trade = pair
+            is_buyer_maker = maker_trade.side == BUY
             self.market_pipeline.publish(
-                f'market:trades:{trade.symbol.name}:{trade.side}',
-                f'{trade.price}#{trade.amount}#{trade.order_id}#{trade.group_id}'
+                f'market:trades:{maker_trade.symbol.name}',
+                f'{maker_trade.price}#{maker_trade.amount}#{maker_trade.order_id}#{taker_trade.order_id}#{is_buyer_maker}'
             )
 
     def update_order_status(self, order):

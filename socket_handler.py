@@ -86,21 +86,20 @@ trades_pubsub = market_redis.pubsub()
 async def broadcast_trades():
     await trades_pubsub.psubscribe('market:trades:*')
     async for raw_message in trades_pubsub.listen():
-        print(raw_message)
         if not raw_message:
             continue
         if not TRADES_CLIENTS:
             print(raw_message)
             continue
-        symbol, side = raw_message['channel'].split(':')[-2:]
-        price, amount, order_id, group_id = raw_message['data'].split('#')
+        symbol = raw_message['channel'].split(':')[-1]
+        price, amount, maker_order_id, taker_order_id, is_buyer_maker = raw_message['data'].split('#')
         websockets.broadcast(TRADES_CLIENTS, pickle.dumps({
             'symbol': symbol,
-            'side': side,
+            'is_buyer_maker': is_buyer_maker,
             'price': Decimal(price),
             'amount': Decimal(amount),
-            'order_id': order_id,
-            'group_id': group_id,
+            'maker_order_id': maker_order_id,
+            'taker_order_id': taker_order_id,
         }))
 
 status_pubsub = market_redis.pubsub()

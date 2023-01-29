@@ -206,8 +206,8 @@ class Order(models.Model):
                         raise CancelOrder('Overriding fill amount is zero')
         else:
             overriding_fill_amount = self.acquire_lock(pipeline, check_balance=check_balance)
-        trades = self.make_match(pipeline, overriding_fill_amount, cache_handler=cache_handler)
-        cache_handler.update_trades(trades)
+        trade_pairs = self.make_match(pipeline, overriding_fill_amount, cache_handler=cache_handler)
+        cache_handler.update_trades(trade_pairs)
         cache_handler.update_bid_ask(self)
 
     def acquire_lock(self, pipeline: WalletPipeline, check_balance: bool = True):
@@ -261,6 +261,7 @@ class Order(models.Model):
         unfilled_amount = overriding_fill_amount or self.unfilled_amount
 
         trades = []
+        trade_pairs = []
 
         tether_irt = get_tether_irt_price(self.BUY)
 
@@ -334,6 +335,7 @@ class Order(models.Model):
                 trade.set_gap_revenue()
 
             trades.extend(trades_pair.trades)
+            trade_pairs.append(trades_pair.trades)
 
             self.update_filled_amount((self.id, matching_order.id), match_amount)
 
@@ -407,7 +409,7 @@ class Order(models.Model):
 
             cache.delete(key)
             logger.info(log_prefix + 'make match finished.')
-        return trades
+        return trade_pairs
 
     @classmethod
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):
