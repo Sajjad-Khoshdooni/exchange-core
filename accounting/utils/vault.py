@@ -139,7 +139,7 @@ def update_cold_wallet_vaults(now: datetime, usdt_irt: Decimal):
         vault_item.value_irt = vault_item.value_usdt * usdt_irt
         vault_item.save(update_fields=['value_usdt', 'value_irt'])
 
-    for vault in Vault.objects.filter(type=(Vault.COLD_WALLET, Vault.MANUAL)):
+    for vault in Vault.objects.filter(type__in=(Vault.COLD_WALLET, Vault.MANUAL)):
         vault.update_real_value()
 
 
