@@ -1,4 +1,5 @@
 import os
+import pickle
 
 from decimal import Decimal
 from django.core.wsgi import get_wsgi_application
@@ -6,7 +7,6 @@ from django.core.wsgi import get_wsgi_application
 from django.conf import settings
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "_base.settings")
 application = get_wsgi_application()
-import json
 
 import asyncio
 import aioredis
@@ -18,10 +18,11 @@ from websockets.exceptions import ConnectionClosed
 
 DEPTH_CLIENTS = []
 ORDERS_STATUS_CLIENTS = []
+TRADES_CLIENTS = []
 
 
 async def add_client(websocket, path):
-    is_added = {'DEPTH': False, 'ORDERS_STATUS': False}
+    is_added = {'DEPTH': False, 'ORDERS_STATUS': False, 'TRADES': False}
     while True:
         try:
             subscribe_request = await websocket.recv()
@@ -29,6 +30,8 @@ async def add_client(websocket, path):
                 continue
             if subscribe_request == 'DEPTH':
                 DEPTH_CLIENTS.append(websocket)
+            elif subscribe_request == 'TRADES':
+                TRADES_CLIENTS.append(websocket)
             elif subscribe_request == 'ORDERS_STATUS':
                 # user_token = subscribe_request.split(':')[1]
                 # token = CustomToken.objects.filter(key=user_token, type=CustomToken.WEBSOCKET).first()
@@ -43,8 +46,15 @@ async def add_client(websocket, path):
             is_added[subscribe_request] = True
         except ConnectionClosed:
             print("Connection is Closed")
-            for request in ('DEPTH', 'ORDERS_STATUS'):
-                clients = DEPTH_CLIENTS if request == 'DEPTH' else ORDERS_STATUS_CLIENTS
+            for request in ('DEPTH', 'ORDERS_STATUS', 'TRADES'):
+                if request == 'DEPTH':
+                    clients = DEPTH_CLIENTS
+                elif request == 'TRADES':
+                    clients = TRADES_CLIENTS
+                elif request == 'ORDERS_STATUS':
+                    clients = ORDERS_STATUS_CLIENTS
+                else:
+                    continue
                 if is_added[request]:
                     clients.remove(websocket)
             break
@@ -66,8 +76,31 @@ async def broadcast_depth():
             print(raw_message)
             continue
         symbol, side = raw_message['channel'].split(':')[-2:]
-        price = raw_message['data']
-        websockets.broadcast(DEPTH_CLIENTS, json.dumps({'symbol': symbol, 'side': side, 'price': price}))
+        price = Decimal(raw_message['data'])
+        websockets.broadcast(DEPTH_CLIENTS, pickle.dumps({'symbol': symbol, 'side': side, 'price': price}))
+
+
+trades_pubsub = market_redis.pubsub()
+
+
+async def broadcast_trades():
+    await depth_pubsub.psubscribe('market:trades:*')
+    async for raw_message in trades_pubsub.listen():
+        if not raw_message:
+            continue
+        if not TRADES_CLIENTS:
+            print(raw_message)
+            continue
+        symbol, side = raw_message['channel'].split(':')[-2:]
+        price, amount, order_id, group_id = raw_message['data'].split('#')
+        websockets.broadcast(TRADES_CLIENTS, pickle.dumps({
+            'symbol': symbol,
+            'side': side,
+            'price': Decimal(price),
+            'amount': Decimal(amount),
+            'order_id': order_id,
+            'group_id': group_id,
+        }))
 
 status_pubsub = market_redis.pubsub()
 
@@ -82,7 +115,8 @@ async def broadcast_orders_status():
             continue
         symbol = raw_message['channel'].split(':')[-1]
         side, price, status = raw_message['data'].split('-')
-        websockets.broadcast(ORDERS_STATUS_CLIENTS, json.dumps({'symbol': symbol, 'side': side, 'price': price, 'status': status}))
+        websockets.broadcast(ORDERS_STATUS_CLIENTS,
+                             pickle.dumps({'symbol': symbol, 'side': side, 'price': Decimal(price), 'status': status}))
 
 
 loop = asyncio.get_event_loop()

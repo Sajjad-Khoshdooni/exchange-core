@@ -127,14 +127,17 @@ class MarketCacheHandler:
         if bool(is_updated):
             self.market_pipeline.publish(f'market:depth:{order.symbol.name}:{order.side}', str(order.price))
 
-    # @classmethod
-    # def update_trades(cls, account_id, order_id, trades):
-    #     if not trades:
-    #         return
-    #     if not market_redis.exists(f'ws:market:orders:{account_id}'):
-    #         return
-    #     for trade in trades:
-    #         market_redis.publish(f'market:orders:{trade.symbol.name}:{account_id}:{order_id}', trade.order_id)
+    def update_trades(self, trades):
+        if not trades:
+            return
+        # if not market_redis.exists(f'ws:market:orders:{account_id}'):
+        #     return
+        for trade in trades:
+            # self.market_pipeline.publish(f'market:orders:{trade.symbol.name}:{account_id}:{order_id}', trade.order_id)
+            self.market_pipeline.publish(
+                f'market:trades:{trade.symbol.name}:{trade.side}',
+                f'{trade.price}#{trade.amount}#{trade.order_id}#{trade.group_id}'
+            )
 
     def update_order_status(self, order):
         self.market_pipeline.publish(f'market:orders:status:{order.symbol.name}',

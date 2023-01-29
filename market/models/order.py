@@ -207,7 +207,7 @@ class Order(models.Model):
         else:
             overriding_fill_amount = self.acquire_lock(pipeline, check_balance=check_balance)
         trades = self.make_match(pipeline, overriding_fill_amount, cache_handler=cache_handler)
-        #TODO: push trade ids to market cache and ws
+        cache_handler.update_trades(trades)
         cache_handler.update_bid_ask(self)
 
     def acquire_lock(self, pipeline: WalletPipeline, check_balance: bool = True):
