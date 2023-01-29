@@ -36,8 +36,6 @@ class AssetAdmin(AdvancedAdmin):
         'trend': True,
     }
 
-    readonly_fields = ('get_calc_hedge_amount', 'get_hedge_value', 'get_hedge_amount', 'get_reserved_amount')
-
     list_display = (
         'symbol', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calc_hedge_amount',
         'get_total_asset', 'get_users_balance', 'get_reserved_amount',
