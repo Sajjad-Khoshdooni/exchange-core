@@ -62,6 +62,9 @@ class Vault(models.Model):
             updated=now,
         )
 
+        self.update_real_value(real_vault_value)
+
+    def update_real_value(self, real_vault_value: Decimal = None):
         if real_vault_value is not None:
             self.real_value = real_vault_value
         else:

@@ -57,9 +57,7 @@ class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super(VaultItemAdmin, self).save_model(request, obj, form, change)
-
-        obj.vault.real_value = VaultItem.objects.filter(vault=obj.vault).aggregate(value=Sum('value_usdt'))['value'] or 0
-        obj.vault.save(update_fields=['real_value'])
+        obj.vault.update_real_value()
 
 
 @admin.register(ReservedAsset)

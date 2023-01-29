@@ -5,11 +5,11 @@ from decimal import Decimal
 from django.utils import timezone
 
 from accounting.models import Vault
-from accounting.models.vault import VaultData, AssetPrice
+from accounting.models.vault import VaultData, AssetPrice, VaultItem
 from financial.utils.stats import get_total_fiat_irt
 from ledger.models import Asset
 from ledger.utils.overview import get_internal_asset_deposits
-from ledger.utils.price import get_prices_dict, BUY
+from ledger.utils.price import get_prices_dict, BUY, get_price
 from ledger.utils.provider import get_provider_requester
 
 logger = logging.getLogger(__name__)
@@ -132,7 +132,15 @@ def update_gateway_vaults(now: datetime, usdt_irt: Decimal):
 
 
 def update_cold_wallet_vaults(now: datetime, usdt_irt: Decimal):
-    logger.info('updating cold wallet vaults')
+    logger.info('updating cold & manual wallet vaults')
+
+    for vault_item in VaultItem.objects.filter(vault__type=(Vault.COLD_WALLET, Vault.MANUAL)):
+        vault_item.value_usdt = vault_item.balance * get_price(vault_item.coin, side=BUY)
+        vault_item.value_irt = vault_item.value_usdt * usdt_irt
+        vault_item.save(update_fields=['value_usdt', 'value_irt'])
+
+    for vault in Vault.objects.filter(type=(Vault.COLD_WALLET, Vault.MANUAL)):
+        vault.update_real_value()
 
 
 def update_asset_prices():
