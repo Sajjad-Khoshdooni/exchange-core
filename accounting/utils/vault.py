@@ -117,18 +117,21 @@ def update_gateway_vaults(now: datetime, usdt_irt: Decimal):
         }
     )
 
-    amount = get_total_fiat_irt()
+    try:
+        amount = get_total_fiat_irt(strict=True)
 
-    vault_data = [
-        VaultData(
-            coin=Asset.IRT,
-            balance=amount,
-            value_usdt=amount / usdt_irt,
-            value_irt=amount
-        )
-    ]
+        vault_data = [
+            VaultData(
+                coin=Asset.IRT,
+                balance=amount,
+                value_usdt=amount / usdt_irt,
+                value_irt=amount
+            )
+        ]
 
-    vault.update_vault_all_items(now, vault_data)
+        vault.update_vault_all_items(now, vault_data)
+    except:
+        pass
 
 
 def update_cold_wallet_vaults(usdt_irt: Decimal):
