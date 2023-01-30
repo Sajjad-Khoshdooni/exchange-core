@@ -99,6 +99,9 @@ class ReservedAsset(models.Model):
     coin = models.CharField(max_length=32, unique=True)
     amount = get_amount_field(validators=())
 
+    value_usdt = get_amount_field(validators=())
+    value_irt = get_amount_field(validators=())
+
     def __str__(self):
         return self.coin
 

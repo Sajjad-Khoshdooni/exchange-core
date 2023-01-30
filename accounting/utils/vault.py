@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.utils import timezone
 
 from accounting.models import Vault
-from accounting.models.vault import VaultData, AssetPrice, VaultItem
+from accounting.models.vault import VaultData, AssetPrice, VaultItem, ReservedAsset
 from financial.utils.stats import get_total_fiat_irt
 from ledger.models import Asset
 from ledger.utils.overview import get_internal_asset_deposits
@@ -131,7 +131,7 @@ def update_gateway_vaults(now: datetime, usdt_irt: Decimal):
     vault.update_vault_all_items(now, vault_data)
 
 
-def update_cold_wallet_vaults(now: datetime, usdt_irt: Decimal):
+def update_cold_wallet_vaults(usdt_irt: Decimal):
     logger.info('updating cold & manual wallet vaults')
 
     for vault_item in VaultItem.objects.filter(vault__type__in=(Vault.COLD_WALLET, Vault.MANUAL)):
@@ -141,6 +141,16 @@ def update_cold_wallet_vaults(now: datetime, usdt_irt: Decimal):
 
     for vault in Vault.objects.filter(type__in=(Vault.COLD_WALLET, Vault.MANUAL)):
         vault.update_real_value()
+
+
+def update_reserved_assets_value(usdt_irt):
+    coins = list(ReservedAsset.objects.values_list('coin', flat=True))
+    prices = get_prices_dict(coins=coins, side=BUY)
+
+    for res in ReservedAsset.objects.all():
+        res.value_usdt = res.amount * prices.get(res.coin, 0)
+        res.value_irt = res.value_usdt * usdt_irt
+        res.save(update_fields=['value_usdt', 'value_irt'])
 
 
 def update_asset_prices():
