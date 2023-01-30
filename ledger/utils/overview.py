@@ -68,11 +68,7 @@ class AssetOverview:
         return self.reserved_assets.get(coin, 0)
 
     def get_total_reserved_assets_value(self):
-        total_value = 0
-        for r in ReservedAsset.objects.all():
-            total_value += r.amount * (get_price(coin=r.coin, side=BUY) or 0)
-
-        return total_value
+        return ReservedAsset.objects.aggregate(value=Sum('value_usdt'))['value'] or 0
 
     def get_hedge_amount(self, coin: str):
         return self.get_real_assets(coin) - self.users_balances.get(coin, 0) - self.get_reserved_assets_amount(coin)

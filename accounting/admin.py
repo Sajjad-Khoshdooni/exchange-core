@@ -64,7 +64,7 @@ class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
 @admin.register(ReservedAsset)
 class ReservedAssetAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
-    list_display = ('coin', 'amount', 'updated')
+    list_display = ('coin', 'amount', 'updated', 'value_usdt', 'value_irt')
     search_fields = ('coin', )
 
 

@@ -25,6 +25,7 @@ class SystemSnapshot(models.Model):
     users = get_amount_field()
     exchange = get_amount_field()
     exchange_potential = get_amount_field()
+    reserved = get_amount_field()
 
     margin_insurance = get_amount_field()
     prize = get_amount_field()
