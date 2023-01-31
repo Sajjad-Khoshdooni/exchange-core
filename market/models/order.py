@@ -4,15 +4,16 @@ from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
 from random import randrange, random
-from time import time
+from time import sleep, time
 from typing import Union
 from uuid import uuid4
 
 from django.conf import settings
 from django.core.cache import cache
-from django.db import models, transaction
+from django.db import models, transaction, OperationalError
 from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet
 from django.utils import timezone
+from psycopg2 import OperationalError as PSOperationalError
 
 from accounts.models import Notification
 from ledger.models import Wallet
@@ -234,7 +235,15 @@ class Order(models.Model):
 
         from market.models import Trade
         # lock symbol open orders
-        open_orders = list(Order.open_objects.select_for_update().filter(symbol=self.symbol))
+        open_orders = None
+        while not open_orders:
+            try:
+                open_orders = list(Order.open_objects.select_for_update().filter(symbol=self.symbol))
+            except (OperationalError, PSOperationalError) as e:
+                if str(e)[:60] == 'tuple to be locked was already moved to another partition due to concurrent update'[:60]:
+                    sleep(0.05)
+                else:
+                    raise e
 
         logger.info(log_prefix + 'make match danger zone')
 
