@@ -1,9 +1,12 @@
 from datetime import timedelta
 from random import randint
+import re
 
 from django.conf import settings
 from django.utils import timezone
 from redis import Redis
+
+from ledger.utils.price import BUY
 
 prefix_top_price = 'market_top_price'
 prefix_top_depth_price = 'market_top_depth_price'
@@ -70,3 +73,82 @@ def get_as_dict(symbol_id, key):
     if None in as_dict.values():
         return
     return as_dict
+
+
+class MarketCacheHandler:
+    _client = market_redis
+
+    SET_IF_HIGHER = 'setifhigher'
+    SET_IF_LOWER = 'setiflower'
+
+    _funcs_dict = {
+        SET_IF_HIGHER: "local c = tonumber(redis.call('get', KEYS[1])); if c then if tonumber(ARGV[1]) > c then redis.call('set', KEYS[1], ARGV[1]) return tonumber(ARGV[1]) - c else return 0 end else return redis.call('set', KEYS[1], ARGV[1]) end",
+        SET_IF_LOWER: "local c = tonumber(redis.call('get', KEYS[1])); if c then if tonumber(ARGV[1]) > c then redis.call('set', KEYS[1], ARGV[1]) return tonumber(ARGV[1]) - c else return 0 end else return redis.call('set', KEYS[1], ARGV[1]) end"
+    }
+
+    def __init__(self):
+        self.pipeline = self._client.pipeline()
+        self.market_pipeline = market_redis.pipeline()
+
+    def set_if_lower(self, k, v):
+        return self._call(self.SET_IF_LOWER, **{k: v})
+
+    def set_if_higher(self, k, v):
+        return self._call(self.SET_IF_HIGHER, **{k: v})
+
+    def _call(self, func_name, **kwargs):
+        inputs = list(sum(kwargs.items(), ()))
+        return self.pipeline.evalsha(self._load_script(func_name), int(len(inputs) / 2), *inputs)
+
+    @classmethod
+    def _load_script(cls, func_name):
+        func_sha = cls._client.get(f'utils:func:{func_name}')
+        if not func_sha or not cls._client.script_exists(func_sha)[0]:
+            func_sha = cls._register_script(func_name)
+            cls._client.set(f'utils:func:{func_name}', func_sha)
+        return func_sha
+
+    @classmethod
+    def _register_script(cls, func_name):
+        if func_name in cls._funcs_dict:
+            return cls._client.script_load(cls._funcs_dict[func_name])
+        raise NotImplementedError
+
+    def update_bid_ask(self, order):
+        if not order:
+            return
+        from market.models import Order
+        if order.status != Order.NEW:
+            return
+
+        if order.side == Order.BUY:
+            is_updated = self.set_if_higher(f'market:depth:{order.symbol.name}:{order.side}', str(order.price))
+        else:
+            is_updated = self.set_if_lower(f'market:depth:{order.symbol.name}:{order.side}', str(order.price))
+
+        if bool(is_updated):
+            self.market_pipeline.publish(f'market:depth:{order.symbol.name}:{order.side}', str(order.price))
+
+    def update_trades(self, trade_pairs):
+        if not trade_pairs:
+            return
+        # if not market_redis.exists(f'ws:market:orders:{account_id}'):
+        #     return
+        for pair in trade_pairs:
+            # self.market_pipeline.publish(f'market:orders:{trade.symbol.name}:{account_id}:{order_id}', trade.order_id)
+            maker_trade, taker_trade = pair
+            is_buyer_maker = maker_trade.side == BUY
+            self.market_pipeline.publish(
+                f'market:trades:{maker_trade.symbol.name}',
+                f'{maker_trade.price}#{maker_trade.amount}#{maker_trade.order_id}#{taker_trade.order_id}#{is_buyer_maker}'
+            )
+
+    def update_order_status(self, order):
+        self.market_pipeline.publish(f'market:orders:status:{order.symbol.name}',
+                                     f'{order.side}-{order.price}-{order.status}')
+
+    def execute(self):
+        if self.pipeline:
+            self.pipeline.execute()
+        if self.market_pipeline:
+            self.market_pipeline.execute()

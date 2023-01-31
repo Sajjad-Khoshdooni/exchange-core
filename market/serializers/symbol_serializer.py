@@ -37,7 +37,8 @@ class SymbolSerializer(serializers.ModelSerializer):
     class Meta:
         model = PairSymbol
         fields = ('name', 'asset', 'base_asset', 'taker_fee', 'maker_fee', 'tick_size', 'step_size',
-                  'min_trade_quantity', 'max_trade_quantity', 'enable', 'bookmark', 'margin_enable', 'strategy_enable')
+                  'min_trade_quantity', 'max_trade_quantity', 'enable', 'bookmark', 'margin_enable', 'strategy_enable',
+                  'market_maker_enabled')
 
 
 class SymbolBriefStatsSerializer(serializers.ModelSerializer):
@@ -82,7 +83,7 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
     class Meta:
         model = PairSymbol
         fields = ('name', 'asset', 'base_asset', 'enable', 'price', 'change_percent', 'bookmark', 'margin_enable',
-                  'strategy_enable')
+                  'strategy_enable', 'market_maker_enabled')
 
 
 class SymbolStatsSerializer(SymbolBriefStatsSerializer):

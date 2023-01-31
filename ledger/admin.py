@@ -56,7 +56,7 @@ class AssetAdmin(AdvancedAdmin):
             'cum_hedge_value': round(self.overview.get_total_cumulative_hedge_value(), 2),
 
             'margin_insurance_balance': self.overview.get_margin_insurance_balance(),
-            'binance_margin_ratio': round(self.overview.get_binance_margin_ratio(), 2),
+            # 'binance_margin_ratio': round(self.overview.get_binance_margin_ratio(), 2),
 
             'total_assets_usdt': round(self.overview.get_all_real_assets_value(), 0),
             'users_usdt': round(self.overview.get_all_users_asset_value(), 0),

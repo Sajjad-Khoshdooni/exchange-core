@@ -16,6 +16,7 @@ from ledger.utils.precision import floor_precision, get_precision, humanize_numb
 from ledger.utils.price import IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
+from market.utils.redis import MarketCacheHandler
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +53,14 @@ class OrderSerializer(serializers.ModelSerializer):
         wallet = self.post_validate(symbol, validated_data)
 
         try:
+            market_cache_handler = MarketCacheHandler()
             with WalletPipeline() as pipeline:
                 created_order = super(OrderSerializer, self).create(
                     {**validated_data, 'wallet': wallet, 'symbol': symbol}
                 )
-                created_order.submit(pipeline)
-                created_order.refresh_from_db()
+                created_order.submit(pipeline, cache_handler=market_cache_handler)
+                
+            market_cache_handler.execute()
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
         except Exception as e:

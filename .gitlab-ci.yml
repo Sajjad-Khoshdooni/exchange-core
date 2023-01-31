@@ -30,6 +30,9 @@ deploy_staging:
     - 'darkube deploy --token ${STAGING_CELERY_WORKERS_DEPLOY_TOKEN}
       --app-id ${STAGING_CELERY_WORKERS_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
       --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${STAGING_SOCKET_SERVER_DEPLOY_TOKEN}
+      --app-id ${STAGING_SOCKET_SERVER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
   stage: deploy
   tags:
     - hamravesh
