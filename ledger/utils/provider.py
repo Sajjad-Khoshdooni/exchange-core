@@ -67,6 +67,7 @@ class NetworkInfo:
     withdraw_fee: Decimal
     withdraw_enable: bool
     deposit_enable: bool
+    address_regex: str
 
 
 @validate_arguments
@@ -206,10 +207,19 @@ class ProviderRequester:
         resp = self.collect_api('/api/v1/futures/', data={'exchange': exchange})
         return resp.data
 
-    def get_network_info(self, asset: Asset, network: Network) -> NetworkInfo:
-        resp = self.collect_api('/api/v1/networks/', data={'coin': asset.symbol, 'network': network.symbol}, cache_timeout=300)
+    def get_network_info(self, coin: str, network: str = None) -> List[NetworkInfo]:
+        params = {'coin': coin}
+        info = []
+
+        if network:
+            params['network'] = network
+
+        resp = self.collect_api('/api/v1/networks/', data=params, cache_timeout=300)
         if resp.success:
-            return NetworkInfo(**resp.data)
+            for data in resp.data:
+                info.append(NetworkInfo(**data))
+
+        return info
 
     def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
         assert amount >= 0

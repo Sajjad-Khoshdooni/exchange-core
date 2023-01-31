@@ -16,7 +16,7 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory, FastBuyToken
+from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network
 from ledger.utils.fields import DONE
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount, humanize_presentation
@@ -24,6 +24,7 @@ from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_trading_price_usdt, SELL
 from ledger.utils.provider import HEDGE, get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor
+from market.utils.fix import create_symbols_for_asset
 
 
 @admin.register(models.Asset)
@@ -35,11 +36,9 @@ class AssetAdmin(AdvancedAdmin):
         'trend': True,
     }
 
-    readonly_fields = ('get_calc_hedge_amount', 'get_hedge_value', 'get_hedge_amount')
-
     list_display = (
         'symbol', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calc_hedge_amount',
-        'get_total_asset', 'get_users_balance',
+        'get_total_asset', 'get_users_balance', 'get_reserved_amount',
         'order', 'trend', 'trade_enable', 'hedge',
         'margin_enable', 'new_coin', 'spread_category'
     )
@@ -47,20 +46,23 @@ class AssetAdmin(AdvancedAdmin):
     list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'new_coin', 'hedge')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
-    actions = ('hedge_asset', )
+    actions = ('hedge_asset', 'setup_asset')
 
     def changelist_view(self, request, extra_context=None):
         self.overview = AssetOverview(calculated_hedge=True)
 
         context = {
             'hedge_value': round(self.overview.get_total_hedge_value(), 2),
+            'cum_hedge_value': round(self.overview.get_total_cumulative_hedge_value(), 2),
+
             'margin_insurance_balance': self.overview.get_margin_insurance_balance(),
             # 'binance_margin_ratio': round(self.overview.get_binance_margin_ratio(), 2),
 
             'total_assets_usdt': round(self.overview.get_all_real_assets_value(), 0),
+            'users_usdt': round(self.overview.get_all_users_asset_value(), 0),
             'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
             'exchange_potential_usdt': round(self.overview.get_exchange_potential_usdt(), 0),
-            'users_usdt': round(self.overview.get_all_users_asset_value(), 0)
+            'reserved_assets_value': round(self.overview.get_total_reserved_assets_value(), 0),
         }
 
         return super().changelist_view(request, extra_context=context)
@@ -87,6 +89,10 @@ class AssetAdmin(AdvancedAdmin):
     def get_calc_hedge_amount(self, asset: Asset):
         return humanize_presentation(self.overview.get_calculated_hedge(asset.symbol))
 
+    @admin.display(description='reserved amount')
+    def get_reserved_amount(self, asset: Asset):
+        return humanize_presentation(self.overview.get_reserved_assets_amount(asset.symbol))
+
     @admin.display(description='hedge value')
     def get_hedge_value(self, asset: Asset):
         hedge_value = self.overview.get_hedge_value(asset.symbol)
@@ -105,6 +111,39 @@ class AssetAdmin(AdvancedAdmin):
                 asset=asset,
                 scope=HEDGE
             )
+
+    @admin.action(description='setup asset', permissions=['view'])
+    def setup_asset(self, request, queryset):
+        from ledger.models import NetworkAsset
+
+        for asset in queryset:
+            networks_info = get_provider_requester().get_network_info(asset.symbol)
+
+            for info in networks_info:
+                network, _ = Network.objects.get_or_create(
+                    symbol=info.network,
+                    defaults={
+                        'can_deposit': False,
+                        'can_withdraw': False,
+                        'address_regex': info.address_regex
+                    }
+                )
+
+                ns, _ = NetworkAsset.objects.get_or_create(
+                    asset=asset,
+                    network=network,
+
+                    defaults={
+                        'withdraw_fee': info.withdraw_fee,
+                        'withdraw_min': info.withdraw_min,
+                        'withdraw_max': info.withdraw_max,
+                        'withdraw_precision': 0,
+                    }
+                )
+
+                ns.update_with_provider(info)
+
+            create_symbols_for_asset(asset)
 
 
 @admin.register(models.Network)

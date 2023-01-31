@@ -39,7 +39,8 @@ class TradesPair:
             price=price,
             base_irt_price=base_irt_price,
             base_usdt_price=base_usdt_price,
-            group_id=group_id
+            group_id=group_id,
+            market=maker_order.wallet.market,
         )
 
         taker_trade = Trade(
@@ -53,7 +54,8 @@ class TradesPair:
             price=price,
             base_irt_price=base_irt_price,
             base_usdt_price=base_usdt_price,
-            group_id=group_id
+            group_id=group_id,
+            market=taker_order.wallet.market,
         )
 
         return TradesPair(

@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.db.models import Sum
 
-from accounting.models import VaultItem
+from accounting.models import VaultItem, Vault, ReservedAsset
 from accounts.models import Account
 from financial.models import FiatWithdrawRequest
 from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
@@ -46,6 +46,8 @@ class AssetOverview:
 
         self.assets_map = {a.symbol: a for a in Asset.objects.all()}
 
+        self.reserved_assets = dict(ReservedAsset.objects.values_list('coin', 'amount'))
+
     def get_calculated_hedge(self, coin: str):
         assert self._coin_total_orders is not None
         coin_orders = self._coin_total_orders.get(coin, CoinOrders(coin=coin, buy=Decimal(), sell=Decimal()))
@@ -60,10 +62,16 @@ class AssetOverview:
         return VaultItem.objects.filter(coin=coin).aggregate(balance=Sum('balance'))['balance'] or 0
 
     def get_all_real_assets_value(self):
-        return VaultItem.objects.aggregate(value=Sum('value_usdt'))['value'] or 0
+        return Vault.objects.aggregate(value=Sum('real_value'))['value'] or 0
+
+    def get_reserved_assets_amount(self, coin: str):
+        return self.reserved_assets.get(coin, 0)
+
+    def get_total_reserved_assets_value(self):
+        return ReservedAsset.objects.aggregate(value=Sum('value_usdt'))['value'] or 0
 
     def get_hedge_amount(self, coin: str):
-        return self.get_real_assets(coin) - self.users_balances.get(coin, 0)
+        return self.get_real_assets(coin) - self.users_balances.get(coin, 0) - self.get_reserved_assets_amount(coin)
 
     def get_hedge_value(self, coin: str) -> Decimal:
         amount = Decimal(self.get_hedge_amount(coin))
@@ -107,6 +115,11 @@ class AssetOverview:
     def get_total_hedge_value(self):
         return sum([
             abs(self.get_hedge_value(asset.symbol) or 0) for asset in Asset.live_objects.filter(hedge=True)
+        ])
+
+    def get_total_cumulative_hedge_value(self):
+        return sum([
+            self.get_hedge_value(asset.symbol) or 0 for asset in Asset.live_objects.filter(hedge=True)
         ])
 
     def get_exchange_assets_usdt(self):

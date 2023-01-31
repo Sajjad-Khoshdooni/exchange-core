@@ -102,12 +102,19 @@ def _fetch_prices(coins: list, side: str = None, allow_stale: bool = False) -> L
     else:
         sides = [BUY, SELL]
 
-    if USDT in coins:  # todo: check if market_symbol = USDT
+    if USDT in coins:
         for s in sides:
             results.append(
                 Price(coin=USDT, price=Decimal(1), side=s)
             )
         coins.remove(USDT)
+
+    if IRT in coins:
+        for s in sides:
+            results.append(
+                Price(coin=IRT, price=1 / get_tether_irt_price(get_other_side(s)), side=s)
+            )
+        coins.remove(IRT)
 
     if 'USDC' in coins:
         for s in sides:

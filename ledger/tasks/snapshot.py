@@ -21,6 +21,7 @@ def create_snapshot():
         users=overview.get_all_users_asset_value(),
         exchange=overview.get_exchange_assets_usdt(),
         exchange_potential=overview.get_exchange_potential_usdt(),
+        reserved=overview.get_total_reserved_assets_value(),
 
         margin_insurance=overview.get_margin_insurance_balance(),
         prize=overview.get_all_prize_value(),
@@ -38,12 +39,12 @@ def create_snapshot():
                 created=now,
                 asset=asset,
                 price=prices.get(asset.symbol, 0),
-                hedge_amount=overview.get_hedge_amount(asset),
-                hedge_value=overview.get_hedge_value(asset),
-                calc_hedge_amount=overview.get_calculated_hedge(asset),
+                hedge_amount=overview.get_hedge_amount(asset.symbol),
+                hedge_value=overview.get_hedge_value(asset.symbol),
+                calc_hedge_amount=overview.get_calculated_hedge(asset.symbol),
 
-                total_amount=overview.get_real_assets(asset),
-                users_amount=overview.get_users_asset_amount(asset),
+                total_amount=overview.get_real_assets(asset.symbol),
+                users_amount=overview.get_users_asset_amount(asset.symbol),
             )
         )
 

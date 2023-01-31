@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.db.models import Sum
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem
+from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset, \
+    AssetPrice
 from ledger.utils.precision import humanize_number
 
 
@@ -32,7 +33,8 @@ class AccountTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(Vault)
 class VaultAdmin(admin.ModelAdmin):
-    list_display = ('name', 'market', 'type', 'get_usdt', 'get_value')
+    list_display = ('name', 'market', 'type', 'get_usdt', 'get_value', 'real_value')
+    ordering = ('-real_value', )
 
     @admin.display(description='usdt')
     def get_usdt(self, vault: Vault):
@@ -53,3 +55,20 @@ class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ('coin', 'vault', 'balance', 'value_usdt', 'value_irt', 'updated')
     search_fields = ('coin', )
     list_filter = ('vault__name', 'vault__type', 'vault__market')
+    ordering = ('-value_usdt', )
+
+    def save_model(self, request, obj, form, change):
+        super(VaultItemAdmin, self).save_model(request, obj, form, change)
+        obj.vault.update_real_value()
+
+
+@admin.register(ReservedAsset)
+class ReservedAssetAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    list_display = ('coin', 'amount', 'updated', 'value_usdt', 'value_irt')
+    search_fields = ('coin', )
+
+
+@admin.register(AssetPrice)
+class AssetPriceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    list_display = ('coin', 'price', 'updated')
+    search_fields = ('coin', )

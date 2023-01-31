@@ -54,6 +54,10 @@
         {% endif %}
         <div style="float: left; font-weight: bold;">HEDGE VALUE: {{ hedge_value }}</div>
         </br>
+        <div style="float: left; font-weight: bold;">CUMULATIVE HEDGE VALUE: {{ cum_hedge_value }}</div>
+        </br>
+        <div style="float: left; font-weight: bold;">Binance MARGIN RATIO: {{ binance_margin_ratio }}</div>
+        </br>
 
         </br>
         <div style="float: left; font-weight: bold;">Total Assets: {{ total_assets_usdt }}</div>
@@ -63,6 +67,8 @@
         <div style="float: left; font-weight: bold;">Exchange Potential Assets: {{ exchange_potential_usdt }}</div>
         </br>
         <div style="float: left; font-weight: bold;">Users Assets: {{ users_usdt }}</div>
+        </br>
+        <div style="float: left; font-weight: bold;">Reserved Assets: {{ reserved_assets_value }}</div>
         </br>
         </br>
       <div style="float: left; font-weight: bold;">Margin Insurance: {{ margin_insurance_balance }}</div>
