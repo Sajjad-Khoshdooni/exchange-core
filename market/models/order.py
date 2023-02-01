@@ -145,7 +145,8 @@ class Order(models.Model):
 
     @classmethod
     def cancel_orders(cls, to_cancel_orders: QuerySet):
-        for order in to_cancel_orders.filter(status=Order.NEW):
+        # for order in to_cancel_orders.filter(status=Order.NEW):
+        for order in to_cancel_orders:
             order.cancel()
 
     @staticmethod
