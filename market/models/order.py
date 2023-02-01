@@ -108,8 +108,10 @@ class Order(models.Model):
             return
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
-            order = Order.objects.select_for_update().get(id=self.id)
-            if order.status != self.NEW:
+            PairSymbol.objects.select_for_update().get(id=self.symbol_id)
+            order = Order.objects.filter(status=Order.NEW, id=self.id).first()
+
+            if not order:
                 return
 
             order.status = self.CANCELED
@@ -143,9 +145,7 @@ class Order(models.Model):
 
     @classmethod
     def cancel_orders(cls, to_cancel_orders: QuerySet):
-        to_cancel_orders = list(to_cancel_orders.select_for_update())
-
-        for order in to_cancel_orders:
+        for order in to_cancel_orders.filter(status=Order.NEW):
             order.cancel()
 
     @staticmethod
@@ -226,23 +226,17 @@ class Order(models.Model):
 
     def make_match(self, pipeline: WalletPipeline, overriding_fill_amount: Union[Decimal, None]):
         from market.utils.trade import register_transactions, TradesPair
+        from market.models import Trade
 
-        key = 'mm-cc-%s' % self.symbol.name
-        log_prefix = 'MM %s: ' % self.symbol.name
+        symbol = PairSymbol.objects.select_for_update().get(id=self.symbol_id)
+
+        log_prefix = 'MM %s: ' % symbol.name
 
         logger.info(log_prefix + f'make match started... {overriding_fill_amount}')
 
-        from market.models import Trade
-        # lock symbol open orders
-        open_orders = list(Order.open_objects.select_for_update().filter(symbol=self.symbol))
+        open_orders = list(Order.open_objects.filter(symbol=symbol))
 
         logger.info(log_prefix + 'make match danger zone')
-
-        # if cache.get(key):
-        #     logger.info(log_prefix + 'concurrent detected!')
-        #     raise Exception('Concurrent make match!')
-
-        cache.set(key, 1, 10)
 
         opp_side = self.get_opposite_side(self.side)
 
@@ -273,7 +267,7 @@ class Order(models.Model):
             base_irt_price = 1
             base_usdt_price = 1
 
-            if self.symbol.base_asset.symbol == Asset.USDT:
+            if symbol.base_asset.symbol == Asset.USDT:
                 base_irt_price = tether_irt
             else:
                 base_usdt_price = 1 / tether_irt
@@ -304,8 +298,8 @@ class Order(models.Model):
             if not taker_is_system:
                 Notification.send(
                     recipient=self.wallet.account.user,
-                    title='معامله {}'.format(self.symbol),
-                    message=('مقدار {symbol} {amount} معامله شد.').format(amount=match_amount, symbol=self.symbol)
+                    title='معامله {}'.format(symbol),
+                    message=('مقدار {symbol} {amount} معامله شد.').format(amount=match_amount, symbol=symbol)
                 )
 
             if not maker_is_system:
@@ -379,9 +373,9 @@ class Order(models.Model):
         Trade.create_hedge_fiat_trxs(trades, tether_irt)
 
         if trades:
-            self.symbol.last_trade_time = timezone.now()
-            self.symbol.last_trade_price = trades[-1].price
-            self.symbol.save(update_fields=['last_trade_time', 'last_trade_price'])
+            symbol.last_trade_time = timezone.now()
+            symbol.last_trade_price = trades[-1].price
+            symbol.save(update_fields=['last_trade_time', 'last_trade_price'])
 
         # updating trade_volume_irt of accounts
         for trade in trades:
@@ -394,7 +388,6 @@ class Order(models.Model):
                 from gamify.utils import check_prize_achievements, Task
                 check_prize_achievements(account, Task.TRADE)
 
-            cache.delete(key)
             logger.info(log_prefix + 'make match finished.')
 
     @classmethod
