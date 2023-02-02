@@ -83,13 +83,13 @@ ALTER TABLE public.market_order
 -- Name: CREATE Partitions
 --
 CREATE TABLE market_order_status_new PARTITION OF market_order for values in ('new');
-CREATE TABLE market_order_status_finished PARTITION OF market_order for values in ('canceled', 'filled');
+CREATE TABLE market_order_status_finished PARTITION OF market_order for values != 'new';
 
 --
 -- Name: Fill Partitions
 --
 INSERT INTO market_order_status_new SELECT * from market_order_old where status='new';
-INSERT INTO market_order_status_finished SELECT * from market_order_old where status in ('canceled', 'filled');
+INSERT INTO market_order_status_finished SELECT * from market_order_old where status != 'new';
 
 
 COMMIT TRANSACTION;
