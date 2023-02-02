@@ -54,7 +54,7 @@ def get_fiat_withdraw_risks(withdraw: FiatWithdrawRequest) -> list:
     if withdraw.bank_account.bank != 'MELLI':
         risks.append(
             RiskFactor(
-                reason=RiskFactor.AUTO_WITHDRAW_CEIL,
+                reason=RiskFactor.INVALID_DESTINATION,
                 value=1,
                 expected=0,
             )

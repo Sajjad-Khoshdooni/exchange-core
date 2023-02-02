@@ -37,6 +37,7 @@ class Gateway(models.Model):
     max_deposit_amount = models.PositiveIntegerField(default=50000000)
 
     max_auto_withdraw_amount = models.PositiveIntegerField(null=True, blank=True)
+    expected_withdraw_datetime = models.DateTimeField(null=True, blank=True)
 
     def clean(self):
         if not self.active and not Gateway.objects.filter(active=True).exclude(id=self.id):
