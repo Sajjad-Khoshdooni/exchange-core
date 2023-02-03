@@ -80,7 +80,8 @@ def send_message_by_sms_ir(phone: str, template: str, params: dict):
         },
         headers={
             'x-sms-ir-secure-token': get_sms_ir_token()
-        }
+        },
+        timeout=20,
     )
 
     data = resp.json()
