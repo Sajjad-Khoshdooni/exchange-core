@@ -21,6 +21,12 @@ from market.utils.redis import MarketCacheHandler
 logger = logging.getLogger(__name__)
 
 
+class OrderIDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ('id',)
+
+
 class OrderSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     symbol = serializers.CharField(source='symbol.name')

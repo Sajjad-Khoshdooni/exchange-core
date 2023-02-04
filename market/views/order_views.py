@@ -19,7 +19,7 @@ from ledger.models.wallet import ReserveWallet
 from market.models import Order, CancelRequest, PairSymbol
 from market.models import StopLoss, Trade
 from market.serializers.cancel_request_serializer import CancelRequestSerializer
-from market.serializers.order_serializer import OrderSerializer
+from market.serializers.order_serializer import OrderIDSerializer, OrderSerializer
 from market.serializers.order_stoploss_serializer import OrderStopLossSerializer
 from market.serializers.stop_loss_serializer import StopLossSerializer
 
@@ -27,10 +27,11 @@ from market.serializers.stop_loss_serializer import StopLossSerializer
 class OrderFilter(django_filters.FilterSet):
     symbol = django_filters.CharFilter(field_name='symbol__name', lookup_expr='iexact')
     market = django_filters.CharFilter(field_name='wallet__market')
+    after = django_filters.DateTimeFilter(field_name='created_at', lookup_expr='gte')
 
     class Meta:
         model = Order
-        fields = ('symbol', 'status', 'market', 'side')
+        fields = ('symbol', 'status', 'market', 'side', 'after')
 
 
 class StopLossFilter(django_filters.FilterSet):
@@ -50,10 +51,15 @@ class OrderViewSet(mixins.CreateModelMixin,
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     pagination_class = LimitOffsetPagination
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
-    serializer_class = OrderSerializer
 
     filter_backends = [DjangoFilterBackend]
     filter_class = OrderFilter
+
+    def get_serializer_class(self):
+        if self.request.query_params.get('only_id') == '1':
+            return OrderIDSerializer
+        else:
+            return OrderSerializer
 
     def get_queryset(self):
         account, variant = self.get_account_variant(self.request)
