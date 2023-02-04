@@ -46,7 +46,8 @@ class FinotechRequester:
             },
             headers={
                 'Authorization': config('FINOTECH_AUTH_TOKEN')
-            }
+            },
+            timeout=30,
         )
 
         if resp.ok:

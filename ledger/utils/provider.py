@@ -118,7 +118,7 @@ class ProviderRequester:
 
         request_kwargs = {
             'url': url,
-            # 'timeout': 60,
+            'timeout': 60,
             'headers': {'Authorization': config('PROVIDER_TOKEN')},
         }
 

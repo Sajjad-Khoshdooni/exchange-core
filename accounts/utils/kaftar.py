@@ -21,5 +21,6 @@ def send_message(profile: str, text: str):
         data={
             'profile': profile,
             'text': text
-        }
+        },
+        timeout=30,
     )

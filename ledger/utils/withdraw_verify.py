@@ -43,6 +43,8 @@ class RiskFactor:
     HIGH_TRANSFERS_COUNT = 'high-transfers-count'
     MISMATCH_OUTPUT_INPUT = 'mismatch-output-input'
     HIGH_WITHDRAW = 'high-withdraw'
+    AUTO_WITHDRAW_CEIL = 'auto-withdraw-ceil'
+    INVALID_DESTINATION = 'invalid-destination'
 
     reason: str
     value: float

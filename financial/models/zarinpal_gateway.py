@@ -21,7 +21,8 @@ class ZarinpalGateway(Gateway):
                 'description': 'افزایش اعتبار',
                 'callback_url': settings.HOST_URL + reverse('finance:zarinpal-callback'),
                 'metadata': {"card_pan":  bank_card.card_pan}
-            }
+            },
+            timeout=30,
         )
 
         if not resp.ok or resp.json()['data']['code'] != 100:
@@ -50,7 +51,8 @@ class ZarinpalGateway(Gateway):
                 'merchant_id': payment_request.gateway.merchant_id,
                 'amount': payment_request.amount,
                 'authority': payment_request.authority
-            }
+            },
+            timeout=30,
         )
 
         data = resp.json()['data']

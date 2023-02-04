@@ -121,7 +121,8 @@ def send_email(subject: str, body_html: str, body_text: str, to: list, transacti
             'utmMedium': 'Email',
             'utmContent': settings.BRAND_EN,
             'utmCampaign': purpose,
-        }
+        },
+        timeout=30,
     )
 
     data = resp.json()

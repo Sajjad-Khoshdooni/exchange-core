@@ -185,7 +185,7 @@ def get_price(coin: str, side: str, allow_stale: bool = False) -> Decimal:
 
 
 def get_price_tether_irt_nobitex():
-    resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=10, verify=False)
+    resp = requests.get(url="https://api.nobitex.net/v2/orderbook/USDTIRT", timeout=10)
     data = resp.json()
     status = data['status']
 

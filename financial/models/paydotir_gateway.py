@@ -23,7 +23,8 @@ class PaydotirGateway(Gateway):
                 'description': 'افزایش اعتبار',
                 'redirect': base_url + reverse('finance:paydotir-callback'),
                 'validCardNumber': bank_card.card_pan
-            }
+            },
+            timeout=30,
         )
 
         resp_data = resp.json()
@@ -67,7 +68,8 @@ class PaydotirGateway(Gateway):
             data={
                 'api': payment_request.gateway.merchant_id,
                 'token': payment_request.authority
-            }
+            },
+            timeout=30,
         )
 
         data = resp.json()
