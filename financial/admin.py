@@ -92,7 +92,7 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'withdraw_channel', 'ref_id')
 
-    actions = ('resend_withdraw_request', 'accept_withdraw_request')
+    actions = ('resend_withdraw_request', 'accept_withdraw_request', 'reject_withdraw_request')
 
     @admin.display(description='نام و نام خانوادگی')
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
