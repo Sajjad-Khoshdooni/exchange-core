@@ -94,6 +94,7 @@ class PayirChannel(FiatWithdraw):
             'url': url,
             'timeout': timeout,
             'headers': {'Authorization': 'Bearer ' + config('PAY_IR_TOKEN')},
+            'timeout': 30
             # 'proxies': {
             #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
             #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',

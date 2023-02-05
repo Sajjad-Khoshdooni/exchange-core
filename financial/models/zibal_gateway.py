@@ -20,7 +20,8 @@ class ZibalGateway(Gateway):
                 'callbackUrl': settings.HOST_URL + reverse('finance:zibal-callback'),
                 'description': 'افزایش اعتبار',
                 'allowedCards': bank_card.card_pan
-            }
+            },
+            timeout=30,
         )
 
         if resp.json()['result'] != 100:
@@ -48,7 +49,8 @@ class ZibalGateway(Gateway):
             json={
                 'merchant': payment_request.gateway.merchant_id,
                 'trackId': int(payment_request.authority)
-            }
+            },
+            timeout=30,
         )
 
         data = resp.json()

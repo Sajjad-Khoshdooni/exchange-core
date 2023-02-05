@@ -65,7 +65,8 @@ class JibitGateway(Gateway):
                 'currency': 'IRR',
                 'description': 'افزایش اعتبار',
                 'payerCardNumber': bank_card.card_pan
-            }
+            },
+            timeout=30,
         )
 
         if not resp.ok:
@@ -99,6 +100,7 @@ class JibitGateway(Gateway):
         resp = requests.post(
             headers={'Authorization': 'Bearer ' + token},
             url=self.BASE_URL + '/v3/purchases/{purchaseId}/verify'.format(purchaseId=payment_request.authority),
+            timeout=30,
         )
 
         status = resp.json()['status']

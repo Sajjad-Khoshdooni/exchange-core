@@ -17,7 +17,7 @@ from accounts.models import VerificationCode
 from accounts.permissions import IsBasicVerified
 from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
 from accounts.verifiers.legal import is_48h_rule_passed
-from financial.models import FiatWithdrawRequest
+from financial.models import FiatWithdrawRequest, Gateway
 from financial.models.bank_card import BankAccount, BankAccountSerializer
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
 from financial.utils.withdraw_verify import auto_verify_fiat_withdraw
@@ -166,6 +166,12 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
                   'rial_estimate_receive_time',)
 
     def get_rial_estimate_receive_time(self, fiat_withdraw_request: FiatWithdrawRequest):
+        if fiat_withdraw_request.status in (FiatWithdrawRequest.INIT, FiatWithdrawRequest.PROCESSING):
+            gateway = Gateway.get_active()
+
+            if gateway.expected_withdraw_datetime and gateway.expected_withdraw_datetime > timezone.now():
+                return gateway.expected_withdraw_datetime
+
         return fiat_withdraw_request.receive_datetime
 
     def get_status(self, withdraw: FiatWithdrawRequest):
