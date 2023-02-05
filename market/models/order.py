@@ -195,7 +195,7 @@ class Order(models.Model):
     def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
         return amount * price if side == Order.BUY else amount
 
-    def submit(self, pipeline: WalletPipeline, check_balance: bool = True, is_stop_loss: bool = False):
+    def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False):
         overriding_fill_amount = None
         if is_stop_loss:
             if self.side == Order.BUY:
@@ -205,11 +205,11 @@ class Order(models.Model):
                     if not overriding_fill_amount:
                         raise CancelOrder('Overriding fill amount is zero')
         else:
-            overriding_fill_amount = self.acquire_lock(pipeline, check_balance=check_balance)
+            overriding_fill_amount = self.acquire_lock(pipeline)
 
         self.make_match(pipeline, overriding_fill_amount)
 
-    def acquire_lock(self, pipeline: WalletPipeline, check_balance: bool = True):
+    def acquire_lock(self, pipeline: WalletPipeline):
         to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side)
 
@@ -218,8 +218,7 @@ class Order(models.Model):
             if free_amount > Decimal('0.95') * lock_amount:
                 lock_amount = min(lock_amount, free_amount)
 
-        if check_balance:
-            to_lock_wallet.has_balance(lock_amount, raise_exception=True)
+        to_lock_wallet.has_balance(lock_amount, raise_exception=True)
 
         pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 

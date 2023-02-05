@@ -28,8 +28,9 @@ class MinNotionalError(Exception):
 
 def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Decimal, side: str,
               fill_type: str = Order.LIMIT, raise_exception: bool = True, market: str = Wallet.SPOT,
-              check_balance: bool = False, order_type: str = Order.ORDINARY,
-              parent_lock_group_id: Union[UUID, None] = None, time_in_force: str = Order.GTC) -> Union[Order, None]:
+              order_type: str = Order.ORDINARY, parent_lock_group_id: Union[UUID, None] = None,
+              time_in_force: str = Order.GTC) -> Union[Order, None]:
+
     wallet = symbol.asset.get_wallet(account, market=market)
     if fill_type == Order.MARKET:
         price = Order.get_market_price(symbol, Order.get_opposite_side(side))
@@ -86,7 +87,7 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
         )
 
         is_stop_loss = parent_lock_group_id is not None
-        order.submit(pipeline, check_balance=check_balance, is_stop_loss=is_stop_loss)
+        order.submit(pipeline, is_stop_loss=is_stop_loss)
     return order
 
 

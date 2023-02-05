@@ -83,7 +83,7 @@ ALTER TABLE public.market_order
 -- Name: CREATE Partitions
 --
 CREATE TABLE market_order_status_new PARTITION OF market_order for values in ('new');
-CREATE TABLE market_order_status_finished PARTITION OF market_order for values != 'new';
+CREATE TABLE market_order_status_finished PARTITION OF market_order for values in ('canceled', 'filled');
 
 --
 -- Name: Fill Partitions
