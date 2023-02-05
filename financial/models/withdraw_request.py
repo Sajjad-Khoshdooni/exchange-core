@@ -93,10 +93,9 @@ class FiatWithdrawRequest(models.Model):
             )
 
     def create_withdraw_request(self):
-        if self.withdraw_channel == self.MANUAL:
+        if self.withdraw_channel == self.MANUAL or self.provider_withdraw_id:
             return
 
-        assert not self.provider_withdraw_id
         assert self.status == self.PROCESSING
 
         from financial.utils.withdraw import ProviderError
