@@ -93,7 +93,12 @@ class FiatWithdrawRequest(models.Model):
             )
 
     def create_withdraw_request(self):
-        if self.withdraw_channel == self.MANUAL or self.provider_withdraw_id:
+        if self.withdraw_channel == self.MANUAL:
+            return
+
+        if self.provider_withdraw_id:
+            self.status = FiatWithdrawRequest.PENDING
+            self.save(update_fields=['status'])
             return
 
         assert self.status == self.PROCESSING
