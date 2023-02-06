@@ -96,7 +96,11 @@ class FiatWithdrawRequest(models.Model):
         if self.withdraw_channel == self.MANUAL:
             return
 
-        assert not self.provider_withdraw_id
+        if self.provider_withdraw_id:
+            self.status = FiatWithdrawRequest.PENDING
+            self.save(update_fields=['status'])
+            return
+
         assert self.status == self.PROCESSING
 
         from financial.utils.withdraw import ProviderError
