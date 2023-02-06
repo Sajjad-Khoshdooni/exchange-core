@@ -10,7 +10,7 @@ from accounts.models import Account
 from ledger.models import Wallet, Asset
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
-from market.utils.redis import MarketCacheHandler
+from market.utils.redis import MarketStreamCache
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
         else:
             logger.info('new order failed: min_notional')
             return
-    market_cache_handler = MarketCacheHandler()
+    market_cache_handler = MarketStreamCache()
     with WalletPipeline() as pipeline:
         additional_params = {'group_id': parent_lock_group_id} if parent_lock_group_id else {}
         order = Order.objects.create(

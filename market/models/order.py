@@ -1,19 +1,18 @@
 import logging
 from collections import defaultdict
+from dataclasses import dataclass
 from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
 from random import randrange, random
-from time import sleep, time
+from time import time
 from typing import Union
 from uuid import uuid4
 
 from django.conf import settings
-from django.core.cache import cache
-from django.db import models, transaction, OperationalError
+from django.db import models, transaction
 from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum
 from django.utils import timezone
-from psycopg2 import OperationalError as PSOperationalError
 
 from accounts.models import Notification
 from ledger.models import Wallet
@@ -26,8 +25,14 @@ from ledger.utils.price import get_trading_price_irt, IRT, USDT, get_trading_pri
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
 
-
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class TopOrder:
+    side: str
+    price: Decimal
+    amount: Decimal
 
 
 class OpenOrderManager(models.Manager):
@@ -118,8 +123,7 @@ class Order(models.Model):
         if self.status != self.NEW:
             return
 
-        from market.utils.redis import MarketCacheHandler
-        cache_handler = MarketCacheHandler()
+        from market.utils.redis import MarketStreamCache
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             PairSymbol.objects.select_for_update().get(id=self.symbol_id)
             order = Order.objects.filter(status=Order.NEW, id=self.id).first()
@@ -129,9 +133,8 @@ class Order(models.Model):
 
             order.status = self.CANCELED
             order.save(update_fields=['status'])
-            pipeline.release_lock(key=order.group_id)
-            cache_handler.update_order_status(order)
-        cache_handler.execute()
+
+        MarketStreamCache().execute(self.symbol, [order], side=order.side)
 
     @property
     def base_wallet(self):
@@ -201,7 +204,7 @@ class Order(models.Model):
     def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
         return amount * price if side == Order.BUY else amount
 
-    def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False, cache_handler=None):
+    def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False):
         overriding_fill_amount = None
         if is_stop_loss:
             if self.side == Order.BUY:
@@ -213,9 +216,7 @@ class Order(models.Model):
         else:
             overriding_fill_amount = self.acquire_lock(pipeline)
 
-        trade_pairs = self.make_match(pipeline, overriding_fill_amount, cache_handler=cache_handler)
-        cache_handler.update_trades(trade_pairs)
-        cache_handler.update_bid_ask(self)
+        return self.make_match(pipeline, overriding_fill_amount)
 
     def acquire_lock(self, pipeline: WalletPipeline):
         to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
@@ -237,7 +238,7 @@ class Order(models.Model):
         release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side)
         pipeline.release_lock(key=self.group_id, amount=release_amount)
 
-    def make_match(self, pipeline: WalletPipeline, overriding_fill_amount: Union[Decimal, None], cache_handler=None):
+    def make_match(self, pipeline: WalletPipeline, overriding_fill_amount: Union[Decimal, None]):
         from market.utils.trade import register_transactions, TradesPair
         from market.models import Trade
 
@@ -253,7 +254,7 @@ class Order(models.Model):
         if maker_side == self.BUY:
             matching_orders = matching_orders.filter(price__gte=self.price).order_by('-price', 'id')
         else:
-            matching_orders = matching_orders.filter(price__lte=self.price)
+            matching_orders = matching_orders.filter(price__lte=self.price).order_by('price', 'id')
 
         unfilled_amount = overriding_fill_amount or self.unfilled_amount
 
@@ -275,6 +276,7 @@ class Order(models.Model):
 
         trades = []
         trade_pairs = []
+        filled_orders = []
 
         tether_irt = get_tether_irt_price(self.BUY)
 
@@ -361,8 +363,7 @@ class Order(models.Model):
                 with transaction.atomic():
                     maker_order.status = Order.FILLED
                     maker_order.save(update_fields=['status'])
-                    if cache_handler:
-                        cache_handler.update_order_status(maker_order)
+                    filled_orders.append(maker_order)
 
             if unfilled_amount == 0:
                 self.status = Order.FILLED
@@ -371,8 +372,6 @@ class Order(models.Model):
                     pipeline.release_lock(self.group_id)
 
                 self.save(update_fields=['status'])
-                if cache_handler:
-                    cache_handler.update_order_status(self)
                 break
 
         if to_hedge_amount != 0:
@@ -417,7 +416,7 @@ class Order(models.Model):
                 check_prize_achievements(account, Task.TRADE)
 
             logger.info(log_prefix + 'make match finished.')
-        return trade_pairs
+        return trade_pairs, filled_orders
 
     @classmethod
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):
@@ -564,3 +563,18 @@ class Order(models.Model):
                 top_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) \
                                             or Decimal()
         return top_prices
+
+    @classmethod
+    def get_top_price_amount(cls, symbol_id, side):
+        agg_func = Max if side == cls.BUY else Min
+        top_price = cls.open_objects.filter(
+            symbol_id=symbol_id, side=side
+        ).aggregate(top_price=agg_func('price'))['top_price']
+        if not top_price:
+            return None
+        unfilled_amount = cls.open_objects.filter(
+            symbol_id=symbol_id, side=side, price=top_price
+        ).annotate(unfilled_amount=F('amount') - F('filled_amount')).aggregate(
+            total_amount=Sum('unfilled_amount')
+        )['total_amount']
+        return TopOrder(side=side, price=top_price, amount=unfilled_amount)
