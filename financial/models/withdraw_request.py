@@ -129,12 +129,12 @@ class FiatWithdrawRequest(models.Model):
                 self.id
             )
             self.ref_id = withdraw.tracking_id
-            self.change_status(withdraw.status)
             self.withdraw_datetime = timezone.now()
             self.receive_datetime = withdraw.receive_datetime
             self.comment = withdraw.message
 
-            self.save()
+            self.save(update_fields=['ref_id', 'withdraw_datetime', 'receive_datetime', 'comment'])
+            self.change_status(withdraw.status)
 
         except ProviderError as e:
             self.comment = str(e)
