@@ -8,6 +8,7 @@ from typing import Dict, List, Union
 import requests
 from decouple import config
 from django.conf import settings
+from django.core.cache import cache
 from redis import Redis
 
 from ledger.utils.cache import cache_for
@@ -169,10 +170,26 @@ def _fetch_prices(coins: list, side: str = None, allow_stale: bool = False) -> L
     return results
 
 
-def get_prices_dict(coins: list, side: str = None, allow_stale: bool = False) -> Dict[str, Decimal]:
-    results = _fetch_prices(coins, side, allow_stale=allow_stale)
+PRICES_CACHE_TIMEOUT = 10
 
-    return {r.coin: r.price for r in results if r.price}
+
+def get_prices_dict(coins: list, side: str = None, allow_stale: bool = False) \
+        -> Dict[str, Decimal]:
+
+    cache_key = 'prices:ext'
+
+    if allow_stale:
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result
+
+    prices = _fetch_prices(coins, side, allow_stale=allow_stale)
+    result = {r.coin: r.price for r in prices if r.price}
+
+    if allow_stale:
+        cache.set(cache_key, result, PRICES_CACHE_TIMEOUT)
+
+    return result
 
 
 def get_price(coin: str, side: str, allow_stale: bool = False) -> Decimal:

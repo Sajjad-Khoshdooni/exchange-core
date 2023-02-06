@@ -347,7 +347,7 @@ class TransferAdmin(AdvancedAdmin):
     actions = ('accept_withdraw', 'reject_withdraw')
 
     def save_model(self, request, obj: models.Transfer, form, change):
-        if obj.id and obj.status == models.Transfer.DONE and obj.trx_hash:
+        if obj.id and obj.status == models.Transfer.DONE:
             old = models.Transfer.objects.get(id=obj.id)
 
             if old.status != models.Transfer.DONE:
