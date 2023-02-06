@@ -74,7 +74,7 @@ class UserRialWithdrawRequestFilter(SimpleListFilter):
 
 
 @admin.register(FiatWithdrawRequest)
-class FiatWithdrawRequestAdmin(admin.ModelAdmin):
+class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     fieldsets = (
         ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'bank_account',
