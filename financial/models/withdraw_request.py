@@ -1,10 +1,10 @@
 import logging
 
+from decouple import config
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
-from decouple import config
 from simple_history.models import HistoricalRecords
 
 from accounts.models import Account
@@ -16,7 +16,7 @@ from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
-from ledger.utils.fields import get_group_id_field, PENDING, CANCELED
+from ledger.utils.fields import get_group_id_field
 from ledger.utils.precision import humanize_number
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -54,7 +54,6 @@ class FiatWithdrawRequest(models.Model):
 
     withdraw_datetime = models.DateTimeField(null=True, blank=True)
     receive_datetime = models.DateTimeField(null=True, blank=True)
-    provider_withdraw_id = models.CharField(max_length=64, blank=True)
 
     withdraw_channel = models.CharField(max_length=10, choices=CHANEL_CHOICES, default=PAYIR)
 
@@ -96,15 +95,15 @@ class FiatWithdrawRequest(models.Model):
             )
 
     def create_withdraw_request(self):
+        assert self.status == self.PROCESSING
+
         if self.withdraw_channel == self.MANUAL:
             return
 
-        if self.provider_withdraw_id:
-            self.status = FiatWithdrawRequest.PENDING
+        if self.ref_id:
+            self.status = self.PENDING
             self.save(update_fields=['status'])
             return
-
-        assert self.status == self.PROCESSING
 
         from financial.utils.withdraw import ProviderError
 
@@ -129,7 +128,7 @@ class FiatWithdrawRequest(models.Model):
                 self.amount,
                 self.id
             )
-            self.provider_withdraw_id = self.ref_id = withdraw.tracking_id
+            self.ref_id = withdraw.tracking_id
             self.change_status(withdraw.status)
             self.withdraw_datetime = timezone.now()
             self.receive_datetime = withdraw.receive_datetime
@@ -145,17 +144,22 @@ class FiatWithdrawRequest(models.Model):
         from financial.utils.withdraw import FiatWithdraw
 
         withdraw_handler = FiatWithdraw.get_withdraw_channel(self.withdraw_channel)
-        status = withdraw_handler.get_withdraw_status(self.id, self.provider_withdraw_id)
+        withdraw_data = withdraw_handler.get_withdraw_status(self.id, self.ref_id)
+        status = withdraw_data.status
 
         logger.info(f'FiatRequest {self.id} status: {status}')
 
         if status in (FiatWithdraw.DONE, FiatWithdraw.CANCELED):
             self.change_status(status)
 
+        if not self.ref_id and withdraw_data.tracking_id:
+            self.ref_id = withdraw_data.tracking_id
+            self.save(update_fields=['ref_id'])
+
     def alert_withdraw_verify_status(self):
         user = self.bank_account.user
 
-        if self.status == PENDING and self.withdraw_datetime:
+        if self.status == self.PENDING and self.withdraw_datetime:
             title = 'درخواست برداشت شما به بانک ارسال گردید.'
             description = 'وجه درخواستی شما در سیکل بعدی پایا {} به حساب شما واریز خواهد شد.'.format(
                 gregorian_to_jalali_datetime_str(self.withdraw_datetime)
@@ -164,7 +168,7 @@ class FiatWithdrawRequest(models.Model):
             template = 'withdraw-accepted'
             email_template = email.SCOPE_SUCCESSFUL_FIAT_WITHDRAW
 
-        elif self.status == CANCELED:
+        elif self.status == self.CANCELED:
             title = 'درخواست برداشت شما لغو شد.'
             description = ''
             level = Notification.ERROR
@@ -197,24 +201,27 @@ class FiatWithdrawRequest(models.Model):
         )
 
     def change_status(self, new_status: str):
-        old_status = self.status
+        with transaction.atomic():
+            withdraw = FiatWithdrawRequest.objects.select_for_update().get(id=self.id)
 
-        if old_status == new_status:
-            return
+            old_status = withdraw.status
 
-        assert old_status not in (CANCELED, self.DONE)
+            if old_status == new_status:
+                return
 
-        with WalletPipeline() as pipeline:  # type: WalletPipeline
-            if new_status in (self.CANCELED, self.DONE):
-                pipeline.release_lock(self.group_id)
+            assert old_status not in (self.CANCELED, self.DONE)
 
-            if (old_status, new_status) in (self.PROCESSING, self.PENDING):
-                self.withdraw_datetime = timezone.now()
-            elif new_status == self.DONE:
-                self.build_trx(pipeline)
+            with WalletPipeline() as pipeline:  # type: WalletPipeline
+                if new_status in (self.CANCELED, self.DONE):
+                    pipeline.release_lock(withdraw.group_id)
 
-            self.status = new_status
-            self.save(update_fields=['status'])
+                if (old_status, new_status) in (self.PROCESSING, self.PENDING):
+                    withdraw.withdraw_datetime = timezone.now()
+                elif new_status == self.DONE:
+                    withdraw.build_trx(pipeline)
+
+                withdraw.status = new_status
+                withdraw.save(update_fields=['status'])
 
         self.alert_withdraw_verify_status()
 
