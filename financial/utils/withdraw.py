@@ -340,7 +340,10 @@ class ZibalChannel(FiatWithdraw):
             'uniqueCode': str(request_id)
         })
 
-        details = data['details'][0]
+        if 'details' in data:
+            details = data['details'][0]
+        else:
+            details = {}
 
         if data['type'] == 'canceledCheckout':
             status = self.CANCELED
