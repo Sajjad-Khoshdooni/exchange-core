@@ -44,12 +44,15 @@ class OrderSerializer(serializers.ModelSerializer):
             raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
 
         symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
+
         if validated_data['fill_type'] == Order.LIMIT:
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
+
         elif validated_data['fill_type'] == Order.MARKET:
             validated_data['price'] = Order.get_market_price(symbol, Order.get_opposite_side(validated_data['side']))
             if not validated_data['price']:
                 raise Exception('Empty order book')
+
         wallet = self.post_validate(symbol, validated_data)
 
         try:

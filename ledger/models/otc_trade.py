@@ -1,13 +1,11 @@
 import logging
-from decimal import Decimal
 from uuid import uuid4
 
-from django.db import models, IntegrityError
+from django.db import models
 
 from accounts.models import Account
-from ledger.exceptions import AbruptDecrease, HedgeError
+from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet
-from ledger.utils.price import SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.exceptions import NegativeGapRevenue
 
@@ -81,9 +79,6 @@ class OTCTrade(models.Model):
         amount = otc_request.from_amount
         from_wallet.has_balance(amount, raise_exception=True)
 
-        if not force:
-            cls.check_abrupt_decrease(otc_request)
-
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             otc_trade = OTCTrade.objects.create(
                 otc_request=otc_request,
@@ -128,25 +123,6 @@ class OTCTrade(models.Model):
                     amount=conf.coin_amount,
                     scope=TRADE
                 )
-
-    @classmethod
-    def check_abrupt_decrease(cls, otc_request: OTCRequest):
-        return
-        old_coin_price = otc_request.to_price
-        new_coin_price = otc_request.get_to_price()
-
-        rate = new_coin_price / old_coin_price - 1
-
-        threshold = Decimal('0.002')
-
-        conf = otc_request.get_trade_config()
-
-        if conf.side == SELL:
-            rate = -rate
-
-        if rate > threshold:
-            logger.error('otc failed because of abrupt change!')
-            raise AbruptDecrease()
 
     def revert(self):
         with WalletPipeline() as pipeline:

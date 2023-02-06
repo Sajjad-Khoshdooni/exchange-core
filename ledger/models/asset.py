@@ -121,8 +121,9 @@ class Asset(models.Model):
             elif amount > self.max_trade_quantity:
                 raise InvalidAmount('واحد وارد شده بزرگ است.')
             elif amount % self.trade_quantity_step != 0:
-                raise InvalidAmount('واحد وارد شده باید مضربی از %s باشد.' % self.get_presentation_amount(self.trade_quantity_step))
-
+                raise InvalidAmount(
+                    'واحد وارد شده باید مضربی از %s باشد.' % self.get_presentation_amount(self.trade_quantity_step)
+                )
         else:
             return \
                 self.min_trade_quantity <= amount <= self.max_trade_quantity and \

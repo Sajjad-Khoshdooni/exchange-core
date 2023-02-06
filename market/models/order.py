@@ -11,7 +11,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models, transaction, OperationalError
-from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet
+from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum
 from django.utils import timezone
 from psycopg2 import OperationalError as PSOperationalError
 
@@ -53,6 +53,8 @@ class Order(models.Model):
     LIMIT, MARKET = 'limit', 'market'
     FILL_TYPE_CHOICES = [(LIMIT, LIMIT), (MARKET, MARKET)]
 
+    TIME_IN_FORCE_OPTIONS = GTC, FOK = None, 'FOK'
+
     NEW, CANCELED, FILLED = 'new', 'canceled', 'filled'
     STATUS_CHOICES = [(NEW, NEW), (CANCELED, CANCELED), (FILLED, FILLED)]
 
@@ -85,6 +87,13 @@ class Order(models.Model):
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
     stop_loss = models.ForeignKey(to='market.StopLoss', on_delete=models.SET_NULL, null=True, blank=True)
+
+    time_in_force = models.CharField(
+        max_length=4,
+        blank=True,
+        null=True,
+        choices=[(GTC, 'GTC'), (FOK, 'FOK')]
+    )
 
     def __str__(self):
         return f'({self.id}) {self.symbol}-{self.side} [p:{self.price:.2f}] (a:{self.unfilled_amount:.5f}/{self.amount:.5f})'
@@ -134,11 +143,6 @@ class Order(models.Model):
     def unfilled_amount(self):
         amount = self.amount - self.filled_amount
         return floor_precision(amount, self.symbol.step_size)
-
-    @staticmethod
-    def matching_orders_filter(side, price, op):
-        return (lambda order: order.side == side and order.price >= price) if op == 'gte' else \
-            (lambda order: order.side == side and order.price <= price)
 
     @staticmethod
     def get_opposite_side(side):
@@ -197,9 +201,9 @@ class Order(models.Model):
     def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
         return amount * price if side == Order.BUY else amount
 
-    def submit(self, pipeline: WalletPipeline, check_balance: bool = True, is_stoploss: bool = False, cache_handler=None):
+    def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False, cache_handler=None):
         overriding_fill_amount = None
-        if is_stoploss:
+        if is_stop_loss:
             if self.side == Order.BUY:
                 locked_amount = BalanceLock.objects.get(key=self.group_id).amount
                 if locked_amount < self.amount * self.price:
@@ -207,12 +211,13 @@ class Order(models.Model):
                     if not overriding_fill_amount:
                         raise CancelOrder('Overriding fill amount is zero')
         else:
-            overriding_fill_amount = self.acquire_lock(pipeline, check_balance=check_balance)
+            overriding_fill_amount = self.acquire_lock(pipeline)
+
         trade_pairs = self.make_match(pipeline, overriding_fill_amount, cache_handler=cache_handler)
         cache_handler.update_trades(trade_pairs)
         cache_handler.update_bid_ask(self)
 
-    def acquire_lock(self, pipeline: WalletPipeline, check_balance: bool = True):
+    def acquire_lock(self, pipeline: WalletPipeline):
         to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side)
 
@@ -221,8 +226,7 @@ class Order(models.Model):
             if free_amount > Decimal('0.95') * lock_amount:
                 lock_amount = min(lock_amount, free_amount)
 
-        if check_balance:
-            to_lock_wallet.has_balance(lock_amount, raise_exception=True)
+        to_lock_wallet.has_balance(lock_amount, raise_exception=True)
 
         pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 
@@ -243,18 +247,31 @@ class Order(models.Model):
 
         logger.info(log_prefix + f'make match started... {overriding_fill_amount}')
 
-        open_orders = list(Order.open_objects.filter(symbol=symbol))
+        maker_side = self.get_opposite_side(self.side)
 
-        logger.info(log_prefix + 'make match danger zone')
-
-        opp_side = self.get_opposite_side(self.side)
-
-        operator = 'lte' if self.side == Order.BUY else 'gte'
-        matching_orders = list(sorted(filter(
-            self.matching_orders_filter(side=opp_side, price=self.price, op=operator), open_orders
-        ), key=self.get_order_by(opp_side)))
+        matching_orders = Order.open_objects.filter(symbol=symbol, side=maker_side)
+        if maker_side == self.BUY:
+            matching_orders = matching_orders.filter(price__gte=self.price).order_by('-price', 'id')
+        else:
+            matching_orders = matching_orders.filter(price__lte=self.price)
 
         unfilled_amount = overriding_fill_amount or self.unfilled_amount
+
+        if self.time_in_force == self.FOK:
+            total_maker_amounts = matching_orders.aggregate(
+                total_amount=Sum(F('amount') - F('filled_amount'))
+            )['total_amount'] or 0
+
+            if unfilled_amount > total_maker_amounts:
+                self.status = Order.CANCELED
+                pipeline.release_lock(self.group_id)
+                self.save(update_fields=['status'])
+                return
+
+        matching_orders = list(matching_orders)
+
+        if not matching_orders:
+            return
 
         trades = []
         trade_pairs = []
@@ -263,14 +280,10 @@ class Order(models.Model):
 
         to_hedge_amount = Decimal(0)
 
-        for matching_order in matching_orders:
-            trade_price = matching_order.price
-            if (self.side == Order.BUY and self.price < trade_price) or (
-                    self.side == Order.SELL and self.price > trade_price
-            ):
-                continue
+        for maker_order in matching_orders:
+            trade_price = maker_order.price
 
-            match_amount = min(matching_order.unfilled_amount, unfilled_amount)
+            match_amount = min(maker_order.unfilled_amount, unfilled_amount)
             if match_amount <= 0:
                 continue
 
@@ -283,7 +296,7 @@ class Order(models.Model):
                 base_usdt_price = 1 / tether_irt
 
             taker_is_system = self.wallet.account.is_system()
-            maker_is_system = matching_order.wallet.account.is_system()
+            maker_is_system = maker_order.wallet.account.is_system()
 
             source_map = {
                 (True, True): Trade.SYSTEM,
@@ -296,7 +309,7 @@ class Order(models.Model):
 
             trades_pair = TradesPair.init_pair(
                 taker_order=self,
-                maker_order=matching_order,
+                maker_order=maker_order,
                 amount=match_amount,
                 price=trade_price,
                 base_irt_price=base_irt_price,
@@ -314,16 +327,16 @@ class Order(models.Model):
 
             if not maker_is_system:
                 Notification.send(
-                    recipient=matching_order.wallet.account.user,
-                    title='معامله {}'.format(matching_order.symbol),
+                    recipient=maker_order.wallet.account.user,
+                    title='معامله {}'.format(maker_order.symbol),
                     message=('مقدار {symbol} {amount} معامله شد.').format(
                         amount=match_amount,
-                        symbol=matching_order.symbol
+                        symbol=maker_order.symbol
                     )
                 )
 
             self.release_lock(pipeline, match_amount)
-            matching_order.release_lock(pipeline, match_amount)
+            maker_order.release_lock(pipeline, match_amount)
 
             register_transactions(pipeline, pair=trades_pair)
 
@@ -333,10 +346,10 @@ class Order(models.Model):
             trades.extend(trades_pair.trades)
             trade_pairs.append(trades_pair.trades)
 
-            self.update_filled_amount((self.id, matching_order.id), match_amount)
+            self.update_filled_amount((self.id, maker_order.id), match_amount)
 
-            if self.wallet.account.is_ordinary_user() != matching_order.wallet.account.is_ordinary_user():
-                ordinary_order = self if self.type == Order.ORDINARY else matching_order
+            if self.wallet.account.is_ordinary_user() != maker_order.wallet.account.is_ordinary_user():
+                ordinary_order = self if self.type == Order.ORDINARY else maker_order
 
                 if ordinary_order.side == Order.SELL:
                     to_hedge_amount -= match_amount
@@ -344,12 +357,12 @@ class Order(models.Model):
                     to_hedge_amount += match_amount
 
             unfilled_amount -= match_amount
-            if match_amount == matching_order.unfilled_amount:  # unfilled_amount reduced in DB but not updated here :)
+            if match_amount == maker_order.unfilled_amount:  # unfilled_amount reduced in DB but not updated here :)
                 with transaction.atomic():
-                    matching_order.status = Order.FILLED
-                    matching_order.save(update_fields=['status'])
+                    maker_order.status = Order.FILLED
+                    maker_order.save(update_fields=['status'])
                     if cache_handler:
-                        cache_handler.update_order_status(matching_order)
+                        cache_handler.update_order_status(maker_order)
 
             if unfilled_amount == 0:
                 self.status = Order.FILLED

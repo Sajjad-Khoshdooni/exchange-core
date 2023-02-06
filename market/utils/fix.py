@@ -1,5 +1,6 @@
 from ledger.models import Asset
 from ledger.utils.precision import get_precision
+from ledger.utils.price import get_price, BUY
 from market.models import PairSymbol
 
 
@@ -11,7 +12,7 @@ def create_symbol_from_pair(asset: Asset, base_asset: Asset):
             'step_size': get_precision(asset.trade_quantity_step),
             'min_trade_quantity': asset.min_trade_quantity,
             'max_trade_quantity': asset.max_trade_quantity,
-            'maker_amount': min(10000 * asset.min_trade_quantity, asset.max_trade_quantity / 100)
+            'maker_amount': 1000 / get_price(asset.symbol, BUY)
         }
     )
 
