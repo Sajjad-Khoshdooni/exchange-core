@@ -14,7 +14,7 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict, get_trading_price_usdt
+from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict, get_trading_price_usdt, get_trading_price_irt
 from ledger.utils.provider import CoinInfo, get_provider_requester
 
 
@@ -253,28 +253,33 @@ class AssetOverviewAPIView(APIView):
     def set_price(cls, coins: list):
         for coin in coins:
             coin['price_usdt'] = get_trading_price_usdt(coin['symbol'], side=BUY)
+            coin['price_irt'] = get_trading_price_irt(coin['symbol'], side=BUY)
             coin['market_irt_enable'] = coin['symbol'] in get_irt_market_asset_symbols()
             coin.update(AssetSerializerMini(Asset.get(symbol=coin['symbol'])).data)
 
     def get(self, request):
+        limit = int(self.request.query_params.get('limit', default=3))
+
         coins = list(Asset.live_objects.values_list('symbol', flat=True))
         caps = get_provider_requester().get_coins_info(coins).values()
 
         def coin_info_to_dict(info: CoinInfo):
             return {
                 'symbol': info.coin,
-                'change_24h': info.change_24h
+                'change_24h': info.change_24h,
+                'volume_24h': info.volume_24h,
+                'trend_url': info.weekly_trend_url,
             }
 
-        high_volume = list(map(coin_info_to_dict, sorted(caps, key=lambda cap: cap.volume_24h, reverse=True)[:3]))
+        high_volume = list(map(coin_info_to_dict, sorted(caps, key=lambda cap: cap.volume_24h, reverse=True)[:limit]))
         AssetOverviewAPIView.set_price(high_volume)
 
-        high_24h_change = list(map(coin_info_to_dict, sorted(caps, key=lambda cap: cap.change_24h, reverse=True)[:3]))
+        high_24h_change = list(map(coin_info_to_dict, sorted(caps, key=lambda cap: cap.change_24h, reverse=True)[:limit]))
         AssetOverviewAPIView.set_price(high_24h_change)
 
         newest_coin_symbols = list(Asset.live_objects.exclude(
             symbol__in=['IRT', 'IOTA']
-        ).filter(new_coin=True).values_list('symbol', flat=True))[:3]
+        ).filter(new_coin=True).values_list('symbol', flat=True))[:limit]
         newest = list(map(coin_info_to_dict, filter(lambda cap: cap.coin in newest_coin_symbols, caps)))
         AssetOverviewAPIView.set_price(newest)
 

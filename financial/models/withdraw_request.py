@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from decouple import config
+from simple_history.models import HistoricalRecords
 
 from accounts.models import Account
 from accounts.models import Notification
@@ -23,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 
 class FiatWithdrawRequest(models.Model):
+    history = HistoricalRecords()
+
     INIT, PROCESSING, PENDING, CANCELED, DONE = 'init', 'process', 'pending', 'canceled', 'done'
 
     MANUAL, ZIBAL, PAYIR, ZARINPAL, JIBIT = 'manual', 'zibal', 'payir', 'zarinpal', 'jibit'
@@ -96,7 +99,11 @@ class FiatWithdrawRequest(models.Model):
         if self.withdraw_channel == self.MANUAL:
             return
 
-        assert not self.provider_withdraw_id
+        if self.provider_withdraw_id:
+            self.status = FiatWithdrawRequest.PENDING
+            self.save(update_fields=['status'])
+            return
+
         assert self.status == self.PROCESSING
 
         from financial.utils.withdraw import ProviderError
