@@ -119,7 +119,7 @@ class MarketStreamCache:
             return cls._client.script_load(cls._funcs_dict[func_name])
         raise NotImplementedError
 
-    def update_bid_ask(self, symbol, side):
+    def update_bid_ask(self, symbol, side, canceled):
         from market.models import Order
         price_updated = {Order.BUY: False, Order.SELL: False}
         amount_updated = {Order.BUY: False, Order.SELL: False}
@@ -129,13 +129,18 @@ class MarketStreamCache:
                 top_order = Order.get_top_price_amount(symbol.id, order_type)
                 top_orders[f'{order_type}_price'] = str(top_order.price)
                 top_orders[f'{order_type}_amount'] = str(top_order.amount)
-                set_func = self.set_if_higher if order_type == Order.BUY else self.set_if_lower
-                price_updated[order_type] = set_func(
-                    f'market:depth:price:{symbol.name}:{order_type}', str(top_order.price)
-                )
+
                 amount_updated[order_type] = self.set_if_not_equal(
                     f'market:depth:amount:{symbol.name}:{order_type}', str(top_order.amount)
                 )
+
+                if canceled:
+                    self.market_pipeline.set(f'market:depth:price:{symbol.name}:{order_type}', str(top_order.price))
+                else:
+                    set_func = self.set_if_higher if order_type == Order.BUY else self.set_if_lower
+                    price_updated[order_type] = set_func(
+                        f'market:depth:price:{symbol.name}:{order_type}', str(top_order.price)
+                    )
             else:
                 top_orders[f'{order_type}_price'] = str(
                     self._client.get(f'market:depth:price:{symbol.name}:{order_type}'))
@@ -164,13 +169,13 @@ class MarketStreamCache:
             f'market:orders:status:{order.symbol.name}', f'{order.side}-{order.price}-{order.status}'
         )
 
-    def execute(self, symbol, updated_orders, trade_pairs=None, side=None):
+    def execute(self, symbol, updated_orders, trade_pairs=None, side=None, canceled=False):
         if trade_pairs is None:
             trade_pairs = []
         for updated_order in updated_orders:
             self.update_order_status(updated_order)
         self.update_trades(trade_pairs)
-        self.update_bid_ask(symbol, side)
+        self.update_bid_ask(symbol, side, canceled)
 
         if self.market_pipeline:
             self.market_pipeline.execute()

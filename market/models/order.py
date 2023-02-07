@@ -134,7 +134,7 @@ class Order(models.Model):
             order.status = self.CANCELED
             order.save(update_fields=['status'])
 
-        MarketStreamCache().execute(self.symbol, [order], side=order.side)
+        MarketStreamCache().execute(self.symbol, [order], side=order.side, canceled=True)
 
     @property
     def base_wallet(self):
