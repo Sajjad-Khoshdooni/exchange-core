@@ -63,7 +63,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 trade_pairs, updated_orders = created_order.submit(pipeline) or ([], [])
 
             if trade_pairs:
-                MarketStreamCache().execute(self.symbol, updated_orders, trade_pairs=trade_pairs)
+                MarketStreamCache().execute(symbol, updated_orders, trade_pairs=trade_pairs)
 
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
