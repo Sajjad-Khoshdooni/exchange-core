@@ -1,14 +1,11 @@
 import logging
-import time
-from decimal import Decimal
 
 from django.conf import settings
 
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_system_message
-from ledger.models import Transfer, Asset
-from ledger.utils.price import BUY, get_price, SELL
-from ledger.utils.provider import get_provider_requester, BINANCE
+from ledger.models import Transfer
+from ledger.utils.provider import get_provider_requester
 
 logger = logging.getLogger(__name__)
 

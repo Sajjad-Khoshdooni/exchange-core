@@ -121,7 +121,7 @@ class SymbolStatsSerializer(SymbolBriefStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
-            side=Order.BUY,
+            side=BUY,
         ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum('amount'))['total_amount']
         if total_amount:
             return decimal_to_str(floor_precision(total_amount, symbol.step_size))
@@ -131,7 +131,7 @@ class SymbolStatsSerializer(SymbolBriefStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
-            side=Order.BUY,
+            side=BUY,
         ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum(F('amount') * F('price')))['total_amount']
         if total_amount:
             return decimal_to_str(floor_precision(total_amount))

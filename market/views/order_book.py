@@ -29,8 +29,8 @@ class OrderBookAPIView(APIView):
 
         open_orders = Order.quantize_values(symbol, open_orders)
 
-        bids = Order.get_formatted_orders(open_orders, symbol, Order.BUY)
-        asks = Order.get_formatted_orders(open_orders, symbol, Order.SELL)
+        bids = Order.get_formatted_orders(open_orders, symbol, BUY)
+        asks = Order.get_formatted_orders(open_orders, symbol, SELL)
 
         top_ask = Decimal(asks[0]['price']) if asks else Decimal('inf')
 
@@ -58,8 +58,8 @@ class OrderBookAPIView(APIView):
                     symbol=symbol, wallet__account=self.request.user.account
                 ).values('side', 'price')
             }
-            for side in (Order.BUY, Order.SELL):
-                key = 'bids' if side == Order.BUY else 'asks'
+            for side in (BUY, SELL):
+                key = 'bids' if side == BUY else 'asks'
                 results[key] = [
                     {**order, 'user_order': open_orders.get((side, order['price']), False)} for order in results[key]
                 ]

@@ -1,13 +1,14 @@
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Union
 from uuid import UUID
 
 from django.conf import settings
 
+from accounts.models import Account, Referral
 from ledger.models import Wallet, Trx, Asset
+from ledger.utils.external_price import BUY, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order, Trade
+from market.models import Order, Trade, BaseTrade
 from market.models import ReferralTrx
 
 
@@ -72,13 +73,28 @@ def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade
         _register_trade_transaction(pipeline, pair=pair)
         _register_trade_base_transaction(pipeline, pair=pair)
 
-    pair.taker_trade.fee_amount = _register_fee_transaction(pipeline, pair.taker_order, pair.taker_trade)
-    pair.maker_trade.fee_amount = _register_fee_transaction(pipeline, pair.maker_order, pair.maker_trade)
+    pair.taker_trade.fee_amount = _register_fee_transaction(
+        pipeline=pipeline,
+        trade=pair.taker_trade,
+        wallet=pair.taker_order.wallet,
+        base_wallet=pair.taker_order.base_wallet,
+        group_id=pair.taker_trade.group_id
+    )
+    pair.taker_trade.fee_usdt_value = (pair.taker_trade.price if pair.taker_order.side == BUY else 1) * pair.taker_trade.base_usdt_price
+
+    pair.maker_trade.fee_amount = _register_fee_transaction(
+        pipeline=pipeline,
+        trade=pair.maker_trade,
+        wallet=pair.maker_order.wallet,
+        base_wallet=pair.maker_order.base_wallet,
+        group_id=pair.maker_trade.group_id
+    )
+    pair.maker_trade.fee_usdt_value = (pair.maker_trade.price if pair.maker_order.side == BUY else 1) * pair.maker_trade.base_usdt_price
 
 
 def _register_trade_transaction(pipeline: WalletPipeline, pair: TradesPair):
 
-    if pair.maker_order.side == Order.BUY:
+    if pair.maker_order.side == BUY:
         sender, receiver = pair.taker_order.wallet, pair.maker_order.wallet
     else:
         sender, receiver = pair.maker_order.wallet, pair.taker_order.wallet
@@ -93,7 +109,7 @@ def _register_trade_transaction(pipeline: WalletPipeline, pair: TradesPair):
 
 
 def _register_trade_base_transaction(pipeline: WalletPipeline, pair: TradesPair):
-    if pair.maker_order.side == Order.SELL:
+    if pair.maker_order.side == SELL:
         sender, receiver = pair.taker_order.base_wallet, pair.maker_order.base_wallet
     else:
         sender, receiver = pair.maker_order.base_wallet, pair.taker_order.base_wallet
@@ -107,29 +123,55 @@ def _register_trade_base_transaction(pipeline: WalletPipeline, pair: TradesPair)
     )
 
 
-def _register_fee_transaction(pipeline: WalletPipeline, order: Order, trade: Trade) -> Decimal:
-    account = order.wallet.account
-    fee_rate = order.symbol.get_maker_fee(account) if trade.is_maker else order.symbol.get_taker_fee(account)
+def get_trader_fee(trade: BaseTrade) -> Decimal:
+    account = trade.account
+    referrer = account.referred_by
+    fee_rate = trade.symbol.get_fee_rate(account, trade.is_maker)
 
-    fee_payer = order.wallet if order.side == Order.BUY else order.base_wallet
-    fee_amount = initial_fee_amount = fee_rate * trade.amount * (1 if order.side == Order.BUY else trade.price)
+    if referrer:
+        referrer_share_percent = min(max(referrer.owner_share_percent, 0), 30)
+        trader_share_percent = Referral.REFERRAL_MAX_RETURN_PERCENT - referrer_share_percent
+
+        fee_rate *= (1 - Decimal(trader_share_percent) / 100)
+
+    return fee_rate * trade.amount * (1 if trade.side == BUY else trade.price)
+
+
+def get_referrer_reward(account: Account, trade_value: Decimal, fee_rate: Decimal) -> Decimal:
+    referrer = account.referred_by
+
+    if not referrer:
+        return Decimal()
+
+    referrer_share_percent = min(max(referrer.owner_share_percent, 0), 30)
+
+    return trade_value * fee_rate * Decimal(referrer_share_percent) / 100
+
+
+def _register_fee_transaction(pipeline: WalletPipeline, trade: BaseTrade, wallet: Wallet, base_wallet: Wallet,
+                              group_id: UUID) -> Decimal:
+
+    account = trade.account
+    fee_rate = trade.symbol.get_fee_rate(account, trade.is_maker)
+
+    fee_payer = wallet if trade.side == BUY else base_wallet
+    initial_fee_amount = fee_rate * trade.amount * (1 if trade.side == BUY else trade.price)
+
+    trader_fee = get_trader_fee(trade)
 
     if not initial_fee_amount:
         return Decimal()
 
-    referrer = order.wallet.account.referred_by
+    referrer = trade.account.referred_by
     if referrer:
         referrer_share_percent = min(max(referrer.owner_share_percent, 0), 30)
-        trader_share_percent = ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - referrer_share_percent
-
-        fee_amount *= 1 - Decimal(trader_share_percent) / 100
 
         referrer_reward = initial_fee_amount * Decimal(referrer_share_percent) / 100
         if referrer_reward:
             irt_asset = Asset.get(symbol=Asset.IRT)
             referrer_reward_irt = referrer_reward * trade.base_irt_price
 
-            if trade.side == Order.BUY:
+            if trade.side == BUY:
                 referrer_reward_irt *= trade.price
 
             # referrer reward trx
@@ -137,13 +179,13 @@ def _register_fee_transaction(pipeline: WalletPipeline, order: Order, trade: Tra
                 sender=irt_asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=fee_payer.market),
                 receiver=irt_asset.get_wallet(referrer.owner, Wallet.SPOT),
                 amount=referrer_reward_irt,
-                group_id=trade.group_id,
+                group_id=group_id,
                 scope=Trx.COMMISSION
             )
             ReferralTrx.objects.create(
-                trader=order.wallet.account,
+                trader=wallet.account,
                 referral=referrer,
-                group_id=trade.group_id,
+                group_id=group_id,
                 trader_amount=0,
                 referrer_amount=referrer_reward_irt
             )
@@ -152,9 +194,9 @@ def _register_fee_transaction(pipeline: WalletPipeline, order: Order, trade: Tra
     pipeline.new_trx(
         sender=fee_payer,
         receiver=fee_payer.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=fee_payer.market),
-        amount=fee_amount,
-        group_id=trade.group_id,
+        amount=trader_fee,
+        group_id=group_id,
         scope=Trx.COMMISSION
     )
 
-    return fee_amount
+    return trader_fee

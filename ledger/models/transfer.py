@@ -17,9 +17,9 @@ from accounts.utils.push_notif import send_push_notif_to_user
 from accounts.utils.telegram import send_support_message
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
+from ledger.utils.external_price import get_external_price, SELL
 from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import get_trading_price_usdt, SELL, get_trading_price_irt
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -145,8 +145,18 @@ class Transfer(models.Model):
 
         group_id = uuid4()
 
-        price_usdt = get_trading_price_usdt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL) or 0
-        price_irt = get_trading_price_irt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL) or 0
+        price_usdt = get_external_price(
+            coin=sender_wallet.asset.symbol,
+            base_coin=Asset.USDT,
+            side=SELL,
+            allow_stale=True,
+        ) or 0
+        price_irt = get_external_price(
+            coin=sender_wallet.asset.symbol,
+            base_coin=Asset.IRT,
+            side=SELL,
+            allow_stale=True,
+        ) or 0
 
         with WalletPipeline() as pipeline:
             pipeline.new_trx(
@@ -210,8 +220,18 @@ class Transfer(models.Model):
 
         commission = network_asset.withdraw_fee
 
-        price_usdt = get_trading_price_usdt(coin=wallet.asset.symbol, raw_price=True, side=SELL) or 0
-        price_irt = get_trading_price_irt(coin=wallet.asset.symbol, raw_price=True, side=SELL) or 0
+        price_usdt = get_external_price(
+            coin=wallet.asset.symbol,
+            base_coin=Asset.USDT,
+            side=SELL,
+            allow_stale=True,
+        ) or 0
+        price_irt = get_external_price(
+            coin=wallet.asset.symbol,
+            base_coin=Asset.IRT,
+            side=SELL,
+            allow_stale=True,
+        ) or 0
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             transfer = Transfer.objects.create(

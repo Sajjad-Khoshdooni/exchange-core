@@ -21,11 +21,11 @@ def handle_stop_loss():
 
     for symbol_id in stop_loss_symbols:
         symbol_top_prices = {
-            Order.BUY: market_top_prices[symbol_id, Order.BUY],
-            Order.SELL: market_top_prices[symbol_id, Order.SELL],
+            BUY: market_top_prices[symbol_id, BUY],
+            SELL: market_top_prices[symbol_id, SELL],
         }
         set_top_prices(symbol_id, symbol_top_prices, scope='stoploss')
-        for side in (Order.BUY, Order.SELL):
+        for side in (BUY, SELL):
             if symbol_top_prices[side]:
                 create_needed_stop_loss_orders.apply_async(args=(symbol_id, side,), queue='stop_loss')
 

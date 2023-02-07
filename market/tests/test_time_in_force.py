@@ -7,6 +7,7 @@ from django.test import TestCase
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Trx
+from ledger.utils.external_price import SELL, BUY
 from ledger.utils.test import new_account, create_system_order_book
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol, Order
@@ -33,7 +34,7 @@ class CreateOrderTestCase(TestCase):
                 scope=Trx.TRANSFER
             )
 
-        create_system_order_book(btcusdt, Order.SELL, [
+        create_system_order_book(btcusdt, SELL, [
             (20000, Decimal('0.2')),
             (21000, Decimal('0.3')),
             (22000, Decimal('0.3')),
@@ -44,7 +45,7 @@ class CreateOrderTestCase(TestCase):
             account=account,
             amount=Decimal('0.3'),
             price=Decimal(20500),
-            side=Order.BUY,
+            side=BUY,
             time_in_force=Order.FOK
         )
 
@@ -59,7 +60,7 @@ class CreateOrderTestCase(TestCase):
             account=account,
             amount=Decimal('0.3'),
             price=Decimal(20500),
-            side=Order.BUY,
+            side=BUY,
             time_in_force=Order.ORDINARY
         )
 
@@ -75,7 +76,7 @@ class CreateOrderTestCase(TestCase):
                 account=account,
                 amount=Decimal('0.2'),
                 price=Decimal(22000),
-                side=Order.BUY,
+                side=BUY,
                 time_in_force=Order.FOK
             )
             self.fail('Should raise insufficient balance')
@@ -87,7 +88,7 @@ class CreateOrderTestCase(TestCase):
             account=account,
             amount=Decimal('0.1'),
             price=Decimal(22000),
-            side=Order.BUY,
+            side=BUY,
             time_in_force=Order.FOK
         )
 

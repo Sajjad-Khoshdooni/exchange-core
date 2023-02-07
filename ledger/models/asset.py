@@ -41,10 +41,6 @@ class Asset(models.Model):
     symbol = models.CharField(max_length=16, unique=True, db_index=True)
     original_symbol = models.CharField(max_length=16, blank=True)
 
-    trade_quantity_step = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
-    min_trade_quantity = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
-    max_trade_quantity = models.DecimalField(max_digits=18, decimal_places=2, default=1e9)
-
     price_precision_usdt = models.SmallIntegerField(default=2)
     price_precision_irt = models.SmallIntegerField(default=0)
 
@@ -114,21 +110,6 @@ class Asset(models.Model):
     def is_trade_base(self):
         return self.symbol in (self.IRT, self.USDT)
 
-    def is_trade_amount_valid(self, amount: Decimal, raise_exception: bool = False):
-        if raise_exception:
-            if amount < self.min_trade_quantity:
-                raise InvalidAmount('واحد وارد شده کوچک است.')
-            elif amount > self.max_trade_quantity:
-                raise InvalidAmount('واحد وارد شده بزرگ است.')
-            elif amount % self.trade_quantity_step != 0:
-                raise InvalidAmount(
-                    'واحد وارد شده باید مضربی از %s باشد.' % self.get_presentation_amount(self.trade_quantity_step)
-                )
-        else:
-            return \
-                self.min_trade_quantity <= amount <= self.max_trade_quantity and \
-                amount % self.trade_quantity_step == 0
-
     def get_presentation_amount(self, amount: Decimal) -> str:
         return get_presentation_amount(amount, self.get_precision())
 
@@ -149,7 +130,7 @@ class Asset(models.Model):
 class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
-        fields = ('symbol', 'trade_quantity_step', 'min_trade_quantity', 'max_trade_quantity')
+        fields = ('symbol', )
 
 
 class AssetSerializerMini(serializers.ModelSerializer):
@@ -163,7 +144,7 @@ class AssetSerializerMini(serializers.ModelSerializer):
         return asset.get_precision()
 
     def get_step_size(self, asset: Asset):
-        return get_precision(asset.trade_quantity_step)
+        return Asset.PRECISION
 
     def get_logo(self, asset: Asset):
         return settings.MINIO_STORAGE_STATIC_URL + '/coins/%s.png' % asset.symbol

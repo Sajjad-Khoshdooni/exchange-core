@@ -6,8 +6,10 @@ from django.db import models
 from accounts.models import Account
 from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet
+from ledger.utils.fields import get_amount_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.exceptions import NegativeGapRevenue
+from ledger.utils.otc import get_trading_pair
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +21,9 @@ class TokenExpired(Exception):
 class OTCTrade(models.Model):
     PENDING, CANCELED, DONE, REVERT = 'pending', 'canceled', 'done', 'revert'
 
-    created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
+    created = models.DateTimeField(auto_now_add=True)
     otc_request = models.OneToOneField('ledger.OTCRequest', on_delete=models.PROTECT)
+    # revenue = get_amount_field(default=0, validators=())
 
     group_id = models.UUIDField(default=uuid4, db_index=True)
 
@@ -28,8 +31,10 @@ class OTCTrade(models.Model):
         default=PENDING,
         max_length=8,
         choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE), (REVERT, REVERT)],
-        verbose_name='وضعیت'
     )
+
+    # fee = get_amount_field()
+    # fee_usdt_value = get_amount_field()
 
     def change_status(self, status: str):
         self.status = status
@@ -45,14 +50,14 @@ class OTCTrade(models.Model):
         pipeline.new_trx(
             sender=from_asset.get_wallet(user, market=self.otc_request.market),
             receiver=from_asset.get_wallet(system, market=self.otc_request.market),
-            amount=self.otc_request.from_amount,
+            amount=self.otc_request.get_final_from_amount(),
             group_id=self.group_id,
             scope=Trx.TRADE
         )
         pipeline.new_trx(
             sender=to_asset.get_wallet(system, market=self.otc_request.market),
             receiver=to_asset.get_wallet(user, market=self.otc_request.market),
-            amount=self.otc_request.to_amount,
+            amount=self.otc_request.get_final_to_amount(),
             group_id=self.group_id,
             scope=Trx.TRADE
         )
@@ -70,13 +75,9 @@ class OTCTrade(models.Model):
         account = otc_request.account
 
         from_asset = otc_request.from_asset
-        conf = otc_request.get_trade_config()
-
-        if not force:
-            conf.coin.is_trade_amount_valid(conf.coin_amount, raise_exception=True)
 
         from_wallet = from_asset.get_wallet(account, market=otc_request.market)
-        amount = otc_request.from_amount
+        amount = otc_request.get_final_from_amount()
         from_wallet.has_balance(amount, raise_exception=True)
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
@@ -88,6 +89,9 @@ class OTCTrade(models.Model):
         otc_trade.hedge_and_finalize()
 
         return otc_trade
+
+    def try_fok_fill(self):
+        pass
 
     def hedge_and_finalize(self):
 
@@ -110,17 +114,28 @@ class OTCTrade(models.Model):
             from market.models import Trade
             self.change_status(self.DONE)
             self.create_ledger(pipeline)
-            Trade.create_for_otc_trade(self, pipeline)
+
+            # # updating trade_volume_irt of accounts
+            # accounts = [trades_pair.maker_trade.account, trades_pair.taker_trade.account]
+            #
+            # for account in accounts:
+            #     if not account.is_system():
+            #         account.trade_volume_irt = F('trade_volume_irt') + trades_pair.maker_trade.irt_value
+            #         account.save(update_fields=['trade_volume_irt'])
+            #         account.refresh_from_db()
+            #
+            #         from gamify.utils import check_prize_achievements, Task
+            #         check_prize_achievements(account, Task.TRADE)
 
             if hedge:
-                conf = self.otc_request.get_trade_config()
+                req = self.otc_request
 
                 from ledger.utils.provider import TRADE, get_provider_requester
                 get_provider_requester().try_hedge_new_order(
                     request_id='otc:%s' % self.id,
-                    asset=conf.coin,
-                    side=conf.side,
-                    amount=conf.coin_amount,
+                    asset=req.symbol.asset,
+                    side=req.side,
+                    amount=req.amount,
                     scope=TRADE
                 )
 

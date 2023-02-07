@@ -3,7 +3,7 @@ from django.utils import timezone
 
 from ledger.models import SystemSnapshot, Asset, AssetSnapshot
 from ledger.utils.overview import AssetOverview
-from ledger.utils.price import get_prices_dict, BUY
+from ledger.utils.external_price import get_external_usdt_prices, BUY
 
 
 @shared_task(queue='history')
@@ -31,7 +31,7 @@ def create_snapshot():
 
     assets = Asset.live_objects.all()
 
-    prices = get_prices_dict(coins=list(assets.values_list('symbol', flat=True)), side=BUY, allow_stale=True)
+    prices = get_external_usdt_prices(coins=list(assets.values_list('symbol', flat=True)), side=BUY, allow_stale=True)
 
     for asset in assets:
         asset_snapshots.append(

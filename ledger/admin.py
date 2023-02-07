@@ -17,11 +17,11 @@ from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network
+from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE
 from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount, humanize_presentation
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import get_trading_price_usdt, SELL
 from ledger.utils.provider import HEDGE, get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor
 from market.utils.fix import create_symbols_for_asset
@@ -189,23 +189,8 @@ class DepositAddressAdmin(admin.ModelAdmin):
 
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'from_asset', 'to_asset', 'to_price', 'from_amount', 'to_amount', 'token')
+    list_display = ('created', 'account', 'from_asset', 'to_asset', 'from_amount', 'to_amount', 'token')
     readonly_fields = ('account', )
-
-    def get_from_amount(self, otc_request: models.OTCRequest):
-        return humanize_number((otc_request.from_asset.get_presentation_amount(otc_request.from_amount)))
-
-    get_from_amount.short_description = 'from_amount'
-
-    def get_to_amount(self, otc_request: models.OTCRequest):
-        return otc_request.to_asset.get_presentation_amount(otc_request.to_amount)
-
-    get_to_amount.short_description = 'to_amount'
-
-    def get_to_price(self, otc_request: models.OTCRequest):
-        return otc_request.to_asset.get_presentation_amount(otc_request.to_price)
-
-    get_to_price.short_description = 'to_price'
 
 
 class OTCUserFilter(SimpleListFilter):
@@ -225,7 +210,7 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request', 'status', 'get_otc_trade_to_price_absolute_irt', )
+    list_display = ('created', 'otc_request', 'status', 'get_value', )
     list_filter = (OTCUserFilter, 'status')
     search_fields = ('group_id', )
     readonly_fields = ('otc_request', )
@@ -233,16 +218,16 @@ class OTCTradeAdmin(admin.ModelAdmin):
 
     def get_otc_trade_from_amount(self, otc_trade: models.OTCTrade):
         return humanize_number(
-            otc_trade.otc_request.from_asset.get_presentation_amount(otc_trade.otc_request.from_amount)
+            otc_trade.otc_request.from_asset.get_presentation_amount(otc_trade.otc_request.get_final_from_amount())
         )
 
     get_otc_trade_from_amount.short_description = 'مقدار پایه'
 
-    def get_otc_trade_to_price_absolute_irt(self, otc_trade: models.OTCTrade):
+    @admin.display(description='value')
+    def get_value(self, otc_trade: models.OTCTrade):
         return humanize_number(int(
-            otc_trade.otc_request.to_price_absolute_irt * otc_trade.otc_request.to_amount
+            otc_trade.otc_request.price * otc_trade.otc_request.base_usdt_price
         ))
-    get_otc_trade_to_price_absolute_irt.short_description = 'ارزش ریالی'
 
     @admin.action(description='تایید معامله')
     def accept_trade(self, request, queryset):
@@ -285,30 +270,34 @@ class WalletUserFilter(SimpleListFilter):
 
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'asset', 'market', 'get_free', 'get_locked', 'get_free_usdt', 'get_free_irt')
+    list_display = ('created', 'account', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt')
     list_filter = [
         ('asset', RelatedDropdownFilter),
         WalletUserFilter
     ]
     readonly_fields = ('account', 'asset', 'market')
 
+    @admin.display(description='free')
     def get_free(self, wallet: models.Wallet):
-        return float(wallet.get_free())
+        return wallet.get_free()
 
-    get_free.short_description = 'free'
+    @admin.display(description='irt value')
+    def get_value_irt(self, wallet: models.Wallet):
+        price = get_external_price(
+            coin=wallet.asset.symbol,
+            base_coin=Asset.IRT,
+            side=BUY
+        ) or 0
+        return wallet.asset.get_presentation_price_irt(wallet.balance * price)
 
-    def get_locked(self, wallet: models.Wallet):
-        return float(wallet.get_locked())
-
-    get_locked.short_description = 'locked'
-
-    def get_free_irt(self, wallet: models.Wallet):
-        return wallet.asset.get_presentation_price_irt(wallet.get_balance_irt())
-    get_free_irt.short_description = 'ارزش ریالی'
-
-    def get_free_usdt(self, wallet: models.Wallet):
-        return wallet.asset.get_presentation_price_usdt(wallet.get_balance_usdt())
-    get_free_usdt.short_description = 'ارزش دلاری'
+    @admin.display(description='usdt value')
+    def get_value_usdt(self, wallet: models.Wallet):
+        price = get_external_price(
+            coin=wallet.asset.symbol,
+            base_coin=Asset.USDT,
+            side=BUY
+        ) or 0
+        return wallet.asset.get_presentation_price_usdt(wallet.balance * price)
 
 
 class TransferUserFilter(SimpleListFilter):
@@ -336,11 +325,11 @@ class TransferAdmin(AdvancedAdmin):
 
     list_display = (
         'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
-        'get_total_volume_usdt', 'get_remaining_time_to_pass_72h', 'get_jalali_created'
+        'usdt_value', 'get_remaining_time_to_pass_72h', 'get_jalali_created'
     )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
-    readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt', 'created', 'accepted_datetime',
+    readonly_fields = ('deposit_address', 'network', 'wallet', 'created', 'accepted_datetime',
                        'finished_datetime', 'get_risks')
     exclude = ('risks', )
 
@@ -354,12 +343,6 @@ class TransferAdmin(AdvancedAdmin):
                 old.accept(obj.trx_hash)
 
         obj.save()
-
-    @admin.display(description='ارزش تتری')
-    def get_total_volume_usdt(self, transfer: models.Transfer):
-        price = get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
-        if price:
-            return round(transfer.amount * price, 1)
 
     def get_queryset(self, request):
         queryset = super(TransferAdmin, self).get_queryset(request).select_related('wallet__account__user')

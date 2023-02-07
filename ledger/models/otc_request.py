@@ -8,44 +8,41 @@ from django.utils import timezone
 from accounts.models import Account
 from ledger.exceptions import SmallAmountTrade
 from ledger.models import Asset, Wallet
+from ledger.utils.external_price import get_external_price, get_other_side
 from ledger.utils.fields import get_amount_field
-from ledger.utils.price import get_other_side, get_trading_price_irt, BUY, get_trading_price_usdt, SELL
+from ledger.utils.otc import get_trading_pair, get_otc_spread, spread_to_multiplier
+from ledger.utils.precision import ceil_precision, floor_precision
 from ledger.utils.random import secure_uuid4
-from dataclasses import dataclass
+from market.models import BaseTrade
 
 
-@dataclass
-class TradeConfig:
-    side: str
-    coin: Asset
-    cash: Asset
-    coin_amount: Decimal
-    cash_amount: Decimal
-
-
-class OTCRequest(models.Model):
+class OTCRequest(BaseTrade):
     # EXPIRE_TIME = 6
-    EXPIRE_TIME = 11
+    EXPIRATION_TIME = 11
 
     created = models.DateTimeField(auto_now_add=True)
     token = models.UUIDField(default=secure_uuid4, db_index=True)
-    account = models.ForeignKey(to=Account, on_delete=models.CASCADE)
 
     from_asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE, related_name='from_otc_requests')
     to_asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE, related_name='to_otc_requests')
+    from_amount = get_amount_field(null=True)
+    to_amount = get_amount_field(null=True)
 
-    to_amount = get_amount_field()
-    from_amount = get_amount_field()
-    to_price = get_amount_field(max_digits=40, decimal_places=18)
+    @property
+    def is_maker(self) -> bool:
+        return False
 
-    to_price_absolute_irt = get_amount_field()
-    to_price_absolute_usdt = get_amount_field()
+    def get_final_from_amount(self):
+        if self.side == OTCRequest.BUY:
+            return self.amount * self.price
+        else:
+            return self.amount
 
-    market = models.CharField(
-        max_length=8,
-        default=Wallet.SPOT,
-        choices=((Wallet.SPOT, Wallet.SPOT), (Wallet.MARGIN, Wallet.MARGIN)),
-    )
+    def get_final_to_amount(self):
+        if self.side == OTCRequest.SELL:
+            return self.amount * self.price
+        else:
+            return self.amount
 
     @classmethod
     def new_trade(cls, account: Account, market: str, from_asset: Asset, to_asset: Asset, from_amount: Decimal = None,
@@ -54,143 +51,116 @@ class OTCRequest(models.Model):
         assert from_amount or to_amount
         assert (from_amount or to_amount) > 0
 
-        otc_request = OTCRequest(
+        otc_request = cls.get_otc_request(
             account=account,
             from_asset=from_asset,
             to_asset=to_asset,
+            from_amount=from_amount,
+            to_amount=to_amount,
             market=market,
         )
 
-        otc_request.set_amounts(from_amount, to_amount, allow_dust)
-
         if not allow_dust:
-            if from_amount:
-                check_asset, check_amount = from_asset, from_amount
-            else:
-                check_asset, check_amount = to_asset, to_amount
+            if otc_request.price * otc_request.amount * otc_request.base_irt_price < 8_000:
+                raise SmallAmountTrade()
 
-            if check_amount * get_trading_price_irt(check_asset.symbol, BUY, raw_price=True) < 8_000:
+            if otc_request.price * otc_request.amount * otc_request.base_irt_price < 8_000:
                 raise SmallAmountTrade()
 
         if check_enough_balance:
             from_wallet = from_asset.get_wallet(account, otc_request.market)
-            from_wallet.has_balance(otc_request.from_amount, raise_exception=True)
+            from_wallet.has_balance(otc_request.get_final_from_amount(), raise_exception=True, check_system_wallets=True)
 
         otc_request.save()
 
         return otc_request
 
-    def get_trade_config(self) -> TradeConfig:
-        from_symbol = self.from_asset.symbol
-        to_symbol = self.to_asset.symbol
+    @classmethod
+    def get_otc_request(cls, account: Account, from_asset: Asset, to_asset: Asset, from_amount: Decimal = None,
+                        to_amount: Decimal = None, market: str = Wallet.SPOT) -> 'OTCRequest':
 
-        if from_symbol in (Asset.IRT, Asset.USDT) and to_symbol != Asset.IRT:
-            return TradeConfig(
-                side=BUY,
-                cash=self.from_asset,
-                coin=self.to_asset,
-                cash_amount=self.from_amount,
-                coin_amount=self.to_amount,
-            )
-
-        elif to_symbol in (Asset.IRT, Asset.USDT):
-            return TradeConfig(
-                side=SELL,
-                cash=self.to_asset,
-                coin=self.from_asset,
-                cash_amount=self.to_amount,
-                coin_amount=self.from_amount,
-            )
-
-        else:
-            raise NotImplementedError
-
-    def get_to_price(self):
-        conf = self.get_trade_config()
-        other_side = get_other_side(conf.side)
-
-        if conf.cash.symbol == Asset.IRT:
-            trading_price = get_trading_price_irt(conf.coin.symbol, other_side, value=conf.cash_amount)
-        elif conf.cash.symbol == Asset.USDT:
-            trading_price = get_trading_price_usdt(conf.coin.symbol, other_side, value=conf.cash_amount)
-        else:
-            raise NotImplementedError
-
-        if conf.side == 'sell':
-            return 1 / trading_price
-
-        return trading_price
-
-    def _get_to_price_absolute_irt(self):
-        conf = self.get_trade_config()
-        other_side = get_other_side(conf.side)
-        return get_trading_price_irt(self.to_asset.symbol, other_side)
-
-    def _get_to_price_absolute_usdt(self):
-        conf = self.get_trade_config()
-        other_side = get_other_side(conf.side)
-        return get_trading_price_usdt(self.to_asset.symbol, other_side)
-
-    def set_amounts(self, from_amount: Decimal = None, to_amount: Decimal = None, allow_dust: bool = False):
         assert (from_amount or to_amount) and (not from_amount or not to_amount), 'exactly one amount should present'
 
-        to_price = self.get_to_price()
+        pair = get_trading_pair(from_asset, to_asset, from_amount, to_amount)
+        assert pair.base.symbol in (Asset.IRT, Asset.USDT)
+        from market.models import PairSymbol, BaseTrade
 
-        if to_amount:
-            self.from_amount = to_price * to_amount
-            self.to_amount = to_amount
+        symbol = PairSymbol.objects.get(asset=pair.coin, base_asset=pair.base)
 
-            # recalc with price diff_multipliers
-            to_price = self.get_to_price()
-            from_amount = to_price * to_amount
+        otc_request = OTCRequest(
+            account=account,
+            from_asset=from_asset,
+            to_asset=to_asset,
+            market=market,
+            from_amount=from_amount,
+            to_amount=to_amount,
 
-            if self.from_asset.is_trade_base() and self.to_asset.symbol != Asset.IRT:
-                self.to_asset.is_trade_amount_valid(to_amount, raise_exception=not allow_dust)
-            else:
-                prev_from_amount = from_amount
-                from_amount = from_amount - (from_amount % self.from_asset.trade_quantity_step)
+            symbol=symbol,
+            side=pair.side,
+        )
 
-                if prev_from_amount != from_amount:
-                    from_amount += self.from_asset.trade_quantity_step
+        other_side = get_other_side(pair.side)
+        usdt_irt_price = get_external_price(
+            coin=Asset.USDT,
+            base_coin=Asset.IRT,
+            side=other_side,
+            allow_stale=True,
+        )
 
-                # to_amount = from_amount / to_price  # re calc cash
-
+        if pair.base.symbol == Asset.USDT:
+            otc_request.base_usdt_price = 1
+            otc_request.base_irt_price = usdt_irt_price
         else:
-            self.from_amount = from_amount
-            self.to_amount = from_amount / to_price
+            otc_request.base_usdt_price = 1 / usdt_irt_price
+            otc_request.base_irt_price = 1
 
-            # recalc with price diff_multipliers
-            to_price = self.get_to_price()
-            to_amount = from_amount / to_price
+        if pair.base_amount is not None:
+            trade_value = pair.base_amount * otc_request.base_usdt_price
+        else:
+            coin_usdt_price = get_external_price(
+                coin=pair.coin.symbol,
+                base_coin=Asset.USDT,
+                side=other_side,
+            )
 
-            if self.from_asset.is_trade_base() and self.to_asset.symbol != Asset.IRT:
-                to_amount = to_amount - (to_amount % self.to_asset.trade_quantity_step)
-                # from_amount = to_amount * to_price  # re calc cash
-            else:
-                self.from_asset.is_trade_amount_valid(from_amount, raise_exception=not allow_dust)
+            trade_value = pair.coin_amount * coin_usdt_price
 
-        self.to_price = to_price
-        self.from_amount = from_amount
-        self.to_amount = to_amount
+        spread = get_otc_spread(
+            coin=pair.coin.symbol,
+            base_coin=pair.base.symbol,
+            value=trade_value,
+            side=other_side
+        )
 
-        self.to_price_absolute_irt = self._get_to_price_absolute_irt()
-        self.to_price_absolute_usdt = self._get_to_price_absolute_usdt()
+        coin_price = get_external_price(
+            coin=pair.coin.symbol,
+            base_coin=pair.base.symbol,
+            side=other_side,
+        )
+        otc_request.price = ceil_precision(coin_price * spread_to_multiplier(spread, other_side), symbol.tick_size)
+
+        if pair.coin_amount is not None:
+            amount = pair.coin_amount
+        else:
+            amount = pair.base_amount / otc_request.price
+
+        otc_request.amount = floor_precision(amount, symbol.step_size)
+
+        return otc_request
 
     def get_expire_time(self) -> datetime:
-        return self.created + timedelta(seconds=OTCRequest.EXPIRE_TIME)
+        return self.created + timedelta(seconds=OTCRequest.EXPIRATION_TIME)
 
     def expired(self):
-        return (timezone.now() - self.created).total_seconds() >= self.EXPIRE_TIME
+        return (timezone.now() - self.created).total_seconds() >= self.EXPIRATION_TIME
 
     def __str__(self):
-        return 'Buy %s %s from %s' % (self.to_asset.get_presentation_amount(self.to_amount), self.to_asset, self.from_asset)
+        return '%s %s in %s' % (self.side, self.amount, self.symbol)
 
     class Meta:
         constraints = [
             CheckConstraint(check=Q(
                 from_amount__gte=0,
                 to_amount__gte=0,
-                to_price__gte=0,
-                to_price_absolute_irt__gte=0,
-                to_price_absolute_usdt__gte=0,
-            ), name='check_ledger_otc_request_amounts', ), ]
+            ), name='check_ledger_otc_request_amounts', ),
+        ]

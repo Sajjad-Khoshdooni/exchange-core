@@ -25,13 +25,13 @@ class AccountTradeSerializer(serializers.ModelSerializer):
         data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), trade.symbol.tick_size))
         data['pair_amount'] = decimal_to_str(floor_precision(Decimal(data['pair_amount']), trade.symbol.tick_size))
         if 'fee_amount' in data:
-            if data['side'] == Order.BUY:
+            if data['side'] == BUY:
                 data['fee_amount'] = trade.symbol.asset.get_presentation_amount(data['fee_amount'])
             elif trade.symbol.base_asset.symbol == Asset.IRT:
                 data['fee_amount'] = trade.symbol.asset.get_presentation_price_irt(data['fee_amount'])
             elif trade.symbol.base_asset.symbol == Asset.USDT:
                 data['fee_amount'] = trade.symbol.asset.get_presentation_price_usdt(data['fee_amount'])
-            data['fee_asset'] = data['coin'] if data['side'] == Order.BUY else data['pair']
+            data['fee_asset'] = data['coin'] if data['side'] == BUY else data['pair']
         return data
 
     class Meta:
@@ -44,7 +44,7 @@ class TradeSerializer(serializers.ModelSerializer):
 
     @classmethod
     def get_is_buyer_maker(cls, instance: Trade):
-        return (instance.side == Order.BUY) == instance.is_maker
+        return (instance.side == BUY) == instance.is_maker
 
     class Meta:
         model = Trade

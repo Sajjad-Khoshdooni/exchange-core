@@ -42,7 +42,7 @@ class StopLossSerializer(OrderSerializer):
             conservative_factor = Decimal(1)
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
         else:
-            conservative_factor = Decimal('1.01') if validated_data['side'] == Order.BUY else Decimal(1)
+            conservative_factor = Decimal('1.01') if validated_data['side'] == BUY else Decimal(1)
         
         order_price = validated_data.get('price', validated_data['trigger_price']) * conservative_factor
         wallet = self.post_validate(symbol, {**validated_data, 'price': validated_data.get('price', order_price)})

@@ -100,7 +100,7 @@ def get_market_top_prices(order_type='all', symbol_ids=None):
             max_price=Max('price'), min_price=Min('price')):
         market_top_prices[
             (depth['symbol'], depth['side'])
-        ] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) or Decimal()
+        ] = (depth['max_price'] if depth['side'] == BUY else depth['min_price']) or Decimal()
     return market_top_prices
 
 
@@ -124,10 +124,10 @@ def get_market_top_price_amounts(order_type='all', symbol_ids=None):
                 output_field=DecimalField(),
             )
     ).filter(
-        Q(price=F('max_price'), side=Order.BUY) | Q(price=F('min_price'), side=Order.SELL)
+        Q(price=F('max_price'), side=BUY) | Q(price=F('min_price'), side=SELL)
     ).annotate(total_amount=Sum('amount')):
         market_top_price_amounts[(depth['symbol'], depth['side'])] = {
-            'price': depth['max_price'] if depth['side'] == Order.BUY else depth['min_price'],
+            'price': depth['max_price'] if depth['side'] == BUY else depth['min_price'],
             'amount': depth['total_amount'],
         }
     return market_top_price_amounts

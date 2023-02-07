@@ -52,7 +52,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
                     if stop_loss.price:
                         order_price = stop_loss.price
                     else:
-                        conservative_factor = Decimal('1.01') if stop_loss.side == Order.BUY else Decimal(1)
+                        conservative_factor = Decimal('1.01') if stop_loss.side == BUY else Decimal(1)
                         order_price = stop_loss.trigger_price * conservative_factor
 
                     release_amount = Order.get_to_lock_amount(

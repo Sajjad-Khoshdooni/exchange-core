@@ -1,7 +1,6 @@
 from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
-from django.db.models import Sum
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404
@@ -14,8 +13,7 @@ from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired
 from ledger.utils.fields import get_serializer_amount_field
-from ledger.utils.price import SELL, get_tether_irt_price
-from market.models.pair_symbol import DEFAULT_TAKER_FEE
+from market.utils.trade import get_trader_fee
 
 
 class OTCInfoView(APIView):
@@ -38,53 +36,42 @@ class OTCInfoView(APIView):
         from_asset = get_object_or_404(Asset, symbol=from_symbol)
         to_asset = get_object_or_404(Asset, symbol=to_symbol)
 
-        otc = OTCRequest(
+        if from_amount and to_amount:
+            raise ValidationError({'amount': 'دقیقا یکی از این مقدایر می‌تواند پر باشد.'})
+
+        if not from_amount and not to_amount:
+            to_amount = 0
+
+        otc = OTCRequest.get_otc_request(
+            account=self.request.user.account,
             from_asset=from_asset,
             to_asset=to_asset,
             from_amount=from_amount,
             to_amount=to_amount,
         )
 
-        if from_amount and to_amount:
-            raise ValidationError({'amount': 'دقیقا یکی از این مقدایر می‌تواند پر باشد.'})
-
-        if from_amount or to_amount:
-            otc.set_amounts(from_amount=from_amount, to_amount=to_amount, allow_dust=True)
-
-        to_price = otc.get_to_price()
-        config = otc.get_trade_config()
-
         return Response({
-            'from': from_symbol,
-            'to': to_symbol,
-            'cash': config.cash.symbol,
-            'coin': config.coin.symbol,
-            'side': config.side,
-            'to_price': to_price,
-            'coin_price': self.get_coin_price(config, to_price)
+            'base_asset': otc.symbol.base_asset.symbol,
+            'asset': otc.symbol.asset.symbol,
+            'side': otc.side,
+            'price': otc.price,
         })
-
-    def get_coin_price(self, conf, to_price):
-
-        if conf.side == SELL:
-            to_price = 1 / to_price
-
-        if conf.cash.symbol == Asset.IRT:
-            return conf.coin.get_presentation_price_irt(to_price)
-        else:
-            return conf.coin.get_presentation_price_usdt(to_price)
 
 
 class OTCRequestSerializer(serializers.ModelSerializer):
     from_asset = serializers.CharField(source='from_asset.symbol')
     to_asset = serializers.CharField(source='to_asset.symbol')
-    from_amount = get_serializer_amount_field(allow_null=True, required=False)
-    to_amount = get_serializer_amount_field(allow_null=True, required=False)
-    price = get_serializer_amount_field(source='to_price', read_only=True)
+    from_amount = get_serializer_amount_field(allow_null=True, required=False, write_only=True)
+    to_amount = get_serializer_amount_field(allow_null=True, required=False, write_only=True)
+
+    paying_amount = serializers.SerializerMethodField()
+    receiving_amount = serializers.SerializerMethodField()
+    net_receiving_amount = serializers.SerializerMethodField()
+
     expire = serializers.SerializerMethodField()
-    coin = serializers.SerializerMethodField()
-    coin_price = serializers.SerializerMethodField()
-    cash = serializers.SerializerMethodField()
+    price = get_serializer_amount_field(read_only=True)
+    asset = serializers.CharField(source='symbol.asset.symbol', read_only=True)
+    base_asset = serializers.CharField(source='symbol.base_asset.symbol', read_only=True)
     fee = serializers.SerializerMethodField()
 
     def validate(self, attrs):
@@ -149,47 +136,25 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     def get_expire(self, otc: OTCRequest):
         return otc.get_expire_time()
 
-    def to_representation(self, instance: OTCRequest):
-        representation = super(OTCRequestSerializer, self).to_representation(instance)
-
-        representation['from_amount'] = instance.from_asset.get_presentation_amount(representation['from_amount'])
-        representation['to_amount'] = instance.to_asset.get_presentation_amount(representation['to_amount'])
-
-        return representation
-
-    def get_coin(self, otc_request: OTCRequest):
-        conf = otc_request.get_trade_config()
-        return conf.coin.symbol
-
-    def get_cash(self, otc_request: OTCRequest):
-        conf = otc_request.get_trade_config()
-        return conf.cash.symbol
-
     def get_fee(self, otc_request: OTCRequest) -> Decimal:
-        voucher = otc_request.account.get_voucher_wallet()
-        if voucher:
-            return Decimal(0)
-        else:
-            return DEFAULT_TAKER_FEE
+        return get_trader_fee(otc_request)
 
-    def get_coin_price(self, otc_request: OTCRequest):
-        conf = otc_request.get_trade_config()
+    def get_paying_amount(self, otc_request: OTCRequest) -> Decimal:
+        return otc_request.get_final_from_amount()
 
-        price = otc_request.to_price
+    def get_receiving_amount(self, otc_request: OTCRequest) -> Decimal:
+        return otc_request.get_final_to_amount()
 
-        if conf.side == SELL:
-            price = 1 / price
-
-        if conf.cash.symbol == Asset.IRT:
-            return conf.coin.get_presentation_price_irt(price)
-        else:
-            return conf.coin.get_presentation_price_usdt(price)
+    def get_net_receiving_amount(self, otc_request: OTCRequest) -> Decimal:
+        rec = self.get_receiving_amount(otc_request)
+        fee = self.get_fee(otc_request)
+        return rec - fee
 
     class Meta:
         model = OTCRequest
-        fields = ('from_asset', 'to_asset', 'from_amount', 'to_amount', 'token', 'price', 'expire', 'coin',
-                  'coin_price', 'cash', 'fee')
-        read_only_fields = ('token', 'price')
+        fields = ('from_asset', 'to_asset', 'from_amount', 'to_amount',
+                  'token', 'expire', 'price', 'asset', 'base_asset', 'paying_amount', 'receiving_amount',
+                  'net_receiving_amount', 'fee')
 
 
 class OTCTradeRequestView(CreateAPIView):
@@ -198,21 +163,10 @@ class OTCTradeRequestView(CreateAPIView):
 
 class OTCTradeSerializer(serializers.ModelSerializer):
     token = serializers.CharField(write_only=True)
-    value_usdt = serializers.SerializerMethodField()
-
-    def get_value_usdt(self, otc_trade: OTCTrade):
-        from market.models import Trade
-        revenue_irt = Trade.objects.filter(
-            group_id=otc_trade.group_id
-        ).aggregate(revenue=Sum('gap_revenue'))['revenue'] or 0
-
-        usdt_price = get_tether_irt_price(SELL, allow_stale=True)
-
-        return revenue_irt / usdt_price or 0
 
     class Meta:
         model = OTCTrade
-        fields = ('id', 'token', 'status', 'value_usdt')
+        fields = ('id', 'token', 'status')
         read_only_fields = ('token', )
 
     def create(self, validated_data):

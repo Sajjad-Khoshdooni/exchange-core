@@ -4,9 +4,9 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from accounts.models import User
-from ledger.models import Transfer
+from ledger.models import Transfer, Asset
+from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import CANCELED
-from ledger.utils.price import get_trading_price_irt, BUY
 
 MILLION = 10 ** 6
 
@@ -62,7 +62,13 @@ def get_crypto_withdraw_irt_value(user: User):
     crypto_amount = 0
 
     for symbol, amount in crypto_withdraws.items():
-        crypto_amount += get_trading_price_irt(symbol, BUY, raw_price=True) * amount
+        price = get_external_price(
+            coin=symbol,
+            base_coin=Asset.IRT,
+            side=BUY,
+            allow_stale=True
+        )
+        crypto_amount += price * amount
 
     return crypto_amount
 

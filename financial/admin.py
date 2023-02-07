@@ -3,7 +3,6 @@ from decimal import Decimal
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import Sum
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
@@ -14,11 +13,10 @@ from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
-    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost, FiatHedgeTrx
+    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.withdraw import FiatWithdraw
-from ledger.utils.precision import humanize_number, get_presentation_amount
-from ledger.utils.price import get_tether_irt_price, BUY, SELL
+from ledger.utils.precision import humanize_number
 from ledger.utils.withdraw_verify import RiskFactor
 
 
@@ -351,33 +349,3 @@ class MarketingSourceAdmin(admin.ModelAdmin):
 class MarketingCostAdmin(admin.ModelAdmin):
     list_display = ('source', 'date', 'cost')
     search_fields = ('source__utm_source', )
-
-
-@admin.register(FiatHedgeTrx)
-class FiatHedgeTrxAdmin(admin.ModelAdmin):
-    list_display = ('base_amount', 'target_amount', 'price', 'get_side', 'source', 'reason')
-    list_filter = ('source', )
-
-    @admin.display(description='side')
-    def get_side(self, fiat_hedge: FiatHedgeTrx):
-        return SELL if fiat_hedge.target_amount > 0 else BUY
-
-    def changelist_view(self, request, extra_context=None):
-
-        aggregates = FiatHedgeTrx.objects.aggregate(
-            total_base_amount=Sum('base_amount'),
-            total_target_amount=Sum('target_amount'),
-        )
-
-        total_base = aggregates['total_base_amount'] or 0
-        total_target = aggregates['total_target_amount'] or 0
-
-        usdt_irt = get_tether_irt_price(BUY)
-
-        context = {
-            'irt': round(total_base),
-            'usdt': round(total_target, 2),
-            'total_value': round(total_target + total_base / usdt_irt, 2),
-        }
-
-        return super().changelist_view(request, extra_context=context)

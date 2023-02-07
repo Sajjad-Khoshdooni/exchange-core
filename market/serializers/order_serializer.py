@@ -13,7 +13,7 @@ from ledger.models import Wallet, Asset, CloseRequest
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
     decimal_to_str
-from ledger.utils.price import IRT
+from ledger.utils.external_price import IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
 

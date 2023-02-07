@@ -1,57 +1,35 @@
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
-from decimal import Decimal, ROUND_HALF_UP
-from typing import List
+from decimal import Decimal
 
-from django.conf import settings
 from django.db import models
 from django.db.models import F, CheckConstraint, Q, Sum, Max, Min
 from django.utils import timezone
 
-from ledger.models import OTCTrade, Asset, Wallet
 from ledger.utils.fields import get_amount_field, get_group_id_field
-from ledger.utils.precision import floor_precision, precision_to_step, decimal_to_str
-from ledger.utils.price import get_tether_irt_price, BUY, get_trading_price_irt, get_trading_price_usdt, SELL
-from ledger.utils.wallet_pipeline import WalletPipeline
-from market.exceptions import NegativeGapRevenue
-from market.models import Order, PairSymbol
+from ledger.utils.precision import floor_precision, decimal_to_str
+from market.models import Order, BaseTrade
 
 logger = logging.getLogger(__name__)
 
 
-class Trade(models.Model):
-    OTC, SYSTEM, SYSTEM_MAKER, SYSTEM_TAKER, MARKET = 'otc', 'system', 'sys-make', 'sys-take', 'market'
-    SOURCE_CHOICES = (OTC, 'otc'), (MARKET, 'market'), (SYSTEM, 'system'), (SYSTEM_MAKER, SYSTEM_MAKER), \
+class Trade(BaseTrade):
+    SYSTEM, SYSTEM_MAKER, SYSTEM_TAKER, MARKET = 'system', 'sys-make', 'sys-take', 'market'
+    SOURCE_CHOICES = (MARKET, 'market'), (SYSTEM, 'system'), (SYSTEM_MAKER, SYSTEM_MAKER), \
                      (SYSTEM_TAKER, SYSTEM_TAKER)
 
     DONE, REVERT = 'd', 'r'
     STATUS_CHOICES = (DONE, 'done'), (REVERT, 'revert')
 
-    created = models.DateTimeField(auto_now_add=True, db_index=True)
-    symbol = models.ForeignKey(PairSymbol, on_delete=models.CASCADE)
-    account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
-
-    market = models.CharField(
-        max_length=8,
-        choices=Wallet.MARKET_CHOICES,
-    )
-
     status = models.CharField(max_length=1, choices=STATUS_CHOICES, default=DONE, db_index=True)
-    side = models.CharField(max_length=8, choices=Order.ORDER_CHOICES)
-
-    amount = get_amount_field()
-    price = get_amount_field()
-    is_maker = models.BooleanField()
 
     group_id = get_group_id_field(db_index=True)
 
     order_id = models.PositiveIntegerField(db_index=True)
 
     fee_amount = get_amount_field()
-
-    base_irt_price = get_amount_field()
-    base_usdt_price = get_amount_field(default=Decimal(1))
+    fee_usdt_value = get_amount_field()
 
     trade_source = models.CharField(
         max_length=8,
@@ -59,9 +37,6 @@ class Trade(models.Model):
         db_index=True,
         default=MARKET
     )
-
-    hedge_price = get_amount_field(null=True)
-    gap_revenue = get_amount_field(null=True, default=Decimal(0))
 
     class Meta:
         indexes = [
@@ -87,7 +62,7 @@ class Trade(models.Model):
 
     @classmethod
     def get_last(cls, symbol, max_datetime=None):
-        qs = cls.objects.filter(symbol=symbol).exclude(trade_source=cls.OTC).order_by('-id')
+        qs = cls.objects.filter(symbol=symbol).order_by('-id')
         if max_datetime:
             qs = qs.filter(created__lte=max_datetime)
         return qs.first()
@@ -134,7 +109,7 @@ class Trade(models.Model):
                 "max(price) as high, min(price) as low, "
                 "sum(amount) as volume, "
                 "(date_trunc('seconds', (created - (timestamptz 'epoch' - interval %s)) / %s) * %s + (timestamptz 'epoch' - interval %s)) as tf "
-                "from market_trade where symbol_id = %s and side = 'buy' and status = 'd' and trade_source != 'otc' and created between %s and %s group by tf order by tf",
+                "from market_trade where symbol_id = %s and side = 'buy' and status = 'd' and created between %s and %s group by tf order by tf",
                 [tf_shift, interval_in_secs, interval_in_secs, tf_shift, symbol_id, start, end]
             )
         ]
@@ -148,131 +123,8 @@ class Trade(models.Model):
                 max_price=Max('price'), min_price=Min('price')):
             market_top_prices[
                 (depth['symbol'], depth['side'])
-            ] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) or Decimal()
+            ] = (depth['max_price'] if depth['side'] == BUY else depth['min_price']) or Decimal()
         return market_top_prices
-
-    @classmethod
-    def create_for_otc_trade(cls, otc_trade: 'OTCTrade', pipeline: WalletPipeline):
-        from market.utils.trade import register_transactions, TradesPair
-
-        config = otc_trade.otc_request.get_trade_config()
-        market_symbol = f'{config.coin.symbol}{config.cash.symbol}'.upper()
-        symbol = PairSymbol.get_by(name=market_symbol)
-        amount = config.coin_amount
-        price = (config.cash_amount / config.coin_amount).quantize(
-            precision_to_step(symbol.tick_size), rounding=ROUND_HALF_UP)
-        system_wallet = symbol.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=otc_trade.otc_request.market)
-        maker_order = Order.objects.create(
-            wallet=system_wallet,
-            symbol=symbol,
-            amount=amount,
-            price=price,
-            side=Order.get_opposite_side(config.side),
-            fill_type=Order.MARKET,
-            filled_amount=amount,
-            status=Order.FILLED,
-        )
-        taker_wallet = symbol.asset.get_wallet(otc_trade.otc_request.account, market=otc_trade.otc_request.market)
-        taker_order = Order.objects.create(
-            wallet=taker_wallet,
-            symbol=symbol,
-            amount=amount,
-            price=price,
-            side=config.side,
-            fill_type=Order.MARKET,
-            filled_amount=amount,
-            status=Order.FILLED,
-        )
-
-        base_irt_price = 1
-        base_usdt_price = 1
-
-        usdt_irt = get_tether_irt_price(BUY)
-
-        if symbol.base_asset.symbol == Asset.USDT:
-            base_irt_price = usdt_irt
-        else:
-            base_usdt_price = 1 / usdt_irt
-
-        trades_pair = TradesPair.init_pair(
-            taker_order=taker_order,
-            maker_order=maker_order,
-            amount=amount,
-            price=price,
-            base_irt_price=base_irt_price,
-            base_usdt_price=base_usdt_price,
-            trade_source=Trade.OTC,
-            group_id=otc_trade.group_id,
-        )
-
-        register_transactions(pipeline, pair=trades_pair, fake_trade=True)
-
-        for trade in trades_pair.trades:
-            trade.set_gap_revenue()
-
-        Trade.objects.bulk_create(trades_pair.trades)
-        Trade.create_hedge_fiat_trxs(trades_pair.trades, current_tether_irt=usdt_irt)
-
-        # updating trade_volume_irt of accounts
-        accounts = [trades_pair.maker_trade.account, trades_pair.taker_trade.account]
-
-        for account in accounts:
-            if not account.is_system():
-                account.trade_volume_irt = F('trade_volume_irt') + trades_pair.maker_trade.irt_value
-                account.save(update_fields=['trade_volume_irt'])
-                account.refresh_from_db()
-
-                from gamify.utils import check_prize_achievements, Task
-                check_prize_achievements(account, Task.TRADE)
-
-    def get_fee_irt_value(self):
-        if self.account.is_system():
-            return 0
-
-        if self.side == BUY:
-            return self.fee_amount * self.price * self.base_irt_price
-        else:
-            return self.fee_amount * self.base_irt_price
-
-    def set_gap_revenue(self):
-        if settings.DEBUG_OR_TESTING:
-            return
-
-        self.gap_revenue = 0
-
-        fee = self.get_fee_irt_value()
-
-        if self.trade_source == self.MARKET or self.account.is_system():
-            self.gap_revenue = fee
-            return
-
-        reverse_side = BUY if self.side == SELL else SELL
-
-        base_asset = self.symbol.base_asset
-
-        if base_asset.symbol == Asset.IRT:
-            get_price = get_trading_price_irt
-        elif base_asset.symbol == Asset.USDT:
-            get_price = get_trading_price_usdt
-        else:
-            raise NotImplementedError
-
-        self.hedge_price = get_price(self.symbol.asset.symbol, side=reverse_side, raw_price=True)
-
-        if self.side == BUY:
-            gap_price = self.price - self.hedge_price
-        else:
-            gap_price = self.hedge_price - self.price
-
-        self.gap_revenue = gap_price * self.amount
-
-        if base_asset.symbol == Asset.USDT:
-            self.gap_revenue *= get_tether_irt_price(side=reverse_side)
-
-        if self.gap_revenue < 0:
-            raise NegativeGapRevenue
-
-        self.gap_revenue += fee
 
     @staticmethod
     def get_account_orders_filled_price(account_id):
@@ -294,45 +146,3 @@ class Trade(models.Model):
             for k, v in Trade.get_interval_top_prices([symbol_id]).items():
                 top_prices[k[1]] = v
         return top_prices
-
-    @classmethod
-    def create_hedge_fiat_trxs(cls, trades: List['Trade'], current_tether_irt: Decimal):
-        from financial.models import FiatHedgeTrx
-        trxs = []
-
-        for trade in trades:
-            if trade.symbol.base_asset.symbol == Asset.IRT and \
-                    ((trade.is_maker and trade.trade_source == cls.SYSTEM_TAKER) or
-                     (not trade.is_maker and trade.trade_source in [cls.OTC, cls.SYSTEM_MAKER])):
-
-                coin = trade.symbol.asset.symbol
-
-                if coin == Asset.USDT:
-                    coin_usdt_price = 1
-                else:
-                    coin_usdt_price = get_trading_price_usdt(
-                        coin=coin,
-                        side=trade.side,
-                        value=trade.irt_value / current_tether_irt
-                    )
-
-                usdt_price = trade.price / coin_usdt_price
-
-                usdt_amount = trade.amount * coin_usdt_price
-                irt_amount = trade.amount * trade.price
-
-                if trade.side == BUY:
-                    usdt_amount = -usdt_amount
-                else:
-                    irt_amount = -irt_amount
-
-                trxs.append(FiatHedgeTrx(
-                    base_amount=irt_amount,
-                    target_amount=usdt_amount,
-                    price=usdt_price,
-                    source=FiatHedgeTrx.TRADE,
-                    reason=str(trade.id)
-                ))
-
-        if trxs:
-            FiatHedgeTrx.objects.bulk_create(trxs)

@@ -1,13 +1,12 @@
 import logging
 
 from django.db import models
-from django.utils import timezone
 
 from accounts.models import Notification, Account, TrafficSource
 from ledger.models import Prize, Asset
+from ledger.utils.external_price import BUY, get_external_price
 from ledger.utils.fields import get_amount_field
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import get_trading_price_usdt, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -101,10 +100,10 @@ class Achievement(models.Model):
         return Prize.objects.filter(account=account, achievement=self).exists()
 
     def achieve_prize(self, account: Account):
-        price = get_trading_price_usdt(Asset.SHIB, SELL, raw_price=True)
         value = 0
 
         if not self.voucher:
+            price = get_external_price(Asset.SHIB, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
             value = self.amount * price
 
         with WalletPipeline() as pipeline:

@@ -29,7 +29,7 @@ def update_maker_orders():
     for depth in depth_orders:
         top_depth_prices[
             (depth['symbol'], depth['side'])
-        ] = (depth['max_price'] if depth['side'] == Order.BUY else depth['min_price']) or Decimal()
+        ] = (depth['max_price'] if depth['side'] == BUY else depth['min_price']) or Decimal()
 
     open_depth_orders_count = defaultdict(int)
     for depth in depth_orders:
@@ -39,18 +39,18 @@ def update_maker_orders():
 
     for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True, asset__enable=True):
         symbol_top_prices = {
-            Order.BUY: market_top_prices[symbol.id, Order.BUY],
-            Order.SELL: market_top_prices[symbol.id, Order.SELL],
+            BUY: market_top_prices[symbol.id, BUY],
+            SELL: market_top_prices[symbol.id, SELL],
         }
         set_top_prices(symbol.id, symbol_top_prices)
         symbol_top_depth_prices = {
-            Order.BUY: top_depth_prices[symbol.id, Order.BUY],
-            Order.SELL: top_depth_prices[symbol.id, Order.SELL],
+            BUY: top_depth_prices[symbol.id, BUY],
+            SELL: top_depth_prices[symbol.id, SELL],
         }
         set_top_depth_prices(symbol.id, symbol_top_depth_prices)
         symbol_open_depth_orders_count = {
-            Order.BUY: open_depth_orders_count[symbol.id, Order.BUY],
-            Order.SELL: open_depth_orders_count[symbol.id, Order.SELL],
+            BUY: open_depth_orders_count[symbol.id, BUY],
+            SELL: open_depth_orders_count[symbol.id, SELL],
         }
         set_open_orders_count(symbol.id, symbol_open_depth_orders_count)
 
@@ -77,7 +77,7 @@ def update_symbol_maker_orders(symbol, last_trade_ts):
     if not top_depth_prices:
         top_depth_prices = defaultdict(lambda: Decimal())
         for depth in depth_orders:
-            top_depth_prices[depth['side']] = (depth['max_price'] if depth['side'] == Order.BUY else depth[
+            top_depth_prices[depth['side']] = (depth['max_price'] if depth['side'] == BUY else depth[
                 'min_price']) or Decimal()
 
     if not open_depth_orders_count:
@@ -90,7 +90,7 @@ def update_symbol_maker_orders(symbol, last_trade_ts):
             Order.cancel_invalid_maker_orders(symbol, top_depth_prices, last_trade_ts=last_trade_ts)
             Order.cancel_invalid_maker_orders(symbol, top_depth_prices, gap=Decimal('0.001'), order_type=Order.BOT)
 
-        for side in (Order.BUY, Order.SELL):
+        for side in (BUY, SELL):
             logger.info(f'{symbol.name} {side} open count: {open_depth_orders_count[side]}')
             price = Order.get_maker_price(symbol, side, last_trade_ts=last_trade_ts)
             order = Order.init_top_maker_order(symbol, side, price, Decimal(depth_top_prices[side]))
@@ -115,7 +115,7 @@ def update_symbol_maker_orders(symbol, last_trade_ts):
 def create_depth_orders(symbol=None, open_depth_orders_count=None):
     def get_price_factor(order_side, distance):
         factor = Decimal(1 + (log10(11 + distance) - 1) / 4)
-        return factor if order_side == Order.SELL else 1 / factor
+        return factor if order_side == SELL else 1 / factor
 
     if open_depth_orders_count is None:
         open_depth_orders_count = defaultdict(int)
@@ -125,8 +125,8 @@ def create_depth_orders(symbol=None, open_depth_orders_count=None):
     if symbol is None:
         for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True, asset__enable=True):
             symbol_open_depth_orders_count = {
-                Order.BUY: open_depth_orders_count[symbol.id, Order.BUY],
-                Order.SELL: open_depth_orders_count[symbol.id, Order.SELL],
+                BUY: open_depth_orders_count[symbol.id, BUY],
+                SELL: open_depth_orders_count[symbol.id, SELL],
             }
             pair_symbol = PairSymbol.IdName(id=symbol.id, name=symbol.name, tick_size=symbol.tick_size)
             create_depth_orders.apply_async(args=(pair_symbol, symbol_open_depth_orders_count), queue='market')
@@ -135,7 +135,7 @@ def create_depth_orders(symbol=None, open_depth_orders_count=None):
         present_prices = set(
             Order.open_objects.filter(symbol_id=symbol.id, type=Order.DEPTH).values_list('price', flat=True))
         try:
-            for side in (Order.BUY, Order.SELL):
+            for side in (BUY, SELL):
                 price = Order.get_maker_price(symbol, side)
                 for rank in range(open_depth_orders_count[side], Order.MAKER_ORDERS_COUNT):
                     order = Order.init_maker_order(symbol, side, price * get_price_factor(side, rank))

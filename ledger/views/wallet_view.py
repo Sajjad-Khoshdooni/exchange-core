@@ -13,9 +13,9 @@ from rest_framework.viewsets import ModelViewSet
 from accounts.views.jwt_views import DelegatedAccountMixin
 from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCTrade
 from ledger.models.asset import Asset
+from ledger.utils.external_price import get_external_price, get_external_usdt_prices, BUY, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.precision import get_presentation_amount, get_precision
-from ledger.utils.price import get_trading_price_irt, BUY, SELL, get_prices_dict, get_tether_irt_price
+from ledger.utils.precision import get_presentation_amount
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,6 @@ class AssetListSerializer(serializers.ModelSerializer):
     can_withdraw = serializers.SerializerMethodField()
 
     free = serializers.SerializerMethodField()
-    free_irt = serializers.SerializerMethodField()
 
     pin_to_top = serializers.SerializerMethodField()
 
@@ -64,16 +63,21 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        return asset.get_presentation_amount(wallet.get_balance())
+        return asset.get_presentation_amount(wallet.balance)
 
     def get_balance_irt(self, asset: Asset):
         wallet = self.get_wallet(asset)
 
-        if not wallet:
+        if not wallet or wallet.balance == 0:
             return '0'
 
-        amount = wallet.get_balance_irt()
-        return asset.get_presentation_price_irt(amount)
+        price = self.context.get('prices', {}).get(asset.symbol, 0)
+        if not price:
+            price = get_external_price(coin=asset.symbol, base_coin=Asset.IRT, side=SELL, allow_stale=True) or 0
+        else:
+            price *= self.context.get('tether_irt', 0)
+
+        return asset.get_presentation_price_irt(wallet.balance * price)
 
     def get_balance_usdt(self, asset: Asset):
         wallet = self.get_wallet(asset)
@@ -81,8 +85,11 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        amount = wallet.get_balance_usdt()
-        return asset.get_presentation_price_usdt(amount)
+        price = self.context.get('prices', {}).get(asset.symbol, 0)
+        if not price:
+            price = get_external_price(coin=asset.symbol, base_coin=Asset.USDT, side=SELL, allow_stale=True) or 0
+
+        return asset.get_presentation_price_usdt(wallet.balance * price)
 
     def get_free(self, asset: Asset):
         wallet = self.get_wallet(asset)
@@ -91,39 +98,6 @@ class AssetListSerializer(serializers.ModelSerializer):
             return '0'
 
         return asset.get_presentation_amount(wallet.get_free())
-
-    def get_free_irt(self, asset: Asset):
-        wallet = self.get_wallet(asset)
-
-        if not wallet:
-            return '0'
-
-        amount = wallet.get_free_irt()
-        return asset.get_presentation_price_irt(amount)
-
-    def get_sell_price_irt(self, asset: Asset):
-        if asset.symbol == asset.IRT:
-            return ''
-
-        prices = self.context.get('prices_sell')
-
-        if prices:
-            return (prices.get(asset.symbol) or 1) * self.context.get('tether_irt_sell', 1)
-
-        price = get_trading_price_irt(asset.symbol, SELL, allow_stale=True)
-        return asset.get_presentation_price_irt(price)
-
-    def get_buy_price_irt(self, asset: Asset):
-        if asset.symbol == asset.IRT:
-            return ''
-
-        prices = self.context.get('prices_buy')
-
-        if prices:
-            return (prices.get(asset.symbol) or 1) * self.context.get('tether_irt_buy', 1)
-
-        price = get_trading_price_irt(asset.symbol, BUY, allow_stale=True)
-        return asset.get_presentation_price_irt(price)
 
     def get_can_deposit(self, asset: Asset):
         if asset.symbol == Asset.IRT:
@@ -152,7 +126,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         return asset.original_name_fa or asset.name_fa
 
     def get_step_size(self, asset: Asset):
-        return get_precision(asset.trade_quantity_step)
+        return Asset.PRECISION
 
     class Meta:
         model = Asset
@@ -250,10 +224,8 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
         if self.action == 'list':
             coins = list(self.get_queryset().values_list('symbol', flat=True))
 
-            ctx['prices_buy'] = get_prices_dict(coins=coins, side=BUY, allow_stale=True)
-            ctx['prices_sell'] = get_prices_dict(coins=coins, side=SELL, allow_stale=True)
-            ctx['tether_irt_buy'] = get_tether_irt_price(BUY, allow_stale=True)
-            ctx['tether_irt_sell'] = get_tether_irt_price(SELL, allow_stale=True)
+            ctx['prices'] = get_external_usdt_prices(coins=coins, side=SELL, allow_stale=True)
+            ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=True)
 
         return ctx
 
@@ -278,8 +250,6 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
         queryset = self.get_queryset()
 
         symbols = [a.symbol for a in queryset]
-        get_prices_dict(coins=symbols, side='buy')
-        get_prices_dict(coins=symbols, side='sell')
 
         serializer = self.get_serializer(queryset, many=True)
         data = serializer.data
@@ -370,7 +340,13 @@ class ConvertDustView(APIView):
             account=account, market=Wallet.SPOT, balance__gt=0, variant__isnull=True).exclude(asset=IRT)
 
         for wallet in spot_wallets:
-            free_irt_value = wallet.get_free_irt()
+            price = get_external_price(
+                coin=wallet.asset.symbol,
+                base_coin=Asset.IRT,
+                side=BUY,
+                allow_stale=True
+            )
+            free_irt_value = wallet.get_free() * price
 
             if not free_irt_value:
                 continue
