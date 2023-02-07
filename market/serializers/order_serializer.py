@@ -16,7 +16,7 @@ from ledger.utils.precision import floor_precision, get_precision, humanize_numb
 from ledger.utils.price import IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
-from market.utils.redis import MarketCacheHandler
+from market.utils.redis import MarketStreamCache
 
 logger = logging.getLogger(__name__)
 
@@ -44,23 +44,27 @@ class OrderSerializer(serializers.ModelSerializer):
             raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
 
         symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
+
         if validated_data['fill_type'] == Order.LIMIT:
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
+
         elif validated_data['fill_type'] == Order.MARKET:
             validated_data['price'] = Order.get_market_price(symbol, Order.get_opposite_side(validated_data['side']))
             if not validated_data['price']:
                 raise Exception('Empty order book')
+
         wallet = self.post_validate(symbol, validated_data)
 
         try:
-            market_cache_handler = MarketCacheHandler()
             with WalletPipeline() as pipeline:
                 created_order = super(OrderSerializer, self).create(
                     {**validated_data, 'wallet': wallet, 'symbol': symbol}
                 )
-                created_order.submit(pipeline, cache_handler=market_cache_handler)
-                
-            market_cache_handler.execute()
+                trade_pairs, updated_orders = created_order.submit(pipeline) or ([], [])
+
+            extra = {} if trade_pairs else {'side': created_order.side}
+            MarketStreamCache().execute(symbol, updated_orders, trade_pairs=trade_pairs, **extra)
+
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
         except Exception as e:

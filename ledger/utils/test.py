@@ -1,6 +1,5 @@
 from django.conf import settings
 
-from financial.models import BankCard, Gateway
 
 if settings.DEBUG_OR_TESTING:
     import random
@@ -9,6 +8,10 @@ if settings.DEBUG_OR_TESTING:
     from accounts.models import Account, User, VerificationCode
     from ledger.utils.price import price_redis
     from ledger.models import Asset, AddressBook, Network, NetworkAsset
+    from financial.models import BankCard, Gateway
+    from market.models import PairSymbol
+    from market.utils.order_utils import new_order
+
 
     def get_rand_int():
         return random.randint(0, 100000000)
@@ -93,10 +96,20 @@ if settings.DEBUG_OR_TESTING:
                                                   asset=asset)
         return address_book
 
-    def new_bankcard(user) ->BankCard:
+    def new_bankcard(user) -> BankCard:
         bankcard = BankCard.objects.create(user=user, card_pan='1', verified=True, kyc=True,)
         return bankcard
 
-    def new_zibal_gateway() ->Gateway:
+    def new_zibal_gateway() -> Gateway:
         gateway = Gateway.objects.create(name='test', type=Gateway.ZIBAL, merchant_id='zibal', active=True)
         return gateway
+
+    def create_system_order_book(symbol: PairSymbol, side: str, data: list):
+        for d in data:
+            new_order(
+                symbol=symbol,
+                account=Account.system(),
+                price=d[0],
+                amount=d[1],
+                side=side
+            )
