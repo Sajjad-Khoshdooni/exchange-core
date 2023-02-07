@@ -127,6 +127,8 @@ class MarketStreamCache:
         for order_type in (Order.BUY, Order.SELL):
             if side is None or order_type == side:
                 top_order = Order.get_top_price_amount(symbol.id, order_type)
+                if not top_order:
+                    continue
                 top_orders[f'{order_type}_price'] = str(top_order.price)
                 top_orders[f'{order_type}_amount'] = str(top_order.amount)
 
@@ -179,3 +181,6 @@ class MarketStreamCache:
 
         if self.market_pipeline:
             self.market_pipeline.execute()
+
+
+"{\"buy_price\": \"323.10000000\", \"buy_amount\": \"0.20846300\", \"sell_price\": \"349.90000000\", \"sell_amount\": \"0.20846300\"}"
