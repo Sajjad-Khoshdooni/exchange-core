@@ -147,7 +147,7 @@ class MarketStreamCache:
                 top_orders[f'{order_type}_amount'] = str(
                     self._client.get(f'market:depth:amount:{symbol.name}:{order_type}'))
 
-        if any(price_updated.values()) or any(amount_updated.values()):
+        if canceled or any(price_updated.values()) or any(amount_updated.values()):
             self.market_pipeline.publish(f'market:depth:{symbol.name}', json.dumps(top_orders))
 
     def update_trades(self, trade_pairs):
