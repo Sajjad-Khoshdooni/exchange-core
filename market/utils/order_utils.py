@@ -87,8 +87,9 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
         )
 
         is_stop_loss = parent_lock_group_id is not None
-        trade_pairs, updated_orders = order.submit(pipeline, is_stop_loss=is_stop_loss)
-    MarketStreamCache().execute(symbol, updated_orders, trade_pairs=trade_pairs)
+        trade_pairs, updated_orders = order.submit(pipeline, is_stop_loss=is_stop_loss) or ([], [])
+    if trade_pairs:
+        MarketStreamCache().execute(symbol, updated_orders, trade_pairs=trade_pairs)
     return order
 
 
