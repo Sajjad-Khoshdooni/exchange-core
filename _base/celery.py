@@ -139,14 +139,14 @@ app.conf.beat_schedule = {
     #         'expire': 17 * TASK_MULTIPLIER
     #     }
     # },
-    'carrot_trader': {
-        'task': 'trader.tasks.carrot_trader.carrot_trader',
-        'schedule': 7 * TASK_MULTIPLIER,
-        'options': {
-            'queue': 'trader',
-            'expire': 7 * TASK_MULTIPLIER
-        }
-    },
+    # 'carrot_trader': {
+    #     'task': 'trader.tasks.carrot_trader.carrot_trader',
+    #     'schedule': 7 * TASK_MULTIPLIER,
+    #     'options': {
+    #         'queue': 'trader',
+    #         'expire': 7 * TASK_MULTIPLIER
+    #     }
+    # },
 
     'update_accounts_pnl': {
         'task': 'ledger.tasks.pnl.create_pnl_histories',
