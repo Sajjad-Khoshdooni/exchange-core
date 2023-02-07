@@ -1,3 +1,4 @@
+import json
 import os
 import pickle
 
@@ -75,9 +76,15 @@ async def broadcast_depth():
         if not DEPTH_CLIENTS:
             print(raw_message)
             continue
-        symbol, side = raw_message['channel'].split(':')[-2:]
-        price = Decimal(raw_message['data'])
-        websockets.broadcast(DEPTH_CLIENTS, pickle.dumps({'symbol': symbol, 'side': side, 'price': price}))
+        symbol = raw_message['channel'].split(':')[-1]
+        top_orders = json.loads(raw_message['data'])
+        websockets.broadcast(DEPTH_CLIENTS, pickle.dumps({
+            'symbol': symbol,
+            'buy_price': Decimal(top_orders['buy_price']),
+            'buy_amount': Decimal(top_orders['buy_amount']),
+            'sell_price': Decimal(top_orders['sell_price']),
+            'sell_amount': Decimal(top_orders['sell_amount']),
+        }))
 
 
 trades_pubsub = market_redis.pubsub()

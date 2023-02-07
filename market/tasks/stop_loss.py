@@ -34,12 +34,15 @@ def handle_stop_loss():
 def create_needed_stop_loss_orders(symbol_id, side):
     market_top_prices = Trade.get_top_prices(symbol_id)
     symbol_price = market_top_prices[side]
+
     if not symbol_price:
         logger.info(f'Missing trade in last 5 seconds for {symbol_id}')
         return
+
     stop_loss_qs = StopLoss.not_triggered_objects.filter(
         symbol_id=symbol_id, side=side
     ).prefetch_related('wallet__account')
+
     if side == StopLoss.BUY:
         stop_loss_qs = stop_loss_qs.filter(trigger_price__lte=symbol_price)
     else:
