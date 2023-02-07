@@ -72,7 +72,6 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
         else:
             logger.info('new order failed: min_notional')
             return
-    market_cache_handler = MarketStreamCache()
     with WalletPipeline() as pipeline:
         additional_params = {'group_id': parent_lock_group_id} if parent_lock_group_id else {}
         order = Order.objects.create(
@@ -88,8 +87,8 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
         )
 
         is_stop_loss = parent_lock_group_id is not None
-        order.submit(pipeline, is_stop_loss=is_stop_loss)
-    market_cache_handler.execute()
+        trade_pairs, updated_orders = order.submit(pipeline, is_stop_loss=is_stop_loss)
+    MarketStreamCache().execute(symbol, updated_orders, trade_pairs=trade_pairs)
     return order
 
 
