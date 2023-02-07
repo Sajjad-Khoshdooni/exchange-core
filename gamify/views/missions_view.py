@@ -130,7 +130,7 @@ class ActiveMissionsAPIView(RetrieveAPIView):
     def get_object(self):
         account = self.request.user.account
         journey = MissionJourney.get_journey(account)
-        return journey.get_active_mission(account)
+        return journey and journey.get_active_mission(account)
 
 
 class TotalVoucherAPIView(APIView):
