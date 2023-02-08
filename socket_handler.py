@@ -90,10 +90,10 @@ async def broadcast_depth():
                 logger.info(len(DEPTH_CLIENTS))
                 websockets.broadcast(DEPTH_CLIENTS, pickle.dumps({
                     'symbol': symbol,
-                    'buy_price': Decimal(top_orders['buy_price']),
-                    'buy_amount': Decimal(top_orders['buy_amount']),
-                    'sell_price': Decimal(top_orders['sell_price']),
-                    'sell_amount': Decimal(top_orders['sell_amount']),
+                    'buy_price': Decimal(top_orders.get('buy_price', 'inf')),
+                    'buy_amount': Decimal(top_orders.get('buy_amount', 0)),
+                    'sell_price': Decimal(top_orders.get('sell_price', 0)),
+                    'sell_amount': Decimal(top_orders.get('sell_amount', 0)),
                 }))
         except (ConnectionError, TimeoutError) as err:
             logger.warning('redis connection error on broadcast_depth', extra={'err': err})
