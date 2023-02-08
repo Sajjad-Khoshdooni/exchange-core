@@ -7,7 +7,7 @@ raastin_build:
   only:
     refs:
       - main
-      - develop
+      - featue/otc
   script:
     - export IMAGE="registry.hamdocker.ir/raastin/core"
     - 'darkube build --push -t $IMAGE:$CI_COMMIT_SHORT_SHA -t $IMAGE:$CI_COMMIT_REF_SLUG'
@@ -19,7 +19,7 @@ deploy_staging:
   image: hamravesh.hamdocker.ir/public/darkube-cli:v1.1
   only:
     refs:
-    - develop
+    - featue/otc
   script:
     - 'darkube deploy --token ${STAGING_API_DEPLOY_TOKEN}
       --app-id ${STAGING_API_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
