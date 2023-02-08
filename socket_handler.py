@@ -72,8 +72,8 @@ depth_pubsub = market_redis.pubsub()
 
 async def broadcast_depth():
     while True:
-        await depth_pubsub.psubscribe('market:depth:*')
         try:
+            await depth_pubsub.psubscribe('market:depth:*')
             async for raw_message in depth_pubsub.listen():
                 if not raw_message:
                     continue
@@ -100,8 +100,8 @@ trades_pubsub = market_redis.pubsub()
 
 async def broadcast_trades():
     while True:
-        await trades_pubsub.psubscribe('market:trades:*')
         try:
+            await trades_pubsub.psubscribe('market:trades:*')
             async for raw_message in trades_pubsub.listen():
                 if not raw_message:
                     continue
@@ -129,8 +129,8 @@ status_pubsub = market_redis.pubsub()
 
 async def broadcast_orders_status():
     while True:
-        await status_pubsub.psubscribe('market:orders:*')
         try:
+            await status_pubsub.psubscribe('market:orders:*')
             async for raw_message in status_pubsub.listen():
                 if not raw_message:
                     continue
