@@ -39,7 +39,10 @@ class OTCInfoView(APIView):
             raise ValidationError({'amount': 'دقیقا یکی از این مقدایر می‌تواند پر باشد.'})
 
         if not from_amount and not to_amount:
-            to_amount = 0
+            if from_asset.symbol in (Asset.IRT, Asset.USDT):
+                from_amount = 1
+            else:
+                to_amount = 1
 
         otc = OTCRequest.get_otc_request(
             account=self.request.user.account,
