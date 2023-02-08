@@ -247,7 +247,7 @@ class Order(models.Model):
         if maker_side == BUY:
             matching_orders = matching_orders.filter(price__gte=self.price).order_by('-price', 'id')
         else:
-            matching_orders = matching_orders.filter(price__lte=self.price)
+            matching_orders = matching_orders.filter(price__lte=self.price).order_by('price', 'id')
 
         unfilled_amount = overriding_fill_amount or self.unfilled_amount
 
