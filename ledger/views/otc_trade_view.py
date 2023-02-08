@@ -23,10 +23,17 @@ class OTCInfoView(APIView):
 
         try:
             from_amount = request.query_params.get('from_amount')
-            from_amount = from_amount and Decimal(from_amount)
+            if from_amount:
+                from_amount = Decimal(from_amount)
+            else:
+                from_amount = None
 
             to_amount = request.query_params.get('to_amount')
-            to_amount = to_amount and Decimal(to_amount)
+            if to_amount:
+                to_amount = Decimal(to_amount)
+            else:
+                to_amount = None
+
         except InvalidOperation:
             raise ValidationError({
                 'amount': 'مقدار نامعتبر است.'
@@ -48,8 +55,8 @@ class OTCInfoView(APIView):
             account=self.request.user.account,
             from_asset=from_asset,
             to_asset=to_asset,
-            from_amount=from_amount and Decimal(from_amount),
-            to_amount=to_amount and Decimal(to_amount),
+            from_amount=from_amount,
+            to_amount=to_amount,
         )
 
         return Response({
