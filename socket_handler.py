@@ -82,6 +82,8 @@ async def broadcast_depth():
                     continue
                 symbol = raw_message['channel'].split(':')[-1]
                 top_orders = json.loads(raw_message['data'])
+                print(len(DEPTH_CLIENTS))
+                logger.info(len(DEPTH_CLIENTS))
                 websockets.broadcast(DEPTH_CLIENTS, pickle.dumps({
                     'symbol': symbol,
                     'buy_price': Decimal(top_orders['buy_price']),
