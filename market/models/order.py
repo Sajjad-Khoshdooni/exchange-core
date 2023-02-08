@@ -180,7 +180,7 @@ class Order(models.Model):
             if spread_step != 0:
                 logger.info(f'override {coin} boundary_price gap with {gap}')
 
-        boundary_price = price * spread_to_multiplier(Decimal(gap), side)
+        boundary_price = price * spread_to_multiplier(Decimal(gap or 0), side)
 
         precision = Order.get_rounding_precision(boundary_price, symbol.tick_size)
         # use bi-direction in roundness to avoid risky bid ask spread
