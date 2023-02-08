@@ -43,7 +43,7 @@ class OTCInfoView(APIView):
         to_asset = get_object_or_404(Asset, symbol=to_symbol)
 
         if from_amount and to_amount:
-            raise ValidationError({'amount': 'دقیقا یکی از این مقدایر می‌تواند پر باشد.'})
+            raise ValidationError({'amount': 'دقیقا یکی از این مقادیر می‌تواند پر باشد.'})
 
         if not from_amount and not to_amount:
             if from_asset.symbol in (Asset.IRT, Asset.USDT):

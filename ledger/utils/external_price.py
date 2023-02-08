@@ -170,7 +170,6 @@ def get_external_price(coin: str, base_coin: str, side: str, allow_stale: bool =
     assert side in (BUY, SELL)
 
     from ledger.models import Asset
-    assert coin != Asset.IRT
     assert base_coin in (Asset.IRT, Asset.USDT)
 
     if coin == base_coin:

@@ -125,11 +125,12 @@ class OTCTrade(models.Model):
             self.order_id = fok_order.id
 
             if fok_order.status == Order.FILLED:
-                trades_net_rec = Trade.objects.filter(order_id=fok_order.id).aggregate(
-                    net_rec=Sum(F('amount') * F('price') * F('base_usdt_price') - F('fee_usdt_value'))
-                )['net_rec'] or 0
+                trades_base_sum = Trade.objects.filter(order_id=fok_order.id).aggregate(
+                    sum=Sum(F('amount') * F('price'))
+                )['sum'] or 0
 
-                self.gap_revenue = self.otc_request.get_net_receiving_value() - trades_net_rec
+                otc_base_amount = self.otc_request.amount * self.otc_request.price
+                self.gap_revenue = (otc_base_amount - trades_base_sum) * self.otc_request.base_usdt_price
                 if self.otc_request.side == SELL:
                     self.gap_revenue = -self.gap_revenue
 
