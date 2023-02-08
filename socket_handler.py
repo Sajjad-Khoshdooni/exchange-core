@@ -1,20 +1,20 @@
+import asyncio
 import json
 import logging
 import os
 import pickle
-
 from decimal import Decimal
-from django.core.wsgi import get_wsgi_application
 
+import aioredis
+import websockets
+from aioredis.exceptions import ConnectionError, TimeoutError
 from django.conf import settings
+from django.core.wsgi import get_wsgi_application
+from websockets.exceptions import ConnectionClosed
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "_base.settings")
 application = get_wsgi_application()
 
-import asyncio
-import aioredis
-
-import websockets
-from websockets.exceptions import ConnectionClosed
 # from accounts.models.custom_token import CustomToken
 
 logger = logging.getLogger(__name__)
@@ -147,6 +147,7 @@ async def broadcast_orders_status():
             logger.warning('redis connection error on broadcast_orders_status', extra={'err': err})
             logger.info('retry broadcast_orders_status in 10 secs')
             await asyncio.sleep(10)
+
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(start_server)
