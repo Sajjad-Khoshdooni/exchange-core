@@ -174,10 +174,11 @@ class MarketStreamCache:
     def execute(self, symbol, updated_orders, trade_pairs=None, side=None, canceled=False):
         if trade_pairs is None:
             trade_pairs = []
-        for updated_order in updated_orders:
-            self.update_order_status(updated_order)
         self.update_trades(trade_pairs)
         self.update_bid_ask(symbol, side, canceled)
+
+        for updated_order in updated_orders:
+            self.update_order_status(updated_order)
 
         if self.market_pipeline:
             self.market_pipeline.execute()
