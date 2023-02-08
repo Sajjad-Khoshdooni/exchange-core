@@ -86,7 +86,6 @@ async def broadcast_depth():
                     continue
                 symbol = raw_message['channel'].split(':')[-1]
                 top_orders = json.loads(raw_message['data'])
-                print(len(DEPTH_CLIENTS))
                 logger.info(len(DEPTH_CLIENTS))
                 websockets.broadcast(DEPTH_CLIENTS, pickle.dumps({
                     'symbol': symbol,
@@ -115,6 +114,9 @@ async def broadcast_trades():
                     print(raw_message)
                     continue
                 symbol = raw_message['channel'].split(':')[-1]
+                if type(raw_message['data']) != str:
+                    print(raw_message)
+                    continue
                 price, amount, maker_order_id, taker_order_id, is_buyer_maker = raw_message['data'].split('#')
                 websockets.broadcast(TRADES_CLIENTS, pickle.dumps({
                     'symbol': symbol,
@@ -141,6 +143,9 @@ async def broadcast_orders_status():
                 if not raw_message:
                     continue
                 if not ORDERS_STATUS_CLIENTS:
+                    print(raw_message)
+                    continue
+                if type(raw_message['data']) != str:
                     print(raw_message)
                     continue
                 symbol = raw_message['channel'].split(':')[-1]
