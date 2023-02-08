@@ -33,18 +33,6 @@ class OTCRequest(BaseTrade):
     def is_maker(self) -> bool:
         return False
 
-    def get_final_from_amount(self):
-        if self.side == OTCRequest.BUY:
-            return self.amount * self.price
-        else:
-            return self.amount
-
-    def get_final_to_amount(self):
-        if self.side == OTCRequest.SELL:
-            return self.amount * self.price
-        else:
-            return self.amount
-
     @classmethod
     def new_trade(cls, account: Account, market: str, from_asset: Asset, to_asset: Asset, from_amount: Decimal = None,
                   to_amount: Decimal = None, allow_dust: bool = False, check_enough_balance: bool = True) -> 'OTCRequest':
@@ -70,7 +58,7 @@ class OTCRequest(BaseTrade):
 
         if check_enough_balance:
             from_wallet = from_asset.get_wallet(account, otc_request.market)
-            from_wallet.has_balance(otc_request.get_final_from_amount(), raise_exception=True, check_system_wallets=True)
+            from_wallet.has_balance(otc_request.get_paying_amount(), raise_exception=True, check_system_wallets=True)
 
         otc_request.save()
 

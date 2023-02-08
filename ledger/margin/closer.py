@@ -172,7 +172,7 @@ class MarginCloser:
 
                 requests.append(request)
 
-                usdt_need += request.get_final_from_amount()
+                usdt_need += request.get_paying_amount()
 
         margin_usdt_wallet = self.tether.get_wallet(self.account, market=Wallet.MARGIN)
 

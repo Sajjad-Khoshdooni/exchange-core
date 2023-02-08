@@ -296,7 +296,7 @@
 #         OTCTrade.execute_trade(otc_request)
 #         usdt_wallet = self.usdt.get_wallet(self.account, market=Wallet.MARGIN)
 #
-#         self.assertEqual(usdt_wallet.balance, otc_request.get_final_to_amount() + TO_TRANSFER_USDT)
+#         self.assertEqual(usdt_wallet.balance, otc_request.get_receiving_amount() + TO_TRANSFER_USDT)
 #
 #         new_order(self.btcusdt, self.account, amount=usdt_wallet.balance / BTC_USDT_PRICE, price=BTC_USDT_PRICE, side=BUY, market=Wallet.MARGIN)
 #
@@ -332,7 +332,7 @@
 #         OTCTrade.execute_trade(otc_request)
 #         usdt_wallet = self.usdt.get_wallet(self.account, market=Wallet.MARGIN)
 #
-#         self.assertEqual(usdt_wallet.balance, otc_request.get_final_to_amount() + TO_TRANSFER_USDT)
+#         self.assertEqual(usdt_wallet.balance, otc_request.get_receiving_amount() + TO_TRANSFER_USDT)
 #
 #         new_order(self.btcusdt, self.account, amount=usdt_wallet.balance / BTC_USDT_PRICE, price=BTC_USDT_PRICE, side=BUY, market=Wallet.MARGIN)
 #

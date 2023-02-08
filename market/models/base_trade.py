@@ -5,13 +5,13 @@ from django.db import models
 from django.db.models import CheckConstraint, Q
 
 from ledger.models import Wallet
+from ledger.utils.external_price import BUY, SELL
 from ledger.utils.fields import get_amount_field
 
 logger = logging.getLogger(__name__)
 
 
 class BaseTrade(models.Model):
-    BUY, SELL = 'buy', 'sell'
     SIDE_CHOICES = [(BUY, BUY), (SELL, SELL)]
 
     side = models.CharField(max_length=8, choices=SIDE_CHOICES)
@@ -30,13 +30,36 @@ class BaseTrade(models.Model):
     base_irt_price = get_amount_field()
     base_usdt_price = get_amount_field(default=Decimal(1))
 
-    fee_amount = get_amount_field()
-    fee_usdt_value = get_amount_field()
+    fee_amount = get_amount_field()  # trader fee amount
+    fee_usdt_value = get_amount_field()  # trader fee value
+
     fee_revenue = get_amount_field()
 
     @property
     def irt_value(self):
         return self.amount * self.price * self.base_irt_price
+
+    @property
+    def usdt_value(self):
+        return self.amount * self.price * self.base_usdt_price
+
+    def get_paying_amount(self):
+        if self.side == BUY:
+            return self.amount * self.price
+        else:
+            return self.amount
+
+    def get_receiving_amount(self):
+        if self.side == SELL:
+            return self.amount * self.price
+        else:
+            return self.amount
+
+    def get_net_receiving_amount(self):
+        return self.get_receiving_amount() - self.fee_amount
+
+    def get_net_receiving_value(self):
+        return self.usdt_value - self.fee_usdt_value
 
     class Meta:
         abstract = True

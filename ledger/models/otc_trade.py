@@ -3,13 +3,16 @@ from uuid import uuid4
 
 from decouple import config
 from django.db import models
-from django.db.models import F
+from django.db.models import F, Sum
 
+from accounts.models import Account
 from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet
+from ledger.utils.external_price import SELL
 from ledger.utils.fields import get_amount_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.exceptions import NegativeGapRevenue
+from market.models import Trade
 from market.utils.order_utils import new_order
 from market.utils.trade import register_fee_transactions
 
@@ -39,6 +42,9 @@ class OTCTrade(models.Model):
     )
     execution_type = models.CharField(max_length=1, choices=((MARKET, 'market'), (PROVIDER, 'provider')))
 
+    gap_revenue = get_amount_field(default=0)
+    order_id = models.PositiveIntegerField(null=True, blank=True)
+
     def change_status(self, status: str):
         self.status = status
         self.save(update_fields=['status'])
@@ -52,14 +58,14 @@ class OTCTrade(models.Model):
         pipeline.new_trx(
             sender=from_asset.get_wallet(user, market=self.otc_request.market),
             receiver=from_asset.get_wallet(OTC_ACCOUNT, market=self.otc_request.market),
-            amount=self.otc_request.get_final_from_amount(),
+            amount=self.otc_request.get_paying_amount(),
             group_id=self.group_id,
             scope=Trx.TRADE
         )
         pipeline.new_trx(
             sender=to_asset.get_wallet(OTC_ACCOUNT, market=self.otc_request.market),
             receiver=to_asset.get_wallet(user, market=self.otc_request.market),
-            amount=self.otc_request.get_final_to_amount(),
+            amount=self.otc_request.get_receiving_amount(),
             group_id=self.group_id,
             scope=Trx.TRADE
         )
@@ -79,7 +85,7 @@ class OTCTrade(models.Model):
         from_asset = otc_request.from_asset
 
         from_wallet = from_asset.get_wallet(account, market=otc_request.market)
-        amount = otc_request.get_final_from_amount()
+        amount = otc_request.get_paying_amount()
         from_wallet.has_balance(amount, raise_exception=True)
         
         with WalletPipeline() as pipeline:
@@ -107,17 +113,30 @@ class OTCTrade(models.Model):
 
             fok_order = new_order(
                 symbol=symbol,
-                account=self.otc_request.account,
+                account=Account.objects.get(id=OTC_ACCOUNT),
                 amount=self.otc_request.amount,
                 price=self.otc_request.price,
                 side=self.otc_request.side,
                 time_in_force=Order.FOK
             )
 
+            self.order_id = fok_order.id
+
             if fok_order.status == Order.FILLED:
+                trades_net_rec = Trade.objects.filter(order_id=fok_order.id).aggregate(
+                    net_rec=Sum(F('amount') * F('price') * F('base_usdt_price') - F('fee_usdt_value'))
+                )['net_rec'] or 0
+
+                self.gap_revenue = self.otc_request.get_net_receiving_value() - trades_net_rec
+                if self.otc_request.side == SELL:
+                    self.gap_revenue = -self.gap_revenue
+
+                self.save(update_fields=['order_id', 'gap_revenue'])
                 self.accept(pipeline)
                 return True
-            
+            else:
+                self.save(update_fields=['order_id'])
+
         return False
 
     def try_provider_fill(self):

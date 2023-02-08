@@ -136,15 +136,13 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         return otc.get_expire_time()
 
     def get_paying_amount(self, otc_request: OTCRequest) -> Decimal:
-        return otc_request.get_final_from_amount()
+        return otc_request.get_paying_amount()
 
     def get_receiving_amount(self, otc_request: OTCRequest) -> Decimal:
-        return otc_request.get_final_to_amount()
+        return otc_request.get_receiving_amount()
 
     def get_net_receiving_amount(self, otc_request: OTCRequest) -> Decimal:
-        rec = self.get_receiving_amount(otc_request)
-        fee = otc_request.fee_amount
-        return rec - fee
+        return otc_request.get_net_receiving_amount()
 
     class Meta:
         model = OTCRequest

@@ -218,7 +218,7 @@ class OTCTradeAdmin(admin.ModelAdmin):
 
     def get_otc_trade_from_amount(self, otc_trade: models.OTCTrade):
         return humanize_number(
-            otc_trade.otc_request.from_asset.get_presentation_amount(otc_trade.otc_request.get_final_from_amount())
+            otc_trade.otc_request.from_asset.get_presentation_amount(otc_trade.otc_request.get_paying_amount())
         )
 
     get_otc_trade_from_amount.short_description = 'مقدار پایه'
