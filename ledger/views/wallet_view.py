@@ -27,8 +27,6 @@ class AssetListSerializer(serializers.ModelSerializer):
     balance_irt = serializers.SerializerMethodField()
     balance_usdt = serializers.SerializerMethodField()
 
-    sell_price_irt = serializers.SerializerMethodField()
-    buy_price_irt = serializers.SerializerMethodField()
     can_deposit = serializers.SerializerMethodField()
     can_withdraw = serializers.SerializerMethodField()
 
@@ -130,8 +128,8 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'precision', 'free', 'free_irt', 'balance', 'balance_irt', 'balance_usdt', 'sell_price_irt',
-                  'buy_price_irt', 'can_deposit', 'can_withdraw', 'trade_enable', 'pin_to_top', 'market_irt_enable',
+        fields = ('symbol', 'precision', 'free', 'balance', 'balance_irt', 'balance_usdt',
+                  'can_deposit', 'can_withdraw', 'trade_enable', 'pin_to_top', 'market_irt_enable',
                   'name', 'name_fa', 'logo', 'original_symbol', 'original_name_fa', 'step_size')
         ref_name = 'ledger asset'
 
@@ -248,8 +246,6 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-
-        symbols = [a.symbol for a in queryset]
 
         serializer = self.get_serializer(queryset, many=True)
         data = serializer.data
