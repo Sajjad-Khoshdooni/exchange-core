@@ -58,6 +58,8 @@ def get_withdraw_risks(transfer: Transfer) -> list:
 
     transfers = Transfer.objects.filter(
         wallet__account=transfer.wallet.account
+    ).exclude(
+        status=Transfer.CANCELED
     )
 
     withdraws = transfers.filter(deposit=False)

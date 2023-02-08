@@ -37,7 +37,7 @@ class Wallet:
 class Withdraw:
     tracking_id: str
     status: str
-    receive_datetime: Union[datetime, None]
+    receive_datetime: Union[datetime, None] = None
     message: str = ''
 
 
@@ -64,7 +64,7 @@ class FiatWithdraw:
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
         raise NotImplementedError
 
-    def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
+    def get_withdraw_status(self, request_id: int, provider_id: str) -> Withdraw:
         raise NotImplementedError
 
     def get_estimated_receive_time(self, created: datetime):
@@ -94,7 +94,6 @@ class PayirChannel(FiatWithdraw):
             'url': url,
             'timeout': timeout,
             'headers': {'Authorization': 'Bearer ' + config('PAY_IR_TOKEN')},
-            'timeout': 30
             # 'proxies': {
             #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
             #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
@@ -152,7 +151,7 @@ class PayirChannel(FiatWithdraw):
             receive_datetime=self.get_estimated_receive_time(timezone.now())
         )
 
-    def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
+    def get_withdraw_status(self, request_id: int, provider_id: str) -> Withdraw:
         data = self.collect_api(f'/api/v2/cashouts/track/{request_id}')
 
         mapping_status = {
@@ -162,7 +161,11 @@ class PayirChannel(FiatWithdraw):
 
         }
         status = data['cashout']['status']
-        return mapping_status.get(int(status), self.PENDING)
+
+        return Withdraw(
+            tracking_id='',
+            status=mapping_status.get(int(status), self.PENDING)
+        )
 
     def get_estimated_receive_time(self, created: datetime):
         request_date = created.astimezone()
@@ -331,24 +334,34 @@ class ZibalChannel(FiatWithdraw):
             receive_datetime=receive_datetime.replace(tzinfo=pytz.utc).astimezone()
         )
 
-    def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
+    def get_withdraw_status(self, request_id: int, provider_id: str) -> Withdraw:
         data = self.collect_api(f'/v1/report/checkout/inquire', method='POST', data={
             "walletId": self.get_wallet_id(),
             'uniqueCode': str(request_id)
         })
 
-        if data['type'] == 'canceledCheckout':
-            return self.CANCELED
-        elif data['type'] == 'checkoutQueue':
-            return self.PENDING
+        if 'details' in data:
+            details = data['details'][0]
+        else:
+            details = {}
 
-        mapping_status = {
-            0: self.DONE,
-            1: self.CANCELED,
-            2: self.CANCELED,
-        }
-        status = data['details'][0].get('checkoutStatus', self.PENDING)
-        return mapping_status.get(status, self.PENDING)
+        if data['type'] == 'canceledCheckout':
+            status = self.CANCELED
+        elif data['type'] == 'checkoutQueue':
+            status = self.PENDING
+        else:
+            mapping_status = {
+                0: self.DONE,
+                1: self.CANCELED,
+                2: self.CANCELED,
+            }
+            status = details.get('checkoutStatus', self.PENDING)
+            status = mapping_status.get(int(status), self.PENDING)
+
+        return Withdraw(
+            tracking_id=details.get('refCode'),
+            status=status
+        )
 
     def get_estimated_receive_time(self, created: datetime):
         request_date = created.astimezone()
