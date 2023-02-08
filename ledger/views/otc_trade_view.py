@@ -47,9 +47,9 @@ class OTCInfoView(APIView):
 
         if not from_amount and not to_amount:
             if from_asset.symbol in (Asset.IRT, Asset.USDT):
-                from_amount = 1
+                from_amount = Decimal(1)
             else:
-                to_amount = 1
+                to_amount = Decimal(1)
 
         otc = OTCRequest.get_otc_request(
             account=self.request.user.account,
