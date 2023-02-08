@@ -19,6 +19,9 @@ application = get_wsgi_application()
 
 logger = logging.getLogger(__name__)
 
+logging.getLogger("websockets").setLevel(logging.ERROR)
+
+
 DEPTH_CLIENTS = []
 ORDERS_STATUS_CLIENTS = []
 TRADES_CLIENTS = []
@@ -59,6 +62,7 @@ async def add_client(websocket, path):
                 else:
                     continue
                 if is_added[request]:
+                    is_added[request] = False
                     clients.remove(websocket)
             break
 
