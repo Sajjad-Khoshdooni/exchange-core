@@ -14,6 +14,7 @@ from ledger.utils.otc import get_trading_pair, get_otc_spread, spread_to_multipl
 from ledger.utils.precision import ceil_precision, floor_precision
 from ledger.utils.random import secure_uuid4
 from market.models import BaseTrade
+from market.utils.trade import get_fee_info
 
 
 class OTCRequest(BaseTrade):
@@ -146,6 +147,12 @@ class OTCRequest(BaseTrade):
 
         otc_request.amount = floor_precision(amount, symbol.step_size)
 
+        fee_info = get_fee_info(otc_request)
+
+        otc_request.fee_amount = fee_info.trader_fee_amount
+        otc_request.fee_usdt_value = fee_info.trader_fee_value
+        otc_request.fee_revenue = fee_info.fee_revenue
+
         return otc_request
 
     def get_expire_time(self) -> datetime:
@@ -163,4 +170,10 @@ class OTCRequest(BaseTrade):
                 from_amount__gte=0,
                 to_amount__gte=0,
             ), name='check_ledger_otc_request_amounts', ),
+
+            CheckConstraint(check=Q(
+                amount__gte=0,
+                price__gte=0,
+                fee_amount__gte=0,
+            ), name='otc_request_check_trade_amounts', ),
         ]

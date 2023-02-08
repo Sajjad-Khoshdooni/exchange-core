@@ -7,9 +7,11 @@ from django.db.models import F
 
 from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet
+from ledger.utils.fields import get_amount_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.exceptions import NegativeGapRevenue
 from market.utils.order_utils import new_order
+from market.utils.trade import register_fee_transactions
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,6 @@ class OTCTrade(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
     otc_request = models.OneToOneField('ledger.OTCRequest', on_delete=models.PROTECT)
-    # revenue = get_amount_field(default=0, validators=())
 
     group_id = models.UUIDField(default=uuid4, db_index=True)
 
@@ -37,9 +38,6 @@ class OTCTrade(models.Model):
         choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE), (REVERT, REVERT)],
     )
     execution_type = models.CharField(max_length=1, choices=((MARKET, 'market'), (PROVIDER, 'provider')))
-
-    # fee = get_amount_field()
-    # fee_usdt_value = get_amount_field()
 
     def change_status(self, status: str):
         self.status = status
@@ -143,6 +141,14 @@ class OTCTrade(models.Model):
 
         self.change_status(self.DONE)
         self.create_ledger(pipeline)
+
+        register_fee_transactions(
+            pipeline=pipeline,
+            trade=self.otc_request,
+            wallet=self.otc_request.symbol.asset.get_wallet(self.otc_request.account),
+            base_wallet=self.otc_request.symbol.base_asset.get_wallet(self.otc_request.account),
+            group_id=self.group_id
+        )
 
         # updating trade_volume_irt of accounts
         account = self.otc_request.account

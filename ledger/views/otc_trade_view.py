@@ -13,7 +13,6 @@ from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired
 from ledger.utils.fields import get_serializer_amount_field
-from market.utils.trade import get_trader_fee
 
 
 class OTCInfoView(APIView):
@@ -72,7 +71,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     price = get_serializer_amount_field(read_only=True)
     asset = serializers.CharField(source='symbol.asset.symbol', read_only=True)
     base_asset = serializers.CharField(source='symbol.base_asset.symbol', read_only=True)
-    fee = serializers.SerializerMethodField()
+    fee = get_serializer_amount_field(source='fee_amount', read_only=True)
 
     def validate(self, attrs):
         from_symbol = attrs['from_asset']['symbol']
@@ -136,9 +135,6 @@ class OTCRequestSerializer(serializers.ModelSerializer):
     def get_expire(self, otc: OTCRequest):
         return otc.get_expire_time()
 
-    def get_fee(self, otc_request: OTCRequest) -> Decimal:
-        return get_trader_fee(otc_request)
-
     def get_paying_amount(self, otc_request: OTCRequest) -> Decimal:
         return otc_request.get_final_from_amount()
 
@@ -147,7 +143,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
 
     def get_net_receiving_amount(self, otc_request: OTCRequest) -> Decimal:
         rec = self.get_receiving_amount(otc_request)
-        fee = self.get_fee(otc_request)
+        fee = otc_request.fee_amount
         return rec - fee
 
     class Meta:

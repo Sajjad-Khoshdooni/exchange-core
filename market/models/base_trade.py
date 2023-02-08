@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 
 from django.db import models
+from django.db.models import CheckConstraint, Q
 
 from ledger.models import Wallet
 from ledger.utils.fields import get_amount_field
@@ -28,6 +29,10 @@ class BaseTrade(models.Model):
     )
     base_irt_price = get_amount_field()
     base_usdt_price = get_amount_field(default=Decimal(1))
+
+    fee_amount = get_amount_field()
+    fee_usdt_value = get_amount_field()
+    fee_revenue = get_amount_field()
 
     @property
     def irt_value(self):

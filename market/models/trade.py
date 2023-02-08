@@ -29,9 +29,6 @@ class Trade(BaseTrade):
 
     order_id = models.PositiveIntegerField(db_index=True)
 
-    fee_amount = get_amount_field()
-    fee_usdt_value = get_amount_field()
-
     trade_source = models.CharField(
         max_length=8,
         choices=SOURCE_CHOICES,
