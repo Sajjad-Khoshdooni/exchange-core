@@ -12,6 +12,7 @@ from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecre
 from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired
+from ledger.utils.external_price import BUY
 from ledger.utils.fields import get_serializer_amount_field
 
 
@@ -64,6 +65,7 @@ class OTCInfoView(APIView):
             'asset': otc.symbol.asset.symbol,
             'side': otc.side,
             'price': otc.price,
+            'to_price': otc.price if otc.side == BUY else 1 / otc.price,
         })
 
 
