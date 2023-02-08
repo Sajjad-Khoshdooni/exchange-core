@@ -219,7 +219,7 @@ class OTCTradeAdmin(admin.ModelAdmin):
 
     @admin.display(description='value')
     def get_value(self, otc_trade: models.OTCTrade):
-        return humanize_number(otc_trade.otc_request.usdt_value)
+        return humanize_number(round(otc_trade.otc_request.usdt_value, 2))
 
     @admin.action(description='Accept Trade')
     def accept_trade(self, request, queryset):

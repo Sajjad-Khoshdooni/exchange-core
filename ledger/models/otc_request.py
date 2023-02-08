@@ -72,7 +72,7 @@ class OTCRequest(BaseTrade):
 
         pair = get_trading_pair(from_asset, to_asset, from_amount, to_amount)
         assert pair.base.symbol in (Asset.IRT, Asset.USDT)
-        from market.models import PairSymbol, BaseTrade
+        from market.models import PairSymbol
 
         symbol = PairSymbol.objects.get(asset=pair.coin, base_asset=pair.base)
 
