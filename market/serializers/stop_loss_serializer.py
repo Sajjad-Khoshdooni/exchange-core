@@ -8,6 +8,7 @@ from rest_framework.generics import get_object_or_404
 
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet
+from ledger.utils.external_price import BUY
 from ledger.utils.precision import floor_precision, decimal_to_str
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import StopLoss, Order, PairSymbol

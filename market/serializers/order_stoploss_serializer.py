@@ -5,6 +5,7 @@ from typing import Union
 from rest_framework import serializers
 
 from ledger.models import Wallet
+from ledger.utils.external_price import BUY
 from ledger.utils.precision import floor_precision, decimal_to_str
 from market.models import Order, StopLoss
 

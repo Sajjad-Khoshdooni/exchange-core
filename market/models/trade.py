@@ -7,9 +7,10 @@ from django.db import models
 from django.db.models import F, CheckConstraint, Q, Sum, Max, Min
 from django.utils import timezone
 
+from ledger.utils.external_price import BUY
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, decimal_to_str
-from market.models import Order, BaseTrade
+from market.models import BaseTrade
 
 logger = logging.getLogger(__name__)
 
@@ -55,10 +56,6 @@ class Trade(BaseTrade):
     def __str__(self):
         return f'{self.symbol}-{self.side} ' \
                f'[p:{self.price:.2f}] (a:{self.amount:.5f})'
-
-    @property
-    def irt_value(self):
-        return self.amount * self.price * self.base_irt_price
 
     @classmethod
     def get_last(cls, symbol, max_datetime=None):

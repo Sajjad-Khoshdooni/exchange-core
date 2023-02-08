@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import APIException, NotFound, PermissionDenied
 
+from ledger.utils.external_price import BUY
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import CancelRequest, Order, StopLoss
 

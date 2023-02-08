@@ -1,15 +1,15 @@
 import logging
 from uuid import uuid4
 
+from decouple import config
 from django.db import models
+from django.db.models import F
 
-from accounts.models import Account
 from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet
-from ledger.utils.fields import get_amount_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.exceptions import NegativeGapRevenue
-from ledger.utils.otc import get_trading_pair
+from market.utils.order_utils import new_order
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +18,12 @@ class TokenExpired(Exception):
     pass
 
 
+OTC_ACCOUNT = config('OTC_ACCOUNT', cast=int)
+
+
 class OTCTrade(models.Model):
     PENDING, CANCELED, DONE, REVERT = 'pending', 'canceled', 'done', 'revert'
+    MARKET, PROVIDER = 'm', 'p'
 
     created = models.DateTimeField(auto_now_add=True)
     otc_request = models.OneToOneField('ledger.OTCRequest', on_delete=models.PROTECT)
@@ -32,16 +36,16 @@ class OTCTrade(models.Model):
         max_length=8,
         choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE), (REVERT, REVERT)],
     )
+    execution_type = models.CharField(max_length=1, choices=((MARKET, 'market'), (PROVIDER, 'provider')))
 
     # fee = get_amount_field()
     # fee_usdt_value = get_amount_field()
 
     def change_status(self, status: str):
         self.status = status
-        self.save()
+        self.save(update_fields=['status'])
 
     def create_ledger(self, pipeline: WalletPipeline):
-        system = Account.system()
         user = self.otc_request.account
 
         from_asset = self.otc_request.from_asset
@@ -49,13 +53,13 @@ class OTCTrade(models.Model):
 
         pipeline.new_trx(
             sender=from_asset.get_wallet(user, market=self.otc_request.market),
-            receiver=from_asset.get_wallet(system, market=self.otc_request.market),
+            receiver=from_asset.get_wallet(OTC_ACCOUNT, market=self.otc_request.market),
             amount=self.otc_request.get_final_from_amount(),
             group_id=self.group_id,
             scope=Trx.TRADE
         )
         pipeline.new_trx(
-            sender=to_asset.get_wallet(system, market=self.otc_request.market),
+            sender=to_asset.get_wallet(OTC_ACCOUNT, market=self.otc_request.market),
             receiver=to_asset.get_wallet(user, market=self.otc_request.market),
             amount=self.otc_request.get_final_to_amount(),
             group_id=self.group_id,
@@ -79,53 +83,79 @@ class OTCTrade(models.Model):
         from_wallet = from_asset.get_wallet(account, market=otc_request.market)
         amount = otc_request.get_final_from_amount()
         from_wallet.has_balance(amount, raise_exception=True)
-
-        with WalletPipeline() as pipeline:  # type: WalletPipeline
+        
+        with WalletPipeline() as pipeline:
             otc_trade = OTCTrade.objects.create(
                 otc_request=otc_request,
+                execution_type=OTCTrade.MARKET,
             )
-            pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount, reason=WalletPipeline.TRADE)
+            
+            fok_success = otc_trade.try_fok_fill(pipeline)
+            
+            if not fok_success:
+                otc_trade.execution_type = OTCTrade.PROVIDER
+                otc_trade.save(update_fields=['execution_type'])
+                pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount, reason=WalletPipeline.TRADE)
 
-        otc_trade.hedge_and_finalize()
+        if not fok_success:
+            otc_trade.try_provider_fill()
 
         return otc_trade
 
-    def try_fok_fill(self):
-        pass
+    def try_fok_fill(self, pipeline: WalletPipeline) -> bool:
+        symbol = self.otc_request.symbol
+        if symbol.enable:
+            from market.models import Order
 
-    def hedge_and_finalize(self):
+            fok_order = new_order(
+                symbol=symbol,
+                account=self.otc_request.account,
+                amount=self.otc_request.amount,
+                price=self.otc_request.price,
+                side=self.otc_request.side,
+                time_in_force=Order.FOK
+            )
+
+            if fok_order.status == Order.FILLED:
+                self.accept(pipeline)
+                return True
+            
+        return False
+
+    def try_provider_fill(self):
 
         if self.otc_request.account.is_ordinary_user():
             try:
-                self.accept()
+                self._hedge_with_provider()
             except (HedgeError, NegativeGapRevenue):
                 logger.exception('Error in hedging otc request')
                 self.cancel()
                 raise
 
-    def cancel(self):
+    def cancel(self,):
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             pipeline.release_lock(self.group_id)
             self.change_status(self.CANCELED)
 
-    def accept(self, hedge: bool = True):
-        with WalletPipeline() as pipeline:  # type: WalletPipeline
+    def accept(self, pipeline: WalletPipeline):
+        if self.execution_type == self.PROVIDER:
             pipeline.release_lock(self.group_id)
-            from market.models import Trade
-            self.change_status(self.DONE)
-            self.create_ledger(pipeline)
 
-            # # updating trade_volume_irt of accounts
-            # accounts = [trades_pair.maker_trade.account, trades_pair.taker_trade.account]
-            #
-            # for account in accounts:
-            #     if not account.is_system():
-            #         account.trade_volume_irt = F('trade_volume_irt') + trades_pair.maker_trade.irt_value
-            #         account.save(update_fields=['trade_volume_irt'])
-            #         account.refresh_from_db()
-            #
-            #         from gamify.utils import check_prize_achievements, Task
-            #         check_prize_achievements(account, Task.TRADE)
+        self.change_status(self.DONE)
+        self.create_ledger(pipeline)
+
+        # updating trade_volume_irt of accounts
+        account = self.otc_request.account
+        account.trade_volume_irt = F('trade_volume_irt') + self.otc_request.irt_value
+        account.save(update_fields=['trade_volume_irt'])
+        account.refresh_from_db()
+
+        from gamify.utils import check_prize_achievements, Task
+        check_prize_achievements(account, Task.TRADE)
+
+    def _hedge_with_provider(self, hedge: bool = True):
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
+            self.accept(pipeline)
 
             if hedge:
                 req = self.otc_request

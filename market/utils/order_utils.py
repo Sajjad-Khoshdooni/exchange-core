@@ -8,6 +8,7 @@ from django.db.models import Max, Min, F, Q, OuterRef, Subquery, DecimalField, S
 
 from accounts.models import Account
 from ledger.models import Wallet, Asset
+from ledger.utils.external_price import BUY, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
 

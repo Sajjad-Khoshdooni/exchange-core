@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.throttle import BursAPIRateThrottle
+from ledger.utils.external_price import BUY, SELL
 from ledger.utils.precision import floor_precision, decimal_to_str
 from market.models import PairSymbol, Order, Trade
 

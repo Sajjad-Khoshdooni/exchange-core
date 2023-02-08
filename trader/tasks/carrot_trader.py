@@ -8,7 +8,7 @@ from decouple import config
 
 from accounts.models import Account
 from ledger.models import Asset
-from ledger.utils.external_price import get_external_price
+from ledger.utils.external_price import get_external_price, BUY, SELL
 from ledger.utils.otc import spread_to_multiplier
 from ledger.utils.precision import floor_precision
 from market.models import PairSymbol, Order

@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from ledger.models import Asset
 from ledger.models.asset import AssetSerializerMini
+from ledger.utils.external_price import BUY
 from ledger.utils.precision import floor_precision, decimal_to_str
 from market.models import Trade, Order
 

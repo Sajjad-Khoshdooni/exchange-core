@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 
 from accounts.models import Account
-from ledger.models import Asset
+from ledger.models import Asset, OTCRequest, OTCTrade
 from ledger.utils.test import new_account, set_price
 
 
@@ -52,3 +52,7 @@ class OTCTestCase(TestCase):
 
         self.assertGreater(self.wallet_btc.balance, 0)
         self.assertEqual(self.wallet_usdt.locked, 0)
+
+        otc_request = OTCRequest.objects.get(token=token)
+        otc_trade = otc_request.otctrade
+        self.assertEqual(otc_trade.execution_type, OTCTrade.PROVIDER)

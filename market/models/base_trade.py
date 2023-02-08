@@ -29,5 +29,9 @@ class BaseTrade(models.Model):
     base_irt_price = get_amount_field()
     base_usdt_price = get_amount_field(default=Decimal(1))
 
+    @property
+    def irt_value(self):
+        return self.amount * self.price * self.base_irt_price
+
     class Meta:
         abstract = True
