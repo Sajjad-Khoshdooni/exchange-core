@@ -107,6 +107,8 @@ class OTCTrade(models.Model):
         return otc_trade
 
     def try_fok_fill(self, pipeline: WalletPipeline) -> bool:
+        assert self.execution_type == self.MARKET
+
         symbol = self.otc_request.symbol
         if symbol.enable:
             from market.models import Order
@@ -143,7 +145,7 @@ class OTCTrade(models.Model):
 
         if self.otc_request.account.is_ordinary_user():
             try:
-                self._hedge_with_provider()
+                self.hedge_with_provider()
             except (HedgeError, NegativeGapRevenue):
                 logger.exception('Error in hedging otc request')
                 self.cancel()
@@ -178,7 +180,9 @@ class OTCTrade(models.Model):
         from gamify.utils import check_prize_achievements, Task
         check_prize_achievements(account, Task.TRADE)
 
-    def _hedge_with_provider(self, hedge: bool = True):
+    def hedge_with_provider(self, hedge: bool = True):
+        assert self.execution_type == self.PROVIDER
+
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             self.accept(pipeline)
 

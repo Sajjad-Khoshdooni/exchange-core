@@ -189,8 +189,9 @@ class DepositAddressAdmin(admin.ModelAdmin):
 
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'from_asset', 'to_asset', 'from_amount', 'to_amount', 'token')
+    list_display = ('created', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount', 'fee_revenue')
     readonly_fields = ('account', )
+    search_fields = ('token', )
 
 
 class OTCUserFilter(SimpleListFilter):
@@ -210,36 +211,27 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request', 'status', 'get_value', )
+    list_display = ('created', 'otc_request', 'status', 'get_value', 'execution_type', 'gap_revenue')
     list_filter = (OTCUserFilter, 'status')
-    search_fields = ('group_id', )
+    search_fields = ('group_id', 'order_id')
     readonly_fields = ('otc_request', )
     actions = ('accept_trade', 'accept_trade_without_hedge', 'cancel_trade')
 
-    def get_otc_trade_from_amount(self, otc_trade: models.OTCTrade):
-        return humanize_number(
-            otc_trade.otc_request.from_asset.get_presentation_amount(otc_trade.otc_request.get_paying_amount())
-        )
-
-    get_otc_trade_from_amount.short_description = 'مقدار پایه'
-
     @admin.display(description='value')
     def get_value(self, otc_trade: models.OTCTrade):
-        return humanize_number(int(
-            otc_trade.otc_request.price * otc_trade.otc_request.base_usdt_price
-        ))
+        return humanize_number(otc_trade.otc_request.usdt_value)
 
-    @admin.action(description='تایید معامله')
+    @admin.action(description='Accept Trade')
     def accept_trade(self, request, queryset):
         for otc in queryset.filter(status='pending'):
             otc.accept()
 
-    @admin.action(description='تایید معامله بدون هج')
+    @admin.action(description='Accept without Hedge')
     def accept_trade_without_hedge(self, request, queryset):
         for otc in queryset.filter(status='pending'):
             otc.accept(hedge=False)
 
-    @admin.action(description='لغو معامله')
+    @admin.action(description='Cancel Trade')
     def cancel_trade(self, request, queryset):
         for otc in queryset.filter(status='pending'):
             otc.cancel()
