@@ -48,8 +48,8 @@ class OTCInfoView(APIView):
             account=self.request.user.account,
             from_asset=from_asset,
             to_asset=to_asset,
-            from_amount=from_amount,
-            to_amount=to_amount,
+            from_amount=from_amount and Decimal(from_amount),
+            to_amount=to_amount and Decimal(to_amount),
         )
 
         return Response({
