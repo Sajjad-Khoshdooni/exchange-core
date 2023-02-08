@@ -181,6 +181,3 @@ class MarketStreamCache:
 
         if self.market_pipeline:
             self.market_pipeline.execute()
-
-
-"{\"buy_price\": \"323.10000000\", \"buy_amount\": \"0.20846300\", \"sell_price\": \"349.90000000\", \"sell_amount\": \"0.20846300\"}"
