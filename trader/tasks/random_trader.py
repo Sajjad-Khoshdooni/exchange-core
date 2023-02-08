@@ -7,8 +7,9 @@ from celery import shared_task
 from decouple import config
 
 from accounts.models import Account
+from ledger.utils.external_price import BUY, SELL
 from market.models import PairSymbol
-from market.models.order import CancelOrder, Order
+from market.models.order import CancelOrder
 from market.utils.order_utils import get_market_top_price_amounts
 from market.utils.redis import get_daily_order_size_factors
 from trader.bots.utils import random_buy, random_sell

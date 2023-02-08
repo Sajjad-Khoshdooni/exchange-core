@@ -10,7 +10,7 @@ from django.db.models import Max, Min, Count
 
 from ledger.utils.external_price import BUY, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order, PairSymbol, Trade
+from market.models import Order, PairSymbol
 from market.utils.order_utils import get_market_top_prices
 from market.utils.redis import set_top_prices, set_open_orders_count, get_open_orders_count, set_top_depth_prices, \
     get_top_depth_prices

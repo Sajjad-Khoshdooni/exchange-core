@@ -62,7 +62,7 @@ class TradeHistoryView(ListAPIView):
         return Trade.objects.filter(
             is_maker=True,
             symbol=pair_symbol
-        ).exclude(trade_source=Trade.OTC).order_by('-created')[:15]
+        ).order_by('-created')[:15]
 
     def list(self, request, *args, **kwargs):
         serializer = TradeSerializer(self.get_queryset(), many=True)

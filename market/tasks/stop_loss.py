@@ -3,6 +3,7 @@ import logging
 from celery import shared_task
 from django.utils import timezone
 
+from ledger.utils.external_price import BUY, SELL
 from market.models import Order, Trade
 from market.models.order import CancelOrder
 from market.models.stop_loss import StopLoss
