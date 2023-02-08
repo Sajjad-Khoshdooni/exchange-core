@@ -41,7 +41,7 @@ def populate_amounts(apps, schema_editor):
         o.amount = coin_amount
         o.price = base_amount / coin_amount
         o.fee_amount = Decimal('0.002') * to_amount
-        o.fee_revenue = 0
+        o.fee_usdt_value = o.fee_revenue = 0
         o.side = side
 
         o.save()
