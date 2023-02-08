@@ -3,18 +3,17 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from ledger.models import Asset
-from ledger.models.asset import AssetSerializerMini
 from ledger.utils.external_price import BUY
 from ledger.utils.precision import floor_precision, decimal_to_str
-from market.models import Trade, Order
+from market.models import Trade, BaseTrade
 
 
 class AccountTradeSerializer(serializers.ModelSerializer):
-    coin = serializers.CharField(source='symbol.asset.symbol')
-    pair = serializers.CharField(source='symbol.base_asset.symbol')
-    pair_amount = serializers.SerializerMethodField()
+    asset = serializers.CharField(source='symbol.asset.symbol')
+    base_asset = serializers.CharField(source='symbol.base_asset.symbol')
+    base_amount = serializers.SerializerMethodField()
 
-    def get_pair_amount(self, trade: Trade):
+    def get_base_amount(self, trade: Trade):
         return trade.price * trade.amount
 
     def to_representation(self, trade: Trade):
@@ -24,7 +23,8 @@ class AccountTradeSerializer(serializers.ModelSerializer):
             amount = floor_precision(trade.symbol.min_trade_quantity, trade.symbol.step_size)
         data['amount'] = str(amount)
         data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), trade.symbol.tick_size))
-        data['pair_amount'] = decimal_to_str(floor_precision(Decimal(data['pair_amount']), trade.symbol.tick_size))
+        data['base_amount'] = decimal_to_str(floor_precision(Decimal(data['base_amount']), trade.symbol.tick_size))
+
         if 'fee_amount' in data:
             if data['side'] == BUY:
                 data['fee_amount'] = trade.symbol.asset.get_presentation_amount(data['fee_amount'])
@@ -36,8 +36,8 @@ class AccountTradeSerializer(serializers.ModelSerializer):
         return data
 
     class Meta:
-        model = Trade
-        fields = ('created', 'coin', 'pair', 'side', 'amount', 'price', 'pair_amount', 'fee_amount', 'market')
+        model = BaseTrade
+        fields = ('created', 'asset', 'base_asset', 'side', 'amount', 'price', 'base_amount', 'fee_amount', 'market')
 
 
 class TradeSerializer(serializers.ModelSerializer):

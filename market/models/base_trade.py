@@ -28,7 +28,7 @@ class BaseTrade(models.Model):
         choices=Wallet.MARKET_CHOICES,
     )
     base_irt_price = get_amount_field()
-    base_usdt_price = get_amount_field(default=Decimal(1))
+    base_usdt_price = get_amount_field()
 
     fee_amount = get_amount_field()  # trader fee amount
     fee_usdt_value = get_amount_field()  # trader fee value
