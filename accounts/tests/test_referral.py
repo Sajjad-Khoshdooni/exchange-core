@@ -4,11 +4,12 @@ from django.test import TestCase
 
 from accounts.models import Account, Referral
 from accounts.utils.test import create_referral, set_referred_by
-from ledger.models import Trx, Asset
+from ledger.models import Trx, Asset, OTCRequest
 from ledger.utils.external_price import BUY, SELL
 from ledger.utils.test import new_account, set_price
-from market.models import PairSymbol, Trade
+from market.models import PairSymbol, Trade, BaseTrade
 from market.utils.order_utils import new_order
+from market.utils.trade import get_fee_info
 
 
 class ReferralTestCase(TestCase):
@@ -169,3 +170,55 @@ class ReferralTestCase(TestCase):
                 '100'))) *
             self.usdtirt.taker_fee * trade_2.amount
         )
+
+    def test_fee_info(self):
+        s = PairSymbol.objects.create(
+            name='TESTUSDT',
+            asset=Asset.objects.create(symbol='TEST'),
+            base_asset=self.usdt,
+            taker_fee=Decimal('0.003'),
+            maker_fee=Decimal('0')
+        )
+
+        referrer = Account.objects.create()
+        ref = Referral.objects.create(owner=referrer, owner_share_percent=20)
+        a = Account.objects.create(referred_by=ref)
+
+        trade = Trade(
+            side=BUY,
+            amount=100,
+            price=3000,
+            is_maker=True,
+            symbol=s,
+            account=a,
+            base_irt_price=40000,
+            base_usdt_price=1
+        )
+
+        info = get_fee_info(trade)
+        self.assertEqual(info.trader_fee_amount, 0)
+        self.assertEqual(info.trader_fee_value, 0)
+        self.assertEqual(info.fee_revenue, 0)
+        self.assertEqual(info.referrer_reward_irt, 0)
+
+        trade.side = SELL
+        info = get_fee_info(trade)
+        self.assertEqual(info.trader_fee_amount, 0)
+        self.assertEqual(info.trader_fee_value, 0)
+        self.assertEqual(info.fee_revenue, 0)
+        self.assertEqual(info.referrer_reward_irt, 0)
+
+        trade.is_maker = False
+        trade.side = BUY
+        info = get_fee_info(trade)
+        self.assertEqual(info.trader_fee_amount, Decimal('0.27'))
+        self.assertEqual(info.trader_fee_value, Decimal('810'))
+        self.assertEqual(info.fee_revenue, Decimal('630'))
+        self.assertEqual(info.referrer_reward_irt, Decimal('7200000'))
+
+        trade.side = SELL
+        info = get_fee_info(trade)
+        self.assertEqual(info.trader_fee_amount, Decimal('810'))
+        self.assertEqual(info.trader_fee_value, Decimal('810'))
+        self.assertEqual(info.fee_revenue, Decimal('630'))
+        self.assertEqual(info.referrer_reward_irt, Decimal('7200000'))
