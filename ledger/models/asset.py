@@ -9,7 +9,6 @@ from rest_framework import serializers
 from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
-from ledger.models.otc_trade import OTC_ACCOUNT
 from ledger.utils.precision import get_precision, get_presentation_amount
 
 
@@ -73,6 +72,7 @@ class Asset(models.Model):
     def get_wallet(self, account: Union[Account, int], market: str = Wallet.SPOT, variant: str = None,
                    expiration: datetime = None):
         assert market in Wallet.MARKETS
+        from ledger.models.otc_trade import OTC_ACCOUNT
 
         if isinstance(account, int):
             account_filter = {'account_id': account}
