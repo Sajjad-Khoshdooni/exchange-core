@@ -146,7 +146,7 @@ def update_cold_wallet_vaults(usdt_irt: Decimal):
     logger.info('updating cold & manual wallet vaults')
 
     for vault_item in VaultItem.objects.filter(vault__type__in=(Vault.COLD_WALLET, Vault.MANUAL)):
-        price = get_external_price(vault_item.coin, base_coin=Asset.USDT, side=BUY, allow_stale=True)
+        price = get_external_price(vault_item.coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
         vault_item.value_usdt = vault_item.balance * price
         vault_item.value_irt = vault_item.value_usdt * usdt_irt
         vault_item.save(update_fields=['value_usdt', 'value_irt'])
