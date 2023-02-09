@@ -36,7 +36,7 @@ def update_maker_orders():
     for depth in depth_orders:
         open_depth_orders_count[(depth['symbol'], depth['side'])] = depth['count'] or 0
 
-    last_trades_ts = dict(PairSymbol.objects.values('id', 'last_trade_time'))
+    last_trades = dict(PairSymbol.objects.values_list('id', 'last_trade_time'))
 
     for symbol in PairSymbol.objects.filter(market_maker_enabled=True, enable=True, asset__enable=True):
         symbol_top_prices = {
@@ -55,10 +55,16 @@ def update_maker_orders():
         }
         set_open_orders_count(symbol.id, symbol_open_depth_orders_count)
 
+        last_trade_ts = None
+        last_trade = last_trades.get(symbol.id)
+
+        if last_trade:
+            last_trade_ts = last_trade.timestamp()
+
         update_symbol_maker_orders.apply_async(
             args=(
                 PairSymbol.IdName(id=symbol.id, name=symbol.name, tick_size=symbol.tick_size),
-                last_trades_ts.get(symbol.id)
+                last_trade_ts
             ), queue='market'
         )
 
