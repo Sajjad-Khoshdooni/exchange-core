@@ -91,7 +91,7 @@ class Account(models.Model):
         total = Decimal('0')
 
         for wallet in wallets:
-            price = get_external_price(coin=wallet.asset.symbol, base_coin=Asset.USDT, side=side, allow_stale=True)
+            price = get_external_price(coin=wallet.asset.symbol, base_coin=Asset.USDT, side=side, allow_stale=True) or 0
             balance = wallet.balance * price
 
             if balance:
@@ -100,7 +100,7 @@ class Account(models.Model):
         return total
 
     def get_total_balance_irt(self, market: str = None, side: str = BUY):
-        from ledger.models import Wallet
+        from ledger.models import Wallet, Asset
 
         wallets = Wallet.objects.filter(account=self).prefetch_related('asset')
 
@@ -115,7 +115,8 @@ class Account(models.Model):
             if wallet.balance == 0:
                 continue
 
-            balance = wallet.get_balance_irt(side)
+            price = get_external_price(coin=wallet.asset.symbol, base_coin=Asset.IRT, side=side, allow_stale=True) or 0
+            balance = wallet.balance * price
 
             if balance:
                 total += balance
