@@ -42,24 +42,24 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
                 logger.info('new order failed: empty order book %s' % symbol)
                 return
 
-    if amount < symbol.min_trade_quantity:
-        if raise_exception:
-            raise MinTradeError
-        else:
-            logger.info(
-                'new order failed: min_trade_quantity %s (%s < %s)' % (symbol, amount, symbol.min_trade_quantity))
-            return
-
-    if amount > symbol.max_trade_quantity:
-        if raise_exception:
-            raise MinTradeError
-        else:
-            logger.info('new order failed: max_trade_quantity')
-            return
-
     base_asset_symbol = symbol.base_asset.symbol
 
     if not pass_min_notional:
+        if amount < symbol.min_trade_quantity:
+            if raise_exception:
+                raise MinTradeError
+            else:
+                logger.info(
+                    'new order failed: min_trade_quantity %s (%s < %s)' % (symbol, amount, symbol.min_trade_quantity))
+                return
+
+        if amount > symbol.max_trade_quantity:
+            if raise_exception:
+                raise MinTradeError
+            else:
+                logger.info('new order failed: max_trade_quantity')
+                return
+
         if base_asset_symbol == Asset.IRT:
             min_notional = Order.MIN_IRT_ORDER_SIZE
         elif base_asset_symbol == Asset.USDT:
