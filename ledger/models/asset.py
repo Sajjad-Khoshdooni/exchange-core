@@ -9,6 +9,7 @@ from rest_framework import serializers
 from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
+from ledger.models.otc_trade import OTC_ACCOUNT
 from ledger.utils.precision import get_precision, get_presentation_amount
 
 
@@ -76,7 +77,7 @@ class Asset(models.Model):
         if isinstance(account, int):
             account_filter = {'account_id': account}
 
-            if account == SYSTEM_ACCOUNT_ID:
+            if account in (SYSTEM_ACCOUNT_ID, OTC_ACCOUNT):
                 account_type = Account.SYSTEM
             else:
                 account_type = Account.ORDINARY
