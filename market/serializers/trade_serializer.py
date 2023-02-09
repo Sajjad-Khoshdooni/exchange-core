@@ -32,7 +32,7 @@ class AccountTradeSerializer(serializers.ModelSerializer):
                 data['fee_amount'] = trade.symbol.asset.get_presentation_price_irt(data['fee_amount'])
             elif trade.symbol.base_asset.symbol == Asset.USDT:
                 data['fee_amount'] = trade.symbol.asset.get_presentation_price_usdt(data['fee_amount'])
-            data['fee_asset'] = data['coin'] if data['side'] == BUY else data['pair']
+            data['fee_asset'] = data['asset'] if data['side'] == BUY else data['base_asset']
         return data
 
     class Meta:
