@@ -54,7 +54,11 @@ def update_provider_vaults(now: datetime, usdt_irt: Decimal):
             balances = balances_data['balances']
             real_value = balances_data['real_value'] and Decimal(balances_data['real_value'])
 
-            prices = get_external_usdt_prices(coins=list(balances.keys()), side=BUY)
+            prices = get_external_usdt_prices(
+                coins=list(balances.keys()),
+                side=BUY,
+                allow_stale=True,
+            )
 
             for coin, balance in balances.items():
                 balance = Decimal(balance)
@@ -76,7 +80,11 @@ def update_hot_wallet_vault(now: datetime, usdt_irt: Decimal):
     logger.info('updating hotwallet vaults')
 
     data = get_internal_asset_deposits()
-    prices = get_external_usdt_prices(coins=list(data.keys()), side=BUY)
+    prices = get_external_usdt_prices(
+        coins=list(data.keys()),
+        side=BUY,
+        allow_stale=True
+    )
 
     vault, _ = Vault.objects.get_or_create(
         type=Vault.HOT_WALLET,
@@ -149,7 +157,7 @@ def update_cold_wallet_vaults(usdt_irt: Decimal):
 
 def update_reserved_assets_value(usdt_irt):
     coins = list(ReservedAsset.objects.values_list('coin', flat=True))
-    prices = get_external_usdt_prices(coins=coins, side=BUY)
+    prices = get_external_usdt_prices(coins=coins, side=BUY, allow_stale=True)
 
     for res in ReservedAsset.objects.all():
         res.value_usdt = res.amount * prices.get(res.coin, 0)
@@ -160,7 +168,12 @@ def update_reserved_assets_value(usdt_irt):
 def update_asset_prices():
     logger.info('updating asset prices')
 
-    prices = get_external_usdt_prices(coins=list(Asset.live_objects.values_list('symbol', flat=True)), side=BUY)
+    prices = get_external_usdt_prices(
+        coins=list(Asset.live_objects.values_list('symbol', flat=True)),
+        side=BUY,
+        allow_stale=True,
+        set_bulk_cache=True
+    )
 
     existing_assets = AssetPrice.objects.filter(coin__in=prices)
     existing_coins = set(existing_assets.values_list('coin', flat=True))

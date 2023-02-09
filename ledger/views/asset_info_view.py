@@ -176,7 +176,11 @@ class AssetsViewSet(ModelViewSet):
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
             ctx['cap_info'] = get_provider_requester().get_coins_info(symbols)
-            ctx['prices'] = get_external_usdt_prices(coins=symbols, side=BUY, allow_stale=True)
+            ctx['prices'] = get_external_usdt_prices(
+                coins=symbols,
+                side=BUY,
+                allow_stale=True,
+            )
             ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
 
         return ctx

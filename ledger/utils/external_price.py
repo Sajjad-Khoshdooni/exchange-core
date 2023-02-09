@@ -1,6 +1,5 @@
 import logging
 from dataclasses import dataclass
-from datetime import datetime
 from decimal import Decimal
 from json import JSONDecodeError
 from typing import Dict, List, Union
@@ -9,8 +8,6 @@ import requests
 from django.conf import settings
 from django.core.cache import cache
 from redis import Redis
-
-from ledger.utils.cache import cache_for
 
 logger = logging.getLogger(__name__)
 
@@ -94,10 +91,10 @@ def _fetch_redis_prices(coins: list, side: str = None, allow_stale: bool = False
     return results
 
 
-PRICES_CACHE_TIMEOUT = 10
+PRICES_CACHE_TIMEOUT = 30
 
 
-def get_external_usdt_prices(coins: list, side: str = None, allow_stale: bool = False) \
+def get_external_usdt_prices(coins: list, side: str = None, allow_stale: bool = False, set_bulk_cache: bool = False) \
         -> Dict[str, Decimal]:
 
     cache_key = 'prices:ext'
@@ -110,7 +107,7 @@ def get_external_usdt_prices(coins: list, side: str = None, allow_stale: bool = 
     prices = _fetch_redis_prices(coins, side, allow_stale=allow_stale)
     result = {r.coin: r.price for r in prices if r.price}
 
-    if allow_stale:
+    if set_bulk_cache:
         cache.set(cache_key, result, PRICES_CACHE_TIMEOUT)
 
     return result

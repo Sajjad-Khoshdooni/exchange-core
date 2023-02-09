@@ -222,7 +222,12 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
         if self.action == 'list':
             coins = list(self.get_queryset().values_list('symbol', flat=True))
 
-            ctx['prices'] = get_external_usdt_prices(coins=coins, side=SELL, allow_stale=True)
+            ctx['prices'] = get_external_usdt_prices(
+                coins=coins,
+                side=SELL,
+                allow_stale=True,
+                set_bulk_cache=True
+            )
             ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=True)
 
         return ctx

@@ -31,7 +31,12 @@ def create_snapshot():
 
     assets = Asset.live_objects.all()
 
-    prices = get_external_usdt_prices(coins=list(assets.values_list('symbol', flat=True)), side=BUY, allow_stale=True)
+    prices = get_external_usdt_prices(
+        coins=list(assets.values_list('symbol', flat=True)),
+        side=BUY,
+        allow_stale=True,
+        set_bulk_cache=True
+    )
 
     for asset in assets:
         asset_snapshots.append(
