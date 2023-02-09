@@ -10,7 +10,8 @@ def populate_amounts(apps, schema_editor):
     OTCRequest = apps.get_model('ledger', 'OTCRequest')
     PairSymbol = apps.get_model('market', 'PairSymbol')
 
-    symbols = list(PairSymbol.objects.select_for_update())
+    symbols = list(PairSymbol.objects.select_for_update().values_list('asset', 'base_asset'))
+    symbols_dict = {(s.asset, s.base_asset): s for s in symbols}
 
     for o in OTCRequest.objects.all():
         from_asset = o.from_asset
@@ -39,7 +40,7 @@ def populate_amounts(apps, schema_editor):
             o.base_irt_price = 35000
             o.base_usdt_price = 1
 
-        o.symbol = PairSymbol.objects.get(asset=asset, base_asset=base_asset)
+        o.symbol = symbols_dict[asset, base_asset]
         o.amount = coin_amount
         o.price = base_amount / coin_amount
         o.fee_amount = Decimal('0.002') * to_amount
