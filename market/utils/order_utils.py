@@ -30,7 +30,7 @@ class MinNotionalError(Exception):
 def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Decimal, side: str,
               fill_type: str = Order.LIMIT, raise_exception: bool = True, market: str = Wallet.SPOT,
               order_type: str = Order.ORDINARY, parent_lock_group_id: Union[UUID, None] = None,
-              time_in_force: str = Order.GTC) -> Union[Order, None]:
+              time_in_force: str = Order.GTC, pass_min_notional: bool = False) -> Union[Order, None]:
 
     wallet = symbol.asset.get_wallet(account, market=market)
     if fill_type == Order.MARKET:
@@ -59,19 +59,20 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
 
     base_asset_symbol = symbol.base_asset.symbol
 
-    if base_asset_symbol == Asset.IRT:
-        min_notional = Order.MIN_IRT_ORDER_SIZE
-    elif base_asset_symbol == Asset.USDT:
-        min_notional = Order.MIN_USDT_ORDER_SIZE
-    else:
-        raise NotImplementedError
-
-    if amount * price < min_notional:
-        if raise_exception:
-            raise MinNotionalError
+    if not pass_min_notional:
+        if base_asset_symbol == Asset.IRT:
+            min_notional = Order.MIN_IRT_ORDER_SIZE
+        elif base_asset_symbol == Asset.USDT:
+            min_notional = Order.MIN_USDT_ORDER_SIZE
         else:
-            logger.info('new order failed: min_notional')
-            return
+            raise NotImplementedError
+
+        if amount * price < min_notional:
+            if raise_exception:
+                raise MinNotionalError
+            else:
+                logger.info('new order failed: min_notional')
+                return
 
     with WalletPipeline() as pipeline:
         additional_params = {'group_id': parent_lock_group_id} if parent_lock_group_id else {}

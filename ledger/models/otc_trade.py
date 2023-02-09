@@ -119,7 +119,8 @@ class OTCTrade(models.Model):
                 amount=self.otc_request.amount,
                 price=self.otc_request.price,
                 side=self.otc_request.side,
-                time_in_force=Order.FOK
+                time_in_force=Order.FOK,
+                pass_min_notional=True
             )
 
             self.order_id = fok_order.id
