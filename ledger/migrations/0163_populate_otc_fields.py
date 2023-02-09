@@ -14,7 +14,9 @@ def populate_amounts(apps, schema_editor):
     symbols = list(PairSymbol.objects.select_for_update())
     symbols_dict = {(s.asset, s.base_asset): s for s in symbols}
 
-    for o in OTCRequest.objects.all().prefetch_related('from_asset', 'to_asset'):
+    otc_requests = OTCRequest.objects.all().prefetch_related('from_asset', 'to_asset')
+
+    for o in otc_requests:
         from_asset = o.from_asset
         from_amount = o.from_amount
 
@@ -48,7 +50,9 @@ def populate_amounts(apps, schema_editor):
         o.fee_usdt_value = o.fee_revenue = 0
         o.side = side
 
-        o.save()
+    OTCRequest.objects.bulk_update(otc_requests, [
+        'base_irt_price', 'base_usdt_price', 'symbol', 'amount', 'price', 'fee_amount', 'fee_usdt_value', 'side'
+    ])
 
 
 class Migration(migrations.Migration):
