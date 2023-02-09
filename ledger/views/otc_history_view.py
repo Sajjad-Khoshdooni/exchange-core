@@ -1,6 +1,7 @@
 import django_filters
 
 from ledger.models import OTCTrade, OTCRequest
+from market.serializers.trade_serializer import AccountTradeSerializer
 from market.views import AccountTradeHistoryView
 
 
@@ -12,8 +13,14 @@ class AccountTradeFilter(django_filters.FilterSet):
         fields = ('symbol', 'side')
 
 
+class OTCRequestSerializer(AccountTradeSerializer):
+    class Meta(AccountTradeSerializer.Meta):
+        model = OTCRequest
+
+
 class OTCHistoryView(AccountTradeHistoryView):
     filter_class = AccountTradeFilter
+    serializer_class = OTCRequestSerializer
 
     def get_queryset(self):
         return OTCRequest.objects.filter(

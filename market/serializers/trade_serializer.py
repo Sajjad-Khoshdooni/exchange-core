@@ -36,7 +36,7 @@ class AccountTradeSerializer(serializers.ModelSerializer):
         return data
 
     class Meta:
-        model = BaseTrade
+        model = Trade
         fields = ('created', 'asset', 'base_asset', 'side', 'amount', 'price', 'base_amount', 'fee_amount', 'market')
 
 
