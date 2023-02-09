@@ -5,6 +5,7 @@ from decouple import config
 from django.db import models
 from django.db.models import F, Sum
 
+from _base.settings import OTC_ACCOUNT_ID
 from accounts.models import Account
 from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet
@@ -23,7 +24,6 @@ class TokenExpired(Exception):
     pass
 
 
-OTC_ACCOUNT = config('OTC_ACCOUNT', cast=int)
 
 
 class OTCTrade(models.Model):
@@ -57,13 +57,13 @@ class OTCTrade(models.Model):
 
         pipeline.new_trx(
             sender=from_asset.get_wallet(user, market=self.otc_request.market),
-            receiver=from_asset.get_wallet(OTC_ACCOUNT, market=self.otc_request.market),
+            receiver=from_asset.get_wallet(OTC_ACCOUNT_ID, market=self.otc_request.market),
             amount=self.otc_request.get_paying_amount(),
             group_id=self.group_id,
             scope=Trx.TRADE
         )
         pipeline.new_trx(
-            sender=to_asset.get_wallet(OTC_ACCOUNT, market=self.otc_request.market),
+            sender=to_asset.get_wallet(OTC_ACCOUNT_ID, market=self.otc_request.market),
             receiver=to_asset.get_wallet(user, market=self.otc_request.market),
             amount=self.otc_request.get_receiving_amount(),
             group_id=self.group_id,
@@ -115,7 +115,7 @@ class OTCTrade(models.Model):
 
             fok_order = new_order(
                 symbol=symbol,
-                account=Account.objects.get(id=OTC_ACCOUNT),
+                account=Account.objects.get(id=OTC_ACCOUNT_ID),
                 amount=self.otc_request.amount,
                 price=self.otc_request.price,
                 side=self.otc_request.side,

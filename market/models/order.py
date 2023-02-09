@@ -13,6 +13,7 @@ from django.db import models, transaction
 from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum
 from django.utils import timezone
 
+from _base.settings import OTC_ACCOUNT_ID
 from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
@@ -337,7 +338,9 @@ class Order(models.Model):
 
             self.update_filled_amount((self.id, maker_order.id), match_amount)
 
-            if self.wallet.account.is_ordinary_user() != maker_order.wallet.account.is_ordinary_user():
+            taker_ordinary = self.wallet.account_id == OTC_ACCOUNT_ID or self.wallet.account.is_ordinary_user()
+
+            if taker_ordinary != maker_order.wallet.account.is_ordinary_user():
                 ordinary_order = self if self.type == Order.ORDINARY else maker_order
 
                 if ordinary_order.side == SELL:
