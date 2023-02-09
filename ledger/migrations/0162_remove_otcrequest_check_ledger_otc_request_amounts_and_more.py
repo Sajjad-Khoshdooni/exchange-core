@@ -13,7 +13,7 @@ def populate_amounts(apps, schema_editor):
     symbols = list(PairSymbol.objects.select_for_update())
     symbols_dict = {(s.asset, s.base_asset): s for s in symbols}
 
-    for o in OTCRequest.objects.all():
+    for o in OTCRequest.objects.all().prefetch_related('from_asset', 'to_asset'):
         from_asset = o.from_asset
         from_amount = o.from_amount
 
