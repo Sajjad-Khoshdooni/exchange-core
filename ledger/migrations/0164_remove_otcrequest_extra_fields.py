@@ -12,6 +12,67 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.AlterField(
+            model_name='otcrequest',
+            name='amount',
+            field=models.DecimalField(decimal_places=8, max_digits=30,
+                                      validators=[django.core.validators.MinValueValidator(0)]),
+            preserve_default=False,
+        ),
+        migrations.AlterField(
+            model_name='otcrequest',
+            name='base_irt_price',
+            field=models.DecimalField(decimal_places=8, max_digits=30,
+                                      validators=[django.core.validators.MinValueValidator(0)]),
+            preserve_default=False,
+        ),
+        migrations.AlterField(
+            model_name='otcrequest',
+            name='base_usdt_price',
+            field=models.DecimalField(decimal_places=8, max_digits=30,
+                                      validators=[django.core.validators.MinValueValidator(0)]),
+        ),
+        migrations.AlterField(
+            model_name='otcrequest',
+            name='fee_amount',
+            field=models.DecimalField(decimal_places=8, max_digits=30,
+                                      validators=[django.core.validators.MinValueValidator(0)]),
+            preserve_default=False,
+        ),
+        migrations.AlterField(
+            model_name='otcrequest',
+            name='fee_revenue',
+            field=models.DecimalField(decimal_places=8, max_digits=30,
+                                      validators=[django.core.validators.MinValueValidator(0)]),
+            preserve_default=False,
+        ),
+        migrations.AlterField(
+            model_name='otcrequest',
+            name='fee_usdt_value',
+            field=models.DecimalField(decimal_places=8, max_digits=30,
+                                      validators=[django.core.validators.MinValueValidator(0)]),
+            preserve_default=False,
+        ),
+        migrations.AlterField(
+            model_name='otcrequest',
+            name='price',
+            field=models.DecimalField(decimal_places=8, max_digits=30,
+                                      validators=[django.core.validators.MinValueValidator(0)]),
+            preserve_default=False,
+        ),
+        migrations.AlterField(
+            model_name='otcrequest',
+            name='side',
+            field=models.CharField(choices=[('buy', 'buy'), ('sell', 'sell')], max_length=8),
+            preserve_default=False,
+        ),
+        migrations.AlterField(
+            model_name='otcrequest',
+            name='symbol',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='market.pairsymbol'),
+            preserve_default=False,
+        ),
+
         migrations.RemoveConstraint(
             model_name='otcrequest',
             name='check_ledger_otc_request_amounts',
