@@ -15,9 +15,9 @@ from accounts.authentication import CustomTokenAuthentication
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Network, Transfer, NetworkAsset, AddressBook
+from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
-from ledger.utils.price import get_trading_price_irt, BUY
 from ledger.utils.withdraw_verify import can_withdraw
 
 
@@ -113,7 +113,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             raise ValidationError(
                 'در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید. لطفا احراز هویت سطح ۳ را انجام دهید.')
 
-        price = get_trading_price_irt(asset.symbol, BUY, raw_price=False)
+        price = get_external_price(asset.symbol, base_coin=Asset.IRT, side=BUY, allow_stale=True)
 
         if price:
             irt_value = price * amount

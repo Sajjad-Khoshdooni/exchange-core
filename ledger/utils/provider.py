@@ -17,11 +17,11 @@ from urllib3.exceptions import ReadTimeoutError
 
 from accounts.verifiers.jibit import Response
 from ledger.exceptions import HedgeError
-from ledger.models import Asset, Network, Wallet, Transfer
+from ledger.models import Asset, Wallet, Transfer
 from ledger.utils.cache import get_cache_func_key
+from ledger.utils.external_price import SELL, BUY, get_external_price
 from ledger.utils.fields import DONE
 from ledger.utils.precision import floor_precision
-from ledger.utils.price import SELL, BUY, get_trading_price_usdt
 
 TRADE, BORROW, LIQUIDATION, WITHDRAW, HEDGE, PROVIDE_BASE, FAKE = \
     'trade', 'borrow', 'liquid', 'withdraw', 'hedge', 'prv-base', 'fake'
@@ -259,7 +259,11 @@ class ProviderRequester:
 
             order_amount = round(hedge_amount, round_digits)
 
-            price = get_trading_price_usdt(asset.symbol, side=BUY)
+            price = get_external_price(
+                coin=asset.symbol,
+                base_coin=Asset.USDT,
+                side=BUY
+            )
             min_notional = market_info.min_notional * Decimal('1.1')
 
             if order_amount * price < min_notional:
@@ -430,15 +434,16 @@ class MockProviderRequester(ProviderRequester):
     def get_futures_info(self, exchange: str) -> dict:
         return {}
 
-    def get_network_info(self, asset: Asset, network: Network) -> NetworkInfo:
+    def get_network_info(self, asset: str, network: str = None) -> NetworkInfo:
         return NetworkInfo(
-            coin=asset.symbol,
-            network=network.symbol,
+            coin=asset,
+            network=network,
             withdraw_min=Decimal(1),
             withdraw_max=Decimal(100),
             withdraw_fee=Decimal(1),
             withdraw_enable=True,
             deposit_enable=True,
+            address_regex='\w+'
         )
 
     def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):

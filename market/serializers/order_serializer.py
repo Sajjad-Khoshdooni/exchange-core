@@ -13,7 +13,7 @@ from ledger.models import Wallet, Asset, CloseRequest
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
     decimal_to_str
-from ledger.utils.price import IRT
+from ledger.utils.external_price import IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
 
@@ -43,12 +43,15 @@ class OrderSerializer(serializers.ModelSerializer):
             raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
 
         symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
+
         if validated_data['fill_type'] == Order.LIMIT:
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
+
         elif validated_data['fill_type'] == Order.MARKET:
             validated_data['price'] = Order.get_market_price(symbol, Order.get_opposite_side(validated_data['side']))
             if not validated_data['price']:
                 raise Exception('Empty order book')
+
         wallet = self.post_validate(symbol, validated_data)
 
         try:

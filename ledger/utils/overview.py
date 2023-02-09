@@ -9,7 +9,7 @@ from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Wallet, Prize, Asset
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
 from ledger.utils.cache import cache_for
-from ledger.utils.price import SELL, get_tether_irt_price, BUY, get_price
+from ledger.utils.external_price import get_external_price, SELL, BUY
 from ledger.utils.provider import get_provider_requester, BINANCE, CoinOrders
 
 
@@ -42,7 +42,7 @@ class AssetOverview:
         ).exclude(market__in=(Wallet.VOUCHER, Wallet.DEBT)).values('asset__symbol').annotate(amount=Sum('balance'))
         self.users_balances = {w['asset__symbol']: w['amount'] for w in wallets}
 
-        self.usdt_irt = get_tether_irt_price(SELL)
+        self.usdt_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=True)
 
         self.assets_map = {a.symbol: a for a in Asset.objects.all()}
 
@@ -79,7 +79,7 @@ class AssetOverview:
         if not amount:
             return Decimal(0)
 
-        price = get_price(coin=coin, side=BUY) or 0
+        price = get_external_price(coin=coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
         return amount * price
 
     def get_users_asset_amount(self, coin: str) -> Decimal:
@@ -91,7 +91,7 @@ class AssetOverview:
         if not balance:
             return Decimal(0)
 
-        price = get_price(coin=coin, side=BUY) or 0
+        price = get_external_price(coin=coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
         
         return balance * price
 
@@ -131,7 +131,7 @@ class AssetOverview:
         non_deposited = self.get_non_deposited_accounts_per_asset_balance()
 
         for coin, balance in non_deposited.items():
-            price = get_price(coin=coin, side=BUY) or 0
+            price = get_external_price(coin=coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
             value += balance * price
 
         return self.get_exchange_assets_usdt() + value

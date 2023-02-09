@@ -1,11 +1,8 @@
 import logging
-import math
-from decimal import Decimal
 
 from celery import shared_task
 
 from ledger.models import NetworkAsset
-from ledger.utils.price import get_trading_price_usdt, BUY
 from ledger.utils.provider import get_provider_requester
 
 logger = logging.getLogger()

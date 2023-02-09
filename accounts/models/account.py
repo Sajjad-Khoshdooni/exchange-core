@@ -6,7 +6,7 @@ from django.db.models import UniqueConstraint, Q
 from django.utils import timezone
 
 from accounts.models import User
-from ledger.utils.price import BUY
+from ledger.utils.external_price import BUY, get_external_price
 
 
 class Account(models.Model):
@@ -91,7 +91,8 @@ class Account(models.Model):
         total = Decimal('0')
 
         for wallet in wallets:
-            balance = wallet.get_balance_usdt(side)
+            price = get_external_price(coin=wallet.asset.symbol, base_coin=Asset.USDT, side=side, allow_stale=True)
+            balance = wallet.balance * price
 
             if balance:
                 total += balance

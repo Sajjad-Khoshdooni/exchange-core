@@ -3,6 +3,7 @@ import logging
 from celery import shared_task
 from django.utils import timezone
 
+from ledger.utils.external_price import BUY, SELL
 from market.models import Order, Trade
 from market.models.order import CancelOrder
 from market.models.stop_loss import StopLoss
@@ -21,11 +22,11 @@ def handle_stop_loss():
 
     for symbol_id in stop_loss_symbols:
         symbol_top_prices = {
-            Order.BUY: market_top_prices[symbol_id, Order.BUY],
-            Order.SELL: market_top_prices[symbol_id, Order.SELL],
+            BUY: market_top_prices[symbol_id, BUY],
+            SELL: market_top_prices[symbol_id, SELL],
         }
         set_top_prices(symbol_id, symbol_top_prices, scope='stoploss')
-        for side in (Order.BUY, Order.SELL):
+        for side in (BUY, SELL):
             if symbol_top_prices[side]:
                 create_needed_stop_loss_orders.apply_async(args=(symbol_id, side,), queue='stop_loss')
 
@@ -34,12 +35,15 @@ def handle_stop_loss():
 def create_needed_stop_loss_orders(symbol_id, side):
     market_top_prices = Trade.get_top_prices(symbol_id)
     symbol_price = market_top_prices[side]
+
     if not symbol_price:
         logger.info(f'Missing trade in last 5 seconds for {symbol_id}')
         return
+
     stop_loss_qs = StopLoss.not_triggered_objects.filter(
         symbol_id=symbol_id, side=side
     ).prefetch_related('wallet__account')
+
     if side == StopLoss.BUY:
         stop_loss_qs = stop_loss_qs.filter(trigger_price__lte=symbol_price)
     else:

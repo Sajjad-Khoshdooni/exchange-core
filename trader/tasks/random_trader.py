@@ -7,8 +7,9 @@ from celery import shared_task
 from decouple import config
 
 from accounts.models import Account
+from ledger.utils.external_price import BUY, SELL
 from market.models import PairSymbol
-from market.models.order import CancelOrder, Order
+from market.models.order import CancelOrder
 from market.utils.order_utils import get_market_top_price_amounts
 from market.utils.redis import get_daily_order_size_factors
 from trader.bots.utils import random_buy, random_sell
@@ -32,7 +33,7 @@ def random_trader():
 
     for symbol in symbols:
         top_price_amounts = {
-            order_type: market_top_price_amounts[(symbol.id, order_type)] for order_type in (Order.BUY, Order.SELL)
+            order_type: market_top_price_amounts[(symbol.id, order_type)] for order_type in (BUY, SELL)
         }
         random_trade(symbol, account, top_price_amounts, daily_factors[symbol.id])
 
@@ -46,8 +47,8 @@ def random_trade(symbol: PairSymbol, account, top_price_amounts, daily_factor: i
     logger.info(f'random trading {symbol} ({top_price_amounts}) {daily_factor}')
 
     random_func, max_amount, market_price = random.choices([
-        (random_buy, top_price_amounts[Order.SELL]['amount'], top_price_amounts[Order.SELL]['price']),
-        (random_sell, top_price_amounts[Order.BUY]['amount'], top_price_amounts[Order.BUY]['price'])
+        (random_buy, top_price_amounts[SELL]['amount'], top_price_amounts[SELL]['price']),
+        (random_sell, top_price_amounts[BUY]['amount'], top_price_amounts[BUY]['price'])
     ])[0]
 
     try:
