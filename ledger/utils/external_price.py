@@ -94,10 +94,10 @@ def _fetch_redis_prices(coins: list, side: str = None, allow_stale: bool = False
 PRICES_CACHE_TIMEOUT = 30
 
 
-def get_external_usdt_prices(coins: list, side: str = None, allow_stale: bool = False, set_bulk_cache: bool = False) \
+def get_external_usdt_prices(coins: list, side, allow_stale: bool = False, set_bulk_cache: bool = False) \
         -> Dict[str, Decimal]:
 
-    cache_key = 'prices:ext'
+    cache_key = 'prices:ext:%s' % side
 
     if allow_stale:
         cached_result = cache.get(cache_key)
@@ -106,6 +106,9 @@ def get_external_usdt_prices(coins: list, side: str = None, allow_stale: bool = 
 
     prices = _fetch_redis_prices(coins, side, allow_stale=allow_stale)
     result = {r.coin: r.price for r in prices if r.price}
+
+    if 'USDT' in coins:
+        result['USDT'] = 1
 
     if set_bulk_cache:
         cache.set(cache_key, result, PRICES_CACHE_TIMEOUT)
