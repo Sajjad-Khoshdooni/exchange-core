@@ -173,7 +173,7 @@ class Order(models.Model):
         if gap is None and last_trade_ts:
             spread_step = (time() - last_trade_ts) // 600
             gap = {
-                0: (get_otc_spread(coin, side, base_coin=base_symbol) / 100), 1: '0.0015', 2: '0.0008'
+                0: (get_otc_spread(coin, side, base_coin=base_symbol)), 1: '0.0015', 2: '0.0008'
             }.get(spread_step, '0.0008')
 
             gap = Decimal(gap)
