@@ -62,7 +62,12 @@ def update_provider_vaults(now: datetime, usdt_irt: Decimal):
 
             for coin, balance in balances.items():
                 balance = Decimal(balance)
-                value = balance * prices.get(coin, 0)
+                price = prices.get(coin, 0)
+
+                if coin == Asset.IRT:
+                    price = get_external_price(Asset.IRT, base_coin=Asset.USDT, side=BUY)
+
+                value = balance * price
 
                 vault_data.append(
                     VaultData(
