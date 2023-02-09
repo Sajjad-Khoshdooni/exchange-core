@@ -10,7 +10,7 @@ def populate_amounts(apps, schema_editor):
     OTCRequest = apps.get_model('ledger', 'OTCRequest')
     PairSymbol = apps.get_model('market', 'PairSymbol')
 
-    symbols = list(PairSymbol.objects.select_for_update().values_list('asset', 'base_asset'))
+    symbols = list(PairSymbol.objects.select_for_update())
     symbols_dict = {(s.asset, s.base_asset): s for s in symbols}
 
     for o in OTCRequest.objects.all():
