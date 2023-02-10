@@ -1,5 +1,6 @@
 import logging
 from decimal import Decimal
+from uuid import uuid4
 
 from django.conf import settings
 from django.db.models import Q
@@ -10,12 +11,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
+from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.views.jwt_views import DelegatedAccountMixin
-from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCTrade
+from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCTrade, Trx
 from ledger.models.asset import Asset
 from ledger.utils.external_price import get_external_price, get_external_usdt_prices, BUY, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
+from ledger.utils.otc import get_otc_spread, spread_to_multiplier
 from ledger.utils.precision import get_presentation_amount
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -336,35 +340,52 @@ class ConvertDustView(APIView):
 
     def post(self, *args):
         account = self.request.user.account
-        IRT = Asset.get(Asset.IRT)
+        irt_asset = Asset.get(Asset.IRT)
+
         spot_wallets = Wallet.objects.filter(
-            account=account, market=Wallet.SPOT, balance__gt=0, variant__isnull=True).exclude(asset=IRT)
+            account=account,
+            market=Wallet.SPOT,
+            balance__gt=0,
+            variant__isnull=True
+        ).exclude(asset=irt_asset).prefetch_related('asset')
 
-        for wallet in spot_wallets:
-            price = get_external_price(
-                coin=wallet.asset.symbol,
-                base_coin=Asset.IRT,
-                side=BUY,
-                allow_stale=True
+        group_id = uuid4()
+        irt_amount = 0
+
+        with WalletPipeline() as pipeline:
+            for wallet in spot_wallets:
+                price = get_external_price(
+                    coin=wallet.asset.symbol,
+                    base_coin=Asset.IRT,
+                    side=BUY,
+                    allow_stale=True
+                ) or 0
+
+                free = wallet.get_free()
+                free_irt_value = free * price
+
+                if Decimal(0) < free_irt_value < Decimal('10000'):
+                    logger.info('Converting dust %s' % wallet)
+
+                    pipeline.new_trx(
+                        sender=wallet,
+                        receiver=wallet.asset.get_wallet(SYSTEM_ACCOUNT_ID),
+                        amount=free,
+                        group_id=group_id,
+                        scope=Trx.DUST
+                    )
+
+                    spread = get_otc_spread(coin=wallet.asset.symbol, side=BUY, base_coin=Asset.IRT)
+
+                    irt_amount += price * spread_to_multiplier(spread, side=BUY) * free
+
+            pipeline.new_trx(
+                sender=irt_asset.get_wallet(SYSTEM_ACCOUNT_ID),
+                receiver=irt_asset.get_wallet(account),
+                amount=irt_amount,
+                group_id=group_id,
+                scope=Trx.DUST,
             )
-            free_irt_value = wallet.get_free() * price
-
-            if not free_irt_value:
-                continue
-
-            if Decimal(0) < free_irt_value < Decimal('100000'):
-                logger.info('Converting dust %s' % wallet)
-
-                request = OTCRequest.new_trade(
-                    account=account,
-                    market=Wallet.SPOT,
-                    from_asset=wallet.asset,
-                    to_asset=IRT,
-                    from_amount=wallet.get_free(),
-                    allow_dust=True
-                )
-
-                OTCTrade.execute_trade(request, force=True)
 
         return Response({'msg': 'convert_dust success'}, status=status.HTTP_200_OK)
 
