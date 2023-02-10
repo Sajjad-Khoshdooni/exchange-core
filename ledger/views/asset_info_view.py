@@ -234,22 +234,6 @@ class AssetsViewSet(ModelViewSet):
         return asset
 
 
-class AssetOverViewSerializer(serializers.Serializer):
-
-    high_volume = serializers.SerializerMethodField()
-    high_24h_change = serializers.SerializerMethodField()
-    newest = serializers.SerializerMethodField()
-
-    def get_high_volume(self, *args):
-        return self.context['high_volume']
-
-    def get_high_24h_change(self, *args):
-        return self.context['high_24h_change']
-
-    def get_newest(self, *args):
-        return self.context['newest']
-
-
 class AssetOverviewAPIView(APIView):
     permission_classes = []
 
@@ -264,7 +248,7 @@ class AssetOverviewAPIView(APIView):
     def get(self, request):
         limit = int(self.request.query_params.get('limit', default=3))
 
-        coins = list(Asset.live_objects.values_list('symbol', flat=True))
+        coins = list(Asset.live_objects.exclude(symbol=Asset.IRT).values_list('symbol', flat=True))
         caps = get_provider_requester().get_coins_info(coins).values()
 
         def coin_info_to_dict(info: CoinInfo):
