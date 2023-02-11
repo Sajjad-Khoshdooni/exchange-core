@@ -158,10 +158,11 @@ class NetworkAdmin(admin.ModelAdmin):
 @admin.register(models.NetworkAsset)
 class NetworkAssetAdmin(admin.ModelAdmin):
     list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'can_deposit', 'can_withdraw',
-                    'allow_provider_withdraw', 'hedger_withdraw_enable')
+                    'allow_provider_withdraw', 'hedger_withdraw_enable', 'update_fee_with_provider')
     search_fields = ('asset__symbol', )
-    list_editable = ('can_deposit', 'can_withdraw', 'allow_provider_withdraw')
-    list_filter = ('network', 'allow_provider_withdraw')
+    list_editable = ('can_deposit', 'can_withdraw', 'allow_provider_withdraw', 'hedger_withdraw_enable',
+                     'update_fee_with_provider')
+    list_filter = ('network', 'allow_provider_withdraw', 'hedger_withdraw_enable', 'update_fee_with_provider')
 
 
 class DepositAddressUserFilter(admin.SimpleListFilter):
