@@ -117,7 +117,7 @@ async def broadcast_trades():
                 if type(raw_message['data']) != str:
                     print(raw_message)
                     continue
-                price, amount, maker_order_id, taker_order_id, is_buyer_maker = raw_message['data'].split('#')
+                origin_id, price, amount, maker_order_id, taker_order_id, is_buyer_maker = raw_message['data'].split('#')
                 websockets.broadcast(TRADES_CLIENTS, pickle.dumps({
                     'symbol': symbol,
                     'is_buyer_maker': is_buyer_maker,
@@ -125,6 +125,7 @@ async def broadcast_trades():
                     'amount': Decimal(amount),
                     'maker_order_id': maker_order_id,
                     'taker_order_id': taker_order_id,
+                    'origin_id': origin_id
                 }))
         except (ConnectionError, TimeoutError) as err:
             logger.warning('redis connection error on broadcast_trades', extra={'err': err})

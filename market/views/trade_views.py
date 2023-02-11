@@ -1,3 +1,4 @@
+from django.db.models import Min, Max
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.authentication import SessionAuthentication
@@ -10,7 +11,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from market.models import Trade, PairSymbol
 from market.pagination import FastLimitOffsetPagination
-from market.serializers.trade_serializer import TradeSerializer, AccountTradeSerializer
+from market.serializers.trade_serializer import TradePairSerializer, TradeSerializer, AccountTradeSerializer
 
 
 class TradeFilter(django_filters.FilterSet):
@@ -88,6 +89,34 @@ class TradeHistoryView(ListAPIView):
 
     def list(self, request, *args, **kwargs):
         serializer = TradeSerializer(self.get_queryset(), many=True)
+
+        return Response({
+            'results': serializer.data
+        })
+
+
+class TradePairsHistoryView(ListAPIView):
+    authentication_classes = ()
+    permission_classes = ()
+    pagination_class = LimitOffsetPagination
+    throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
+
+    def get_queryset(self):
+        min_id = self.request.query_params.get('from_id')
+        id_filter = {'id__gt': min_id} if min_id else {}
+        return Trade.objects.filter(
+            is_maker=True,
+            **id_filter
+        ).exclude(trade_source=Trade.OTC).prefetch_related('symbol').order_by('id')
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        maker_taker_mapping = {
+            t['maker_order_id']: t['taker_order_id'] for t in qs.values('group_id').annotate(
+                maker_order_id=Min('order_id'), taker_order_id=Max('order_id')
+            )
+        }
+        serializer = TradePairSerializer(qs, context={'maker_taker_mapping': maker_taker_mapping}, many=True)
 
         return Response({
             'results': serializer.data

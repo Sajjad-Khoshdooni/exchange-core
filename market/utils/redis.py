@@ -158,12 +158,11 @@ class MarketStreamCache:
         # if not market_redis.exists(f'ws:market:orders:{account_id}'):
         #     return
         for pair in trade_pairs:
-            # self.market_pipeline.publish(f'market:orders:{trade.symbol.name}:{account_id}:{order_id}', trade.order_id)
             maker_trade, taker_trade = pair
             is_buyer_maker = maker_trade.side == BUY
             self.market_pipeline.publish(
                 f'market:trades:{maker_trade.symbol.name}',
-                f'{maker_trade.price}#{maker_trade.amount}#{maker_trade.order_id}#{taker_trade.order_id}#{is_buyer_maker}'
+                f'{taker_trade.id}#{maker_trade.price}#{maker_trade.amount}#{maker_trade.order_id}#{taker_trade.order_id}#{is_buyer_maker}'
             )
 
     def update_order_status(self, order):

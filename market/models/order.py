@@ -395,7 +395,7 @@ class Order(models.Model):
             pipeline.release_lock(self.group_id)
             self.save(update_fields=['status'])
 
-        Trade.objects.bulk_create(trades)
+        trades = Trade.objects.bulk_create(trades)
 
         Trade.create_hedge_fiat_trxs(trades, tether_irt)
 
@@ -405,7 +405,9 @@ class Order(models.Model):
             symbol.save(update_fields=['last_trade_time', 'last_trade_price'])
 
         # updating trade_volume_irt of accounts
-        for trade in trades:
+        for index, trade in enumerate(trades):
+            trade_pairs[(index // 2)][index % 2].id = trade.id
+
             account = trade.account
             if not account.is_system():
                 account.trade_volume_irt = F('trade_volume_irt') + trade.irt_value
