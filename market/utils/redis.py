@@ -7,8 +7,6 @@ from django.conf import settings
 from django.utils import timezone
 from redis import Redis
 
-from ledger.utils.price import BUY
-
 prefix_top_price = 'market_top_price'
 prefix_top_depth_price = 'market_top_depth_price'
 prefix_orders_count = 'market_orders_count'
@@ -157,9 +155,10 @@ class MarketStreamCache:
             return
         # if not market_redis.exists(f'ws:market:orders:{account_id}'):
         #     return
+        from market.models import Order
         for pair in trade_pairs:
             maker_trade, taker_trade = pair
-            is_buyer_maker = maker_trade.side == BUY
+            is_buyer_maker = maker_trade.side == Order.BUY
             self.market_pipeline.publish(
                 f'market:trades:{maker_trade.symbol.name}',
                 f'{taker_trade.id}#{maker_trade.price}#{maker_trade.amount}#{maker_trade.order_id}#{taker_trade.order_id}#{is_buyer_maker}'
