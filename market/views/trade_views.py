@@ -88,7 +88,7 @@ class TradePairsHistoryView(ListAPIView):
             account=self.request.user.account,
             is_maker=True,
             **id_filter
-        ).exclude(trade_source=Trade.OTC).prefetch_related('symbol').order_by('id')
+        ).prefetch_related('symbol').order_by('id')
 
     def list(self, request, *args, **kwargs):
         min_id = self.request.query_params.get('from_id')
