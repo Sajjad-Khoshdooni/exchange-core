@@ -6,6 +6,8 @@ from rest_framework.generics import ListAPIView, get_object_or_404
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.permissions import IsAuthenticated
+from accounts.authentication import CustomTokenAuthentication
 
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from market.models import Trade, PairSymbol, BaseTrade
@@ -74,8 +76,8 @@ class TradeHistoryView(ListAPIView):
 
 
 class TradePairsHistoryView(ListAPIView):
-    authentication_classes = ()
-    permission_classes = ()
+    authentication_classes = (CustomTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
     pagination_class = LimitOffsetPagination
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
 
@@ -83,18 +85,20 @@ class TradePairsHistoryView(ListAPIView):
         min_id = self.request.query_params.get('from_id')
         id_filter = {'id__gt': min_id} if min_id else {}
         return Trade.objects.filter(
+            account_id=self.request.user.account_id,
             is_maker=True,
             **id_filter
         ).exclude(trade_source=Trade.OTC).prefetch_related('symbol').order_by('id')
 
     def list(self, request, *args, **kwargs):
-        qs = self.get_queryset()
+        min_id = self.request.query_params.get('from_id')
+        id_filter = {'id__gt': min_id} if min_id else {}
         maker_taker_mapping = {
-            t['maker_order_id']: t['taker_order_id'] for t in qs.values('group_id').annotate(
+            t['maker_order_id']: t['taker_order_id'] for t in Trade.objects.filter(**id_filter).values('group_id').annotate(
                 maker_order_id=Min('order_id'), taker_order_id=Max('order_id')
             )
         }
-        serializer = TradePairSerializer(qs, context={'maker_taker_mapping': maker_taker_mapping}, many=True)
+        serializer = TradePairSerializer(self.get_queryset(), context={'maker_taker_mapping': maker_taker_mapping}, many=True)
 
         return Response({
             'results': serializer.data
