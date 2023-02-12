@@ -188,11 +188,27 @@ class DepositAddressAdmin(admin.ModelAdmin):
     search_fields = ('address',)
 
 
+class OTCRequestUserFilter(SimpleListFilter):
+    title = 'کاربر'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(account__user_id=user)
+        else:
+            return queryset
+
+
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount', 'fee_revenue')
     readonly_fields = ('account', )
     search_fields = ('token', )
+    list_filter = (OTCRequestUserFilter, )
 
 
 class OTCUserFilter(SimpleListFilter):
