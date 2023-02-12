@@ -7,7 +7,7 @@ from django.conf import settings
 from django.utils import timezone
 from redis import Redis
 
-from ledger.utils.external_price import BUY
+from ledger.utils.external_price import BUY, SELL
 
 prefix_top_price = 'market_top_price'
 prefix_top_depth_price = 'market_top_depth_price'
@@ -121,10 +121,10 @@ class MarketStreamCache:
 
     def update_bid_ask(self, symbol, side, canceled):
         from market.models import Order
-        price_updated = {Order.BUY: False, Order.SELL: False}
-        amount_updated = {Order.BUY: False, Order.SELL: False}
+        price_updated = {BUY: False, SELL: False}
+        amount_updated = {BUY: False, SELL: False}
         top_orders = {}
-        for order_type in (Order.BUY, Order.SELL):
+        for order_type in (BUY, SELL):
             if side is None or order_type == side:
                 top_order = Order.get_top_price_amount(symbol.id, order_type)
                 if not top_order:
@@ -139,7 +139,7 @@ class MarketStreamCache:
                 if canceled:
                     self.market_pipeline.set(f'market:depth:price:{symbol.name}:{order_type}', str(top_order.price))
                 else:
-                    set_func = self.set_if_higher if order_type == Order.BUY else self.set_if_lower
+                    set_func = self.set_if_higher if order_type == BUY else self.set_if_lower
                     price_updated[order_type] = set_func(
                         f'market:depth:price:{symbol.name}:{order_type}', str(top_order.price)
                     )
