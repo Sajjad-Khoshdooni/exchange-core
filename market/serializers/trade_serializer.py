@@ -66,7 +66,7 @@ class TradeSerializer(serializers.ModelSerializer):
 
 
 class TradePairSerializer(TradeSerializer):
-    symbol = serializers.CharField(source='symbol__name')
+    symbol = serializers.CharField(source='symbol.name')
     maker_order_id = serializers.IntegerField(source='order_id')
     taker_order_id = serializers.SerializerMethodField()
 
