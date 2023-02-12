@@ -569,7 +569,7 @@ class Order(models.Model):
 
     @classmethod
     def get_top_price_amount(cls, symbol_id, side):
-        agg_func = Max if side == cls.BUY else Min
+        agg_func = Max if side == BUY else Min
         top_price = cls.open_objects.filter(
             symbol_id=symbol_id, side=side
         ).aggregate(top_price=agg_func('price'))['top_price']
