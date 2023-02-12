@@ -5,6 +5,7 @@ from typing import Union
 from rest_framework import serializers
 
 from ledger.models import Wallet
+from ledger.utils.external_price import BUY
 from ledger.utils.precision import floor_precision, decimal_to_str
 from market.models import Order, StopLoss
 
@@ -58,7 +59,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
         if isinstance(instance, Order):
             return None
         price = decimal_to_str(floor_precision(instance.trigger_price, instance.symbol.tick_size))
-        operator = '≥' if instance.side == Order.BUY else '≤'
+        operator = '≥' if instance.side == BUY else '≤'
         return f'آخرین قیمت {operator} {price}'
 
     def get_filled_price(self, instance: Union[Order, StopLoss]):

@@ -4,8 +4,9 @@ from decimal import Decimal
 from django.db import models
 from django.db.models import CheckConstraint, Q
 
+from ledger.models import Asset
+from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import get_amount_field
-from ledger.utils.price import get_trading_price_usdt, BUY
 
 
 class NetworkAsset(models.Model):
@@ -24,6 +25,7 @@ class NetworkAsset(models.Model):
     can_withdraw = models.BooleanField(default=True)
 
     allow_provider_withdraw = models.BooleanField(default=True)
+    update_fee_with_provider = models.BooleanField(default=True)
 
     def can_deposit_enabled(self) -> bool:
         return self.network.can_deposit and self.can_deposit and self.hedger_deposit_enable
@@ -45,27 +47,24 @@ class NetworkAsset(models.Model):
         withdraw_fee = info.withdraw_fee
         withdraw_min = info.withdraw_min
 
-        if symbol_pair in [('TRX', 'USDT'), ('BSC', 'USDT'), ('BNB', 'USDT'), ('SOL', 'USDT')]:
-            withdraw_fee = Decimal('0.8')
-            withdraw_min = Decimal(10)
-        elif symbol_pair not in [('TRX', 'USDT'), ('TRX', 'TRX'), ('BSC', 'USDT'), ('BNB', 'USDT'), ('SOL', 'USDT')]:
+        if symbol_pair not in [('TRX', 'USDT'), ('TRX', 'TRX'), ('BSC', 'USDT'), ('BNB', 'USDT'), ('SOL', 'USDT')]:
             withdraw_fee *= 2
             withdraw_min = max(withdraw_min, 2 * withdraw_fee)
 
-        price = get_trading_price_usdt(self.asset.symbol, BUY, raw_price=True)
+            price = get_external_price(self.asset.symbol, base_coin=Asset.USDT, side=BUY, allow_stale=True)
 
-        if price and withdraw_min:
-            multiplier = max(math.ceil(5 / (price * withdraw_min)), 1)  # withdraw_min >= 5$
-            withdraw_min *= multiplier
+            if price and withdraw_min:
+                multiplier = max(math.ceil(5 / (price * withdraw_min)), 1)  # withdraw_min >= 5$
+                withdraw_min *= multiplier
 
-        if price and withdraw_fee:
-            multiplier = max(math.ceil(Decimal('0.2') / (price * withdraw_fee)), 1)  # withdraw_fee >= 0.2$
-            withdraw_fee *= multiplier
+            if price and withdraw_fee:
+                multiplier = max(math.ceil(Decimal('0.2') / (price * withdraw_fee)), 1)  # withdraw_fee >= 0.2$
+                withdraw_fee *= multiplier
 
-        withdraw_min = max(
-            withdraw_min,
-            info.withdraw_min + withdraw_fee - info.withdraw_fee
-        )
+            withdraw_min = max(
+                withdraw_min,
+                info.withdraw_min + withdraw_fee - info.withdraw_fee
+            )
 
         self.withdraw_fee = withdraw_fee
         self.withdraw_min = withdraw_min

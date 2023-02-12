@@ -28,6 +28,7 @@ class Trx(models.Model):
     STAKE_FEE = 'sf'
     CLOSE_MARGIN = 'cm'
     DEBT_CLEAR = 'dc'
+    DUST = 'du'
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -39,10 +40,13 @@ class Trx(models.Model):
 
     scope = models.CharField(
         max_length=2,
-        choices=((TRADE, 'trade'), (TRANSFER, 'transfer'), (MARGIN_TRANSFER, 'margin transfer'),
-                 (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (LIQUID, 'liquid'),
-                 (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'), (REVERT, 'revert'), (AIRDROP, 'airdrop'),
-                 (STAKE, 'stake'), (STAKE_REVENUE, 'stake revenue'), (STAKE_FEE, 'stake fee'), (RESERVE, 'reserve'))
+        choices=(
+            (TRADE, 'trade'), (TRANSFER, 'transfer'), (MARGIN_TRANSFER, 'margin transfer'),
+            (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (LIQUID, 'liquid'),
+            (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'), (REVERT, 'revert'), (AIRDROP, 'airdrop'),
+            (STAKE, 'stake'), (STAKE_REVENUE, 'stake revenue'), (STAKE_FEE, 'stake fee'), (RESERVE, 'reserve'),
+            (DUST, 'dust'),
+        )
     )
 
     class Meta:

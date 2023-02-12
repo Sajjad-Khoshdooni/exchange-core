@@ -46,8 +46,8 @@ class ReferralSerializer(serializers.ModelSerializer):
         if value < 0:
             raise ValidationError(_('Invalid share percent'))
 
-        if value > ReferralTrx.REFERRAL_MAX_RETURN_PERCENT:
-            raise ValidationError(_('Input value is greater than {max_percent}').format(max_percent=ReferralTrx.REFERRAL_MAX_RETURN_PERCENT))
+        if value > Referral.REFERRAL_MAX_RETURN_PERCENT:
+            raise ValidationError(_('Input value is greater than {max_percent}').format(max_percent=Referral.REFERRAL_MAX_RETURN_PERCENT))
         return value
 
     class Meta:
@@ -150,7 +150,7 @@ class TradingFeeView(APIView):
         referral_code = request.user.account.referred_by
 
         if referral_code:
-            referral_percent = ReferralTrx.REFERRAL_MAX_RETURN_PERCENT - referral_code.owner_share_percent
+            referral_percent = Referral.REFERRAL_MAX_RETURN_PERCENT - referral_code.owner_share_percent
             taker_fee = taker_fee * (Decimal('1') - referral_percent /Decimal('100'))
 
         return Response({

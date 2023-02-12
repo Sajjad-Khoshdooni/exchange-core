@@ -6,7 +6,7 @@ from celery.exceptions import MaxRetriesExceededError
 from django.utils import timezone
 
 from ledger.models import PNLHistory, Wallet, Asset
-from ledger.utils.price import BUY, get_tether_irt_price
+from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.provider import get_provider_requester
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,15 @@ def create_pnl_histories(self):
             symbol='USDTIRT',
             start=today - timedelta(minutes=10),
             end=today
-        ) or get_tether_irt_price(BUY)
+        )
+
+        if not usdt_price:
+            usdt_price = get_external_price(
+                coin=Asset.USDT,
+                base_coin=Asset.IRT,
+                side=BUY,
+                allow_stale=True
+            )
 
         all_in_out = PNLHistory.get_all_in_out(today - timedelta(days=1), today)
         all_wallets = PNLHistory.get_all_wallets()

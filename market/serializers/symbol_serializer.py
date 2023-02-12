@@ -9,6 +9,7 @@ from rest_framework.generics import get_object_or_404
 from accounts.models import Account
 from ledger.models import Asset
 from ledger.models.asset import AssetSerializerMini
+from ledger.utils.external_price import BUY
 from ledger.utils.precision import get_presentation_amount, floor_precision, decimal_to_str
 from market.models import PairSymbol, Trade, Order
 from market.utils.price import get_symbol_prices
@@ -104,7 +105,7 @@ class SymbolStatsSerializer(SymbolBriefStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
-        ).exclude(trade_source=Trade.OTC).aggregate(max_price=Max('price'))['max_price']
+        ).aggregate(max_price=Max('price'))['max_price']
         if high_price:
             return decimal_to_str(floor_precision(high_price, symbol.tick_size))
 
@@ -113,7 +114,7 @@ class SymbolStatsSerializer(SymbolBriefStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
-        ).exclude(trade_source=Trade.OTC).aggregate(min_price=Min('price'))['min_price']
+        ).aggregate(min_price=Min('price'))['min_price']
         if low_price:
             return decimal_to_str(floor_precision(low_price, symbol.tick_size))
 
@@ -122,8 +123,9 @@ class SymbolStatsSerializer(SymbolBriefStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
-            side=Order.BUY,
-        ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum('amount'))['total_amount']
+            side=BUY,
+        ).aggregate(total_amount=Sum('amount'))['total_amount']
+
         if total_amount:
             return decimal_to_str(floor_precision(total_amount, symbol.step_size))
 
@@ -132,8 +134,9 @@ class SymbolStatsSerializer(SymbolBriefStatsSerializer):
             symbol=symbol,
             created__gt=timezone.now() - timedelta(hours=24),
             created__lte=timezone.now(),
-            side=Order.BUY,
-        ).exclude(trade_source=Trade.OTC).aggregate(total_amount=Sum(F('amount') * F('price')))['total_amount']
+            side=BUY,
+        ).aggregate(total_amount=Sum(F('amount') * F('price')))['total_amount']
+
         if total_amount:
             return decimal_to_str(floor_precision(total_amount))
 

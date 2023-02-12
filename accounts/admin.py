@@ -20,7 +20,7 @@ from ledger.models import OTCTrade, DepositAddress
 from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import BUY
+from ledger.utils.external_price import BUY
 from market.models import Trade, ReferralTrx, Order
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin

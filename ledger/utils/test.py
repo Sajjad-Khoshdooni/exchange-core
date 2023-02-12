@@ -6,7 +6,7 @@ if settings.DEBUG_OR_TESTING:
     import time
 
     from accounts.models import Account, User, VerificationCode
-    from ledger.utils.price import price_redis
+    from ledger.utils.external_price import price_redis
     from ledger.models import Asset, AddressBook, Network, NetworkAsset
     from financial.models import BankCard, Gateway
     from market.models import PairSymbol

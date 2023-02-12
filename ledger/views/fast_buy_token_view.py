@@ -7,9 +7,9 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from accounts.authentication import CustomTokenAuthentication
 from financial.models import BankCard
 from financial.views.payment_view import PaymentRequestSerializer
-from ledger.models.asset import CoinField
+from ledger.models.asset import CoinField, Asset
 from ledger.models.fast_buy_token import FastBuyToken
-from ledger.utils.price import get_price, SELL
+from ledger.utils.external_price import get_external_price, SELL
 
 
 class FastBuyTokenSerializer(serializers.ModelSerializer):
@@ -34,7 +34,12 @@ class FastBuyTokenSerializer(serializers.ModelSerializer):
         validated_data['card_pan'] = card_pan
         validated_data['payment_request'] = payment_request_serializer.create(validated_data)
         validated_data.pop('card_pan')
-        validated_data['price'] = get_price(coin=validated_data['asset'].symbol, side=SELL) or 0
+        validated_data['price'] = get_external_price(
+            coin=validated_data['asset'].symbol,
+            base_coin=Asset.USDT,
+            side=SELL
+        ) or 0
+
         return super().create(validated_data)
 
     class Meta:
@@ -46,4 +51,3 @@ class FastBuyTokenAPI(CreateAPIView):
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     serializer_class = FastBuyTokenSerializer
     queryset = FastBuyToken.objects.all()
-

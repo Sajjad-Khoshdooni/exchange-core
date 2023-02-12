@@ -13,8 +13,8 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
+from ledger.utils.external_price import BUY, get_external_usdt_prices, get_external_price
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.price import get_tether_irt_price, BUY, get_prices_dict, get_trading_price_usdt, get_trading_price_irt
 from ledger.utils.provider import CoinInfo, get_provider_requester
 
 
@@ -155,7 +155,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return Serializer
 
 
-@method_decorator(cache_page(20), name='dispatch')
+@method_decorator(cache_page(10), name='dispatch')
 class AssetsViewSet(ModelViewSet):
 
     authentication_classes = ()
@@ -176,8 +176,12 @@ class AssetsViewSet(ModelViewSet):
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
             ctx['cap_info'] = get_provider_requester().get_coins_info(symbols)
-            ctx['prices'] = get_prices_dict(coins=symbols, side=BUY, allow_stale=True)
-            ctx['tether_irt'] = get_tether_irt_price(BUY, allow_stale=True)
+            ctx['prices'] = get_external_usdt_prices(
+                coins=symbols,
+                side=BUY,
+                allow_stale=True,
+            )
+            ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
 
         return ctx
 
@@ -230,37 +234,21 @@ class AssetsViewSet(ModelViewSet):
         return asset
 
 
-class AssetOverViewSerializer(serializers.Serializer):
-
-    high_volume = serializers.SerializerMethodField()
-    high_24h_change = serializers.SerializerMethodField()
-    newest = serializers.SerializerMethodField()
-
-    def get_high_volume(self, *args):
-        return self.context['high_volume']
-
-    def get_high_24h_change(self, *args):
-        return self.context['high_24h_change']
-
-    def get_newest(self, *args):
-        return self.context['newest']
-
-
 class AssetOverviewAPIView(APIView):
     permission_classes = []
 
     @classmethod
     def set_price(cls, coins: list):
         for coin in coins:
-            coin['price_usdt'] = get_trading_price_usdt(coin['symbol'], side=BUY)
-            coin['price_irt'] = get_trading_price_irt(coin['symbol'], side=BUY)
+            coin['price_usdt'] = get_external_price(coin=coin['symbol'], base_coin=Asset.USDT, side=BUY, allow_stale=True)
+            coin['price_irt'] = get_external_price(coin=coin['symbol'], base_coin=Asset.IRT, side=BUY, allow_stale=True)
             coin['market_irt_enable'] = coin['symbol'] in get_irt_market_asset_symbols()
             coin.update(AssetSerializerMini(Asset.get(symbol=coin['symbol'])).data)
 
     def get(self, request):
         limit = int(self.request.query_params.get('limit', default=3))
 
-        coins = list(Asset.live_objects.values_list('symbol', flat=True))
+        coins = list(Asset.live_objects.exclude(symbol=Asset.IRT).values_list('symbol', flat=True))
         caps = get_provider_requester().get_coins_info(coins).values()
 
         def coin_info_to_dict(info: CoinInfo):
