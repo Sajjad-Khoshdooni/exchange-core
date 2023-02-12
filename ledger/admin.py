@@ -228,7 +228,7 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request', 'status', 'get_value', 'execution_type', 'gap_revenue')
+    list_display = ('created', 'otc_request', 'status', 'get_value', 'get_value_irt', 'execution_type', 'gap_revenue')
     list_filter = (OTCUserFilter, 'status')
     search_fields = ('group_id', 'order_id')
     readonly_fields = ('otc_request', )
@@ -237,6 +237,10 @@ class OTCTradeAdmin(admin.ModelAdmin):
     @admin.display(description='value')
     def get_value(self, otc_trade: models.OTCTrade):
         return humanize_number(round(otc_trade.otc_request.usdt_value, 2))
+
+    @admin.display(description='value_irt')
+    def get_value_irt(self, otc_trade: models.OTCTrade):
+        return humanize_number(round(otc_trade.otc_request.irt_value, 0))
 
     @admin.action(description='Accept Trade')
     def accept_trade(self, request, queryset):
