@@ -16,6 +16,7 @@ from ledger.models.asset import AssetSerializerMini
 from ledger.utils.external_price import BUY, get_external_usdt_prices, get_external_price
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.provider import CoinInfo, get_provider_requester
+from multimedia.models import CoinPriceContent
 
 
 class AssetSerializerBuilder(AssetSerializerMini):
@@ -41,6 +42,8 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
     can_deposit = serializers.SerializerMethodField()
     can_withdraw = serializers.SerializerMethodField()
+
+    description = serializers.SerializerMethodField()
 
     class Meta:
         model = Asset
@@ -131,6 +134,11 @@ class AssetSerializerBuilder(AssetSerializerMini):
             network__can_withdraw=True
         ).exists()
 
+    def get_description(self, asset: Asset):
+        content = CoinPriceContent.objects.filter(asset=asset).first()
+        if content:
+            return content.get_html()
+
     @classmethod
     def create_serializer(cls,  prices: bool = True, extra_info: bool = True):
         fields = AssetSerializerMini.Meta.fields
@@ -144,7 +152,7 @@ class AssetSerializerBuilder(AssetSerializerMini):
                 'price_usdt', 'price_irt', 'change_1h', 'change_24h', 'change_7d',
                 'cmc_rank', 'market_cap', 'volume_24h', 'circulating_supply', 'high_24h',
                 'low_24h', 'trend_url', 'min_withdraw_amount', 'min_withdraw_fee', 'can_deposit', 'can_withdraw',
-                'market_irt_enable'
+                'market_irt_enable', 'description',
             ]
 
         class Serializer(cls):

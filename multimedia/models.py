@@ -37,3 +37,6 @@ class CoinPriceContent(models.Model):
 
     def __str__(self):
         return str(self.asset)
+
+    def get_html(self):
+        return self.content.replace('\r\n', '')
