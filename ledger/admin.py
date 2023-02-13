@@ -16,7 +16,7 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network
+from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE
 from ledger.utils.overview import AssetOverview
@@ -565,3 +565,11 @@ class FastBuyTokenAdmin(admin.ModelAdmin):
         return humanize_number(fast_buy_token.amount)
 
     get_amount.short_description = 'مقدار'
+
+
+@admin.register(ManualTransaction)
+class ManualTransactionAdmin(admin.ModelAdmin):
+    list_display = ('created', 'wallet', 'type', 'status', 'amount')
+    raw_id_fields = ('wallet', )
+    list_filter = ('type', 'status')
+    ordering = ('-created', )

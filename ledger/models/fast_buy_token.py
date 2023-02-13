@@ -4,7 +4,6 @@ from decimal import Decimal
 from django.db import models
 
 from accounts.models import Notification
-from financial.models.payment import Payment
 from ledger.models import OTCRequest, Asset, Wallet, OTCTrade
 from ledger.utils.fields import DONE
 from ledger.utils.fields import get_amount_field
@@ -39,7 +38,7 @@ class FastBuyToken(models.Model):
     def user(self):
         return self.payment_request.bank_card.user
 
-    def create_otc_for_fast_buy_token(self, payment: Payment):
+    def create_otc_for_fast_buy_token(self, payment):
 
         self.status = FastBuyToken.DEPOSIT
         self.save(update_fields=['status'])
