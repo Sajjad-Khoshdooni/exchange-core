@@ -32,7 +32,7 @@ class DepositAddressView(RetrieveAPIView):
 
         network = get_object_or_404(Network, symbol=data['network'], can_deposit=True)
 
-        deposit_address = network.get_deposit_address(request.user.account)
+        deposit_address = network.get_deposit_address(request.user.get_account())
 
         return Response(data={
             'address': deposit_address.address

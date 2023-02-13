@@ -44,7 +44,7 @@ class FastBuyToken(models.Model):
         self.save(update_fields=['status'])
         if payment.status == DONE:
             otc_request = OTCRequest.new_trade(
-                account=self.user.account,
+                account=self.user.get_account(),
                 from_asset=Asset.get('IRT'),
                 to_asset=self.asset,
                 from_amount=Decimal(self.amount),

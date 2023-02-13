@@ -32,7 +32,7 @@ def build_user_wallets_balance(date, upload: bool = False):
             'user_id': user.id,
             'user_name': user.get_full_name(),
             'user_national_code': user.national_code,
-            'balance': balance_map[user.account.id] * 10
+            'balance': balance_map[user.get_account().id] * 10
         })
 
     file_path = '/tmp/accounting/wallets_{}.csv'.format(str(date))

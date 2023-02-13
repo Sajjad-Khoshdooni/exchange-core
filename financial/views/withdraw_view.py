@@ -39,8 +39,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context['request'].user
+        account = user.get_account()
 
-        if not can_withdraw(user.account):
+        if not can_withdraw(account):
             raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
 
         if user.level < user.LEVEL2:
@@ -52,7 +53,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         bank_account = get_object_or_404(BankAccount, iban=iban, user=user, verified=True, deleted=False)
 
-        assert user.account.is_ordinary_user()
+        assert account.is_ordinary_user()
 
         if not is_48h_rule_passed(user):
             logger.info('FiatRequest rejected due to 48h rule. user=%s' % user.id)
@@ -86,7 +87,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             raise ValidationError({'amount': 'حداکثر میزان برداشت به حساب بانکی در روز ۱۰۰ میلیون تومان است.'})
 
         asset = Asset.get(Asset.IRT)
-        wallet = asset.get_wallet(user.account)
+        wallet = asset.get_wallet(account)
 
         if not wallet.has_balance(amount):
             raise ValidationError({'amount': 'موجودی کافی نیست.'})

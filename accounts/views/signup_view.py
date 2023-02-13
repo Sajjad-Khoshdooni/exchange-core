@@ -97,11 +97,12 @@ class SignupSerializer(serializers.Serializer):
             user.save()
 
             if validated_data.get('referral_code'):
-                user.account.referred_by = Referral.objects.get(code=validated_data['referral_code'])
-                user.account.save()
+                account = user.get_account()
+                account.referred_by = Referral.objects.get(code=validated_data['referral_code'])
+                account.save()
 
                 from gamify.utils import check_prize_achievements, Task
-                check_prize_achievements(user.account.referred_by.owner, Task.REFERRAL)
+                check_prize_achievements(account.referred_by.owner, Task.REFERRAL)
 
             # otp_code.set_token_used()
 

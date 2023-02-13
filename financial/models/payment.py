@@ -93,7 +93,7 @@ class Payment(models.Model):
     def accept(self, pipeline: WalletPipeline):
         asset = Asset.get(Asset.IRT)
         user = self.payment_request.bank_card.user
-        account = user.account
+        account = user.get_account()
 
         pipeline.new_trx(
             sender=asset.get_wallet(Account.out()),
@@ -108,7 +108,7 @@ class Payment(models.Model):
             user.save()
 
         from gamify.utils import check_prize_achievements, Task
-        check_prize_achievements(user.account, Task.DEPOSIT)
+        check_prize_achievements(account, Task.DEPOSIT)
 
         self.alert_payment()
 

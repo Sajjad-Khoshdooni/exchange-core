@@ -53,7 +53,7 @@ class OTCInfoView(APIView):
                 to_amount = Decimal(1)
 
         otc = OTCRequest.get_otc_request(
-            account=self.request.user.account,
+            account=self.request.user.get_account(),
             from_asset=from_asset,
             to_asset=to_asset,
             from_amount=from_amount,
@@ -117,7 +117,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context['request']
-        account = request.user.account
+        account = request.user.get_account()
 
         if not settings.TRADE_ENABLE or not account.user.can_trade:
             raise ValidationError('در حال حاضر امکان معامله وجود ندارد.')
@@ -182,7 +182,7 @@ class OTCTradeSerializer(serializers.ModelSerializer):
         if not settings.TRADE_ENABLE or not request.user.can_trade:
             raise ValidationError('در حال حاضر امکان معامله وجود ندارد.')
 
-        otc_request = get_object_or_404(OTCRequest, token=token, account=request.user.account)
+        otc_request = get_object_or_404(OTCRequest, token=token, account=request.user.get_account())
 
         otc_trade = OTCTrade.objects.filter(otc_request=otc_request).first()
         if otc_trade:

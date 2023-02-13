@@ -196,7 +196,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
     def get_networks(self, asset: Asset):
         network_assets = asset.networkasset_set.all().order_by('withdraw_fee')
 
-        account = self.context['request'].user.account
+        account = self.context['request'].user.get_account()
 
         deposit_addresses = DepositAddress.objects.filter(address_key__account=account)
 
@@ -247,7 +247,7 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
 
     def get_queryset(self):
         disabled_assets = Wallet.objects.filter(
-            account=self.request.user.account,
+            account=self.request.user.get_account(),
             asset__enable=False
         ).exclude(balance=0).values_list('asset_id', flat=True)
 
@@ -339,7 +339,7 @@ class WalletSerializer(serializers.ModelSerializer):
 class ConvertDustView(APIView):
 
     def post(self, *args):
-        account = self.request.user.account
+        account = self.request.user.get_account()
         irt_asset = Asset.get(Asset.IRT)
 
         spot_wallets = Wallet.objects.filter(

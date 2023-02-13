@@ -37,7 +37,7 @@ class AchievementSerializer(serializers.ModelSerializer):
 
     def get_achieved(self, achievement: Achievement):
         user = self.context['request'].user
-        return achievement.achieved(user.account)
+        return achievement.achieved(user.get_account())
 
     def get_redeemed(self, achievement: Achievement):
         prize = self.context['prize']
@@ -58,11 +58,11 @@ class TaskSerializer(serializers.ModelSerializer):
 
     def get_progress(self, task: Task):
         user = self.context['request'].user
-        return task.get_progress_percent(user.account)
+        return task.get_progress_percent(user.get_account())
 
     def get_finished(self, task: Task):
         user = self.context['request'].user
-        return task.finished(user.account)
+        return task.finished(user.get_account())
 
 
 class MissionSerializer(serializers.ModelSerializer):
@@ -77,7 +77,7 @@ class MissionSerializer(serializers.ModelSerializer):
 
     def get_achievements(self, mission: Mission):
         user = self.context['request'].user
-        prize = Prize.objects.filter(account=user.account, achievement=mission.achievement).first()
+        prize = Prize.objects.filter(account=user.get_account(), achievement=mission.achievement).first()
 
         context = {
             **self.context,
@@ -93,11 +93,11 @@ class MissionSerializer(serializers.ModelSerializer):
 
     def get_finished(self, mission: Mission):
         user = self.context['request'].user
-        return mission.finished(user.account)
+        return mission.finished(user.get_account())
 
     def get_active(self, mission: Mission):
         user = self.context['request'].user
-        return mission.journey.get_active_mission(user.account) == mission
+        return mission.journey.get_active_mission(user.get_account()) == mission
 
     @property
     def data(self):
@@ -111,7 +111,7 @@ class MissionsAPIView(ListAPIView):
     serializer_class = MissionSerializer
 
     def get_queryset(self):
-        account = self.request.user.account
+        account = self.request.user.get_account()
         journey = MissionJourney.get_journey(account)
         return Mission.objects.filter(journey=journey, active=True)
 
@@ -128,7 +128,7 @@ class ActiveMissionsAPIView(RetrieveAPIView):
     serializer_class = MissionSerializer
 
     def get_object(self):
-        account = self.request.user.account
+        account = self.request.user.get_account()
         journey = MissionJourney.get_journey(account)
         return journey.get_active_mission(account)
 
@@ -136,7 +136,7 @@ class ActiveMissionsAPIView(RetrieveAPIView):
 class TotalVoucherAPIView(APIView):
 
     def get(self, request):
-        account = self.request.user.account
+        account = self.request.user.get_account()
         voucher = account.get_voucher_wallet()
 
         voucher_amount = 0

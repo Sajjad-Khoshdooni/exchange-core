@@ -38,7 +38,7 @@ class AccountTradeHistoryView(ListAPIView):
 
     def get_queryset(self):
         trades = Trade.objects.filter(
-            account=self.request.user.account,
+            account=self.request.user.get_account(),
             status=Trade.DONE,
         )
 

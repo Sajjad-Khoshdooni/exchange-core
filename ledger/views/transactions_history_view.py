@@ -56,7 +56,7 @@ class WithdrawHistoryView(ListAPIView):
         query_params = self.request.query_params
 
         queryset = Transfer.objects.filter(
-            wallet__account=self.request.user.account,
+            wallet__account=self.request.user.get_account(),
             deposit=False,
         ).order_by('-created')
 
@@ -73,7 +73,7 @@ class DepositHistoryView(WithdrawHistoryView):
         query_params = self.request.query_params
 
         queryset = Transfer.objects.filter(
-            wallet__account=self.request.user.account,
+            wallet__account=self.request.user.get_account(),
             deposit=True,
         ).order_by('-created')
 

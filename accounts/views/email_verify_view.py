@@ -63,7 +63,7 @@ class EmailOTPVerifySerializer(serializers.ModelSerializer):
         user.save()
 
         from gamify.utils import check_prize_achievements, Task
-        check_prize_achievements(user.account, Task.SET_EMAIL)
+        check_prize_achievements(user.get_account(), Task.SET_EMAIL)
 
         return user
 

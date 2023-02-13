@@ -82,7 +82,7 @@ class MarginWalletViewSet(ModelViewSet):
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
 
-        account = self.request.user.account
+        account = self.request.user.get_account()
         wallets = Wallet.objects.filter(account=account, market=Wallet.MARGIN, variant__isnull=True)
         loans = Wallet.objects.filter(account=account, market=Wallet.LOAN)
 
