@@ -47,7 +47,7 @@ def create_symbols_for_asset(asset: Asset):
         )
 
 
-def check_pair_symbol(p, up = False):
+def check_pair_symbol(p, up: bool = False):
     asset = p.asset
     price_irt = get_external_price(
         coin=asset.symbol,
