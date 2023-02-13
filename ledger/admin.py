@@ -289,6 +289,7 @@ class WalletAdmin(admin.ModelAdmin):
         WalletUserFilter
     ]
     readonly_fields = ('account', 'asset', 'market')
+    search_fields = ('account__user__phone', 'asset__symbol')
 
     @admin.display(description='free')
     def get_free(self, wallet: models.Wallet):
