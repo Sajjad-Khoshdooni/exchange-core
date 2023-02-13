@@ -20,7 +20,7 @@ class BaseTrade(models.Model):
     is_maker = models.BooleanField()
 
     created = models.DateTimeField(auto_now_add=True, db_index=True)
-    symbol = models.ForeignKey('market.PairSymbol', on_delete=models.CASCADE)
+    symbol = models.ForeignKey('market.PairSymbol', on_delete=models.PROTECT)
     account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
 
     market = models.CharField(
