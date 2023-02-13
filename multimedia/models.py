@@ -1,9 +1,8 @@
 from uuid import uuid4
 
-from django.conf import settings
 from django.db import models
-from django_quill.fields import QuillField
 from tinymce.models import HTMLField
+
 
 class Image(models.Model):
     uuid = models.UUIDField(default=uuid4, unique=True)

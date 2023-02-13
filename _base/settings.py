@@ -58,7 +58,6 @@ INSTALLED_APPS = [
     'gamify',
     'experiment',
 
-    'django_quill',
     'tinymce',
 
 ]
