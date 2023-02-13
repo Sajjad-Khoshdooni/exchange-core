@@ -38,6 +38,7 @@ urlpatterns = [
     path('robots.txt', TemplateView.as_view(template_name="robots.txt", content_type="text/plain")),
     path('dashboard/', dashboard),
 
+    path('tinymce/', include('tinymce.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.STAGING:
