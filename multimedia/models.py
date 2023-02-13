@@ -1,7 +1,7 @@
 from uuid import uuid4
 
-from django.conf import settings
 from django.db import models
+from tinymce.models import HTMLField
 
 
 class Image(models.Model):
@@ -28,3 +28,14 @@ class Banner(models.Model):
 
     class Meta:
         ordering = ('order', )
+
+
+class CoinPriceContent(models.Model):
+    asset = models.OneToOneField(to='ledger.Asset', on_delete=models.PROTECT)
+    content = HTMLField()
+
+    def __str__(self):
+        return str(self.asset)
+
+    def get_html(self):
+        return self.content.replace('\r\n', '')

@@ -16,8 +16,8 @@ class PairSymbol(models.Model):
     IdName = namedtuple("PairSymbol", "id name tick_size")
 
     name = models.CharField(max_length=32, blank=True, unique=True)
-    asset = models.ForeignKey('ledger.Asset', on_delete=models.CASCADE, related_name='pair')
-    base_asset = models.ForeignKey('ledger.Asset', on_delete=models.CASCADE, related_name='trading_pair')
+    asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT, related_name='pair')
+    base_asset = models.ForeignKey('ledger.Asset', on_delete=models.PROTECT, related_name='trading_pair')
 
     taker_fee = models.DecimalField(max_digits=9, decimal_places=8, default=DEFAULT_TAKER_FEE)
     maker_fee = models.DecimalField(max_digits=9, decimal_places=8, default=DEFAULT_MAKER_FEE)

@@ -41,7 +41,7 @@ class StopLoss(models.Model):
 
     wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name='stop_losses')
     created = models.DateTimeField(auto_now_add=True)
-    symbol = models.ForeignKey('market.PairSymbol', on_delete=models.CASCADE)
+    symbol = models.ForeignKey('market.PairSymbol', on_delete=models.PROTECT)
     fill_type = models.CharField(max_length=8, choices=FILL_TYPE_CHOICES)
     amount = get_amount_field()
     filled_amount = get_amount_field(default=Decimal(0))
