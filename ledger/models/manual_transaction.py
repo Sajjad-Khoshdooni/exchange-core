@@ -53,14 +53,13 @@ class ManualTransaction(models.Model):
                                 receiver=receiver,
                                 group_id=self.group_id,
                                 scope=Trx.MANUAL,
-                                amount=amount - sender_free
+                                amount=self.amount - sender_free
                             )
 
-                if amount > 0:
-                    pipeline.new_trx(
-                        sender=sender,
-                        receiver=receiver,
-                        group_id=self.group_id,
-                        scope=Trx.MANUAL,
-                        amount=amount
-                    )
+                pipeline.new_trx(
+                    sender=sender,
+                    receiver=receiver,
+                    group_id=self.group_id,
+                    scope=Trx.MANUAL,
+                    amount=amount
+                )
