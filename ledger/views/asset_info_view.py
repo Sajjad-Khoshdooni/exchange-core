@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import Min
+from django.db.models import Min, F
 from django.http import Http404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -275,7 +275,7 @@ class AssetOverviewAPIView(APIView):
 
         newest_coin_symbols = list(Asset.live_objects.exclude(
             symbol__in=['IRT', 'IOTA']
-        ).order_by('-publish_date').values_list('symbol', flat=True))[:limit]
+        ).order_by(F('publish_date').desc(nulls_last=True)).values_list('symbol', flat=True))[:limit]
 
         newest = list(map(coin_info_to_dict, filter(lambda cap: cap.coin in newest_coin_symbols, caps)))
         AssetOverviewAPIView.set_price(newest)
