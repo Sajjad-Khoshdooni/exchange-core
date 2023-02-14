@@ -55,7 +55,8 @@ class Asset(models.Model):
 
     margin_enable = models.BooleanField(default=False)
     spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.PROTECT, null=True, blank=True)
-    new_coin = models.BooleanField(default=False)
+
+    publish_date = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
