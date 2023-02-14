@@ -47,6 +47,9 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     step_size = serializers.SerializerMethodField()
 
+    price_irt = serializers.SerializerMethodField()
+    price_usdt = serializers.SerializerMethodField()
+
     def get_market_irt_enable(self, asset: Asset):
         return asset.symbol in self.context['enable_irt_market_list']
 
@@ -73,13 +76,24 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet or wallet.balance == 0:
             return '0'
 
-        price = self.context.get('prices', {}).get(asset.symbol, 0)
+        price = self.get_ext_price_irt(asset.symbol)
+        return asset.get_presentation_price_irt(wallet.balance * price)
+
+    def get_ext_price_irt(self, coin: str):
+        price = self.context.get('prices', {}).get(coin, 0)
         if not price:
-            price = get_external_price(coin=asset.symbol, base_coin=Asset.IRT, side=SELL, allow_stale=True) or 0
+            price = get_external_price(coin=coin, base_coin=Asset.IRT, side=SELL, allow_stale=True) or 0
         else:
             price *= self.context.get('tether_irt', 0)
 
-        return asset.get_presentation_price_irt(wallet.balance * price)
+        return price
+
+    def get_ext_price_usdt(self, coin: str):
+        price = self.context.get('prices', {}).get(coin, 0)
+        if not price:
+            price = get_external_price(coin=coin, base_coin=Asset.USDT, side=SELL, allow_stale=True) or 0
+
+        return price
 
     def get_balance_usdt(self, asset: Asset):
         wallet = self.get_wallet(asset)
@@ -87,10 +101,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        price = self.context.get('prices', {}).get(asset.symbol, 0)
-        if not price:
-            price = get_external_price(coin=asset.symbol, base_coin=Asset.USDT, side=SELL, allow_stale=True) or 0
-
+        price = self.get_ext_price_usdt(asset.symbol)
         return asset.get_presentation_price_usdt(wallet.balance * price)
 
     def get_free(self, asset: Asset):
@@ -130,11 +141,19 @@ class AssetListSerializer(serializers.ModelSerializer):
     def get_step_size(self, asset: Asset):
         return Asset.PRECISION
 
+    def get_price_irt(self, asset: Asset):
+        return asset.get_presentation_price_irt(self.get_ext_price_irt(asset.symbol))
+
+    def get_price_usdt(self, asset: Asset):
+        return asset.get_presentation_price_usdt(self.get_ext_price_usdt(asset.symbol))
+
     class Meta:
         model = Asset
         fields = ('symbol', 'precision', 'free', 'balance', 'balance_irt', 'balance_usdt',
                   'can_deposit', 'can_withdraw', 'trade_enable', 'pin_to_top', 'market_irt_enable',
-                  'name', 'name_fa', 'logo', 'original_symbol', 'original_name_fa', 'step_size')
+                  'name', 'name_fa', 'logo', 'original_symbol', 'original_name_fa', 'step_size', 'price_irt',
+                  'price_usdt')
+
         ref_name = 'ledger asset'
 
 
