@@ -73,7 +73,7 @@ class FiatWithdrawRequest(models.Model):
         asset = Asset.get(Asset.IRT)
         out_wallet = asset.get_wallet(Account.out())
 
-        account = self.bank_account.user.account
+        account = self.bank_account.user.get_account()
 
         sender, receiver = asset.get_wallet(account), out_wallet
 

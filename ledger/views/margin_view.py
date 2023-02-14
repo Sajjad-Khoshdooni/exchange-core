@@ -21,7 +21,7 @@ from ledger.utils.margin import check_margin_view_permission
 
 class MarginInfoView(APIView):
     def get(self, request: Request):
-        account = request.user.account
+        account = request.user.get_account()
         margin_info = MarginInfo.get(account)
 
         margin_level = min(margin_info.get_margin_level(), Decimal(999))
@@ -44,7 +44,7 @@ class MarginInfoView(APIView):
 
 class AssetMarginInfoView(APIView):
     def get(self, request: Request, symbol):
-        account = request.user.account
+        account = request.user.get_account()
         asset = get_object_or_404(Asset, symbol=symbol.upper(), margin_enable=True)
 
         margin_info = MarginInfo.get(account)
@@ -78,7 +78,7 @@ class MarginTransferSerializer(serializers.ModelSerializer):
 
         asset = validated_data['asset']
 
-        check_margin_view_permission(user.account, asset)
+        check_margin_view_permission(user.get_account(), asset)
 
         return super(MarginTransferSerializer, self).create(validated_data)
 
@@ -97,13 +97,13 @@ class MarginTransferViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         try:
-            serializer.save(account=self.request.user.account)
+            serializer.save(account=self.request.user.get_account())
         except InsufficientBalance:
             raise ValidationError('موجودی کافی نیست.')
 
     def get_queryset(self):
         return MarginTransfer.objects.filter(
-            account=self.request.user.account
+            account=self.request.user.get_account()
         ).order_by('-created')
 
 
@@ -116,7 +116,7 @@ class MarginLoanSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         asset = validated_data['asset']
 
-        check_margin_view_permission(user.account, asset)
+        check_margin_view_permission(user.get_account(), asset)
 
         validated_data['loan_type'] = validated_data.pop('type')
 
@@ -148,17 +148,17 @@ class MarginLoanViewSet(ModelViewSet):
     filterset_fields = ['status', 'type']
 
     def perform_create(self, serializer):
-        serializer.save(account=self.request.user.account)
+        serializer.save(account=self.request.user.get_account())
 
     def get_queryset(self):
         return MarginLoan.objects.filter(
-            account=self.request.user.account
+            account=self.request.user.get_account()
         ).order_by('-created')
 
 
 class MarginClosePositionView(APIView):
     def post(self, request: Request):
-        account = request.user.account
+        account = request.user.get_account()
 
         CloseRequest.close_margin(account, reason=CloseRequest.USER)
 

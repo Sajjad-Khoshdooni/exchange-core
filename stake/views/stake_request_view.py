@@ -33,7 +33,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
         amount = floor_precision(attrs['amount'], stake_option.precision)
         user = self.context['request'].user
         asset = stake_option.asset
-        wallet = asset.get_wallet(user.account)
+        wallet = asset.get_wallet(user.get_account())
 
         if not stake_option.enable:
             raise ValidationError('امکان استفاده از این گزینه در حال حاضر وجود ندارد.')
@@ -53,7 +53,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
         return {
             'stake_option': stake_option,
             'amount': amount,
-            'account': user.account,
+            'account': user.get_account(),
             'wallet': wallet,
             'user': user,
         }
@@ -66,7 +66,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
         if not user.show_staking:
             raise ValidationError('امکان سرمایه‌گذاری وجود ندارد.')
 
-        account = user.account
+        account = user.get_account()
         asset = stake_option.asset
 
         spot_wallet = asset.get_wallet(account)
@@ -76,7 +76,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
             stake_object = StakeRequest.objects.create(
                 stake_option=stake_option,
                 amount=amount,
-                account=user.account
+                account=user.get_account()
             )
             pipeline.new_trx(
                 group_id=stake_object.group_id,
@@ -102,11 +102,11 @@ class StakeRequestAPIView(ModelViewSet):
     serializer_class = StakeRequestSerializer
 
     def get_queryset(self):
-        return StakeRequest.objects.filter(account=self.request.user.account).order_by('-created')
+        return StakeRequest.objects.filter(account=self.request.user.get_account()).order_by('-created')
 
     def destroy(self, request, *args, **kwargs):
 
-        instance = get_object_or_404(StakeRequest, pk=kwargs['pk'], account=self.request.user.account)
+        instance = get_object_or_404(StakeRequest, pk=kwargs['pk'], account=self.request.user.get_account())
 
         if instance.status == StakeRequest.PROCESS:
             instance.change_status(new_status=StakeRequest.CANCEL_COMPLETE)

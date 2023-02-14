@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
 
-from accounts.models import Notification
+from accounts.models import Notification, Account
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import PHONE_MAX_LENGTH
@@ -152,6 +152,10 @@ class User(AbstractUser):
     promotion = models.CharField(max_length=256, blank=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
 
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
+
+    def get_account(self) -> Account:
+        account, _ = Account.objects.get_or_create(user=self)
+        return account
 
     @property
     def kyc_bank_card(self):

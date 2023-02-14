@@ -78,12 +78,12 @@ class ReferralViewSet(
     serializer_class = ReferralSerializer
 
     def get_queryset(self):
-        return Referral.objects.filter(owner=self.request.user.account)
+        return Referral.objects.filter(owner=self.request.user.get_account())
 
     def get_serializer_context(self):
         return {
             **super(ReferralViewSet, self).get_serializer_context(),
-            'account': self.request.user.account
+            'account': self.request.user.get_account()
         }
 
 
@@ -91,7 +91,7 @@ class ReferralOverviewAPIView(APIView):
 
     def get(self, request):
 
-        account = request.user.account
+        account = request.user.get_account()
 
         members = Account.objects.filter(referred_by__owner=account).count()
         referred_revenue = ReferralTrx.objects.filter(
@@ -116,22 +116,24 @@ class ReferralReportAPIView(ListAPIView):
     filterset_fields = ['referral']
 
     def get_queryset(self):
-        qs = ReferralTrx.objects.filter(
-            Q(referral__owner=self.request.user.account) | Q(trader=self.request.user.account)
+        account = self.request.user.get_account()
+
+        return ReferralTrx.objects.filter(
+            Q(referral__owner=account) | Q(trader=account)
         ).annotate(
             date=Cast('created', DateField()),
             received_amount=Case(
-                When(trader=self.request.user.account, then=F('trader_amount')),
-                When(referral__owner=self.request.user.account, then=F('referrer_amount'))
+                When(trader=account, then=F('trader_amount')),
+                When(referral__owner=account, then=F('referrer_amount'))
             )
         ).values('date').annotate(amount=Sum('received_amount'))
-        return qs
 
 
 class TradingFeeView(APIView):
 
     def get(self, request):
-        voucher = request.user.account.get_voucher_wallet()
+        account = request.user.get_account()
+        voucher = account.get_voucher_wallet()
 
         old_taker_fee = Decimal('0.2')
         old_maker_fee = Decimal('0')
@@ -147,7 +149,7 @@ class TradingFeeView(APIView):
 
         maker_fee = Decimal('0')
 
-        referral_code = request.user.account.referred_by
+        referral_code = account.referred_by
 
         if referral_code:
             referral_percent = Referral.REFERRAL_MAX_RETURN_PERCENT - referral_code.owner_share_percent

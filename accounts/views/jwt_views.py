@@ -30,7 +30,7 @@ class DelegatedAccountMixin:
             return Account.objects.get(id=request.auth.payload.get('account_id')), request.auth.payload.get('variant')
 
         if request.user:
-            return request.user.account, None
+            return request.user.get_account(), None
         return None, None
 
 

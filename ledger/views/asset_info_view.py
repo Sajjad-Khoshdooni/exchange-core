@@ -175,7 +175,7 @@ class AssetsViewSet(ModelViewSet):
         ctx = super().get_serializer_context()
 
         if self.request.user.is_authenticated:
-            ctx['bookmark_assets'] = set(self.request.user.account.bookmark_assets.values_list('id', flat=True))
+            ctx['bookmark_assets'] = set(self.request.user.get_account().bookmark_assets.values_list('id', flat=True))
         else:
             ctx['bookmark_assets'] = set()
 

@@ -33,10 +33,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         user = self.context['request'].user
 
-        if not can_withdraw(user.account):
+        if not can_withdraw(user.get_account()):
             raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
 
-        account = user.account
+        account = user.get_account()
         api = self.context.get('api')
 
         if attrs['address_book_id'] and (not api):

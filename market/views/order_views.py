@@ -88,8 +88,10 @@ class OpenOrderListAPIView(APIView):
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
 
     def get(self, request, *args, **kwargs):
+        account = self.request.user.get_account()
+
         context = {
-            'trades': Trade.get_account_orders_filled_price(self.request.user.account),
+            'trades': Trade.get_account_orders_filled_price(account),
         }
         filters = {}
         symbol_filter = self.request.query_params.get('symbol')
@@ -104,11 +106,11 @@ class OpenOrderListAPIView(APIView):
             filters['wallet__variant__isnull'] = not(str(bot_filter) == 'true')
 
         open_orders = Order.open_objects.filter(
-            wallet__account=self.request.user.account, stop_loss__isnull=True, **filters
+            wallet__account=account, stop_loss__isnull=True, **filters
         ).select_related('symbol', 'wallet',)
 
         open_stop_losses = StopLoss.open_objects.filter(
-            wallet__account=self.request.user.account, **filters
+            wallet__account=account, **filters
         ).select_related('symbol', 'wallet')
 
         serialized_orders = OrderStopLossSerializer(open_orders, many=True, context=context)

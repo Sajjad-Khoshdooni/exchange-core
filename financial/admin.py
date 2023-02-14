@@ -12,7 +12,7 @@ from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str
-from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
+from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
     FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.withdraw import FiatWithdraw
@@ -46,14 +46,6 @@ class GatewayAdmin(admin.ModelAdmin):
     @admin.display(description='max deposit')
     def get_max_deposit_amount(self, gateway: Gateway):
         return humanize_number(Decimal(gateway.max_deposit_amount))
-
-
-@admin.register(FiatTransaction)
-class FiatTransferRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'deposit', 'status', 'amount')
-    raw_id_fields = ('account', )
-    list_filter = ('deposit', 'status')
-    ordering = ('-created', )
 
 
 class UserRialWithdrawRequestFilter(SimpleListFilter):

@@ -56,7 +56,7 @@ class OrderBookAPIView(APIView):
             open_orders = {
                 (order['side'], str(floor_precision(order['price'], symbol.tick_size))): True for order in
                 Order.open_objects.filter(
-                    symbol=symbol, wallet__account=self.request.user.account
+                    symbol=symbol, wallet__account=self.request.user.get_account()
                 ).values('side', 'price')
             }
             for side in (BUY, SELL):

@@ -25,5 +25,5 @@ class OTCHistoryView(AccountTradeHistoryView):
     def get_queryset(self):
         return OTCRequest.objects.filter(
             otctrade__status=OTCTrade.DONE,
-            account=self.request.user.account,
+            account=self.request.user.get_account(),
         ).select_related('symbol', 'symbol__asset', 'symbol__base_asset').order_by('-created')

@@ -22,7 +22,7 @@ class WithdrawTestCase(TestCase):
 
         new_network_asset(self.usdt, self.network)
 
-        self.usdt.get_wallet(self.user.account).airdrop(100000)
+        self.usdt.get_wallet(self.user.get_account()).airdrop(100000)
 
     def test_withdraw_without_addressbook(self):
         amount = '50'

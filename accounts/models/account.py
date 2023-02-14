@@ -5,7 +5,6 @@ from django.db import models
 from django.db.models import UniqueConstraint, Q
 from django.utils import timezone
 
-from accounts.models import User
 from ledger.utils.external_price import BUY, get_external_price
 
 
@@ -18,7 +17,7 @@ class Account(models.Model):
 
     name = models.CharField(max_length=16, blank=True)
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.OneToOneField('User', on_delete=models.CASCADE, null=True, blank=True)
 
     type = models.CharField(
         max_length=1,

@@ -410,7 +410,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_user_reject_reason.short_description = 'وضعیت احراز'
 
     def get_wallet(self, user: User):
-        link = url_to_admin_list(Wallet) + '?account={}'.format(user.account.id)
+        link = url_to_admin_list(Wallet) + '?account={}'.format(user.get_account().id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_wallet.short_description = 'لیست کیف‌ها'
 
@@ -418,12 +418,12 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         if not hasattr(user, 'account'):
             return 0
 
-        return humanize_number(user.account.trade_volume_irt)
+        return humanize_number(user.get_account().trade_volume_irt)
 
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
 
     def get_last_trade(self, user: User):
-        return gregorian_to_jalali_datetime_str(Trade.objects.filter(account=user.account).last().created)
+        return gregorian_to_jalali_datetime_str(Trade.objects.filter(account=user.get_account()).last().created)
     get_last_trade.short_description = 'تاریخ آخرین معامله'
 
     def get_bank_card_link(self, user: User):
@@ -520,7 +520,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_selfie_image.short_description = 'عکس سلفی'
 
     def get_user_prizes(self, user: User):
-        prizes = user.account.prize_set.all()
+        prizes = user.get_account().prize_set.all()
         prize_list = []
         for prize in prizes:
             prize_list.append(str(prize.achievement))
@@ -529,7 +529,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_user_prizes.short_description = 'جایزه‌های دریافتی کاربر'
 
     def get_referred_count(self, user: User):
-        referrals = Referral.objects.filter(owner=user.account)
+        referrals = Referral.objects.filter(owner=user.get_account())
         referred_count = 0
         for referral in referrals:
             referred_count += Account.objects.filter(referred_by=referral).count()
@@ -537,7 +537,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_referred_count.short_description = ' تعداد دوستان دعوت شده'
 
     def get_revenue_of_referral(self, user: User):
-        referrals = Referral.objects.filter(owner=user.account)
+        referrals = Referral.objects.filter(owner=user.get_account())
         revenues = 0
         for referral in referrals:
             revenue = ReferralTrx.objects.filter(referral=referral).aggregate(total=Sum('referrer_amount'))
@@ -547,7 +547,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_revenue_of_referral.short_description = 'درآمد حاصل از کدهای دعوت ارسال شده به دوستان '
 
     def get_revenue_of_referred(self, user: User):
-        referral = user.account.referred_by
+        referral = user.get_account().referred_by
 
         revenue = ReferralTrx.objects.filter(referral=referral).aggregate(total=Sum('trader_amount'))
         return int(revenue['total'] or 0)
@@ -576,7 +576,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     def get_total_balance_irt_admin(self, user: User):
         try:
-            total_balance_irt = user.account.get_total_balance_irt(side=BUY)
+            total_balance_irt = user.get_account().get_total_balance_irt(side=BUY)
             return humanize_number(int(total_balance_irt))
         except:
             pass
