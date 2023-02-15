@@ -102,7 +102,7 @@ class MissionSerializer(serializers.ModelSerializer):
     @property
     def data(self):
         if self.instance is None:
-            return
+            return {}
         else:
             return super(MissionSerializer, self).data
 
