@@ -93,6 +93,15 @@ app.conf.beat_schedule = {
         },
     },
 
+    'free_missing_locks': {
+        'task': 'ledger.tasks.locks.free_missing_locks',
+        'schedule': 15,
+        'options': {
+            'queue': 'celery',
+            'expire': 15
+        },
+    },
+
     # 'lock_monitor': {
     #     'task': 'ledger.tasks.lock_monitor.lock_monitor',
     #     'schedule': crontab(minute=0),
