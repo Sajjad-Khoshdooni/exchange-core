@@ -167,7 +167,7 @@ class MarketStreamCache:
 
     def update_order_status(self, order):
         self.market_pipeline.publish(
-            f'market:orders:status:{order.symbol.name}', f'{order.side}-{order.price}-{order.status}'
+            f'market:orders:status:{order.symbol.name}', f'{order.id}-{order.side}-{order.price}-{order.status}'
         )
 
     def execute(self, symbol, updated_orders, trade_pairs=None, side=None, canceled=False):

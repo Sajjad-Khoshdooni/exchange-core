@@ -150,10 +150,12 @@ async def broadcast_orders_status():
                     print(raw_message)
                     continue
                 symbol = raw_message['channel'].split(':')[-1]
-                side, price, status = raw_message['data'].split('-')
+                order_id, side, price, status = raw_message['data'].split('-')
                 websockets.broadcast(
                     ORDERS_STATUS_CLIENTS,
-                    pickle.dumps({'symbol': symbol, 'side': side, 'price': Decimal(price), 'status': status})
+                    pickle.dumps({
+                        'order_id': order_id, 'symbol': symbol, 'side': side, 'price': Decimal(price), 'status': status
+                    })
                 )
         except (ConnectionError, TimeoutError) as err:
             logger.warning('redis connection error on broadcast_orders_status', extra={'err': err})
