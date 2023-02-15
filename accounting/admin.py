@@ -56,6 +56,7 @@ class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     search_fields = ('coin', )
     list_filter = ('vault__name', 'vault__type', 'vault__market')
     ordering = ('-value_usdt', )
+    readonly_fields = ('value_usdt', 'value_irt')
 
     def save_model(self, request, obj, form, change):
         super(VaultItemAdmin, self).save_model(request, obj, form, change)
