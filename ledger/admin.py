@@ -230,7 +230,7 @@ class OTCUserFilter(SimpleListFilter):
 class OTCTradeAdmin(admin.ModelAdmin):
     list_display = ('created', 'otc_request', 'status', 'get_value', 'get_value_irt', 'execution_type', 'gap_revenue')
     list_filter = (OTCUserFilter, 'status')
-    search_fields = ('group_id', 'order_id')
+    search_fields = ('group_id', 'order_id', 'otc_request__symbol__asset__symbol', 'account__user__phone')
     readonly_fields = ('otc_request', )
     actions = ('accept_trade', 'accept_trade_without_hedge', 'cancel_trade')
 
