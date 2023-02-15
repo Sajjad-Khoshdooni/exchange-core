@@ -3,4 +3,4 @@ from .withdraw import create_provider_withdraw, update_provider_withdraw, update
 from .fee import update_network_fees
 from .pnl import create_pnl_histories
 from .snapshot import create_snapshot
-from locks import free_missing_locks
+from .locks import free_missing_locks
