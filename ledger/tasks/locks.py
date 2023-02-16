@@ -11,6 +11,7 @@ def free_missing_locks():
 
     open_keys -= set(Order.open_objects.values_list('group_id', flat=True))
     open_keys -= set(OTCTrade.objects.filter(status=OTCTrade.PENDING).values_list('group_id', flat=True))
+    open_keys -= set(StopLoss.open_objects.values_list('group_id', flat=True))
 
     with WalletPipeline() as p:
         for k in open_keys:

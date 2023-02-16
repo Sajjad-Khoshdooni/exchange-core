@@ -288,7 +288,7 @@ class WalletAdmin(admin.ModelAdmin):
         ('asset', RelatedDropdownFilter),
         WalletUserFilter
     ]
-    readonly_fields = ('account', 'asset', 'market')
+    readonly_fields = ('account', 'asset', 'market', 'balance', 'locked')
     search_fields = ('account__user__phone', 'asset__symbol')
 
     @admin.display(description='free')
