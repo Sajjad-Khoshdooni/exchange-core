@@ -89,9 +89,9 @@ async def broadcast_depth():
                 logger.info(len(DEPTH_CLIENTS))
                 websockets.broadcast(DEPTH_CLIENTS, pickle.dumps({
                     'symbol': symbol,
-                    'buy_price': Decimal(top_orders.get('buy_price', 'inf')),
+                    'buy_price': Decimal(top_orders.get('buy_price', 0)),
                     'buy_amount': Decimal(top_orders.get('buy_amount', 0)),
-                    'sell_price': Decimal(top_orders.get('sell_price', 0)),
+                    'sell_price': Decimal(top_orders.get('sell_price', 'inf')),
                     'sell_amount': Decimal(top_orders.get('sell_amount', 0)),
                 }))
         except (ConnectionError, TimeoutError) as err:
