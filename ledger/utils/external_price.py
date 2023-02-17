@@ -134,6 +134,12 @@ def _get_raw_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
     if price:
         return Decimal(price)
 
+    if allow_stale:
+        from market.models import PairSymbol
+
+        symbol = PairSymbol.objects.get(name='USDTIRT')
+        return symbol.last_trade_price
+
     try:
         data = _get_price_tether_irt_nobitex()
         if data['status'] != 'ok':
