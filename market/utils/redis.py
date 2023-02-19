@@ -146,10 +146,13 @@ class MarketStreamCache:
                         f'market:depth:price:{symbol.name}:{order_type}', str(top_order.price)
                     )
             else:
+                missing_price_fallback = 0 if side == BUY else 'inf'
                 top_orders[f'{order_type}_price'] = str(
-                    self._client.get(f'market:depth:price:{symbol.name}:{order_type}'))
+                    self._client.get(f'market:depth:price:{symbol.name}:{order_type}') or missing_price_fallback
+                )
                 top_orders[f'{order_type}_amount'] = str(
-                    self._client.get(f'market:depth:amount:{symbol.name}:{order_type}'))
+                    self._client.get(f'market:depth:amount:{symbol.name}:{order_type}') or 0
+                )
 
         if canceled or any(price_updated.values()) or any(amount_updated.values()):
             self.market_pipeline.publish(f'market:depth:{symbol.name}', json.dumps(top_orders))
