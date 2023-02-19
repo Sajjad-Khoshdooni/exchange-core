@@ -27,7 +27,7 @@ class Asset(models.Model):
     USDT = 'USDT'
     SHIB = 'SHIB'
 
-    ACTIVE = 'active'
+    ACTIVE, DISABLED = 'active', 'disabled'
 
     PRECISION = 8
 
@@ -64,7 +64,7 @@ class Asset(models.Model):
     otc_status = models.CharField(
         max_length=8,
         default=ACTIVE,
-        choices=((ACTIVE, ACTIVE), (BUY, BUY), (SELL, SELL)),
+        choices=((ACTIVE, ACTIVE), (BUY, BUY), (SELL, SELL), (DISABLED, DISABLED)),
     )
 
     class Meta:
