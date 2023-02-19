@@ -85,7 +85,10 @@ async def broadcast_depth():
                     print(raw_message)
                     continue
                 symbol = raw_message['channel'].split(':')[-1]
-                top_orders = json.loads(raw_message['data'])
+                try:
+                    top_orders = json.loads(raw_message['data'])
+                except TypeError:
+                    continue
                 logger.info(len(DEPTH_CLIENTS))
                 websockets.broadcast(DEPTH_CLIENTS, pickle.dumps({
                     'symbol': symbol,
