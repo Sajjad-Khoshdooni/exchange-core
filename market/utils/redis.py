@@ -128,6 +128,8 @@ class MarketStreamCache:
             if side is None or order_type == side:
                 top_order = Order.get_top_price_amount(symbol.id, order_type)
                 if not top_order:
+                    self.market_pipeline.delete(f'market:depth:price:{symbol.name}:{order_type}')
+                    self.market_pipeline.delete(f'market:depth:amount:{symbol.name}:{order_type}')
                     continue
                 top_orders[f'{order_type}_price'] = str(top_order.price)
                 top_orders[f'{order_type}_amount'] = str(top_order.amount)
