@@ -9,7 +9,8 @@ from rest_framework import serializers
 from _base.settings import SYSTEM_ACCOUNT_ID, OTC_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
-from ledger.utils.precision import get_precision, get_presentation_amount
+from ledger.utils.external_price import BUY, SELL
+from ledger.utils.precision import get_presentation_amount
 
 
 class InvalidAmount(Exception):
@@ -25,6 +26,8 @@ class Asset(models.Model):
     IRT = 'IRT'
     USDT = 'USDT'
     SHIB = 'SHIB'
+
+    ACTIVE = 'active'
 
     PRECISION = 8
 
@@ -57,6 +60,12 @@ class Asset(models.Model):
     spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.PROTECT, null=True, blank=True)
 
     publish_date = models.DateTimeField(null=True, blank=True)
+
+    otc_status = models.CharField(
+        max_length=8,
+        default=ACTIVE,
+        choices=((ACTIVE, ACTIVE), (BUY, BUY), (SELL, SELL)),
+    )
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
