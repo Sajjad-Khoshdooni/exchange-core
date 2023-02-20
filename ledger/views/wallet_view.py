@@ -325,7 +325,8 @@ class WalletBalanceView(APIView, DelegatedAccountMixin):
                variant__isnull=True
             ).first()
 
-            free = max(Decimal(), free + debt_wallet.balance)
+            if debt_wallet:
+                free = max(Decimal(), free + debt_wallet.balance)
 
         return Response({
             'symbol': asset.symbol,
