@@ -75,7 +75,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        return asset.get_presentation_amount(wallet.balance - self.get_debt(asset))
+        return asset.get_presentation_amount(wallet.balance + self.get_debt(asset))
 
     def get_balance_irt(self, asset: Asset):
         wallet = self.get_wallet(asset)
@@ -83,7 +83,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        balance = wallet.balance - self.get_debt(asset)
+        balance = wallet.balance + self.get_debt(asset)
 
         if balance == 0:
             return '0'
@@ -113,7 +113,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        balance = wallet.balance - self.get_debt(asset)
+        balance = wallet.balance + self.get_debt(asset)
 
         price = self.get_ext_price_usdt(asset.symbol)
         return asset.get_presentation_price_usdt(balance * price)
@@ -124,7 +124,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        return asset.get_presentation_amount(wallet.get_free() - self.get_debt(asset))
+        return asset.get_presentation_amount(wallet.get_free() + self.get_debt(asset))
 
     def get_can_deposit(self, asset: Asset):
         if asset.symbol == Asset.IRT:
@@ -324,7 +324,7 @@ class WalletBalanceView(APIView, DelegatedAccountMixin):
                variant__isnull=True
             ).first()
 
-            free -= debt_wallet.balance
+            free += debt_wallet.balance
 
         return Response({
             'symbol': asset.symbol,
