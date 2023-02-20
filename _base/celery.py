@@ -33,6 +33,14 @@ app.conf.beat_schedule = {
             'expire': 30 * 60
         },
     },
+    'auto_clear_debts': {
+        'task': 'ledger.tasks.debt.auto_clear_debts',
+        'schedule': 60 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'celery',
+            'expire': 60 * TASK_MULTIPLIER
+        },
+    },
     'update_provider_withdraw': {
         'task': 'ledger.tasks.withdraw.update_provider_withdraw',
         'schedule': 10 * TASK_MULTIPLIER,

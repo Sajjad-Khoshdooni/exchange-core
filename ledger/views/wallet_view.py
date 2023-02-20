@@ -124,7 +124,8 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        return asset.get_presentation_amount(wallet.get_free() + self.get_debt(asset))
+        free = max(Decimal(), wallet.get_free() + self.get_debt(asset))
+        return asset.get_presentation_amount(free)
 
     def get_can_deposit(self, asset: Asset):
         if asset.symbol == Asset.IRT:
@@ -324,7 +325,7 @@ class WalletBalanceView(APIView, DelegatedAccountMixin):
                variant__isnull=True
             ).first()
 
-            free += debt_wallet.balance
+            free = max(Decimal(), free + debt_wallet.balance)
 
         return Response({
             'symbol': asset.symbol,
