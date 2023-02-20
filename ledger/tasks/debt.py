@@ -15,6 +15,7 @@ def auto_clear_debts():
             market=Wallet.SPOT,
             variant__isnull=True,
             balance__gt=0,
-        )
+        ).first()
 
-        clear_debt(spot_wallet, debt_wallet)
+        if spot_wallet:
+            clear_debt(spot_wallet, debt_wallet)
