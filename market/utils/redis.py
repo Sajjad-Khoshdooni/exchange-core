@@ -9,6 +9,7 @@ prefix_top_price = 'market_top_price'
 prefix_top_depth_price = 'market_top_depth_price'
 prefix_orders_count = 'market_orders_count'
 prefix_order_size_factor = 'market_order_size_factor'
+prefix_last_trade = 'market_order_size_factor'
 
 market_redis = Redis.from_url(settings.MARKET_CACHE_LOCATION, decode_responses=True)
 
