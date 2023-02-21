@@ -23,7 +23,7 @@ def get_yesterday_prices() -> dict:
     hour = timezone.now().hour + 1
     key = '%s:%s' % (PREFIX_LAST_TRADE, hour)
     prices = market_redis.hgetall(key)
-    return {s: Decimal(p) for (s, p) in prices.items()}
+    return {int(s): Decimal(p) for (s, p) in prices.items()}
 
 
 @cache_for()
