@@ -40,7 +40,7 @@ def update_provider_vaults(now: datetime, usdt_irt: Decimal):
                 key=profile_id,
 
                 defaults={
-                    'name': '%s-%s' % (exchange, profile['scope'])
+                    'name': '%s-%s' % (exchange, profile['id'])
                 }
             )
 
