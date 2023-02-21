@@ -81,8 +81,8 @@ class VaultItem(models.Model):
     vault = models.ForeignKey(Vault, on_delete=models.CASCADE)
     coin = models.CharField(max_length=32, db_index=True)
     balance = get_amount_field(validators=())
-    value_usdt = get_amount_field(validators=())
-    value_irt = get_amount_field(validators=())
+    value_usdt = get_amount_field(validators=(), default=0)
+    value_irt = get_amount_field(validators=(), default=0)
 
     class Meta:
         unique_together = ('vault', 'coin')
