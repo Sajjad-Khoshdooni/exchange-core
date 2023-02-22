@@ -80,6 +80,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         today_withdraws = FiatWithdrawRequest.objects.filter(
             bank_account=bank_account,
             created__gte=today,
+        ).exclude(
+            status=FiatWithdrawRequest.CANCELED
         ).aggregate(amount=Sum('amount'))['amount'] or 0
 
         if amount + today_withdraws > MAX_WITHDRAW:
