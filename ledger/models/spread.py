@@ -28,12 +28,12 @@ class CategorySpread(models.Model):
 
     step = models.PositiveIntegerField(
         choices=[(1, '0$ - 3$'), (2, '3$ - 10$'), (3, '10$ - 1000$'), (4, '1000$ - 2000$'), (5, '> 2000$')],
-        validators=[MinValueValidator(-5), MaxValueValidator(10)],
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
     )
 
     spread = get_amount_field(
         default=DEFAULT_SPREAD,
-        validators=(MinValueValidator(Decimal('0.1')), MaxValueValidator(15))
+        validators=(MinValueValidator(-5), MaxValueValidator(5))
     )
 
     def __str__(self):
