@@ -28,7 +28,7 @@ class CategorySpread(models.Model):
 
     step = models.PositiveIntegerField(
         choices=[(1, '0$ - 3$'), (2, '3$ - 10$'), (3, '10$ - 1000$'), (4, '1000$ - 2000$'), (5, '> 2000$')],
-        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        validators=[MinValueValidator(-5), MaxValueValidator(10)],
     )
 
     spread = get_amount_field(
@@ -83,7 +83,7 @@ class MarketSpread(models.Model):
     )
 
     spread = get_amount_field(
-        validators=(MinValueValidator(0), MaxValueValidator(15))
+        validators=(MinValueValidator(-5), MaxValueValidator(10))
     )
 
     class Meta:
