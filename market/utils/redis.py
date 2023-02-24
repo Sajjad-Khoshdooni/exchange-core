@@ -167,7 +167,7 @@ class MarketStreamCache:
             is_buyer_maker = maker_trade.side == BUY
             self.market_pipeline.publish(
                 f'market:trades:{maker_trade.symbol.name}',
-                f'{taker_trade.id}#{maker_trade.price}#{maker_trade.amount}#{maker_trade.order_id}#{taker_trade.order_id}#{is_buyer_maker}'
+                f'{taker_trade.id}#{maker_trade.price}#{maker_trade.amount}#{maker_trade.client_order_id or maker_trade.order_id}#{taker_trade.client_order_id or taker_trade.order_id}#{is_buyer_maker}'
             )
 
     def update_order_status(self, order):
