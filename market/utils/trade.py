@@ -50,7 +50,6 @@ class TradesPair:
             base_usdt_price=base_usdt_price,
             group_id=group_id,
             market=maker_order.wallet.market,
-            client_order_id=maker_order.client_order_id,
         )
 
         taker_trade = Trade(
@@ -66,8 +65,9 @@ class TradesPair:
             base_usdt_price=base_usdt_price,
             group_id=group_id,
             market=taker_order.wallet.market,
-            client_order_id=taker_order.client_order_id,
         )
+        maker_trade.client_order_id = maker_order.client_order_id,
+        taker_trade.client_order_id = taker_order.client_order_id,
 
         return TradesPair(
             maker_trade=maker_trade,
