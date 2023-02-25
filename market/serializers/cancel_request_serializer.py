@@ -73,7 +73,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
                 order_filter = {'id': instance_id}
             else:
                 order_filter = {'client_order_id': client_order_id}
-            order = Order.objects.filter(
+            order = Order.open_objects.filter(
                 wallet__account=self.context['account'],
                 **order_filter
             ).first()
