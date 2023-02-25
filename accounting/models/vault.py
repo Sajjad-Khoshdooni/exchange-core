@@ -24,9 +24,9 @@ class Vault(models.Model):
     MARKETS = SPOT, FUTURES = 'spot', 'futures'
 
     name = models.CharField(max_length=32)
+
     type = models.CharField(max_length=8, choices=[(t, t) for t in TYPES])
     market = models.CharField(max_length=8, choices=[(t, t) for t in MARKETS], default=SPOT)
-
     key = models.CharField(max_length=128, blank=True)
 
     real_value = get_amount_field(default=Decimal())
