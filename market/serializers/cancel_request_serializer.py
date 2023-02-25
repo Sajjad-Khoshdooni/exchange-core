@@ -41,7 +41,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
             client_order_id = validated_data.pop('client_order_id', None)
         if not (instance_id or client_order_id):
             raise NotFound(_('Order id is missing in input'))
-        if instance_id.startswith('sl-'):
+        if instance_id and instance_id.startswith('sl-'):
             stop_loss = StopLoss.open_objects.filter(
                 wallet__account=self.context['account'],
                 id=instance_id.split('sl-')[1],
