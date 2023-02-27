@@ -128,6 +128,8 @@ class MarketStreamCache:
             if side is None or order_type == side:
                 top_order = Order.get_top_price_amount(symbol.id, order_type)
                 if not top_order:
+                    self.market_pipeline.delete(f'market:depth:price:{symbol.name}:{order_type}')
+                    self.market_pipeline.delete(f'market:depth:amount:{symbol.name}:{order_type}')
                     continue
                 top_orders[f'{order_type}_price'] = str(top_order.price)
                 top_orders[f'{order_type}_amount'] = str(top_order.amount)
@@ -144,10 +146,13 @@ class MarketStreamCache:
                         f'market:depth:price:{symbol.name}:{order_type}', str(top_order.price)
                     )
             else:
+                missing_price_fallback = 0 if side == BUY else 'inf'
                 top_orders[f'{order_type}_price'] = str(
-                    self._client.get(f'market:depth:price:{symbol.name}:{order_type}'))
+                    self._client.get(f'market:depth:price:{symbol.name}:{order_type}') or missing_price_fallback
+                )
                 top_orders[f'{order_type}_amount'] = str(
-                    self._client.get(f'market:depth:amount:{symbol.name}:{order_type}'))
+                    self._client.get(f'market:depth:amount:{symbol.name}:{order_type}') or 0
+                )
 
         if canceled or any(price_updated.values()) or any(amount_updated.values()):
             self.market_pipeline.publish(f'market:depth:{symbol.name}', json.dumps(top_orders))
@@ -162,12 +167,12 @@ class MarketStreamCache:
             is_buyer_maker = maker_trade.side == BUY
             self.market_pipeline.publish(
                 f'market:trades:{maker_trade.symbol.name}',
-                f'{taker_trade.id}#{maker_trade.price}#{maker_trade.amount}#{maker_trade.order_id}#{taker_trade.order_id}#{is_buyer_maker}'
+                f'{taker_trade.id}#{maker_trade.price}#{maker_trade.amount}#{maker_trade.client_order_id or maker_trade.order_id}#{taker_trade.client_order_id or taker_trade.order_id}#{is_buyer_maker}'
             )
 
     def update_order_status(self, order):
         self.market_pipeline.publish(
-            f'market:orders:status:{order.symbol.name}', f'{order.side}-{order.price}-{order.status}'
+            f'market:orders:status:{order.symbol.name}', f'{order.id}-{order.side}-{order.price}-{order.status}'
         )
 
     def execute(self, symbol, updated_orders, trade_pairs=None, side=None, canceled=False):

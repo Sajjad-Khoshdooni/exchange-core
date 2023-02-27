@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 
 
 class CancelRequestSerializer(serializers.ModelSerializer):
-    id = serializers.CharField(source='order_id')
+    id = serializers.CharField(source='order_id', required=False)
+    client_order_id = serializers.CharField(write_only=True, required=False)
     canceled_at = serializers.CharField(source='created', read_only=True)
 
     @staticmethod
@@ -34,8 +35,13 @@ class CancelRequestSerializer(serializers.ModelSerializer):
         return req
 
     def create(self, validated_data):
-        instance_id = validated_data.pop('order_id')
-        if instance_id.startswith('sl-'):
+        instance_id = validated_data.pop('order_id', None)
+        client_order_id = None
+        if not instance_id:
+            client_order_id = validated_data.pop('client_order_id', None)
+        if not (instance_id or client_order_id):
+            raise NotFound(_('Order id is missing in input'))
+        if instance_id and instance_id.startswith('sl-'):
             stop_loss = StopLoss.open_objects.filter(
                 wallet__account=self.context['account'],
                 id=instance_id.split('sl-')[1],
@@ -63,9 +69,13 @@ class CancelRequestSerializer(serializers.ModelSerializer):
                     # faking cancel request creation
                     return CancelRequest(order_id=instance_id, created=timezone.now())
         else:
+            if instance_id:
+                order_filter = {'id': instance_id}
+            else:
+                order_filter = {'client_order_id': client_order_id}
             order = Order.open_objects.filter(
                 wallet__account=self.context['account'],
-                id=instance_id,
+                **order_filter
             ).first()
             if not order or order.stop_loss:
                 raise NotFound(_('Order not found'))
@@ -76,4 +86,4 @@ class CancelRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CancelRequest
-        fields = ('id', 'canceled_at')
+        fields = ('id', 'canceled_at', 'client_order_id')
