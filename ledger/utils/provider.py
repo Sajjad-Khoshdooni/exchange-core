@@ -311,6 +311,8 @@ class ProviderRequester:
             if not order:
                 raise HedgeError
 
+            return True
+
     def new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal, side: str):
         resp = self.collect_api('/api/v1/orders/', method='POST', data={
             'request_id': request_id,
@@ -351,6 +353,11 @@ class ProviderRequester:
             status=data['status'],
             tx_id=data.get('tx_id') or ''
         )
+
+    def get_order(self, request_id: str):
+        return self.collect_api('/api/v1/orders/details/', method='GET', data={
+            'request_id': request_id,
+        }).data
 
     # todo: add caching
     def get_coins_info(self, coins: List[str]) -> Dict[str, CoinInfo]:
@@ -474,6 +481,12 @@ class MockProviderRequester(ProviderRequester):
 
     def get_avg_trade_price(self, symbol: str, start: datetime, end: datetime) -> Decimal:
         return Decimal(30000)
+
+    def get_order(self, request_id: str):
+        return {
+            'filled_price': Decimal(1),
+            'filled_amount': Decimal(1),
+        }
 
 
 def get_provider_requester() -> ProviderRequester:

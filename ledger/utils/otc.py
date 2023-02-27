@@ -42,9 +42,8 @@ def get_trading_pair(from_asset: Asset, to_asset: Asset, from_amount: Decimal = 
         raise NotImplementedError
 
 
-@cache_for(30)
-def get_otc_spread(coin: str, side: str, value: Decimal = None, base_coin: str = None) -> Decimal:
-    from ledger.models import CategorySpread, Asset, MarketSpread
+def get_asset_spread(coin, side: str, value: Decimal = None) -> Decimal:
+    from ledger.models import CategorySpread, Asset
 
     asset = Asset.get(coin)
     step = CategorySpread.get_step(value)
@@ -57,15 +56,29 @@ def get_otc_spread(coin: str, side: str, value: Decimal = None, base_coin: str =
         logger.warning("No category spread defined for %s step = %s, side = %s" % (category, step, side))
         asset_spread = CategorySpread()
 
-    spread = asset_spread.spread
+    return asset_spread.spread / 100
+
+
+def get_market_spread(base_coin: str, side: str, value: Decimal = None) -> Decimal:
+    from ledger.models import Asset, MarketSpread, CategorySpread
+
+    step = CategorySpread.get_step(value)
 
     if base_coin == Asset.IRT:
         market_spread = MarketSpread.objects.filter(step=step, side=side).first()
 
         if market_spread:
-            spread += market_spread.spread
+            return market_spread.spread / 100
 
-    return spread / 100
+    return Decimal()
+
+
+@cache_for(30)
+def get_otc_spread(coin: str, side: str, value: Decimal = None, base_coin: str = None) -> Decimal:
+    spread = get_asset_spread(coin=coin, side=side, value=value)
+    spread += get_market_spread(base_coin=base_coin, side=side, value=value)
+
+    return spread
 
 
 def spread_to_multiplier(spread: Decimal, side: str):

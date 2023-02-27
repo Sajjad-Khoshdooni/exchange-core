@@ -15,6 +15,7 @@ from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum
 from django.utils import timezone
 
 from _base.settings import OTC_ACCOUNT_ID
+from accounting.models import TradeRevenue
 from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
@@ -249,6 +250,8 @@ class Order(models.Model):
 
         symbol = PairSymbol.objects.select_for_update().get(id=self.symbol_id)
 
+        trades_revenue = []
+
         log_prefix = 'MM %s: ' % symbol.name
 
         logger.info(log_prefix + f'make match started... {overriding_fill_amount}')
@@ -356,11 +359,21 @@ class Order(models.Model):
 
             if taker_ordinary != maker_order.wallet.account.is_ordinary_user():
                 ordinary_order = self if self.type == Order.ORDINARY else maker_order
+                ordinary_trade = trades_pair.taker_trade if taker_ordinary else trades_pair.maker_trade
 
                 if ordinary_order.side == SELL:
                     to_hedge_amount -= match_amount
                 else:
                     to_hedge_amount += match_amount
+
+                trades_revenue.append(
+                    TradeRevenue.new(
+                        user_trade=ordinary_trade,
+                        group_id=ordinary_trade.group_id,
+                        source=TradeRevenue.MAKER if ordinary_trade.is_maker else TradeRevenue.TAKER,
+                        hedge_key=''
+                    )
+                )
 
             unfilled_amount -= match_amount
             if match_amount == maker_order.unfilled_amount:  # unfilled_amount reduced in DB but not updated here :)
@@ -379,6 +392,7 @@ class Order(models.Model):
                 break
 
         if to_hedge_amount != 0:
+            provider_request_id = 'taker:%s' % self.id
             side = BUY
 
             if to_hedge_amount < 0:
@@ -386,13 +400,17 @@ class Order(models.Model):
                 side = SELL
 
             from ledger.utils.provider import get_provider_requester, TRADE
-            get_provider_requester().try_hedge_new_order(
-                request_id='taker:%s' % self.id,
+            hedged = get_provider_requester().try_hedge_new_order(
+                request_id=provider_request_id,
                 asset=self.wallet.asset,
                 side=side,
                 amount=to_hedge_amount,
                 scope=TRADE
             )
+
+            if hedged:
+                for rev in trades_revenue:
+                    rev.hedge_key = provider_request_id
 
         if self.fill_type == Order.MARKET and self.status == Order.NEW:
             self.status = Order.CANCELED
@@ -400,6 +418,7 @@ class Order(models.Model):
             self.save(update_fields=['status'])
 
         trades = Trade.objects.bulk_create(trades)
+        TradeRevenue.objects.bulk_create(trades_revenue)
 
         if trades:
             symbol.last_trade_time = timezone.now()

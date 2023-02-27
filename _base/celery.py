@@ -94,6 +94,15 @@ app.conf.beat_schedule = {
         },
     },
 
+    'fill_trades_revenue': {
+        'task': 'accounting.tasks.revenue.fill_revenue_filled_prices',
+        'schedule': 30 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'celery',
+            'expire': 30 * TASK_MULTIPLIER
+        },
+    },
+
     # 'lock_monitor': {
     #     'task': 'ledger.tasks.lock_monitor.lock_monitor',
     #     'schedule': crontab(minute=0),

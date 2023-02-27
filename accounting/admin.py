@@ -3,7 +3,7 @@ from django.db.models import Sum
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset, \
-    AssetPrice
+    AssetPrice, TradeRevenue
 from ledger.utils.precision import humanize_number
 
 
@@ -73,3 +73,11 @@ class ReservedAssetAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 class AssetPriceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ('coin', 'price', 'updated')
     search_fields = ('coin', )
+
+
+@admin.register(TradeRevenue)
+class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    list_display = ('created', 'symbol', 'side', 'amount', 'price', 'coin_filled_price', 'source', 'hedge_key',
+                    'fiat_hedge_usdt', 'fiat_hedge_base')
+    search_fields = ('group_id', 'hedge_key', )
+    list_filter = ('symbol', )
