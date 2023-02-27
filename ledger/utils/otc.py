@@ -42,7 +42,7 @@ def get_trading_pair(from_asset: Asset, to_asset: Asset, from_amount: Decimal = 
         raise NotImplementedError
 
 
-@cache_for(300)
+@cache_for(30)
 def get_otc_spread(coin: str, side: str, value: Decimal = None, base_coin: str = None) -> Decimal:
     from ledger.models import CategorySpread, Asset, MarketSpread
 
