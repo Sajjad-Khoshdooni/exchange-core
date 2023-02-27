@@ -40,7 +40,7 @@ def update_provider_vaults(now: datetime, usdt_irt: Decimal):
                 key=profile_id,
 
                 defaults={
-                    'name': '%s-%s' % (exchange, profile['scope'])
+                    'name': '%s-%s' % (exchange, profile['id'])
                 }
             )
 
@@ -178,6 +178,13 @@ def update_asset_prices():
         side=BUY,
         allow_stale=True,
         set_bulk_cache=True
+    )
+
+    prices['IRT'] = get_external_price(
+        coin=Asset.IRT,
+        base_coin=Asset.USDT,
+        side=BUY,
+        allow_stale=True,
     )
 
     existing_assets = AssetPrice.objects.filter(coin__in=prices)

@@ -33,7 +33,7 @@ class CategorySpread(models.Model):
 
     spread = get_amount_field(
         default=DEFAULT_SPREAD,
-        validators=(MinValueValidator(Decimal('0.1')), MaxValueValidator(15))
+        validators=(MinValueValidator(-5), MaxValueValidator(5))
     )
 
     def __str__(self):
@@ -83,7 +83,7 @@ class MarketSpread(models.Model):
     )
 
     spread = get_amount_field(
-        validators=(MinValueValidator(0), MaxValueValidator(15))
+        validators=(MinValueValidator(-5), MaxValueValidator(10))
     )
 
     class Meta:

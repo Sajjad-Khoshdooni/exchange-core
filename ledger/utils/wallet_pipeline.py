@@ -171,8 +171,7 @@ class WalletPipeline(Atomic):
             print('new locks count', len(self._locks))
             print('new trxs', len(self._trxs))
 
-        from ledger.models import Wallet, BalanceLock
-        from ledger.models.trx import Trx
+        from ledger.models import Wallet, BalanceLock, Trx
 
         for lock_id, lock_update in self._build_lock_updates().items():
             BalanceLock.objects.filter(key=lock_id).update(**lock_update)

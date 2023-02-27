@@ -26,6 +26,7 @@ class Wallet(models.Model):
     market = models.CharField(
         max_length=8,
         choices=MARKET_CHOICES,
+        db_index=True,
     )
 
     check_balance = models.BooleanField(default=True)

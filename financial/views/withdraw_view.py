@@ -42,7 +42,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         account = user.get_account()
 
         if not can_withdraw(account):
-            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
+            raise ValidationError('به خاطر بدهی به سیستم امکان برداشت وجود ندارد.')
 
         if user.level < user.LEVEL2:
             raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
@@ -80,6 +80,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         today_withdraws = FiatWithdrawRequest.objects.filter(
             bank_account=bank_account,
             created__gte=today,
+        ).exclude(
+            status=FiatWithdrawRequest.CANCELED
         ).aggregate(amount=Sum('amount'))['amount'] or 0
 
         if amount + today_withdraws > MAX_WITHDRAW:

@@ -25,6 +25,7 @@ from ledger.utils.otc import get_otc_spread, spread_to_multiplier
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent, decimal_to_str
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol, BaseTrade
+from market.utils.price import set_last_trade_price
 
 logger = logging.getLogger(__name__)
 
@@ -404,6 +405,7 @@ class Order(models.Model):
             symbol.last_trade_time = timezone.now()
             symbol.last_trade_price = trades[-1].price
             symbol.save(update_fields=['last_trade_time', 'last_trade_price'])
+            set_last_trade_price(symbol)
 
         # updating trade_volume_irt of accounts
         for index, trade in enumerate(trades):
