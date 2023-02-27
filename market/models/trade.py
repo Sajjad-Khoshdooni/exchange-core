@@ -8,7 +8,7 @@ from django.db.models import F, CheckConstraint, Q, Sum, Max, Min
 from django.utils import timezone
 
 from ledger.utils.external_price import BUY
-from ledger.utils.fields import get_amount_field, get_group_id_field
+from ledger.utils.fields import get_group_id_field
 from ledger.utils.precision import floor_precision, decimal_to_str
 from market.models import BaseTrade
 

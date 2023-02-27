@@ -1,11 +1,11 @@
 import logging
 from uuid import uuid4
 
-from decouple import config
 from django.db import models
 from django.db.models import F, Sum
 
 from _base.settings import OTC_ACCOUNT_ID
+from accounting.models import TradeRevenue
 from accounts.models import Account
 from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet
@@ -22,8 +22,6 @@ logger = logging.getLogger(__name__)
 
 class TokenExpired(Exception):
     pass
-
-
 
 
 class OTCTrade(models.Model):
@@ -137,6 +135,14 @@ class OTCTrade(models.Model):
 
                 self.save(update_fields=['order_id', 'gap_revenue'])
                 self.accept(pipeline)
+
+                TradeRevenue.new(
+                    user_trade=self.otc_request,
+                    group_id=self.group_id,
+                    source=TradeRevenue.OTC_MARKET,
+                    hedge_key=str(fok_order.id),
+                )
+
                 return True
             else:
                 self.save(update_fields=['order_id'])
@@ -187,18 +193,31 @@ class OTCTrade(models.Model):
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             self.accept(pipeline)
+            hedge_key = ''
 
             if hedge:
                 req = self.otc_request
+                _key = 'otc:%s' % self.id
 
                 from ledger.utils.provider import TRADE, get_provider_requester
-                get_provider_requester().try_hedge_new_order(
-                    request_id='otc:%s' % self.id,
+                hedged = get_provider_requester().try_hedge_new_order(
+                    request_id=hedge_key,
                     asset=req.symbol.asset,
                     side=req.side,
                     amount=req.amount,
                     scope=TRADE
                 )
+
+                if hedged:
+                    hedge_key = _key
+
+            from accounting.models.revenue import TradeRevenue
+            TradeRevenue.new(
+                user_trade=self.otc_request,
+                group_id=self.group_id,
+                source=TradeRevenue.OTC_PROVIDER,
+                hedge_key=hedge_key,
+            )
 
     def revert(self):
         with WalletPipeline() as pipeline:

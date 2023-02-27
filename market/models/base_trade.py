@@ -35,6 +35,10 @@ class BaseTrade(models.Model):
 
     fee_revenue = get_amount_field()
 
+    # coin_price = get_amount_field(null=True)
+    # coin_filled_price = get_amount_field(null=True)
+    # filled_amount = get_amount_field(null=True)
+
     @property
     def irt_value(self):
         return self.amount * self.price * self.base_irt_price
