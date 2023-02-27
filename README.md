@@ -36,14 +36,6 @@ CREATE VIEW accounts_users AS SELECT id, last_login, is_superuser, username, fir
 FROM accounts_user;
 
 GRANT SELECT ON accounts_users TO metabase;
-
-CREATE VIEW market_all_trades AS 
-    SELECT created, symbol, account, side, amount, price, is_maker, base_irt_price, base_usdt_price, fee_amount, fee_usdt_value, fee_revenue, coin_price, coin_filled_price, filled_amount, trade_source  
-    FROM market_trade where trade_source != 'system'
-UNION ALL 
-    SELECT req.created, symbol, account, side, amount, price, is_maker, base_irt_price, base_usdt_price, fee_amount, fee_usdt_value, fee_revenue, coin_price, coin_filled_price, filled_amount, 'otc' AS trade_source  
-    FROM ledger_otctrade o join ledger_otcrequest req on o.otc_request_id = req.id where o.status != 'done'
-;
 ```
 
 # Rabbitmq

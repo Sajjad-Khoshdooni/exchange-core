@@ -141,7 +141,7 @@ class OTCTrade(models.Model):
                     group_id=self.group_id,
                     source=TradeRevenue.OTC_MARKET,
                     hedge_key=str(fok_order.id),
-                )
+                ).save()
 
                 return True
             else:
@@ -217,7 +217,7 @@ class OTCTrade(models.Model):
                 group_id=self.group_id,
                 source=TradeRevenue.OTC_PROVIDER,
                 hedge_key=hedge_key,
-            )
+            ).save()
 
     def revert(self):
         with WalletPipeline() as pipeline:
