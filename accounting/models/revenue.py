@@ -1,7 +1,7 @@
 from django.db import models
 
 from ledger.models import Asset
-from ledger.utils.external_price import BUY, get_external_price, get_other_side
+from ledger.utils.external_price import BUY, get_external_price, get_other_side, SELL
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.otc import get_asset_spread, spread_to_multiplier, get_market_spread
 from market.models import BaseTrade
@@ -37,6 +37,7 @@ class TradeRevenue(models.Model):
 
     coin_filled_price = get_amount_field(null=True)
     filled_amount = get_amount_field(null=True)
+    gap_revenue = get_amount_field(validators=(), null=True)
     hedge_key = models.CharField(max_length=16, db_index=True, blank=True)
 
     fiat_hedge_usdt = get_amount_field(validators=(), default=0)
@@ -110,3 +111,11 @@ class TradeRevenue(models.Model):
                 revenue.fiat_hedge_base *= -1
 
         return revenue
+
+    def get_gap_revenue(self):
+        gap = self.amount * (self.coin_price - self.coin_filled_price)
+
+        if self.side == SELL:
+            gap = -gap
+
+        return gap

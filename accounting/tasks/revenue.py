@@ -26,7 +26,8 @@ def fill_revenue_filled_prices():
         if revenue.source == TradeRevenue.USER:
             revenue.coin_filled_price = revenue.coin_price
             revenue.filled_amount = revenue.amount
-            revenue.save(update_fields=['filled_amount', 'coin_filled_price'])
+            revenue.gap_revenue = 0
+            revenue.save(update_fields=['filled_amount', 'coin_filled_price', 'gap_revenue'])
 
         elif revenue.source == TradeRevenue.OTC_MARKET:
             info = Trade.objects.filter(order_id=int(revenue.hedge_key)).aggregate(
@@ -39,22 +40,28 @@ def fill_revenue_filled_prices():
 
             revenue.filled_amount = filled_amount
             revenue.coin_filled_price = filled_price / revenue.base_price
+            revenue.gap_revenue = revenue.get_gap_revenue()
+
+            user_quote = revenue.price * revenue.amount
+            earning_quote = user_quote - executed_quote
+
+            if revenue.side == SELL:
+                earning_quote = -earning_quote
 
             if revenue.symbol.base_asset.symbol == Asset.IRT:
-                user_quote = revenue.price * revenue.amount
-                earning_quote = user_quote - executed_quote
-
-                if revenue.side == SELL:
-                    earning_quote = -earning_quote
-
                 revenue.fiat_hedge_base = earning_quote
+            else:
+                revenue.fiat_hedge_usdt = earning_quote
 
-            revenue.save(update_fields=['filled_amount', 'coin_filled_price', 'fiat_hedge_base'])
+            revenue.save(update_fields=[
+                'filled_amount', 'coin_filled_price', 'gap_revenue', 'fiat_hedge_base', 'fiat_hedge_usdt',
+            ])
 
         elif revenue.symbol == usdt_irt_symbol:
             revenue.coin_filled_price = 1
             revenue.filled_amount = revenue.amount
-            revenue.save(update_fields=['filled_amount', 'coin_filled_price'])
+            revenue.gap_revenue = revenue.get_gap_revenue()
+            revenue.save(update_fields=['filled_amount', 'coin_filled_price', 'gap_revenue'])
 
         else:
             coin = revenue.symbol.asset.symbol
@@ -66,10 +73,15 @@ def fill_revenue_filled_prices():
                 info = get_provider_requester().get_order(request_id=revenue.hedge_key)
 
                 if info:
+                    executed_amount = info['filled_amount']
+
                     for r in revenues:
                         r.coin_filled_price = info['filled_price']
-                        r.filled_amount = info['filled_amount']
+                        r.filled_amount = min(r.amount, executed_amount)
+                        r.gap_revenue = r.get_gap_revenue()
 
-                    TradeRevenue.objects.bulk_update(revenues, ['coin_filled_price', 'filled_amount'])
+                        executed_amount -= r.filled_amount
+
+                    TradeRevenue.objects.bulk_update(revenues, ['coin_filled_price', 'filled_amount', 'gap_revenue'])
             else:
                 delegated_hedges[coin].append(revenue)
