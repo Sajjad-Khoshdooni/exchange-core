@@ -8,6 +8,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.generics import get_object_or_404
 
+from accounts.permissions import can_trade
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet, Asset, CloseRequest
 from ledger.utils.margin import check_margin_view_permission
@@ -38,8 +39,9 @@ class OrderSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        user = self.context['request'].user
-        if not settings.TRADE_ENABLE or not user.can_trade:
+        request = self.context['request']
+
+        if not can_trade(request):
             raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
 
         symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
