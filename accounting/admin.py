@@ -81,3 +81,4 @@ class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
                     'fiat_hedge_usdt', 'fiat_hedge_base')
     search_fields = ('group_id', 'hedge_key', )
     list_filter = ('symbol', )
+    readonly_fields = ('account', 'symbol')
