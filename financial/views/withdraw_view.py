@@ -42,7 +42,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         account = user.get_account()
 
         if not can_withdraw(account):
-            raise ValidationError('به خاطر بدهی به سیستم امکان برداشت وجود ندارد.')
+            raise ValidationError('امکان برداشت وجود ندارد.')
 
         if user.level < user.LEVEL2:
             raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
