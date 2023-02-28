@@ -23,7 +23,12 @@ def fill_revenue_filled_prices():
     usdt_irt_symbol = PairSymbol.objects.get(asset__symbol=Asset.USDT, base_asset__symbol=Asset.IRT)
 
     for revenue in trade_revenues:
-        if revenue.source == TradeRevenue.OTC_MARKET:
+        if revenue.source == TradeRevenue.USER:
+            revenue.coin_filled_price = revenue.coin_price
+            revenue.filled_amount = revenue.amount
+            revenue.save(update_fields=['filled_amount', 'coin_filled_price'])
+
+        elif revenue.source == TradeRevenue.OTC_MARKET:
             info = Trade.objects.filter(order_id=int(revenue.hedge_key)).aggregate(
                 quote_cum=Sum(F('amount') * F('price')),
                 amount_sum=Sum('amount'),
