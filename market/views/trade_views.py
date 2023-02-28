@@ -53,7 +53,6 @@ class AccountTradeHistoryView(ListAPIView):
 
 
 class TradeHistoryView(ListAPIView):
-    authentication_classes = ()
     permission_classes = ()
     pagination_class = FastLimitOffsetPagination
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
