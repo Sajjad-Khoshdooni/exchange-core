@@ -60,12 +60,25 @@ class TradeHistoryView(ListAPIView):
 
     def get_queryset(self):
         symbol = self.request.query_params.get('symbol')
+        my = self.request.query_params.get('my')
         pair_symbol = get_object_or_404(PairSymbol, name=symbol)
 
-        return Trade.objects.filter(
-            is_maker=True,
-            symbol=pair_symbol
-        ).order_by('-created')[:15]
+        user = self.request.user
+
+        if my == '1':
+            if not user.is_authenticated:
+                return Trade.objects.none()
+
+            return Trade.objects.filter(
+                account=user.get_account(),
+                symbol=pair_symbol
+            ).order_by('-created')[:15]
+
+        else:
+            return Trade.objects.filter(
+                is_maker=True,
+                symbol=pair_symbol
+            ).order_by('-created')[:15]
 
     def list(self, request, *args, **kwargs):
         serializer = TradeSerializer(self.get_queryset(), many=True)
