@@ -64,6 +64,7 @@ def fill_revenue_filled_prices():
                     for r in revenues:
                         r.coin_filled_price = info['filled_price']
                         r.filled_amount = info['filled_amount']
-                        TradeRevenue.objects.bulk_update(revenues, update_fields=['coin_filled_price', 'filled_amount'])
+
+                    TradeRevenue.objects.bulk_update(revenues, ['coin_filled_price', 'filled_amount'])
             else:
                 delegated_hedges[coin].append(revenue)
