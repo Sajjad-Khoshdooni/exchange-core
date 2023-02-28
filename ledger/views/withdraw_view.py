@@ -31,9 +31,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
     code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     def validate(self, attrs):
-        user = self.context['request'].user
+        request = self.context['request']
+        user = request.user
 
-        if not can_withdraw(user.get_account()):
+        if not can_withdraw(user.get_account(), request):
             raise ValidationError('امکان برداشت وجود ندارد.')
 
         account = user.get_account()
