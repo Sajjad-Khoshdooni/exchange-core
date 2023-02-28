@@ -97,7 +97,7 @@ class TradeRevenue(models.Model):
             base_spread=base_spread,
         )
 
-        if user_trade.symbol.base_asset.symbol == Asset.IRT:
+        if source != TradeRevenue.OTC_MARKET and user_trade.symbol.base_asset.symbol == Asset.IRT:
             revenue.fiat_hedge_base = trade_volume
             revenue.fiat_hedge_usdt = revenue.coin_price * revenue.amount
 
