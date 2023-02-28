@@ -359,11 +359,7 @@ class TransferAdmin(AdvancedAdmin):
         obj.save()
 
     def get_queryset(self, request):
-        queryset = super(TransferAdmin, self).get_queryset(request).select_related('wallet__account__user')
-
-        users = set(queryset.filter(deposit=False).values_list('wallet__account__user_id', flat=True))
-
-        return queryset
+        return super(TransferAdmin, self).get_queryset(request).select_related('wallet__account__user')
 
     @admin.display(description='Asset')
     def get_asset(self, transfer: models.Transfer):
