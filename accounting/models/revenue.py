@@ -52,7 +52,7 @@ class TradeRevenue(models.Model):
 
         coin_raw_price = get_external_price(
             coin=symbol.asset.symbol,
-            base_coin=symbol.base_asset.symbol,
+            base_coin=Asset.USDT,
             side=other_side,
         )
         coin_spread = get_asset_spread(
@@ -97,7 +97,7 @@ class TradeRevenue(models.Model):
             base_spread=base_spread,
         )
 
-        if user_trade.symbol.base_asset.symbol == Asset.IRT:
+        if source != TradeRevenue.OTC_MARKET and user_trade.symbol.base_asset.symbol == Asset.IRT:
             revenue.fiat_hedge_base = trade_volume
             revenue.fiat_hedge_usdt = revenue.coin_price * revenue.amount
 
