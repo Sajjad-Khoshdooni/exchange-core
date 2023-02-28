@@ -52,7 +52,7 @@ class TradeRevenue(models.Model):
 
         coin_raw_price = get_external_price(
             coin=symbol.asset.symbol,
-            base_coin=symbol.base_asset.symbol,
+            base_coin=Asset.USDT,
             side=other_side,
         )
         coin_spread = get_asset_spread(
