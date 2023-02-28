@@ -3,6 +3,7 @@ import django_filters
 from ledger.models import OTCTrade, OTCRequest
 from market.serializers.trade_serializer import AccountTradeSerializer
 from market.views import AccountTradeHistoryView
+from rest_framework import serializers
 
 
 class OTCFilter(django_filters.FilterSet):
@@ -14,6 +15,9 @@ class OTCFilter(django_filters.FilterSet):
 
 
 class OTCRequestSerializer(AccountTradeSerializer):
+    from_asset = serializers.CharField(source='from_asset.symbol')
+    to_asset = serializers.CharField(source='to_asset.symbol')
+
     class Meta(AccountTradeSerializer.Meta):
         model = OTCRequest
         fields = (*AccountTradeSerializer.Meta.fields, 'from_asset', 'to_asset')
