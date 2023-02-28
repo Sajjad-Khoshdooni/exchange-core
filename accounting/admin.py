@@ -79,6 +79,6 @@ class AssetPriceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ('created', 'symbol', 'side', 'amount', 'price', 'coin_price', 'coin_filled_price', 'source', 'hedge_key',
                     'fiat_hedge_usdt', 'fiat_hedge_base')
-    search_fields = ('group_id', 'hedge_key', )
+    search_fields = ('group_id', 'hedge_key', 'symbol__name')
     list_filter = ('symbol', )
     readonly_fields = ('account', 'symbol', 'group_id')
