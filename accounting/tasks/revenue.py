@@ -32,14 +32,15 @@ def fill_revenue_filled_prices():
 
         elif revenue.source == TradeRevenue.OTC_MARKET:
             info = Trade.objects.filter(order_id=int(revenue.hedge_key)).aggregate(
-                quote_cum=Sum(F('amount') * F('price') * F('base_usdt_price')),
+                quote_cum=Sum(F('amount') * F('price')),
+                quote_cum_usdt=Sum(F('amount') * F('price') * F('base_usdt_price')),
                 amount_sum=Sum('amount'),
             )
-            executed_quote = info['quote_cum']
+
             filled_amount = info['amount_sum'] or 0
 
             revenue.filled_amount = filled_amount
-            revenue.coin_filled_price = executed_quote / filled_amount
+            revenue.coin_filled_price = info['quote_cum_usdt'] / filled_amount
             revenue.gap_revenue = revenue.get_gap_revenue()
 
             if revenue.gap_revenue < 0:
@@ -47,7 +48,7 @@ def fill_revenue_filled_prices():
                 revenue.gap_revenue = revenue.get_gap_revenue()
 
             user_quote = revenue.price * revenue.amount
-            earning_quote = user_quote - executed_quote
+            earning_quote = user_quote - info['quote_cum']
 
             if revenue.side == SELL:
                 earning_quote = -earning_quote
