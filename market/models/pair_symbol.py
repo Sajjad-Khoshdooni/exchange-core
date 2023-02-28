@@ -56,6 +56,9 @@ class PairSymbol(models.Model):
         ]
 
     def get_fee_rate(self, account: Account, is_maker: bool) -> Decimal:
+        if account.is_system():
+            return Decimal(0)
+
         if account.get_voucher_wallet():
             return Decimal(0)
         else:
