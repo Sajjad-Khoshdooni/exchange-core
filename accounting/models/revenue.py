@@ -14,7 +14,7 @@ class TradeRevenue(models.Model):
     base_price = base_real_price * (1 +- base_spread)
     """
 
-    OTC_MARKET, OTC_PROVIDER, TAKER, MAKER, MANUAL = 'otc-m', 'otc-p', 'taker', 'maker', 'manual'
+    OTC_MARKET, OTC_PROVIDER, TAKER, MAKER, USER, MANUAL = 'otc-m', 'otc-p', 'taker', 'maker', 'user', 'manual'
 
     created = models.DateTimeField(auto_now_add=True)
     symbol = models.ForeignKey('market.PairSymbol', on_delete=models.PROTECT)
@@ -24,7 +24,8 @@ class TradeRevenue(models.Model):
     price = get_amount_field()
     group_id = get_group_id_field()
     source = models.CharField(max_length=8, choices=(
-        (OTC_MARKET, OTC_MARKET), (OTC_PROVIDER, OTC_PROVIDER), (MAKER, MAKER), (TAKER, TAKER), (MANUAL, MANUAL)
+        (OTC_MARKET, OTC_MARKET), (OTC_PROVIDER, OTC_PROVIDER), (MAKER, MAKER), (TAKER, TAKER), (USER, USER),
+        (MANUAL, MANUAL)
     ))
     fee_revenue = get_amount_field()
     value = get_amount_field()
@@ -43,7 +44,6 @@ class TradeRevenue(models.Model):
 
     @classmethod
     def new(cls, user_trade: BaseTrade, group_id, source: str, hedge_key: str = None):
-
         trade_volume = user_trade.amount * user_trade.price
         trade_value = trade_volume * user_trade.base_usdt_price
 
@@ -54,6 +54,7 @@ class TradeRevenue(models.Model):
             coin=symbol.asset.symbol,
             base_coin=Asset.USDT,
             side=other_side,
+            allow_stale=True,
         )
         coin_spread = get_asset_spread(
             coin=symbol.asset.symbol,
