@@ -42,6 +42,10 @@ def fill_revenue_filled_prices():
             revenue.coin_filled_price = executed_quote / filled_amount
             revenue.gap_revenue = revenue.get_gap_revenue()
 
+            if revenue.gap_revenue < 0:
+                revenue.coin_price = revenue.coin_filled_price
+                revenue.gap_revenue = revenue.get_gap_revenue()
+
             user_quote = revenue.price * revenue.amount
             earning_quote = user_quote - executed_quote
 
@@ -54,7 +58,7 @@ def fill_revenue_filled_prices():
                 revenue.fiat_hedge_usdt = earning_quote
 
             revenue.save(update_fields=[
-                'filled_amount', 'coin_filled_price', 'gap_revenue', 'fiat_hedge_base', 'fiat_hedge_usdt',
+                'filled_amount', 'coin_filled_price', 'gap_revenue', 'fiat_hedge_base', 'fiat_hedge_usdt', 'coin_price'
             ])
 
         elif revenue.symbol == usdt_irt_symbol:
