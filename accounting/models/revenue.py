@@ -31,8 +31,8 @@ class TradeRevenue(models.Model):
     value = get_amount_field()
 
     coin_price = get_amount_field()
-    base_price = get_amount_field()
     coin_spread = get_amount_field()
+
     base_spread = get_amount_field()
 
     coin_filled_price = get_amount_field(null=True)
@@ -63,20 +63,15 @@ class TradeRevenue(models.Model):
             value=trade_value
         )
 
+        coin_price = coin_raw_price * spread_to_multiplier(coin_spread, other_side)
+
         if symbol.base_asset.symbol == Asset.IRT:
-            base_price = get_external_price(
-                coin=Asset.USDT,
-                base_coin=Asset.IRT,
-                side=other_side,
-                allow_stale=True,
-            )
             base_spread = get_market_spread(
                 base_coin=Asset.IRT,
                 side=other_side,
                 value=trade_value,
             )
         else:
-            base_price = 1
             base_spread = 0
 
         revenue = TradeRevenue(
@@ -94,8 +89,8 @@ class TradeRevenue(models.Model):
             hedge_key=hedge_key,
 
             coin_spread=coin_spread,
-            coin_price=coin_raw_price * spread_to_multiplier(coin_spread, other_side),
-            base_price=base_price,
+            coin_price=coin_price,
+
             base_spread=base_spread,
         )
 
