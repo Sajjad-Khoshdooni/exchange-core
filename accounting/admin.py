@@ -81,8 +81,8 @@ class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
         'created', 'symbol', 'source', 'side', 'amount', 'price', 'gap_revenue', 'fee_revenue',
         'coin_price', 'coin_filled_price', 'hedge_key', 'fiat_hedge_usdt', 'fiat_hedge_base')
 
-    search_fields = ('group_id', 'hedge_key', 'symbol__name', 'source',)
-    list_filter = ('symbol', )
+    search_fields = ('group_id', 'hedge_key', 'symbol__name', )
+    list_filter = ('symbol', 'source',)
     readonly_fields = ('account', 'symbol', 'group_id')
 
     # def get_readonly_fields(self, request, obj=None):

@@ -1,5 +1,6 @@
 import logging
 from collections import defaultdict
+from decimal import Decimal
 
 from celery import shared_task
 from django.db.models import Sum, F
@@ -73,10 +74,11 @@ def fill_revenue_filled_prices():
                 info = get_provider_requester().get_order(request_id=revenue.hedge_key)
 
                 if info:
-                    executed_amount = info['filled_amount']
+                    executed_amount = Decimal(info['filled_amount'])
+                    executed_price = Decimal(info['filled_price'])
 
                     for r in revenues:
-                        r.coin_filled_price = info['filled_price']
+                        r.coin_filled_price = executed_price
                         r.filled_amount = min(r.amount, executed_amount)
                         r.gap_revenue = r.get_gap_revenue()
 
