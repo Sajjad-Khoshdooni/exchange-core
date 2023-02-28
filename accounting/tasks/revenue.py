@@ -47,7 +47,7 @@ def fill_revenue_filled_prices():
             revenue.save(update_fields=['filled_amount', 'coin_filled_price', 'fiat_hedge_base'])
 
         elif revenue.symbol == usdt_irt_symbol:
-            revenue.coin_filled_price = revenue.coin_price
+            revenue.coin_filled_price = 1
             revenue.filled_amount = revenue.amount
             revenue.save(update_fields=['filled_amount', 'coin_filled_price'])
 
