@@ -106,11 +106,11 @@ def get_market_top_prices(order_type='all', symbol_ids=None):
     return market_top_prices
 
 
-def get_market_top_price_amounts(order_type='all', symbol_ids=None):
+def get_market_top_price_amounts(order_types_in=None, symbol_ids=None):
     market_top_price_amounts = defaultdict(lambda: {'price': Decimal(), 'amount': Decimal()})
     symbol_filter = {'symbol_id__in': symbol_ids} if symbol_ids else {}
-    if order_type != 'all':
-        symbol_filter['type'] = order_type
+    if order_types_in:
+        symbol_filter['type__in'] = order_types_in
     sub_query = Order.open_objects.filter(
         **symbol_filter,
         symbol=OuterRef('symbol'),

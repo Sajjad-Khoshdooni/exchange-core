@@ -9,7 +9,7 @@ from decouple import config
 from accounts.models import Account
 from ledger.utils.external_price import BUY, SELL
 from market.models import PairSymbol
-from market.models.order import CancelOrder
+from market.models.order import CancelOrder, Order
 from market.utils.order_utils import get_market_top_price_amounts
 from market.utils.redis import get_daily_order_size_factors
 from trader.bots.utils import random_buy, random_sell
@@ -29,7 +29,10 @@ def random_trader():
 
     account = get_account()
     daily_factors = get_daily_order_size_factors(symbol_ids=list(map(lambda s: s.id, symbols)))
-    market_top_price_amounts = get_market_top_price_amounts(symbol_ids=list(map(lambda s: s.id, symbols)))
+    market_top_price_amounts = get_market_top_price_amounts(
+        order_types_in=(Order.DEPTH, Order.BOT),
+        symbol_ids=list(map(lambda s: s.id, symbols))
+    )
 
     for symbol in symbols:
         top_price_amounts = {
