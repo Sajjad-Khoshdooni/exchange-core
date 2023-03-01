@@ -257,6 +257,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
+        'get_external_notifications_link', 'get_notifications_link'
     )
     preserve_filters = ('archived', )
 
@@ -590,7 +591,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
     @admin.display(description='اعلانات بیرون پنل')
-    def get_notifications_link(self, user: User):
+    def get_external_notifications_link(self, user: User):
         link = url_to_admin_list(Notification) + '?user_id={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
