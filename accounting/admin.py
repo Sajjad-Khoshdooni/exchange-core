@@ -87,4 +87,4 @@ class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
     @admin.display(description='hedge revenue')
     def get_hedge_revenue(self, revenue: TradeRevenue):
-        return revenue.fiat_hedge_base * revenue.base_usdt_price + revenue.fiat_hedge_usdt
+        return round(revenue.fiat_hedge_base * revenue.base_usdt_price + revenue.fiat_hedge_usdt, 3)
