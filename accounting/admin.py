@@ -78,14 +78,13 @@ class AssetPriceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 @admin.register(TradeRevenue)
 class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = (
-        'created', 'symbol', 'source', 'side', 'amount', 'price', 'gap_revenue', 'fee_revenue',
-        'coin_price', 'coin_filled_price', 'hedge_key', 'fiat_hedge_usdt', 'fiat_hedge_base', 'get_usdt_price')
+        'created', 'symbol', 'source', 'side', 'amount', 'price', 'gap_revenue', 'fee_revenue', 'get_hedge_revenue',
+        'coin_price', 'coin_filled_price', 'hedge_key', 'fiat_hedge_usdt', 'fiat_hedge_base')
 
     search_fields = ('group_id', 'hedge_key', 'symbol__name', )
     list_filter = ('symbol', 'source',)
     readonly_fields = ('account', 'symbol', 'group_id')
 
-    @admin.display(description='usdt price')
-    def get_usdt_price(self, revenue: TradeRevenue):
-        if revenue.fiat_hedge_usdt:
-            return -revenue.fiat_hedge_base / revenue.fiat_hedge_usdt
+    @admin.display(description='hedge revenue')
+    def get_hedge_revenue(self, revenue: TradeRevenue):
+        return revenue.fiat_hedge_base / revenue.base_irt_price + revenue.fiat_hedge_usdt
