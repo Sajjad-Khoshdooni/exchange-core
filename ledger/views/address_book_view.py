@@ -90,3 +90,7 @@ class AddressBookView(ModelViewSet):
             **super(AddressBookView, self).get_serializer_context(),
             'coin': self.request.query_params.get('coin'),
         }
+
+
+class AddressBookViewV2(AddressBookView):
+    pagination_class = None

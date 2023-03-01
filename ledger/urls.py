@@ -52,6 +52,10 @@ urlpatterns = [
         'post': 'create',
         'get': 'list',
     })),
+    path('v2/addressbook/', views.AddressBookViewV2.as_view({
+        'post': 'create',
+        'get': 'list',
+    })),
 
     path('v1/wallet/balance/', views.GetBalanceInformation.as_view()),
     path('v1/bookmark/assets/', views.BookmarkAssetsAPIView.as_view()),
