@@ -85,7 +85,7 @@ class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_filter = ('symbol', 'source',)
     readonly_fields = ('account', 'symbol', 'group_id')
 
-    @admin.display('usdt price')
+    @admin.display(description='usdt price')
     def get_usdt_price(self, revenue: TradeRevenue):
         if revenue.fiat_hedge_usdt:
             return -revenue.fiat_hedge_base / revenue.fiat_hedge_usdt

@@ -42,6 +42,7 @@ class TradeRevenue(models.Model):
 
     fiat_hedge_usdt = get_amount_field(validators=(), default=0)
     fiat_hedge_base = get_amount_field(validators=(), default=0)
+    base_irt_price = get_amount_field()
 
     @classmethod
     def new(cls, user_trade: BaseTrade, group_id, source: str, hedge_key: str = None):
@@ -92,6 +93,7 @@ class TradeRevenue(models.Model):
             coin_price=coin_price,
 
             base_spread=base_spread,
+            base_irt_price=user_trade.base_irt_price,
         )
 
         if source not in (TradeRevenue.OTC_MARKET, TradeRevenue.USER) \
