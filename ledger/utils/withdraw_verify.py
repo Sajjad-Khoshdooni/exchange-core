@@ -5,8 +5,9 @@ from django.conf import settings
 from django.db.models import Sum, Max
 from django.utils import timezone
 
-from accounts.models import Account
+from accounts.models import Account, User
 from accounts.models.login_activity import LoginActivity
+from accounts.utils.hijack import get_hijacker_id
 from ledger.models import Transfer, Wallet
 
 WHITELIST_DAILY_WITHDRAW_VALUE = 50
@@ -157,7 +158,20 @@ def get_withdraw_risks(transfer: Transfer) -> list:
     return risks
 
 
-def can_withdraw(account: Account):
+def can_withdraw(account: Account, request) -> bool:
+    withdraw_conditions = check_withdraw_conditions(account)
+
+    if not withdraw_conditions:
+        hijacker_id = get_hijacker_id(request)
+        hijacker = User.objects.get(id=hijacker_id)
+
+        if hijacker.is_superuser:
+            return True
+
+    return withdraw_conditions
+
+
+def check_withdraw_conditions(account: Account) -> bool:
     if not settings.WITHDRAW_ENABLE or not account.user.can_withdraw:
         return False
 

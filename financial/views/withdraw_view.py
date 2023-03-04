@@ -38,11 +38,12 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
     code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     def create(self, validated_data):
-        user = self.context['request'].user
+        request = self.context['request']
+        user = request.user
         account = user.get_account()
 
-        if not can_withdraw(account):
-            raise ValidationError('به خاطر بدهی به سیستم امکان برداشت وجود ندارد.')
+        if not can_withdraw(account, request):
+            raise ValidationError('امکان برداشت وجود ندارد.')
 
         if user.level < user.LEVEL2:
             raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')

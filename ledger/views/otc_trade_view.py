@@ -8,6 +8,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.permissions import can_trade
 from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease, HedgeError
 from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
@@ -119,7 +120,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         request = self.context['request']
         account = request.user.get_account()
 
-        if not settings.TRADE_ENABLE or not account.user.can_trade:
+        if not can_trade(request):
             raise ValidationError('در حال حاضر امکان معامله وجود ندارد.')
 
         from_asset = validated_data['from_asset']
@@ -179,7 +180,7 @@ class OTCTradeSerializer(serializers.ModelSerializer):
         token = validated_data['token']
         request = self.context['request']
 
-        if not settings.TRADE_ENABLE or not request.user.can_trade:
+        if not can_trade(request):
             raise ValidationError('در حال حاضر امکان معامله وجود ندارد.')
 
         otc_request = get_object_or_404(OTCRequest, token=token, account=request.user.get_account())

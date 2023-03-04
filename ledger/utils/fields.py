@@ -57,7 +57,7 @@ def get_status_field():
 
 
 def get_group_id_field(db_index: bool = False, null: bool = False):
-    return models.UUIDField(default=uuid4, editable=False, db_index=db_index, null=null, blank=null)
+    return models.UUIDField(default=uuid4, db_index=db_index, null=null, blank=null)
 
 
 def get_address_field():

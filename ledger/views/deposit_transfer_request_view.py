@@ -1,3 +1,5 @@
+import logging
+
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -9,6 +11,8 @@ from ledger.models.transfer import Transfer
 from ledger.requester.architecture_requester import request_architecture
 from ledger.utils.external_price import get_external_price, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
+
+logger = logging.getLogger(__name__)
 
 
 class DepositSerializer(serializers.ModelSerializer):
@@ -44,7 +48,13 @@ class DepositSerializer(serializers.ModelSerializer):
                 }
             )
 
-        asset = Asset.objects.get(symbol=validated_data.get('coin'))
+        coin = validated_data.get('coin')
+
+        asset = Asset.objects.filter(symbol=coin).first()
+        if not asset:
+            logger.warning('invalid coin for deposit', extra={'coin': coin})
+            raise ValidationError({'coin': 'invalid coin'})
+
         wallet = asset.get_wallet(deposit_address.address_key.account)
 
         network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)

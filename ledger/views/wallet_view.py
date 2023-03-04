@@ -173,31 +173,20 @@ class AssetListSerializer(serializers.ModelSerializer):
 
 
 class NetworkAssetSerializer(serializers.ModelSerializer):
-    network = serializers.SerializerMethodField()
-    network_name = serializers.SerializerMethodField()
+    network = serializers.CharField(source='network.symbol')
+    network_name = serializers.CharField(source='network.name')
     address = serializers.SerializerMethodField()
     can_deposit = serializers.SerializerMethodField()
     can_withdraw = serializers.SerializerMethodField()
-    address_regex = serializers.SerializerMethodField()
+    address_regex = serializers.CharField(source='network.address_regex')
 
     withdraw_commission = serializers.SerializerMethodField()
     min_withdraw = serializers.SerializerMethodField()
+    min_confirm = serializers.IntegerField(source='network.min_confirm')
 
     withdraw_precision = serializers.SerializerMethodField()
 
-    need_memo = serializers.SerializerMethodField()
-
-    def get_need_memo(self, network_asset: NetworkAsset):
-        return network_asset.network.need_memo
-
-    def get_network(self, network_asset: NetworkAsset):
-        return network_asset.network.symbol
-
-    def get_network_name(self, network_asset: NetworkAsset):
-        return network_asset.network.name
-
-    def get_address_regex(self, network_asset: NetworkAsset):
-        return network_asset.network.address_regex
+    need_memo = serializers.BooleanField(source='network.need_memo')
 
     def get_can_deposit(self, network_asset: NetworkAsset):
         return network_asset.can_deposit_enabled()
@@ -220,7 +209,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('network', 'address', 'can_deposit', 'can_withdraw', 'withdraw_commission', 'min_withdraw',
-                  'network_name', 'address_regex', 'withdraw_precision', 'need_memo')
+                  'network_name', 'address_regex', 'withdraw_precision', 'need_memo', 'min_confirm')
         model = NetworkAsset
 
 
@@ -228,7 +217,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
     networks = serializers.SerializerMethodField()
 
     def get_networks(self, asset: Asset):
-        network_assets = asset.networkasset_set.all().order_by('withdraw_fee')
+        network_assets = asset.networkasset_set.all().prefetch_related('network', 'asset').order_by('withdraw_fee')
 
         account = self.context['request'].user.get_account()
 

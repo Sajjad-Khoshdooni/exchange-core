@@ -7,6 +7,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.models import User, CustomToken
 from accounts.utils.auth2fa import is_2fa_active_for_user
+from accounts.utils.hijack import get_hijacker_id
 from accounts.verifiers.legal import possible_time_for_withdraw
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 
@@ -18,8 +19,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_chat_uuid(self, user: User):
         request = self.context['request']
-        hijack_history = request.session.get('hijack_history')
-        if hijack_history:
+
+        if get_hijacker_id(request):
             return ''
         else:
             return user.chat_uuid

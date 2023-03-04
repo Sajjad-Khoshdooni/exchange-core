@@ -1,7 +1,7 @@
 from django.db import models
 
 from ledger.models import Asset
-from ledger.utils.external_price import BUY, get_external_price, get_other_side
+from ledger.utils.external_price import BUY, get_external_price, get_other_side, SELL
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.otc import get_asset_spread, spread_to_multiplier, get_market_spread
 from market.models import BaseTrade
@@ -14,7 +14,7 @@ class TradeRevenue(models.Model):
     base_price = base_real_price * (1 +- base_spread)
     """
 
-    OTC_MARKET, OTC_PROVIDER, TAKER, MAKER, MANUAL = 'otc-m', 'otc-p', 'taker', 'maker', 'manual'
+    OTC_MARKET, OTC_PROVIDER, TAKER, MAKER, USER, MANUAL = 'otc-m', 'otc-p', 'taker', 'maker', 'user', 'manual'
 
     created = models.DateTimeField(auto_now_add=True)
     symbol = models.ForeignKey('market.PairSymbol', on_delete=models.PROTECT)
@@ -24,26 +24,28 @@ class TradeRevenue(models.Model):
     price = get_amount_field()
     group_id = get_group_id_field()
     source = models.CharField(max_length=8, choices=(
-        (OTC_MARKET, OTC_MARKET), (OTC_PROVIDER, OTC_PROVIDER), (MAKER, MAKER), (TAKER, TAKER), (MANUAL, MANUAL)
+        (OTC_MARKET, OTC_MARKET), (OTC_PROVIDER, OTC_PROVIDER), (MAKER, MAKER), (TAKER, TAKER), (USER, USER),
+        (MANUAL, MANUAL)
     ))
     fee_revenue = get_amount_field()
     value = get_amount_field()
 
     coin_price = get_amount_field()
-    base_price = get_amount_field()
     coin_spread = get_amount_field()
+
     base_spread = get_amount_field()
 
     coin_filled_price = get_amount_field(null=True)
     filled_amount = get_amount_field(null=True)
+    gap_revenue = get_amount_field(validators=(), null=True)
     hedge_key = models.CharField(max_length=16, db_index=True, blank=True)
 
     fiat_hedge_usdt = get_amount_field(validators=(), default=0)
     fiat_hedge_base = get_amount_field(validators=(), default=0)
+    base_usdt_price = get_amount_field(decimal_places=20)
 
     @classmethod
     def new(cls, user_trade: BaseTrade, group_id, source: str, hedge_key: str = None):
-
         trade_volume = user_trade.amount * user_trade.price
         trade_value = trade_volume * user_trade.base_usdt_price
 
@@ -54,6 +56,7 @@ class TradeRevenue(models.Model):
             coin=symbol.asset.symbol,
             base_coin=Asset.USDT,
             side=other_side,
+            allow_stale=True,
         )
         coin_spread = get_asset_spread(
             coin=symbol.asset.symbol,
@@ -61,20 +64,15 @@ class TradeRevenue(models.Model):
             value=trade_value
         )
 
+        coin_price = coin_raw_price * spread_to_multiplier(coin_spread, other_side)
+
         if symbol.base_asset.symbol == Asset.IRT:
-            base_price = get_external_price(
-                coin=Asset.USDT,
-                base_coin=Asset.IRT,
-                side=other_side,
-                allow_stale=True,
-            )
             base_spread = get_market_spread(
                 base_coin=Asset.IRT,
                 side=other_side,
                 value=trade_value,
             )
         else:
-            base_price = 1
             base_spread = 0
 
         revenue = TradeRevenue(
@@ -92,12 +90,15 @@ class TradeRevenue(models.Model):
             hedge_key=hedge_key,
 
             coin_spread=coin_spread,
-            coin_price=coin_raw_price * spread_to_multiplier(coin_spread, other_side),
-            base_price=base_price,
+            coin_price=coin_price,
+
             base_spread=base_spread,
+            base_usdt_price=user_trade.base_usdt_price,
         )
 
-        if source != TradeRevenue.OTC_MARKET and user_trade.symbol.base_asset.symbol == Asset.IRT:
+        if source not in (TradeRevenue.OTC_MARKET, TradeRevenue.USER) \
+                and user_trade.symbol.base_asset.symbol == Asset.IRT:
+
             revenue.fiat_hedge_base = trade_volume
             revenue.fiat_hedge_usdt = revenue.coin_price * revenue.amount
 
@@ -107,3 +108,11 @@ class TradeRevenue(models.Model):
                 revenue.fiat_hedge_base *= -1
 
         return revenue
+
+    def get_gap_revenue(self):
+        gap = self.amount * (self.coin_price - self.coin_filled_price)
+
+        if self.side == SELL:
+            gap = -gap
+
+        return gap

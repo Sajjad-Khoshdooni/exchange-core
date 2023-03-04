@@ -112,7 +112,7 @@ class AssetPrice(models.Model):
     updated = models.DateTimeField(auto_now=True)
 
     coin = models.CharField(max_length=32, unique=True)
-    price = get_amount_field()
+    price = get_amount_field(decimal_places=12)
 
     def __str__(self):
         return self.coin

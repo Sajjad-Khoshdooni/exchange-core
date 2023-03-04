@@ -201,7 +201,7 @@ class OTCTrade(models.Model):
 
                 from ledger.utils.provider import TRADE, get_provider_requester
                 hedged = get_provider_requester().try_hedge_new_order(
-                    request_id=hedge_key,
+                    request_id=_key,
                     asset=req.symbol.asset,
                     side=req.side,
                     amount=req.amount,

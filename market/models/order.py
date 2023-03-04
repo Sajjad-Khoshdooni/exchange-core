@@ -58,7 +58,7 @@ class Order(models.Model):
     LIMIT, MARKET = 'limit', 'market'
     FILL_TYPE_CHOICES = [(LIMIT, LIMIT), (MARKET, MARKET)]
 
-    TIME_IN_FORCE_OPTIONS = GTC, FOK = None, 'FOK'
+    TIME_IN_FORCE_OPTIONS = GTC, FOK, IOC = None, 'FOK', 'IOC'
 
     NEW, CANCELED, FILLED = 'new', 'canceled', 'filled'
     STATUS_CHOICES = [(NEW, NEW), (CANCELED, CANCELED), (FILLED, FILLED)]
@@ -97,7 +97,7 @@ class Order(models.Model):
         max_length=4,
         blank=True,
         null=True,
-        choices=[(GTC, 'GTC'), (FOK, 'FOK')]
+        choices=[(GTC, 'GTC'), (FOK, 'FOK'), (IOC, 'IOC')]
     )
 
     def __str__(self):
@@ -290,6 +290,9 @@ class Order(models.Model):
 
         to_hedge_amount = Decimal(0)
 
+        taker_is_system = self.wallet.account.is_system()
+        taker_ordinary = self.wallet.account_id == OTC_ACCOUNT_ID or self.wallet.account.is_ordinary_user()
+
         for maker_order in matching_orders:
             trade_price = maker_order.price
 
@@ -305,7 +308,6 @@ class Order(models.Model):
             else:
                 base_usdt_price = 1 / tether_irt
 
-            taker_is_system = self.wallet.account.is_system()
             maker_is_system = maker_order.wallet.account.is_system()
 
             source_map = {
@@ -355,9 +357,9 @@ class Order(models.Model):
 
             self.update_filled_amount((self.id, maker_order.id), match_amount)
 
-            taker_ordinary = self.wallet.account_id == OTC_ACCOUNT_ID or self.wallet.account.is_ordinary_user()
+            maker_ordinary = maker_order.wallet.account.is_ordinary_user()
 
-            if taker_ordinary != maker_order.wallet.account.is_ordinary_user():
+            if taker_ordinary != maker_ordinary:
                 ordinary_order = self if self.type == Order.ORDINARY else maker_order
                 ordinary_trade = trades_pair.taker_trade if taker_ordinary else trades_pair.maker_trade
 
@@ -374,6 +376,17 @@ class Order(models.Model):
                         hedge_key=''
                     )
                 )
+
+            elif taker_ordinary and maker_ordinary:
+                for t in trades_pair.trades:
+                    trades_revenue.append(
+                        TradeRevenue.new(
+                            user_trade=t,
+                            group_id=t.group_id,
+                            source=TradeRevenue.USER,
+                            hedge_key=''
+                        )
+                    )
 
             unfilled_amount -= match_amount
             if match_amount == maker_order.unfilled_amount:  # unfilled_amount reduced in DB but not updated here :)
@@ -410,9 +423,10 @@ class Order(models.Model):
 
             if hedged:
                 for rev in trades_revenue:
-                    rev.hedge_key = provider_request_id
+                    if rev.source != TradeRevenue.USER:
+                        rev.hedge_key = provider_request_id
 
-        if self.fill_type == Order.MARKET and self.status == Order.NEW:
+        if (self.fill_type == Order.MARKET or self.time_in_force == self.IOC) and self.status == Order.NEW:
             self.status = Order.CANCELED
             pipeline.release_lock(self.group_id)
             self.save(update_fields=['status'])
