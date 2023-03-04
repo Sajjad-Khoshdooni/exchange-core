@@ -55,7 +55,7 @@ def random_trade(symbol: PairSymbol, account, top_price_amounts, user_top_prices
     random_funcs = {BUY: random_sell, SELL: random_buy}
 
     for side in (BUY, SELL):
-        if top_price_amounts[side]['price'] and top_price_amounts[side]['price'] != user_top_prices[side]:
+        if (not user_top_prices[side]) and top_price_amounts[side]['price']:
             available_choices.append(
                 (random_funcs[side], top_price_amounts[side]['amount'], top_price_amounts[side]['price'])
             )
