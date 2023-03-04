@@ -81,7 +81,8 @@ def random_buy(symbol: PairSymbol, account: Account, max_amount, market_price, d
     amount = floor_precision(min(max_amount, Decimal(amount_value / ask)), symbol.step_size)
 
     return new_order(
-        symbol, account, amount, None, side=BUY, fill_type=Order.MARKET, raise_exception=False, order_type=Order.BOT
+        symbol, account, amount, market_price, side=BUY, fill_type=Order.LIMIT, raise_exception=False,
+        order_type=Order.BOT, time_in_force=Order.IOC
     )
 
 
@@ -96,7 +97,8 @@ def random_sell(symbol: PairSymbol, account: Account, max_amount, market_price, 
     amount = floor_precision(min(max_amount, random_min_order_value(symbol, daily_factor) / bid), symbol.step_size)
     logger.info(f'random sell {symbol}, {amount}')
     return new_order(
-        symbol, account, amount, None, fill_type=Order.MARKET, side=SELL, raise_exception=False, order_type=Order.BOT
+        symbol, account, amount, market_price, fill_type=Order.LIMIT, side=SELL, raise_exception=False,
+        order_type=Order.BOT, time_in_force=Order.IOC
     )
 
 

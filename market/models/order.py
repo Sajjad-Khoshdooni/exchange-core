@@ -50,7 +50,7 @@ class Order(models.Model):
     LIMIT, MARKET = 'limit', 'market'
     FILL_TYPE_CHOICES = [(LIMIT, LIMIT), (MARKET, MARKET)]
 
-    TIME_IN_FORCE_OPTIONS = GTC, FOK = None, 'FOK'
+    TIME_IN_FORCE_OPTIONS = GTC, FOK, IOC = None, 'FOK', 'IOC'
 
     NEW, CANCELED, FILLED = 'new', 'canceled', 'filled'
     STATUS_CHOICES = [(NEW, NEW), (CANCELED, CANCELED), (FILLED, FILLED)]
@@ -89,7 +89,7 @@ class Order(models.Model):
         max_length=4,
         blank=True,
         null=True,
-        choices=[(GTC, 'GTC'), (FOK, 'FOK')]
+        choices=[(GTC, 'GTC'), (FOK, 'FOK'), (IOC, 'IOC')]
     )
 
     def __str__(self):
@@ -412,7 +412,7 @@ class Order(models.Model):
                     if rev.source != TradeRevenue.USER:
                         rev.hedge_key = provider_request_id
 
-        if self.fill_type == Order.MARKET and self.status == Order.NEW:
+        if (self.fill_type == Order.MARKET or self.time_in_force == self.IOC) and self.status == Order.NEW:
             self.status = Order.CANCELED
             pipeline.release_lock(self.group_id)
             self.save(update_fields=['status'])
