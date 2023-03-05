@@ -293,7 +293,7 @@ if config('JWT_PRIVATE_KEY', None):
         'ALGORITHM': 'RS256',
         'SIGNING_KEY': config('JWT_PRIVATE_KEY', default=''),
         'VERIFYING_KEY': config('JWT_PUBLIC_KEY', default=''),
-        'REFRESH_TOKEN_LIFETIME': timedelta(hours=6),
+        'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     }
 
 AUTH_USER_MODEL = 'accounts.User'
