@@ -12,37 +12,41 @@ from ledger.utils.external_price import get_external_price, BUY
 
 @shared_task()
 def fill_blocklink_incomes():
-
     def blocklink_income_fetcher(start: datetime, end: datetime):
         res = blocklink_income_request(start=start, end=end)
 
         for network, data in res.items():
             coin = data['coin']
             price = get_external_price(coin=coin, base_coin='USDT', side=BUY, allow_stale=True)
-            core_income = Transfer.objects.filter(created__range=(start, end), deposit=False).\
-            aggregate(total=Sum(F('usdt_value') / F('amount') * F('fee_amount')))['total'] or 0
+            core_income = Transfer.objects.filter(created__range=(start, end), deposit=False). \
+                              aggregate(total=Sum(F('usdt_value') / F('amount') * F('fee_amount')))['total'] or 0
 
-            BlockLinkIncome.objects.create(
-                start=start,
-                end=end,
-                network=network,
-                coin=coin,
-                fee_amount=int(data['fee_amount']),
-                usdt_value=price * int(data['fee_amount']),
-                core_income=core_income
+            fee_amount = data['fee_amount']
+            dust_cost = data['dust_cost']
+
+            if fee_amount:
+                BlockLinkIncome.objects.create(
+                    start=start,
+                    end=end,
+                    network=network,
+                    coin=coin,
+                    fee_amount=int(fee_amount),
+                    usdt_value=price * int(fee_amount),
+                    core_income=core_income
+                )
+
+            if dust_cost:
+                DustCost.update_dust(
+                    start=start,
+                    end=end,
+                    network=network,
+                    coin=coin,
+                    amount=int(dust_cost),
+                    usdt_value=int(dust_cost) * price
+                )
+
+            PeriodicFetcher.repetitive_fetch(
+                name='Blocklink',
+                fetcher=blocklink_income_fetcher,
+                interval=timedelta(hours=1)
             )
-
-            DustCost.update_dust(
-                start=start,
-                end=end,
-                network=network,
-                coin=coin,
-                amount=int(data['dust_cost']),
-                usdt_value=int(data['dust_cost']) * price
-            )
-
-    PeriodicFetcher.repetitive_fetch(
-        name='Blocklink',
-        fetcher=blocklink_income_fetcher,
-        interval=timedelta(hours=1)
-    )
