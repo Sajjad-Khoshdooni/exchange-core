@@ -415,6 +415,15 @@ class ProviderRequester:
 
         return resp.data
 
+    def get_income_history(self, profile_id: int, start: datetime, end: datetime) -> list:
+        resp = self.collect_api('/api/v1/incomes/', data={
+            'profile_id': profile_id,
+            'start': start,
+            'end': end
+        })
+
+        return resp.data
+
 
 class MockProviderRequester(ProviderRequester):
     def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:
@@ -487,6 +496,20 @@ class MockProviderRequester(ProviderRequester):
             'filled_price': Decimal(1),
             'filled_amount': Decimal(1),
         }
+
+    def get_income_history(self, profile_id: int, start: datetime, end: datetime) -> list:
+        return [
+            {
+                "symbol": "BTCUSDT",
+                "incomeType": "FUNDING_FEE",
+                "income": "-0.05900757",
+                "asset": "USDT",
+                "time": 1678032000000,
+                "info": "FUNDING_FEE",
+                "tranId": 6847922729675042940,
+                "tradeId": ""
+            },
+        ]
 
 
 def get_provider_requester() -> ProviderRequester:
