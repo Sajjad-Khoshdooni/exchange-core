@@ -1,4 +1,5 @@
 from datetime import timedelta, datetime
+from decimal import Decimal
 
 from celery import shared_task
 from django.db.models import Sum, F
@@ -23,26 +24,28 @@ def blocklink_income_fetcher(start: datetime, end: datetime):
             total=Sum(F('usdt_value') / F('amount') * F('fee_amount'))
         )['total'] or 0
 
-        fee_amount = data['fee_amount']
-        dust_cost = data['dust_cost']
+        fee_amount = Decimal(data['fee_amount'])
+        dust_cost = Decimal(data['dust_cost'])
 
-        if fee_amount and not BlocklinkIncome.objects.filter(start=start).exists():
-            BlocklinkIncome.objects.create(
-                start=start,
-                network=network,
-                coin=coin,
-                real_fee_amount=int(fee_amount),
-                fee_cost=price * int(fee_amount),
-                fee_income=fee_income
-            )
+        BlocklinkIncome.objects.get_or_create(
+            start=start,
+            network=network,
+            defaults={
+                'coin': coin,
+                'real_fee_amount': fee_amount,
+                'fee_cost': price * fee_amount,
+                'fee_income': fee_income
+            }
+        )
 
-        if dust_cost:
-            BlocklinkDustCost.objects.update(
-                network=network,
-                coin=coin,
-                amount=int(dust_cost),
-                usdt_value=int(dust_cost) * price
-            )
+        BlocklinkDustCost.objects.update_or_create(
+            network=network,
+            defaults={
+                'coin': coin,
+                'amount': dust_cost,
+                'usdt_value': dust_cost * price
+            }
+        )
 
 
 @shared_task()
