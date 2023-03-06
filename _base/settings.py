@@ -80,7 +80,7 @@ MIDDLEWARE = [
     'simple_history.middleware.HistoryRequestMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
 
-    'utilities.middleware.SetLocaleMiddleware',
+    'accounts.middleware.SetLocaleMiddleware',
 ]
 
 # todo: fix csrf check
