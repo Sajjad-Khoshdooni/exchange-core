@@ -214,7 +214,7 @@ app.conf.beat_schedule = {
         },
     },
     'blocklink_incomes': {
-        'task': 'accounting.tasks.provider.fill_blocklink_incomes',
+        'task': 'accounting.tasks.blocklink.fill_blocklink_incomes',
         'schedule': crontab(minute=0),
         'options': {
             'queue': 'history',
