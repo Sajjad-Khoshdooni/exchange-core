@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class BlockLinkIncome(models.Model):
+class BlocklinkIncome(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     start = models.DateTimeField(unique=True)
     real_fee_amount = models.PositiveIntegerField()
