@@ -207,7 +207,7 @@ app.conf.beat_schedule = {
     },
     'provider_income': {
         'task': 'accounting.tasks.provider.fill_provider_incomes',
-        'schedule': crontab(minute=0),
+        'schedule': crontab(minute=30),
         'options': {
             'queue': 'history',
             'expire': 3600,
