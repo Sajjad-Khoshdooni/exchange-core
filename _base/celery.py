@@ -213,6 +213,14 @@ app.conf.beat_schedule = {
             'expire': 3600,
         },
     },
+    'blocklink_incomes': {
+        'task': 'accounting.tasks.provider.fill_blocklink_incomes',
+        'schedule': crontab(minute=0),
+        'options': {
+            'queue': 'history',
+            'expire': 3600,
+        },
+    },
 
     'create_vault_snapshot': {
         'task': 'accounting.tasks.vault.update_vaults',

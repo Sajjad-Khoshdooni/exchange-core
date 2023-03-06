@@ -1,8 +1,5 @@
-import json
 import requests
 from django.conf import settings
-from decouple import config
-from decouple import config
 
 
 class AddressRequester:
@@ -14,8 +11,8 @@ class AddressRequester:
                 account_id=account.id,
             )
         }
-        url = config('BLOCKLINK_BASE_URL', default='https://blocklink.raastin.com') + '/api/v1/tracker/wallets/'
+        url = settings.BLOCKLINK_BASE_URL + '/api/v1/tracker/wallets/'
         header = {
-            'Authorization': config('BLOCKLINK_TOKEN')
+            'Authorization': settings.BLOCKLINK_TOKEN
         }
         return requests.post(url=url, data=data, headers=header, timeout=10).json()

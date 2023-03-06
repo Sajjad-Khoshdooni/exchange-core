@@ -1,18 +1,17 @@
 import requests
 import logging
+
 from django.conf import settings
 
-from decouple import config
-from decouple import config
 
 logger = logging.getLogger(__name__)
 
 
 class InternalAssetsRequester:
     def __init__(self):
-        self.url = config('BLOCKLINK_BASE_URL', default='https://blocklink.raastin.com') + '/api/v1/hotwallet/amount/'
+        self.url = settings.BLOCKLINK_BASE_URL + '/api/v1/hotwallet/amount/'
         self.header = {
-            'Authorization': config('BLOCKLINK_TOKEN')
+            'Authorization': settings.BLOCKLINK_TOKEN
         }
 
     def get_assets(self):
