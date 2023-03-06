@@ -5,3 +5,5 @@ from .vault import Vault, VaultItem, ReservedAsset, AssetPrice
 from .revenue import TradeRevenue
 from .provider_income import ProviderIncome
 from .periodic_fetcher import PeriodicFetcher
+from .blocklink_income import BlockLinkIncome
+from .dust_cost import DustCost
