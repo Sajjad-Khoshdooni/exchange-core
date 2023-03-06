@@ -1,5 +1,5 @@
 import requests
-from decouple import config
+from django.conf import settings
 
 
 def blocklink_income_request(start, end):
@@ -7,8 +7,8 @@ def blocklink_income_request(start, end):
         'start': start,
         'end': end
     }
-    url = config('BLOCKLINK_BASE_URL', default='https://blocklink.raastin.com') + '/api/v1/tracker/revenue/'
+    url = settings.BLOCKLINK_BASE_URL + '/api/v1/tracker/revenue/'
     header = {
-        'Authorization': config('BLOCKLINK_TOKEN')
+        'Authorization': settings.BLOCKLINK_TOKEN
     }
-    return requests.get(url=url, data=data, headers=header, timeout=10).json()
+    return requests.get(url=url, data=data, headers=header, timeout=60).json()
