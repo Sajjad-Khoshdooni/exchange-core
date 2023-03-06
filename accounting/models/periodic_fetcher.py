@@ -52,3 +52,6 @@ class PeriodicFetcher(models.Model):
 
             fetcher(start, end)
             PeriodicFetcher.confirm_range(name, end)
+
+    def __str__(self):
+        return '%s %s' % (self.name, self.end)
