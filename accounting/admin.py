@@ -3,7 +3,7 @@ from django.db.models import Sum
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset, \
-    AssetPrice, TradeRevenue, PeriodicFetcher
+    AssetPrice, TradeRevenue, PeriodicFetcher, BlockLinkIncome, BlocklinkDustCost
 from accounting.models.provider_income import ProviderIncome
 from ledger.utils.precision import humanize_number
 
@@ -102,3 +102,14 @@ class BinanceIncomeAdmin(admin.ModelAdmin):
 @admin.register(PeriodicFetcher)
 class PeriodicFetcherAdmin(admin.ModelAdmin):
     list_display = ('name', 'end')
+
+
+@admin.register(BlockLinkIncome)
+class BlockLinkIncomeAdmin(admin.ModelAdmin):
+    list_display = ('start', 'network', 'real_fee_amount', 'fee_cost', 'fee_income',)
+    list_filter = ('network', )
+
+
+@admin.register(BlocklinkDustCost)
+class BlocklinkDustCostAdmin(admin.ModelAdmin):
+    list_display = ('updated', 'network', 'amount', 'usdt_value',)
