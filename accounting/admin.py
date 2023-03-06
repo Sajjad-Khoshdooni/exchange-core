@@ -3,7 +3,7 @@ from django.db.models import Sum
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset, \
-    AssetPrice, TradeRevenue
+    AssetPrice, TradeRevenue, PeriodicFetcher
 from accounting.models.provider_income import ProviderIncome
 from ledger.utils.precision import humanize_number
 
@@ -97,3 +97,8 @@ class BinanceIncomeAdmin(admin.ModelAdmin):
     search_fields = ('symbol', 'coin')
     list_filter = ('income_type', )
     ordering = ('-income_date', 'income_type')
+
+
+@admin.register(PeriodicFetcher)
+class PeriodicFetcherAdmin(admin.ModelAdmin):
+    list_display = ('name', 'end')
