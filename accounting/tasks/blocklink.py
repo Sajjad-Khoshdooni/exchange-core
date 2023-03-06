@@ -20,7 +20,7 @@ def fill_blocklink_incomes():
             coin = data['coin']
             price = get_external_price(coin=coin, base_coin='USDT', side=BUY, allow_stale=True)
             core_income = Transfer.objects.filter(created__range=(start, end), deposit=False).\
-            aggregate(total=Sum(F('usdt_value') / F('amount') * F('fee_amount')))['total']
+            aggregate(total=Sum(F('usdt_value') / F('amount') * F('fee_amount')))['total'] or 0
 
             BlockLinkIncome.objects.create(
                 start=start,

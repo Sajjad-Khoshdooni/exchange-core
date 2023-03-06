@@ -10,8 +10,8 @@ class DustCost(models.Model):
     end = models.DateTimeField()
     amount = models.PositiveIntegerField()
     usdt_value = models.PositiveIntegerField()
-    network = models.CharField(max_length=16, unique=True, db_index=True)
-    coin = models.CharField(max_length=16, unique=True, db_index=True)
+    network = models.CharField(max_length=16)
+    coin = models.CharField(max_length=16)
 
     @staticmethod
     def update_dust(start, end, amount: int, usdt_value: int, network: str, coin: str):
