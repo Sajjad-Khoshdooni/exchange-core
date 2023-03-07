@@ -8,6 +8,7 @@ from accounting.models import PeriodicFetcher, BlocklinkIncome, BlocklinkDustCos
 from accounting.requester.blocklink_income import blocklink_income_request
 from ledger.models import Transfer
 from ledger.utils.external_price import get_external_price, BUY
+from ledger.utils.fields import AMOUNT_PRECISION
 
 
 def blocklink_income_fetcher(start: datetime, end: datetime):
@@ -28,7 +29,7 @@ def blocklink_income_fetcher(start: datetime, end: datetime):
         fee_amount = Decimal(data['fee_amount'])
         dust_cost = Decimal(data['dust_cost'])
 
-        if fee_amount + fee_income:
+        if int((fee_amount + fee_income) * 10 ** AMOUNT_PRECISION):
             BlocklinkIncome.objects.get_or_create(
                 start=start,
                 network=network,
