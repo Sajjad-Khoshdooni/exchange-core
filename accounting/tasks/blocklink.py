@@ -19,7 +19,8 @@ def blocklink_income_fetcher(start: datetime, end: datetime):
 
         fee_income = Transfer.objects.filter(
             created__range=(start, end),
-            deposit=False
+            deposit=False,
+            network__symbol=network
         ).aggregate(
             total=Sum(F('usdt_value') / F('amount') * F('fee_amount'))
         )['total'] or 0
