@@ -14,4 +14,4 @@ class BlocklinkIncome(models.Model):
     fee_income = get_amount_field()
 
     class Meta:
-        unique_together = ('network', 'coin')
+        unique_together = ('network', 'start')
