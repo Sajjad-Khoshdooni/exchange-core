@@ -22,22 +22,23 @@ def blocklink_income_fetcher(start: datetime, end: datetime):
             deposit=False,
             network__symbol=network
         ).aggregate(
-            total=Sum(F('usdt_value') / F('amount') * F('fee_amount'))
+            total=Sum(F('usdt_value') / (F('amount') + F('fee_amount')) * F('fee_amount'))
         )['total'] or 0
 
         fee_amount = Decimal(data['fee_amount'])
         dust_cost = Decimal(data['dust_cost'])
 
-        BlocklinkIncome.objects.get_or_create(
-            start=start,
-            network=network,
-            defaults={
-                'coin': coin,
-                'real_fee_amount': fee_amount,
-                'fee_cost': price * fee_amount,
-                'fee_income': fee_income
-            }
-        )
+        if fee_amount + fee_income:
+            BlocklinkIncome.objects.get_or_create(
+                start=start,
+                network=network,
+                defaults={
+                    'coin': coin,
+                    'real_fee_amount': fee_amount,
+                    'fee_cost': price * fee_amount,
+                    'fee_income': fee_income
+                }
+            )
 
         BlocklinkDustCost.objects.update_or_create(
             network=network,
