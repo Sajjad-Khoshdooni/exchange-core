@@ -8,6 +8,7 @@ from accounting.models import PeriodicFetcher, BlocklinkIncome, BlocklinkDustCos
 from accounting.requester.blocklink_income import blocklink_income_request
 from ledger.models import Transfer
 from ledger.utils.external_price import get_external_price, BUY
+from ledger.utils.fields import AMOUNT_PRECISION
 
 
 def blocklink_income_fetcher(start: datetime, end: datetime):
@@ -19,24 +20,26 @@ def blocklink_income_fetcher(start: datetime, end: datetime):
 
         fee_income = Transfer.objects.filter(
             created__range=(start, end),
-            deposit=False
+            deposit=False,
+            network__symbol=network
         ).aggregate(
-            total=Sum(F('usdt_value') / F('amount') * F('fee_amount'))
+            total=Sum(F('usdt_value') / (F('amount') + F('fee_amount')) * F('fee_amount'))
         )['total'] or 0
 
         fee_amount = Decimal(data['fee_amount'])
         dust_cost = Decimal(data['dust_cost'])
 
-        BlocklinkIncome.objects.get_or_create(
-            start=start,
-            network=network,
-            defaults={
-                'coin': coin,
-                'real_fee_amount': fee_amount,
-                'fee_cost': price * fee_amount,
-                'fee_income': fee_income
-            }
-        )
+        if int((fee_amount + fee_income) * 10 ** AMOUNT_PRECISION):
+            BlocklinkIncome.objects.get_or_create(
+                start=start,
+                network=network,
+                defaults={
+                    'coin': coin,
+                    'real_fee_amount': fee_amount,
+                    'fee_cost': price * fee_amount,
+                    'fee_income': fee_income
+                }
+            )
 
         BlocklinkDustCost.objects.update_or_create(
             network=network,
