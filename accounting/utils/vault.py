@@ -54,6 +54,9 @@ def update_provider_vaults(now: datetime, usdt_irt: Decimal):
             balances = balances_data['balances']
             real_value = balances_data['real_value'] and Decimal(balances_data['real_value'])
 
+            if not balances:
+                continue
+
             prices = get_external_usdt_prices(
                 coins=list(balances.keys()),
                 side=BUY,

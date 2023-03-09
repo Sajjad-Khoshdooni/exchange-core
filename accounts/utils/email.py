@@ -15,13 +15,10 @@ SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw_email'
 SCOPE_CANCEL_FIAT_WITHDRAW = 'cancel_fiat_withdraw_email'
 SCOPE_PAYMENT = 'payment_email'
 
-
 SCOPE_MARGIN_UNDER_LIQUIDATION = 'margin_under_liquidation'
 SCOPE_MARGIN_LIQUIDATION_FINISHED = 'margin_liquidation_finished'
 
-
 SCOPE_DONE_STAKE = 'done_stake'
-
 SCOPE_CANCEL_STAKE = 'cancel_stake'
 
 SCOPE_2FA_ACTIVATE = 'activate_2fa'
