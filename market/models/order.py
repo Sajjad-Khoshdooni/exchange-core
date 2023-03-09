@@ -360,6 +360,9 @@ class Order(models.Model):
             maker_ordinary = maker_order.wallet.account.is_ordinary_user()
 
             if taker_ordinary != maker_ordinary:
+                if self.wallet.account_id == settings.RANDOM_TRADER_ACCOUNT_ID:
+                    raise Exception('Random trader took ordinary order!!!')
+
                 ordinary_order = self if self.type == Order.ORDINARY else maker_order
                 ordinary_trade = trades_pair.taker_trade if taker_ordinary else trades_pair.maker_trade
 

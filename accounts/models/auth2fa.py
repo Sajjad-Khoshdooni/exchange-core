@@ -19,3 +19,4 @@ class Auth2Fa(models.Model):
 
     @classmethod
     def new(cls, user: User):
+        pass

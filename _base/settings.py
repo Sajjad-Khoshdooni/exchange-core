@@ -17,6 +17,9 @@ DEBUG = config('DEBUG', cast=bool, default=False)
 STAGING = config('STAGING', cast=bool, default=False)
 TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
+BLOCKLINK_TOKEN = config('BLOCKLINK_TOKEN')
+BLOCKLINK_BASE_URL = config('BLOCKLINK_BASE_URL', default='https://blocklink.raastin.com')
+
 DEBUG_OR_TESTING = DEBUG or TESTING
 DEBUG_OR_TESTING_OR_STAGING = DEBUG or TESTING or STAGING
 
@@ -78,7 +81,7 @@ MIDDLEWARE = [
     'simple_history.middleware.HistoryRequestMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
 
-    'utilities.middleware.SetLocaleMiddleware',
+    'accounts.middleware.SetLocaleMiddleware',
 ]
 
 # todo: fix csrf check
@@ -296,7 +299,7 @@ if config('JWT_PRIVATE_KEY', None):
         'ALGORITHM': 'RS256',
         'SIGNING_KEY': config('JWT_PRIVATE_KEY', default=''),
         'VERIFYING_KEY': config('JWT_PUBLIC_KEY', default=''),
-        'REFRESH_TOKEN_LIFETIME': timedelta(hours=6),
+        'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     }
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -367,6 +370,7 @@ JALALI_DATE_DEFAULTS = {
 
 SYSTEM_ACCOUNT_ID = config('SYSTEM_ACCOUNT_ID', default=1)
 OTC_ACCOUNT_ID = config('OTC_ACCOUNT', cast=int)
+RANDOM_TRADER_ACCOUNT_ID = config('BOT_RANDOM_TRADER_ACCOUNT_ID', default=None)
 
 BRAND_EN = config('BRAND_EN', default='')
 BRAND = config('BRAND', default='')

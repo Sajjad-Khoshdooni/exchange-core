@@ -77,7 +77,7 @@ def fill_revenue_filled_prices():
 
                 info = get_provider_requester().get_order(request_id=revenue.hedge_key)
 
-                if info:
+                if info and info['filled_amount']:
                     executed_amount = Decimal(info['filled_amount'])
                     executed_price = Decimal(info['filled_price'])
 

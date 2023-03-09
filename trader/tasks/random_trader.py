@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from celery import shared_task
 from decouple import config
+from django.conf import settings
 
 from accounts.models import Account
 from ledger.utils.external_price import BUY, SELL
@@ -27,7 +28,7 @@ def random_trader():
 
     symbols = set(random.choices(symbols, k=choices_count))
 
-    account = get_account()
+    account = Account.objects.get(id=settings.RANDOM_TRADER_ACCOUNT_ID)
     daily_factors = get_daily_order_size_factors(symbol_ids=list(map(lambda s: s.id, symbols)))
     system_top_price_amounts = get_market_top_price_amounts(
         order_types_in=(Order.DEPTH, Order.BOT),
@@ -41,11 +42,6 @@ def random_trader():
         }
         user_top_prices = {side: users_top_prices[symbol.id, side] for side in [BUY, SELL]}
         random_trade(symbol, account, top_price_amounts, user_top_prices, daily_factors[symbol.id])
-
-
-def get_account():
-    account_id = config('BOT_RANDOM_TRADER_ACCOUNT_ID')
-    return Account.objects.get(id=account_id)
 
 
 def random_trade(symbol: PairSymbol, account, top_price_amounts, user_top_prices, daily_factor: int):
