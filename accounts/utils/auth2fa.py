@@ -15,10 +15,9 @@ def create_qr_code(token: str):
     key = token.encode('ASCII')
 
     token = base64.b32encode(key)
-    relative_path = 'qrcode/{}.png'.format(uuid.uuid4())
+    relative_path = '/qrcode/{}.png'.format(uuid.uuid4())
     path = settings.MEDIA_ROOT + relative_path
-    qr_string = "otpauth://totp/Raastin?config=" + token.decode(
-        "utf-8") + "&issuer=raastin.com&algorithm=SHA1&digits=6&period=30"
+    qr_string = "otpauth://totp/Raastin?config=" + token.decode("utf-8") + "&issuer=raastin.com&algorithm=SHA1&digits=6&period=30"
     img = qrcode.make(qr_string)
     img.save(path)
     return relative_path

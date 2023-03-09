@@ -44,10 +44,10 @@ class Create2FaQrCodeAPIView(APIView):
 
     def post(self, request, *args, **kwargs):
         user = request.user
+
         if getattr(user, 'auth2fa', None):
             raise ValidationError('این کاربر قبلا qrcode ساخته است')
 
-        token = uuid.uuid4()
         qrcode_address = create_qr_code(str(token))
         Auth2Fa.objects.create(
             user=user,
@@ -71,7 +71,6 @@ class Create2FaQrCodeAPIView(APIView):
 class Verify2FaVerificationAPIView(APIView):
 
     def post(self, request, *args, **kwargs):
-
         user = self.request.user
         if not getattr(user, 'auth2fa', None):
             raise ValidationError('این کاربر قبلا qrcode نساخته است')
