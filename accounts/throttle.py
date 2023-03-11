@@ -1,6 +1,10 @@
+import logging
+
 from rest_framework.throttling import UserRateThrottle
 
 from accounts.models import CustomToken
+
+logger = logging.getLogger(__name__)
 
 
 class CustomUserRateThrottle(UserRateThrottle):
@@ -12,7 +16,12 @@ class CustomUserRateThrottle(UserRateThrottle):
                 hasattr(request.auth, 'payload') and request.auth.payload.get('account_id')
         ) or used_token_authentication):
             return True
-        return super(CustomUserRateThrottle, self).allow_request(request, view)
+        allow_request = super(CustomUserRateThrottle, self).allow_request(request, view)
+        if not allow_request:
+            logger.info(f"throttled {request.auth}, {request.user}, {user_has_delegate_permission(request.user)}, "
+                        f"{getattr(request.auth, 'token_type', None) == 'access'}, {hasattr(request.auth, 'payload')}, "
+                        f"{request.auth.payload.get('account_id')}, {used_token_authentication}")
+        return allow_request
 
 
 class BurstRateThrottle(CustomUserRateThrottle):
