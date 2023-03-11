@@ -61,8 +61,6 @@ class Asset(models.Model):
 
     publish_date = models.DateTimeField(null=True, blank=True)
 
-    coin_multiplier = models.IntegerField(default=1)
-
     otc_status = models.CharField(
         max_length=8,
         default=ACTIVE,
@@ -131,6 +129,19 @@ class Asset(models.Model):
     def get_presentation_price_usdt(self, price: Decimal) -> str:
         return get_presentation_amount(price, self.price_precision_usdt)
 
+    def get_original_symbol(self):
+        return self.original_symbol or self.symbol
+
+    def get_coin_multiplier(self) -> int:
+        if not self.original_symbol or self.symbol == self.original_symbol:
+            return 1
+        elif self.symbol.startswith('1M-'):
+            return 10 ** 6
+        elif self.symbol.startswith('1000'):
+            return 10 ** 3
+        else:
+            return 1
+
     @property
     def future_symbol(self):
         if self.symbol == 'SHIB':
@@ -162,7 +173,7 @@ class AssetSerializerMini(serializers.ModelSerializer):
         return settings.MINIO_STORAGE_STATIC_URL + '/coins/%s.png' % asset.symbol
 
     def get_original_symbol(self, asset: Asset):
-        return asset.original_symbol or asset.symbol
+        return asset.get_original_symbol()
 
     def get_original_name_fa(self, asset: Asset):
         return asset.original_name_fa or asset.name_fa

@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 
 from django.utils import timezone
 from rest_framework import serializers
@@ -51,6 +52,14 @@ class DepositSerializer(serializers.ModelSerializer):
         coin = validated_data.get('coin')
 
         asset = Asset.objects.filter(symbol=coin).first()
+        coin_mult = 1
+
+        if not asset and coin:
+            asset = Asset.objects.filter(original_symbol=coin).first()
+
+            if asset:
+                coin_mult = asset.get_coin_multiplier()
+
         if not asset:
             logger.warning('invalid coin for deposit', extra={'coin': coin})
             raise ValidationError({'coin': 'invalid coin'})
@@ -107,7 +116,7 @@ class DepositSerializer(serializers.ModelSerializer):
             return prev_transfer
 
         else:
-            amount = int(validated_data.get('amount')) / asset.coin_multiplier
+            amount = Decimal(validated_data.get('amount')) / coin_mult
             price_usdt = get_external_price(coin=asset.symbol, base_coin=Asset.USDT, side=SELL, allow_stale=True)
             price_irt = get_external_price(coin=asset.symbol, base_coin=Asset.IRT, side=SELL, allow_stale=True)
 

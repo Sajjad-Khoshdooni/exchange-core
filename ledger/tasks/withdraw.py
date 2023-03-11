@@ -64,11 +64,16 @@ def create_withdraw(transfer_id: int):
 
     from ledger.requester.withdraw_requester import RequestWithdraw
 
+    asset = transfer.wallet.asset
+    coin_mult = asset.get_coin_multiplier()
+
+    assert coin_mult == 1 or (asset.symbol != asset.original_symbol and asset.original_symbol)
+
     response = RequestWithdraw().withdraw_from_hot_wallet(
         receiver_address=transfer.out_address,
-        amount=transfer.amount * transfer.wallet.asset.coin_multiplier,
+        amount=transfer.amount * coin_mult,
         network=transfer.network.symbol,
-        asset=transfer.wallet.asset.symbol,
+        asset=asset.get_original_symbol(),
         transfer_id=transfer.id
     )
 

@@ -148,7 +148,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         return settings.MINIO_STORAGE_STATIC_URL + '/coins/%s.png' % asset.symbol
 
     def get_original_symbol(self, asset: Asset):
-        return asset.original_symbol or asset.symbol
+        return asset.get_original_symbol()
 
     def get_original_name_fa(self, asset: Asset):
         return asset.original_name_fa or asset.name_fa
