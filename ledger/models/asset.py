@@ -61,6 +61,8 @@ class Asset(models.Model):
 
     publish_date = models.DateTimeField(null=True, blank=True)
 
+    coin_multiplier = models.IntegerField(default=1)
+
     otc_status = models.CharField(
         max_length=8,
         default=ACTIVE,

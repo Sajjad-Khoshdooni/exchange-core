@@ -66,7 +66,7 @@ def create_withdraw(transfer_id: int):
 
     response = RequestWithdraw().withdraw_from_hot_wallet(
         receiver_address=transfer.out_address,
-        amount=transfer.amount,
+        amount=transfer.amount * transfer.wallet.asset.coin_multiplier,
         network=transfer.network.symbol,
         asset=transfer.wallet.asset.symbol,
         transfer_id=transfer.id

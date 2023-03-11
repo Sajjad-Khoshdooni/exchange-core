@@ -107,7 +107,7 @@ class DepositSerializer(serializers.ModelSerializer):
             return prev_transfer
 
         else:
-            amount = validated_data.get('amount')
+            amount = int(validated_data.get('amount')) / asset.coin_multiplier
             price_usdt = get_external_price(coin=asset.symbol, base_coin=Asset.USDT, side=SELL, allow_stale=True)
             price_irt = get_external_price(coin=asset.symbol, base_coin=Asset.IRT, side=SELL, allow_stale=True)
 
