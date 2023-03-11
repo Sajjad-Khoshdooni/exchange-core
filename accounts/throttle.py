@@ -20,7 +20,7 @@ class CustomUserRateThrottle(UserRateThrottle):
         if not allow_request:
             logger.info(f"throttled {request.auth}, {request.user}, {user_has_delegate_permission(request.user)}, "
                         f"{getattr(request.auth, 'token_type', None) == 'access'}, {hasattr(request.auth, 'payload')}, "
-                        f"{request.auth.payload.get('account_id')}, {used_token_authentication}")
+                        f"{used_token_authentication}")
         return allow_request
 
 
