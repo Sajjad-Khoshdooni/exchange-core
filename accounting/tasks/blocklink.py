@@ -8,7 +8,6 @@ from accounting.models import PeriodicFetcher, BlocklinkIncome, BlocklinkDustCos
 from accounting.requester.blocklink_income import blocklink_income_request
 from ledger.models import Transfer
 from ledger.utils.external_price import get_external_price, BUY
-from ledger.utils.fields import AMOUNT_PRECISION
 from ledger.utils.precision import zero_by_precision
 
 

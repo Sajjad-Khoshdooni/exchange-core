@@ -6,7 +6,6 @@ from uuid import UUID
 from django.db.models import F
 from django.db.transaction import Atomic
 
-from ledger.utils.fields import AMOUNT_PRECISION
 from ledger.utils.precision import zero_by_precision
 
 

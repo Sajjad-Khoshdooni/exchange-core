@@ -1,7 +1,7 @@
 from decimal import Decimal, ROUND_DOWN, ROUND_UP
 from math import ceil
 
-from ledger.utils.fields import AMOUNT_PRECISION
+AMOUNT_PRECISION = 8
 
 
 def round_up_to_exponent(amount: Decimal, precision: int = 0):

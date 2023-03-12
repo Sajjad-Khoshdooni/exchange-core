@@ -9,12 +9,9 @@ from rest_framework import serializers
 
 
 from ledger.utils.cache import cache_for
-from ledger.utils.precision import normalize_fraction
-
+from ledger.utils.precision import normalize_fraction, AMOUNT_PRECISION
 
 PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
-
-AMOUNT_PRECISION = 8
 
 
 def get_amount_field(default: Union[Decimal, int] = None, max_digits: int = None, decimal_places: int = None,
