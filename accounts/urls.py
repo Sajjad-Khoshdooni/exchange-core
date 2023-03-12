@@ -98,4 +98,6 @@ urlpatterns = [
     path('2fa/verify/', views.Verify2FaVerificationAPIView.as_view()),
 
     path('users/<int:pk>/', views.UserDigestView.as_view()),
+
+    path('feedback/', views.UserFeedbackView.as_view()),
 ]
