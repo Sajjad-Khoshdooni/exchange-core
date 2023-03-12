@@ -9,12 +9,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from accounts.authentication import CustomTokenAuthentication
 from accounts.models import Account
+from accounts.utils.validation import set_login_activity
 
 logger = logging.getLogger(__name__)
 
@@ -108,9 +110,15 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
-        logger.info('App Login: %s' % request.META['HTTP_USER_AGENT'])
+        serializer = self.get_serializer(data=request.data)
 
-        return super(CustomTokenObtainPairView, self).post(request, *args, **kwargs)
+        try:
+            serializer.is_valid(raise_exception=True)
+            set_login_activity(request, user=serializer.user)
+        except TokenError as e:
+            raise InvalidToken(e.args[0])
+
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 
 class SessionTokenObtainPairView(TokenObtainPairView):
