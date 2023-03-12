@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
+from accounts.models import UserFeedback
 from accounts.models.notification import Notification
 from accounts.utils.validation import parse_positive_int
 
@@ -32,9 +33,17 @@ class NotificationViewSet(ModelViewSet):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
 
+        feedback = False
+
+        user = self.request.user
+
+        if user.account.trade_volume_irt and not UserFeedback.objects.filter(user=user).exists():
+            feedback = True
+
         return Response({
             'notifications': serializer.data,
-            'unread_count': Notification.objects.filter(recipient=self.request.user, read=False).count()
+            'unread_count': Notification.objects.filter(recipient=self.request.user, read=False).count(),
+            'feedback': feedback
         })
 
     def get_queryset(self):
