@@ -108,11 +108,12 @@ def set_login_activity(request, user, is_sign_up: bool = False):
 
         ip = get_client_ip(request)
         ip_data = get_ip_data(ip)
+
         LoginActivity.objects.create(
             user=user,
             ip=ip,
             user_agent=request.META['HTTP_USER_AGENT'],
-            session=Session.objects.get(session_key=request.session.session_key),
+            session=Session.objects.filter(session_key=request.session.session_key).first(),
             device_type=device_type,
             device=device,
             os=os,
