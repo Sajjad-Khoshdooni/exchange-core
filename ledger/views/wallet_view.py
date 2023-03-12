@@ -3,6 +3,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
@@ -391,12 +392,15 @@ class ConvertDustView(APIView):
         account = self.request.user.get_account()
         irt_asset = Asset.get(Asset.IRT)
 
-        spot_wallets = Wallet.objects.filter(
+        spot_wallets = list(Wallet.objects.filter(
             account=account,
             market=Wallet.SPOT,
             balance__gt=0,
             variant__isnull=True
-        ).exclude(asset=irt_asset).prefetch_related('asset')
+        ).exclude(asset=irt_asset).prefetch_related('asset'))
+
+        if not spot_wallets:
+            raise ValidationError({'هیچ گزینه‌ای برای تبدیل خرد وجود ندارد.'})
 
         group_id = uuid4()
         irt_amount = 0
