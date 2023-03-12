@@ -1,3 +1,6 @@
+import logging
+
+from decouple import config
 from django.utils.translation import activate
 from rest_framework import serializers
 from rest_framework import status
@@ -9,10 +12,11 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from decouple import config
 
-from accounts.models import Account
 from accounts.authentication import CustomTokenAuthentication
+from accounts.models import Account
+
+logger = logging.getLogger(__name__)
 
 
 def user_has_delegate_permission(user):
@@ -102,6 +106,11 @@ class SessionTokenObtainPairSerializer(CustomTokenObtainPairSerializer):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        logger.info('App Login: %s' % request.META['HTTP_USER_AGENT'])
+
+        return super(CustomTokenObtainPairView, self).post(request, *args, **kwargs)
 
 
 class SessionTokenObtainPairView(TokenObtainPairView):
