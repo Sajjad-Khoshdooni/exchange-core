@@ -199,7 +199,7 @@ app.conf.beat_schedule = {
     },
     'create_snapshot': {
         'task': 'ledger.tasks.snapshot.create_snapshot',
-        'schedule': crontab(minute='*/5'),
+        'schedule': crontab(minute='1-59/5'),
         'options': {
             'queue': 'history',
             'expire': 200
