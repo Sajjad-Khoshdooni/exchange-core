@@ -405,6 +405,7 @@ class Order(models.Model):
                     pipeline.release_lock(self.group_id)
 
                 self.save(update_fields=['status'])
+                filled_orders.append(self)
                 break
 
         if to_hedge_amount != 0:
