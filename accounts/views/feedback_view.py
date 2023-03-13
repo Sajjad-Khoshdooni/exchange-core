@@ -7,7 +7,7 @@ from accounts.models import UserFeedback
 class UserFeedbackSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserFeedback
-        fields = ('user', 'score', 'comment')
+        fields = ('score', 'comment')
 
 
 class UserFeedbackView(CreateAPIView):
