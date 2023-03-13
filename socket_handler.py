@@ -153,7 +153,9 @@ async def broadcast_orders_status():
                     print(raw_message)
                     continue
                 symbol = raw_message['channel'].split(':')[-1]
-                order_id, side, price, status = raw_message['data'].split('-')
+                split_data = raw_message['data'].split('-')
+                side, price, status = split_data[-3:]
+                order_id = '-'.join(split_data[:-3])
                 websockets.broadcast(
                     ORDERS_STATUS_CLIENTS,
                     pickle.dumps({
