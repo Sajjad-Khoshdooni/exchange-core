@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 from datetime import timedelta
 from secrets import randbelow
@@ -84,7 +85,7 @@ def get_ip_data(ip):
         return {}
 
 
-def set_login_activity(request, user, is_sign_up: bool = False):
+def get_login_activity_from_request(request) -> LoginActivity:
     try:
         os = request.user_agent.os.family
         if request.user_agent.os.version_string:
@@ -106,24 +107,48 @@ def set_login_activity(request, user, is_sign_up: bool = False):
         else:
             device_type = LoginActivity.UNKNOWN
 
-        ip = get_client_ip(request)
-        ip_data = get_ip_data(ip)
-
-        LoginActivity.objects.create(
-            user=user,
-            ip=ip,
+        return LoginActivity(
             user_agent=request.META['HTTP_USER_AGENT'],
-            session=Session.objects.filter(session_key=request.session.session_key).first(),
             device_type=device_type,
             device=device,
             os=os,
             browser=browser,
-            is_sign_up=is_sign_up,
-            ip_data=ip_data,
-            city=ip_data.get('city', ''),
-            country=ip_data.get('country', '')
         )
+    except:
+        pass
+
+
+def get_login_activity_from_client_info(client_info: dict) -> LoginActivity:
+    return LoginActivity(
+        user_agent=json.dumps(client_info),
+        device_type=LoginActivity.MOBILE,
+        device=client_info.get('device_name', ''),
+        os='%s %s' % (client_info.get('system_name', ''), client_info.get('system_version', '')),
+        browser=client_info.get('brand', ''),
+    )
+
+
+def set_login_activity(request, user, is_sign_up: bool = False, client_info: dict = None, native_app: bool = False):
+    try:
+        if client_info:
+            login_activity = get_login_activity_from_client_info(client_info)
+        else:
+            login_activity = get_login_activity_from_request(request)
+
+        ip = get_client_ip(request)
+        ip_data = get_ip_data(ip)
+
+        login_activity.user = user
+        login_activity.session = Session.objects.filter(session_key=request.session.session_key).first()
+        login_activity.is_sign_up = is_sign_up
+        login_activity.ip = ip
+        login_activity.ip_data = ip_data
+        login_activity.city = ip_data.get('city', '')
+        login_activity.country = ip_data.get('country', '')
+        login_activity.native_app = native_app
+        login_activity.save()
 
     except:
         logger.exception('User login activity dos not saved ')
+
     return

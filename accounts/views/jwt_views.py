@@ -85,6 +85,35 @@ class InternalTokenObtainPairView(TokenObtainPairView):
         }
 
 
+class ClientInfoSerializer(serializers.Serializer):
+    version = serializers.CharField(required=False, allow_blank=True)
+
+    system_name = serializers.CharField(required=False, allow_blank=True)
+    system_version = serializers.CharField(required=False, allow_blank=True)
+
+    unique_id = serializers.CharField(required=False, allow_blank=True)
+
+    brand = serializers.CharField(required=False, allow_blank=True)
+
+    build_id = serializers.CharField(required=False, allow_blank=True)
+    build_number = serializers.CharField(required=False, allow_blank=True)
+
+    device = serializers.CharField(required=False, allow_blank=True)
+    device_id = serializers.CharField(required=False, allow_blank=True)
+    device_name = serializers.CharField(required=False, allow_blank=True)
+    device_token = serializers.CharField(required=False, allow_blank=True)
+    device_type = serializers.CharField(required=False, allow_blank=True)
+
+    display = serializers.CharField(required=False, allow_blank=True)
+    mac_address = serializers.CharField(required=False, allow_blank=True)
+
+    manufacturer = serializers.CharField(required=False, allow_blank=True)
+    model = serializers.CharField(required=False, allow_blank=True)
+    product = serializers.CharField(required=False, allow_blank=True)
+
+    is_table = serializers.BooleanField(required=False)
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -114,7 +143,16 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
         try:
             serializer.is_valid(raise_exception=True)
-            set_login_activity(request, user=serializer.user)
+
+            client_info_serializer = ClientInfoSerializer(data=request.data.get('client_info'))
+
+            client_info = None
+
+            if client_info_serializer.is_valid():
+                client_info = client_info_serializer.validated_data
+
+            set_login_activity(request, user=serializer.user, client_info=client_info, native_app=True)
+
         except TokenError as e:
             raise InvalidToken(e.args[0])
 
