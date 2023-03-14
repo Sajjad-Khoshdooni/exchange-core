@@ -22,7 +22,7 @@ class UserFeedback(models.Model):
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, unique=True)
 
     score = models.PositiveIntegerField(validators=[MaxValueValidator(10)])
-    comment = models.TextField(max_length=4096)
+    comment = models.TextField(max_length=4096, blank=True)
 
     # class Meta:
     #     unique_together = ('user', 'feedback')
