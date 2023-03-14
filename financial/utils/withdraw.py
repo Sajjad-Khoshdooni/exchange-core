@@ -416,7 +416,7 @@ class ZibalChannel(FiatWithdraw):
             path='/v1/gateway/report/transaction',
             method='POST',
             data={'merchantId': merchant_id, 'status': status},
-            timeout=120
+            timeout=45
         )
 
     def update_missing_payments(self, gateway: Gateway):
