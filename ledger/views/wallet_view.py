@@ -388,11 +388,10 @@ class ConvertDustView(APIView):
             variant__isnull=True
         ).exclude(asset=irt_asset).prefetch_related('asset'))
 
-        if not spot_wallets:
-            raise ValidationError({'هیچ گزینه‌ای برای تبدیل خرد وجود ندارد.'})
-
         group_id = uuid4()
         irt_amount = 0
+
+        any_converted = False
 
         with WalletPipeline() as pipeline:
             for wallet in spot_wallets:
@@ -421,6 +420,8 @@ class ConvertDustView(APIView):
 
                     irt_amount += price * spread_to_multiplier(spread, side=BUY) * free
 
+                    any_converted = True
+
             pipeline.new_trx(
                 sender=irt_asset.get_wallet(SYSTEM_ACCOUNT_ID),
                 receiver=irt_asset.get_wallet(account),
@@ -428,6 +429,9 @@ class ConvertDustView(APIView):
                 group_id=group_id,
                 scope=Trx.DUST,
             )
+
+        if not any_converted:
+            raise ValidationError({'هیچ گزینه‌ای برای تبدیل خرد وجود ندارد.'})
 
         return Response({'msg': 'convert_dust success'}, status=status.HTTP_200_OK)
 
