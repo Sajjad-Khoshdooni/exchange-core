@@ -4,6 +4,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from json import JSONDecodeError
 from math import log10
 from typing import List, Dict, Union
 
@@ -131,10 +132,15 @@ class ProviderRequester:
         except (requests.exceptions.ConnectionError, ReadTimeoutError, requests.exceptions.Timeout):
             raise TimeoutError
 
-        if not resp.ok:
-            logger.info('PROVIDER', path, method, data, resp.json())
+        try:
+            resp_json = resp.json()
+        except JSONDecodeError:
+            resp_json = None
 
-        return Response(data=resp.json(), success=resp.ok, status_code=resp.status_code)
+        if not resp.ok:
+            logger.info('PROVIDER', path, method, data, resp_json)
+
+        return Response(data=resp_json, success=resp.ok, status_code=resp.status_code)
 
     def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:
         if asset:
