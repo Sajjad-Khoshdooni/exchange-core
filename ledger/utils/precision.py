@@ -1,6 +1,8 @@
 from decimal import Decimal, ROUND_DOWN, ROUND_UP
 from math import ceil
 
+AMOUNT_PRECISION = 8
+
 
 def round_up_to_exponent(amount: Decimal, precision: int = 0):
     if precision < 0:
@@ -92,3 +94,7 @@ def normalize_fraction(d: Decimal):
 
 def humanize_presentation(num):
     return humanize_number(get_presentation_amount(num, precision=8))
+
+
+def zero_by_precision(amount: Decimal, precision: int = AMOUNT_PRECISION):
+    return int(amount * 10 ** precision) == 0

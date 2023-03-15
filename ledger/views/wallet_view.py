@@ -5,6 +5,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.db.models import Q
 from rest_framework import serializers, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
@@ -148,7 +149,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         return settings.MINIO_STORAGE_STATIC_URL + '/coins/%s.png' % asset.symbol
 
     def get_original_symbol(self, asset: Asset):
-        return asset.original_symbol or asset.symbol
+        return asset.get_original_symbol()
 
     def get_original_name_fa(self, asset: Asset):
         return asset.original_name_fa or asset.name_fa
@@ -380,15 +381,17 @@ class ConvertDustView(APIView):
         account = self.request.user.get_account()
         irt_asset = Asset.get(Asset.IRT)
 
-        spot_wallets = Wallet.objects.filter(
+        spot_wallets = list(Wallet.objects.filter(
             account=account,
             market=Wallet.SPOT,
             balance__gt=0,
             variant__isnull=True
-        ).exclude(asset=irt_asset).prefetch_related('asset')
+        ).exclude(asset=irt_asset).prefetch_related('asset'))
 
         group_id = uuid4()
         irt_amount = 0
+
+        any_converted = False
 
         with WalletPipeline() as pipeline:
             for wallet in spot_wallets:
@@ -417,6 +420,8 @@ class ConvertDustView(APIView):
 
                     irt_amount += price * spread_to_multiplier(spread, side=BUY) * free
 
+                    any_converted = True
+
             pipeline.new_trx(
                 sender=irt_asset.get_wallet(SYSTEM_ACCOUNT_ID),
                 receiver=irt_asset.get_wallet(account),
@@ -424,6 +429,9 @@ class ConvertDustView(APIView):
                 group_id=group_id,
                 scope=Trx.DUST,
             )
+
+        if not any_converted:
+            raise ValidationError({'هیچ گزینه‌ای برای تبدیل خرد وجود ندارد.'})
 
         return Response({'msg': 'convert_dust success'}, status=status.HTTP_200_OK)
 

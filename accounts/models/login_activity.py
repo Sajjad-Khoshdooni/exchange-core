@@ -24,5 +24,7 @@ class LoginActivity(models.Model):
     country = models.CharField(blank=True, max_length=256)
     ip_data = models.JSONField(null=True, blank=True)
 
+    native_app = models.BooleanField(default=False)
+
     class Meta:
         verbose_name_plural = verbose_name = "تاریخچه ورود به حساب"

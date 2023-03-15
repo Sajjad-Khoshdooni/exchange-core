@@ -34,7 +34,7 @@ class ConvertDustTestCase(TestCase):
     def test_convert_dust_for_zero_wallet(self):
         resp = self.client.post('/api/v1/convert/dust/')
 
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 400)
 
         self.assertEqual(self.wallet_irt.balance, 0)
         self.assertEqual(self.wallet_btc.balance, 0)
@@ -46,12 +46,12 @@ class ConvertDustTestCase(TestCase):
         self.wallet_irt.airdrop(Decimal('5000'))
 
         resp = self.client.post('/api/v1/convert/dust/')
+        self.assertEqual(resp.status_code, 200)
 
         self.wallet_btc.refresh_from_db()
         self.wallet_usdt.refresh_from_db()
         self.wallet_irt.refresh_from_db()
 
-        self.assertEqual(resp.status_code, 200)
         self.assertGreater(self.wallet_irt.balance, 5000)
         self.assertEqual(self.wallet_usdt.balance, 10)
         self.assertEqual(self.wallet_btc.balance, 0)

@@ -59,15 +59,7 @@ app.conf.beat_schedule = {
         },
     },
 
-    # market tasks
-    'handle open stop loss': {
-        'task': 'market.tasks.stop_loss.handle_stop_loss',
-        'schedule': 1 * TASK_MULTIPLIER,
-        'options': {
-            'queue': 'stop_loss',
-            'expire': 1 * TASK_MULTIPLIER
-        },
-    },
+
     'create_stake_revenue': {
         'task': 'stake.tasks.stake_revenue.create_stake_revenue',
         'schedule': crontab(hour=19, minute=30),
@@ -150,10 +142,10 @@ app.conf.beat_schedule = {
 
     'handle_missing_payments': {
         'task': 'financial.tasks.gateway.handle_missing_payments',
-        'schedule': 30 * TASK_MULTIPLIER,
+        'schedule': 60 * TASK_MULTIPLIER,
         'options': {
             'queue': 'finance',
-            'expire': 30 * TASK_MULTIPLIER
+            'expire': 60 * TASK_MULTIPLIER
         },
     },
 
@@ -183,7 +175,7 @@ app.conf.beat_schedule = {
     },
     'create_snapshot': {
         'task': 'ledger.tasks.snapshot.create_snapshot',
-        'schedule': crontab(minute='*/5'),
+        'schedule': crontab(minute='1-59/5'),
         'options': {
             'queue': 'history',
             'expire': 200
