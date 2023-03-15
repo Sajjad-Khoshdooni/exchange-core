@@ -434,4 +434,3 @@ class ConvertDustView(APIView):
             raise ValidationError('هیچ گزینه‌ای برای تبدیل خرد وجود ندارد.')
 
         return Response({'msg': 'convert_dust success'}, status=status.HTTP_200_OK)
-
