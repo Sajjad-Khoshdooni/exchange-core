@@ -5,12 +5,14 @@ from typing import Union
 from uuid import UUID
 
 from django.db.models import Max, Min, F, Q, OuterRef, Subquery, DecimalField, Sum
+from django.utils import timezone
 
 from accounts.models import Account
 from ledger.models import Wallet, Asset
 from ledger.utils.external_price import BUY, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order, PairSymbol
+from market.models import Order, PairSymbol, StopLoss
+from market.models.order import CancelOrder
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +93,44 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
         is_stop_loss = parent_lock_group_id is not None
         order.submit(pipeline, is_stop_loss=is_stop_loss)
     return order
+
+
+def trigger_stop_loss(stop_loss: StopLoss, triggered_price: Decimal):
+    try:
+        if stop_loss.price:
+            order = new_order(
+                stop_loss.symbol, stop_loss.wallet.account, stop_loss.unfilled_amount, stop_loss.price, stop_loss.side,
+                Order.LIMIT, raise_exception=False, market=stop_loss.wallet.market,
+                parent_lock_group_id=stop_loss.group_id
+            )
+        else:
+            order = new_order(
+                stop_loss.symbol, stop_loss.wallet.account, stop_loss.unfilled_amount, None, stop_loss.side,
+                Order.MARKET, raise_exception=False, market=stop_loss.wallet.market,
+                parent_lock_group_id=stop_loss.group_id
+            )
+    except Exception:
+        order = None
+    if not order:
+        logger.exception(f'could not place order for stop loss ({stop_loss.symbol})',
+                         extra={
+                             'triggered_price': triggered_price,
+                             'stop_loss': stop_loss.id,
+                             'stop_loss_side': stop_loss.side,
+                             'stop_loss_trigger_price': stop_loss.trigger_price,
+                         })
+        if stop_loss.fill_type == StopLoss.MARKET:
+            stop_loss.canceled_at = timezone.now()
+            stop_loss.save(update_fields=['canceled_at'])
+        return
+    order.refresh_from_db()
+    order.stop_loss = stop_loss
+    order.save(update_fields=['stop_loss_id'])
+    stop_loss.filled_amount += order.filled_amount
+    stop_loss.save(update_fields=['filled_amount'])
+    logger.info(f'filled order at {triggered_price} with amount: {order.filled_amount}, price: {order.price} for '
+                f'stop loss({stop_loss.id}) {stop_loss.filled_amount} {stop_loss.trigger_price} {stop_loss.price} '
+                f'{stop_loss.side} ')
 
 
 def get_market_top_prices(order_type='all', symbol_ids=None):

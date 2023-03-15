@@ -212,7 +212,20 @@ class Order(models.Model):
         else:
             overriding_fill_amount = self.acquire_lock(pipeline)
 
-        self.make_match(pipeline, overriding_fill_amount)
+        trades = self.make_match(pipeline, overriding_fill_amount)
+        if trades:
+            # trigger stop loss
+            min_price = min(map(lambda t: t.price, trades))
+            max_price = max(map(lambda t: t.price, trades))
+            from market.models import StopLoss
+            to_trigger_stop_loss_qs = StopLoss.not_triggered_objects.filter(
+                Q(side=BUY, trigger_price__lte=max_price) | Q(side=SELL, trigger_price__gte=min_price),
+                symbol=self.symbol,
+            )
+            for stop_loss in to_trigger_stop_loss_qs:
+                from market.utils.order_utils import trigger_stop_loss
+                triggered_price = min_price if stop_loss.side == SELL else max_price
+                trigger_stop_loss(stop_loss, triggered_price)
 
     def acquire_lock(self, pipeline: WalletPipeline):
         to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
@@ -420,7 +433,7 @@ class Order(models.Model):
             pipeline.release_lock(self.group_id)
             self.save(update_fields=['status'])
 
-        Trade.objects.bulk_create(trades)
+        trades = Trade.objects.bulk_create(trades)
         TradeRevenue.objects.bulk_create(trades_revenue)
 
         if trades:
@@ -441,6 +454,7 @@ class Order(models.Model):
                 check_prize_achievements(account, Task.TRADE)
 
             logger.info(log_prefix + 'make match finished.')
+        return trades
 
     @classmethod
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):
