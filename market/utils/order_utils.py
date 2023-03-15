@@ -109,11 +109,16 @@ def trigger_stop_loss(stop_loss: StopLoss, triggered_price: Decimal):
                 Order.MARKET, raise_exception=False, market=stop_loss.wallet.market,
                 parent_lock_group_id=stop_loss.group_id
             )
-    except CancelOrder:
+    except Exception:
         order = None
     if not order:
-        logger.warning(f'could not place order for stop loss ({stop_loss.symbol})',
-                       extra={'stop_loss': stop_loss.id})
+        logger.exception(f'could not place order for stop loss ({stop_loss.symbol})',
+                         extra={
+                             'triggered_price': triggered_price,
+                             'stop_loss': stop_loss.id,
+                             'stop_loss_side': stop_loss.side,
+                             'stop_loss_trigger_price': stop_loss.trigger_price,
+                         })
         if stop_loss.fill_type == StopLoss.MARKET:
             stop_loss.canceled_at = timezone.now()
             stop_loss.save(update_fields=['canceled_at'])
