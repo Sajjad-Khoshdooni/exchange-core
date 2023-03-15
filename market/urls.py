@@ -12,6 +12,7 @@ urlpatterns = [
     path('irt/info/', cache_page(60)(MarketInfoView.as_view())),
     path('depth/<str:symbol>/', OrderBookAPIView.as_view()),
     path('orders/cancel/', CancelOrderAPIView.as_view()),
+    path('myOrders/<str:client_order_id>/', OrderDetailAPIView.as_view()),
     path('symbols/<str:name>/', cache_page(300)(SymbolDetailedStatsAPIView.as_view())),
     path('symbols/', SymbolListAPIView.as_view()),
     path('myTrades/', AccountTradeHistoryView.as_view()),

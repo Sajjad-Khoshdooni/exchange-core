@@ -4,7 +4,7 @@ import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.generics import CreateAPIView, get_object_or_404
+from rest_framework.generics import CreateAPIView, get_object_or_404, RetrieveAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -104,11 +104,11 @@ class OpenOrderListAPIView(APIView):
         if side_filter:
             filters['side'] = side_filter
         if bot_filter:
-            filters['wallet__variant__isnull'] = not(str(bot_filter) == 'true')
+            filters['wallet__variant__isnull'] = not (str(bot_filter) == 'true')
 
         open_orders = Order.open_objects.filter(
             wallet__account=account, stop_loss__isnull=True, **filters
-        ).select_related('symbol', 'wallet',)
+        ).select_related('symbol', 'wallet', )
 
         open_stop_losses = StopLoss.open_objects.filter(
             wallet__account=account, **filters
@@ -124,6 +124,41 @@ class OpenOrderListAPIView(APIView):
             key=lambda obj: datetime.strptime(obj['created'], date_pattern), reverse=True
         )
         return Response(sorted_results)
+
+
+class OrderDetailAPIView(RetrieveAPIView, DelegatedAccountMixin):
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
+    throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
+
+    serializer_class = OrderSerializer
+    lookup_field = 'client_order_id'
+
+    def get_queryset(self):
+        account, variant = self.get_account_variant(self.request)
+
+        filters = {}
+        if variant:
+            filters = {'wallet__variant': variant}
+        elif self.request.query_params.get('agent') and self.request.query_params.get('strategy'):
+            reserve_wallet = ReserveWallet.objects.filter(
+                request_id=f'strategy:{self.request.query_params.get("strategy")}:{self.request.query_params.get("agent")}'
+            ).first()
+            if reserve_wallet:
+                filters = {'wallet__variant': reserve_wallet.group_id}
+
+        return Order.objects.filter(
+            wallet__account=account,
+            **filters
+        ).select_related('symbol', 'wallet', 'stop_loss').order_by('-created')
+
+    def get_serializer_context(self):
+        account, variant = self.get_account_variant(self.request)
+        return {
+            **super(OrderDetailAPIView, self).get_serializer_context(),
+            'account': account,
+            'trades': {},
+            'variant': variant,
+        }
 
 
 class CancelOrderAPIView(CreateAPIView, DelegatedAccountMixin):
