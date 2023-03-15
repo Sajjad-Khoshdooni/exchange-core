@@ -732,7 +732,9 @@ class UserFeedbackAdmin(admin.ModelAdmin):
 
     @admin.display(description='comment')
     def get_comment(self, feedback: UserFeedback):
-        if len(feedback.comment) > 100:
-            return feedback.comment[:100] + '...'
+        n = 300
+
+        if len(feedback.comment) > n:
+            return feedback.comment[:n] + '...'
         else:
             return feedback.comment
