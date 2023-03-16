@@ -76,14 +76,6 @@ app.conf.beat_schedule = {
             'expire': 4 * TASK_MULTIPLIER
         },
     },
-    'handle open stop loss': {
-        'task': 'market.tasks.stop_loss.handle_stop_loss',
-        'schedule': 1 * TASK_MULTIPLIER,
-        'options': {
-            'queue': 'stop_loss',
-            'expire': 1 * TASK_MULTIPLIER
-        },
-    },
     'create_stake_revenue': {
         'task': 'stake.tasks.stake_revenue.create_stake_revenue',
         'schedule': crontab(hour=19, minute=30),
