@@ -31,7 +31,7 @@ class OrderFilter(django_filters.FilterSet):
 
     class Meta:
         model = Order
-        fields = ('symbol', 'status', 'market', 'side')
+        fields = ('symbol', 'status', 'market', 'side', 'client_order_id')
 
 
 class StopLossFilter(django_filters.FilterSet):
