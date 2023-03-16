@@ -79,6 +79,7 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
     with WalletPipeline() as pipeline:
         additional_params = {'group_id': parent_lock_group_id} if parent_lock_group_id else {}
         order = Order.objects.create(
+            account=account,
             wallet=wallet,
             symbol=symbol,
             amount=amount,
@@ -112,15 +113,21 @@ def trigger_stop_loss(stop_loss: StopLoss, triggered_price: Decimal):
                 Order.MARKET, raise_exception=False, market=stop_loss.wallet.market,
                 parent_lock_group_id=stop_loss.group_id
             )
-    except CancelOrder:
+    except Exception:
         order = None
     if not order:
-        logger.warning(f'could not place order for stop loss ({stop_loss.symbol})',
-                       extra={'stop_loss': stop_loss.id})
+        logger.exception(f'could not place order for stop loss ({stop_loss.symbol})',
+                         extra={
+                             'triggered_price': triggered_price,
+                             'stop_loss': stop_loss.id,
+                             'stop_loss_side': stop_loss.side,
+                             'stop_loss_trigger_price': stop_loss.trigger_price,
+                         })
         if stop_loss.fill_type == StopLoss.MARKET:
             stop_loss.canceled_at = timezone.now()
             stop_loss.save(update_fields=['canceled_at'])
         return
+
     order.refresh_from_db()
     order.stop_loss = stop_loss
     order.save(update_fields=['stop_loss_id'])

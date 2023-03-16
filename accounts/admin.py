@@ -726,6 +726,15 @@ class VerificationCodeAdmin(admin.ModelAdmin):
 
 @admin.register(UserFeedback)
 class UserFeedbackAdmin(admin.ModelAdmin):
-    list_display = ['created', 'user', 'score']
+    list_display = ['created', 'user', 'score', 'get_comment']
     search_fields = ('user__phone', 'user__first_name', 'user__last_name')
     readonly_fields = ('user', )
+
+    @admin.display(description='comment')
+    def get_comment(self, feedback: UserFeedback):
+        n = 300
+
+        if len(feedback.comment) > n:
+            return feedback.comment[:n] + '...'
+        else:
+            return feedback.comment

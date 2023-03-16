@@ -76,8 +76,9 @@ class Order(models.Model):
         blank=True
     )
 
-    wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name='orders')
     created = models.DateTimeField(auto_now_add=True)
+    account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
+    wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name='orders')
 
     symbol = models.ForeignKey(PairSymbol, on_delete=models.PROTECT)
     amount = get_amount_field()

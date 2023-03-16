@@ -60,7 +60,7 @@ class OrderSerializer(serializers.ModelSerializer):
         try:
             with WalletPipeline() as pipeline:
                 created_order = super(OrderSerializer, self).create(
-                    {**validated_data, 'wallet': wallet, 'symbol': symbol}
+                    {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol}
                 )
                 trade_pairs, updated_orders = created_order.submit(pipeline) or ([], [])
 
