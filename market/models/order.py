@@ -108,6 +108,8 @@ class Order(models.Model):
                             name='check_market_order_amounts', ),
         ]
 
+        unique_together = ('account', 'client_order_id', 'status')
+
     objects = models.Manager()
     open_objects = OpenOrderManager()
 
