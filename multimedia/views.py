@@ -38,6 +38,6 @@ class BannerListView(ListAPIView):
         banners = Banner.objects.filter(active=True)
 
         if is_app(self.request):
-            banners = banners.exclude(limits=Banner.ONLY_DESKTOP)
+            banners = banners.exclude(limit=Banner.ONLY_DESKTOP)
 
         return banners
