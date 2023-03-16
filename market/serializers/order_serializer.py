@@ -59,7 +59,7 @@ class OrderSerializer(serializers.ModelSerializer):
         try:
             with WalletPipeline() as pipeline:
                 created_order = super(OrderSerializer, self).create(
-                    {**validated_data, 'wallet': wallet, 'symbol': symbol}
+                    {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol}
                 )
                 created_order.submit(pipeline)
                 created_order.refresh_from_db()
