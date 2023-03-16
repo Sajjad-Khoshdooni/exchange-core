@@ -730,7 +730,7 @@ class UserFeedbackAdmin(admin.ModelAdmin):
     search_fields = ('user__phone', 'user__first_name', 'user__last_name')
     readonly_fields = ('user', )
 
-    @admin.display(description='comment')
+    @admin.display(description='comment', ordering='comment')
     def get_comment(self, feedback: UserFeedback):
         n = 300
 
