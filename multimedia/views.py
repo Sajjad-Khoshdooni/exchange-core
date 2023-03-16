@@ -33,6 +33,7 @@ class BannerSerializer(serializers.ModelSerializer):
 
 class BannerListView(ListAPIView):
     serializer_class = BannerSerializer
+    permission_classes = []
 
     def get_queryset(self):
         banners = Banner.objects.filter(active=True)
