@@ -140,3 +140,29 @@ class Trade(BaseTrade):
             for k, v in Trade.get_interval_top_prices([symbol_id]).items():
                 top_prices[k[1]] = v
         return top_prices
+
+    def revert(self):
+        from ledger.utils.wallet_pipeline import WalletPipeline
+        from ledger.models import Trx, Wallet
+
+        with WalletPipeline() as pipeline:
+            self.status = self.REVERT
+            self.save(update_fields=['status'])
+
+            for trx in Trx.objects.filter(group_id=self.group_id):
+                if trx.receiver.has_balance(trx.amount):
+                    pipeline.new_trx(
+                        sender=trx.receiver,
+                        receiver=trx.sender,
+                        amount=trx.amount,
+                        group_id=trx.group_id,
+                        scope=Trx.REVERT
+                    )
+                else:
+                    pipeline.new_trx(
+                        sender=trx.receiver.asset.get_wallet(trx.receiver.account, market=Wallet.DEBT),
+                        receiver=trx.sender,
+                        amount=trx.amount,
+                        group_id=trx.group_id,
+                        scope=Trx.REVERT
+                    )
