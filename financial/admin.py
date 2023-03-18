@@ -25,7 +25,7 @@ from ledger.utils.withdraw_verify import RiskFactor
 class GatewayAdmin(admin.ModelAdmin):
     list_display = ('name', 'type', 'merchant_id', 'active', 'active_for_staff', 'withdraw_enable', 'get_balance',
                     'get_min_deposit_amount', 'get_max_deposit_amount')
-    list_editable = ('active', 'active_for_staff', )
+    list_editable = ('active', 'active_for_staff', 'withdraw_enable')
     readonly_fields = ('get_balance', 'get_min_deposit_amount', 'get_max_deposit_amount')
 
     @admin.display(description='balance')
