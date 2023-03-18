@@ -6,7 +6,9 @@ from django.utils import timezone
 
 from accounting.models import Vault
 from accounting.models.vault import VaultData, AssetPrice, VaultItem, ReservedAsset
+from financial.models import Gateway
 from financial.utils.stats import get_total_fiat_irt
+from financial.utils.withdraw import FiatWithdraw
 from ledger.models import Asset
 from ledger.utils.external_price import get_external_usdt_prices, get_external_price, BUY
 from ledger.utils.overview import get_internal_asset_deposits
@@ -124,30 +126,35 @@ def update_hot_wallet_vault(now: datetime, usdt_irt: Decimal):
 def update_gateway_vaults(now: datetime, usdt_irt: Decimal):
     logger.info('updating gateway vaults')
 
-    vault, _ = Vault.objects.get_or_create(
-        type=Vault.GATEWAY,
-        market=Vault.SPOT,
-        key='main',
-        defaults={
-            'name': 'main'
-        }
-    )
+    vault_data = []
 
-    try:
-        amount = get_total_fiat_irt(strict=True)
+    for gateway in Gateway.objects.exclude(api_secret_encrypted=''):
 
-        vault_data = [
-            VaultData(
-                coin=Asset.IRT,
-                balance=amount,
-                value_usdt=amount / usdt_irt,
-                value_irt=amount
+        vault, _ = Vault.objects.get_or_create(
+            type=Vault.GATEWAY,
+            market=Vault.SPOT,
+            key=gateway.id,
+            defaults={
+                'name': str(gateway)
+            }
+        )
+
+        try:
+            handler = FiatWithdraw.get_withdraw_channel(gateway)
+            amount = handler.get_total_wallet_irt_value()
+
+            vault_data.append(
+                VaultData(
+                    coin=Asset.IRT,
+                    balance=amount,
+                    value_usdt=amount / usdt_irt,
+                    value_irt=amount
+                )
             )
-        ]
 
-        vault.update_vault_all_items(now, vault_data)
-    except:
-        pass
+            vault.update_vault_all_items(now, vault_data)
+        except:
+            pass
 
 
 def update_cold_wallet_vaults(usdt_irt: Decimal):

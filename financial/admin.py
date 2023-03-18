@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
+from accounting.models import VaultItem, Vault
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import User
@@ -22,22 +23,15 @@ from ledger.utils.withdraw_verify import RiskFactor
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'merchant_id', 'active', 'active_for_staff', 'get_total_wallet_irt_value',
+    list_display = ('name', 'type', 'merchant_id', 'active', 'active_for_staff', 'withdraw_enable', 'get_balance',
                     'get_min_deposit_amount', 'get_max_deposit_amount')
     list_editable = ('active', 'active_for_staff', )
-    readonly_fields = ('get_total_wallet_irt_value', 'get_min_deposit_amount', 'get_max_deposit_amount')
+    readonly_fields = ('get_balance', 'get_min_deposit_amount', 'get_max_deposit_amount')
 
     @admin.display(description='balance')
-    def get_total_wallet_irt_value(self, gateway: Gateway):
-        if not gateway.type:
-            return
-
-        channel = FiatWithdraw.get_withdraw_channel(gateway)
-
-        try:
-            return humanize_number(Decimal(channel.get_total_wallet_irt_value()))
-        except:
-            return
+    def get_balance(self, gateway: Gateway):
+        v = VaultItem.objects.filter(vault__type=Vault.GATEWAY, vault__key=gateway.id).first()
+        return v and v.value_irt
 
     @admin.display(description='min deposit')
     def get_min_deposit_amount(self, gateway: Gateway):
@@ -68,7 +62,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     fieldsets = (
         ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'bank_account',
-         'ref_doc', 'get_withdraw_request_receive_time', 'get_risks')}),
+         'ref_doc', 'get_withdraw_request_receive_time', 'gateway', 'get_risks')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
                                       'get_user')}),
         ('نظر', {'fields': ('comment',)})
