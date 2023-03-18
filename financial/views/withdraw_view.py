@@ -1,7 +1,6 @@
 import logging
 from datetime import timedelta
 
-from decouple import config
 from django.conf import settings
 from django.db.models import Sum
 from django.utils import timezone
@@ -103,6 +102,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         fee_amount = 5000
         withdraw_amount = amount - fee_amount
 
+        gateway = Gateway.get_active_withdraw()
+
         try:
             with WalletPipeline() as pipeline:  # type: WalletPipeline
                 withdraw_request = FiatWithdrawRequest.objects.create(
@@ -110,7 +111,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
                     amount=withdraw_amount,
                     fee_amount=fee_amount,
                     bank_account=bank_account,
-                    withdraw_channel=config('WITHDRAW_CHANNEL')
+                    gateway=gateway,
                 )
 
                 pipeline.new_lock(
@@ -168,15 +169,6 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
         model = FiatWithdrawRequest
         fields = ('id', 'created', 'status', 'fee_amount', 'amount', 'bank_account', 'ref_id',
                   'rial_estimate_receive_time',)
-
-    def get_rial_estimate_receive_time(self, fiat_withdraw_request: FiatWithdrawRequest):
-        if fiat_withdraw_request.status in (FiatWithdrawRequest.INIT, FiatWithdrawRequest.PROCESSING):
-            gateway = Gateway.get_active()
-
-            if gateway.expected_withdraw_datetime and gateway.expected_withdraw_datetime > timezone.now():
-                return gateway.expected_withdraw_datetime
-
-        return fiat_withdraw_request.receive_datetime
 
     def get_status(self, withdraw: FiatWithdrawRequest):
         if withdraw.status == FiatWithdrawRequest.INIT:

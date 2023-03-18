@@ -28,9 +28,6 @@ class FiatWithdrawRequest(models.Model):
 
     INIT, PROCESSING, PENDING, CANCELED, DONE = 'init', 'process', 'pending', 'canceled', 'done'
 
-    MANUAL, ZIBAL, PAYIR, ZARINPAL, JIBIT = 'manual', 'zibal', 'payir', 'zarinpal', 'jibit'
-    CHANEL_CHOICES = ((ZIBAL, ZIBAL), (PAYIR, PAYIR), (JIBIT, JIBIT), (MANUAL, MANUAL))
-
     FREEZE_TIME = 3 * 60
 
     created = models.DateTimeField(auto_now_add=True)
@@ -55,19 +52,13 @@ class FiatWithdrawRequest(models.Model):
     withdraw_datetime = models.DateTimeField(null=True, blank=True)
     receive_datetime = models.DateTimeField(null=True, blank=True)
 
-    withdraw_channel = models.CharField(max_length=10, choices=CHANEL_CHOICES, default=PAYIR)
+    gateway = models.ForeignKey('Gateway', on_delete=models.PROTECT)
 
     risks = models.JSONField(null=True, blank=True)
 
     @property
     def total_amount(self):
         return self.amount + self.fee_amount
-
-    @property
-    def channel_handler(self):
-        from financial.utils.withdraw import FiatWithdraw
-
-        return FiatWithdraw.get_withdraw_channel(self.withdraw_channel)
 
     def build_trx(self, pipeline: WalletPipeline):
         asset = Asset.get(Asset.IRT)
@@ -97,19 +88,18 @@ class FiatWithdrawRequest(models.Model):
     def create_withdraw_request(self):
         assert self.status == self.PROCESSING
 
-        if self.withdraw_channel == self.MANUAL:
-            return
-
         if self.ref_id:
             self.status = self.PENDING
             self.save(update_fields=['status'])
             return
 
         from financial.utils.withdraw import ProviderError
+        from financial.utils.withdraw import FiatWithdraw
 
-        wallet_id = self.channel_handler.get_wallet_id()
+        wallet_id = self.gateway.wallet_id
+        api_handler = FiatWithdraw(self.gateway)
 
-        wallet = self.channel_handler.get_wallet_data(wallet_id)
+        wallet = api_handler.get_wallet_data(wallet_id)
 
         if wallet.free < self.amount:
             logger.info(f'Not enough wallet balance to full fill bank acc')
@@ -122,7 +112,7 @@ class FiatWithdrawRequest(models.Model):
             return
 
         try:
-            withdraw = self.channel_handler.create_withdraw(
+            withdraw = api_handler.create_withdraw(
                 wallet_id,
                 self.bank_account,
                 self.amount,
@@ -143,7 +133,7 @@ class FiatWithdrawRequest(models.Model):
     def update_status(self):
         from financial.utils.withdraw import FiatWithdraw
 
-        withdraw_handler = FiatWithdraw.get_withdraw_channel(self.withdraw_channel)
+        withdraw_handler = FiatWithdraw.get_withdraw_channel(self.gateway)
         withdraw_data = withdraw_handler.get_withdraw_status(self.id, self.ref_id)
         status = withdraw_data.status
 
@@ -236,8 +226,6 @@ class FiatWithdrawRequest(models.Model):
 
         if old:
             old.change_status(self.status)
-
-        # super().save_model(request, fiat_withdraw_request, form, change)
 
     def __str__(self):
         return '%s %s' % (self.bank_account, self.amount)

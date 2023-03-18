@@ -8,6 +8,7 @@ from accounts.models import User
 from financial.models import BankCard
 from financial.models import PaymentRequest
 from financial.models.payment import Payment
+from financial.utils.encryption import decrypt
 from ledger.models import FastBuyToken
 
 logger = logging.getLogger(__name__)
@@ -31,20 +32,32 @@ class Gateway(models.Model):
         choices=((ZARINPAL, ZARINPAL), (PAYIR, PAYIR), (ZIBAL, ZIBAL), (JIBIT, JIBIT))
     )
     merchant_id = models.CharField(max_length=128)
+
+    withdraw_enable = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
     active_for_staff = models.BooleanField(default=False)
+
     min_deposit_amount = models.PositiveIntegerField(default=10000)
     max_deposit_amount = models.PositiveIntegerField(default=50000000)
 
     max_auto_withdraw_amount = models.PositiveIntegerField(null=True, blank=True)
     expected_withdraw_datetime = models.DateTimeField(null=True, blank=True)
 
+    api_key = models.CharField(max_length=1024, blank=True)
+    api_secret_encrypted = models.CharField(max_length=4096, blank=True)
+
+    wallet_id = models.PositiveIntegerField(null=True, blank=True)
+
     def clean(self):
         if not self.active and not Gateway.objects.filter(active=True).exclude(id=self.id):
             raise ValidationError('At least one gateway should be active')
 
+    @property
+    def api_secret(self):
+        return decrypt(self.api_secret_encrypted)
+
     @classmethod
-    def get_active(cls, user: User = None) -> 'Gateway':
+    def get_active_deposit(cls, user: User = None) -> 'Gateway':
         if user and user.is_staff:
             gateway = Gateway.objects.filter(active_for_staff=True).order_by('id').first()
 
@@ -55,6 +68,10 @@ class Gateway(models.Model):
 
         if gateway:
             return gateway.get_concrete_gateway()
+
+    @classmethod
+    def get_active_withdraw(cls) -> 'Gateway':
+        return Gateway.objects.filter(withdraw_enable=True).order_by('id').first()
 
     @classmethod
     def get_gateway_class(cls, type: str) -> Type['Gateway']:
@@ -94,6 +111,4 @@ class Gateway(models.Model):
         raise NotImplementedError
 
     def __str__(self):
-        return self.name
-
-
+        return '%s (%s)' % (self.name, self.id)

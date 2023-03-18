@@ -8,8 +8,6 @@ import pytz
 import requests
 from django.core.cache import caches
 from django.utils import timezone
-from decouple import config
-from decouple import config
 
 from financial.models import BankAccount, FiatWithdrawRequest, Gateway, Payment, PaymentRequest
 from financial.utils.withdraw_limit import is_holiday, time_in_range
@@ -45,18 +43,18 @@ class FiatWithdraw:
 
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
 
-    @classmethod
-    def get_withdraw_channel(cls, channel) -> 'FiatWithdraw':
-        mapping = {
-            FiatWithdrawRequest.PAYIR: PayirChannel,
-            FiatWithdrawRequest.ZIBAL: ZibalChannel,
-            FiatWithdrawRequest.ZARINPAL: ZarinpalChannel,
-            FiatWithdrawRequest.JIBIT: JibitChannel
-        }
-        return mapping[channel]()
+    def __init__(self, gateway: Gateway):
+        self.gateway = gateway
 
-    def get_wallet_id(self) -> int:
-        raise NotImplementedError
+    @classmethod
+    def get_withdraw_channel(cls, gateway: Gateway) -> 'FiatWithdraw':
+        mapping = {
+            Gateway.PAYIR: PayirChannel,
+            Gateway.ZIBAL: ZibalChannel,
+            Gateway.ZARINPAL: ZarinpalChannel,
+            Gateway.JIBIT: JibitChannel
+        }
+        return mapping[gateway.type](gateway)
 
     def get_wallet_data(self, wallet_id: int):
         raise NotImplementedError
@@ -73,32 +71,23 @@ class FiatWithdraw:
     def get_total_wallet_irt_value(self):
         raise NotImplementedError
 
-    def is_active(self):
-        return True
-
     def update_missing_payments(self, gateway: Gateway):
         pass
+
+    def is_active(self):
+        return bool(self.gateway.api_secret_encrypted)
 
 
 class PayirChannel(FiatWithdraw):
 
-    def get_wallet_id(self):
-        return config('PAY_IR_WALLET_ID', cast=int)
-
-    @classmethod
-    def collect_api(cls, path: str, method: str = 'GET', data: dict = None, verbose: bool = True, timeout: float = 30) -> dict:
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, verbose: bool = True, timeout: float = 30) -> dict:
 
         url = 'https://pay.ir' + path
 
         request_kwargs = {
             'url': url,
             'timeout': timeout,
-            'headers': {'Authorization': 'Bearer ' + config('PAY_IR_TOKEN')},
-            # 'proxies': {
-            #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            #     'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            # }
+            'headers': {'Authorization': self.gateway.api_secret},
         }
 
         try:
@@ -220,28 +209,17 @@ class PayirChannel(FiatWithdraw):
 
         return total_wallet_irt_value // 10
 
-    def is_active(self):
-        return bool(config('PAY_IR_TOKEN', ''))
-
 
 class ZibalChannel(FiatWithdraw):
-    def get_wallet_id(self):
-        return config('ZIBAL_WALLET_ID', cast=int)
 
-    @classmethod
-    def collect_api(cls, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> dict:
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> dict:
 
         url = 'https://api.zibal.ir' + path
 
         request_kwargs = {
             'url': url,
             'timeout': timeout,
-            'headers': {'Authorization': 'Bearer ' + config('ZIBAL_TOKEN')},
-            # 'proxies': {
-            #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            #     'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            # }
+            'headers': {'Authorization': self.gateway.api_secret},
         }
 
         try:
@@ -336,7 +314,7 @@ class ZibalChannel(FiatWithdraw):
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> Withdraw:
         data = self.collect_api(f'/v1/report/checkout/inquire', method='POST', data={
-            "walletId": self.get_wallet_id(),
+            "walletId": self.gateway.wallet_id,
             'uniqueCode': str(request_id)
         })
 
@@ -408,9 +386,6 @@ class ZibalChannel(FiatWithdraw):
 
         return total_wallet_irt_value // 10
 
-    def is_active(self):
-        return bool(config('ZIBAL_TOKEN', ''))
-
     def get_transactions(self, merchant_id: str, status: int):
         return self.collect_api(
             path='/v1/gateway/report/transaction',
@@ -443,23 +418,17 @@ class ZarinpalChannel(FiatWithdraw):
 class JibitChannel(FiatWithdraw):
     BASE_URL = ' https://napi.jibit.ir/trf'
 
-    @classmethod
-    def _get_token(cls):
+    def _get_token(self):
         token_cache = caches['token']
         JIBIT_GATEWAY_TRANSFER_TOKEN_KEY = 'jibit_gateway_transfer_token'
 
         resp = requests.post(
-            url=cls.BASE_URL + '/v2/tokens/generate',
+            url=self.BASE_URL + '/v2/tokens/generate',
             json={
-                'apiKey': config('JIBIT_GATEWAY-API_KEY'),
-                'secretKey': config('JIBIT_GATEWAY_API_SECRET'),
+                'apiKey': self.gateway.api_key,
+                'secretKey': self.gateway.api_secret,
             },
             timeout=30,
-            # proxies={
-            #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            #     'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            # }
         )
 
         if resp.ok:
@@ -470,22 +439,12 @@ class JibitChannel(FiatWithdraw):
 
             return token
 
-    def get_wallet_id(self) -> int:
-        return config('JIBIT_WALLET_ID', cast=int)
-
-    @classmethod
-    def collect_api(cls, path: str, method: str = 'GET', data: dict = None, verbose: bool = True, timeout: float = 30) ->dict:
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, verbose: bool = True, timeout: float = 30) ->dict:
         url = 'https://napi.jibit.ir/trf' + path
         request_kwargs = {
             'url': url,
             'timeout': timeout,
-            'headers': {'Authorization': 'Bearer ' + cls._get_token()},
-            # 'proxies': {
-            #     'https': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            #     'http': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            #     'ftp': config('IRAN_PROXY_IP', default='localhost') + ':3128',
-            # }
-
+            'headers': {'Authorization': 'Bearer ' + self._get_token()},
         }
 
         try:
@@ -562,9 +521,6 @@ class JibitChannel(FiatWithdraw):
         return receive_time
 
     def get_total_wallet_irt_value(self):
-        if not self.is_active():
-            return 0
-
         resp = self.collect_api(
             path='/v1/wallet/list',
             timeout=5
@@ -575,6 +531,3 @@ class JibitChannel(FiatWithdraw):
             total_wallet_irt_value += Decimal(wallet['balance']) + Decimal(wallet.get('pendingPFAmount', 0))
 
         return total_wallet_irt_value // 10
-
-    def is_active(self):
-        return False

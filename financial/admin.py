@@ -32,7 +32,7 @@ class GatewayAdmin(admin.ModelAdmin):
         if not gateway.type:
             return
 
-        channel = FiatWithdraw.get_withdraw_channel(gateway.type)
+        channel = FiatWithdraw.get_withdraw_channel(gateway)
 
         try:
             return humanize_number(Decimal(channel.get_total_wallet_irt_value()))
@@ -77,10 +77,10 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
     ordering = ('-created', )
     readonly_fields = (
         'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount', 'get_risks',
-        'get_withdraw_request_user', 'withdraw_channel', 'get_withdraw_request_receive_time', 'get_user'
+        'get_withdraw_request_user', 'gateway', 'get_withdraw_request_receive_time', 'get_user'
     )
 
-    list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'withdraw_channel', 'ref_id')
+    list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
 
     actions = ('resend_withdraw_request', 'accept_withdraw_request', 'reject_withdraw_request')
 
