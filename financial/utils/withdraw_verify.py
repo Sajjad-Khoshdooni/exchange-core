@@ -41,7 +41,7 @@ def get_fiat_withdraw_risks(withdraw: FiatWithdrawRequest) -> list:
             )
         )
 
-    gateway = Gateway.get_active()
+    gateway = Gateway.get_active_deposit()
     if gateway.max_auto_withdraw_amount is not None and withdraw.amount > gateway.max_auto_withdraw_amount:
         risks.append(
             RiskFactor(
@@ -50,14 +50,5 @@ def get_fiat_withdraw_risks(withdraw: FiatWithdrawRequest) -> list:
                 expected=gateway.max_auto_withdraw_amount,
             )
         )
-
-    # if withdraw.bank_account.bank != 'MELLI':
-    #     risks.append(
-    #         RiskFactor(
-    #             reason=RiskFactor.INVALID_DESTINATION,
-    #             value=1,
-    #             expected=0,
-    #         )
-    #     )
 
     return risks

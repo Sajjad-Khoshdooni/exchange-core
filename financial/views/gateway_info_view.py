@@ -15,4 +15,4 @@ class GatewayInfoView(RetrieveAPIView):
 
     def get_object(self):
         user = self.request.user
-        return Gateway.get_active(user)
+        return Gateway.get_active_deposit(user)
