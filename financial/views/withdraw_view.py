@@ -170,6 +170,16 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
         fields = ('id', 'created', 'status', 'fee_amount', 'amount', 'bank_account', 'ref_id',
                   'rial_estimate_receive_time',)
 
+    def get_rial_estimate_receive_time(self, withdraw_request: FiatWithdrawRequest):
+        if withdraw_request.status in (FiatWithdrawRequest.INIT, FiatWithdrawRequest.PROCESSING):
+
+            gateway = withdraw_request.gateway
+
+            if gateway.expected_withdraw_datetime and gateway.expected_withdraw_datetime > timezone.now():
+                return gateway.expected_withdraw_datetime
+
+        return withdraw_request.receive_datetime
+
     def get_status(self, withdraw: FiatWithdrawRequest):
         if withdraw.status == FiatWithdrawRequest.INIT:
             return FiatWithdrawRequest.PROCESSING
