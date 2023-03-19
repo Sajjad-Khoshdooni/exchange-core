@@ -97,7 +97,7 @@ class FiatWithdrawRequest(models.Model):
         from financial.utils.withdraw import FiatWithdraw
 
         wallet_id = self.gateway.wallet_id
-        api_handler = FiatWithdraw(self.gateway)
+        api_handler = FiatWithdraw.get_withdraw_channel(self.gateway)
 
         wallet = api_handler.get_wallet_data(wallet_id)
 
