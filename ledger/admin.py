@@ -343,8 +343,10 @@ class TransferAdmin(AdvancedAdmin):
     )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
-    readonly_fields = ('deposit_address', 'network', 'wallet', 'created', 'accepted_datetime',
-                       'finished_datetime', 'get_risks')
+    readonly_fields = (
+        'deposit_address', 'network', 'wallet', 'created', 'accepted_datetime', 'finished_datetime', 'get_risks',
+        'out_address', 'memo', 'amount', 'irt_value', 'usdt_value', 'deposit', 'group_id'
+    )
     exclude = ('risks', )
 
     actions = ('accept_withdraw', 'reject_withdraw')

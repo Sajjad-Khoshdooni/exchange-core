@@ -7,7 +7,6 @@ from django.utils import timezone
 from accounting.models import Vault
 from accounting.models.vault import VaultData, AssetPrice, VaultItem, ReservedAsset
 from financial.models import Gateway
-from financial.utils.stats import get_total_fiat_irt
 from financial.utils.withdraw import FiatWithdraw
 from ledger.models import Asset
 from ledger.utils.external_price import get_external_usdt_prices, get_external_price, BUY
