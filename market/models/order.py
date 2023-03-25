@@ -300,7 +300,6 @@ class Order(models.Model):
             return
 
         trades = []
-        trade_pairs = []
         filled_orders = []
 
         tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY)
@@ -370,7 +369,6 @@ class Order(models.Model):
             register_transactions(pipeline, pair=trades_pair)
 
             trades.extend(trades_pair.trades)
-            trade_pairs.append(trades_pair.trades)
 
             self.update_filled_amount((self.id, maker_order.id), match_amount)
 
@@ -452,6 +450,7 @@ class Order(models.Model):
             self.save(update_fields=['status'])
 
         trades = Trade.objects.bulk_create(trades)
+        trade_pairs = list(zip(trades[0::2], trades[1::2]))
         TradeRevenue.objects.bulk_create(trades_revenue)
 
         if trades:
@@ -461,9 +460,7 @@ class Order(models.Model):
             set_last_trade_price(symbol)
 
         # updating trade_volume_irt of accounts
-        for index, trade in enumerate(trades):
-            trade_pairs[(index // 2)][index % 2].id = trade.id
-
+        for trade in trades:
             account = trade.account
             if not account.is_system():
                 account.trade_volume_irt = F('trade_volume_irt') + trade.irt_value
