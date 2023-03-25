@@ -60,6 +60,24 @@ app.conf.beat_schedule = {
     },
 
 
+    # market tasks
+    'create depth orders': {
+        'task': 'market.tasks.market_maker.create_depth_orders',
+        'schedule': 60 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'market',
+            'expire': 60 * TASK_MULTIPLIER
+        },
+    },
+    'update maker orders': {
+        'task': 'market.tasks.market_maker.update_maker_orders',
+        'schedule': 4 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'market',
+            'expire': 4 * TASK_MULTIPLIER
+        },
+    },
+
     'create_stake_revenue': {
         'task': 'stake.tasks.stake_revenue.create_stake_revenue',
         'schedule': crontab(hour=19, minute=30),
@@ -149,22 +167,22 @@ app.conf.beat_schedule = {
         },
     },
 
-    # 'random_trader': {
-    #     'task': 'trader.tasks.random_trader.random_trader',
-    #     'schedule': 17 * TASK_MULTIPLIER,
-    #     'options': {
-    #         'queue': 'trader',
-    #         'expire': 17 * TASK_MULTIPLIER
-    #     }
-    # },
-    # 'carrot_trader': {
-    #     'task': 'trader.tasks.carrot_trader.carrot_trader',
-    #     'schedule': 7 * TASK_MULTIPLIER,
-    #     'options': {
-    #         'queue': 'trader',
-    #         'expire': 7 * TASK_MULTIPLIER
-    #     }
-    # },
+    'random_trader': {
+        'task': 'trader.tasks.random_trader.random_trader',
+        'schedule': 17 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'trader',
+            'expire': 17 * TASK_MULTIPLIER
+        }
+    },
+    'carrot_trader': {
+        'task': 'trader.tasks.carrot_trader.carrot_trader',
+        'schedule': 7 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'trader',
+            'expire': 7 * TASK_MULTIPLIER
+        }
+    },
 
     'update_accounts_pnl': {
         'task': 'ledger.tasks.pnl.create_pnl_histories',
