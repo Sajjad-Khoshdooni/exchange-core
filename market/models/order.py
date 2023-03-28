@@ -523,6 +523,7 @@ class Order(models.Model):
         wallet = symbol_instance.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
         precision = Order.get_rounding_precision(maker_price, symbol_instance.tick_size)
         return Order(
+            account=wallet.account,
             type=Order.DEPTH,
             wallet=wallet,
             symbol=symbol_instance,
