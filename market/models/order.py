@@ -68,8 +68,9 @@ class Order(models.Model):
         blank=True
     )
 
-    wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name='orders')
     created = models.DateTimeField(auto_now_add=True)
+    account = models.ForeignKey('accounts.Account', on_delete=models.PROTECT)
+    wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name='orders')
 
     symbol = models.ForeignKey(PairSymbol, on_delete=models.PROTECT)
     amount = get_amount_field()
@@ -106,6 +107,8 @@ class Order(models.Model):
             CheckConstraint(check=Q(amount__gte=0, filled_amount__gte=0, price__gte=0),
                             name='check_market_order_amounts', ),
         ]
+
+        unique_together = ('account', 'client_order_id', 'status')
 
     objects = models.Manager()
     open_objects = OpenOrderManager()

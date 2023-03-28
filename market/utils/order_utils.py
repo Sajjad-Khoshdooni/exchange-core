@@ -79,6 +79,7 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
     with WalletPipeline() as pipeline:
         additional_params = {'group_id': parent_lock_group_id} if parent_lock_group_id else {}
         order = Order.objects.create(
+            account=account,
             wallet=wallet,
             symbol=symbol,
             amount=amount,
@@ -123,6 +124,7 @@ def trigger_stop_loss(stop_loss: StopLoss, triggered_price: Decimal):
             stop_loss.canceled_at = timezone.now()
             stop_loss.save(update_fields=['canceled_at'])
         return
+
     order.refresh_from_db()
     order.stop_loss = stop_loss
     order.save(update_fields=['stop_loss_id'])

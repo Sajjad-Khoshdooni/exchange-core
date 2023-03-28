@@ -59,7 +59,7 @@ class OrderSerializer(serializers.ModelSerializer):
         try:
             with WalletPipeline() as pipeline:
                 created_order = super(OrderSerializer, self).create(
-                    {**validated_data, 'wallet': wallet, 'symbol': symbol}
+                    {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol}
                 )
                 created_order.submit(pipeline)
                 created_order.refresh_from_db()
@@ -169,7 +169,8 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
-                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel')
+                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel',
+                  'client_order_id')
         read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},
