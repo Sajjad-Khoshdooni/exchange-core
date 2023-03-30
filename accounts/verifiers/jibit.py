@@ -4,11 +4,10 @@ from dataclasses import dataclass
 from typing import Union
 
 import requests
+from decouple import config
 from django.core.cache import caches
 from django.utils import timezone
 from urllib3.exceptions import ReadTimeoutError
-from decouple import config
-from decouple import config
 
 from accounts.models import FinotechRequest
 from accounts.utils.validation import gregorian_to_jalali_date_str
