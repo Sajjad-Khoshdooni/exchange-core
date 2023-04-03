@@ -16,7 +16,6 @@ class UserSerializer(serializers.ModelSerializer):
     possible_time_for_withdraw = serializers.SerializerMethodField()
     chat_uuid = serializers.CharField()
     auth2fa = serializers.SerializerMethodField()
-    show_community = serializers.SerializerMethodField()
 
     def get_chat_uuid(self, user: User):
         request = self.context['request']
@@ -28,9 +27,6 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_auth2fa(self, user: User):
         return is_2fa_active_for_user(user)
-
-    def get_show_community(self, user: User):
-        return True
 
     class Meta:
         model = User
