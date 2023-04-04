@@ -16,6 +16,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='order',
-            constraint=models.UniqueConstraint(condition=models.Q(('status', 'new')), fields=('account', 'client_order_id'), name='unique_client_order_id_new_order'),
+            constraint=models.UniqueConstraint(condition=models.Q(('status', 'new')), fields=('account', 'client_order_id', 'status'), name='unique_client_order_id_new_order'),
         ),
     ]

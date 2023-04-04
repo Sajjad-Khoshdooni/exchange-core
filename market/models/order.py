@@ -107,7 +107,7 @@ class Order(models.Model):
             CheckConstraint(check=Q(amount__gte=0, filled_amount__gte=0, price__gte=0),
                             name='check_market_order_amounts', ),
             UniqueConstraint(
-                fields=('account', 'client_order_id'),
+                fields=('account', 'client_order_id', 'status'),
                 condition=Q(status='new'),
                 name='unique_client_order_id_new_order'
             )
