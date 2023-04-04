@@ -57,7 +57,7 @@ urlpatterns = [
         'get': 'list',
     })),
 
-    path('v1/wallet/balance/', views.GetBalanceInformation.as_view()),
+    path('v1/wallet/balance/', views.BalanceInfoView.as_view()),
     path('v1/bookmark/assets/', views.BookmarkAssetsAPIView.as_view()),
 
     path('v1/transfer/deposit/', views.DepositTransferUpdateView.as_view()),
