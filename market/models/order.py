@@ -10,7 +10,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum
+from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum, UniqueConstraint
 from django.utils import timezone
 
 from _base.settings import OTC_ACCOUNT_ID
@@ -106,9 +106,12 @@ class Order(models.Model):
             CheckConstraint(check=Q(filled_amount__lte=F('amount')), name='check_filled_amount', ),
             CheckConstraint(check=Q(amount__gte=0, filled_amount__gte=0, price__gte=0),
                             name='check_market_order_amounts', ),
+            UniqueConstraint(
+                fields=('account', 'client_order_id'),
+                condition=Q(status='new'),
+                name='unique_client_order_id_new_order'
+            )
         ]
-
-        unique_together = ('account', 'client_order_id', 'status')
 
     objects = models.Manager()
     open_objects = OpenOrderManager()
