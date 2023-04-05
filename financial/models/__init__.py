@@ -1,5 +1,6 @@
-from .bank_card import BankCard, BankAccount
+from .bank_card import BankCard, BankAccount, BankPaymentId
 from .payment import PaymentRequest, Payment
+from .payment_id import PaymentIdRequest, PaymentIdPay
 from .gateway import Gateway
 from .zarinpal_gateway import ZarinpalGateway
 from .paydotir_gateway import PaydotirGateway

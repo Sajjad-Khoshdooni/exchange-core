@@ -147,6 +147,31 @@ class BankAccount(models.Model):
         ]
 
 
+class BankPaymentId(models.Model):
+    WAITING_FOR_USER, WAITING_FOR_VERIFICATION, VERIFIED, REJECTED, REVIEWING = \
+        'WAITING_FOR_USER', 'WAITING_FOR_VERIFICATION', 'VERIFIED', 'REJECTED', 'REVIEWING'
+
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+
+    bank_account = models.ForeignKey('financial.BankAccount', on_delete=models.PROTECT)
+
+    destination_deposit_number = models.IntegerField()
+    destination_iban = models.CharField(max_length=100)
+    merchant_code = models.CharField(max_length=100)
+    merchant_name = models.CharField(max_length=100)
+    merchant_reference_number = models.IntegerField()
+    pay_id = models.IntegerField()
+    registry_status = models.CharField(
+        max_length=28,
+        choices=[(WAITING_FOR_USER, WAITING_FOR_USER), (WAITING_FOR_VERIFICATION, WAITING_FOR_VERIFICATION),
+                 (VERIFIED, VERIFIED), (REJECTED, REJECTED), (REVIEWING, REVIEWING)],
+        default=WAITING_FOR_VERIFICATION
+    )
+    user_iban = models.CharField(max_length=100)
+    user_iban_list = models.TextField(null=True)
+
+
 class BankCardSerializer(serializers.ModelSerializer):
     info = serializers.SerializerMethodField()
 
