@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.db.models import F
+from simple_history.admin import SimpleHistoryAdmin
 
 from multimedia.models import Image, Banner, CoinPriceContent
 
@@ -23,5 +24,5 @@ class BannerAdmin(admin.ModelAdmin):
 
 
 @admin.register(CoinPriceContent)
-class CoinPriceContentAdmin(admin.ModelAdmin):
+class CoinPriceContentAdmin(SimpleHistoryAdmin):
     pass
