@@ -2,7 +2,7 @@ from django.db import models
 
 
 class DailyAnalytics(models.Model):
-    created = models.DateField(unique=True, db_index=True)
+    created = models.DateTimeField(unique=True, db_index=True)
     active_30 = models.PositiveSmallIntegerField()
     churn_30 = models.PositiveSmallIntegerField()
 

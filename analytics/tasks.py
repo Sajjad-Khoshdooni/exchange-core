@@ -9,7 +9,7 @@ from analytics.models import DailyAnalytics
 
 @shared_task(queue='history')
 def create_analytics():
-    now = timezone.now().astimezone().date()
+    now = timezone.now()
     start = now - timedelta(days=30)
 
     accounts = set(TradeRevenue.objects.filter(
