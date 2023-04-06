@@ -25,5 +25,6 @@ def create_analytics():
         defaults={
             'active_30': len(accounts),
             'churn_30': len(old_accounts - accounts),
+            'new_30': len(accounts - old_accounts),
         }
     )
