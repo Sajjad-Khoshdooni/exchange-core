@@ -62,10 +62,10 @@ class OrderSerializer(serializers.ModelSerializer):
                 created_order = super(OrderSerializer, self).create(
                     {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol}
                 )
-                trade_pairs, updated_orders = created_order.submit(pipeline) or ([], [])
+                matched_trades = created_order.submit(pipeline) or ([], [])
 
-            extra = {} if trade_pairs else {'side': created_order.side}
-            MarketStreamCache().execute(symbol, updated_orders, trade_pairs=trade_pairs, **extra)
+            extra = {} if matched_trades.trade_pairs else {'side': created_order.side}
+            MarketStreamCache().execute(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
 
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))

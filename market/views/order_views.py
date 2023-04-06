@@ -126,41 +126,6 @@ class OpenOrderListAPIView(APIView):
         return Response(sorted_results)
 
 
-class OrderDetailAPIView(RetrieveAPIView, DelegatedAccountMixin):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
-    throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
-
-    serializer_class = OrderSerializer
-    lookup_field = 'client_order_id'
-
-    def get_queryset(self):
-        account, variant = self.get_account_variant(self.request)
-
-        filters = {}
-        if variant:
-            filters = {'wallet__variant': variant}
-        elif self.request.query_params.get('agent') and self.request.query_params.get('strategy'):
-            reserve_wallet = ReserveWallet.objects.filter(
-                request_id=f'strategy:{self.request.query_params.get("strategy")}:{self.request.query_params.get("agent")}'
-            ).first()
-            if reserve_wallet:
-                filters = {'wallet__variant': reserve_wallet.group_id}
-
-        return Order.objects.filter(
-            wallet__account=account,
-            **filters
-        ).select_related('symbol', 'wallet', 'stop_loss').order_by('-created')
-
-    def get_serializer_context(self):
-        account, variant = self.get_account_variant(self.request)
-        return {
-            **super(OrderDetailAPIView, self).get_serializer_context(),
-            'account': account,
-            'trades': {},
-            'variant': variant,
-        }
-
-
 class CancelOrderAPIView(CreateAPIView, DelegatedAccountMixin):
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
