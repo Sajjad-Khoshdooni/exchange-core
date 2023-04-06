@@ -8,8 +8,9 @@ from analytics.models import ActiveTrader
 
 
 @shared_task(queue='history')
-def create_analytics():
-    now = timezone.now()
+def create_analytics(now=None):
+    if not now:
+        now = timezone.now()
 
     for period in ActiveTrader.PERIODS:
         start = now - timedelta(days=period)
