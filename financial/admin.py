@@ -14,7 +14,7 @@ from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
-    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost
+    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost, PaymentIdRequest, BankPaymentId
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.precision import humanize_number
@@ -335,3 +335,17 @@ class MarketingSourceAdmin(admin.ModelAdmin):
 class MarketingCostAdmin(admin.ModelAdmin):
     list_display = ('source', 'date', 'cost')
     search_fields = ('source__utm_source', )
+
+
+@admin.register(PaymentIdRequest)
+class PaymentIdRequestAdmin(admin.ModelAdmin):
+    list_display = ('created', 'gateway', 'bank_account', 'amount', 'payment_id', 'status')
+    search_fields = ('payment_id', )
+    list_filter = ('status',)
+
+
+@admin.register(BankPaymentId)
+class BankPaymentIdAdmin(admin.ModelAdmin):
+    list_display = ('created', 'bank_account', 'destination_iban', 'registry_status')
+    search_fields = ('destination_iban', )
+    list_filter = ('registry_status',)

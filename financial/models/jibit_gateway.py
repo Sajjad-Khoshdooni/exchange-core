@@ -125,7 +125,7 @@ class JibitGateway(Gateway):
             url=self.BASE_URL + '/v1/paymentIds',
             headers={'Authorization': 'Bearer ' + token},
             params={
-                "callbackUrl": base_url + f"paymentIds/callback/jibit/",
+                "callbackUrl": base_url + f"paymentIds/callback/jibit/?id={bank_account.id}",
                 "merchantReferenceNumber": bank_account.id,
                 "userFullName": bank_account.user.name,
                 "userIban": bank_account.iban,
@@ -171,7 +171,7 @@ class JibitGateway(Gateway):
             url=self.BASE_URL + '/v1/paymentIds',
             headers={'Authorization': 'Bearer ' + token},
             params={
-                "callbackUrl": base_url + f"paymentIds/callback/jibit/",
+                "callbackUrl": base_url + f"paymentIds/callback/jibit/?id={bank_account.id}",
                 "merchantReferenceNumber": bank_account.id,
                 "userFullName": bank_account.user.name,
                 "userIban": bank_account.iban,
@@ -233,11 +233,8 @@ class JibitGateway(Gateway):
             timeout=30
         )
         if resp.ok:
-            with transaction.atomic():
-                payment_id_request.status=resp.json()['status']
-                payment_id_request.save(update_fields=['status'])
-
-                PaymentIdPay.object.create()
+            payment_id_request.status = resp.json()['status']
+            payment_id_request.save(update_fields=['status'])
 
     def fail_payments_id(self, payment_id_request: PaymentIdRequest):
         token = self._get_token()

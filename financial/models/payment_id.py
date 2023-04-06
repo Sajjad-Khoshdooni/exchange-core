@@ -25,6 +25,7 @@ class PaymentIdRequest(models.Model):
     modified = models.DateTimeField(auto_now=True)
 
     gateway = models.ForeignKey('financial.Gateway', on_delete=models.PROTECT)
+    bank_account = models.ForeignKey('financial.BankAccount', on_delete=models.PROTECT)
 
     amount = models.PositiveIntegerField()
     bank = models.CharField(max_length=16)

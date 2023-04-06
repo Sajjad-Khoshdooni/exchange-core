@@ -49,6 +49,7 @@ class JibitPaymentidCallbackView(TemplateView):
 
         PaymentIdRequest.objects.create(
             gateway=Gateway.objects.filter(type=Gateway.JIBIT).first(),
+            bank_account__id=request.POST['id'],
             amount=request.POST['amount'],
             bank=request.POST['bank'],
             bank_reference_number=request.POST['bankRefrenceNumber'],
