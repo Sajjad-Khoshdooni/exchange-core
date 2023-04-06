@@ -1,11 +1,18 @@
 from django.db import models
 
 
-class DailyAnalytics(models.Model):
-    created = models.DateTimeField(unique=True, db_index=True)
-    active_30 = models.PositiveSmallIntegerField()
-    new_30 = models.PositiveSmallIntegerField()
-    churn_30 = models.PositiveSmallIntegerField()
+class ActiveTrader(models.Model):
+    DAILY, WEEKLY, MONTHLY = 1, 7, 30
+    PERIODS = (DAILY, WEEKLY, MONTHLY)
+
+    created = models.DateField(db_index=True)
+    period = models.SmallIntegerField(
+        choices=((DAILY, 'daily'), (WEEKLY, 'weekly'), (MONTHLY, 'monthly'), )
+    )
+
+    active = models.PositiveSmallIntegerField()
+    new = models.PositiveSmallIntegerField()
+    churn = models.PositiveSmallIntegerField()
 
     class Meta:
-        verbose_name = verbose_name_plural = 'Daily analytics'
+        unique_together = ('created', 'period')
