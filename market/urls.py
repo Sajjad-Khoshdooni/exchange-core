@@ -19,5 +19,5 @@ urlpatterns = [
     path('tradingview/ohlcv/', cache_page(10)(OHLCVAPIView.as_view())),
     path('open-orders/', OpenOrderListAPIView.as_view()),
     path('', include(router.urls)),
-    path('bookmark/', BookMarkSymbolAPIView.as_view()),
+    path('bookmark/', BookmarkSymbolAPIView.as_view()),
 ]
