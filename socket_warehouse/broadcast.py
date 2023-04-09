@@ -88,7 +88,10 @@ class SocketBroadcast(metaclass=Singleton):
 
     def allows_add_new_client(self, websocket):
         clients_ips = list(map(lambda c: c.remote_address[0], self.clients.values()))
-        if clients_ips.count(websocket.remote_address[0]) > 100:
+        remote_address = websocket.remote_address[0]
+        if remote_address not in clients_ips:
+            return True
+        if clients_ips.count(remote_address) > 100:
             return False
         return True
 
