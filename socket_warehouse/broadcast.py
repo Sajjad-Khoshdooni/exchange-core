@@ -240,7 +240,7 @@ class OrderDepthPeriodicBroadcast(SocketPeriodicBroadcast):
                 lambda key_value: key_value[0].subscribe_request == symbol, self.clients.items()
             ))
             message_clients_pairs.append(
-                {'message': pickle.dumps(depth), 'clients': filtered_clients.values()}
+                {'message': json.dumps(depth), 'clients': filtered_clients.values()}
             )
         return message_clients_pairs
 
