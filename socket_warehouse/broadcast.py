@@ -1,8 +1,8 @@
 import asyncio
 import json
 import logging
-import os
 import pickle
+from datetime import timedelta
 from decimal import Decimal
 
 import aioredis
@@ -10,12 +10,11 @@ import websockets
 from aioredis.exceptions import ConnectionError, TimeoutError
 from asgiref.sync import sync_to_async
 from django.conf import settings
-from django.core.wsgi import get_wsgi_application
-from websockets.exceptions import ConnectionClosed
+from django.db.models import F
+from django.utils import timezone
+
 from ledger.utils.external_price import BUY, SELL
 from market.models import Order
-from django.db.models import F
-
 from market.models.pair_symbol import PairSymbol
 from socket_warehouse.client import SocketClient
 
@@ -33,17 +32,22 @@ class Singleton(type):
 
 class SocketBroadcast(metaclass=Singleton):
     SUBSCRIBE = 'subscribe'
-    PING = 'ping'
+    PING, PONG = 'ping', 'pong'
+    ping_interval = 30
     subscribe_key = None
-    clients = {}
 
     DEPTH, TRADES, ORDERS_STATUS, ORDER_BOOK = 'DEPTH', 'TRADES', 'ORDERS_STATUS', 'ORDER_BOOK'
+
+    def __init__(self):
+        self.clients = {}
 
     @staticmethod
     async def get_broadcast_server(subscribe_request: str) -> 'SocketBroadcast':
         return BROADCAST_CLASSES_DICT.get(subscribe_request.partition(':')[0])
 
     async def add_new_client(self, websocket_instance, subscribe_request):
+        if not self.allows_add_new_client(websocket_instance):
+            return
         client_instance = SocketClient(websocket_instance, subscribe_request.partition(':')[2])
         self.clients[client_instance] = websocket_instance
         return client_instance.id
@@ -56,18 +60,37 @@ class SocketBroadcast(metaclass=Singleton):
         for message_client_pair in message_client_pairs:
             filtered_message = message_client_pair['message']
             clients = message_client_pair['clients']
-            websockets.broadcast(clients, filtered_message)
+            if clients:
+                websockets.broadcast(clients, filtered_message)
 
     async def broadcast(self):
         raise NotImplementedError
 
+    async def ping_clients(self):
+        while True:
+            await asyncio.sleep(self.ping_interval)
+            if not self.clients:
+                continue
+            now = timezone.now()
+            for client in list(filter(
+                lambda c: (now - c.last_ping) > timedelta(seconds=self.ping_interval * 3), self.clients.keys()
+            )):
+                await self.clients[client].close()
+                self.clients.pop(client, None)
+            websockets.broadcast(self.clients.values(), SocketBroadcast.PING)
+
     async def drop_client(self, client_id):
-        if client_id in self.clients:
-            del self.clients[client_id]
+        self.clients.pop(client_id, None)
 
     async def update_client_ping(self, client_id):
         if client_id in self.clients:
             self.clients[client_id].update_ping()
+
+    def allows_add_new_client(self, websocket):
+        clients_ips = list(map(lambda c: c.remote_address[0], self.clients.values()))
+        if clients_ips.count(websocket.remote_address[0]) > 100:
+            return False
+        return True
 
 
 class SocketUpdateBroadcast(SocketBroadcast):
@@ -184,13 +207,15 @@ class OrdersStatusUpdateBroadcast(SocketUpdateBroadcast):
 class OrderDepthPeriodicBroadcast(SocketPeriodicBroadcast):
     subscribe_key = SocketBroadcast.ORDER_BOOK
 
-    async def get_raw_message(self):
-        return sync_to_async(Order.open_objects.annotate(
+    @sync_to_async
+    def get_raw_message(self):
+        return Order.open_objects.annotate(
             unfilled_amount=F('amount') - F('filled_amount')
-        ).exclude(unfilled_amount=0).order_by('symbol', 'side').values('symbol', 'side', 'price', 'unfilled_amount'))
+        ).exclude(unfilled_amount=0).order_by('symbol', 'side').values('symbol', 'side', 'price', 'unfilled_amount')
 
-    async def get_parsed_message(self, raw_message):
-        all_open_orders = await raw_message
+    @sync_to_async
+    def get_parsed_message(self, raw_message):
+        all_open_orders = raw_message
         symbols_depth_dict = {}
         symbols_id_mapping = {symbol.id: symbol for symbol in PairSymbol.objects.all()}
         for symbol_id in set(map(lambda o: o['symbol'], all_open_orders)):
@@ -208,8 +233,11 @@ class OrderDepthPeriodicBroadcast(SocketPeriodicBroadcast):
     async def get_message_client_pairs(self, message):
         message_clients_pairs = []
         for symbol, depth in message.items():
+            filtered_clients = dict(filter(
+                lambda key_value: key_value[0].subscribe_request == symbol, self.clients.items()
+            ))
             message_clients_pairs.append(
-                {'message': depth, 'clients': list(filter(lambda c: c.symbol == symbol, self.clients.values()))}
+                {'message': pickle.dumps(depth), 'clients': filtered_clients.values()}
             )
         return message_clients_pairs
 

@@ -6,7 +6,7 @@ from django.utils import timezone
 class SocketClient:
 
     def __init__(self, socket, subscribe_request):
-        self.id = uuid4()
+        self.id = socket.id
         self.last_ping = timezone.now()
         self.socket = socket
         self.subscribe_request = subscribe_request
