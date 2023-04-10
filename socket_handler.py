@@ -69,9 +69,9 @@ async def add_client(websocket, path):
 
 start_server = websockets.serve(add_client, '0.0.0.0', 6789)
 
-market_redis = aioredis.from_url(settings.MARKET_CACHE_LOCATION, decode_responses=True)
+socket_server_redis = aioredis.from_url(settings.SOCKET_SERVER_CACHE_LOCATION, decode_responses=True)
 
-depth_pubsub = market_redis.pubsub()
+depth_pubsub = socket_server_redis.pubsub()
 
 
 async def broadcast_depth():
@@ -103,7 +103,7 @@ async def broadcast_depth():
             await asyncio.sleep(10)
 
 
-trades_pubsub = market_redis.pubsub()
+trades_pubsub = socket_server_redis.pubsub()
 
 
 async def broadcast_trades():
@@ -136,7 +136,7 @@ async def broadcast_trades():
             await asyncio.sleep(10)
 
 
-status_pubsub = market_redis.pubsub()
+status_pubsub = socket_server_redis.pubsub()
 
 
 async def broadcast_orders_status():

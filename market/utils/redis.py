@@ -15,6 +15,7 @@ prefix_order_size_factor = 'market_order_size_factor'
 prefix_last_trade = 'market_order_size_factor'
 
 market_redis = Redis.from_url(settings.MARKET_CACHE_LOCATION, decode_responses=True)
+socket_server_redis = Redis.from_url(settings.SOCKET_SERVER_CACHE_LOCATION, decode_responses=True)
 
 
 def set_top_prices(symbol_id, price_dict, scope=''):
@@ -77,7 +78,7 @@ def get_as_dict(symbol_id, key):
 
 
 class MarketStreamCache:
-    _client = market_redis
+    _client = socket_server_redis
 
     SET_IF_HIGHER = 'setifhigher'
     SET_IF_LOWER = 'setiflower'
