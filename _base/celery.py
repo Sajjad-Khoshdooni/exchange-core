@@ -191,6 +191,15 @@ app.conf.beat_schedule = {
             'queue': 'history',
         }
     },
+
+    'create_analytics': {
+        'task': 'analytics.tasks.create_analytics',
+        'schedule': crontab(hour=21, minute=0),
+        'options': {
+            'queue': 'history',
+        }
+    },
+
     'create_snapshot': {
         'task': 'ledger.tasks.snapshot.create_snapshot',
         'schedule': crontab(minute='1-59/5'),

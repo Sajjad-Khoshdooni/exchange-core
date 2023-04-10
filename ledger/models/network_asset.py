@@ -70,7 +70,7 @@ class NetworkAsset(models.Model):
         self.withdraw_min = withdraw_min
         self.withdraw_max = info.withdraw_max
         self.hedger_withdraw_enable = info.withdraw_enable
-        self.hedger_deposit_enable = info.active
+        self.hedger_deposit_enable = info.deposit_enable
         self.save(update_fields=[
             'withdraw_fee', 'withdraw_min', 'withdraw_max', 'hedger_withdraw_enable', 'hedger_deposit_enable'
         ])

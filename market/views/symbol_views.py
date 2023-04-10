@@ -40,7 +40,7 @@ class SymbolListAPIView(ListAPIView):
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
         user = self.request.user
-        if user.id:
+        if user.is_authenticated:
             ctx['bookmarks'] = set(user.get_account().bookmark_market.values_list('id', flat=True))
         else:
             ctx['bookmarks'] = []
@@ -49,7 +49,6 @@ class SymbolListAPIView(ListAPIView):
 
 
 class SymbolDetailedStatsAPIView(RetrieveAPIView):
-    authentication_classes = ()
     permission_classes = ()
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
 
@@ -58,7 +57,7 @@ class SymbolDetailedStatsAPIView(RetrieveAPIView):
     lookup_field = 'name'
 
 
-class BookMarkSymbolAPIView(APIView):
+class BookmarkSymbolAPIView(APIView):
     def patch(self, request):
         user = self.request.user
         book_mark_serializer = BookMarkPairSymbolSerializer(

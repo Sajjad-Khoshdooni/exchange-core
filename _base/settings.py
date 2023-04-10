@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'simple_history',
     'django_user_agents',
 
+    'analytics',
     'financial',
     'multimedia',
     'accounts',
@@ -63,7 +64,6 @@ INSTALLED_APPS = [
     'experiment',
 
     'tinymce',
-
 ]
 
 
