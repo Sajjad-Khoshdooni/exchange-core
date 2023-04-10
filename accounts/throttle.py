@@ -15,7 +15,7 @@ class CustomUserRateThrottle(UserRateThrottle):
         if request.auth and request.user and user_has_delegate_permission(request.user) and ((
                 getattr(request.auth, 'token_type', None) == 'access' and
                 hasattr(request.auth, 'payload') and request.auth.payload.get('account_id')
-        ) or used_token_authentication):
+        ) or (used_token_authentication and request.user.auth_token.throttle_exempted)):
             return True
         allow_request = super(CustomUserRateThrottle, self).allow_request(request, view)
         return allow_request
