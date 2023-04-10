@@ -456,17 +456,19 @@ class MockProviderRequester(ProviderRequester):
     def get_futures_info(self, exchange: str) -> dict:
         return {}
 
-    def get_network_info(self, asset: str, network: str = None) -> NetworkInfo:
-        return NetworkInfo(
-            coin=asset,
-            network=network,
-            withdraw_min=Decimal(1),
-            withdraw_max=Decimal(100),
-            withdraw_fee=Decimal(1),
-            withdraw_enable=True,
-            deposit_enable=True,
-            address_regex='\w+'
-        )
+    def get_network_info(self, asset: str, network: str = None) -> List[NetworkInfo]:
+        return [
+            NetworkInfo(
+                coin=asset,
+                network=network,
+                withdraw_min=Decimal(1),
+                withdraw_max=Decimal(100),
+                withdraw_fee=Decimal(1),
+                withdraw_enable=True,
+                deposit_enable=True,
+                address_regex='\w+'
+            )
+        ]
 
     def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
         pass

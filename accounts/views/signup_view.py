@@ -93,6 +93,9 @@ class SignupSerializer(serializers.Serializer):
             if not config('ENABLE_MARGIN_SHOW_TO_ALL', cast=bool, default=True):
                 user.show_margin = False
 
+            if config('SHOW_NINJA_TO_ALL', cast=bool, default=False):
+                user.show_community = True
+
             user.set_password(password)
             user.save()
 

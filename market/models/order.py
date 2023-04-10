@@ -11,7 +11,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum
+from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum, UniqueConstraint
 from django.utils import timezone
 
 from _base.settings import OTC_ACCOUNT_ID
@@ -20,7 +20,7 @@ from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
-from ledger.utils.external_price import get_external_price, BUY, SELL
+from ledger.utils.external_price import get_external_price, BUY, SELL, SIDE_VERBOSE
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.otc import get_otc_spread, spread_to_multiplier
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent, decimal_to_str
@@ -131,9 +131,12 @@ class Order(models.Model):
             CheckConstraint(check=Q(filled_amount__lte=F('amount')), name='check_filled_amount', ),
             CheckConstraint(check=Q(amount__gte=0, filled_amount__gte=0, price__gte=0),
                             name='check_market_order_amounts', ),
+            UniqueConstraint(
+                fields=('account', 'client_order_id', 'status'),
+                condition=Q(status='new'),
+                name='unique_client_order_id_new_order'
+            )
         ]
-
-        unique_together = ('account', 'client_order_id', 'status')
 
     objects = models.Manager()
     open_objects = OpenOrderManager()
@@ -367,17 +370,22 @@ class Order(models.Model):
             if not taker_is_system:
                 Notification.send(
                     recipient=self.wallet.account.user,
-                    title='معامله {}'.format(symbol),
-                    message=('مقدار {symbol} {amount} معامله شد.').format(amount=match_amount, symbol=symbol)
+                    title='معامله {} انجام شد'.format(symbol),
+                    message='{side} {amount} {coin}'.format(
+                        amount=match_amount,
+                        side=SIDE_VERBOSE[self.side],
+                        coin=symbol.asset.name_fa
+                    )
                 )
 
             if not maker_is_system:
                 Notification.send(
                     recipient=maker_order.wallet.account.user,
-                    title='معامله {}'.format(maker_order.symbol),
-                    message=('مقدار {symbol} {amount} معامله شد.').format(
+                    title='معامله {} انجام شد'.format(maker_order.symbol),
+                    message='{side} {amount} {coin}'.format(
                         amount=match_amount,
-                        symbol=maker_order.symbol
+                        side=SIDE_VERBOSE[maker_side],
+                        coin=symbol.asset.name_fa
                     )
                 )
 
@@ -555,6 +563,7 @@ class Order(models.Model):
         wallet = symbol_instance.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
         precision = Order.get_rounding_precision(maker_price, symbol_instance.tick_size)
         return Order(
+            account=wallet.account,
             type=Order.DEPTH,
             wallet=wallet,
             symbol=symbol_instance,

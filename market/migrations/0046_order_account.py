@@ -18,13 +18,13 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='accounts.account', null=True),
             preserve_default=False,
         ),
-        migrations.RunSQL(
-            sql='UPDATE market_order o SET account_id = w.account_id FROM ledger_wallet w WHERE o.wallet_id = w.id;',
-            reverse_sql=migrations.RunSQL.noop
-        ),
-        migrations.AlterField(
-            model_name='order',
-            name='account',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='accounts.account'),
-        ),
+        # migrations.RunSQL(
+        #     sql='UPDATE market_order o SET account_id = w.account_id FROM ledger_wallet w WHERE o.wallet_id = w.id;',
+        #     reverse_sql=migrations.RunSQL.noop
+        # ),
+        # migrations.AlterField(
+        #     model_name='order',
+        #     name='account',
+        #     field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='accounts.account'),
+        # ),
     ]
