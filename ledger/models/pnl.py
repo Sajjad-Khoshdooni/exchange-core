@@ -102,3 +102,7 @@ class PNLHistory(models.Model):
                 'account', 'market', 'base_asset'
             ).values('account', 'market', 'base_asset', 'snapshot_balance')
         }
+
+    @classmethod
+    def get_already_created_pnl_accounts(cls, date):
+        return PNLHistory.objects.filter(date=date).values_list('account_id', flat=True).distinct()
