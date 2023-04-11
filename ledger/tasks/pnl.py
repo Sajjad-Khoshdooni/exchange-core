@@ -35,7 +35,8 @@ def create_pnl_histories(self):
         all_wallets = PNLHistory.get_all_wallets()
         last_pnl_histories = PNLHistory.get_last_histories()
         margin_accounts = set(map(lambda k: k[1], filter(lambda w: w[0] == Wallet.MARGIN, all_wallets)))
-        pnl_accounts = list(set(map(lambda k: k[1], all_wallets)))
+        excluding_accounts = PNLHistory.get_already_created_pnl_accounts(today)
+        pnl_accounts = list(set(map(lambda k: k[1], all_wallets)) - set(excluding_accounts))
 
         for sliced_pnl_accounts in [pnl_accounts[i:i + 1000] for i in range(0, len(pnl_accounts), 1000)]:
             to_create_pnl_histories = []
