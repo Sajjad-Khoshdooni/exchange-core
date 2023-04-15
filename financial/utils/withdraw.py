@@ -43,18 +43,19 @@ class FiatWithdraw:
 
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
 
-    def __init__(self, gateway: Gateway):
+    def __init__(self, gateway: Gateway, verbose: bool = False):
         self.gateway = gateway
+        self.verbose = verbose
 
     @classmethod
-    def get_withdraw_channel(cls, gateway: Gateway) -> 'FiatWithdraw':
+    def get_withdraw_channel(cls, gateway: Gateway, verbose: bool = False) -> 'FiatWithdraw':
         mapping = {
             Gateway.PAYIR: PayirChannel,
             Gateway.ZIBAL: ZibalChannel,
             Gateway.ZARINPAL: ZarinpalChannel,
             Gateway.JIBIT: JibitChannel
         }
-        return mapping[gateway.type](gateway)
+        return mapping[gateway.type](gateway, verbose)
 
     def get_wallet_data(self, wallet_id: int):
         raise NotImplementedError
@@ -80,7 +81,7 @@ class FiatWithdraw:
 
 class PayirChannel(FiatWithdraw):
 
-    def collect_api(self, path: str, method: str = 'GET', data: dict = None, verbose: bool = True, timeout: float = 30) -> dict:
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> dict:
 
         url = 'https://pay.ir' + path
 
@@ -106,7 +107,7 @@ class PayirChannel(FiatWithdraw):
 
         resp_data = resp.json()
 
-        if verbose:
+        if self.verbose:
             print('status', resp.status_code)
             print('data', resp_data)
 
@@ -439,11 +440,11 @@ class JibitChannel(FiatWithdraw):
 
             return token
 
-    def collect_api(self, path: str, method: str = 'GET', data: dict = None, verbose: bool = True, timeout: float = 30) ->dict:
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> dict:
         url = 'https://napi.jibit.ir/trf' + path
         request_kwargs = {
             'url': url,
-            'timeout': timeout,
+            # 'timeout': timeout,
             'headers': {'Authorization': 'Bearer ' + self._get_token()},
         }
 
@@ -462,33 +463,36 @@ class JibitChannel(FiatWithdraw):
             raise TimeoutError
         resp_data = resp.json()
 
-        if verbose:
+        if self.verbose:
             print('status', resp.status_code)
             print('data', resp_data)
 
-        if not resp.ok or not resp_data['success']:
+        if not resp.ok:
             raise ServerError
 
-        return resp_data['data']
+        return resp_data
 
-    def get_wallet_data(self, wallet_id: int) -> Wallet:
+    def get_wallet_data(self, wallet_id: int = None) -> Wallet:
         data = self.collect_api('/v2/balances')
         return Wallet(
-            id=wallet_id,
+            id=0,
             name='main',
             balance=data['balance'] // 10,
             free=data['settleableBalance'] // 10
         )
 
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
-        self.collect_api('/v2/transfers', method='post', data={
+        self.collect_api('/v2/transfers', method='POST', data={
             'submissionMode': 'TRANSFER',
-            'transfer': [{
+            'batchID': 'wr-%s' % request_id,
+            'transfers': [{
                 'transferID': str(request_id),
                 'destination': receiver.iban[2:],
-                'destinationLastName': receiver.user.get_full_name(),
+                'destinationFirstName': receiver.user.first_name,
+                'destinationLastName': receiver.user.last_name,
                 'amount': amount,
                 'currency': 'TOMAN',
+                'cancellable': True
             }],
         })
 
@@ -521,13 +525,5 @@ class JibitChannel(FiatWithdraw):
         return receive_time
 
     def get_total_wallet_irt_value(self):
-        resp = self.collect_api(
-            path='/v1/wallet/list',
-            timeout=5
-        )
-
-        total_wallet_irt_value = 0
-        for wallet in resp:
-            total_wallet_irt_value += Decimal(wallet['balance']) + Decimal(wallet.get('pendingPFAmount', 0))
-
-        return total_wallet_irt_value // 10
+        wallet = self.get_wallet_data()
+        return wallet.free
