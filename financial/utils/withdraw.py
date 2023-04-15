@@ -75,7 +75,7 @@ class FiatWithdraw:
         pass
 
     def is_active(self):
-        return bool(self.gateway.api_secret_encrypted)
+        return bool(self.gateway.withdraw_api_secret_encrypted)
 
 
 class PayirChannel(FiatWithdraw):
@@ -87,7 +87,7 @@ class PayirChannel(FiatWithdraw):
         request_kwargs = {
             'url': url,
             'timeout': timeout,
-            'headers': {'Authorization': self.gateway.api_secret},
+            'headers': {'Authorization': self.gateway.withdraw_api_secret},
         }
 
         try:
@@ -219,7 +219,7 @@ class ZibalChannel(FiatWithdraw):
         request_kwargs = {
             'url': url,
             'timeout': timeout,
-            'headers': {'Authorization': self.gateway.api_secret},
+            'headers': {'Authorization': self.gateway.withdraw_api_secret},
         }
 
         try:
@@ -420,13 +420,13 @@ class JibitChannel(FiatWithdraw):
 
     def _get_token(self):
         token_cache = caches['token']
-        JIBIT_GATEWAY_TRANSFER_TOKEN_KEY = 'jibit_gateway_transfer_token'
+        token_cache_key = 'jibit_gateway_transfer_token'
 
         resp = requests.post(
             url=self.BASE_URL + '/v2/tokens/generate',
             json={
-                'apiKey': self.gateway.api_key,
-                'secretKey': self.gateway.api_secret,
+                'apiKey': self.gateway.withdraw_api_key,
+                'secretKey': self.gateway.withdraw_api_secret,
             },
             timeout=30,
         )
@@ -435,7 +435,7 @@ class JibitChannel(FiatWithdraw):
             resp_data = resp.json()
             token = resp_data['accessToken']
             expire = 23 * 3600
-            token_cache.set(JIBIT_GATEWAY_TRANSFER_TOKEN_KEY, token, expire)
+            token_cache.set(token_cache_key, token, expire)
 
             return token
 
@@ -471,7 +471,7 @@ class JibitChannel(FiatWithdraw):
 
         return resp_data['data']
 
-    def gat_wallet_data(self, wallet_id: int) -> Wallet:
+    def get_wallet_data(self, wallet_id: int) -> Wallet:
         data = self.collect_api('/v2/balances')
         return Wallet(
             id=wallet_id,
