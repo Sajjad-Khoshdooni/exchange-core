@@ -572,6 +572,7 @@ class ManualTransactionAdmin(admin.ModelAdmin):
     raw_id_fields = ('wallet', )
     list_filter = ('type', 'status')
     ordering = ('-created', )
+    readonly_fields = ('group_id', )
 
 
 @admin.register(BalanceLock)

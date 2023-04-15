@@ -368,11 +368,11 @@ class WalletSerializer(serializers.ModelSerializer):
         return wallet.asset.symbol
 
     def get_free(self, wallet: Wallet):
-        return wallet.asset.get_presentation_amount(wallet.get_free())
+        return wallet.get_free()
 
     class Meta:
         model = Wallet
-        fields = ('asset', 'free',)
+        fields = ('asset', 'free', 'balance', 'locked')
 
 
 class ConvertDustView(APIView):

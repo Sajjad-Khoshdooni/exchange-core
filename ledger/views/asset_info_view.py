@@ -258,6 +258,7 @@ class AssetOverviewAPIView(APIView):
 
         coins = list(Asset.live_objects.exclude(symbol=Asset.IRT).values_list('symbol', flat=True))
         caps = get_provider_requester().get_coins_info(coins).values()
+        caps_dict = {c.coin: c for c in caps}
 
         def coin_info_to_dict(info: CoinInfo):
             return {
@@ -277,7 +278,7 @@ class AssetOverviewAPIView(APIView):
             symbol__in=['IRT', 'IOTA']
         ).order_by(F('publish_date').desc(nulls_last=True)).values_list('symbol', flat=True))[:limit]
 
-        newest = list(map(coin_info_to_dict, filter(lambda cap: cap.coin in newest_coin_symbols, caps)))
+        newest = list(map(coin_info_to_dict, map(lambda coin: caps_dict[coin], newest_coin_symbols)))
         AssetOverviewAPIView.set_price(newest)
 
         return Response({
