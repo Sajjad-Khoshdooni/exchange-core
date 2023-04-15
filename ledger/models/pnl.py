@@ -70,7 +70,9 @@ class PNLHistory(models.Model):
                 account__type=Account.ORDINARY,
                 asset__enable=True,
             ).exclude(balance=0).annotate(
-                wallet_market=Case(When(market=Wallet.LOAN, then=V(Wallet.MARGIN)), default='market')
+                wallet_market=Case(
+                    When(market=Wallet.LOAN, then=V(Wallet.MARGIN)),
+                    When(market=Wallet.STAKE, then=V(Wallet.SPOT)), default=F('market')),
             ).values('wallet_market', 'account', 'asset__symbol').annotate(total_balance=Sum('balance')).values(
                 'wallet_market', 'account', 'asset__symbol', 'total_balance'
             )
