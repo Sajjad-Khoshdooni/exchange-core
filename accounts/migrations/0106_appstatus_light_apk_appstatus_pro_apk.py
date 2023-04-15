@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0106_customtoken_throttle_exempted'),
+        ('accounts', '0105_merge_20230314_1509'),
     ]
 
     operations = [
