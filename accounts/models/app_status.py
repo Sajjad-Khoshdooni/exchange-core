@@ -8,9 +8,6 @@ class AppStatus(models.Model):
     latest_version = models.PositiveIntegerField(default=1)
     force_update_version = models.PositiveIntegerField(default=0)
 
-    light_apk = models.FileField(null=True, blank=True, upload_to='app/light/')
-    pro_apk = models.FileField(null=True, blank=True, upload_to='app/pro/')
-
     @classmethod
     def get_active(cls) -> 'AppStatus':
         return AppStatus.objects.filter(active=True).first() or AppStatus()
