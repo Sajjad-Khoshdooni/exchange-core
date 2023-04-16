@@ -62,7 +62,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 created_order = super(OrderSerializer, self).create(
                     {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol}
                 )
-                matched_trades = created_order.submit(pipeline) or ([], [])
+                matched_trades = created_order.submit(pipeline)
 
             extra = {} if matched_trades.trade_pairs else {'side': created_order.side}
             MarketStreamCache().execute(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
