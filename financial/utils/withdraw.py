@@ -487,12 +487,13 @@ class JibitChannel(FiatWithdraw):
             'batchID': 'wr-%s' % request_id,
             'transfers': [{
                 'transferID': str(request_id),
-                'destination': receiver.iban[2:],
+                'destination': receiver.iban,
                 'destinationFirstName': receiver.user.first_name,
                 'destinationLastName': receiver.user.last_name,
                 'amount': amount,
                 'currency': 'TOMAN',
-                'cancellable': True
+                'cancellable': False,
+                'description': 'برداشت کاربر'
             }],
         })
 
