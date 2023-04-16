@@ -23,6 +23,7 @@ class PaymentIdRequest(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
+    group_id = get_group_id_field()
 
     gateway = models.ForeignKey('financial.Gateway', on_delete=models.PROTECT)
     bank_account = models.ForeignKey('financial.BankAccount', on_delete=models.PROTECT)
@@ -44,11 +45,11 @@ class PaymentIdRequest(models.Model):
     )
 
     def alert_payment(self):
-        user = self.payment_request.bank_card.user
+        user = self.bank_account.user
         user_email = user.email
         title = 'واریز وجه با موفقیت انجام شد'
-        payment_amont = humanize_number(get_presentation_amount(Decimal(self.payment_request.amount)))
-        description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amont)
+        payment_amount = humanize_number(get_presentation_amount(Decimal(self.amount)))
+        description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amount)
 
         Notification.send(
             recipient=user,
@@ -62,9 +63,31 @@ class PaymentIdRequest(models.Model):
                 recipient=user_email,
                 template=email.SCOPE_PAYMENT,
                 context={
-                    'payment_amount': payment_amont,
+                    'payment_amount': payment_amount,
                     'brand': settings.BRAND,
                     'panel_url': settings.PANEL_URL,
                     'logo_elastic_url': config('LOGO_ELASTIC_URL'),
                 }
             )
+
+    def accept(self, pipeline: WalletPipeline):
+        asset = Asset.get(Asset.IRT)
+        user = self.bank_account.user
+        account = user.get_account()
+
+        pipeline.new_trx(
+            sender=asset.get_wallet(Account.out()),
+            receiver=asset.get_wallet(account),
+            amount=self.amount,
+            scope=Trx.TRANSFER,
+            group_id=self.group_id,
+        )
+
+        if not user.first_fiat_deposit_date:
+            user.first_fiat_deposit_date = timezone.now()
+            user.save()
+
+        from gamify.utils import check_prize_achievements, Task
+        check_prize_achievements(account, Task.DEPOSIT)
+
+        self.alert_payment()
