@@ -474,11 +474,23 @@ class JibitChannel(FiatWithdraw):
 
     def get_wallet_data(self, wallet_id: int = None) -> Wallet:
         data = self.collect_api('/v2/balances')
+        balance = 0
+        free = 0
+
+        for d in data['balances']:
+            balance_type = d['balanceType']
+
+            if balance_type == 'STL':
+                free = d['amount']
+
+            if balance_type in ('STL', 'WLT'):
+                balance += d['amount']
+
         return Wallet(
             id=0,
             name='main',
-            balance=data['balance'] // 10,
-            free=data['settleableBalance'] // 10
+            balance=balance // 10,
+            free=free // 10
         )
 
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
