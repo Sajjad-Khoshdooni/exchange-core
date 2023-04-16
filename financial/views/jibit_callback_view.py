@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
 from rest_framework.response import Response
 
-from financial.models import PaymentRequest, Payment, PaymentIdRequest, Gateway
+from financial.models import PaymentRequest, Payment, PaymentIdRequest, Gateway, BankAccount, BankPaymentId
 from ledger.utils.fields import CANCELED
 
 
@@ -47,9 +47,13 @@ class JibitPaymentidCallbackView(TemplateView):
         if status not in ('SUCCESSFUL', 'FAILED'):
             return HttpResponseBadRequest('Invalid data')
 
-        PaymentIdRequest.objects.create(
+        bank_payment_id = BankPaymentId.objects.get(
             gateway=Gateway.objects.filter(type=Gateway.JIBIT).first(),
-            bank_account__id=request.POST['id'],
+            bank_account__id=request.POST['id']
+        )
+
+        PaymentIdRequest.objects.create(
+            bank_payment_id=bank_payment_id,
             amount=request.POST['amount'],
             bank=request.POST['bank'],
             bank_reference_number=request.POST['bankRefrenceNumber'],

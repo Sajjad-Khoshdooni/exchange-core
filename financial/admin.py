@@ -339,13 +339,13 @@ class MarketingCostAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentIdRequest)
 class PaymentIdRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'gateway', 'bank_account', 'amount', 'payment_id', 'status')
+    list_display = ('created', 'bank_payment_id', 'amount', 'payment_id', 'status')
     search_fields = ('payment_id', )
     list_filter = ('status',)
 
 
 @admin.register(BankPaymentId)
 class BankPaymentIdAdmin(admin.ModelAdmin):
-    list_display = ('created', 'bank_account', 'destination_iban', 'registry_status')
+    list_display = ('created', 'bank_account', 'gateway', 'destination_iban', 'registry_status')
     search_fields = ('destination_iban', )
     list_filter = ('registry_status',)

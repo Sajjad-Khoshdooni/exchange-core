@@ -1,4 +1,4 @@
-from django.db import models, IntegrityError
+from django.db import models
 from django.db.models import UniqueConstraint, Q
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -155,6 +155,7 @@ class BankPaymentId(models.Model):
     modified = models.DateTimeField(auto_now=True)
 
     bank_account = models.ForeignKey('financial.BankAccount', on_delete=models.PROTECT)
+    gateway = models.ForeignKey('financial.Gateway', on_delete=models.PROTECT)
 
     destination_deposit_number = models.IntegerField()
     destination_iban = models.CharField(max_length=100)
@@ -170,6 +171,9 @@ class BankPaymentId(models.Model):
     )
     user_iban = models.CharField(max_length=100)
     user_iban_list = models.TextField(null=True)
+
+    class Meta:
+        unique_together = ('gateway', 'bank_account')
 
 
 class BankCardSerializer(serializers.ModelSerializer):

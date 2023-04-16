@@ -1,18 +1,15 @@
 from decimal import Decimal
 
+from decouple import config
 from django.conf import settings
 from django.db import models
-from django.http import HttpResponse
-from django.shortcuts import redirect
 from django.utils import timezone
-from decouple import config
 
 from accounts.models import Account
 from accounts.models import Notification
 from accounts.utils import email
 from ledger.models import Trx, Asset
-from ledger.utils.fields import DONE
-from ledger.utils.fields import get_group_id_field, get_status_field
+from ledger.utils.fields import get_group_id_field
 from ledger.utils.precision import humanize_number, get_presentation_amount
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -25,8 +22,7 @@ class PaymentIdRequest(models.Model):
     modified = models.DateTimeField(auto_now=True)
     group_id = get_group_id_field()
 
-    gateway = models.ForeignKey('financial.Gateway', on_delete=models.PROTECT)
-    bank_account = models.ForeignKey('financial.BankAccount', on_delete=models.PROTECT)
+    bank_payment_id = models.ForeignKey('financial.BankPaymentId', on_delete=models.PROTECT)
 
     amount = models.PositiveIntegerField()
     bank = models.CharField(max_length=16)
