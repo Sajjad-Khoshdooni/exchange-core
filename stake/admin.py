@@ -7,7 +7,6 @@ from accounts.models import User
 from accounts.utils.admin import url_to_admin_list
 from ledger.utils.precision import get_presentation_amount
 from .models import StakeRequest, StakeRevenue, StakeOption
-# Register your models here.
 
 
 @admin.register(StakeOption)
@@ -17,6 +16,7 @@ class StakeOptionAdmin(admin.ModelAdmin):
     list_editable = ('enable', 'landing')
     readonly_fields = ('get_stake_request_count', 'get_stake_request_amount')
     list_filter = ('enable', )
+    ordering = ('-enable', '-apr')
 
     def get_stake_request_count(self, stake_option: StakeOption):
         return StakeRequest.objects.filter(

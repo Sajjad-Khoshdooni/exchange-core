@@ -127,8 +127,7 @@ def update_gateway_vaults(now: datetime, usdt_irt: Decimal):
 
     vault_data = []
 
-    for gateway in Gateway.objects.exclude(api_secret_encrypted=''):
-
+    for gateway in Gateway.objects.exclude(withdraw_api_secret_encrypted=''):
         vault, _ = Vault.objects.get_or_create(
             type=Vault.GATEWAY,
             market=Vault.SPOT,
