@@ -1,12 +1,10 @@
 import json
 
 import requests
+from decouple import config
 from django.conf import settings
 from django.core.cache import caches
-from django.db import transaction
 from rest_framework.reverse import reverse
-from decouple import config
-from decouple import config
 
 from financial.models import Gateway, BankCard, PaymentRequest, Payment, BankAccount, PaymentIdRequest, BankPaymentId
 from financial.models.gateway import GatewayFailed, logger
@@ -129,9 +127,9 @@ class JibitGateway(Gateway):
                 "merchantReferenceNumber": bank_account.id,
                 "userFullName": bank_account.user.name,
                 "userIban": bank_account.iban,
-                # "userIbans": [
-                #     "string"
-                # ],
+                "userIbans": [
+                    bank_account.iban
+                ],
                 "userMobile": bank_account.user.phone,
             },
             timeout=30
@@ -167,7 +165,7 @@ class JibitGateway(Gateway):
         token = self._get_token()
         base_url = config('PAYMENT_PROXY_HOST_URL', default='') or settings.HOST_URL
 
-        resp = requests.post(
+        resp = requests.put(
             url=self.BASE_URL + '/v1/paymentIds',
             headers={'Authorization': 'Bearer ' + token},
             params={
@@ -177,7 +175,6 @@ class JibitGateway(Gateway):
                 "userIban": bank_account.iban,
                 "userIbans": ibans,
                 "userMobile": bank_account.user.phone,
-                # "userRedirectUrl": "string"
             },
             timeout=30
         )
@@ -185,7 +182,7 @@ class JibitGateway(Gateway):
             bank_payment_id.user_iban_list = json.dumps(resp.json()['userIbans'])
             bank_payment_id.save(update_fields=['user_iban_list'])
 
-    def get_payments_id_status(self, payment_id_request: PaymentIdRequest):
+    def get_payments_id_transaction_status(self, payment_id_request: PaymentIdRequest):
         token = self._get_token()
 
         resp = requests.get(
@@ -198,7 +195,7 @@ class JibitGateway(Gateway):
             payment_id_request.status = resp.json()['status']
             payment_id_request.save(update_fields=['status'])
 
-    def get_waiting_payments_id_list(self, page_number = 0, page_size = 200):
+    def get_waiting_payments_id_transaction_list(self, page_number=0, page_size=200):
         token = self._get_token()
 
         resp = requests.get(
@@ -224,7 +221,7 @@ class JibitGateway(Gateway):
                     }
                 )
 
-    def verify_payments_id(self, payment_id_request: PaymentIdRequest):
+    def verify_payments_id_transaction(self, payment_id_request: PaymentIdRequest):
         token = self._get_token()
 
         resp = requests.get(
@@ -236,7 +233,7 @@ class JibitGateway(Gateway):
             payment_id_request.status = resp.json()['status']
             payment_id_request.save(update_fields=['status'])
 
-    def fail_payments_id(self, payment_id_request: PaymentIdRequest):
+    def fail_payments_id_transaction(self, payment_id_request: PaymentIdRequest):
         token = self._get_token()
 
         resp = requests.get(
@@ -248,7 +245,7 @@ class JibitGateway(Gateway):
             payment_id_request.status=resp.json()['status']
             payment_id_request.save(update_fields=['status'])
 
-    def get_payments_id_payed_list(self, from_date, to_date, page_number = 0, page_size = 200):
+    def get_payments_id_payed_transaction_list(self, from_date, to_date, page_number=0, page_size=200):
         token = self._get_token()
 
         resp = requests.get(
