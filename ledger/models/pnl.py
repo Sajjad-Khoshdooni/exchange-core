@@ -70,7 +70,9 @@ class PNLHistory(models.Model):
                 account__type=Account.ORDINARY,
                 asset__enable=True,
             ).exclude(balance=0).annotate(
-                wallet_market=Case(When(market=Wallet.LOAN, then=V(Wallet.MARGIN)), default='market')
+                wallet_market=Case(
+                    When(market=Wallet.LOAN, then=V(Wallet.MARGIN)),
+                    When(market=Wallet.STAKE, then=V(Wallet.SPOT)), default=F('market')),
             ).values('wallet_market', 'account', 'asset__symbol').annotate(total_balance=Sum('balance')).values(
                 'wallet_market', 'account', 'asset__symbol', 'total_balance'
             )
@@ -102,3 +104,7 @@ class PNLHistory(models.Model):
                 'account', 'market', 'base_asset'
             ).values('account', 'market', 'base_asset', 'snapshot_balance')
         }
+
+    @classmethod
+    def get_already_created_pnl_accounts(cls, date):
+        return PNLHistory.objects.filter(date=date).values_list('account_id', flat=True).distinct()

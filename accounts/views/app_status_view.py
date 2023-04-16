@@ -1,13 +1,13 @@
+from rest_framework import serializers
 from rest_framework.generics import RetrieveAPIView
-from rest_framework.serializers import ModelSerializer
 
 from accounts.models import AppStatus
 
 
-class AppStatusSerializer(ModelSerializer):
+class AppStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppStatus
-        fields = ('latest_version', 'force_update_version')
+        fields = ('latest_version', 'force_update_version', 'apk_link')
 
 
 class AppStatusView(RetrieveAPIView):

@@ -19,7 +19,7 @@ from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
-from ledger.utils.external_price import get_external_price, BUY, SELL
+from ledger.utils.external_price import get_external_price, BUY, SELL, SIDE_VERBOSE
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.otc import get_otc_spread, spread_to_multiplier
 from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent, decimal_to_str
@@ -340,17 +340,22 @@ class Order(models.Model):
             if not taker_is_system:
                 Notification.send(
                     recipient=self.wallet.account.user,
-                    title='معامله {}'.format(symbol),
-                    message=('مقدار {symbol} {amount} معامله شد.').format(amount=match_amount, symbol=symbol)
+                    title='معامله {} انجام شد'.format(symbol),
+                    message='{side} {amount} {coin}'.format(
+                        amount=match_amount,
+                        side=SIDE_VERBOSE[self.side],
+                        coin=symbol.asset.name_fa
+                    )
                 )
 
             if not maker_is_system:
                 Notification.send(
                     recipient=maker_order.wallet.account.user,
-                    title='معامله {}'.format(maker_order.symbol),
-                    message=('مقدار {symbol} {amount} معامله شد.').format(
+                    title='معامله {} انجام شد'.format(maker_order.symbol),
+                    message='{side} {amount} {coin}'.format(
                         amount=match_amount,
-                        symbol=maker_order.symbol
+                        side=SIDE_VERBOSE[maker_side],
+                        coin=symbol.asset.name_fa
                     )
                 )
 

@@ -22,6 +22,11 @@ IRT = 'IRT'
 
 BUY, SELL = 'buy', 'sell'
 
+SIDE_VERBOSE = {
+    BUY: 'خرید',
+    SELL: 'فروش'
+}
+
 DAY = 24 * 3600
 
 

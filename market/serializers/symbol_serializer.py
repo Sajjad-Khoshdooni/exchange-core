@@ -92,6 +92,7 @@ class SymbolStatsSerializer(SymbolBriefStatsSerializer):
     low = serializers.SerializerMethodField()
     volume = serializers.SerializerMethodField()
     base_volume = serializers.SerializerMethodField()
+    bookmark = serializers.SerializerMethodField()
 
     def get_change(self, symbol: PairSymbol):
         last_price, previous_price = self.get_change_value_pairs(symbol)
@@ -139,10 +140,18 @@ class SymbolStatsSerializer(SymbolBriefStatsSerializer):
         if total_amount:
             return decimal_to_str(floor_precision(total_amount))
 
+    def get_bookmark(self, pair_symbol: PairSymbol):
+        user = self.context['request'].user
+
+        if user.is_authenticated:
+            return user.get_account().bookmark_market.filter(id=pair_symbol.id).exists()
+        else:
+            return False
+
     class Meta:
         model = PairSymbol
         fields = ('name', 'asset', 'base_asset', 'enable', 'price', 'change', 'change_percent',
-                  'high', 'low', 'volume', 'base_volume')
+                  'high', 'low', 'volume', 'base_volume', 'bookmark')
 
 
 class BookMarkPairSymbolSerializer(serializers.ModelSerializer):
