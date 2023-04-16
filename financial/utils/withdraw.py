@@ -539,4 +539,4 @@ class JibitChannel(FiatWithdraw):
 
     def get_total_wallet_irt_value(self):
         wallet = self.get_wallet_data()
-        return wallet.free
+        return wallet.balance
