@@ -504,7 +504,7 @@ class JibitChannel(FiatWithdraw):
                 'destinationLastName': receiver.user.last_name,
                 'amount': amount,
                 'currency': 'TOMAN',
-                'cancellable': False,
+                'cancelable': False,
                 'description': 'برداشت کاربر'
             }],
         })
