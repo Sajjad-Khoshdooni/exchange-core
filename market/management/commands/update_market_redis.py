@@ -12,7 +12,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         proc_list = []
 
-        command = 'python market/utils/update_market_redis.py'
+        command = 'python update_market_redis.py'
         print("$ " + command)
         proc = Popen(command, shell=True, stdin=stdin,
                      stdout=stdout, stderr=stderr)

@@ -1,27 +1,32 @@
 import logging
+import os
 from time import sleep
 
 import msgpack
+from django.core.wsgi import get_wsgi_application
 from django.db.models import F
 
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "_base.settings")
+application = get_wsgi_application()
+
+from market.utils.redis import socket_server_redis
 from ledger.utils.external_price import BUY, SELL
 from market.models import Order, PairSymbol
-from market.utils.redis import socket_server_redis
 
 logger = logging.getLogger(__name__)
 
 
-def run():
+def main():
     logger.info('start market redis updater')
-
     pipeline = socket_server_redis.pipeline()
     while True:
-        open_orders = Order.open_objects.annotate(
+        all_open_orders = Order.open_objects.annotate(
             unfilled_amount=F('amount') - F('filled_amount')
         ).exclude(unfilled_amount=0).order_by('symbol', 'side').values('symbol', 'side', 'price', 'unfilled_amount')
         symbols_id_mapping = {symbol.id: symbol for symbol in PairSymbol.objects.all()}
-        for symbol_id in set(map(lambda o: o['symbol'], open_orders)):
-            open_orders = list(filter(lambda o: o['symbol'] == symbol_id, open_orders))
+        for symbol_id in set(map(lambda o: o['symbol'], all_open_orders)):
+            open_orders = list(filter(lambda o: o['symbol'] == symbol_id, all_open_orders))
             symbol = symbols_id_mapping[symbol_id]
             open_orders = Order.quantize_values(symbol, open_orders)
             symbol_name = symbols_id_mapping[symbol_id].name
@@ -36,4 +41,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    main()
