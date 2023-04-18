@@ -47,7 +47,9 @@ class StakeOption(models.Model):
         total_stake_amount = StakeRequest.objects.filter(
             stake_option=self,
             account__user=user
-        ).exclude(status=StakeRequest.CANCEL_COMPLETE).aggregate(Sum('amount'))['amount__sum'] or 0
+        ).exclude(
+            status__in=(StakeRequest.CANCEL_COMPLETE, StakeRequest.FINISHED)
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
 
         return max(min((self.user_max_amount - total_stake_amount), self.get_free_cap_amount()), 0)
 

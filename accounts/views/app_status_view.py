@@ -7,7 +7,7 @@ from accounts.models import AppStatus
 class AppStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppStatus
-        fields = ('latest_version', 'force_update_version', 'light_apk', 'pro_apk')
+        fields = ('latest_version', 'force_update_version', 'apk_link')
 
 
 class AppStatusView(RetrieveAPIView):
