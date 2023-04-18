@@ -15,6 +15,7 @@ prefix_order_size_factor = 'market_order_size_factor'
 prefix_last_trade = 'market_order_size_factor'
 
 market_redis = Redis.from_url(settings.MARKET_CACHE_LOCATION, decode_responses=True)
+socket_server_redis = Redis.from_url(settings.SOCKET_SERVER_CACHE_LOCATION, decode_responses=True)
 
 
 def set_top_prices(symbol_id, price_dict, scope=''):
@@ -77,7 +78,7 @@ def get_as_dict(symbol_id, key):
 
 
 class MarketStreamCache:
-    _client = market_redis
+    _client = socket_server_redis
 
     SET_IF_HIGHER = 'setifhigher'
     SET_IF_LOWER = 'setiflower'
@@ -90,7 +91,7 @@ class MarketStreamCache:
     }
 
     def __init__(self):
-        self.market_pipeline = market_redis.pipeline()
+        self.market_pipeline = socket_server_redis.pipeline()
 
     def set_if_lower(self, k, v):
         return self._call(self.SET_IF_LOWER, **{k: v})
@@ -160,7 +161,7 @@ class MarketStreamCache:
     def update_trades(self, trade_pairs):
         if not trade_pairs:
             return
-        # if not market_redis.exists(f'ws:market:orders:{account_id}'):
+        # if not socket_server_redis.exists(f'ws:market:orders:{account_id}'):
         #     return
         for pair in trade_pairs:
             maker_trade, taker_trade = pair
