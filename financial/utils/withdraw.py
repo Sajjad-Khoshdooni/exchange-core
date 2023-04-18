@@ -530,7 +530,7 @@ class JibitChannel(FiatWithdraw):
         channel_status = transfer['state']
 
         return Withdraw(
-            tracking_id=transfer['bankTransferID'],
+            tracking_id=transfer['bankTransferID'] or '',
             status=mapping_status.get(channel_status, self.PENDING)
         )
 
