@@ -510,12 +510,11 @@ class JibitChannel(FiatWithdraw):
         })
 
         return Withdraw(
-            tracking_id=str(request_id),
+            tracking_id='',
             status=FiatWithdrawRequest.PENDING,
-            receive_datetime=self.get_estimated_receive_time(timezone.now())
         )
 
-    def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
+    def get_withdraw_status(self, request_id: int, provider_id: str) -> Withdraw:
         data = self.collect_api('/v2/transfers?transferID={}'.format(request_id))
 
         mapping_status = {
@@ -526,8 +525,14 @@ class JibitChannel(FiatWithdraw):
             'IN_PROGRESS': self.PENDING
         }
 
-        status = data['transfers'][0]['state']
-        return mapping_status.get(status, self.PENDING)
+        transfer = data['transfers'][0]
+
+        channel_status = transfer['state']
+
+        return Withdraw(
+            tracking_id=transfer['bankTransferID'],
+            status=mapping_status.get(channel_status, self.PENDING)
+        )
 
     def get_estimated_receive_time(self, created: datetime):
         request_date = created.astimezone()
