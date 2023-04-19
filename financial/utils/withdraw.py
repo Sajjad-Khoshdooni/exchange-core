@@ -418,6 +418,8 @@ class ZarinpalChannel(FiatWithdraw):
 
 class JibitChannel(FiatWithdraw):
     BASE_URL = ' https://napi.jibit.ir/trf'
+    INSTANT_BANKS = ['MELLI', 'RESALAT', 'KESHAVARZI', 'SADERAT', 'EGHTESAD_NOVIN', 'SHAHR', 'SEPAH', 'PASARGAD',
+                     'IRANZAMIN', 'AYANDEH', 'SAMAN', 'TEJARAT', 'PARSIAN']
 
     def _get_token(self):
         token_cache = caches['token']
@@ -494,6 +496,12 @@ class JibitChannel(FiatWithdraw):
         )
 
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
+
+        if receiver.bank in self.INSTANT_BANKS:
+            transfer_mode = 'NORMAL'
+        else:
+            transfer_mode = 'ACH'
+
         self.collect_api('/v2/transfers', method='POST', data={
             'submissionMode': 'TRANSFER',
             'batchID': 'wr-%s' % request_id,
@@ -505,7 +513,7 @@ class JibitChannel(FiatWithdraw):
                 'amount': amount,
                 'currency': 'TOMAN',
                 'cancellable': False,
-                'transferMode': 'NORMAL',
+                'transferMode': transfer_mode,
                 'description': 'برداشت کاربر'
             }],
         })
