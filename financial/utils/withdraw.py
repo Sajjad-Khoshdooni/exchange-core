@@ -446,7 +446,7 @@ class JibitChannel(FiatWithdraw):
         url = 'https://napi.jibit.ir/trf' + path
         request_kwargs = {
             'url': url,
-            # 'timeout': timeout,
+            'timeout': timeout,
             'headers': {'Authorization': 'Bearer ' + self._get_token()},
         }
 
@@ -463,9 +463,10 @@ class JibitChannel(FiatWithdraw):
                 'data': data,
             })
             raise TimeoutError
+
         resp_data = resp.json()
 
-        if self.verbose:
+        if self.verbose or not resp.ok:
             print('status', resp.status_code)
             print('data', resp_data)
 
