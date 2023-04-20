@@ -419,7 +419,7 @@ class ZarinpalChannel(FiatWithdraw):
 class JibitChannel(FiatWithdraw):
     BASE_URL = ' https://napi.jibit.ir/trf'
     INSTANT_BANKS = ['MELLI', 'RESALAT', 'KESHAVARZI', 'SADERAT', 'EGHTESAD_NOVIN', 'SHAHR', 'SEPAH', 'PASARGAD',
-                     'IRANZAMIN', 'AYANDEH', 'SAMAN', 'TEJARAT', 'PARSIAN']
+                     'AYANDEH', 'SAMAN', 'TEJARAT', 'PARSIAN']
 
     def _get_token(self):
         token_cache = caches['token']
