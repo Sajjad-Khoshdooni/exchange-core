@@ -71,7 +71,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
     ordering = ('-created', )
     readonly_fields = (
         'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount', 'get_risks',
-        'get_withdraw_request_user', 'gateway', 'get_withdraw_request_receive_time', 'get_user'
+        'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user'
     )
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
