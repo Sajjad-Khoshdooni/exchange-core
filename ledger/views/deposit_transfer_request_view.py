@@ -1,6 +1,7 @@
 import logging
 from decimal import Decimal
 
+from django.contrib.auth.mixins import UserPassesTestMixin
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -161,6 +162,9 @@ class DepositSerializer(serializers.ModelSerializer):
             return transfer
 
 
-class DepositTransferUpdateView(CreateAPIView):
+class DepositTransferUpdateView(CreateAPIView, UserPassesTestMixin):
     authentication_classes = [CustomTokenAuthentication]
     serializer_class = DepositSerializer
+
+    def test_func(self):
+        return self.request.user.has_perm('ledger.add_transfer') and self.request.user.has_perm('ledger.change_transfer')

@@ -1,5 +1,6 @@
 import logging
 
+from django.contrib.auth.mixins import UserPassesTestMixin
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -70,6 +71,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
         return transfer
 
 
-class WithdrawTransferUpdateView(CreateAPIView):
+class WithdrawTransferUpdateView(CreateAPIView, UserPassesTestMixin):
     authentication_classes = [CustomTokenAuthentication]
     serializer_class = WithdrawSerializer
+
+    def test_func(self):
+        return self.request.user.has_perm('ledger.change_transfer')
