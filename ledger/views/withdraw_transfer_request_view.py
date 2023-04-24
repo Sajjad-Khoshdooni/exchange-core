@@ -1,5 +1,7 @@
 import logging
 
+from django.conf import settings
+from django.contrib.auth.mixins import UserPassesTestMixin
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -7,8 +9,8 @@ from rest_framework.generics import get_object_or_404, CreateAPIView
 
 from accounts.authentication import CustomTokenAuthentication
 from ledger.models.transfer import Transfer
+from ledger.utils.ip_check import get_ip_address
 from ledger.utils.wallet_pipeline import WalletPipeline
-
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +72,13 @@ class WithdrawSerializer(serializers.ModelSerializer):
         return transfer
 
 
-class WithdrawTransferUpdateView(CreateAPIView):
+class WithdrawTransferUpdateView(CreateAPIView, UserPassesTestMixin):
     authentication_classes = [CustomTokenAuthentication]
     serializer_class = WithdrawSerializer
+
+    def test_func(self):
+        permission_check = self.request.user.has_perm('ledger.change_transfer')
+        ip_check = get_ip_address(self.request) in settings.BLOCKLINK_IP
+
+        return permission_check and ip_check
+
