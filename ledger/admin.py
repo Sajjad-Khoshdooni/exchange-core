@@ -334,7 +334,9 @@ class TransferAdmin(AdvancedAdmin):
     default_edit_condition = M.superuser
 
     fields_edit_conditions = {
-        'comment': True
+        'comment': True,
+        'status': True,
+        'trx_hash': True,
     }
 
     list_display = (
