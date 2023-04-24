@@ -1,6 +1,6 @@
 import logging
 
-from decouple import config, Csv
+from django.conf import settings
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.utils import timezone
 from rest_framework import serializers
@@ -11,7 +11,6 @@ from accounts.authentication import CustomTokenAuthentication
 from ledger.models.transfer import Transfer
 from ledger.utils.ip_check import get_ip_address
 from ledger.utils.wallet_pipeline import WalletPipeline
-
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +78,7 @@ class WithdrawTransferUpdateView(CreateAPIView, UserPassesTestMixin):
 
     def test_func(self):
         permission_check = self.request.user.has_perm('ledger.change_transfer')
-        ip_check = get_ip_address(self.request) in config('BLOCKLINK_IP', cast=Csv(), default='')
+        ip_check = get_ip_address(self.request) in settings.BLOCKLINK_IP
 
         return permission_check and ip_check
 

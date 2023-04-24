@@ -23,6 +23,8 @@ BLOCKLINK_BASE_URL = config('BLOCKLINK_BASE_URL', default='https://blocklink.raa
 DEBUG_OR_TESTING = DEBUG or TESTING
 DEBUG_OR_TESTING_OR_STAGING = DEBUG or TESTING or STAGING
 
+BLOCKLINK_IP = config('BLOCKLINK_IP', cast=Csv(), default='')
+
 HOST_URL = config('HOST_URL', default='https://api.raastin.com')
 PANEL_URL = config('PANEL_URL', default='https://raastin.com')
 

@@ -1,7 +1,7 @@
 import logging
 from decimal import Decimal
 
-from decouple import Csv, config
+from django.conf import settings
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.utils import timezone
 from rest_framework import serializers
@@ -169,7 +169,8 @@ class DepositTransferUpdateView(CreateAPIView, UserPassesTestMixin):
     serializer_class = DepositSerializer
 
     def test_func(self):
-        permission_check = self.request.user.has_perm('ledger.add_transfer') and self.request.user.has_perm('ledger.change_transfer')
-        ip_check = get_ip_address(self.request) in config('BLOCKLINK_IP', cast=Csv(), default='')
+        permission_check = self.request.user.has_perm('ledger.add_transfer') and\
+                           self.request.user.has_perm('ledger.change_transfer')
+        ip_check = get_ip_address(self.request) in settings.BLOCKLINK_IP
 
         return permission_check and ip_check
