@@ -1,9 +1,9 @@
-from django.db.models import Sum
+from django.db.models import Sum, Max
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView
 
-from ledger.models.asset import AssetSerializerMini
+from ledger.models.asset import AssetSerializerMini, Asset
 from ledger.utils.precision import get_presentation_amount
 from stake.models import StakeOption, StakeRequest
 
@@ -71,6 +71,24 @@ class StakeOptionSerializer(serializers.ModelSerializer):
                   'total_cap', 'filled_cap_percent', 'landing', 'precision', 'fee')
 
 
+class StakeOptionGroupedSerializer(serializers.Serializer):
+    def update(self, instance, validated_data):
+        pass
+
+    def create(self, validated_data):
+        pass
+
+    asset = serializers.CharField(source='name')
+    variants = serializers.SerializerMethodField()
+
+    def get_variants(self, asset: Asset):
+        serialized_options = [
+            StakeOptionSerializer(instance=option, context=self.context).data
+            for option in asset.stakeoption_set.order_by('-apr')
+        ]
+        return serialized_options
+
+
 class StakeOptionAPIView(ListAPIView):
     permission_classes = []
 
@@ -91,3 +109,21 @@ class StakeOptionAPIView(ListAPIView):
         ).values('stake_option').annotate(sum=Sum('amount')).values_list('stake_option', 'sum'))
 
         return ctx
+
+
+class StakeOptionGroupedAPIView(StakeOptionAPIView):
+    permission_classes = []
+
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = []
+
+    serializer_class = StakeOptionGroupedSerializer
+
+    def get_queryset(self):
+        return sorted(
+            Asset.objects.filter(
+                enable=True,
+                stakeoption__enable=True
+            ).prefetch_related('stakeoption_set').order_by('id', '-stakeoption__apr').distinct('id'),
+            key=lambda asset: -asset.stakeoption_set.aggregate(max_apr=Max('apr'))['max_apr']
+        )
