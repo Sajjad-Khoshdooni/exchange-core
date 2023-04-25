@@ -49,4 +49,4 @@ class CoinPriceContent(models.Model):
         return str(self.asset)
 
     def get_html(self):
-        return self.content.replace('\r\n', '').replace('<div', '<p')
+        return self.content.replace('\r\n', '')

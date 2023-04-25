@@ -1,6 +1,8 @@
 import logging
 from decimal import Decimal
 
+from django.conf import settings
+from django.contrib.auth.mixins import UserPassesTestMixin
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -11,6 +13,7 @@ from ledger.models import Network, Asset, DepositAddress, AddressKey, NetworkAss
 from ledger.models.transfer import Transfer
 from ledger.requester.architecture_requester import request_architecture
 from ledger.utils.external_price import get_external_price, SELL
+from ledger.utils.ip_check import get_ip_address
 from ledger.utils.precision import zero_by_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -161,6 +164,13 @@ class DepositSerializer(serializers.ModelSerializer):
             return transfer
 
 
-class DepositTransferUpdateView(CreateAPIView):
+class DepositTransferUpdateView(CreateAPIView, UserPassesTestMixin):
     authentication_classes = [CustomTokenAuthentication]
     serializer_class = DepositSerializer
+
+    def test_func(self):
+        permission_check = self.request.user.has_perm('ledger.add_transfer') and\
+                           self.request.user.has_perm('ledger.change_transfer')
+        ip_check = get_ip_address(self.request) in settings.BLOCKLINK_IP
+
+        return permission_check and ip_check
