@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.db import models
 from django.db.models import Sum
+from django.utils import timezone
 
 from accounts.models import Account
 from accounts.tasks import send_message_by_kavenegar
@@ -35,6 +36,10 @@ class StakeRequest(models.Model):
     account = models.ForeignKey(Account, on_delete=models.CASCADE)
 
     created = models.DateTimeField(auto_now_add=True)
+    start_at = models.DateTimeField(null=True, blank=True)
+    cancel_request_at = models.DateTimeField(null=True, blank=True)
+    cancel_pending_at = models.DateTimeField(null=True, blank=True)
+    end_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return str(self.stake_option) + ' ' + str(self.account_id)
@@ -71,6 +76,16 @@ class StakeRequest(models.Model):
         ]
 
         assert (old_status, new_status) in valid_change_status, 'invalid change_status'
+
+        updating_datetime_field_mapping = {
+            self.PENDING: 'start_at',
+            self.CANCEL_PROCESS: 'cancel_request_at',
+            self.CANCEL_PENDING: 'cancel_pending_at',
+            self.CANCEL_COMPLETE: 'end_at',
+            self.DONE: 'end_at',
+            self.FINISHED: 'end_at'
+        }
+        setattr(self, updating_datetime_field_mapping[new_status], timezone.now())
 
         if new_status == self.CANCEL_COMPLETE and \
                 old_status in [self.PROCESS, self.CANCEL_PROCESS, self.CANCEL_PENDING]:
