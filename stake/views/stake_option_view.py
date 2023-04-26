@@ -71,6 +71,13 @@ class StakeOptionSerializer(serializers.ModelSerializer):
                   'total_cap', 'filled_cap_percent', 'landing', 'precision', 'fee')
 
 
+class StakeOptionSerializerMini(StakeOptionSerializer):
+    class Meta:
+        model = StakeOption
+        fields = ('id', 'apr', 'enable', 'user_max_amount', 'user_min_amount', 'user_available_amount',
+                  'total_cap', 'filled_cap_percent', 'landing', 'precision', 'fee')
+
+
 class StakeOptionGroupedSerializer(serializers.Serializer):
     def update(self, instance, validated_data):
         pass
@@ -78,15 +85,27 @@ class StakeOptionGroupedSerializer(serializers.Serializer):
     def create(self, validated_data):
         pass
 
-    asset = serializers.CharField(source='name')
+    asset = serializers.SerializerMethodField()
+    min_apr = serializers.SerializerMethodField()
+    max_apr = serializers.SerializerMethodField()
     variants = serializers.SerializerMethodField()
+
+    def get_asset(self, asset: Asset):
+        return AssetSerializerMini(instance=asset).data
 
     def get_variants(self, asset: Asset):
         serialized_options = [
-            StakeOptionSerializer(instance=option, context=self.context).data
-            for option in asset.stakeoption_set.order_by('-apr')
+            StakeOptionSerializerMini(instance=option, context=self.context).data
+            for option in asset.stakeoption_set.filter(enable=True).order_by('-apr')
         ]
         return serialized_options
+
+    def get_min_apr(self, asset: Asset):
+        return get_presentation_amount(asset.stakeoption_set.filter(enable=True).order_by('apr')[0].apr)
+
+    def get_max_apr(self, asset: Asset):
+        if asset.stakeoption_set.filter(enable=True).count() > 1:
+            return get_presentation_amount(asset.stakeoption_set.filter(enable=True).order_by('-apr')[0].apr)
 
 
 class StakeOptionAPIView(ListAPIView):
