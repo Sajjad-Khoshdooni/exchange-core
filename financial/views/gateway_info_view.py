@@ -6,7 +6,7 @@ from financial.utils.ach import next_ach_clear_time
 
 
 class GatewaySerializer(serializers.ModelSerializer):
-    next_ach_time = serializers.SerializerMethodField
+    next_ach_time = serializers.SerializerMethodField()
 
     def get_next_ach_time(self):
         return next_ach_clear_time()
