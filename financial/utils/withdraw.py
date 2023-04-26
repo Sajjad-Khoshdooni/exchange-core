@@ -10,6 +10,7 @@ from django.core.cache import caches
 from django.utils import timezone
 
 from financial.models import BankAccount, FiatWithdrawRequest, Gateway, Payment, PaymentRequest
+from financial.utils.ach import next_ach_clear_time
 from financial.utils.withdraw_limit import is_holiday, time_in_range
 
 logger = logging.getLogger(__name__)
@@ -522,6 +523,7 @@ class JibitChannel(FiatWithdraw):
         return Withdraw(
             tracking_id='',
             status=FiatWithdrawRequest.PENDING,
+            receive_datetime=next_ach_clear_time()
         )
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> Withdraw:
@@ -538,10 +540,11 @@ class JibitChannel(FiatWithdraw):
         transfer = data['transfers'][0]
 
         channel_status = transfer['state']
+        tracking_id = transfer['bankTransferID'] or ''
 
         return Withdraw(
-            tracking_id=transfer['bankTransferID'] or '',
-            status=mapping_status.get(channel_status, self.PENDING)
+            tracking_id=tracking_id,
+            status=mapping_status.get(channel_status, self.PENDING),
         )
 
     def get_estimated_receive_time(self, created: datetime):

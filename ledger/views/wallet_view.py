@@ -14,7 +14,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.views.jwt_views import DelegatedAccountMixin
-from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCTrade, Trx
+from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCTrade, Trx, BalanceLock
 from ledger.models.asset import Asset
 from ledger.utils.external_price import get_external_price, get_external_usdt_prices, BUY, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
@@ -79,15 +79,10 @@ class AssetListSerializer(serializers.ModelSerializer):
         return asset.get_presentation_amount(wallet.balance + self.get_debt(asset))
 
     def get_balance_irt(self, asset: Asset):
-        wallet = self.get_wallet(asset)
+        balance = Decimal(self.get_balance(asset))
 
-        if not wallet:
-            return '0'
-
-        balance = wallet.balance + self.get_debt(asset)
-
-        if balance == 0:
-            return '0'
+        if not balance:
+            return 0
 
         price = self.get_ext_price_irt(asset.symbol)
         return asset.get_presentation_price_irt(balance * price)
@@ -109,12 +104,10 @@ class AssetListSerializer(serializers.ModelSerializer):
         return price
 
     def get_balance_usdt(self, asset: Asset):
-        wallet = self.get_wallet(asset)
+        balance = Decimal(self.get_balance(asset))
 
-        if not wallet:
-            return '0'
-
-        balance = wallet.balance + self.get_debt(asset)
+        if not balance:
+            return 0
 
         price = self.get_ext_price_usdt(asset.symbol)
         return asset.get_presentation_price_usdt(balance * price)
