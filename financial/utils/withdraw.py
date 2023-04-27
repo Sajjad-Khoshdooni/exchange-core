@@ -9,6 +9,7 @@ import requests
 from django.core.cache import caches
 from django.utils import timezone
 
+from accounts.verifiers.jibit import Response
 from financial.models import BankAccount, FiatWithdrawRequest, Gateway, Payment, PaymentRequest
 from financial.utils.ach import next_ach_clear_time
 from financial.utils.withdraw_limit import is_holiday, time_in_range
@@ -443,7 +444,7 @@ class JibitChannel(FiatWithdraw):
 
             return token
 
-    def collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> dict:
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> Response:
         url = 'https://napi.jibit.ir/trf' + path
         request_kwargs = {
             'url': url,
@@ -471,17 +472,14 @@ class JibitChannel(FiatWithdraw):
             print('status', resp.status_code)
             print('data', resp_data)
 
-        if not resp.ok:
-            raise ServerError
-
-        return resp_data
+        return Response(data=resp_data, success=resp.ok, status_code=resp.status_code)
 
     def get_wallet_data(self, wallet_id: int = None) -> Wallet:
-        data = self.collect_api('/v2/balances')
+        resp = self.collect_api('/v2/balances')
         balance = 0
         free = 0
 
-        for d in data['balances']:
+        for d in resp.get_success_data()['balances']:
             balance_type = d['balanceType']
 
             if balance_type == 'STL':
@@ -504,7 +502,7 @@ class JibitChannel(FiatWithdraw):
         else:
             transfer_mode = 'ACH'
 
-        self.collect_api('/v2/transfers', method='POST', data={
+        resp = self.collect_api('/v2/transfers', method='POST', data={
             'submissionMode': 'TRANSFER',
             'batchID': 'wr-%s' % request_id,
             'transfers': [{
@@ -520,6 +518,16 @@ class JibitChannel(FiatWithdraw):
             }],
         })
 
+        if not resp.success:
+            if resp.data['errors']['code'] == 'transfer.already_exists':
+                return Withdraw(
+                    tracking_id='',
+                    status=FiatWithdrawRequest.PENDING,
+                )
+
+            else:
+                raise ServerError
+
         return Withdraw(
             tracking_id='',
             status=FiatWithdrawRequest.PENDING,
@@ -527,7 +535,8 @@ class JibitChannel(FiatWithdraw):
         )
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> Withdraw:
-        data = self.collect_api('/v2/transfers?transferID={}'.format(request_id))
+        resp = self.collect_api('/v2/transfers?transferID={}'.format(request_id))
+        data = resp.get_success_data()
 
         mapping_status = {
             'CANCELLED': self.CANCELED,
