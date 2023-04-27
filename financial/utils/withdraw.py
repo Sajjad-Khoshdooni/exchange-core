@@ -519,7 +519,7 @@ class JibitChannel(FiatWithdraw):
         })
 
         if not resp.success:
-            if resp.data['errors']['code'] == 'transfer.already_exists':
+            if resp.data['errors'][0]['code'] == 'transfer.already_exists':
                 return Withdraw(
                     tracking_id='',
                     status=FiatWithdrawRequest.PENDING,
