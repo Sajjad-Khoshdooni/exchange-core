@@ -1,3 +1,4 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 
 from rest_framework.generics import ListAPIView
@@ -21,6 +22,9 @@ class StakeRevenueSerializer(serializers.ModelSerializer):
 
 
 class StakeRevenueAPIView(ListAPIView):
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['stake_request']
+
     serializer_class = StakeRevenueSerializer
 
     def get_queryset(self):
