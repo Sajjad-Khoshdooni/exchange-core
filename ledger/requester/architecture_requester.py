@@ -6,7 +6,7 @@ from ledger.utils.cache import cache_for
 
 
 @cache_for(3600)
-def request_architecture(network):
+def get_network_architecture(network: str):
     data = {
         'network': network,
     }

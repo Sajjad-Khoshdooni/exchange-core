@@ -11,7 +11,7 @@ from rest_framework.generics import CreateAPIView, get_object_or_404
 from accounts.authentication import CustomTokenAuthentication
 from ledger.models import Network, Asset, DepositAddress, AddressKey, NetworkAsset
 from ledger.models.transfer import Transfer
-from ledger.requester.architecture_requester import request_architecture
+from ledger.requester.architecture_requester import get_network_architecture
 from ledger.utils.external_price import get_external_price, SELL
 from ledger.utils.ip_check import get_ip_address
 from ledger.utils.precision import zero_by_precision
@@ -43,7 +43,7 @@ class DepositSerializer(serializers.ModelSerializer):
             address_key = get_object_or_404(
                 AddressKey,
                 address=receiver_address,
-                architecture=request_architecture(network)
+                architecture=get_network_architecture(network)
             )
             deposit_address, _ = DepositAddress.objects.get_or_create(
                 address=receiver_address,
