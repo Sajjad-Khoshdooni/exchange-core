@@ -1,6 +1,5 @@
 from django.db import models
 
-from accounting.models import Account
 from ledger.models import Network
 from ledger.requester.address_requester import AddressRequester
 from ledger.models.address_key import AddressKey
@@ -17,7 +16,7 @@ class DepositAddress(models.Model):
         return '%s (network= %s)' % (self.address, self.network)
 
     @classmethod
-    def get_deposit_address(cls, account: Account, network: Network):
+    def get_deposit_address(cls, account, network: Network):
         architecture = get_network_architecture(network.symbol)
 
         deposit_address = DepositAddress.objects.filter(address_key__account=account, network=network).first()
