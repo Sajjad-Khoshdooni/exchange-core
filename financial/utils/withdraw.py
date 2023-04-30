@@ -9,7 +9,9 @@ import requests
 from django.core.cache import caches
 from django.utils import timezone
 
+from accounts.verifiers.jibit import Response
 from financial.models import BankAccount, FiatWithdrawRequest, Gateway, Payment, PaymentRequest
+from financial.utils.ach import next_ach_clear_time
 from financial.utils.withdraw_limit import is_holiday, time_in_range
 
 logger = logging.getLogger(__name__)
@@ -43,18 +45,19 @@ class FiatWithdraw:
 
     PROCESSING, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
 
-    def __init__(self, gateway: Gateway):
+    def __init__(self, gateway: Gateway, verbose: bool = False):
         self.gateway = gateway
+        self.verbose = verbose
 
     @classmethod
-    def get_withdraw_channel(cls, gateway: Gateway) -> 'FiatWithdraw':
+    def get_withdraw_channel(cls, gateway: Gateway, verbose: bool = False) -> 'FiatWithdraw':
         mapping = {
             Gateway.PAYIR: PayirChannel,
             Gateway.ZIBAL: ZibalChannel,
             Gateway.ZARINPAL: ZarinpalChannel,
             Gateway.JIBIT: JibitChannel
         }
-        return mapping[gateway.type](gateway)
+        return mapping[gateway.type](gateway, verbose)
 
     def get_wallet_data(self, wallet_id: int):
         raise NotImplementedError
@@ -75,19 +78,19 @@ class FiatWithdraw:
         pass
 
     def is_active(self):
-        return bool(self.gateway.api_secret_encrypted)
+        return bool(self.gateway.withdraw_api_secret_encrypted)
 
 
 class PayirChannel(FiatWithdraw):
 
-    def collect_api(self, path: str, method: str = 'GET', data: dict = None, verbose: bool = True, timeout: float = 30) -> dict:
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> dict:
 
         url = 'https://pay.ir' + path
 
         request_kwargs = {
             'url': url,
             'timeout': timeout,
-            'headers': {'Authorization': self.gateway.api_secret},
+            'headers': {'Authorization': self.gateway.withdraw_api_secret},
         }
 
         try:
@@ -106,7 +109,7 @@ class PayirChannel(FiatWithdraw):
 
         resp_data = resp.json()
 
-        if verbose:
+        if self.verbose:
             print('status', resp.status_code)
             print('data', resp_data)
 
@@ -219,7 +222,7 @@ class ZibalChannel(FiatWithdraw):
         request_kwargs = {
             'url': url,
             'timeout': timeout,
-            'headers': {'Authorization': self.gateway.api_secret},
+            'headers': {'Authorization': self.gateway.withdraw_api_secret},
         }
 
         try:
@@ -417,16 +420,18 @@ class ZarinpalChannel(FiatWithdraw):
 
 class JibitChannel(FiatWithdraw):
     BASE_URL = ' https://napi.jibit.ir/trf'
+    INSTANT_BANKS = ['MELLI', 'RESALAT', 'KESHAVARZI', 'SADERAT', 'EGHTESAD_NOVIN', 'SHAHR', 'SEPAH',
+                     'AYANDEH', 'SAMAN', 'TEJARAT', 'PARSIAN']
 
     def _get_token(self):
         token_cache = caches['token']
-        JIBIT_GATEWAY_TRANSFER_TOKEN_KEY = 'jibit_gateway_transfer_token'
+        token_cache_key = 'jibit_gateway_transfer_token'
 
         resp = requests.post(
             url=self.BASE_URL + '/v2/tokens/generate',
             json={
-                'apiKey': self.gateway.api_key,
-                'secretKey': self.gateway.api_secret,
+                'apiKey': self.gateway.withdraw_api_key,
+                'secretKey': self.gateway.withdraw_api_secret,
             },
             timeout=30,
         )
@@ -435,11 +440,11 @@ class JibitChannel(FiatWithdraw):
             resp_data = resp.json()
             token = resp_data['accessToken']
             expire = 23 * 3600
-            token_cache.set(JIBIT_GATEWAY_TRANSFER_TOKEN_KEY, token, expire)
+            token_cache.set(token_cache_key, token, expire)
 
             return token
 
-    def collect_api(self, path: str, method: str = 'GET', data: dict = None, verbose: bool = True, timeout: float = 30) ->dict:
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> Response:
         url = 'https://napi.jibit.ir/trf' + path
         request_kwargs = {
             'url': url,
@@ -460,46 +465,78 @@ class JibitChannel(FiatWithdraw):
                 'data': data,
             })
             raise TimeoutError
+
         resp_data = resp.json()
 
-        if verbose:
+        if self.verbose or not resp.ok:
             print('status', resp.status_code)
             print('data', resp_data)
 
-        if not resp.ok or not resp_data['success']:
-            raise ServerError
+        return Response(data=resp_data, success=resp.ok, status_code=resp.status_code)
 
-        return resp_data['data']
+    def get_wallet_data(self, wallet_id: int = None) -> Wallet:
+        resp = self.collect_api('/v2/balances')
+        balance = 0
+        free = 0
 
-    def gat_wallet_data(self, wallet_id: int) -> Wallet:
-        data = self.collect_api('/v2/balances')
+        for d in resp.get_success_data()['balances']:
+            balance_type = d['balanceType']
+
+            if balance_type == 'STL':
+                free = d['amount']
+
+            if balance_type in ('STL', 'WLT'):
+                balance += d['amount']
+
         return Wallet(
-            id=wallet_id,
+            id=0,
             name='main',
-            balance=data['balance'] // 10,
-            free=data['settleableBalance'] // 10
+            balance=balance // 10,
+            free=free // 10
         )
 
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
-        self.collect_api('/v2/transfers', method='post', data={
+
+        if receiver.bank in self.INSTANT_BANKS:
+            transfer_mode = 'NORMAL'
+        else:
+            transfer_mode = 'ACH'
+
+        resp = self.collect_api('/v2/transfers', method='POST', data={
             'submissionMode': 'TRANSFER',
-            'transfer': [{
+            'batchID': 'wr-%s' % request_id,
+            'transfers': [{
                 'transferID': str(request_id),
-                'destination': receiver.iban[2:],
-                'destinationLastName': receiver.user.get_full_name(),
+                'destination': receiver.iban,
+                'destinationFirstName': receiver.user.first_name,
+                'destinationLastName': receiver.user.last_name,
                 'amount': amount,
                 'currency': 'TOMAN',
+                'cancellable': False,
+                'transferMode': transfer_mode,
+                'description': 'برداشت کاربر'
             }],
         })
 
+        if not resp.success:
+            if resp.data['errors'][0]['code'] == 'transfer.already_exists':
+                return Withdraw(
+                    tracking_id='',
+                    status=FiatWithdrawRequest.PENDING,
+                )
+
+            else:
+                raise ServerError
+
         return Withdraw(
-            tracking_id=str(request_id),
+            tracking_id='',
             status=FiatWithdrawRequest.PENDING,
-            receive_datetime=self.get_estimated_receive_time(timezone.now())
+            receive_datetime=next_ach_clear_time()
         )
 
-    def get_withdraw_status(self, request_id: int, provider_id: str) -> str:
-        data = self.collect_api('/v2/transfers?transferID={}'.format(request_id))
+    def get_withdraw_status(self, request_id: int, provider_id: str) -> Withdraw:
+        resp = self.collect_api('/v2/transfers?transferID={}'.format(request_id))
+        data = resp.get_success_data()
 
         mapping_status = {
             'CANCELLED': self.CANCELED,
@@ -509,8 +546,15 @@ class JibitChannel(FiatWithdraw):
             'IN_PROGRESS': self.PENDING
         }
 
-        status = data['transfers'][0]['state']
-        return mapping_status.get(status, self.PENDING)
+        transfer = data['transfers'][0]
+
+        channel_status = transfer['state']
+        tracking_id = transfer['bankTransferID'] or ''
+
+        return Withdraw(
+            tracking_id=tracking_id,
+            status=mapping_status.get(channel_status, self.PENDING),
+        )
 
     def get_estimated_receive_time(self, created: datetime):
         request_date = created.astimezone()
@@ -521,13 +565,5 @@ class JibitChannel(FiatWithdraw):
         return receive_time
 
     def get_total_wallet_irt_value(self):
-        resp = self.collect_api(
-            path='/v1/wallet/list',
-            timeout=5
-        )
-
-        total_wallet_irt_value = 0
-        for wallet in resp:
-            total_wallet_irt_value += Decimal(wallet['balance']) + Decimal(wallet.get('pendingPFAmount', 0))
-
-        return total_wallet_irt_value // 10
+        wallet = self.get_wallet_data()
+        return wallet.balance

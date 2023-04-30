@@ -1,9 +1,8 @@
 import requests
+from decouple import config
 from django.conf import settings
 from django.core.cache import caches
 from rest_framework.reverse import reverse
-from decouple import config
-from decouple import config
 
 from financial.models import Gateway, BankCard, PaymentRequest, Payment
 from financial.models.gateway import GatewayFailed, logger
@@ -26,8 +25,8 @@ class JibitGateway(Gateway):
         resp = requests.post(
             url=self.BASE_URL + '/v3/tokens',
             json={
-                'apiKey': config('JIBIT_PAYMENT_API_KEY'),
-                'secretKey': config('JIBIT_PAYMENT_SECRET_KEY'),
+                'apiKey': self.deposit_api_key,
+                'secretKey': self.deposit_api_secret,
             },
             timeout=30,
         )

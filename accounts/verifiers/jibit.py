@@ -25,6 +25,12 @@ class Response:
     success: bool = True
     status_code: int = 200
 
+    def get_success_data(self):
+        if not self.success:
+            raise ServerError
+
+        return self.data
+
 
 class JibitRequester:
     BASE_URL = 'https://napi.jibit.cloud/ide'

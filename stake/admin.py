@@ -5,9 +5,9 @@ from django.utils.safestring import mark_safe
 
 from accounts.models import User
 from accounts.utils.admin import url_to_admin_list
+from ledger.models import Trx
 from ledger.utils.precision import get_presentation_amount
 from .models import StakeRequest, StakeRevenue, StakeOption
-# Register your models here.
 
 
 @admin.register(StakeOption)
@@ -17,6 +17,7 @@ class StakeOptionAdmin(admin.ModelAdmin):
     list_editable = ('enable', 'landing')
     readonly_fields = ('get_stake_request_count', 'get_stake_request_amount')
     list_filter = ('enable', )
+    ordering = ('-enable', '-apr')
 
     def get_stake_request_count(self, stake_option: StakeOption):
         return StakeRequest.objects.filter(
@@ -50,16 +51,25 @@ class StakeStatusFilter(SimpleListFilter):
 
 @admin.register(StakeRequest)
 class StakeRequestAdmin(admin.ModelAdmin):
-    list_display = ['get_stake_option_asset', 'get_amount', 'get_user','status']
+    list_display = ['get_stake_option_asset', 'get_stake_option_apr', 'created', 'get_amount', 'get_user', 'status',
+                    'start_at', 'cancel_request_at', 'cancel_pending_at', 'end_at', 'get_stake_revenue']
     actions = ('stake_request_processing', 'stake_request_done',
                'stake_request_cancel_processing', 'stake_request_cancel_done',)
     readonly_fields = ('get_stake_option_asset', 'account', 'status', 'stake_option', 'get_amount', 'amount', 'get_user')
-
     list_filter = ('status', StakeStatusFilter)
+    search_fields = ('account__user__phone', 'stake_option__asset__symbol')
 
     def get_stake_option_asset(self, stake_request: StakeRequest):
         return stake_request.stake_option.asset
     get_stake_option_asset.short_description = 'asset'
+
+    def get_stake_revenue(self, stake_request: StakeRequest):
+        return StakeRevenue.objects.filter(stake_request=stake_request).aggregate(Sum('revenue'))['revenue__sum']
+    get_stake_revenue.short_description = 'Total Revenue'
+
+    def get_stake_option_apr(self, stake_request: StakeRequest):
+        return stake_request.stake_option.apr
+    get_stake_option_apr.short_description = 'Plan APR'
 
     def get_amount(self, stake_request: StakeRequest):
         return get_presentation_amount(stake_request.amount)

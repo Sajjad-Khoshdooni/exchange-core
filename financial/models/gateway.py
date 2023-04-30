@@ -31,7 +31,7 @@ class Gateway(models.Model):
         max_length=8,
         choices=((ZARINPAL, ZARINPAL), (PAYIR, PAYIR), (ZIBAL, ZIBAL), (JIBIT, JIBIT))
     )
-    merchant_id = models.CharField(max_length=128)
+    merchant_id = models.CharField(max_length=128, blank=True)
 
     withdraw_enable = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
@@ -43,8 +43,11 @@ class Gateway(models.Model):
     max_auto_withdraw_amount = models.PositiveIntegerField(null=True, blank=True)
     expected_withdraw_datetime = models.DateTimeField(null=True, blank=True)
 
-    api_key = models.CharField(max_length=1024, blank=True)
-    api_secret_encrypted = models.CharField(max_length=4096, blank=True)
+    withdraw_api_key = models.CharField(max_length=1024, blank=True)
+    withdraw_api_secret_encrypted = models.CharField(max_length=4096, blank=True)
+
+    deposit_api_key = models.CharField(max_length=1024, blank=True)
+    deposit_api_secret_encrypted = models.CharField(max_length=4096, blank=True)
 
     wallet_id = models.PositiveIntegerField(null=True, blank=True)
 
@@ -53,8 +56,12 @@ class Gateway(models.Model):
             raise ValidationError('At least one gateway should be active')
 
     @property
-    def api_secret(self):
-        return decrypt(self.api_secret_encrypted)
+    def withdraw_api_secret(self):
+        return decrypt(self.withdraw_api_secret_encrypted)
+
+    @property
+    def deposit_api_secret(self):
+        return decrypt(self.deposit_api_secret_encrypted)
 
     @classmethod
     def get_active_deposit(cls, user: User = None) -> 'Gateway':

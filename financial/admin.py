@@ -14,7 +14,7 @@ from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
-    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost
+    FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.precision import humanize_number
@@ -62,7 +62,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     fieldsets = (
         ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'bank_account',
-         'ref_doc', 'get_withdraw_request_receive_time', 'gateway', 'get_risks')}),
+         'get_withdraw_request_receive_time', 'gateway', 'get_risks')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
                                       'get_user')}),
         ('نظر', {'fields': ('comment',)})
@@ -71,7 +71,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
     ordering = ('-created', )
     readonly_fields = (
         'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount', 'get_risks',
-        'get_withdraw_request_user', 'gateway', 'get_withdraw_request_receive_time', 'get_user'
+        'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user'
     )
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
@@ -319,12 +319,6 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
                 user.change_status(User.REJECTED)
 
 
-@admin.register(ManualTransferHistory)
-class ManualTransferHistoryAdmin(SimpleHistoryAdmin):
-    list_display = ('created', 'asset', 'amount', 'full_fill_amount', 'deposit', 'done')
-    list_filter = ('deposit', 'done')
-
-
 @admin.register(MarketingSource)
 class MarketingSourceAdmin(admin.ModelAdmin):
     list_display = ('utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term')
@@ -335,3 +329,21 @@ class MarketingSourceAdmin(admin.ModelAdmin):
 class MarketingCostAdmin(admin.ModelAdmin):
     list_display = ('source', 'date', 'cost')
     search_fields = ('source__utm_source', )
+
+
+@admin.register(ManualTransfer)
+class ManualTransferAdmin(admin.ModelAdmin):
+    list_display = ('created', 'amount', 'bank_account', 'status')
+
+    def save_model(self, request, obj: ManualTransfer, form, change):
+        obj.save()
+
+        if obj.status == ManualTransfer.PROCESS:
+            handler = FiatWithdraw.get_withdraw_channel(obj.gateway)
+
+            handler.create_withdraw(
+                wallet_id=handler.gateway.wallet_id,
+                receiver=obj.bank_account,
+                amount=obj.amount,
+                request_id='mt-%s' % self.id
+            )

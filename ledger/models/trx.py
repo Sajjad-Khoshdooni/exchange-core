@@ -5,6 +5,7 @@ from django.db import models
 from django.db.models import CheckConstraint, Q
 
 from ledger.utils.fields import get_amount_field
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,16 @@ class Trx(models.Model):
             (DUST, 'dust'), (MANUAL, 'manual')
         )
     )
+
+    def revert(self):
+        with WalletPipeline() as pipeline:
+            pipeline.new_trx(
+                sender=self.receiver,
+                receiver=self.sender,
+                amount=self.amount,
+                group_id=self.group_id,
+                scope=Trx.REVERT
+            )
 
     class Meta:
         unique_together = ('group_id', 'sender', 'receiver', 'scope')
