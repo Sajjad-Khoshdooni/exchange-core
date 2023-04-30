@@ -113,6 +113,8 @@ class BankAccount(models.Model):
     verified = models.BooleanField(null=True, blank=True)
     deleted = models.BooleanField(default=False)
 
+    stake_holder = models.BooleanField(default=False)
+
     history = HistoricalRecords()
 
     objects = models.Manager()
