@@ -91,7 +91,7 @@ class MarketStreamCache:
     }
 
     def __init__(self):
-        self.market_pipeline = market_redis.pipeline()
+        self.market_pipeline = socket_server_redis.pipeline()
 
     def set_if_lower(self, k, v):
         return self._call(self.SET_IF_LOWER, **{k: v})
