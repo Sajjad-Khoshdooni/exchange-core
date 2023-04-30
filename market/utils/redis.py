@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import timedelta
 from random import randint
 
@@ -16,6 +17,8 @@ prefix_last_trade = 'market_order_size_factor'
 
 market_redis = Redis.from_url(settings.MARKET_CACHE_LOCATION, decode_responses=True)
 socket_server_redis = Redis.from_url(settings.SOCKET_SERVER_CACHE_LOCATION, decode_responses=True)
+
+logger = logging.getLogger(__name__)
 
 
 def set_top_prices(symbol_id, price_dict, scope=''):
@@ -159,6 +162,7 @@ class MarketStreamCache:
             self.market_pipeline.publish(f'market:depth:{symbol.name}', json.dumps(top_orders))
 
     def update_trades(self, trade_pairs):
+        logger.info(f'publishing trades to socket server redis for {len(trade_pairs or [])}')
         if not trade_pairs:
             return
         # if not market_redis.exists(f'ws:market:orders:{account_id}'):
