@@ -42,6 +42,8 @@ class Account(models.Model):
     bookmark_market = models.ManyToManyField("market.PairSymbol")
     bookmark_assets = models.ManyToManyField("ledger.Asset")
 
+    owned = models.BooleanField(default=False)
+
     def is_system(self) -> bool:
         return self.type == self.SYSTEM
 
