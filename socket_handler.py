@@ -111,6 +111,7 @@ async def broadcast_trades():
         try:
             await trades_pubsub.psubscribe('market:trades:*')
             async for raw_message in trades_pubsub.listen():
+                logger.info(f'received message on market trades {raw_message}')
                 if not raw_message:
                     continue
                 if not TRADES_CLIENTS:
