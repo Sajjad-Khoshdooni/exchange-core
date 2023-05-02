@@ -7,7 +7,6 @@ raastin_build:
   only:
     refs:
       - main
-      - release/socket-server
       - develop
   script:
     - export IMAGE="registry.hamdocker.ir/raastin/core"
@@ -42,7 +41,7 @@ arzplus_deploy_production:
   image: hamravesh.hamdocker.ir/public/darkube-cli:v1.1
   only:
     refs:
-    - release/socket-server
+    - main
   script:
     - 'darkube deploy --token ${ARZPLUS_CELERY_CELERY_TOKEN}
       --app-id ${ARZPLUS_CELERY_CELERY_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
