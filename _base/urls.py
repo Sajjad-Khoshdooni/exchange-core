@@ -27,7 +27,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/health/ready/', HealthView.as_view()),
     path('api/v1/accounts/', include('accounts.urls')),
-    path('api/v1/analytics/', include('analytics.urls')),
+    path('analytics/', include('analytics.urls')),
     path('api/v1/media/', include('multimedia.urls')),
     path('api/v1/finance/', include(('financial.urls', 'financial'), 'finance', )),
     path('api/v1/market/', include('market.urls')),

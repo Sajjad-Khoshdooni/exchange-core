@@ -12,9 +12,9 @@ from accounts.models import TrafficSource, User
 
 @login_required
 def request_source_analytics(request):
-    my_url = settings.HOST_URL + '/api/v1/analytics/traffic/'
+    correct_url = settings.HOST_URL + '/analytics/marketing/reports/download/'
     context = {
-        'redirect_url': my_url
+        'redirect_url': correct_url
     }
     return render(request, 'datetime_form.html', context)
 
@@ -29,14 +29,13 @@ def get_source_analytics(request):
         start_datetime = datetime.strptime(start_date_str, '%Y-%m-%dT%H:%M')
         end_datetime = datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M')
 
-        if request.user.has_perm('accounts.read_yektanet_mobile'):
+        if request.user.has_perm('accounts.has_marketing_adivery_reports'):
             queryset = TrafficSource.objects.filter(
                 created__range=[start_datetime, end_datetime],
                 utm_source='yektanet',
                 utm_medium='mobile'
             )
-            print(queryset)
-        elif request.user.has_perm('accounts.read_mediaad'):
+        elif request.user.has_perm('accounts.has_marketing_mediaad_reports'):
             queryset = TrafficSource.objects.filter(
                 created__range=[start_datetime, end_datetime],
                 utm_source='mediaad'
@@ -50,7 +49,7 @@ def get_source_analytics(request):
 
         # create a response object
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename=my_file.xlsx'
+        response['Content-Disposition'] = 'attachment; filename=reports.xlsx'
 
         # write workbook to response
         workbook.save(response)
