@@ -17,6 +17,7 @@ from ledger.utils.precision import floor_precision, get_precision, humanize_numb
 from ledger.utils.external_price import IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
+from market.utils.redis import MarketStreamCache
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +62,11 @@ class OrderSerializer(serializers.ModelSerializer):
                 created_order = super(OrderSerializer, self).create(
                     {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol}
                 )
-                created_order.submit(pipeline)
-                created_order.refresh_from_db()
+                matched_trades = created_order.submit(pipeline)
+
+            extra = {} if matched_trades.trade_pairs else {'side': created_order.side}
+            MarketStreamCache().execute(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
+
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
         except Exception as e:

@@ -15,6 +15,7 @@ urlpatterns = [
     path('symbols/<str:name>/', cache_page(300)(SymbolDetailedStatsAPIView.as_view())),
     path('symbols/', SymbolListAPIView.as_view()),
     path('myTrades/', AccountTradeHistoryView.as_view()),
+    path('trades/pairs/', TradePairsHistoryView.as_view()),
     path('trades/', cache_page(10)(TradeHistoryView.as_view())),
     path('tradingview/ohlcv/', cache_page(10)(OHLCVAPIView.as_view())),
     path('open-orders/', OpenOrderListAPIView.as_view()),

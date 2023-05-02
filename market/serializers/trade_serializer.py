@@ -63,3 +63,16 @@ class TradeSerializer(serializers.ModelSerializer):
         data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), trade.symbol.tick_size))
 
         return data
+
+
+class TradePairSerializer(TradeSerializer):
+    symbol = serializers.CharField(source='symbol.name')
+    maker_order_id = serializers.IntegerField(source='order_id')
+    taker_order_id = serializers.SerializerMethodField()
+
+    def get_taker_order_id(self, instance: Trade):
+        return self.context['maker_taker_mapping'].get(instance.order_id)
+
+    class Meta:
+        model = Trade
+        fields = ('id', 'symbol', 'created', 'amount', 'price', 'is_buyer_maker', 'maker_order_id', 'taker_order_id')

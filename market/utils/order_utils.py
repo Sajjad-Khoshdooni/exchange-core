@@ -13,6 +13,7 @@ from ledger.utils.external_price import BUY, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol, StopLoss
 from market.models.order import CancelOrder
+from market.utils.redis import MarketStreamCache
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,6 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
               fill_type: str = Order.LIMIT, raise_exception: bool = True, market: str = Wallet.SPOT,
               order_type: str = Order.ORDINARY, parent_lock_group_id: Union[UUID, None] = None,
               time_in_force: str = Order.GTC, pass_min_notional: bool = False) -> Union[Order, None]:
-
     wallet = symbol.asset.get_wallet(account, market=market)
     if fill_type == Order.MARKET:
         price = Order.get_market_price(symbol, Order.get_opposite_side(side))
@@ -92,7 +92,10 @@ def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Deci
         )
 
         is_stop_loss = parent_lock_group_id is not None
-        order.submit(pipeline, is_stop_loss=is_stop_loss)
+        matched_trades = order.submit(pipeline, is_stop_loss=is_stop_loss)
+
+    extra = {} if matched_trades.trade_pairs else {'side': order.side}
+    MarketStreamCache().execute(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
     return order
 
 

@@ -66,6 +66,8 @@ class TradesPair:
             group_id=group_id,
             market=taker_order.wallet.market,
         )
+        maker_trade.client_order_id = maker_order.client_order_id
+        taker_trade.client_order_id = taker_order.client_order_id
 
         return TradesPair(
             maker_trade=maker_trade,

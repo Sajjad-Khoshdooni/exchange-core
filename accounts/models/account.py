@@ -48,6 +48,7 @@ class Account(models.Model):
         return self.type == self.SYSTEM
 
     def is_ordinary_user(self) -> bool:
+        # be careful about new market maker account, should be ordinary if dont want to hedge in Core 
         return not bool(self.type)
 
     @classmethod

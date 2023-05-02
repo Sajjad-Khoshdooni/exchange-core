@@ -165,6 +165,7 @@ MARKET_CACHE_LOCATION = LOCAL_REDIS_URL + '/3'
 METRICS_CACHE_LOCATION = LOCAL_REDIS_URL + '/4'
 
 PRICE_CACHE_LOCATION = config('PRICE_CACHE_LOCATION', default='redis://127.0.0.1:6379/2')
+SOCKET_SERVER_CACHE_LOCATION = config('SOCKET_SERVER_CACHE_LOCATION', default='redis://127.0.0.1:6379')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -224,6 +225,7 @@ if not DEBUG_OR_TESTING:
     MINIO_SECRET_KEY = config('MINIO_STORAGE_SECRET_KEY')
     MINIO_EXTERNAL_ENDPOINT_USE_HTTPS = True
     MINIO_USE_HTTPS = False
+
     MINIO_PRIVATE_BUCKETS = [
         'core-media',
     ]
