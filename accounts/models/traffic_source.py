@@ -19,6 +19,10 @@ class TrafficSource(models.Model):
 
     class Meta:
         verbose_name_plural = verbose_name = "منشا ترافیک"
+        permissions = [
+            ("read_yektanet_mobile", "Can read yektanet mobile analytics"),
+            ("read_mediaad", "Can read mediaad analytics"),
+        ]
 
     def __str__(self):
         return 'نظرهای ' + str(self.user)
