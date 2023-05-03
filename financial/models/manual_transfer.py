@@ -1,13 +1,11 @@
 from django.db import models
 
-from ledger.utils.fields import get_amount_field
-
 
 class ManualTransfer(models.Model):
     PROCESS, DONE = 'process', 'done'
 
     created = models.DateTimeField(auto_now_add=True)
-    amount = get_amount_field()
+    amount = models.PositiveIntegerField()
     reason = models.TextField(blank=True)
     bank_account = models.ForeignKey(
         'financial.BankAccount',
