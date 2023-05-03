@@ -62,7 +62,7 @@ class FiatWithdraw:
     def get_wallet_data(self, wallet_id: int):
         raise NotImplementedError
 
-    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id) -> Withdraw:
         raise NotImplementedError
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> Withdraw:
@@ -495,7 +495,7 @@ class JibitChannel(FiatWithdraw):
             free=free // 10
         )
 
-    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id: int) -> Withdraw:
+    def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id) -> Withdraw:
 
         if receiver.bank in self.INSTANT_BANKS:
             transfer_mode = 'NORMAL'

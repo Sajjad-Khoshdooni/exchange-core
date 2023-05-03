@@ -345,5 +345,5 @@ class ManualTransferAdmin(admin.ModelAdmin):
                 wallet_id=handler.gateway.wallet_id,
                 receiver=obj.bank_account,
                 amount=obj.amount,
-                request_id='mt-%s' % self.id
+                request_id='mt-%s' % obj.id
             )
