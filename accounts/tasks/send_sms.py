@@ -2,10 +2,9 @@ import logging
 
 import requests
 from celery import shared_task
+from decouple import config
 from django.conf import settings
 from kavenegar import KavenegarAPI, APIException, HTTPException
-from decouple import config
-from decouple import config
 
 from accounts.verifiers.finotech import token_cache
 
@@ -13,6 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 SMS_IR_TOKEN_KEY = 'sms-ir-token'
+
+
+TEMPLATES = {
+}
 
 
 @shared_task(queue='sms')

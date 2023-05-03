@@ -10,6 +10,8 @@ class Notification(models.Model):
     INFO, SUCCESS, WARNING, ERROR = 'info', 'success', 'warning', 'error'
     LEVEL_CHOICES = ((INFO, INFO), (SUCCESS, SUCCESS), (WARNING, WARNING), (ERROR, ERROR))
 
+    PUSH_WAITING, PUSH_SENT = 'w', 's'
+
     created = models.DateTimeField(auto_now_add=True)
     read_date = models.DateTimeField(null=True, blank=True)
 
@@ -26,6 +28,13 @@ class Notification(models.Model):
     )
 
     read = models.BooleanField(default=False)
+
+    push_status = models.CharField(
+        choices=((PUSH_WAITING, 'waiting'), (PUSH_SENT, 'sent')),
+        blank=True,
+        max_length=1,
+        db_index=True
+    )
 
     class Meta:
         ordering = ('-created', )

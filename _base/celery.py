@@ -249,4 +249,13 @@ app.conf.beat_schedule = {
             'expire': 300 * TASK_MULTIPLIER
         },
     },
+
+    'send_notifications_push': {
+        'task': 'accounting.tasks.notification.send_notifications_push',
+        'schedule': 5 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'celery',
+            'expire': 5 * TASK_MULTIPLIER
+        },
+    },
 }
