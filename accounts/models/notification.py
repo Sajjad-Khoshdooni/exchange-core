@@ -45,7 +45,7 @@ class Notification(models.Model):
             logger.info('failed to send notif')
             return
 
-        Notification.objects.create(
+        return Notification.objects.create(
             recipient=recipient,
             title=title,
             link=link,

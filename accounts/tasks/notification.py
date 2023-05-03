@@ -14,3 +14,6 @@ def send_notifications_push():
             body=notif.message,
             link=notif.link
         )
+
+        notif.push_status = Notification.PUSH_SENT
+        notif.save(update_fields=['push_status'])
