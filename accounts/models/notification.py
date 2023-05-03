@@ -21,6 +21,8 @@ class Notification(models.Model):
     link = models.CharField(blank=True, max_length=128)
     message = models.CharField(max_length=512, blank=True)
 
+    image = models.URLField(blank=True)
+
     level = models.CharField(
         max_length=8,
         choices=LEVEL_CHOICES,
@@ -40,7 +42,9 @@ class Notification(models.Model):
         ordering = ('-created', )
 
     @classmethod
-    def send(cls, recipient, title: str, link: str = '', message: str = '', level: str = INFO, send_push: bool = False):
+    def send(cls, recipient, title: str, link: str = '', message: str = '', level: str = INFO, image: str = '',
+             send_push: bool = False):
+
         if not recipient:
             logger.info('failed to send notif')
             return
@@ -51,6 +55,7 @@ class Notification(models.Model):
             link=link,
             message=message,
             level=level,
+            image=image,
             push_status=Notification.PUSH_WAITING if send_push else ''
         )
 

@@ -12,6 +12,7 @@ def send_notifications_push():
             user=notif.recipient,
             title=notif.title,
             body=notif.message,
+            image=notif.image,
             link=notif.link
         )
 
