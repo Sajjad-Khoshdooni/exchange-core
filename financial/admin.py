@@ -334,6 +334,7 @@ class MarketingCostAdmin(admin.ModelAdmin):
 @admin.register(ManualTransfer)
 class ManualTransferAdmin(admin.ModelAdmin):
     list_display = ('created', 'amount', 'bank_account', 'status')
+    readonly_fields = ('status', )
 
     def save_model(self, request, obj: ManualTransfer, form, change):
         obj.save()
