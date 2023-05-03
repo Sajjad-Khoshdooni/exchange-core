@@ -40,7 +40,7 @@ class Notification(models.Model):
         ordering = ('-created', )
 
     @classmethod
-    def send(cls, recipient, title: str, link: str = '', message: str = '', level: str = INFO):
+    def send(cls, recipient, title: str, link: str = '', message: str = '', level: str = INFO, send_push: bool = False):
         if not recipient:
             logger.info('failed to send notif')
             return
@@ -50,7 +50,8 @@ class Notification(models.Model):
             title=title,
             link=link,
             message=message,
-            level=level
+            level=level,
+            push_status=Notification.PUSH_WAITING if send_push else ''
         )
 
     def make_read(self):
