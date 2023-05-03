@@ -32,33 +32,29 @@ def get_source_analytics(request):
         if start_datetime < end_datetime - timedelta(days=30):
             return HttpResponseBadRequest('Report time filter threshold must be less than 30 days')
 
-        qs1, qs2 = None, None
+        q = None
 
         if request.user.has_perm('accounts.has_marketing_adivery_reports'):
-            qs1 = TrafficSource.objects.filter(
-                created__range=[start_datetime, end_datetime],
+            q = Q(
                 utm_source='yektanet',
                 utm_medium='mobile'
             )
+
         if request.user.has_perm('accounts.has_marketing_mediaad_reports'):
-            qs2 = TrafficSource.objects.filter(
-                created__range=[start_datetime, end_datetime],
-                utm_source='mediaad'
-            )
+            q = q | Q(utm_source='mediaad')
         if not request.user.has_perm('accounts.has_marketing_adivery_reports') and not request.user.has_perm('accounts.has_marketing_mediaad_reports'):
             return HttpResponseForbidden('You do not have permission to view this content')
 
         # generate Excel workbook from queryset
-        if qs1 is None and qs1 is None:
+        if q is None:
             return HttpResponseBadRequest('There is no data in this period')
-        elif qs1 is None:
-            result_queryset = qs2
-        elif qs2 is None:
-            result_queryset = qs1
-        else:
-            result_queryset = qs1.union(qs2)
 
-        workbook = queryset_to_workbook(result_queryset)
+        workbook = queryset_to_workbook(
+            TrafficSource.objects.filter(
+                q,
+                created__range=[start_datetime, end_datetime]
+            )
+        )
 
         # create a response object
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
