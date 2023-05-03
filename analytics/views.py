@@ -1,13 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, Count, F, Value
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseBadRequest
 from django.shortcuts import render
 from openpyxl import Workbook
 
-from accounts.models import TrafficSource, User
+from accounts.models import TrafficSource
 
 
 @login_required
@@ -26,26 +26,39 @@ def get_source_analytics(request):
 
     if start_date_str and end_date_str:
 
-        start_datetime = datetime.strptime(start_date_str, '%Y-%m-%dT%H:%M')
-        end_datetime = datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M')
+        start_datetime = datetime.strptime(start_date_str, '%Y-%m-%dT%H:%M').astimezone()
+        end_datetime = datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M').astimezone()
+
+        if start_datetime < end_datetime - timedelta(days=30):
+            return HttpResponseBadRequest('Report time filter threshold must be less than 30 days')
+
+        qs1, qs2 = None, None
 
         if request.user.has_perm('accounts.has_marketing_adivery_reports'):
-            queryset = TrafficSource.objects.filter(
+            qs1 = TrafficSource.objects.filter(
                 created__range=[start_datetime, end_datetime],
                 utm_source='yektanet',
                 utm_medium='mobile'
             )
-        elif request.user.has_perm('accounts.has_marketing_mediaad_reports'):
-            queryset = TrafficSource.objects.filter(
+        if request.user.has_perm('accounts.has_marketing_mediaad_reports'):
+            qs2 = TrafficSource.objects.filter(
                 created__range=[start_datetime, end_datetime],
                 utm_source='mediaad'
             )
-        else:
+        if not request.user.has_perm('accounts.has_marketing_adivery_reports') and not request.user.has_perm('accounts.has_marketing_mediaad_reports'):
             return HttpResponseForbidden('You do not have permission to view this content')
 
-
         # generate Excel workbook from queryset
-        workbook = queryset_to_workbook(queryset)
+        if qs1 is None and qs1 is None:
+            return HttpResponseBadRequest('There is no data in this period')
+        elif qs1 is None:
+            result_queryset = qs2
+        elif qs2 is None:
+            result_queryset = qs1
+        else:
+            result_queryset = qs1.union(qs2)
+
+        workbook = queryset_to_workbook(result_queryset)
 
         # create a response object
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -71,25 +84,18 @@ def queryset_to_workbook(queryset, sheet_name='Sheet1'):
         cell = sheet.cell(row=1, column=col_num)
         cell.value = header
 
-    groups = queryset.values('utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term')
+    groups = queryset.values('utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term')\
+        .annotate(
+        user_count=Count('user__id', distinct=True),
+        depositor_count=Count('user__id', distinct=True,
+                              filter=Q(user__first_fiat_deposit_date__lte=F('user__date_joined') + Value(timedelta(days=1))) |
+                                     Q(user__first_crypto_deposit_date__lte=F('user__date_joined') + Value(timedelta(days=1))))
+    ).values_list('utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'user_count', 'depositor_count')
+
     # write data
     for row_num, row in enumerate(groups, 1):
         for col_num, field_name in enumerate(headers, 1):
             cell = sheet.cell(row=row_num+1, column=col_num)
-            cell.value = row.get(field_name)
-        _list = queryset.filter(
-            utm_source=row.get('utm_source'),
-            utm_medium=row.get('utm_medium'),
-            utm_campaign=row.get('utm_campaign'),
-            utm_content=row.get('utm_content'),
-            utm_term=row.get('utm_term')
-        )
-        cell = sheet.cell(row=row_num + 1, column=6)
-        cell.value = len(_list)
+            cell.value = row[col_num-1]
 
-        cell = sheet.cell(row=row_num + 1, column=7)
-        cell.value = len(User.objects.filter(id__in=_list.values_list('user__id', flat=True)).exclude(
-            Q(first_fiat_deposit_date__isnull=True) |
-            Q(first_crypto_deposit_date__isnull=True)
-        ))
     return workbook
