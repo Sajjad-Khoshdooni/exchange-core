@@ -251,7 +251,7 @@ app.conf.beat_schedule = {
     },
 
     'send_notifications_push': {
-        'task': 'accounting.tasks.notification.send_notifications_push',
+        'task': 'accounts.tasks.notification.send_notifications_push',
         'schedule': 5 * TASK_MULTIPLIER,
         'options': {
             'queue': 'celery',
