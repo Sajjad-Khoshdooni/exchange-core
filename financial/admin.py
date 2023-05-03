@@ -347,3 +347,6 @@ class ManualTransferAdmin(admin.ModelAdmin):
                 amount=obj.amount,
                 request_id='mt-%s' % obj.id
             )
+
+            obj.status = ManualTransfer.DONE
+            obj.save(update_fields=['status'])
