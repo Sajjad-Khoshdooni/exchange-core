@@ -83,9 +83,9 @@ def get_as_dict(symbol_id, key):
 class MarketStreamCache:
     _client = socket_server_redis
 
-    SET_IF_HIGHER = 'setifhigher'
-    SET_IF_LOWER = 'setiflower'
-    SET_IF_NOT_EQUAL = 'setifnoteq'
+    SET_IF_HIGHER = 'setifhigher_v2'
+    SET_IF_LOWER = 'setiflower_v2'
+    SET_IF_NOT_EQUAL = 'setifnoteq_v2'
 
     _funcs_dict = {
         SET_IF_HIGHER: "local c = tonumber(redis.call('get', KEYS[1])); if c then if tonumber(ARGV[1]) > c then redis.call('set', KEYS[1], ARGV[1]) return string.format('%.20f', (tonumber(ARGV[1]) - c)) else return 0 end else return redis.call('set', KEYS[1], ARGV[1]) end",
