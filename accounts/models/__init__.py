@@ -1,4 +1,4 @@
-from .notification import Notification
+from .notification import Notification, BulkNotification
 from .account import Account
 from .user import User
 from .finotech import FinotechRequest

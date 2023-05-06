@@ -9,7 +9,7 @@ from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounts.models import FirebaseToken, ExternalNotification, Attribution, AppStatus, Auth2Fa, VerificationCode, \
-    UserFeedback
+    UserFeedback, BulkNotification
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -671,7 +671,16 @@ class FinotechRequestAdmin(admin.ModelAdmin):
 class NotificationAdmin(admin.ModelAdmin):
     list_display = ('created', 'recipient', 'level', 'title', 'message')
     list_filter = ('level', 'recipient')
-    search_fields = ('title', 'message', )
+    search_fields = ('title', 'message', 'group_id')
+    readonly_fields = ('recipient', 'group_id')
+
+
+@admin.register(BulkNotification)
+class BulkNotificationAdmin(admin.ModelAdmin):
+    list_display = ('created', 'status', 'level', 'title', 'message')
+    list_filter = ('level', )
+    search_fields = ('title', 'message', 'group_id')
+    readonly_fields = ('group_id', )
 
 
 @admin.register(UserComment)
