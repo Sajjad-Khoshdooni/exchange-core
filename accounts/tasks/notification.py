@@ -8,6 +8,7 @@ from ledger.utils.fields import PENDING, DONE
 
 @shared_task(queue='celery')
 def send_notifications_push():
+    # todo: handle concurrency
 
     for notif in Notification.objects.filter(push_status=Notification.PUSH_WAITING):
         send_push_notif_to_user(
