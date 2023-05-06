@@ -1,4 +1,5 @@
 from celery import shared_task
+from django.db import transaction
 
 from accounts.models import Notification, BulkNotification, User
 from accounts.utils.push_notif import send_push_notif_to_user
@@ -23,30 +24,31 @@ def send_notifications_push():
 
 @shared_task(queue='celery')
 def process_bulk_notifications():
-    for bulk_notif in BulkNotification.objects.filter(status=PENDING).select_for_update():
-        sent_users = list(Notification.objects.filter(group_id=bulk_notif.group_id).values_list('recipient', flat=True))
+    with transaction.atomic():
+        for bulk_notif in BulkNotification.objects.filter(status=PENDING).select_for_update():
+            sent_users = list(Notification.objects.filter(group_id=bulk_notif.group_id).values_list('recipient', flat=True))
 
-        notifs = []
+            notifs = []
 
-        for u in User.objects.exclude(id__in=sent_users):
-            notifs.append(
-                Notification(
-                    recipient=u,
-                    group_id=bulk_notif.group_id,
-                    title=bulk_notif.title,
-                    message=bulk_notif.message,
-                    link=bulk_notif.link,
-                    level=bulk_notif.level,
-                    push_status=Notification.PUSH_WAITING
+            for u in User.objects.exclude(id__in=sent_users):
+                notifs.append(
+                    Notification(
+                        recipient=u,
+                        group_id=bulk_notif.group_id,
+                        title=bulk_notif.title,
+                        message=bulk_notif.message,
+                        link=bulk_notif.link,
+                        level=bulk_notif.level,
+                        push_status=Notification.PUSH_WAITING
+                    )
                 )
-            )
 
-            if len(notifs) > 1000:
+                if len(notifs) > 1000:
+                    Notification.objects.bulk_create(notifs)
+                    notifs = []
+
+            if notifs:
                 Notification.objects.bulk_create(notifs)
-                notifs = []
 
-        if notifs:
-            Notification.objects.bulk_create(notifs)
-
-        bulk_notif.status = DONE
-        bulk_notif.save(update_fields=['status'])
+            bulk_notif.status = DONE
+            bulk_notif.save(update_fields=['status'])
