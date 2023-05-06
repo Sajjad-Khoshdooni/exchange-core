@@ -254,7 +254,7 @@ app.conf.beat_schedule = {
         'task': 'accounts.tasks.notification.send_notifications_push',
         'schedule': 5 * TASK_MULTIPLIER,
         'options': {
-            'queue': 'celery',
+            'queue': 'notif-manager',
             'expire': 5 * TASK_MULTIPLIER
         },
     },
@@ -262,7 +262,7 @@ app.conf.beat_schedule = {
         'task': 'accounts.tasks.notification.process_bulk_notifications',
         'schedule': 60 * TASK_MULTIPLIER,
         'options': {
-            'queue': 'celery',
+            'queue': 'notif-manager',
             'expire': 60 * TASK_MULTIPLIER
         },
     },

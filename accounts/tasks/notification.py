@@ -1,16 +1,13 @@
 from celery import shared_task
-from django.db import transaction
 
 from accounts.models import Notification, BulkNotification, User
 from accounts.utils.push_notif import send_push_notif_to_user
 from ledger.utils.fields import PENDING, DONE
 
 
-@shared_task(queue='celery')
+@shared_task(queue='notif-manager')
 def send_notifications_push():
-    # todo: handle concurrency
-
-    for notif in Notification.objects.filter(push_status=Notification.PUSH_WAITING):
+    for notif in Notification.objects.filter(push_status=Notification.PUSH_WAITING).order_by('id')[:100]:
         send_push_notif_to_user(
             user=notif.recipient,
             title=notif.title,
@@ -23,33 +20,32 @@ def send_notifications_push():
         notif.save(update_fields=['push_status'])
 
 
-@shared_task(queue='celery')
+@shared_task(queue='notif-manager')
 def process_bulk_notifications():
-    with transaction.atomic():
-        for bulk_notif in BulkNotification.objects.filter(status=PENDING).select_for_update():
-            sent_users = list(Notification.objects.filter(group_id=bulk_notif.group_id).values_list('recipient', flat=True))
+    for bulk_notif in BulkNotification.objects.filter(status=PENDING):
+        sent_users = list(Notification.objects.filter(group_id=bulk_notif.group_id).values_list('recipient', flat=True))
 
-            notifs = []
+        notifs = []
 
-            for u in User.objects.exclude(id__in=sent_users):
-                notifs.append(
-                    Notification(
-                        recipient=u,
-                        group_id=bulk_notif.group_id,
-                        title=bulk_notif.title,
-                        message=bulk_notif.message,
-                        link=bulk_notif.link,
-                        level=bulk_notif.level,
-                        push_status=Notification.PUSH_WAITING
-                    )
+        for u in User.objects.exclude(id__in=sent_users):
+            notifs.append(
+                Notification(
+                    recipient=u,
+                    group_id=bulk_notif.group_id,
+                    title=bulk_notif.title,
+                    message=bulk_notif.message,
+                    link=bulk_notif.link,
+                    level=bulk_notif.level,
+                    push_status=Notification.PUSH_WAITING
                 )
+            )
 
-                if len(notifs) > 1000:
-                    Notification.objects.bulk_create(notifs)
-                    notifs = []
-
-            if notifs:
+            if len(notifs) > 1000:
                 Notification.objects.bulk_create(notifs)
+                notifs = []
 
-            bulk_notif.status = DONE
-            bulk_notif.save(update_fields=['status'])
+        if notifs:
+            Notification.objects.bulk_create(notifs)
+
+        bulk_notif.status = DONE
+        bulk_notif.save(update_fields=['status'])
