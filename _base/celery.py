@@ -258,4 +258,12 @@ app.conf.beat_schedule = {
             'expire': 5 * TASK_MULTIPLIER
         },
     },
+    'process_bulk_notifications': {
+        'task': 'accounts.tasks.notification.process_bulk_notifications',
+        'schedule': 60 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'celery',
+            'expire': 60 * TASK_MULTIPLIER
+        },
+    },
 }

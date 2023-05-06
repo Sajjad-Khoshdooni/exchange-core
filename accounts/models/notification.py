@@ -40,7 +40,7 @@ class Notification(models.Model):
         db_index=True
     )
 
-    group_id = get_group_id_field(null=True, db_index=True)
+    group_id = get_group_id_field(null=True, db_index=True, default=None)
 
     class Meta:
         ordering = ('-created', )
