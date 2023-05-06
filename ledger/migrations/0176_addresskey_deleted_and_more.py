@@ -15,12 +15,12 @@ class Migration(migrations.Migration):
             name='deleted',
             field=models.BooleanField(default=False),
         ),
-        migrations.AlterUniqueTogether(
-            name='depositaddress',
-            unique_together={('network', 'address_key'), ('network', 'address')},
-        ),
-        migrations.AddConstraint(
-            model_name='addresskey',
-            constraint=models.UniqueConstraint(condition=models.Q(('deleted', False)), fields=('account', 'architecture'), name='ledger_addresskey_unique_account_architecture'),
-        ),
+        # migrations.AlterUniqueTogether(
+        #     name='depositaddress',
+        #     unique_together={('network', 'address_key'), ('network', 'address')},
+        # ),
+        # migrations.AddConstraint(
+        #     model_name='addresskey',
+        #     constraint=models.UniqueConstraint(condition=models.Q(('deleted', False)), fields=('account', 'architecture'), name='ledger_addresskey_unique_account_architecture'),
+        # ),
     ]
