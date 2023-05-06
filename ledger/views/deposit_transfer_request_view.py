@@ -171,6 +171,4 @@ class DepositTransferUpdateView(CreateAPIView, UserPassesTestMixin):
     def test_func(self):
         permission_check = self.request.user.has_perm('ledger.add_transfer') and\
                            self.request.user.has_perm('ledger.change_transfer')
-        ip_check = get_ip_address(self.request) in settings.BLOCKLINK_IP
-
-        return permission_check and ip_check
+        return permission_check
