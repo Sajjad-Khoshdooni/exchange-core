@@ -34,6 +34,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
         request = self.context['request']
         user = request.user
 
+        raise ValidationError('به دلیل ارتقای زیرساخت امکان برداشت رمزارزی وجود ندارد')
+
         if not can_withdraw(user.get_account(), request):
             raise ValidationError('امکان برداشت وجود ندارد.')
 
