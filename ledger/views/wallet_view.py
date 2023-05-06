@@ -215,7 +215,7 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
         account = self.context['request'].user.get_account()
 
-        deposit_addresses = DepositAddress.objects.filter(address_key__account=account, deleted=False)
+        deposit_addresses = DepositAddress.objects.filter(address_key__account=account, address_key__deleted=False)
 
         address_mapping = {
             deposit.network.symbol: deposit.address for deposit in deposit_addresses
