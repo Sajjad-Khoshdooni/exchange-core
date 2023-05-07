@@ -270,7 +270,28 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
             asset__enable=False
         ).exclude(balance=0).values_list('asset_id', flat=True)
 
-        return Asset.objects.filter(Q(enable=True) | Q(id__in=disabled_assets))
+        assets = Asset.objects.filter(Q(enable=True) | Q(id__in=disabled_assets))
+
+        only_coin = self.request.query_params.get('coin') == '1'
+        if only_coin:
+            assets = assets.exclude(symbol=Asset.IRT)
+
+        can_deposit = self.request.query_params.get('can_deposit') == '1'
+        if can_deposit:
+            assets = assets.filter(
+                networkasset__can_deposit=True,
+                networkasset__network__can_deposit=True
+            ).distinct()
+
+        can_withdraw = self.request.query_params.get('can_withdraw') == '1'
+
+        if can_withdraw:
+            assets = assets.filter(
+                networkasset__can_withdraw=True,
+                networkasset__network__can_withdraw=True
+            ).distinct()
+
+        return assets
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
