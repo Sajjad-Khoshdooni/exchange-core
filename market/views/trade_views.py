@@ -105,12 +105,13 @@ class TradePairsHistoryView(ListAPIView):
     def list(self, request, *args, **kwargs):
         min_id = self.request.query_params.get('from_id')
         id_filter = {'id__gt': min_id} if min_id else {}
+        qs = self.get_queryset()
         maker_taker_mapping = {
-            t['maker_order_id']: t['taker_order_id'] for t in Trade.objects.filter(**id_filter).values('group_id').annotate(
+            t['maker_order_id']: t['taker_order_id'] for t in Trade.objects.filter(group_id__in=qs.values_list('group_id', flat=True), **id_filter).values('group_id').annotate(
                 maker_order_id=Min('order_id'), taker_order_id=Max('order_id')
             )
         }
-        serializer = TradePairSerializer(self.get_queryset(), context={'maker_taker_mapping': maker_taker_mapping}, many=True)
+        serializer = TradePairSerializer(qs, context={'maker_taker_mapping': maker_taker_mapping}, many=True)
 
         return Response({
             'results': serializer.data

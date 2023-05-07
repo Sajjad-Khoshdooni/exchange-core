@@ -1,7 +1,6 @@
 import requests
+from decouple import config
 from django.conf import settings
-from decouple import config
-from decouple import config
 
 
 class RequestWithdraw:

@@ -39,7 +39,11 @@ class AssetOverview:
 
         wallets = Wallet.objects.filter(
             account__type=Account.ORDINARY
-        ).exclude(market__in=(Wallet.VOUCHER, Wallet.DEBT)).values('asset__symbol').annotate(amount=Sum('balance'))
+        ).exclude(
+            market__in=(Wallet.VOUCHER, Wallet.DEBT)
+        ).exclude(
+            account__owned=True
+        ).values('asset__symbol').annotate(amount=Sum('balance'))
         self.users_balances = {w['asset__symbol']: w['amount'] for w in wallets}
 
         self.usdt_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=True)

@@ -202,6 +202,8 @@ class AssetsViewSet(ModelViewSet):
             'market': self.request.query_params.get('market'),
             'category': self.request.query_params.get('category'),
             'name': self.request.query_params.get('name'),
+            'can_deposit': self.request.query_params.get('can_deposit') == '1',
+            'can_withdraw': self.request.query_params.get('can_withdraw') == '1',
         }
 
         return options[key]
@@ -230,6 +232,18 @@ class AssetsViewSet(ModelViewSet):
 
         if self.get_options('name'):
             queryset = queryset.filter(name=self.get_options('name'))
+
+        if self.get_options('can_deposit'):
+            queryset = queryset.filter(
+                networkasset__can_deposit=True,
+                networkasset__network__can_deposit=True
+            ).distinct()
+
+        if self.get_options('can_withdraw'):
+            queryset = queryset.filter(
+                networkasset__can_withdraw=True,
+                networkasset__network__can_withdraw=True
+            ).distinct()
 
         return queryset
 

@@ -249,4 +249,21 @@ app.conf.beat_schedule = {
             'expire': 300 * TASK_MULTIPLIER
         },
     },
+
+    'send_notifications_push': {
+        'task': 'accounts.tasks.notification.send_notifications_push',
+        'schedule': 5 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'notif-manager',
+            'expire': 5 * TASK_MULTIPLIER
+        },
+    },
+    'process_bulk_notifications': {
+        'task': 'accounts.tasks.notification.process_bulk_notifications',
+        'schedule': 60 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'notif-manager',
+            'expire': 60 * TASK_MULTIPLIER
+        },
+    },
 }
