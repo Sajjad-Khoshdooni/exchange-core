@@ -2,7 +2,7 @@ from django.db import models
 
 from ledger.requester.address_requester import AddressRequester
 from ledger.models.address_key import AddressKey
-from ledger.requester.architecture_requester import request_architecture
+from ledger.requester.architecture_requester import get_network_architecture
 
 
 class DepositAddress(models.Model):
@@ -16,7 +16,7 @@ class DepositAddress(models.Model):
 
     @classmethod
     def get_deposit_address(cls, account, network):
-        architecture = request_architecture(network)
+        architecture = get_network_architecture(network)
 
         address_key = AddressKey.objects.filter(account=account, architecture=architecture, deleted=False).first()
 
