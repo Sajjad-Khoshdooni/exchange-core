@@ -32,7 +32,7 @@ def get_source_analytics(request):
         if start_datetime < end_datetime - timedelta(days=30):
             return HttpResponseBadRequest('Report time filter threshold must be less than 30 days')
 
-        q = None
+        q = Q()
 
         if request.user.has_perm('accounts.has_marketing_adivery_reports'):
             q = Q(
