@@ -14,3 +14,4 @@ from .app_status import AppStatus
 from .attribution import Attribution
 from .auth2fa import Auth2Fa
 from .feedback import UserFeedback
+from .sms_notification import SmsNotification

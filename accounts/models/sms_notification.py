@@ -1,9 +1,8 @@
 import logging
 
 from django.db import models
-from django.utils import timezone
 
-from ledger.utils.fields import get_group_id_field, get_status_field
+from ledger.utils.fields import get_group_id_field
 
 logger = logging.getLogger(__name__)
 
