@@ -36,6 +36,7 @@ class AssetListSerializer(serializers.ModelSerializer):
     can_withdraw = serializers.SerializerMethodField()
 
     free = serializers.SerializerMethodField()
+    free_irt = serializers.SerializerMethodField()
 
     pin_to_top = serializers.SerializerMethodField()
 
@@ -121,6 +122,15 @@ class AssetListSerializer(serializers.ModelSerializer):
         free = max(Decimal(), wallet.get_free() + self.get_debt(asset))
         return asset.get_presentation_amount(free)
 
+    def get_free_irt(self, asset: Asset):
+        free = Decimal(self.get_free(asset))
+
+        if not free:
+            return 0
+
+        price = self.get_ext_price_irt(asset.symbol)
+        return asset.get_presentation_price_irt(free * price)
+
     def get_can_deposit(self, asset: Asset):
         if asset.symbol == Asset.IRT:
             return True
@@ -158,7 +168,7 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'precision', 'free', 'balance', 'balance_irt', 'balance_usdt',
+        fields = ('symbol', 'precision', 'free', 'free_irt', 'balance', 'balance_irt', 'balance_usdt',
                   'can_deposit', 'can_withdraw', 'trade_enable', 'pin_to_top', 'market_irt_enable',
                   'name', 'name_fa', 'logo', 'original_symbol', 'original_name_fa', 'step_size', 'price_irt',
                   'price_usdt')

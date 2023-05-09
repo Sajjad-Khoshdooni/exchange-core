@@ -2,9 +2,6 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from rest_framework import serializers
 
-from accounts.models import Account
-from ledger.models.deposit_address import DepositAddress
-
 
 class Network(models.Model):
     ETH = 'ETH'
@@ -26,9 +23,6 @@ class Network(models.Model):
     is_universal = models.BooleanField(default=False)
 
     need_memo = models.BooleanField(default=False)
-
-    def get_deposit_address(self, account: Account) -> DepositAddress:
-        return DepositAddress.get_deposit_address(account=account, network=self)
 
     def __str__(self):
         return self.symbol

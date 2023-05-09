@@ -49,8 +49,8 @@ def update_provider_withdraw():
 
 @shared_task(queue='transfer')
 def create_withdraw(transfer_id: int):
-    if settings.DEBUG_OR_TESTING_OR_STAGING:
-        return
+    # if settings.DEBUG_OR_TESTING_OR_STAGING:
+    #     return
 
     transfer = Transfer.objects.get(id=transfer_id)
 

@@ -7,12 +7,12 @@ import signal
 
 
 class Command(BaseCommand):
-    help = 'Run WebSocket Server'
+    help = 'Run Update Market Redis'
 
     def handle(self, *args, **options):
         proc_list = []
 
-        command = 'python socket_handler.py'
+        command = 'python update_market_redis.py'
         print("$ " + command)
         proc = Popen(command, shell=True, stdin=stdin,
                      stdout=stdout, stderr=stderr)

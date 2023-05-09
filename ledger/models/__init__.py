@@ -3,8 +3,8 @@ from .balance_lock import BalanceLock
 from .wallet import Wallet
 from .asset import Asset
 from .spread import AssetSpreadCategory, CategorySpread, MarketSpread
-from .deposit_address import DepositAddress
 from .network import Network
+from .deposit_address import DepositAddress
 from .network_asset import NetworkAsset
 from .trx import Trx
 from .otc_request import OTCRequest
