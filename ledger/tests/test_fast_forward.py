@@ -58,7 +58,7 @@ class FastForwardTestCase(TestCase):
             Trx.objects.get(sender=self.sender_wallet1).group_id,
             Transfer.objects.get(deposit_address=self.receiver_deposit_address1).group_id)
 
-    @mock.patch('ledger.models.deposit_address.request_architecture')
+    @mock.patch('ledger.requester.architecture_requester.get_network_architecture')
     def test_fast_forward2(self, request_architecture):
         request_architecture.return_value = 'ETH'
         print(request_architecture('BSC'))
