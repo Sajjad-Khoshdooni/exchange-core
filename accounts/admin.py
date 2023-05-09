@@ -686,7 +686,7 @@ class BulkNotificationAdmin(admin.ModelAdmin):
 
 @admin.register(SmsNotification)
 class SmsNotificationAdmin(admin.ModelAdmin):
-    list_display = ('created', 'recipient', 'template', 'data', 'sent')
+    list_display = ('created', 'recipient', 'template', 'params', 'sent')
     list_filter = ('template', )
     search_fields = ('recipient__phone', 'group_id')
     readonly_fields = ('recipient', 'group_id')

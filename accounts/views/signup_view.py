@@ -80,7 +80,6 @@ class SignupSerializer(serializers.Serializer):
         validate_password(password=password)
 
         phone = otp_code.phone
-        # otp_code.set_token_used()
         promotion = validated_data.get('promotion') or ''
 
         user = User.objects.create_user(
