@@ -27,6 +27,9 @@ class IsBasicVerified(IsAuthenticated):
 def can_trade(request) -> bool:
     if not settings.TRADE_ENABLE or not request.user.can_trade:
         hijacker_id = get_hijacker_id(request)
+        if not hijacker_id:
+            return False
+
         hijacker = User.objects.get(id=hijacker_id)
 
         if hijacker.is_superuser:

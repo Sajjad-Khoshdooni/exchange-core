@@ -163,6 +163,10 @@ def can_withdraw(account: Account, request) -> bool:
 
     if not withdraw_conditions:
         hijacker_id = get_hijacker_id(request)
+
+        if not hijacker_id:
+            return False
+
         hijacker = User.objects.get(id=hijacker_id)
 
         if hijacker.is_superuser:
