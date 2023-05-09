@@ -1,19 +1,28 @@
-from django.test import TestCase
-from unittest import mock
 from decimal import Decimal
+from unittest import mock
 
-from ledger.utils.test import new_account, new_network, set_price
-from ledger.models import Transfer, DepositAddress, Trx, Asset, AddressKey
+from django.test import TestCase
+
+from ledger.models import Transfer, DepositAddress, Trx, Asset, AddressKey, Network
+from ledger.utils.test import new_account, set_price
 
 
 class FastForwardTestCase(TestCase):
+    def new_network(self) -> Network:
+        symbol = 'ETH'
+        name = 'ETH'
+        address_regex = '[1-9]'
+        network = Network.objects.create(symbol=symbol, name=name, address_regex=address_regex)
+
+        return network
+
     def setUp(self) -> None:
-        self.network = new_network()
-        self.asset = Asset.objects.create(symbol=self.network.symbol)
+        self.network = self.new_network()
+        self.asset, _ = Asset.objects.get_or_create(symbol=self.network.symbol)
         set_price(self.asset, 19000)
 
         self.sender_account1 = new_account()
-        self.sender_address_key1 = AddressKey.objects.create(account=self.sender_account1, address='0xC8E19189888BED6aaBf88800024106eC7C8cb00B')
+        self.sender_address_key1 = AddressKey.objects.create(account=self.sender_account1, address='0xC8E19189888BED6aaBf88800024106eC7C8cb00B', architecture='ETH')
         self.sender_deposit_address1 = DepositAddress.objects.create(
             # account=self.sender_account1,
             network=self.network,
@@ -25,7 +34,7 @@ class FastForwardTestCase(TestCase):
         self.sender_wallet1.save()
 
         self.receiver_account1 = new_account()
-        self.receiver_address_key1 = AddressKey.objects.create(account=self.receiver_account1, address='0x701e0e2f85E3922F50C054d113b9D694c675a7f5')
+        self.receiver_address_key1 = AddressKey.objects.create(account=self.receiver_account1, address='0x701e0e2f85E3922F50C054d113b9D694c675a7f5', architecture='ETH')
         self.receiver_deposit_address1 = DepositAddress.objects.create(
             # account=self.receiver_account1,
             network=self.network,
