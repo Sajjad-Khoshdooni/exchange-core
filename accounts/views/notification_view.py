@@ -42,13 +42,14 @@ class NotificationViewSet(ModelViewSet):
 
         return Response({
             'notifications': serializer.data,
-            'unread_count': Notification.objects.filter(recipient=self.request.user, read=False).count(),
+            'unread_count': Notification.objects.filter(recipient=self.request.user, read=False, hidden=False).count(),
             'feedback': feedback
         })
 
     def get_queryset(self):
         notifications = Notification.objects.filter(
-            recipient=self.request.user
+            recipient=self.request.user,
+            hidden=False
         ).order_by('-created')
 
         if self.action == 'list':
@@ -61,7 +62,7 @@ class NotificationViewSet(ModelViewSet):
         return notifications
 
 
-class UnreadAllNotificationView(APIView):
+class ReadAllNotificationView(APIView):
     def patch(self, request):
         read = request.data.get('read')
 

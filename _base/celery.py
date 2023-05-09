@@ -265,4 +265,13 @@ app.conf.beat_schedule = {
         },
     },
 
+    'send_signup_not_verified_push': {
+        'task': 'retention.tasks.send_signup_not_verified_push',
+        'schedule': 60,
+        'options': {
+            'queue': 'celery',
+            'expire': 60
+        },
+    },
+
 }

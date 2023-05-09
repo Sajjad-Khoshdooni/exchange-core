@@ -11,4 +11,4 @@ class LinkAdmin(admin.ModelAdmin):
 
 @admin.register(Click)
 class ClickAdmin(admin.ModelAdmin):
-    list_display = ('created', 'user_agent')
+    list_display = ('created', 'link', 'user_agent')

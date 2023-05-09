@@ -20,7 +20,7 @@ class Link(models.Model):
     SCOPE_CHOICES = ((SCOPE_DEPOSIT, 'deposit'), )
 
     SCOPE_TO_LINK = {
-        SCOPE_DEPOSIT: '/wallet/spot/money-deposit',
+        SCOPE_DEPOSIT: '/wallet/spot/money-deposit?utm_source=raastin&utm_medium=sms&utm_campaign=1h-deposit',
     }
 
     created = models.DateTimeField(auto_now_add=True)
