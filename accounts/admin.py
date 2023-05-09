@@ -28,6 +28,7 @@ from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
 from .models.login_activity import LoginActivity
+from .models.sms_notification import SmsNotification
 from .tasks import basic_verify_user
 from .utils.validation import gregorian_to_jalali_date_str, gregorian_to_jalali_datetime_str
 from .verifiers.legal import is_48h_rule_passed
@@ -669,9 +670,9 @@ class FinotechRequestAdmin(admin.ModelAdmin):
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ('created', 'recipient', 'level', 'title', 'message')
+    list_display = ('created', 'recipient', 'level', 'title', 'message', 'push_status')
     list_filter = ('level', 'recipient')
-    search_fields = ('title', 'message', 'group_id')
+    search_fields = ('title', 'message', 'group_id', 'recipient__phone')
     readonly_fields = ('recipient', 'group_id')
 
 
@@ -681,6 +682,14 @@ class BulkNotificationAdmin(admin.ModelAdmin):
     list_filter = ('level', )
     search_fields = ('title', 'message', 'group_id')
     readonly_fields = ('group_id', )
+
+
+@admin.register(SmsNotification)
+class SmsNotificationAdmin(admin.ModelAdmin):
+    list_display = ('created', 'recipient', 'template', 'data', 'sent')
+    list_filter = ('template', )
+    search_fields = ('recipient__phone', 'group_id')
+    readonly_fields = ('recipient', 'group_id')
 
 
 @admin.register(UserComment)
