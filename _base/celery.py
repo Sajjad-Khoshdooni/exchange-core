@@ -59,25 +59,6 @@ app.conf.beat_schedule = {
         },
     },
 
-
-    # market tasks
-    'create depth orders': {
-        'task': 'market.tasks.market_maker.create_depth_orders',
-        'schedule': 60 * TASK_MULTIPLIER,
-        'options': {
-            'queue': 'market',
-            'expire': 60 * TASK_MULTIPLIER
-        },
-    },
-    'update maker orders': {
-        'task': 'market.tasks.market_maker.update_maker_orders',
-        'schedule': 4 * TASK_MULTIPLIER,
-        'options': {
-            'queue': 'market',
-            'expire': 4 * TASK_MULTIPLIER
-        },
-    },
-
     'create_stake_revenue': {
         'task': 'stake.tasks.stake_revenue.create_stake_revenue',
         'schedule': crontab(hour=19, minute=30),

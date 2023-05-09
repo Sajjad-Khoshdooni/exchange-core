@@ -15,6 +15,7 @@ SMS_IR_TOKEN_KEY = 'sms-ir-token'
 
 
 TEMPLATES = {
+    '': ''
 }
 
 
@@ -38,6 +39,25 @@ def send_message_by_kavenegar(phone: str, template: str, token: str, send_type: 
         }
 
         api.verify_lookup(params)
+    except (APIException, HTTPException) as e:
+        logger.exception("Failed to send sms by kavenegar")
+
+
+def send_kavenegar_exclusive_sms(phone: str, template: str):
+    if settings.DEBUG_OR_TESTING_OR_STAGING:
+        return
+
+    api_key = config('KAVENEGAR_KEY')
+    api = KavenegarAPI(apikey=api_key)
+
+    try:
+        params = {
+            'receptor': phone,
+            'message': message,
+            'sender': send_type,
+        }
+
+        api.sms_send(params)
     except (APIException, HTTPException) as e:
         logger.exception("Failed to send sms by kavenegar")
 

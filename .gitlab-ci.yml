@@ -64,8 +64,8 @@ arzplus_deploy_production:
     - 'darkube deploy --token ${ARZPLUS_CELERY_TRANSFER_TOKEN}
       --app-id ${ARZPLUS_CELERY_TRANSFER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
       --job-id "${CI_JOB_ID}"'
-    - 'darkube deploy --token ${ARZPLUS_SOCKET_SERVER_DEPLOY_TOKEN}
-      --app-id ${ARZPLUS_SOCKET_SERVER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+    - 'darkube deploy --token ${ARZPLUS_SOCKET_PROVIDER_DEPLOY_TOKEN}
+      --app-id ${ARZPLUS_SOCKET_PROVIDER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
       --job-id "${CI_JOB_ID}"'
     - 'darkube deploy --token ${ARZPLUS_NOTIF_MANAGER_DEPLOY_TOKEN}
       --app-id ${ARZPLUS_NOTIF_MANAGER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
@@ -101,8 +101,8 @@ raastin_deploy_production:
     - 'darkube deploy --token ${RAASTIN_CELERY_TRANSFER_TOKEN}
       --app-id ${RAASTIN_CELERY_TRANSFER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
       --job-id "${CI_JOB_ID}"'
-    - 'darkube deploy --token ${RAASTIN_SOCKET_SERVER_DEPLOY_TOKEN}
-      --app-id ${RAASTIN_SOCKET_SERVER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+    - 'darkube deploy --token ${RAASTIN_SOCKET_PROVIDER_DEPLOY_TOKEN}
+      --app-id ${RAASTIN_SOCKET_PROVIDER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
       --job-id "${CI_JOB_ID}"'
     - 'darkube deploy --token ${RAASTIN_NOTIF_MANAGER_DEPLOY_TOKEN}
       --app-id ${RAASTIN_NOTIF_MANAGER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
