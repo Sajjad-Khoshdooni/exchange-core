@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'stake',
     'gamify',
     'experiment',
+    'retention',
 
     'tinymce',
 ]
@@ -382,3 +383,6 @@ TRADE_ENABLE = config('TRADE_ENABLE', cast=bool, default=True)
 WITHDRAW_ENABLE = config('WITHDRAW_ENABLE', cast=bool, default=True)
 
 TINYMCE_JS_URL = os.path.join(MINIO_STORAGE_STATIC_URL, "tinymce/tinymce.min.js")
+
+EXCLUSIVE_SMS_NUMBER = config('EXCLUSIVE_SMS_NUMBER', default=None)
+RETENTION_ENABLE = bool(EXCLUSIVE_SMS_NUMBER)

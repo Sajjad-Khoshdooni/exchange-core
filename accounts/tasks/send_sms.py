@@ -15,7 +15,8 @@ SMS_IR_TOKEN_KEY = 'sms-ir-token'
 
 
 TEMPLATES = {
-    'crypto_address_change': 'آدرس های واریز {brand} تغییر کرد.\nمی توانید آدرس های جدید را از بخش کیف پول در حساب کاربری خود دریافت کنید.\n{brand}'.format(brand=settings.BRAND),
+    'crypto_address_change': 'آدرس های واریز {brand} تغییر کرد.\nمی توانید آدرس های جدید را از بخش کیف پول در حساب کاربری خود دریافت کنید.\n{brand}',
+    'recent_not_deposited': 'به {brand} خوش آمدید. با اولین واریز جایزه ماموریت خود را دریافت کنید. {link}'
 }
 
 
@@ -43,14 +44,17 @@ def send_message_by_kavenegar(phone: str, template: str, token: str, send_type: 
         logger.exception("Failed to send sms by kavenegar")
 
 
-def send_kavenegar_exclusive_sms(phone: str, template: str):
-    if settings.DEBUG_OR_TESTING_OR_STAGING:
+def send_kavenegar_exclusive_sms(phone: str, template: str, params: dict = None):
+    if settings.DEBUG_OR_TESTING_OR_STAGING or not settings.EXCLUSIVE_SMS_NUMBER:
         return
 
     api_key = config('KAVENEGAR_KEY')
     api = KavenegarAPI(apikey=api_key)
 
-    message = TEMPLATES[template]
+    params = params or {}
+    params['brand'] = settings.BRAND
+
+    message = TEMPLATES[template].format(**params)
 
     message += '\nلغو= 11'
 
@@ -58,7 +62,7 @@ def send_kavenegar_exclusive_sms(phone: str, template: str):
         params = {
             'receptor': phone,
             'message': message,
-            'sender': '90008087',
+            'sender': settings.EXCLUSIVE_SMS_NUMBER,
         }
 
         api.sms_send(params)
@@ -70,7 +74,6 @@ def send_kavenegar_exclusive_sms(phone: str, template: str):
 
 
 def get_sms_ir_token():
-
     token = token_cache.get(SMS_IR_TOKEN_KEY)
 
     if token:
