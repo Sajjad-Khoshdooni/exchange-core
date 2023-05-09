@@ -41,6 +41,9 @@ def main():
             }
             pipeline.hset('market_depth_snapshot', symbol.name, msgpack.packb(depth))
         pipeline.execute()
+
+        logger.info('market depth inserted to redis')
+
         sleep(1)
 
 
