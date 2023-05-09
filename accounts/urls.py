@@ -58,7 +58,7 @@ urlpatterns = [
         'patch': 'partial_update',
     })),
 
-    path('notifs/all/', views.UnreadAllNotificationView.as_view()),
+    path('notifs/all/', views.ReadAllNotificationView.as_view()),
     path('password/', views.ChangePasswordView.as_view()),
 
     path('quiz/passed/', views.QuizPassedView.as_view()),
