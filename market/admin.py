@@ -81,22 +81,42 @@ class UserFilter(SimpleListFilter):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('created', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount', 'wallet')
+    list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount',
+                    'wallet')
     list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
     readonly_fields = ('wallet', 'symbol')
+
+    def created_at_millis(self, instance):
+        created = instance.created.astimezone()
+        return created.strftime('%S.%f')[:-3]
+
+    created_at_millis.short_description = 'Created Second'
 
 
 @admin.register(CancelRequest)
 class CancelRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'order_id')
+    list_display = ('created', 'created_at_millis', 'order_id')
+
+    def created_at_millis(self, instance):
+        created = instance.created.astimezone()
+        return created.strftime('%S.%f')[:-3]
+
+    created_at_millis.short_description = 'Created Second'
 
 
 @admin.register(Trade)
 class TradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount', 'fee_revenue')
+    list_display = ('created', 'created_at_millis', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount',
+                    'fee_revenue')
     list_filter = ('trade_source', UserTradeFilter)
     readonly_fields = ('symbol', 'order_id', 'account')
     search_fields = ('symbol__name', )
+
+    def created_at_millis(self, instance):
+        created = instance.created.astimezone()
+        return created.strftime('%S.%f')[:-3]
+
+    created_at_millis.short_description = 'Created Second'
 
 
 @admin.register(ReferralTrx)
