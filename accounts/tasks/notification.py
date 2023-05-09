@@ -1,6 +1,8 @@
 from celery import shared_task
 
 from accounts.models import Notification, BulkNotification, User
+from accounts.models.sms_notification import SmsNotification
+from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
 from accounts.utils.push_notif import send_push_notif_to_user
 from ledger.utils.fields import PENDING, DONE
 
@@ -49,3 +51,17 @@ def process_bulk_notifications():
 
         bulk_notif.status = DONE
         bulk_notif.save(update_fields=['status'])
+
+
+@shared_task(queue='notif-manager')
+def send_sms_notifications():
+    for notif in SmsNotification.objects.filter(sent=False).order_by('id')[:100]:
+
+        resp = send_kavenegar_exclusive_sms(
+            phone=notif.recipient.phone,
+            template=notif.template
+        )
+
+        if resp:
+            notif.sent = True
+            notif.save(update_fields=['sent'])

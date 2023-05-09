@@ -15,7 +15,7 @@ SMS_IR_TOKEN_KEY = 'sms-ir-token'
 
 
 TEMPLATES = {
-    '': ''
+    'crypto_address_change': 'آدرس های واریز {brand} تغییر کرد.\nمی توانید آدرس های جدید را از بخش کیف پول در حساب کاربری خود دریافت کنید.\n{brand}'.format(brand=settings.BRAND),
 }
 
 
@@ -50,16 +50,23 @@ def send_kavenegar_exclusive_sms(phone: str, template: str):
     api_key = config('KAVENEGAR_KEY')
     api = KavenegarAPI(apikey=api_key)
 
+    message = TEMPLATES[template]
+
+    message += '\nلغو= 11'
+
     try:
         params = {
             'receptor': phone,
             'message': message,
-            'sender': send_type,
+            'sender': '90008087',
         }
 
         api.sms_send(params)
+        return True
     except (APIException, HTTPException) as e:
         logger.exception("Failed to send sms by kavenegar")
+
+    return False
 
 
 def get_sms_ir_token():

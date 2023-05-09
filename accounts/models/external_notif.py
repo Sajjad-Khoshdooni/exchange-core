@@ -26,7 +26,7 @@ class ExternalNotification(models.Model):
     SCOPE_TRADE1 = 'scope_trade1'
     SCOPE_TRADE2 = 'scope_trade2'
     SCOPE_TRADE3 = 'scope_trade3'
-    #
+
     # TEMPLATES = {
     #     SCOPE_MARGIN_ENABLE: {
     #         'template': '67896',
