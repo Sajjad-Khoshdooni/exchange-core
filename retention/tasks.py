@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task()
-def send_signup_sms():
+def send_signup_not_deposited_sms():
     if not settings.RETENTION_ENABLE:
         return
 
