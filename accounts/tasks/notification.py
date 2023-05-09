@@ -59,7 +59,8 @@ def send_sms_notifications():
 
         resp = send_kavenegar_exclusive_sms(
             phone=notif.recipient.phone,
-            template=notif.template
+            template=notif.template,
+            params=notif.params
         )
 
         if resp:
