@@ -4,7 +4,7 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from gamify.models import MissionJourney, Mission, Task, Achievement
+from gamify.models import MissionJourney, Mission, Task, Achievement, UserMission
 from ledger.models import Prize
 from ledger.models.asset import AssetSerializerMini
 
@@ -106,6 +106,12 @@ class MissionSerializer(serializers.ModelSerializer):
 
     def get_active(self, mission: Mission):
         user = self.context['request'].user
+
+        user_mission = UserMission.objects.filter(user=user, mission__active=True).first()
+
+        if user_mission:
+            return mission == user_mission
+
         return mission.journey.get_active_mission(user.get_account()) == mission
 
     @property
