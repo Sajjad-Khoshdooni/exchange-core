@@ -70,10 +70,19 @@ class Mission(models.Model):
 
 
 class Achievement(models.Model):
+    NORMAL, MYSTERY_BOX = 'normal', 'mystery_box'
+
     mission = models.OneToOneField(Mission, on_delete=models.CASCADE)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, null=True, blank=True)
     amount = get_amount_field()
     voucher = models.BooleanField(default=False)
+
+    @property
+    def type(self):
+        if self.asset:
+            return self.NORMAL
+        else:
+            return self.MYSTERY_BOX
 
     def get_prize_achievement_message(self, prize: Prize):
 

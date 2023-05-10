@@ -10,7 +10,7 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class PrizeSerializer(serializers.ModelSerializer):
-    asset = AssetSerializerMini(read_only=True)
+    asset = serializers.SerializerMethodField()
     reason = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
 
@@ -32,13 +32,20 @@ class PrizeSerializer(serializers.ModelSerializer):
         return ''
 
     def get_asset(self, prize: Prize):
-        mystery_box = prize.achievement.asset
+        from gamify.models import Achievement
 
-        if mystery_box and not prize.redeemed:
-            return
+        achievement = prize.achievement
+
+        if achievement.type == Achievement.NORMAL or prize.redeemed:
+            return AssetSerializerMini(prize).data
 
     def get_amount(self, prize: Prize):
-        return prize.asset.get_presentation_amount(prize.amount)
+        from gamify.models import Achievement
+
+        achievement = prize.achievement
+
+        if achievement.type == Achievement.NORMAL or prize.redeemed:
+            return prize.asset.get_presentation_amount(prize.amount)
 
 
 class PrizeView(ModelViewSet):

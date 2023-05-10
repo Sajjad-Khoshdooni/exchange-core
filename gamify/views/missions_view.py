@@ -16,19 +16,23 @@ class AchievementSerializer(serializers.ModelSerializer):
     achieved = serializers.SerializerMethodField()
     redeemed = serializers.SerializerMethodField()
     fake = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
 
     class Meta:
         model = Achievement
-        fields = ('id', 'amount', 'asset', 'achieved', 'redeemed', 'fake', 'voucher')
+        fields = ('id', 'amount', 'asset', 'achieved', 'redeemed', 'fake', 'voucher', 'type')
 
     def get_id(self, achievement: Achievement):
         prize = self.context['prize']
         return prize and prize.id
 
+    def get_type(self, achievement: Achievement):
+        return achievement.type
+
     def get_asset(self, achievement: Achievement):
         prize = self.context['prize']
 
-        if prize:
+        if prize and (achievement.type == Achievement.NORMAL or prize.redeemed):
             return AssetSerializerMini(prize.asset).data
 
         if not achievement.asset:
@@ -39,7 +43,7 @@ class AchievementSerializer(serializers.ModelSerializer):
     def get_amount(self, achievement: Achievement):
         prize = self.context['prize']
 
-        if prize:
+        if prize and (achievement.type == Achievement.NORMAL or prize.redeemed):
             return prize.amount
         else:
             return achievement.amount
