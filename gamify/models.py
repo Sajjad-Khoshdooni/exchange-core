@@ -1,6 +1,10 @@
 import logging
+import random
+from datetime import timedelta
+from decimal import Decimal
 
 from django.db import models
+from django.utils import timezone
 
 from accounts.models import Notification, Account, TrafficSource
 from ledger.models import Prize, Asset
@@ -58,6 +62,7 @@ class Mission(models.Model):
     name = models.CharField(max_length=64)
     order = models.PositiveSmallIntegerField(default=0)
     active = models.BooleanField(default=True)
+    expiration = models.DateTimeField(null=True, blank=True)
 
     def achievable(self, account: Account):
         if not self.achievement.achieved(account):
@@ -80,44 +85,82 @@ class Mission(models.Model):
 
 class Achievement(models.Model):
     mission = models.OneToOneField(Mission, on_delete=models.CASCADE)
-    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, null=True, blank=True)
     amount = get_amount_field()
     voucher = models.BooleanField(default=False)
 
     def get_prize_achievement_message(self, prize: Prize):
 
-        if not self.voucher:
-            template = 'جایزه {amount} {symbol} به شما تعلق گرفت. برای دریافت، کلیک کنید.'
+        if not self.asset:
+            template = 'جعبه شانس به شما تعلق گرفت. برای دریافت آن، کلیک کنید.'
+        elif not self.voucher:
+            template = 'جایزه {amount} {symbol} به شما تعلق گرفت. برای دریافت، کلیک کنید.'.format(
+                amount=humanize_number(prize.asset.get_presentation_amount(prize.amount)),
+                symbol=self.asset.name_fa
+            )
         else:
-            template = 'جایزه تخفیف کارمزد تا سقف {amount} {symbol} به شما تعلق گرفت. برای دریافت، کلیک کنید.'
+            template = 'جایزه تخفیف کارمزد تا سقف {amount} {symbol} به شما تعلق گرفت. برای دریافت، کلیک کنید.'.format(
+                amount=humanize_number(prize.asset.get_presentation_amount(prize.amount)),
+                symbol=self.asset.name_fa
+            )
 
-        return template.format(
-            amount=humanize_number(prize.asset.get_presentation_amount(prize.amount)),
-            symbol=self.asset.name_fa
-        )
+        return template
 
     def achieved(self, account: Account):
         return Prize.objects.filter(account=account, achievement=self).exists()
 
+    def get_mystery_prize(self):
+        rand = random.randint(1, 100)
+
+        if rand <= 1:
+            return {'coin': 'PEPE', 'amount': 2_000_000}
+        elif rand <= 6:
+            return {'coin': 'SHIB', 'amount': 100_000}
+        elif rand <= 41:
+            return {'coin': 'DOGE', 'amount': Decimal('2.5')}
+        else:
+            return {'coin': 'USDT', 'amount': 10, 'voucher': True}
+
     def achieve_prize(self, account: Account):
         value = 0
 
-        if not self.voucher:
+        voucher_expiration = None
+
+        asset = self.asset
+        amount = self.amount
+        voucher = self.voucher
+        auto_redeem = voucher
+
+        if voucher:
+            voucher_expiration = timezone.now() + timedelta(days=30)
+
+        if not asset:
+            mystery = self.get_mystery_prize()
+            asset = Asset.objects.get(symbol=mystery['coin'])
+            amount = mystery['amount']
+            voucher = mystery.get('voucher', False)
+            auto_redeem = False
+
+            if voucher:
+                voucher_expiration = timezone.now() + timedelta(days=7)
+
+        if not voucher:
             price = get_external_price(Asset.SHIB, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
-            value = self.amount * price
+            value = amount * price
 
         with WalletPipeline() as pipeline:
             prize, created = Prize.objects.get_or_create(
                 account=account,
                 achievement=self,
                 defaults={
-                    'amount': self.amount,
-                    'asset': self.asset,
-                    'value': value
+                    'amount': amount,
+                    'asset': asset,
+                    'value': value,
+                    'voucher_expiration': voucher_expiration
                 }
             )
 
-            if self.voucher and not prize.redeemed:
+            if auto_redeem:
                 prize.build_trx(pipeline)
 
             if created:

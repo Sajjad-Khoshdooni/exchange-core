@@ -25,6 +25,14 @@ class AchievementSerializer(serializers.ModelSerializer):
         return prize and prize.id
 
     def get_asset(self, achievement: Achievement):
+        prize = self.context['prize']
+
+        if prize:
+            return prize.asset
+
+        if not achievement.asset:
+            return None
+
         return AssetSerializerMini(achievement.asset).data
 
     def get_amount(self, achievement: Achievement):
@@ -73,7 +81,7 @@ class MissionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Mission
-        fields = ('name', 'achievements', 'tasks', 'active', 'finished')
+        fields = ('name', 'achievements', 'tasks', 'active', 'finished', 'expiration')
 
     def get_achievements(self, mission: Mission):
         user = self.context['request'].user
