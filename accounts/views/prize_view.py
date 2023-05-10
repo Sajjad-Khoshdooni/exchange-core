@@ -37,7 +37,7 @@ class PrizeSerializer(serializers.ModelSerializer):
         achievement = prize.achievement
 
         if achievement.type == Achievement.NORMAL or prize.redeemed:
-            return AssetSerializerMini(prize).data
+            return AssetSerializerMini(prize.asset).data
 
     def get_amount(self, prize: Prize):
         from gamify.models import Achievement
