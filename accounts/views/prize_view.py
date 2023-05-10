@@ -13,6 +13,7 @@ class PrizeSerializer(serializers.ModelSerializer):
     asset = serializers.SerializerMethodField()
     reason = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
+    voucher = serializers.SerializerMethodField()
 
     def update(self, prize: Prize, validated_data):
         redeemed = validated_data['redeemed']
@@ -25,11 +26,14 @@ class PrizeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Prize
-        fields = ('id', 'amount', 'asset', 'redeemed', 'reason', 'created')
+        fields = ('id', 'amount', 'asset', 'redeemed', 'reason', 'created', 'voucher', 'voucher_expiration')
         read_only_fields = ('id', 'amount', 'scope', 'coin', 'created')
 
     def get_reason(self, prize: Prize):
         return ''
+
+    def get_voucher(self, prize: Prize):
+        return prize.voucher_expiration is not None
 
     def get_asset(self, prize: Prize):
         from gamify.models import Achievement

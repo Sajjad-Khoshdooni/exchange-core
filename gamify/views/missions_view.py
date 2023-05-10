@@ -17,10 +17,12 @@ class AchievementSerializer(serializers.ModelSerializer):
     redeemed = serializers.SerializerMethodField()
     fake = serializers.SerializerMethodField()
     type = serializers.SerializerMethodField()
+    voucher = serializers.SerializerMethodField()
+    voucher_expiration = serializers.SerializerMethodField()
 
     class Meta:
         model = Achievement
-        fields = ('id', 'amount', 'asset', 'achieved', 'redeemed', 'fake', 'voucher', 'type')
+        fields = ('id', 'amount', 'asset', 'achieved', 'redeemed', 'fake', 'voucher', 'voucher_expiration', 'type')
 
     def get_id(self, achievement: Achievement):
         prize = self.context['prize']
@@ -47,6 +49,20 @@ class AchievementSerializer(serializers.ModelSerializer):
             return prize.amount
         else:
             return achievement.amount
+
+    def get_voucher(self, achievement: Achievement):
+        prize = self.context['prize']
+
+        if prize and (achievement.type == Achievement.NORMAL or prize.redeemed):
+            return prize.voucher_expiration is not None
+        elif achievement.type == Achievement.NORMAL:
+            return achievement.voucher
+
+    def get_voucher_expiration(self, achievement: Achievement):
+        prize = self.context['prize']
+
+        if prize and (achievement.type == Achievement.NORMAL or prize.redeemed):
+            return prize.voucher_expiration
 
     def get_achieved(self, achievement: Achievement):
         user = self.context['request'].user
