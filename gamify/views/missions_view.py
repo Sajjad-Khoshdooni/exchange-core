@@ -29,7 +29,7 @@ class AchievementSerializer(serializers.ModelSerializer):
         prize = self.context['prize']
 
         if prize:
-            return prize.asset
+            return AssetSerializerMini(prize.asset).data
 
         if not achievement.asset:
             return None
