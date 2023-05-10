@@ -42,20 +42,6 @@ class MissionJourney(models.Model):
             if not mission.finished(account):
                 return mission
 
-    def achieve_if_can(self, account: Account, task_scope: str):
-        try:
-            missions = self.mission_set.filter(active=True, task__scope=task_scope)
-
-            for mission in missions:
-                if mission.achievable(account):
-                    mission.achievement.achieve_prize(account)
-
-        except Exception as e:
-            logger.exception('Failed to check prize achievements', extra={
-                'account': account.id,
-                'exp': e
-            })
-
 
 class Mission(models.Model):
     journey = models.ForeignKey(MissionJourney, on_delete=models.CASCADE, null=True, blank=True)

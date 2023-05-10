@@ -31,6 +31,12 @@ class PrizeSerializer(serializers.ModelSerializer):
     def get_reason(self, prize: Prize):
         return ''
 
+    def get_asset(self, prize: Prize):
+        mystery_box = prize.achievement.asset
+
+        if mystery_box and not prize.redeemed:
+            return
+
     def get_amount(self, prize: Prize):
         return prize.asset.get_presentation_amount(prize.amount)
 

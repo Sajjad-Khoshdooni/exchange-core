@@ -57,7 +57,7 @@ class WeeklyTradeGoal(BaseGoalType):
     name = Task.WEEKLY_TRADE
 
     def get_progress(self, account: Account):
-        return TradeRevenue.objects.filter(account=account).aggregate(val=Sum('value_irt'))['val'] or 0
+        return TradeRevenue.objects.filter(account=account, ).aggregate(val=Sum('value_irt'))['val'] or 0
 
 
 class ReferralGoal(BaseGoalType):
