@@ -108,7 +108,9 @@ class MissionSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
 
         active_mission = UserMission.objects.filter(user=user, mission__active=True).first()
-        if not active_mission:
+        if active_mission:
+            active_mission = active_mission.mission
+        else:
             active_mission = mission.journey.get_active_mission(user.get_account())
 
         if active_mission:
