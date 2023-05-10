@@ -255,4 +255,23 @@ app.conf.beat_schedule = {
             'expire': 10 * TASK_MULTIPLIER
         },
     },
+
+    'send_signup_not_deposited_sms': {
+        'task': 'retention.tasks.send_signup_not_deposited_sms',
+        'schedule': 60,
+        'options': {
+            'queue': 'celery',
+            'expire': 60
+        },
+    },
+
+    'send_signup_not_verified_push': {
+        'task': 'retention.tasks.send_signup_not_verified_push',
+        'schedule': 60,
+        'options': {
+            'queue': 'celery',
+            'expire': 60
+        },
+    },
+
 }

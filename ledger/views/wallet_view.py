@@ -14,7 +14,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.views.jwt_views import DelegatedAccountMixin
-from ledger.models import Wallet, DepositAddress, NetworkAsset, OTCRequest, OTCTrade, Trx, BalanceLock
+from ledger.models import Wallet, DepositAddress, NetworkAsset, Trx
 from ledger.models.asset import Asset
 from ledger.utils.external_price import get_external_price, get_external_usdt_prices, BUY, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
@@ -91,7 +91,7 @@ class AssetListSerializer(serializers.ModelSerializer):
     def get_ext_price_irt(self, coin: str):
         price = self.context.get('prices', {}).get(coin, 0)
         if not price:
-            price = get_external_price(coin=coin, base_coin=Asset.IRT, side=SELL, allow_stale=True) or 0
+            price = get_external_price(coin=coin, base_coin=Asset.IRT, side=SELL) or 0
         else:
             price *= self.context.get('tether_irt', 0)
 
@@ -100,7 +100,7 @@ class AssetListSerializer(serializers.ModelSerializer):
     def get_ext_price_usdt(self, coin: str):
         price = self.context.get('prices', {}).get(coin, 0)
         if not price:
-            price = get_external_price(coin=coin, base_coin=Asset.USDT, side=SELL, allow_stale=True) or 0
+            price = get_external_price(coin=coin, base_coin=Asset.USDT, side=SELL) or 0
 
         return price
 
@@ -258,10 +258,9 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
             ctx['prices'] = get_external_usdt_prices(
                 coins=coins,
                 side=SELL,
-                allow_stale=True,
                 set_bulk_cache=True
             )
-            ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=True)
+            ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL)
 
         return ctx
 
@@ -423,7 +422,6 @@ class ConvertDustView(APIView):
                     coin=wallet.asset.symbol,
                     base_coin=Asset.IRT,
                     side=BUY,
-                    allow_stale=True
                 ) or 0
 
                 free = wallet.get_free()

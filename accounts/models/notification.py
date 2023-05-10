@@ -32,6 +32,7 @@ class Notification(models.Model):
     )
 
     read = models.BooleanField(default=False)
+    hidden = models.BooleanField(default=False)
 
     push_status = models.CharField(
         choices=((PUSH_WAITING, 'waiting'), (PUSH_SENT, 'sent')),

@@ -1,7 +1,7 @@
-from django.db import models
-
-import string
 import random
+import string
+
+from django.db import models
 
 from experiment.utils.exceptions import TokenCreationError
 
@@ -16,19 +16,25 @@ def create_token():
 
 
 class Link(models.Model):
+    SCOPE_DEPOSIT = 'd'
+    SCOPE_CHOICES = ((SCOPE_DEPOSIT, 'deposit'), )
+
+    SCOPE_TO_LINK = {
+        SCOPE_DEPOSIT: '/wallet/spot/money-deposit?utm_source=raastin&utm_medium=sms&utm_campaign=1h-deposit',
+    }
+
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     token = models.CharField(max_length=6, unique=True, db_index=True, default=create_token)
-    user = models.ForeignKey('accounts.user', related_name='exp_link', on_delete=models.CASCADE, null=True, blank=True)
 
-    @classmethod
-    def create(cls, user):
-        return cls.objects.create(
-            user=user,
-        )
+    scope = models.CharField(max_length=1, choices=SCOPE_CHOICES)
+    user = models.ForeignKey('accounts.user', on_delete=models.CASCADE, related_name='%(class)s_requests_created')
 
-    def get_sms_link(self):
+    def get_link(self):
         return 'c.raastin.com/{token}'.format(token=self.token)
 
     def __str__(self):
-        return self.get_sms_link()
+        return '%s %s' % (self.user, self.scope)
+
+    class Meta:
+        unique_together = ('user', 'scope')
