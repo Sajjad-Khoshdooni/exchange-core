@@ -113,9 +113,6 @@ class MissionSerializer(serializers.ModelSerializer):
         else:
             active_mission = mission.journey.get_active_mission(user.get_account())
 
-        if active_mission:
-            return mission == active_mission
-
         return mission == active_mission
 
     @property
@@ -148,6 +145,11 @@ class ActiveMissionsAPIView(RetrieveAPIView):
 
     def get_object(self):
         account = self.request.user.get_account()
+
+        user_mission = UserMission.objects.filter(user=account.user, mission__active=True).first()
+        if user_mission:
+            return user_mission.mission
+
         journey = MissionJourney.get_journey(account)
         return journey and journey.get_active_mission(account)
 
