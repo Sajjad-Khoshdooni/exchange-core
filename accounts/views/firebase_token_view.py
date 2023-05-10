@@ -45,6 +45,6 @@ class FirebaseTokenView(APIView):
                 user=user,
                 ip=ip,
                 user_agent=user_agent,
-                native_app=serializer.validated_data['source'] == 'app'
+                native_app=serializer.validated_data.get('source') == 'app'
             )
             return Response({'msg': 'token create'})
