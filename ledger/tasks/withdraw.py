@@ -83,6 +83,22 @@ def create_withdraw(transfer_id: int):
         transfer.status = Transfer.PENDING
         transfer.save(update_fields=['status'])
 
+    elif response.status_code == 400 and resp_data.get('type') == 'Invalid':
+        logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
+
+        transfer.status = Transfer.CANCELED
+        transfer.save(update_fields=['status'])
+
+        if resp_data.get('reason') == 'InvalidReceiverAddress':
+            user = transfer.wallet.account.user
+            from accounts.models import Notification
+            Notification.send(
+                recipient=user,
+                title='برداشت ناموفق',
+                level=Notification.ERROR,
+                message='آدرس مقصد وارد شده نامعتبر است'
+            )
+
     elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
         logger.info('withdraw switch %s %s' % (transfer.id, resp_data))
 
