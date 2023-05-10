@@ -59,6 +59,7 @@ class SignupSerializer(serializers.Serializer):
     utm = serializers.JSONField(allow_null=True, required=False, write_only=True)
     referral_code = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
     promotion = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
+    source = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
 
     @staticmethod
     def validate_referral_code(code):
@@ -204,4 +205,4 @@ class SignupView(CreateAPIView):
     def perform_create(self, serializer):
         user = serializer.save()
         login(self.request, user)
-        set_login_activity(self.request, user, is_sign_up=True)
+        set_login_activity(self.request, user, is_sign_up=True, native_app=serializer.validated_data['source'] == 'app')
