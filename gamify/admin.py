@@ -29,3 +29,8 @@ class MissionAdmin(admin.ModelAdmin):
     @admin.display(description='tasks')
     def get_tasks(self, mission: models.Mission):
         return ','.join(mission.task_set.values_list('scope', flat=True))
+
+
+@admin.register(models.UserMission)
+class MissionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'mission')

@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
@@ -121,7 +122,7 @@ class MissionsAPIView(ListAPIView):
     def get_queryset(self):
         account = self.request.user.get_account()
         journey = MissionJourney.get_journey(account)
-        return Mission.objects.filter(journey=journey, active=True)
+        return Mission.objects.filter(Q(journey=journey) | Q(usermission__user=account.user), active=True)
 
     def list(self, request, *args, **kwargs):
         resp = super(MissionsAPIView, self).list(request, *args, **kwargs)

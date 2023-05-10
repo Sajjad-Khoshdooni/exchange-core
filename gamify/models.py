@@ -58,7 +58,7 @@ class MissionJourney(models.Model):
 
 
 class Mission(models.Model):
-    journey = models.ForeignKey(MissionJourney, on_delete=models.CASCADE)
+    journey = models.ForeignKey(MissionJourney, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=64)
     order = models.PositiveSmallIntegerField(default=0)
     active = models.BooleanField(default=True)
@@ -236,3 +236,11 @@ class Task(models.Model):
 
     def __str__(self):
         return '%s / %s' % (self.mission.name, self.type)
+
+
+class UserMission(models.Model):
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('user', 'mission')
