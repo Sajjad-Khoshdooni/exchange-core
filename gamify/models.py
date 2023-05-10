@@ -48,7 +48,7 @@ class Mission(models.Model):
     name = models.CharField(max_length=64)
     order = models.PositiveSmallIntegerField(default=0)
     active = models.BooleanField(default=True)
-    expiration = models.DateTimeField(null=True, blank=True)
+    expiration = models.DateTimeField(null=True, blank=True, db_index=True)
 
     def achievable(self, account: Account):
         if not self.achievement.achieved(account):

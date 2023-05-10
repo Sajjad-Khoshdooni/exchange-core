@@ -274,4 +274,12 @@ app.conf.beat_schedule = {
         },
     },
 
+    'expire_missions': {
+        'task': 'gamify.tasks.deactivate_expired_missions',
+        'schedule': crontab(hour=20, minute=30),
+        'options': {
+            'queue': 'celery',
+            'expire': 3600
+        },
+    },
 }
