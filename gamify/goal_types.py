@@ -74,4 +74,4 @@ class SetEmailGoal(BaseGoalType):
         return bool(account.user.email)
 
 
-GOAL_TYPES = [VerifyLevel2Goal, DepositGoal, TradeGoal, ReferralGoal, SetEmailGoal]
+GOAL_TYPES = [VerifyLevel2Goal, DepositGoal, TradeGoal, ReferralGoal, SetEmailGoal, WeeklyTradeGoal]
