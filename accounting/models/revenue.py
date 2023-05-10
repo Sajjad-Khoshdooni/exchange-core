@@ -29,6 +29,7 @@ class TradeRevenue(models.Model):
     ))
     fee_revenue = get_amount_field()
     value = get_amount_field()
+    value_irt = get_amount_field(default=0)
 
     coin_price = get_amount_field()
     coin_spread = get_amount_field()
@@ -84,6 +85,7 @@ class TradeRevenue(models.Model):
             price=user_trade.price,
             group_id=group_id,
             value=trade_value,
+            value_irt=trade_volume * user_trade.base_irt_price,
             fee_revenue=user_trade.fee_revenue,
 
             source=source,

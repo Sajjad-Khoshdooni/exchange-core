@@ -186,11 +186,12 @@ class Task(models.Model):
     VERIFY_LEVEL2 = 'verify_level2'
     DEPOSIT = 'deposit'
     TRADE = 'trade'
+    WEEKLY_TRADE = 'weekly_trade'
     REFERRAL = 'referral'
     SET_EMAIL = 'set_email'
 
     SCOPE_CHOICES = ((VERIFY_LEVEL2, VERIFY_LEVEL2), (DEPOSIT, DEPOSIT), (TRADE, TRADE), (REFERRAL, REFERRAL),
-                    (SET_EMAIL, SET_EMAIL))
+                    (SET_EMAIL, SET_EMAIL), (WEEKLY_TRADE, WEEKLY_TRADE))
 
     BOOL, NUMBER = 'bool', 'number'
 

@@ -1,7 +1,8 @@
 from django.db.models import Sum
 
+from accounting.models import TradeRevenue
 from accounts.models import Account, User
-from financial.models import Payment, PaymentRequest
+from financial.models import PaymentRequest
 from gamify.models import Task
 from ledger.models import Transfer
 from ledger.utils.fields import DONE
@@ -50,6 +51,13 @@ class TradeGoal(BaseGoalType):
 
     def get_progress(self, account: Account):
         return account.trade_volume_irt
+
+
+class WeeklyTradeGoal(BaseGoalType):
+    name = Task.WEEKLY_TRADE
+
+    def get_progress(self, account: Account):
+        return TradeRevenue.objects.filter(account=account).aggregate(val=Sum('value_irt'))['val'] or 0
 
 
 class ReferralGoal(BaseGoalType):
