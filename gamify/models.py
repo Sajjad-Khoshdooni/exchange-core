@@ -117,7 +117,7 @@ class Achievement(models.Model):
         elif rand <= 6:
             return {'coin': 'SHIB', 'amount': 100_000}
         elif rand <= 41:
-            return {'coin': 'DOGE', 'amount': Decimal('2.5')}
+            return {'coin': 'LUNC', 'amount': 2000}
         else:
             return {'coin': 'USDT', 'amount': 10, 'voucher': True}
 
