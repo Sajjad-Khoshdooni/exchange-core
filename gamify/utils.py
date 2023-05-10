@@ -18,6 +18,7 @@ def check_prize_achievements(account: Account, task_scope: str):
 
     try:
         journey = MissionJourney.get_journey(account)
+
         missions = Mission.objects.filter(
             Q(journey=journey) | Q(usermission__user=account.user),
             active=True,

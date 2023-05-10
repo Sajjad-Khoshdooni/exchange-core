@@ -4,6 +4,7 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.authentication import is_app
 from gamify.models import MissionJourney, Mission, Task, Achievement, UserMission
 from ledger.models import Prize
 from ledger.models.asset import AssetSerializerMini
@@ -127,10 +128,15 @@ class MissionSerializer(serializers.ModelSerializer):
     def get_active(self, mission: Mission):
         user = self.context['request'].user
 
-        active_mission = UserMission.objects.filter(user=user, mission__active=True).first()
-        if active_mission:
-            active_mission = active_mission.mission
-        else:
+        active_mission = None
+
+        if not is_app(self.context['request']):
+            active_mission = UserMission.objects.filter(user=user, mission__active=True).first()
+
+            if active_mission:
+                active_mission = active_mission.mission
+
+        if not active_mission:
             active_mission = mission.journey.get_active_mission(user.get_account())
 
         return mission == active_mission
@@ -149,7 +155,11 @@ class MissionsAPIView(ListAPIView):
     def get_queryset(self):
         account = self.request.user.get_account()
         journey = MissionJourney.get_journey(account)
-        return Mission.objects.filter(Q(journey=journey) | Q(usermission__user=account.user), active=True)
+
+        if is_app(self.request):
+            return Mission.objects.filter(journey=journey, active=True)
+        else:
+            return Mission.objects.filter(Q(journey=journey) | Q(usermission__user=account.user), active=True)
 
     def list(self, request, *args, **kwargs):
         resp = super(MissionsAPIView, self).list(request, *args, **kwargs)
@@ -166,9 +176,11 @@ class ActiveMissionsAPIView(RetrieveAPIView):
     def get_object(self):
         account = self.request.user.get_account()
 
-        user_mission = UserMission.objects.filter(user=account.user, mission__active=True).first()
-        if user_mission:
-            return user_mission.mission
+        if not is_app(self.request):
+            user_mission = UserMission.objects.filter(user=account.user, mission__active=True).first()
+
+            if user_mission:
+                return user_mission.mission
 
         journey = MissionJourney.get_journey(account)
         return journey and journey.get_active_mission(account)
