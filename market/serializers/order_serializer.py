@@ -67,9 +67,9 @@ class OrderSerializer(serializers.ModelSerializer):
             extra = {} if matched_trades.trade_pairs else {'side': created_order.side}
             MarketStreamCache().execute(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
             filtered_trades = list(filter(lambda t: t.order_id == created_order.id, matched_trades.trades))
-            filled_amount = sum(map(lambda t: t.amount, filtered_trades))
+            filled_amount = Decimal(sum(map(lambda t: t.amount, filtered_trades)))
             created_order.filled_amount = filled_amount
-            filled_value = sum(map(lambda t: t.price * t.amount, filtered_trades))
+            filled_value = Decimal(sum(map(lambda t: t.price * t.amount, filtered_trades)))
             self.context['trades'] = {created_order.id: (filled_amount, filled_value)}
 
         except InsufficientBalance:
