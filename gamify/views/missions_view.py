@@ -107,12 +107,14 @@ class MissionSerializer(serializers.ModelSerializer):
     def get_active(self, mission: Mission):
         user = self.context['request'].user
 
-        user_mission = UserMission.objects.filter(user=user, mission__active=True).first()
+        active_mission = UserMission.objects.filter(user=user, mission__active=True).first()
+        if not active_mission:
+            active_mission = mission.journey.get_active_mission(user.get_account())
 
-        if user_mission:
-            return mission == user_mission
+        if active_mission:
+            return mission == active_mission
 
-        return mission.journey.get_active_mission(user.get_account()) == mission
+        return mission == active_mission
 
     @property
     def data(self):
