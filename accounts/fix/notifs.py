@@ -49,3 +49,36 @@ for u in users:
             'push_status': Notification.PUSH_WAITING
         }
     )
+
+
+############# delist
+
+user_ids = Wallet.objects.filter(
+    asset__symbol__in=['REV', 'BLOK'],
+    balance__gt=0
+).values_list('account__user_id', flat=True).distinct()
+users = User.objects.filter(id__in=user_ids)
+
+group_id = uuid.uuid5(uuid.NAMESPACE_URL, f'delist-rev-blok')
+
+for u in users:
+    Notification.objects.get_or_create(
+        recipient=u,
+        group_id=group_id,
+        defaults={
+            'title': 'حذف توکن‌های REV و BLOK',
+            'message': 'به منظور حفظ  پایداری و کاهش ریسک‌، توکن‌های REV و BLOK در ۳۰ اردیبهشت به طور کامل از صرافی راستین حذف خواهند شد. لطفا تا آن زمان نسبت به فروش یا برداشت دارایی‌تان اقدام نمایید.',
+            'level': Notification.WARNING,
+            'link': 'https://raastin.com/ninja/raastin/post/610',
+            'push_status': Notification.PUSH_WAITING
+        }
+    )
+
+
+for user in users:
+    SmsNotification.objects.get_or_create(
+        recipient=user,
+        group_id=group_id,
+        template=SmsNotification.RECENT_SIGNUP_NOT_DEPOSITED,
+        params={'link': 'yun.ir/ie11w'}
+    )

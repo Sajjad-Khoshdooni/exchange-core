@@ -85,6 +85,15 @@ app.conf.beat_schedule = {
         },
     },
 
+    'pending_otc_trades': {
+        'task': 'ledger.tasks.otc.accept_pending_otc_trades',
+        'schedule': 30,
+        'options': {
+            'queue': 'celery',
+            'expire': 30
+        },
+    },
+
     'fill_trades_revenue': {
         'task': 'accounting.tasks.revenue.fill_revenue_filled_prices',
         'schedule': 30 * TASK_MULTIPLIER,
