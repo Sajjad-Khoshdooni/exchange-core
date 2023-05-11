@@ -86,8 +86,7 @@ def create_withdraw(transfer_id: int):
     elif response.status_code == 400 and resp_data.get('type') == 'Invalid':
         logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
 
-        transfer.status = Transfer.CANCELED
-        transfer.save(update_fields=['status'])
+        transfer.reject()
 
         if resp_data.get('reason') == 'InvalidReceiverAddress':
             user = transfer.wallet.account.user
