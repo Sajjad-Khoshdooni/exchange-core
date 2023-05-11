@@ -16,7 +16,7 @@ SMS_IR_TOKEN_KEY = 'sms-ir-token'
 
 TEMPLATES = {
     'crypto_address_change': 'آدرس های واریز {brand} تغییر کرد.\nمی توانید آدرس های جدید را از بخش کیف پول در حساب کاربری خود دریافت کنید.\n{brand}',
-    'recent_not_deposit': 'به {brand} خوش آمدید. با اولین واریز جایزه ماموریت خود را دریافت کنید.\n{link}'
+    'recent_not_deposit': 'به {brand} خوش آمدید. با اولین واریز جایزه ماموریت خود را دریافت کنید.\n{link}',
 }
 
 
