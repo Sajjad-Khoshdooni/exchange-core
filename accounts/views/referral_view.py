@@ -160,5 +160,5 @@ class TradingFeeView(APIView):
             'taker_fee': str(taker_fee),
             'maker_fee': str(maker_fee),
             'voucher_expiration': expiration,
-            'voucher_amount': floor_precision(voucher_amount, 2),
+            'voucher_amount': voucher_amount and floor_precision(voucher_amount, 2),
         })
