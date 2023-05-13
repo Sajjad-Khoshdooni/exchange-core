@@ -260,7 +260,7 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
                 side=SELL,
                 set_bulk_cache=True
             )
-            ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL)
+            ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=True)
 
         return ctx
 

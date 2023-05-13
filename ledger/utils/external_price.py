@@ -126,7 +126,7 @@ def _get_price_tether_irt_nobitex():
     data = resp.json()
     status = data['status']
 
-    if not data['asks']:
+    if not data.get('asks'):
         return
 
     price = {'buy': data['asks'][1][0], 'sell': data['bids'][1][0]}
