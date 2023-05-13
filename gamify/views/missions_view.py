@@ -133,7 +133,7 @@ class MissionSerializer(serializers.ModelSerializer):
         if not is_app(self.context['request']):
             active_mission = UserMission.objects.filter(user=user, mission__active=True).first()
 
-            if active_mission:
+            if active_mission and not mission.finished(active_mission.mission):
                 active_mission = active_mission.mission
 
         if not active_mission:
@@ -180,7 +180,10 @@ class ActiveMissionsAPIView(RetrieveAPIView):
             user_mission = UserMission.objects.filter(user=account.user, mission__active=True).first()
 
             if user_mission:
-                return user_mission.mission
+                mission = user_mission.mission
+
+                if not mission.finished(account):
+                    return mission
 
         journey = MissionJourney.get_journey(account)
         return journey and journey.get_active_mission(account)
