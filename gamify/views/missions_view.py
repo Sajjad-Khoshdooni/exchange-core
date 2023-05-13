@@ -133,7 +133,7 @@ class MissionSerializer(serializers.ModelSerializer):
         if not is_app(self.context['request']):
             active_mission = UserMission.objects.filter(user=user, mission__active=True).first()
 
-            if active_mission and not mission.finished(active_mission.mission):
+            if active_mission and not mission.finished(user.get_account()):
                 active_mission = active_mission.mission
 
         if not active_mission:
