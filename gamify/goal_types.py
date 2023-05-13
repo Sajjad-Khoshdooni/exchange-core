@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db.models import Sum
 
 from accounting.models import TradeRevenue
@@ -57,7 +59,11 @@ class WeeklyTradeGoal(BaseGoalType):
     name = Task.WEEKLY_TRADE
 
     def get_progress(self, account: Account):
-        return TradeRevenue.objects.filter(account=account, ).aggregate(val=Sum('value_irt'))['val'] or 0
+        expiration = self.task.mission.expiration
+        return TradeRevenue.objects.filter(
+            account=account,
+            created__between=(expiration - timedelta(days=7), expiration)
+        ).aggregate(val=Sum('value_irt'))['val'] or 0
 
 
 class ReferralGoal(BaseGoalType):
