@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from gamify import models
 
 
@@ -20,14 +21,14 @@ class AchievementInline(admin.TabularInline):
     extra = 0
 
 
-@admin.register(models.Mission)
-class MissionAdmin(admin.ModelAdmin):
+@admin.register(models.MissionTemplate)
+class MissionTemplateAdmin(admin.ModelAdmin):
     list_display = ('name', 'journey', 'active', 'get_tasks', 'achievement', 'order')
     list_editable = ('order', 'active')
     inlines = (TaskInline, AchievementInline)
 
     @admin.display(description='tasks')
-    def get_tasks(self, mission: models.Mission):
+    def get_tasks(self, mission: models.MissionTemplate):
         return ','.join(mission.task_set.values_list('scope', flat=True))
 
 

@@ -3,9 +3,10 @@ import logging
 from django.db.models import Q
 
 from accounts.models import Account
-from gamify.models import MissionJourney, Task, Mission
+from gamify.models import MissionJourney, Task, MissionTemplate
 
 __all__ = ('Task', 'check_prize_achievements')
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,7 +20,7 @@ def check_prize_achievements(account: Account, task_scope: str):
     try:
         journey = MissionJourney.get_journey(account)
 
-        missions = Mission.objects.filter(
+        missions = MissionTemplate.objects.filter(
             Q(journey=journey) | Q(usermission__user=account.user),
             active=True,
             task__scope__in=scopes

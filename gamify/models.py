@@ -38,12 +38,12 @@ class MissionJourney(models.Model):
             return journey
 
     def get_active_mission(self, account: Account):
-        for mission in self.mission_set.filter(active=True):
+        for mission in self.missiontemplate_set.filter(active=True):
             if not mission.finished(account):
                 return mission
 
 
-class Mission(models.Model):
+class MissionTemplate(models.Model):
     journey = models.ForeignKey(MissionJourney, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=64)
     order = models.PositiveSmallIntegerField(default=0)
@@ -72,7 +72,7 @@ class Mission(models.Model):
 class Achievement(models.Model):
     NORMAL, MYSTERY_BOX = 'normal', 'mystery_box'
 
-    mission = models.OneToOneField(Mission, on_delete=models.CASCADE)
+    mission = models.OneToOneField(MissionTemplate, on_delete=models.CASCADE)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, null=True, blank=True)
     amount = get_amount_field()
     voucher = models.BooleanField(default=False)
@@ -190,7 +190,7 @@ class Task(models.Model):
 
     BOOL, NUMBER = 'bool', 'number'
 
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
+    mission = models.ForeignKey(MissionTemplate, on_delete=models.CASCADE)
     scope = models.CharField(max_length=16, choices=SCOPE_CHOICES)
 
     order = models.PositiveSmallIntegerField(default=0)
@@ -235,7 +235,7 @@ class Task(models.Model):
 
 class UserMission(models.Model):
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
+    mission = models.ForeignKey(MissionTemplate, on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ('user', 'mission')

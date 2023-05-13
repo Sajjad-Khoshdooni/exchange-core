@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.authentication import is_app
-from gamify.models import MissionJourney, Mission, Task, Achievement, UserMission
+from gamify.models import MissionJourney, MissionTemplate, Task, Achievement, UserMission
 from ledger.models import Prize
 from ledger.models.asset import AssetSerializerMini
 
@@ -102,10 +102,10 @@ class MissionSerializer(serializers.ModelSerializer):
     active = serializers.SerializerMethodField()
 
     class Meta:
-        model = Mission
+        model = MissionTemplate
         fields = ('name', 'achievements', 'tasks', 'active', 'finished', 'expiration')
 
-    def get_achievements(self, mission: Mission):
+    def get_achievements(self, mission: MissionTemplate):
         user = self.context['request'].user
         prize = Prize.objects.filter(account=user.get_account(), achievement=mission.achievement).first()
 
@@ -118,14 +118,14 @@ class MissionSerializer(serializers.ModelSerializer):
             AchievementSerializer(mission.achievement, context=context).data,
         ]
 
-    def get_tasks(self, mission: Mission):
+    def get_tasks(self, mission: MissionTemplate):
         return TaskSerializer(mission.task_set.all(), many=True, context=self.context).data
 
-    def get_finished(self, mission: Mission):
+    def get_finished(self, mission: MissionTemplate):
         user = self.context['request'].user
         return mission.finished(user.get_account())
 
-    def get_active(self, mission: Mission):
+    def get_active(self, mission: MissionTemplate):
         user = self.context['request'].user
 
         active_mission = None
@@ -157,9 +157,9 @@ class MissionsAPIView(ListAPIView):
         journey = MissionJourney.get_journey(account)
 
         if is_app(self.request):
-            return Mission.objects.filter(journey=journey, active=True)
+            return MissionTemplate.objects.filter(journey=journey, active=True)
         else:
-            return Mission.objects.filter(Q(journey=journey) | Q(usermission__user=account.user), active=True)
+            return MissionTemplate.objects.filter(Q(journey=journey) | Q(usermission__user=account.user), active=True)
 
     def list(self, request, *args, **kwargs):
         resp = super(MissionsAPIView, self).list(request, *args, **kwargs)
@@ -187,6 +187,7 @@ class ActiveMissionsAPIView(RetrieveAPIView):
 
 
 class TotalVoucherAPIView(APIView):
+    # todo: remove this api
 
     def get(self, request):
         account = self.request.user.get_account()

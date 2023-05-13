@@ -1,7 +1,7 @@
 from celery import shared_task
 from django.utils import timezone
 
-from gamify.models import Mission
+from gamify.models import MissionTemplate
 
 
 @shared_task(queue='celery')
