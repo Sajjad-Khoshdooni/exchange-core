@@ -5,7 +5,7 @@ from django.db.models import Sum
 from accounting.models import TradeRevenue
 from accounts.models import Account, User
 from financial.models import PaymentRequest
-from gamify.models import Task
+from gamify.models import Task, UserMission
 from ledger.models import Transfer
 from ledger.utils.fields import DONE
 
@@ -60,9 +60,11 @@ class WeeklyTradeGoal(BaseGoalType):
 
     def get_progress(self, account: Account):
         expiration = self.task.mission.expiration
+        user_mission = UserMission.objects.get(mission=self.task.mission, user=account.user)
+
         return TradeRevenue.objects.filter(
             account=account,
-            created__between=(expiration - timedelta(days=7), expiration)
+            created__between=(user_mission.created, expiration)
         ).aggregate(val=Sum('value_irt'))['val'] or 0
 
 

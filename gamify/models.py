@@ -9,7 +9,7 @@ from django.utils import timezone
 from accounts.models import Notification, Account, TrafficSource
 from ledger.models import Prize, Asset
 from ledger.utils.external_price import BUY, get_external_price
-from ledger.utils.fields import get_amount_field
+from ledger.utils.fields import get_amount_field, get_created_field
 from ledger.utils.precision import humanize_number
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -234,6 +234,7 @@ class Task(models.Model):
 
 
 class UserMission(models.Model):
+    created = get_created_field()
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
     mission = models.ForeignKey(MissionTemplate, on_delete=models.CASCADE)
 
