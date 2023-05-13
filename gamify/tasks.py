@@ -8,4 +8,4 @@ from gamify.models import MissionTemplate
 def deactivate_expired_missions():
     now = timezone.now()
 
-    Mission.objects.filter(expiration__lte=now).update(active=False)
+    MissionTemplate.objects.filter(expiration__lte=now).update(active=False)
