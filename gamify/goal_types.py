@@ -64,7 +64,7 @@ class WeeklyTradeGoal(BaseGoalType):
 
         return TradeRevenue.objects.filter(
             account=account,
-            created__between=(user_mission.created, expiration)
+            created__range=(user_mission.created, expiration)
         ).aggregate(val=Sum('value_irt'))['val'] or 0
 
 
