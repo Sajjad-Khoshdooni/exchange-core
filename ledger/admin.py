@@ -341,7 +341,7 @@ class TransferAdmin(AdvancedAdmin):
 
     list_display = (
         'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
-        'usdt_value', 'get_remaining_time_to_pass_72h', 'get_jalali_created'
+        'usdt_value', 'get_remaining_time_to_pass_72h', 'get_jalali_created', 'get_jalali_finished'
     )
     search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
@@ -372,6 +372,10 @@ class TransferAdmin(AdvancedAdmin):
     @admin.display(description='created jalali')
     def get_jalali_created(self, transfer: models.Transfer):
         return gregorian_to_jalali_datetime_str(transfer.created)
+
+    @admin.display(description='finished jalali')
+    def get_jalali_finished(self, transfer: models.Transfer):
+        return gregorian_to_jalali_datetime_str(transfer.finished_datetime)
 
     @admin.display(description='User')
     def get_user(self, transfer: models.Transfer):
