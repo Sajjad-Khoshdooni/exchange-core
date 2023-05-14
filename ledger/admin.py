@@ -375,7 +375,7 @@ class TransferAdmin(AdvancedAdmin):
 
     @admin.display(description='finished jalali')
     def get_jalali_finished(self, transfer: models.Transfer):
-        return gregorian_to_jalali_datetime_str(transfer.finished_datetime)
+        return transfer.finished_datetime and gregorian_to_jalali_datetime_str(transfer.finished_datetime)
 
     @admin.display(description='User')
     def get_user(self, transfer: models.Transfer):
