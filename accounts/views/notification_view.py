@@ -35,10 +35,10 @@ class NotificationViewSet(ModelViewSet):
 
         feedback = False
 
-        # user = self.request.user
-        #
-        # if user.account.trade_volume_irt and not UserFeedback.objects.filter(user=user).exists():
-        #     feedback = True
+        user = self.request.user
+
+        if user.account.trade_volume_irt and not UserFeedback.objects.filter(user=user).exists():
+            feedback = True
 
         return Response({
             'notifications': serializer.data,
