@@ -200,7 +200,7 @@ class Task(models.Model):
     title = models.CharField(max_length=32)
     link = models.CharField(max_length=32)
     app_link = models.CharField(max_length=256, default='')
-    description = models.CharField(max_length=128)
+    description = models.CharField(max_length=512)
     level = models.CharField(max_length=8, choices=Notification.LEVEL_CHOICES, default=Notification.WARNING)
 
     def get_goal_type(self):
