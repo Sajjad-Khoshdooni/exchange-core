@@ -14,7 +14,7 @@ from accounts.verifiers.legal import is_48h_rule_passed
 from accounts.authentication import CustomTokenAuthentication
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Asset, Network, Transfer, NetworkAsset, AddressBook
+from ledger.models import Asset, Network, Transfer, NetworkAsset, AddressBook, DepositAddress
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
@@ -101,6 +101,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         if amount > network_asset.withdraw_max:
             raise ValidationError('مقدار وارد شده بزرگ است.')
+
+        if DepositAddress.objects.filter(address=address, address_key__account=account):
+            raise ValidationError('آدرس برداشت متعلق به خودتان است. لطفا آدرس دیگری را وارد نمایید.')
 
         wallet = asset.get_wallet(account)
 
