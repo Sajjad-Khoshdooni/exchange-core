@@ -91,7 +91,7 @@ class AssetListSerializer(serializers.ModelSerializer):
     def get_ext_price_irt(self, coin: str):
         price = self.context.get('prices', {}).get(coin, 0)
         if not price:
-            price = get_external_price(coin=coin, base_coin=Asset.IRT, side=SELL) or 0
+            price = get_external_price(coin=coin, base_coin=Asset.IRT, side=SELL, allow_stale=True) or 0
         else:
             price *= self.context.get('tether_irt', 0)
 
@@ -100,7 +100,7 @@ class AssetListSerializer(serializers.ModelSerializer):
     def get_ext_price_usdt(self, coin: str):
         price = self.context.get('prices', {}).get(coin, 0)
         if not price:
-            price = get_external_price(coin=coin, base_coin=Asset.USDT, side=SELL) or 0
+            price = get_external_price(coin=coin, base_coin=Asset.USDT, side=SELL, allow_stale=True) or 0
 
         return price
 
@@ -422,6 +422,7 @@ class ConvertDustView(APIView):
                     coin=wallet.asset.symbol,
                     base_coin=Asset.IRT,
                     side=BUY,
+                    allow_stale=True,
                 ) or 0
 
                 free = wallet.get_free()

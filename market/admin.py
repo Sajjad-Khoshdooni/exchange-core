@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 
+from ledger.utils.precision import get_presentation_amount
 from market.models import *
 from ledger.models import Asset
 
@@ -107,7 +108,7 @@ class CancelRequestAdmin(admin.ModelAdmin):
 @admin.register(Trade)
 class TradeAdmin(admin.ModelAdmin):
     list_display = ('created', 'created_at_millis', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount',
-                    'fee_revenue')
+                    'fee_revenue', 'get_value_irt', 'get_value_usdt')
     list_filter = ('trade_source', UserTradeFilter)
     readonly_fields = ('symbol', 'order_id', 'account')
     search_fields = ('symbol__name', )
@@ -117,6 +118,14 @@ class TradeAdmin(admin.ModelAdmin):
         return created.strftime('%S.%f')[:-3]
 
     created_at_millis.short_description = 'Created Second'
+
+    @admin.display(description='value irt', ordering='value_irt')
+    def get_value_irt(self, trade: Trade):
+        return get_presentation_amount(trade.irt_value)
+
+    @admin.display(description='value usdt', ordering='value_usdt')
+    def get_value_usdt(self, trade: Trade):
+        return get_presentation_amount(trade.usdt_value)
 
 
 @admin.register(ReferralTrx)

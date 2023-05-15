@@ -44,17 +44,22 @@ def send_message_by_kavenegar(phone: str, template: str, token: str, send_type: 
         logger.exception("Failed to send sms by kavenegar")
 
 
-def send_kavenegar_exclusive_sms(phone: str, template: str, params: dict = None):
+def send_kavenegar_exclusive_sms(phone: str, template: str = None, params: dict = None, content: str = None):
     if settings.DEBUG_OR_TESTING_OR_STAGING or not settings.EXCLUSIVE_SMS_NUMBER:
         return
+
+    assert template or content
 
     api_key = config('KAVENEGAR_KEY')
     api = KavenegarAPI(apikey=api_key)
 
-    params = params or {}
-    params['brand'] = settings.BRAND
+    if template:
+        params = params or {}
+        params['brand'] = settings.BRAND
 
-    message = TEMPLATES[template].format(**params)
+        message = TEMPLATES[template].format(**params)
+    else:
+        message = content
 
     message += '\nلغو= 11'
 

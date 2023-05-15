@@ -108,7 +108,9 @@ class StakeRequestAdmin(admin.ModelAdmin):
 
 @admin.register(StakeRevenue)
 class StakeRevenueAdmin(admin.ModelAdmin):
-    list_display = ['get_revenue', 'get_user', 'get_stake_option_asset', 'get_stake_option_apr']
+    list_display = ['created', 'get_revenue', 'get_user', 'get_stake_option_asset', 'get_stake_option_apr']
+    list_filter = ('stake_request__stake_option', )
+    search_fields = ('stake_request__account__user__phone', )
 
     def get_revenue(self, stake_revenue: StakeRevenue):
         return get_presentation_amount(stake_revenue.revenue)
