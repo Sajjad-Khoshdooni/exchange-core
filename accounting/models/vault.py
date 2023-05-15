@@ -41,19 +41,18 @@ class Vault(models.Model):
         coins = []
 
         for vd in data:
-            if vd.balance != 0:
-                VaultItem.objects.update_or_create(
-                    vault=self,
-                    coin=vd.coin,
-                    defaults={
-                        'updated': now,
-                        'balance': vd.balance,
-                        'value_usdt': vd.value_usdt,
-                        'value_irt': vd.value_irt
-                    }
-                )
+            VaultItem.objects.update_or_create(
+                vault=self,
+                coin=vd.coin,
+                defaults={
+                    'updated': now,
+                    'balance': vd.balance,
+                    'value_usdt': vd.value_usdt,
+                    'value_irt': vd.value_irt
+                }
+            )
 
-                coins.append(vd.coin)
+            coins.append(vd.coin)
 
         VaultItem.objects.filter(vault=self).exclude(coin__in=coins).update(
             balance=0,
