@@ -316,6 +316,7 @@ class Order(models.Model):
                 return MatchedTrades()
 
         matching_orders = list(matching_orders)
+        logger.info(log_prefix + f'make match finished fetching matching orders {len(matching_orders)} {timezone.now()}')
 
         if not matching_orders:
             return MatchedTrades()
