@@ -12,7 +12,7 @@ class FirebaseTokenSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FirebaseToken
-        fields = ('token', 'user_agent', 'ip')
+        fields = ('token', 'user_agent', 'ip', 'source')
 
 
 class FirebaseTokenView(APIView):
