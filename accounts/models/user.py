@@ -3,12 +3,17 @@ from uuid import uuid4
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
 from django.db.models import Q, UniqueConstraint, Sum
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
 
+from accounts.event.producer import get_kafka_producer
 from accounts.models import Notification, Account
+from accounts.models.login_activity import LoginActivity
 from accounts.utils.admin import url_to_edit_object
+from accounts.utils.dto import SignupEvent, ChangeUserEvent
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import PHONE_MAX_LENGTH
 from accounts.validators import mobile_number_validator, national_card_code_validator, telephone_number_validator
@@ -307,3 +312,44 @@ class User(AbstractUser):
             )
             self.selfie_image_discard_text = ''
             super(User, self).save(*args, **kwargs)
+
+
+@receiver(post_save, sender=User)
+def handle_user_save(sender, instance, created, **kwargs):
+    producer = get_kafka_producer()
+
+    referrer_id = None
+    account = Account.objects.filter(user=instance)
+    referrer = account and account.referred_by and account.referred_by.owner.user
+
+    if referrer:
+        referrer_id = referrer.id
+
+    device = None
+    login_activity = LoginActivity.objects.filter(user=instance).last()
+
+    if login_activity:
+        device = login_activity.device
+
+    if created:
+        event = SignupEvent(
+            user_id=instance.id,
+            first_name=instance.first_name,
+            last_name=instance.last_name,
+            phone=instance.phone,
+            email=instance.email,
+            referrer_id=referrer_id,
+            device=device
+        )
+        producer.produce(event)
+
+    elif any(x in ['first_name', 'last_name', 'email'] for x in kwargs['update_fields']):
+        event = ChangeUserEvent(
+            user_id=instance.id,
+            first_name=instance.first_name,
+            last_name=instance.last_name,
+            phone=instance.phone,
+            email=instance.email,
+        )
+        producer.produce(event)
+
