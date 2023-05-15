@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import F
+from django.db.models import F, Max, Q
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
@@ -16,7 +16,8 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock
+from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, \
+    AssetSnapshot
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE
 from ledger.utils.overview import AssetOverview
@@ -73,6 +74,12 @@ class AssetAdmin(AdvancedAdmin):
 
         return super(AssetAdmin, self).save_model(request, obj, form, change)
 
+    def get_queryset(self, request):
+        latest_snapshot = AssetSnapshot.objects.aggregate(created=Max('created'))['created']
+        return super(AssetAdmin, self).get_queryset(request).filter(
+            Q(assetsnapshot__created=latest_snapshot) | Q(assetsnapshot__isnull=True)
+        ).annotate(hedge_value=F('assetsnapshot__hedge_value'))
+
     @admin.display(description='users')
     def get_users_balance(self, asset: Asset):
         return humanize_presentation(self.overview.get_users_asset_amount(asset.symbol))
@@ -93,9 +100,9 @@ class AssetAdmin(AdvancedAdmin):
     def get_reserved_amount(self, asset: Asset):
         return humanize_presentation(self.overview.get_reserved_assets_amount(asset.symbol))
 
-    @admin.display(description='hedge value')
+    @admin.display(description='hedge value', ordering='hedge_value')
     def get_hedge_value(self, asset: Asset):
-        hedge_value = self.overview.get_hedge_value(asset.symbol)
+        hedge_value = asset.hedge_value
 
         if hedge_value is not None:
             hedge_value = round(hedge_value, 2)
