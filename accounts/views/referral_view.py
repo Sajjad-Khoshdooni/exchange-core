@@ -3,7 +3,6 @@ from decimal import Decimal
 
 from django.db.models import Q, DateField, Case, When, F, Sum
 from django.db.models.functions import Cast
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins
@@ -14,8 +13,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from accounts.models import Referral, User, Account
-from ledger.models import Wallet
+from accounts.models import Referral, Account
+from ledger.utils.precision import floor_precision
 from market.models import ReferralTrx
 
 logger = logging.getLogger(__name__)
@@ -161,5 +160,5 @@ class TradingFeeView(APIView):
             'taker_fee': str(taker_fee),
             'maker_fee': str(maker_fee),
             'voucher_expiration': expiration,
-            'voucher_amount': voucher_amount
+            'voucher_amount': voucher_amount and floor_precision(voucher_amount, 2),
         })

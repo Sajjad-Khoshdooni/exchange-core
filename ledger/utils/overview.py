@@ -58,6 +58,9 @@ class AssetOverview:
         return self.provider.get_hedge_amount(self.assets_map[coin], coin_orders)
 
     def get_binance_margin_ratio(self):
+        if not self._binance_futures:
+            return
+
         margin_balance = float(self._binance_futures['total_margin_balance'])
         initial_margin = float(self._binance_futures['total_initial_margin'])
         return margin_balance / max(initial_margin, 1e-10)

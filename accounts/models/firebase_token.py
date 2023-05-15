@@ -19,3 +19,5 @@ class FirebaseToken(models.Model):
     user_agent = models.TextField(blank=True)
     ip = models.GenericIPAddressField(null=True)
     state = models.CharField(max_length=1, choices=state_choice, default=STATE_1)
+
+    native_app = models.BooleanField(default=False)

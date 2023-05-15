@@ -23,6 +23,7 @@ class Prize(models.Model):
 
     amount = get_amount_field()
     asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE)
+    voucher_expiration = models.DateTimeField(null=True, blank=True)
     redeemed = models.BooleanField(default=False)
 
     fake = models.BooleanField(default=False)
@@ -43,12 +44,14 @@ class Prize(models.Model):
 
         system = Account.system()
 
-        if self.achievement.voucher:
+        if self.voucher_expiration:
             market = Wallet.VOUCHER
-            expiration = self.get_voucher_expiration(self.account)
+            expiration = self.voucher_expiration
         else:
             market = Wallet.SPOT
             expiration = None
+
+        assert market == Wallet.VOUCHER or not self.asset.symbol == Asset.USDT
 
         receiver = self.asset.get_wallet(self.account, market=market, expiration=expiration)
 
@@ -63,10 +66,6 @@ class Prize(models.Model):
         if market == Wallet.VOUCHER and receiver.expiration < expiration:
             receiver.expiration = expiration
             receiver.save(update_fields=['expiration'])
-
-    @classmethod
-    def get_voucher_expiration(cls, account: Account):
-        return timezone.now() + timedelta(days=30)
 
     def __str__(self):
         return '%s %s %s' % (self.account, self.amount, self.asset)

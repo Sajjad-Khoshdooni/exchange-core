@@ -1,8 +1,11 @@
+from datetime import timedelta
+
 from django.db.models import Sum
 
+from accounting.models import TradeRevenue
 from accounts.models import Account, User
-from financial.models import Payment, PaymentRequest
-from gamify.models import Task
+from financial.models import PaymentRequest
+from gamify.models import Task, UserMission
 from ledger.models import Transfer
 from ledger.utils.fields import DONE
 
@@ -52,6 +55,19 @@ class TradeGoal(BaseGoalType):
         return account.trade_volume_irt
 
 
+class WeeklyTradeGoal(BaseGoalType):
+    name = Task.WEEKLY_TRADE
+
+    def get_progress(self, account: Account):
+        expiration = self.task.mission.expiration
+        user_mission = UserMission.objects.get(mission=self.task.mission, user=account.user)
+
+        return TradeRevenue.objects.filter(
+            account=account,
+            created__range=(user_mission.created, expiration)
+        ).aggregate(val=Sum('value_irt'))['val'] or 0
+
+
 class ReferralGoal(BaseGoalType):
     name = Task.REFERRAL
 
@@ -66,4 +82,4 @@ class SetEmailGoal(BaseGoalType):
         return bool(account.user.email)
 
 
-GOAL_TYPES = [VerifyLevel2Goal, DepositGoal, TradeGoal, ReferralGoal, SetEmailGoal]
+GOAL_TYPES = [VerifyLevel2Goal, DepositGoal, TradeGoal, ReferralGoal, SetEmailGoal, WeeklyTradeGoal]

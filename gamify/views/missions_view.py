@@ -1,9 +1,11 @@
+from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from gamify.models import MissionJourney, Mission, Task, Achievement
+from accounts.authentication import is_app
+from gamify.models import MissionJourney, MissionTemplate, Task, Achievement, UserMission
 from ledger.models import Prize
 from ledger.models.asset import AssetSerializerMini
 
@@ -15,25 +17,53 @@ class AchievementSerializer(serializers.ModelSerializer):
     achieved = serializers.SerializerMethodField()
     redeemed = serializers.SerializerMethodField()
     fake = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
+    voucher = serializers.SerializerMethodField()
+    voucher_expiration = serializers.SerializerMethodField()
 
     class Meta:
         model = Achievement
-        fields = ('id', 'amount', 'asset', 'achieved', 'redeemed', 'fake', 'voucher')
+        fields = ('id', 'amount', 'asset', 'achieved', 'redeemed', 'fake', 'voucher', 'voucher_expiration', 'type')
 
     def get_id(self, achievement: Achievement):
         prize = self.context['prize']
         return prize and prize.id
 
+    def get_type(self, achievement: Achievement):
+        return achievement.type
+
     def get_asset(self, achievement: Achievement):
+        prize = self.context['prize']
+
+        if prize and (achievement.type == Achievement.NORMAL or prize.redeemed):
+            return AssetSerializerMini(prize.asset).data
+
+        if not achievement.asset:
+            return None
+
         return AssetSerializerMini(achievement.asset).data
 
     def get_amount(self, achievement: Achievement):
         prize = self.context['prize']
 
-        if prize:
+        if prize and (achievement.type == Achievement.NORMAL or prize.redeemed):
             return prize.amount
         else:
             return achievement.amount
+
+    def get_voucher(self, achievement: Achievement):
+        prize = self.context['prize']
+
+        if prize and (achievement.type == Achievement.NORMAL or prize.redeemed):
+            return prize.voucher_expiration is not None
+        elif achievement.type == Achievement.NORMAL:
+            return achievement.voucher
+
+    def get_voucher_expiration(self, achievement: Achievement):
+        prize = self.context['prize']
+
+        if prize and (achievement.type == Achievement.NORMAL or prize.redeemed):
+            return prize.voucher_expiration
 
     def get_achieved(self, achievement: Achievement):
         user = self.context['request'].user
@@ -72,10 +102,10 @@ class MissionSerializer(serializers.ModelSerializer):
     active = serializers.SerializerMethodField()
 
     class Meta:
-        model = Mission
-        fields = ('name', 'achievements', 'tasks', 'active', 'finished')
+        model = MissionTemplate
+        fields = ('name', 'achievements', 'tasks', 'active', 'finished', 'expiration')
 
-    def get_achievements(self, mission: Mission):
+    def get_achievements(self, mission: MissionTemplate):
         user = self.context['request'].user
         prize = Prize.objects.filter(account=user.get_account(), achievement=mission.achievement).first()
 
@@ -88,16 +118,28 @@ class MissionSerializer(serializers.ModelSerializer):
             AchievementSerializer(mission.achievement, context=context).data,
         ]
 
-    def get_tasks(self, mission: Mission):
+    def get_tasks(self, mission: MissionTemplate):
         return TaskSerializer(mission.task_set.all(), many=True, context=self.context).data
 
-    def get_finished(self, mission: Mission):
+    def get_finished(self, mission: MissionTemplate):
         user = self.context['request'].user
         return mission.finished(user.get_account())
 
-    def get_active(self, mission: Mission):
+    def get_active(self, mission: MissionTemplate):
         user = self.context['request'].user
-        return mission.journey.get_active_mission(user.get_account()) == mission
+
+        active_mission = None
+
+        if not is_app(self.context['request']):
+            active_mission = UserMission.objects.filter(user=user, mission__active=True).first()
+
+            if active_mission and not mission.finished(user.get_account()):
+                active_mission = active_mission.mission
+
+        if not active_mission:
+            active_mission = mission.journey.get_active_mission(user.get_account())
+
+        return mission == active_mission
 
     @property
     def data(self):
@@ -113,7 +155,11 @@ class MissionsAPIView(ListAPIView):
     def get_queryset(self):
         account = self.request.user.get_account()
         journey = MissionJourney.get_journey(account)
-        return Mission.objects.filter(journey=journey, active=True)
+
+        if is_app(self.request):
+            return MissionTemplate.objects.filter(journey=journey, active=True)
+        else:
+            return MissionTemplate.objects.filter(Q(journey=journey) | Q(usermission__user=account.user), active=True)
 
     def list(self, request, *args, **kwargs):
         resp = super(MissionsAPIView, self).list(request, *args, **kwargs)
@@ -129,11 +175,22 @@ class ActiveMissionsAPIView(RetrieveAPIView):
 
     def get_object(self):
         account = self.request.user.get_account()
+
+        if not is_app(self.request):
+            user_mission = UserMission.objects.filter(user=account.user, mission__active=True).first()
+
+            if user_mission:
+                mission = user_mission.mission
+
+                if not mission.finished(account):
+                    return mission
+
         journey = MissionJourney.get_journey(account)
         return journey and journey.get_active_mission(account)
 
 
 class TotalVoucherAPIView(APIView):
+    # todo: remove this api
 
     def get(self, request):
         account = self.request.user.get_account()
