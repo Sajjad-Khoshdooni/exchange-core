@@ -104,8 +104,10 @@ class AssetAdmin(AdvancedAdmin):
     def get_hedge_value(self, asset: Asset):
         hedge_value = asset.hedge_value
 
-        if hedge_value is not None:
-            hedge_value = round(hedge_value, 2)
+        if hedge_value is None:
+            return
+
+        hedge_value = round(hedge_value, 2)
 
         return humanize_presentation(hedge_value)
 
