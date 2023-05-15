@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _, to_locale, get_language
 from rest_framework import serializers
 from rest_framework.exceptions import APIException, ValidationError
@@ -40,12 +41,15 @@ class OrderSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        symbol_name = validated_data['symbol']['name'].upper()
+        log_prefix = 'CO %s: ' % symbol_name
+        logger.info(log_prefix + f' started creating... {timezone.now()}')
         request = self.context['request']
 
         if not can_trade(request):
             raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
 
-        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
+        symbol = get_object_or_404(PairSymbol, name=symbol_name)
 
         if validated_data['fill_type'] == Order.LIMIT:
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
@@ -79,7 +83,7 @@ class OrderSerializer(serializers.ModelSerializer):
             if settings.DEBUG_OR_TESTING_OR_STAGING:
                 raise e
             raise APIException(_('Could not place order'))
-
+        logger.info(log_prefix + f' finished creating... {created_order.id} {timezone.now()}')
         return created_order
 
     def post_validate(self, symbol, validated_data):
