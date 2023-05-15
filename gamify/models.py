@@ -238,5 +238,8 @@ class UserMission(models.Model):
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
     mission = models.ForeignKey(MissionTemplate, on_delete=models.CASCADE)
 
+    def __str__(self):
+        return '%s %s' % (self.user, self.mission)
+
     class Meta:
         unique_together = ('user', 'mission')
