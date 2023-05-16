@@ -5,8 +5,6 @@ from typing import Union
 
 @dataclass
 class BaseEvent:
-    topic: str
-
     def serialize(self):
         pass
 

@@ -22,6 +22,13 @@ from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
 from ledger.utils.wallet_pipeline import WalletPipeline
 
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+from accounts.event.producer import get_kafka_producer
+from accounts.utils.dto import WithdrawEvent, DepositEvent
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -338,3 +345,28 @@ class Transfer(models.Model):
             action = 'withdraw'
 
         return f'{action} {self.amount} {self.asset}'
+
+
+@receiver(post_save, sender=Transfer)
+def handle_transfer_save(sender, instance, created, **kwargs):
+    producer = get_kafka_producer()
+
+    if instance.status != Transfer.DONE:
+        return
+
+    if instance.deposit:
+        event = DepositEvent(
+            id=instance.id,
+            user_id=instance.wallet.account.user.id,
+            amount=instance.amount,
+            coin=instance.wallet.asset.symbol
+        )
+    else:
+        event = WithdrawEvent(
+            id=instance.id,
+            user_id=instance.wallet.account.user.id,
+            amount=instance.amount,
+            coin=instance.wallet.asset.symbol
+        )
+
+    producer.produce(event)
