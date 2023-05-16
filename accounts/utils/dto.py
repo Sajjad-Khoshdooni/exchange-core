@@ -1,6 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal
-from typing import Union
+from typing import Union, ClassVar
 
 
 @dataclass
@@ -11,7 +12,6 @@ class BaseEvent:
 
 @dataclass
 class SignupEvent(BaseEvent):
-    topic = 'signup'
     user_id: int
     first_name: str
     last_name: str
@@ -19,10 +19,13 @@ class SignupEvent(BaseEvent):
     email: str
     referrer_id: str
     device: str
+    topic: ClassVar[str] = 'signup'
+    created: datetime = field(default_factory=datetime.utcnow)
 
     def serialize(self):
         return {
             'user_id': self.user_id,
+            'created': self.created,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'phone': self.phone,
@@ -34,15 +37,17 @@ class SignupEvent(BaseEvent):
 
 @dataclass
 class DepositEvent(BaseEvent):
-    topic = 'deposit'
     id: int
     user_id: int
     amount: Union[int, float, Decimal]
     coin: str
+    topic: ClassVar[str] = 'deposit'
+    created: datetime = field(default_factory=datetime.utcnow)
 
     def serialize(self):
         return {
             'id': self.id,
+            'created': self.created,
             'user_id': self.user_id,
             'amount': self.amount,
             'coin': self.coin
@@ -51,15 +56,17 @@ class DepositEvent(BaseEvent):
 
 @dataclass
 class WithdrawEvent(BaseEvent):
-    topic = 'withdraw'
     id: int
     user_id: int
     amount: Union[int, float, Decimal]
     coin: str
+    topic: ClassVar[str] = 'withdraw'
+    created: datetime = field(default_factory=datetime.utcnow)
 
     def serialize(self):
         return {
             'id': self.id,
+            'created': self.created,
             'user_id': self.user_id,
             'amount': self.amount,
             'coin': self.coin
@@ -68,7 +75,6 @@ class WithdrawEvent(BaseEvent):
 
 @dataclass
 class TradeEvent(BaseEvent):
-    topic = 'trade'
     id: int
     user_id: int
     amount: Union[int, float, Decimal]
@@ -78,10 +84,13 @@ class TradeEvent(BaseEvent):
     market: str
     irt_value: Union[int, float, Decimal]
     usdt_value: Union[int, float, Decimal]
+    topic: ClassVar[str] = 'trade'
+    created: datetime = field(default_factory=datetime.utcnow)
 
     def serialize(self):
         return {
             'id': self.id,
+            'created': self.created,
             'user_id': self.user_id,
             'amount': self.amount,
             'symbol': self.symbol,
@@ -95,16 +104,18 @@ class TradeEvent(BaseEvent):
 
 @dataclass
 class ChangeUserEvent(BaseEvent):
-    topic = 'change_user'
     user_id: int
     first_name: str
     last_name: str
     phone: str
     email: str
+    topic: ClassVar[str] = 'change_user'
+    created: datetime = field(default_factory=datetime.utcnow)
 
     def serialize(self):
         return {
             'user_id': self.user_id,
+            'created': self.created,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'phone': self.phone,
@@ -114,12 +125,14 @@ class ChangeUserEvent(BaseEvent):
 
 @dataclass
 class LoginEvent(BaseEvent):
-    topic = 'login'
     user_id: int
     device: str
+    topic: ClassVar[str] = 'login'
+    created: datetime = field(default_factory=datetime.utcnow)
 
     def serialize(self):
         return {
             'user_id': self.user_id,
+            'created': self.created,
             'device': self.device
         }
