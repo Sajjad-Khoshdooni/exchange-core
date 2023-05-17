@@ -5,9 +5,8 @@ from datetime import timedelta
 from pathlib import Path
 
 import sentry_sdk
-from decouple import Csv
+from decouple import Csv, config
 from sentry_sdk.integrations.django import DjangoIntegration
-from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
