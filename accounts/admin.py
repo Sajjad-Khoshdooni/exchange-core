@@ -174,8 +174,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     fields_edit_conditions = {
         'password': None,
-        'first_name': M.superuser | ~M('first_name_verified'),
-        'last_name': M.superuser | ~M('last_name_verified'),
+        'first_name': True,
+        'last_name': True,
         'national_code': M.superuser | ~M('national_code_verified'),
         'national_code_phone_verified': True,
         'birth_date': M.superuser | ~M('birth_date_verified'),
