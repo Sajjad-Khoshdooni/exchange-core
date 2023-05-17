@@ -8,11 +8,15 @@ from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import UniqueConstraint, Q
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 
+from accounts.event.producer import get_kafka_producer
 from accounts.models import Account, Notification
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
+from accounts.utils.dto import WithdrawEvent, DepositEvent
 from accounts.utils.push_notif import send_push_notif_to_user
 from accounts.utils.telegram import send_support_message
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
@@ -21,13 +25,6 @@ from ledger.utils.external_price import get_external_price, SELL
 from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
 from ledger.utils.wallet_pipeline import WalletPipeline
-
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-
-from accounts.event.producer import get_kafka_producer
-from accounts.utils.dto import WithdrawEvent, DepositEvent
-
 
 logger = logging.getLogger(__name__)
 

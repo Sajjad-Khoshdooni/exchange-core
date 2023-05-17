@@ -1,15 +1,19 @@
 from decimal import Decimal
 
+from decouple import config
 from django.conf import settings
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils import timezone
-from decouple import config
 
+from accounts.event.producer import get_kafka_producer
 from accounts.models import Account
 from accounts.models import Notification
 from accounts.utils import email
+from accounts.utils.dto import DepositEvent
 from ledger.models import Trx, Asset
 from ledger.utils.fields import DONE
 from ledger.utils.fields import get_group_id_field, get_status_field
@@ -145,3 +149,20 @@ class Payment(models.Model):
             response = HttpResponse("", status=302)
             response['Location'] = url
             return response
+
+
+@receiver(post_save, sender=Payment)
+def handle_payment_save(sender, instance, created, **kwargs):
+    producer = get_kafka_producer()
+
+    if instance.status != Payment.DONE:
+        return
+
+    event = DepositEvent(
+        id=instance.id,
+        user_id=instance.payment_request.bank_card.user.id,
+        amount=instance.payment_request.amount,
+        coin='IRT'
+    )
+
+    producer.produce(event)

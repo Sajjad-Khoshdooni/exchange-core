@@ -4,14 +4,18 @@ from decouple import config
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
+from accounts.event.producer import get_kafka_producer
 from accounts.models import Account
 from accounts.models import Notification
 from accounts.tasks.send_sms import send_message_by_kavenegar
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
+from accounts.utils.dto import WithdrawEvent
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import BankAccount
@@ -232,3 +236,20 @@ class FiatWithdrawRequest(models.Model):
     class Meta:
         verbose_name = 'درخواست برداشت'
         verbose_name_plural = 'درخواست‌های برداشت'
+
+
+@receiver(post_save, sender=FiatWithdrawRequest)
+def handle_withdraw_request_save(sender, instance, created, **kwargs):
+    producer = get_kafka_producer()
+
+    if instance.status != FiatWithdrawRequest.DONE:
+        return
+
+    event = WithdrawEvent(
+        id=instance.id,
+        user_id=instance.bank_account.user.id,
+        amount=instance.amount,
+        coin='IRT'
+    )
+
+    producer.produce(event)
