@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 class SmsNotification(models.Model):
     RECENT_SIGNUP_NOT_DEPOSITED = 'recent_not_deposit'
+    WEEKLY_MISSION_ACTIVATED = 'weekly_mission_activated'
 
     created = models.DateTimeField(auto_now_add=True)
 

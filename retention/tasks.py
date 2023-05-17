@@ -54,11 +54,14 @@ def send_signup_not_deposited_sms():
         date_joined__range=[start_time, end_time]
     ).exclude(smsnotification__template=SmsNotification.RECENT_SIGNUP_NOT_DEPOSITED)
 
+    group_id = uuid.uuid5(uuid.NAMESPACE_URL, SmsNotification.RECENT_SIGNUP_NOT_DEPOSITED)
+
     for user in users:
         link, _ = Link.objects.get_or_create(user=user, scope=Link.SCOPE_DEPOSIT)
 
         SmsNotification.objects.get_or_create(
             recipient=user,
+            group_id=group_id,
             template=SmsNotification.RECENT_SIGNUP_NOT_DEPOSITED,
             params={'link': link.get_link()}
         )

@@ -33,5 +33,7 @@ class MissionTemplateAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.UserMission)
-class MissionAdmin(admin.ModelAdmin):
+class UserMissionAdmin(admin.ModelAdmin):
     list_display = ('user', 'mission')
+    readonly_fields = ('user', )
+    list_filter = ('mission', )

@@ -82,3 +82,29 @@ for user in users:
         template=SmsNotification.RECENT_SIGNUP_NOT_DEPOSITED,
         params={'link': 'yun.ir/ie11w'}
     )
+
+###########################
+
+user_ids = []
+users = User.objects.filter(id__in=user_ids)
+
+group_id = uuid.uuid5(uuid.NAMESPACE_URL, 'weekly-mission-2023-05-20')
+
+for user in users:
+    SmsNotification.objects.get_or_create(
+        recipient=user,
+        group_id=group_id,
+        template=SmsNotification.WEEKLY_MISSION_ACTIVATED,
+    )
+
+    Notification.objects.get_or_create(
+        recipient=user,
+        group_id=group_id,
+        defaults={
+            'title': 'هدیه جعبه شانس',
+            'message': 'تا آخر هفته ۵ میلیون تومان معامله کنید و یک جعبه شانس بگیرید.',
+            'level': Notification.WARNING,
+            'link': 'https://raastin.com/account/tasks',
+            'push_status': Notification.PUSH_WAITING
+        }
+    )
