@@ -17,7 +17,7 @@ SMS_IR_TOKEN_KEY = 'sms-ir-token'
 TEMPLATES = {
     'crypto_address_change': 'آدرس های واریز {brand} تغییر کرد.\nمی توانید آدرس های جدید را از بخش کیف پول در حساب کاربری خود دریافت کنید.\n{brand}',
     'recent_not_deposit': 'به {brand} خوش آمدید. با اولین واریز جایزه ماموریت خود را دریافت کنید.\n{link}',
-    'weekly_mission_activated': 'تا آخر هفته ۵ میلیون معامله کنید و تا ۲ میلیارد پپه هدیه بگیرید.\nراستین\nyun.ir/27wub1'
+    'weekly_mission_activated': 'تا آخر هفته ۵ میلیون معامله کنید و تا ۲ میلیون پپه هدیه بگیرید.\nراستین\nyun.ir/27wub1',
 }
 
 
