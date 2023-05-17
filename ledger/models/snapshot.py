@@ -4,7 +4,7 @@ from ledger.utils.fields import get_amount_field
 
 
 class AssetSnapshot(models.Model):
-    created = models.DateTimeField(auto_now_add=True, unique=True, db_index=True)
+    created = models.DateTimeField(db_index=True)
     asset = models.ForeignKey('ledger.Asset', on_delete=models.CASCADE)
 
     price = get_amount_field()
@@ -14,6 +14,9 @@ class AssetSnapshot(models.Model):
 
     total_amount = get_amount_field()
     users_amount = get_amount_field()
+
+    class Meta:
+        unique_together = ('created', 'asset')
 
 
 class SystemSnapshot(models.Model):
