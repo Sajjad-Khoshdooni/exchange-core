@@ -16,6 +16,7 @@ def create_snapshot():
         created=now,
         usdt_price=overview.usdt_irt,
         hedge=overview.get_total_hedge_value(),
+        cum_hedge=overview.get_total_cumulative_hedge_value(),
 
         total=overview.get_all_real_assets_value(),
         users=overview.get_all_users_asset_value(),
@@ -25,6 +26,8 @@ def create_snapshot():
 
         margin_insurance=overview.get_margin_insurance_balance(),
         prize=overview.get_all_prize_value(),
+
+        binance_margin_ratio=overview.get_binance_margin_ratio(),
     )
 
     asset_snapshots = []

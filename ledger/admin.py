@@ -3,11 +3,12 @@ from uuid import uuid4
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import F, Max, Q
+from django.db.models import F, Max, Q, Sum
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 
+from accounting.models import ReservedAsset
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.admin_guard.html_tags import anchor_tag
@@ -20,7 +21,6 @@ from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, Man
     AssetSnapshot
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE
-from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount, humanize_presentation
 from ledger.utils.precision import humanize_number
 from ledger.utils.provider import HEDGE, get_provider_requester
@@ -49,25 +49,6 @@ class AssetAdmin(AdvancedAdmin):
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('hedge_asset', 'setup_asset')
 
-    def changelist_view(self, request, extra_context=None):
-        self.overview = AssetOverview(calculated_hedge=True)
-
-        context = {
-            'hedge_value': round(self.overview.get_total_hedge_value(), 2),
-            'cum_hedge_value': round(self.overview.get_total_cumulative_hedge_value(), 2),
-
-            'margin_insurance_balance': self.overview.get_margin_insurance_balance(),
-            'binance_margin_ratio': round(self.overview.get_binance_margin_ratio(), 2),
-
-            'total_assets_usdt': round(self.overview.get_all_real_assets_value(), 0),
-            'users_usdt': round(self.overview.get_all_users_asset_value(), 0),
-            'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
-            'exchange_potential_usdt': round(self.overview.get_exchange_potential_usdt(), 0),
-            'reserved_assets_value': round(self.overview.get_total_reserved_assets_value(), 0),
-        }
-
-        return super().changelist_view(request, extra_context=context)
-
     def save_model(self, request, obj, form, change):
         if Asset.objects.filter(order=obj.order).exclude(id=obj.id).exists():
             Asset.objects.filter(order__gte=obj.order).exclude(id=obj.id).update(order=F('order') + 1)
@@ -78,27 +59,53 @@ class AssetAdmin(AdvancedAdmin):
         latest_snapshot = AssetSnapshot.objects.aggregate(created=Max('created'))['created']
         return super(AssetAdmin, self).get_queryset(request).filter(
             Q(assetsnapshot__created=latest_snapshot) | Q(assetsnapshot__isnull=True)
-        ).annotate(hedge_value=F('assetsnapshot__hedge_value'))
+        ).annotate(
+            hedge_value=F('assetsnapshot__hedge_value'),
+            hedge_amount=F('assetsnapshot__hedge_amount'),
+            calc_hedge_amount=F('assetsnapshot__calc_hedge_amount'),
+            users_amount=F('assetsnapshot__users_amount'),
+            total_amount=F('assetsnapshot__total_amount'),
+        )
 
     @admin.display(description='users')
     def get_users_balance(self, asset: Asset):
-        return humanize_presentation(self.overview.get_users_asset_amount(asset.symbol))
-    
+        users_amount = asset.users_amount
+
+        if users_amount is None:
+            return
+
+        return humanize_presentation(users_amount)
+
     @admin.display(description='total assets')
     def get_total_asset(self, asset: Asset):
-        return humanize_presentation(self.overview.get_real_assets(asset.symbol))
+        total_amount = asset.total_amount
+
+        if total_amount is None:
+            return
+
+        return humanize_presentation(total_amount)
 
     @admin.display(description='hedge amount')
     def get_hedge_amount(self, asset: Asset):
-        return humanize_presentation(self.overview.get_hedge_amount(asset.symbol))
+        hedge_amount = asset.hedge_amount
+
+        if hedge_amount is None:
+            return
+
+        return humanize_presentation(hedge_amount)
 
     @admin.display(description='calc hedge amount')
     def get_calc_hedge_amount(self, asset: Asset):
-        return humanize_presentation(self.overview.get_calculated_hedge(asset.symbol))
+        calc_hedge_amount = asset.calc_hedge_amount
+
+        if calc_hedge_amount is None:
+            return
+
+        return humanize_presentation(calc_hedge_amount)
 
     @admin.display(description='reserved amount')
     def get_reserved_amount(self, asset: Asset):
-        return humanize_presentation(self.overview.get_reserved_assets_amount(asset.symbol))
+        return ReservedAsset.objects.filter(coin=asset.symbol).aggregate(s=Sum('amount'))['s']
 
     @admin.display(description='hedge value', ordering='hedge_value')
     def get_hedge_value(self, asset: Asset):
@@ -487,8 +494,9 @@ class AddressBookAdmin(admin.ModelAdmin):
 
 @admin.register(models.Prize)
 class PrizeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'achievement', 'account', 'get_asset_amount')
+    list_display = ('created', 'achievement', 'account', 'get_asset_amount', 'redeemed', 'value')
     readonly_fields = ('account', 'asset', )
+    list_filter = ('achievement', 'redeemed')
 
     def get_asset_amount(self, prize: Prize):
         return '%s %s' % (get_presentation_amount(prize.amount), prize.asset)

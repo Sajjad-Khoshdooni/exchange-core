@@ -9,6 +9,11 @@ class MissionJourneyAdmin(admin.ModelAdmin):
     list_editable = ('active', 'default')
 
 
+@admin.register(models.Achievement)
+class AchievementAdmin(admin.ModelAdmin):
+    list_display = ('mission', 'asset', 'amount', 'voucher')
+
+
 class TaskInline(admin.TabularInline):
     fields = ('scope', 'type', 'max', 'title', 'link', 'app_link', 'description', 'level', 'order')
     model = models.Task
