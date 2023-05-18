@@ -9,8 +9,6 @@ from django.conf import settings
 from django.core.cache import cache
 from redis import Redis
 
-from ledger.utils.otc import get_all_otc_spreads
-
 logger = logging.getLogger(__name__)
 
 price_redis = Redis.from_url(settings.PRICE_CACHE_LOCATION, decode_responses=True)
@@ -113,6 +111,7 @@ def get_external_usdt_prices(coins: list, side, allow_stale: bool = False, set_b
 
     spreads = {}
     if apply_otc_spread:
+        from ledger.utils.otc import get_all_otc_spreads
         spreads = get_all_otc_spreads(side)
 
     prices = _fetch_redis_prices(coins, side, allow_stale=allow_stale)
