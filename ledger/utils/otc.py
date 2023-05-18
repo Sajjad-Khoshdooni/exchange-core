@@ -89,3 +89,15 @@ def spread_to_multiplier(spread: Decimal, side: str):
         return 1 - spread
     else:
         return 1 + spread
+
+
+@cache_for(300)
+def get_all_otc_spreads(side):
+    queryset = Asset.live_objects.filter(trade_enable=True)
+
+    spreads = {}
+
+    for asset in queryset:
+        spreads[asset.symbol] = spread_to_multiplier(get_otc_spread(asset.symbol, side), side)
+
+    return spreads
