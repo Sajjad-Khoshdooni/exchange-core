@@ -57,11 +57,8 @@ class AssetAdmin(AdvancedAdmin):
 
     def get_queryset(self, request):
         latest_snapshot = AssetSnapshot.objects.aggregate(created=Max('created'))['created']
-        asset_ids = AssetSnapshot.objects.filter(created=latest_snapshot).values_list('asset_id', flat=True)
-        missing_asset_ids = Asset.objects.exclude(id__in=asset_ids).values_list('id', flat=True)
-
         return super(AssetAdmin, self).get_queryset(request).filter(
-            Q(assetsnapshot__created=latest_snapshot) | Q(id__in=missing_asset_ids)
+            Q(assetsnapshot__created=latest_snapshot) | Q(assetsnapshot__isnull=True)
         ).annotate(
             hedge_value=F('assetsnapshot__hedge_value'),
             hedge_amount=F('assetsnapshot__hedge_amount'),
