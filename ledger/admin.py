@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import F, Max, Q, Sum, Value
+from django.db.models import F, Max, Sum, Value
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
@@ -75,7 +75,7 @@ class AssetAdmin(AdvancedAdmin):
             calc_hedge_amount=F('assetsnapshot__calc_hedge_amount'),
             users_amount=F('assetsnapshot__users_amount'),
             total_amount=F('assetsnapshot__total_amount'),
-        ).annotate(missing_assets)
+        ).union(missing_assets)
 
     @admin.display(description='users')
     def get_users_balance(self, asset: Asset):
