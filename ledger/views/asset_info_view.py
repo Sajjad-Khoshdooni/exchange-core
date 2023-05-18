@@ -188,6 +188,7 @@ class AssetsViewSet(ModelViewSet):
                 coins=symbols,
                 side=BUY,
                 allow_stale=True,
+                apply_otc_spread=True
             )
             ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
 
