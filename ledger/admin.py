@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import F, Max, Q, Sum, Value
+from django.db.models import F, Max, Q, Sum
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
@@ -58,24 +58,17 @@ class AssetAdmin(AdvancedAdmin):
     def get_queryset(self, request):
         latest_snapshot = AssetSnapshot.objects.aggregate(created=Max('created'))['created']
         asset_ids = AssetSnapshot.objects.filter(created=latest_snapshot).values_list('asset_id', flat=True)
-
-        missing_assets = Asset.objects.exclude(id__in=asset_ids).annotate(
-            hedge_value=Value(0),
-            hedge_amount=Value(0),
-            calc_hedge_amount=Value(0),
-            users_amount=Value(0),
-            total_amount=Value(0),
-        )
+        missing_asset_ids = Asset.objects.exclude(id__in=asset_ids).values_list('id', flat=True)
 
         return super(AssetAdmin, self).get_queryset(request).filter(
-            assetsnapshot__created=latest_snapshot
+            Q(assetsnapshot__created=latest_snapshot) | Q(id__in=missing_asset_ids)
         ).annotate(
             hedge_value=F('assetsnapshot__hedge_value'),
             hedge_amount=F('assetsnapshot__hedge_amount'),
             calc_hedge_amount=F('assetsnapshot__calc_hedge_amount'),
             users_amount=F('assetsnapshot__users_amount'),
             total_amount=F('assetsnapshot__total_amount'),
-        ).annotate(missing_assets)
+        )
 
     @admin.display(description='users')
     def get_users_balance(self, asset: Asset):
