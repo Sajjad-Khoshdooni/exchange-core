@@ -20,12 +20,14 @@ class SignupEvent(BaseEvent):
     referrer_id: str
     device: str
     topic: ClassVar[str] = 'signup'
+    v: ClassVar[str] = '1'
     created: datetime = field(default_factory=datetime.utcnow)
 
     def serialize(self):
         return {
             'user_id': self.user_id,
             'created': self.created,
+            'v': self.v,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'phone': self.phone,
@@ -42,12 +44,14 @@ class DepositEvent(BaseEvent):
     amount: Union[int, float, Decimal]
     coin: str
     topic: ClassVar[str] = 'deposit'
+    v: ClassVar[str] = '1'
     created: datetime = field(default_factory=datetime.utcnow)
 
     def serialize(self):
         return {
             'id': self.id,
             'created': self.created,
+            'v': self.v,
             'user_id': self.user_id,
             'amount': self.amount,
             'coin': self.coin
@@ -61,12 +65,14 @@ class WithdrawEvent(BaseEvent):
     amount: Union[int, float, Decimal]
     coin: str
     topic: ClassVar[str] = 'withdraw'
+    v: ClassVar[str] = '1'
     created: datetime = field(default_factory=datetime.utcnow)
 
     def serialize(self):
         return {
             'id': self.id,
             'created': self.created,
+            'v': self.v,
             'user_id': self.user_id,
             'amount': self.amount,
             'coin': self.coin
@@ -85,12 +91,14 @@ class TradeEvent(BaseEvent):
     irt_value: Union[int, float, Decimal]
     usdt_value: Union[int, float, Decimal]
     topic: ClassVar[str] = 'trade'
+    v: ClassVar[str] = '1'
     created: datetime = field(default_factory=datetime.utcnow)
 
     def serialize(self):
         return {
             'id': self.id,
             'created': self.created,
+            'v': self.v,
             'user_id': self.user_id,
             'amount': self.amount,
             'symbol': self.symbol,
@@ -110,12 +118,14 @@ class ChangeUserEvent(BaseEvent):
     phone: str
     email: str
     topic: ClassVar[str] = 'change_user'
+    v: ClassVar[str] = '1'
     created: datetime = field(default_factory=datetime.utcnow)
 
     def serialize(self):
         return {
             'user_id': self.user_id,
             'created': self.created,
+            'v': self.v,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'phone': self.phone,
@@ -128,11 +138,13 @@ class LoginEvent(BaseEvent):
     user_id: int
     device: str
     topic: ClassVar[str] = 'login'
+    v: ClassVar[str] = '1'
     created: datetime = field(default_factory=datetime.utcnow)
 
     def serialize(self):
         return {
             'user_id': self.user_id,
             'created': self.created,
+            'v': self.v,
             'device': self.device
         }
