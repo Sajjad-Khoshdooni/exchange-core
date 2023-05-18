@@ -30,6 +30,9 @@ class KafkaProducer:
         self.producer.flush()
 
 
+_producer = None
+
+
 def get_kafka_producer() -> KafkaProducer:
     global _producer
     if _producer is None:
