@@ -26,14 +26,15 @@ class SignupEvent(BaseEvent):
     def serialize(self):
         return {
             'user_id': self.user_id,
-            'created': self.created,
+            'created': self.created.isoformat(),
             'v': self.v,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'phone': self.phone,
             'email': self.email,
             'referrer_id': self.referrer_id,
-            'device': self.device
+            'device': self.device,
+            'topic': self.topic
         }
 
 
@@ -50,11 +51,12 @@ class DepositEvent(BaseEvent):
     def serialize(self):
         return {
             'id': self.id,
-            'created': self.created,
+            'created': self.created.isoformat(),
             'v': self.v,
             'user_id': self.user_id,
             'amount': self.amount,
-            'coin': self.coin
+            'coin': self.coin,
+            'topic': self.topic
         }
 
 
@@ -71,11 +73,12 @@ class WithdrawEvent(BaseEvent):
     def serialize(self):
         return {
             'id': self.id,
-            'created': self.created,
+            'created': self.created.isoformat(),
             'v': self.v,
             'user_id': self.user_id,
             'amount': self.amount,
-            'coin': self.coin
+            'coin': self.coin,
+            'topic': self.topic
         }
 
 
@@ -97,7 +100,7 @@ class TradeEvent(BaseEvent):
     def serialize(self):
         return {
             'id': self.id,
-            'created': self.created,
+            'created': self.created.isoformat(),
             'v': self.v,
             'user_id': self.user_id,
             'amount': self.amount,
@@ -106,7 +109,8 @@ class TradeEvent(BaseEvent):
             'type': self.type,
             'market': self.market,
             'irt_value': self.irt_value,
-            'usdt_value': self.usdt_value
+            'usdt_value': self.usdt_value,
+            'topic': self.topic
         }
 
 
@@ -124,12 +128,13 @@ class ChangeUserEvent(BaseEvent):
     def serialize(self):
         return {
             'user_id': self.user_id,
-            'created': self.created,
+            'created': self.created.isoformat(),
             'v': self.v,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'phone': self.phone,
-            'email': self.email
+            'email': self.email,
+            'topic': self.topic
         }
 
 
@@ -144,7 +149,8 @@ class LoginEvent(BaseEvent):
     def serialize(self):
         return {
             'user_id': self.user_id,
-            'created': self.created,
+            'created': self.created.isoformat(),
             'v': self.v,
-            'device': self.device
+            'device': self.device,
+            'topic': self.topic
         }
