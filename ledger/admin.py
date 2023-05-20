@@ -38,7 +38,7 @@ class AssetAdmin(AdvancedAdmin):
     }
 
     list_display = (
-        'symbol', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calc_hedge_amount',
+        'symbol', 'enable', 'get_hedge_value', 'get_hedge_value_abs', 'get_hedge_amount', 'get_calc_hedge_amount',
         'get_total_asset', 'get_users_balance', 'get_reserved_amount',
         'order', 'trend', 'trade_enable', 'hedge',
         'margin_enable', 'publish_date', 'spread_category', 'otc_status'
@@ -59,6 +59,7 @@ class AssetAdmin(AdvancedAdmin):
         return super(AssetAdmin, self).get_queryset(request)\
             .annotate(
                 hedge_value=F('assetsnapshot__hedge_value'),
+                hedge_value_abs=F('assetsnapshot__hedge_value_abs'),
                 hedge_amount=F('assetsnapshot__hedge_amount'),
                 calc_hedge_amount=F('assetsnapshot__calc_hedge_amount'),
                 users_amount=F('assetsnapshot__users_amount'),
@@ -115,6 +116,17 @@ class AssetAdmin(AdvancedAdmin):
         hedge_value = round(hedge_value, 2)
 
         return humanize_presentation(hedge_value)
+
+    @admin.display(description='hedge value abs', ordering='hedge_value_abs')
+    def get_hedge_value_abs(self, asset: Asset):
+        hedge_value_abs = asset.hedge_value_abs
+
+        if hedge_value_abs is None:
+            return
+
+        hedge_value_abs = round(hedge_value_abs, 2)
+
+        return humanize_presentation(hedge_value_abs)
 
     @admin.action(description='hedge assets', permissions=['view'])
     def hedge_asset(self, request, queryset):

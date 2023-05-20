@@ -45,6 +45,7 @@ def create_snapshot():
             price=0,
             hedge_amount=0,
             hedge_value=0,
+            hedge_value_abs=0,
             calc_hedge_amount=0,
             total_amount=0,
             users_amount=0,
@@ -58,6 +59,7 @@ def create_snapshot():
         s.price = prices.get(asset.symbol, 0)
         s.hedge_amount = overview.get_hedge_amount(asset.symbol)
         s.hedge_value = overview.get_hedge_value(asset.symbol)
+        s.hedge_value_abs = abs(s.hedge_value)
         s.calc_hedge_amount = overview.get_calculated_hedge(asset.symbol)
         s.total_amount = overview.get_real_assets(asset.symbol)
         s.users_amount = overview.get_users_asset_amount(asset.symbol)

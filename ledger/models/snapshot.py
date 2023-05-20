@@ -13,6 +13,7 @@ class AssetSnapshot(models.Model):
     price = get_amount_field()
     hedge_amount = get_amount_field()
     hedge_value = get_amount_field()
+    hedge_value_abs = get_amount_field()
     calc_hedge_amount = get_amount_field()
 
     total_amount = get_amount_field()
