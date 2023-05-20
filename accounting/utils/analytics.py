@@ -1,19 +1,33 @@
-from django.db.models import Sum
+from datetime import datetime
 
+from django.db.models import Sum, F
+
+from accounting.models import TradeRevenue
 from accounts.models import User
 from financial.models import Payment
 from ledger.models import Transfer
 from ledger.utils.fields import DONE
-from market.models import Trade
 
 
-def produce_users_analytics(user_ids: list):
+def produce_users_analytics(user_ids: list, start: datetime = None, end: datetime = None):
     users = User.objects.filter(id__in=user_ids)
     payments = Payment.objects.filter(
         payment_request__bank_card__user_id__in=user_ids,
         status=DONE
     )
+
     transfers = Transfer.objects.filter(wallet__account__user_id__in=users)
+    trades = TradeRevenue.objects.filter(account__user_id__in=users)
+
+    if start:
+        payments = payments.filter(created__gte=start)
+        transfers = transfers.filter(created__gte=start)
+        trades = trades.filter(created__gte=start)
+
+    if end:
+        payments = payments.filter(created__lte=end)
+        transfers = transfers.filter(created__lte=end)
+        trades = trades.filter(created__lte=end)
 
     with_deposit_users = set(payments.values_list('payment_request__bank_card__user_id', flat=True))
     with_deposit_users |= set(transfers.values_list('wallet__account__user_id', flat=True))
@@ -21,16 +35,17 @@ def produce_users_analytics(user_ids: list):
     crypto_deposit_volume = transfers.aggregate(value=Sum('irt_value'))['value'] or 0
     fiat_deposit_volume = payments.aggregate(value=Sum('payment_request__amount'))['value'] or 0
 
-    trades = Trade.objects.filter(account__user_id__in=users)
-
     data = {
         'users': len(user_ids),
         'verified': users.filter(level__gt=User.LEVEL1).count(),
         'deposited': len(with_deposit_users),
         'deposit_value': fiat_deposit_volume + crypto_deposit_volume,
         'traders': len(set(trades.values_list('account__user_id', flat=True))),
-        'trade_volume': trades.aggregate(value=Sum('irt_value'))['value'] or 0,
-        'trade_revenue': trades.aggregate(value=Sum('gap_revenue'))['value'] or 0,
+        'trade_volume': trades.aggregate(value=Sum('value'))['value'] or 0,
+        'trade_revenue': trades.aggregate(
+            value=Sum(F('gap_revenue') + F('fee_revenue') +
+                      F('fiat_hedge_usdt') + F('fiat_hedge_base') * F('base_usdt_price'))
+        )['value'] or 0,
     }
 
     data.update({
