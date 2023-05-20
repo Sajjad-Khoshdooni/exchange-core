@@ -17,7 +17,7 @@ from financial.models.payment import Payment
 from financial.models.withdraw_request import FiatWithdrawRequest
 from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdraw_irt_value, CRYPTO_WITHDRAW_LIMIT, \
     get_crypto_withdraw_irt_value
-from ledger.models import OTCTrade, DepositAddress
+from ledger.models import OTCTrade, DepositAddress, Prize
 from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import humanize_number
@@ -224,7 +224,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                 'get_open_order_address', 'get_deposit_address', 'get_bank_card_link',
                 'get_bank_account_link', 'get_finotech_request_link', 'get_staking_link',
                 'get_user_with_same_national_code', 'get_referred_user', 'get_login_activity_link',
-                'get_notifications_link', 'get_external_notifications_link',
+                'get_notifications_link', 'get_external_notifications_link', 'get_prizes_link',
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
@@ -260,7 +260,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
-        'get_external_notifications_link', 'get_notifications_link', 'get_staking_link'
+        'get_external_notifications_link', 'get_notifications_link', 'get_staking_link', 'get_prizes_link'
     )
     preserve_filters = ('archived', )
 
@@ -596,6 +596,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     @admin.display(description='اعلانات بیرون پنل')
     def get_external_notifications_link(self, user: User):
         link = url_to_admin_list(Notification) + '?user_id={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+
+    @admin.display(description='جوایز')
+    def get_prizes_link(self, user: User):
+        link = url_to_admin_list(Prize) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
     @admin.display(description='لیست استیکینگ‌ (staking) کاربر')

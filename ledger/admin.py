@@ -492,11 +492,26 @@ class AddressBookAdmin(admin.ModelAdmin):
     search_fields = ('address', 'name')
 
 
+class PrizeUserFilter(admin.SimpleListFilter):
+    title = 'کاربران'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(account__user_id=user)
+        else:
+            return queryset
+
+
 @admin.register(models.Prize)
 class PrizeAdmin(admin.ModelAdmin):
     list_display = ('created', 'achievement', 'account', 'get_asset_amount', 'redeemed', 'value')
     readonly_fields = ('account', 'asset', )
-    list_filter = ('achievement', 'redeemed')
+    list_filter = ('achievement', 'redeemed', PrizeUserFilter)
 
     def get_asset_amount(self, prize: Prize):
         return '%s %s' % (get_presentation_amount(prize.amount), prize.asset)
