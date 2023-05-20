@@ -1,10 +1,8 @@
 import logging
-from datetime import timedelta
 from uuid import uuid4
 
 from django.db import models
 from django.db.models import CheckConstraint, Q
-from django.utils import timezone
 
 from accounts.models import Account
 from ledger.models import Trx, Asset, Wallet

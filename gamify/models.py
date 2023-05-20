@@ -169,12 +169,19 @@ class Achievement(models.Model):
                     link='/account/tasks'
                 )
 
-    def __str__(self):
-        kind = ''
-        if self.voucher:
-            kind = ' voucher'
+    def is_mystery_box(self):
+        return not bool(self.asset)
 
-        return '%s %s %s%s' % (self.mission, int(self.amount), self.asset, kind)
+    def __str__(self):
+        if self.is_mystery_box():
+            prize = 'mysterybox'
+        else:
+            kind = ''
+            if self.voucher:
+                kind = ' voucher'
+            prize = f'{self.amount} {self.asset}{kind}'
+
+        return f'{self.mission} ({prize})'
 
 
 class Task(models.Model):
