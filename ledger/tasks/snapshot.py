@@ -30,8 +30,6 @@ def create_snapshot():
         binance_margin_ratio=overview.get_binance_margin_ratio(),
     )
 
-    asset_snapshots = []
-
     assets = Asset.live_objects.all()
 
     prices = get_external_usdt_prices(
@@ -41,20 +39,31 @@ def create_snapshot():
         set_bulk_cache=True
     )
 
-    for asset in assets:
-        asset_snapshots.append(
-            AssetSnapshot(
-                created=now,
-                asset=asset,
-                price=prices.get(asset.symbol, 0),
-                hedge_amount=overview.get_hedge_amount(asset.symbol),
-                hedge_value=overview.get_hedge_value(asset.symbol),
-                calc_hedge_amount=overview.get_calculated_hedge(asset.symbol),
-
-                total_amount=overview.get_real_assets(asset.symbol),
-                users_amount=overview.get_users_asset_amount(asset.symbol),
-            )
+    for asset in assets.filter(assetsnapshot__isnull=True):
+        AssetSnapshot.objects.create(
+            asset=asset,
+            price=0,
+            hedge_amount=0,
+            hedge_value=0,
+            calc_hedge_amount=0,
+            total_amount=0,
+            users_amount=0,
         )
 
+    asset_snapshots = list(AssetSnapshot.objects.filter(asset__enable=True))
+
+    for s in asset_snapshots:
+        asset = s.asset
+
+        s.price = prices.get(asset.symbol, 0)
+        s.hedge_amount = overview.get_hedge_amount(asset.symbol)
+        s.hedge_value = overview.get_hedge_value(asset.symbol)
+        s.calc_hedge_amount = overview.get_calculated_hedge(asset.symbol)
+        s.total_amount = overview.get_real_assets(asset.symbol)
+        s.users_amount = overview.get_users_asset_amount(asset.symbol)
+
+    AssetSnapshot.objects.bulk_update(asset_snapshots, fields=[
+        'price', 'hedge_amount', 'hedge_value', 'calc_hedge_amount', 'total_amount', 'users_amount'
+    ])
+
     system_snapshot.save()
-    AssetSnapshot.objects.bulk_create(asset_snapshots)
