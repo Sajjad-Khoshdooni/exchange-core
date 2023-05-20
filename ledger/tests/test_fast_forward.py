@@ -43,9 +43,7 @@ class FastForwardTestCase(TestCase):
         )
         self.receiver_wallet1 = self.asset.get_wallet(account=self.receiver_account1)
 
-    def test_fast_forward1(self, request_architecture):
-        request_architecture.return_value = 'ETH'
-
+    def test_fast_forward1(self):
         Transfer.check_fast_forward(
             sender_wallet=self.sender_wallet1,
             network=self.network,
@@ -57,9 +55,7 @@ class FastForwardTestCase(TestCase):
             Trx.objects.get(sender=self.sender_wallet1).group_id,
             Transfer.objects.get(deposit_address=self.receiver_deposit_address1).group_id)
 
-    def test_fast_forward2(self, request_architecture):
-        request_architecture.return_value = 'ETH'
-        print(request_architecture('BSC'))
+    def test_fast_forward2(self):
 
         transfer = Transfer.check_fast_forward(
             sender_wallet=self.sender_wallet1,

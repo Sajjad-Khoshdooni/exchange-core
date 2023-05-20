@@ -3,10 +3,11 @@ from uuid import uuid4
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import F, Max, Q, Sum
+from django.db.models import F, Sum
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
+from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import ReservedAsset
 from accounts.admin_guard import M
@@ -17,8 +18,7 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, \
-    AssetSnapshot
+from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE
 from ledger.utils.precision import get_presentation_amount, humanize_presentation
@@ -56,16 +56,14 @@ class AssetAdmin(AdvancedAdmin):
         return super(AssetAdmin, self).save_model(request, obj, form, change)
 
     def get_queryset(self, request):
-        latest_snapshot = AssetSnapshot.objects.aggregate(created=Max('created'))['created']
-        return super(AssetAdmin, self).get_queryset(request).filter(
-            Q(assetsnapshot__created=latest_snapshot) | Q(assetsnapshot__isnull=True)
-        ).annotate(
-            hedge_value=F('assetsnapshot__hedge_value'),
-            hedge_amount=F('assetsnapshot__hedge_amount'),
-            calc_hedge_amount=F('assetsnapshot__calc_hedge_amount'),
-            users_amount=F('assetsnapshot__users_amount'),
-            total_amount=F('assetsnapshot__total_amount'),
-        )
+        return super(AssetAdmin, self).get_queryset(request)\
+            .annotate(
+                hedge_value=F('assetsnapshot__hedge_value'),
+                hedge_amount=F('assetsnapshot__hedge_amount'),
+                calc_hedge_amount=F('assetsnapshot__calc_hedge_amount'),
+                users_amount=F('assetsnapshot__users_amount'),
+                total_amount=F('assetsnapshot__total_amount'),
+            )
 
     @admin.display(description='users')
     def get_users_balance(self, asset: Asset):
@@ -581,9 +579,9 @@ class SystemSnapshotAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.AssetSnapshot)
-class AssetSnapshotAdmin(admin.ModelAdmin):
-    list_display = ('created', 'asset', 'total_amount', 'users_amount', 'hedge_amount', 'hedge_value', 'get_hedge_diff')
-    ordering = ('-created', 'asset__order')
+class AssetSnapshotAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    list_display = ('updated', 'asset', 'total_amount', 'users_amount', 'hedge_amount', 'hedge_value', 'get_hedge_diff')
+    ordering = ('asset__order', )
     list_filter = ('asset', )
 
     def get_hedge_diff(self, asset_snapshot: models.AssetSnapshot):
