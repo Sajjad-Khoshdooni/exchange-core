@@ -19,6 +19,9 @@ class AssetSnapshot(models.Model):
     total_amount = get_amount_field()
     users_amount = get_amount_field()
 
+    def __str__(self):
+        return str(self.asset)
+
 
 class SystemSnapshot(models.Model):
     created = models.DateTimeField(auto_now_add=True, unique=True, db_index=True)
