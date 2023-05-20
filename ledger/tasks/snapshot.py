@@ -51,9 +51,7 @@ def create_snapshot():
             users_amount=0,
         )
 
-    asset_snapshots = list(AssetSnapshot.objects.filter(asset__enable=True))
-
-    for s in asset_snapshots:
+    for s in AssetSnapshot.objects.filter(asset__enable=True):
         asset = s.asset
 
         s.price = prices.get(asset.symbol, 0)
@@ -64,8 +62,6 @@ def create_snapshot():
         s.total_amount = overview.get_real_assets(asset.symbol)
         s.users_amount = overview.get_users_asset_amount(asset.symbol)
 
-    AssetSnapshot.objects.bulk_update(asset_snapshots, fields=[
-        'price', 'hedge_amount', 'hedge_value', 'calc_hedge_amount', 'total_amount', 'users_amount'
-    ])
+        s.save()
 
     system_snapshot.save()
