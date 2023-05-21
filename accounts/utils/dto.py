@@ -68,7 +68,7 @@ class TradeEvent(BaseEvent):
     amount: Union[int, float, Decimal]
     symbol: str
     price: Union[int, float, Decimal]
-    type: str
+    trade_type: str
     market: str
     value_irt: Union[int, float, Decimal]
     value_usdt: Union[int, float, Decimal]

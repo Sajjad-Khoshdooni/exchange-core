@@ -86,7 +86,7 @@ def handle_base_trade_save(sender, instance, created, **kwargs):
         amount=instance.amount,
         price=instance.price,
         symbol=instance.symbol,
-        type=_type,
+        trade_type=_type,
         market=instance.market,
         created=instance.created,
         value_usdt=Decimal(instance.base_irt_price) * Decimal(instance.amount),
