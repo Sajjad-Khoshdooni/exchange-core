@@ -25,7 +25,7 @@ class KafkaProducer:
         data = json.dumps(event.serialize())
 
         self.producer.poll(0)
-        self.producer.produce(event.topic, data.encode('utf-8'), callback=delivery_report)
+        self.producer.produce('crm', data.encode('utf-8'), callback=delivery_report)
 
         self.producer.flush()
 

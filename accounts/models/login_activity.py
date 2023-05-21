@@ -41,7 +41,9 @@ def handle_log_in_save(sender, instance, created, **kwargs):
 
     event = LoginEvent(
         user_id=instance.user.id,
-        device=instance.device
+        device=instance.device,
+        is_signup=instance.is_sign_up,
+        created=instance.created
     )
 
     producer.produce(event)

@@ -16,7 +16,7 @@ from accounts.event.producer import get_kafka_producer
 from accounts.models import Account, Notification
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.dto import WithdrawEvent, DepositEvent
+from accounts.utils.dto import TransferEvent
 from accounts.utils.push_notif import send_push_notif_to_user
 from accounts.utils.telegram import send_support_message
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
@@ -351,19 +351,15 @@ def handle_transfer_save(sender, instance, created, **kwargs):
     if instance.status != Transfer.DONE:
         return
 
-    if instance.deposit:
-        event = DepositEvent(
-            id=instance.id,
-            user_id=instance.wallet.account.user.id,
-            amount=instance.amount,
-            coin=instance.wallet.asset.symbol
-        )
-    else:
-        event = WithdrawEvent(
-            id=instance.id,
-            user_id=instance.wallet.account.user.id,
-            amount=instance.amount,
-            coin=instance.wallet.asset.symbol
-        )
+    event = TransferEvent(
+        id=instance.id,
+        user_id=instance.wallet.account.user.id,
+        amount=instance.amount,
+        coin=instance.wallet.asset.symbol,
+        created=instance.created,
+        is_deposit=instance.deposit,
+        value_irt=instance.irt_value,
+        value_usdt=instance.usdt_value
+    )
 
     producer.produce(event)

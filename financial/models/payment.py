@@ -13,8 +13,9 @@ from accounts.event.producer import get_kafka_producer
 from accounts.models import Account
 from accounts.models import Notification
 from accounts.utils import email
-from accounts.utils.dto import DepositEvent
+from accounts.utils.dto import TransferEvent
 from ledger.models import Trx, Asset
+from ledger.utils.external_price import get_external_price
 from ledger.utils.fields import DONE
 from ledger.utils.fields import get_group_id_field, get_status_field
 from ledger.utils.precision import humanize_number, get_presentation_amount
@@ -158,11 +159,17 @@ def handle_payment_save(sender, instance, created, **kwargs):
     if instance.status != Payment.DONE:
         return
 
-    event = DepositEvent(
+    usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
+
+    event = TransferEvent(
         id=instance.id,
         user_id=instance.payment_request.bank_card.user.id,
         amount=instance.payment_request.amount,
-        coin='IRT'
+        coin='IRT',
+        is_deposit=True,
+        value_usdt=float(instance.payment_request.amount) / float(usdt_price),
+        value_irt=instance.payment_request.amount,
+        created=instance.created
     )
 
     producer.produce(event)

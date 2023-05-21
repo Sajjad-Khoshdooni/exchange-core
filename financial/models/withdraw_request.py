@@ -15,11 +15,12 @@ from accounts.models import Notification
 from accounts.tasks.send_sms import send_message_by_kavenegar
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.dto import WithdrawEvent
+from accounts.utils.dto import TransferEvent
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
+from ledger.utils.external_price import get_external_price
 from ledger.utils.fields import get_group_id_field
 from ledger.utils.precision import humanize_number
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -245,11 +246,17 @@ def handle_withdraw_request_save(sender, instance, created, **kwargs):
     if instance.status != FiatWithdrawRequest.DONE:
         return
 
-    event = WithdrawEvent(
+    usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
+
+    event = TransferEvent(
         id=instance.id,
         user_id=instance.bank_account.user.id,
         amount=instance.amount,
-        coin='IRT'
+        coin='IRT',
+        created=instance.created,
+        value_irt=instance.amount,
+        value_usdt=float(instance.amount) / float(usdt_price),
+        is_deposit=False
     )
 
     producer.produce(event)

@@ -11,9 +11,8 @@ from simple_history.models import HistoricalRecords
 
 from accounts.event.producer import get_kafka_producer
 from accounts.models import Notification, Account
-from accounts.models.login_activity import LoginActivity
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.dto import SignupEvent, ChangeUserEvent
+from accounts.utils.dto import UserEvent
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import PHONE_MAX_LENGTH
 from accounts.validators import mobile_number_validator, national_card_code_validator, telephone_number_validator
@@ -325,31 +324,26 @@ def handle_user_save(sender, instance, created, **kwargs):
     if referrer:
         referrer_id = referrer.id
 
-    device = None
-    login_activity = LoginActivity.objects.filter(user=instance).last()
-
-    if login_activity:
-        device = login_activity.device
-
     if created:
-        event = SignupEvent(
+        event = UserEvent(
             user_id=instance.id,
             first_name=instance.first_name,
             last_name=instance.last_name,
             phone=instance.phone,
             email=instance.email,
             referrer_id=referrer_id,
-            device=device
+            created=instance.created
         )
         producer.produce(event)
 
-    elif any(x in ['first_name', 'last_name', 'email'] for x in kwargs['update_fields']):
-        event = ChangeUserEvent(
+    elif any(x in ['first_name', 'last_name', 'email', 'phone'] for x in kwargs['update_fields']):
+        event = UserEvent(
             user_id=instance.id,
             first_name=instance.first_name,
             last_name=instance.last_name,
             phone=instance.phone,
             email=instance.email,
+            referrer_id=referrer_id,
+            created=instance.created
         )
         producer.produce(event)
-
