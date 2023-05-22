@@ -423,7 +423,7 @@ class ConvertDustView(APIView):
                     base_coin=Asset.IRT,
                     side=BUY,
                     allow_stale=True,
-                ) or 0
+                )
 
                 free = wallet.get_free()
                 free_irt_value = free * price

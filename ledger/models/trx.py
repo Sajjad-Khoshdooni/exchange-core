@@ -31,6 +31,7 @@ class Trx(models.Model):
     DEBT_CLEAR = 'dc'
     DUST = 'du'
     MANUAL = 'mn'
+    DELIST = 'dl'
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -47,7 +48,7 @@ class Trx(models.Model):
             (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (LIQUID, 'liquid'),
             (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'), (REVERT, 'revert'), (AIRDROP, 'airdrop'),
             (STAKE, 'stake'), (STAKE_REVENUE, 'stake revenue'), (STAKE_FEE, 'stake fee'), (RESERVE, 'reserve'),
-            (DUST, 'dust'), (MANUAL, 'manual')
+            (DUST, 'dust'), (MANUAL, 'manual'), (DELIST, 'delist')
         )
     )
 
