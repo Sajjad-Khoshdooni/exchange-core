@@ -1,9 +1,10 @@
 from uuid import uuid4
 
-from accounts.models import Account
+from accounts.models import Account, Notification
 from ledger.models import Asset, Wallet, Trx
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.otc import get_otc_spread, spread_to_multiplier
+from ledger.utils.precision import humanize_number
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
@@ -37,6 +38,7 @@ def sell_all_assets_to_irt(asset: Asset):
     with WalletPipeline() as pipeline:
         for wallet in wallets:
             amount = wallet.balance
+            irt_amount = irt.get_presentation_amount(amount * price)
 
             pipeline.new_trx(
                 sender=wallet,
@@ -48,7 +50,16 @@ def sell_all_assets_to_irt(asset: Asset):
             pipeline.new_trx(
                 sender=system_irt,
                 receiver=irt.get_wallet(wallet.account),
-                amount=amount * price,
+                amount=irt_amount,
                 group_id=group_id,
                 scope=Trx.DELIST
+            )
+
+            Notification.send(
+                recipient=wallet.account.user,
+                title='تبدیل خودکار توکن {}'.format(asset.symbol),
+                message='با توجه به اطلاع‌رسانی‌های مکرر قبلی مبنی بر حذف توکن {}، مقدار {} {} به {} تومان تبدیل شد.'.format(
+                    asset.symbol, humanize_number(asset.get_presentation_amount(amount)), asset.name_fa, humanize_number(irt_amount)
+                ),
+                level=Notification.INFO,
             )
