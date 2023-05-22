@@ -55,8 +55,6 @@ def sell_all_assets_to_irt(asset: Asset):
                 scope=Trx.DELIST
             )
 
-            irt_amount_ceil =
-
             if irt_amount >= 1:
                 Notification.send(
                     recipient=wallet.account.user,
