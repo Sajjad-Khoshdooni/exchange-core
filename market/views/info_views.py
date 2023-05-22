@@ -32,7 +32,7 @@ class AssetListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ('symbol', 'ask', 'bid')
+        fields = ('symbol', 'ask', 'bid', 'name')
         ref_name = 'market asset'
 
 
