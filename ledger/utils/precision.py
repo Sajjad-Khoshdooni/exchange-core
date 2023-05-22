@@ -96,5 +96,5 @@ def humanize_presentation(num):
     return humanize_number(get_presentation_amount(num, precision=8))
 
 
-def zero_by_precision(amount: Decimal, precision: int = AMOUNT_PRECISION):
+def is_zero_by_precision(amount: Decimal, precision: int = AMOUNT_PRECISION):
     return int(amount * 10 ** precision) == 0
