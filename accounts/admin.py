@@ -718,8 +718,10 @@ class LoginActivityAdmin(admin.ModelAdmin):
 
 @admin.register(FirebaseToken)
 class FirebaseTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
-    list_display = ['user', 'token']
-    readonly_fields = ('created',)
+    list_display = ['user', 'ip', 'native_app']
+    readonly_fields = ('created', 'user')
+    list_filter = ('native_app', )
+    search_fields = ('user__phone', 'token')
 
 
 @admin.register(ExternalNotification)

@@ -4,13 +4,6 @@ from accounts.models import User
 
 
 class FirebaseToken(models.Model):
-    STATE_1 = '1'
-    STATE_2 = '2'
-    STATE_3 = '3'
-    STATE_4 = '4'
-
-    state_choice = ((STATE_1, '2h'), (STATE_2, '1d'),
-                    (STATE_3, '7d'))
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -18,6 +11,5 @@ class FirebaseToken(models.Model):
     token = models.CharField(max_length=256, unique=True)
     user_agent = models.TextField(blank=True)
     ip = models.GenericIPAddressField(null=True)
-    state = models.CharField(max_length=1, choices=state_choice, default=STATE_1)
 
     native_app = models.BooleanField(default=False)
