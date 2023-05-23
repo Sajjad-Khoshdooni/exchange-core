@@ -35,3 +35,9 @@ def check_prize_achievements(account: Account, task_scope: str):
             'account': account.id,
             'exp': e
         })
+
+
+def clone_model(instance):
+    instance.pk = None
+    instance.save()
+    return instance
