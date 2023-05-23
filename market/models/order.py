@@ -467,7 +467,7 @@ class Order(models.Model):
             )
 
             if settings.ZERO_USDT_HEDGE and symbol.name != 'USDTIRT' and symbol.base_asset.symbol == Asset.IRT:
-                usdt_irt = PairSymbol.objects.get('USDTIRT')
+                usdt_irt = PairSymbol.objects.get(name='USDTIRT')
 
                 trade_values = Decimal()
                 for rev in trades_revenue:

@@ -213,7 +213,7 @@ class OTCTrade(models.Model):
 
                 if settings.ZERO_USDT_HEDGE and req.symbol.name != 'USDTIRT' and req.symbol.base_asset.symbol == Asset.IRT:
                     from market.models import Order
-                    usdt_irt = PairSymbol.objects.get('USDTIRT')
+                    usdt_irt = PairSymbol.objects.get(name='USDTIRT')
 
                     amount = floor_precision(req.usdt_value, usdt_irt.tick_size)
 
