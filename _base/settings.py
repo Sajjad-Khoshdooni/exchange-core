@@ -372,6 +372,7 @@ JALALI_DATE_DEFAULTS = {
 SYSTEM_ACCOUNT_ID = config('SYSTEM_ACCOUNT_ID', default=1)
 OTC_ACCOUNT_ID = config('OTC_ACCOUNT', cast=int)
 RANDOM_TRADER_ACCOUNT_ID = config('BOT_RANDOM_TRADER_ACCOUNT_ID', default=None)
+MARKET_MAKER_ACCOUNT_ID = config('MARKET_MAKER_ACCOUNT_ID', default=None)
 
 BRAND_EN = config('BRAND_EN', default='')
 BRAND = config('BRAND', default='')

@@ -12,6 +12,7 @@ from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet, Asset
 from ledger.utils.external_price import SELL
 from ledger.utils.fields import get_amount_field
+from ledger.utils.precision import floor_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.exceptions import NegativeGapRevenue
 from market.models import Trade, PairSymbol
@@ -209,6 +210,21 @@ class OTCTrade(models.Model):
                     amount=req.amount,
                     scope=TRADE
                 )
+
+                if settings.ZERO_USDT_HEDGE and req.symbol.name != 'USDTIRT' and req.symbol.base_asset.symbol == Asset.IRT:
+                    from market.models import Order
+                    usdt_irt = PairSymbol.objects.get('USDTIRT')
+
+                    amount = floor_precision(req.usdt_value, usdt_irt.tick_size)
+
+                    order = new_order(
+                        symbol=usdt_irt,
+                        account=Account.objects.get(id=OTC_ACCOUNT_ID),
+                        side=req.side,
+                        amount=amount,
+                        fill_type=Order.MARKET,
+                        raise_exception=False
+                    )
 
                 if hedged:
                     hedge_key = _key
