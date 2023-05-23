@@ -40,19 +40,20 @@ class MissionTemplateAdmin(admin.ModelAdmin):
         return ','.join(mission.task_set.values_list('scope', flat=True))
 
     @admin.action(description='clone', permissions=['change'])
-    def clone_mission(self, mission: models.MissionTemplate):
+    def clone_mission(self, request, queryset):
         with transaction.atomic():
-            tasks = mission.task_set.all()
-            achievement = mission.achievement
+            for mission in queryset:
+                tasks = mission.task_set.all()
+                achievement = mission.achievement
 
-            new_mission = clone_model(mission)
+                new_mission = clone_model(mission)
 
-            achievement.mission = new_mission
-            clone_model(achievement)
+                achievement.mission = new_mission
+                clone_model(achievement)
 
-            for task in tasks:
-                task.mission = new_mission
-                clone_model(task)
+                for task in tasks:
+                    task.mission = new_mission
+                    clone_model(task)
 
 
 @admin.register(models.UserMission)
