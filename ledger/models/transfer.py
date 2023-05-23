@@ -356,10 +356,12 @@ def handle_transfer_save(sender, instance, created, **kwargs):
         user_id=instance.wallet.account.user.id,
         amount=instance.amount,
         coin=instance.wallet.asset.symbol,
+        network=instance.network.symbol,
         created=instance.created,
         is_deposit=instance.deposit,
         value_irt=instance.irt_value,
-        value_usdt=instance.usdt_value
+        value_usdt=instance.usdt_value,
+        event_id=instance.group_id
     )
 
     producer.produce(event)

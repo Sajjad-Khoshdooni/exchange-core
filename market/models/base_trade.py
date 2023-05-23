@@ -1,16 +1,15 @@
 import logging
-from decimal import Decimal
+import uuid
 
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.db import models
 
+from accounts.event.producer import get_kafka_producer
 from accounts.utils.dto import TradeEvent
 from ledger.models import Wallet
 from ledger.utils.external_price import BUY, SELL
 from ledger.utils.fields import get_amount_field
-from accounts.event.producer import get_kafka_producer
-
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +88,9 @@ def handle_base_trade_save(sender, instance, created, **kwargs):
         trade_type=_type,
         market=instance.market,
         created=instance.created,
-        value_usdt=Decimal(instance.base_irt_price) * Decimal(instance.amount),
-        value_irt=Decimal(instance.base_usdt_price) * Decimal(instance.amount),
+        value_usdt=float(instance.base_irt_price) * float(instance.amount),
+        value_irt=float(instance.base_usdt_price) * float(instance.amount),
+        event_id=uuid.uuid4()
     )
 
     producer.produce(event)

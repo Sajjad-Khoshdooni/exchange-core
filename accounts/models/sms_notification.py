@@ -14,8 +14,9 @@ class SmsNotification(models.Model):
 
     recipient = models.ForeignKey(to='accounts.User', on_delete=models.CASCADE)
 
-    template = models.CharField(max_length=32)
+    template = models.CharField(max_length=32, blank=True, null=True)
     params = models.JSONField(null=True, blank=True)
+    content = models.CharField(blank=True, max_length=32, null=True)
     sent = models.BooleanField(default=False, db_index=True)
 
     group_id = get_group_id_field(null=True, db_index=True, default=None)

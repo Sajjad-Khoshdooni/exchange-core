@@ -1,3 +1,4 @@
+import uuid
 from uuid import uuid4
 
 from django.contrib.auth.models import AbstractUser, UserManager
@@ -184,6 +185,10 @@ class User(AbstractUser):
             )
         ]
 
+        permissions = [
+            ("can_generate_notification", "Can Generate All Kind Of Notification"),
+        ]
+
     def change_status(self, status: str, reason: str = ''):
         from accounts.tasks.verify_user import alert_user_verify_status
 
@@ -324,26 +329,17 @@ def handle_user_save(sender, instance, created, **kwargs):
     if referrer:
         referrer_id = referrer.id
 
+    event_id = uuid.uuid4()
     if created:
-        event = UserEvent(
-            user_id=instance.id,
-            first_name=instance.first_name,
-            last_name=instance.last_name,
-            phone=instance.phone,
-            email=instance.email,
-            referrer_id=referrer_id,
-            created=instance.created
-        )
-        producer.produce(event)
+        event_id = uuid.uuid5(uuid.NAMESPACE_DNS, 'python.org')
 
-    elif any(x in ['first_name', 'last_name', 'email', 'phone'] for x in kwargs['update_fields']):
-        event = UserEvent(
-            user_id=instance.id,
-            first_name=instance.first_name,
-            last_name=instance.last_name,
-            phone=instance.phone,
-            email=instance.email,
-            referrer_id=referrer_id,
-            created=instance.created
-        )
-        producer.produce(event)
+    event = UserEvent(
+        user_id=instance.id,
+        first_name=instance.first_name,
+        last_name=instance.last_name,
+        referrer_id=referrer_id,
+        created=instance.created,
+        event_id=event_id
+    )
+    producer.produce(event)
+

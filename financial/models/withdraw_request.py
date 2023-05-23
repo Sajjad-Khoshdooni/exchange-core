@@ -253,10 +253,12 @@ def handle_withdraw_request_save(sender, instance, created, **kwargs):
         user_id=instance.bank_account.user.id,
         amount=instance.amount,
         coin='IRT',
+        network='IRT',
         created=instance.created,
         value_irt=instance.amount,
         value_usdt=float(instance.amount) / float(usdt_price),
-        is_deposit=False
+        is_deposit=False,
+        event_id=instance.group_id
     )
 
     producer.produce(event)

@@ -1,8 +1,9 @@
-from django.db import models
+import uuid
 
+from django.contrib.sessions.models import Session
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.contrib.sessions.models import Session
 
 from accounts.event.producer import get_kafka_producer
 from accounts.utils.dto import LoginEvent
@@ -43,7 +44,8 @@ def handle_log_in_save(sender, instance, created, **kwargs):
         user_id=instance.user.id,
         device=instance.device,
         is_signup=instance.is_sign_up,
-        created=instance.created
+        created=instance.created,
+        event_id=uuid.uuid4()
     )
 
     producer.produce(event)

@@ -156,7 +156,7 @@ class Payment(models.Model):
 def handle_payment_save(sender, instance, created, **kwargs):
     producer = get_kafka_producer()
 
-    if instance.status != Payment.DONE:
+    if instance.status != 'done':
         return
 
     usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
@@ -166,10 +166,12 @@ def handle_payment_save(sender, instance, created, **kwargs):
         user_id=instance.payment_request.bank_card.user.id,
         amount=instance.payment_request.amount,
         coin='IRT',
+        network='IRT',
         is_deposit=True,
         value_usdt=float(instance.payment_request.amount) / float(usdt_price),
         value_irt=instance.payment_request.amount,
-        created=instance.created
+        created=instance.created,
+        event_id=instance.group_id
     )
 
     producer.produce(event)
