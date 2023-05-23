@@ -100,4 +100,6 @@ urlpatterns = [
     path('users/<int:pk>/', views.UserDigestView.as_view()),
 
     path('feedback/', views.UserFeedbackView.as_view()),
+
+    path('notify/', views.NotifyView.as_view())
 ]

@@ -1,9 +1,12 @@
 import logging
-from decimal import Decimal
+import uuid
 
 from django.db import models
-from django.db.models import CheckConstraint, Q
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
+from accounts.event.producer import get_kafka_producer
+from accounts.utils.dto import TradeEvent
 from ledger.models import Wallet
 from ledger.utils.external_price import BUY, SELL
 from ledger.utils.fields import get_amount_field
@@ -63,3 +66,31 @@ class BaseTrade(models.Model):
 
     class Meta:
         abstract = True
+
+
+@receiver(post_save, sender=BaseTrade)
+def handle_base_trade_save(sender, instance, created, **kwargs):
+    from ledger.models import OTCTrade
+
+    producer = get_kafka_producer()
+    _type = 'market'
+
+    is_otc = OTCTrade.objects.filter(order_id=instance.id).exists()
+    if is_otc:
+        _type = 'otc'
+
+    event = TradeEvent(
+        id=instance.id,
+        user_id=instance.account.user.id,
+        amount=instance.amount,
+        price=instance.price,
+        symbol=instance.symbol,
+        trade_type=_type,
+        market=instance.market,
+        created=instance.created,
+        value_usdt=float(instance.base_irt_price) * float(instance.amount),
+        value_irt=float(instance.base_usdt_price) * float(instance.amount),
+        event_id=uuid.uuid4()
+    )
+
+    producer.produce(event)
