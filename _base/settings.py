@@ -385,3 +385,5 @@ TINYMCE_JS_URL = os.path.join(MINIO_STORAGE_STATIC_URL, "tinymce/tinymce.min.js"
 
 EXCLUSIVE_SMS_NUMBER = config('EXCLUSIVE_SMS_NUMBER', default=None)
 RETENTION_ENABLE = bool(EXCLUSIVE_SMS_NUMBER)
+
+ZERO_USDT_HEDGE = config('ZERO_USDT_HEDGE', cast=bool, default=False)

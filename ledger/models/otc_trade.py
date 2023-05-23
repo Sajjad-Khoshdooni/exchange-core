@@ -1,6 +1,7 @@
 import logging
 from uuid import uuid4
 
+from django.conf import settings
 from django.db import models
 from django.db.models import F, Sum
 
@@ -8,12 +9,12 @@ from _base.settings import OTC_ACCOUNT_ID
 from accounting.models import TradeRevenue
 from accounts.models import Account
 from ledger.exceptions import HedgeError
-from ledger.models import OTCRequest, Trx, Wallet
+from ledger.models import OTCRequest, Trx, Wallet, Asset
 from ledger.utils.external_price import SELL
 from ledger.utils.fields import get_amount_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.exceptions import NegativeGapRevenue
-from market.models import Trade
+from market.models import Trade, PairSymbol
 from market.utils.order_utils import new_order
 from market.utils.trade import register_fee_transactions
 
@@ -85,19 +86,20 @@ class OTCTrade(models.Model):
         from_wallet = from_asset.get_wallet(account, market=otc_request.market)
         amount = otc_request.get_paying_amount()
         from_wallet.has_balance(amount, raise_exception=True)
-        
+
         with WalletPipeline() as pipeline:
             otc_trade = OTCTrade.objects.create(
                 otc_request=otc_request,
                 execution_type=OTCTrade.MARKET,
             )
-            
+
             fok_success = otc_trade.try_fok_fill(pipeline)
-            
+
             if not fok_success:
                 otc_trade.execution_type = OTCTrade.PROVIDER
                 otc_trade.save(update_fields=['execution_type'])
-                pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount, reason=WalletPipeline.TRADE)
+                pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount,
+                                  reason=WalletPipeline.TRADE)
 
         if not fok_success:
             otc_trade.try_provider_fill()
@@ -159,7 +161,7 @@ class OTCTrade(models.Model):
                 self.cancel()
                 raise
 
-    def cancel(self,):
+    def cancel(self, ):
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             pipeline.release_lock(self.group_id)
             self.change_status(self.CANCELED)

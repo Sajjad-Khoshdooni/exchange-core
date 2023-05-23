@@ -30,10 +30,13 @@ class MinNotionalError(Exception):
     pass
 
 
-def new_order(symbol: PairSymbol, account: Account, amount: Decimal, price: Decimal, side: str,
+def new_order(symbol: PairSymbol, account: Account, side: str, amount: Decimal, price: Decimal = None,
               fill_type: str = Order.LIMIT, raise_exception: bool = True, market: str = Wallet.SPOT,
               order_type: str = Order.ORDINARY, parent_lock_group_id: Union[UUID, None] = None,
               time_in_force: str = Order.GTC, pass_min_notional: bool = False) -> Union[Order, None]:
+
+    assert price or fill_type == Order.MARKET
+
     wallet = symbol.asset.get_wallet(account, market=market)
     if fill_type == Order.MARKET:
         price = Order.get_market_price(symbol, Order.get_opposite_side(side))
@@ -103,14 +106,25 @@ def trigger_stop_loss(stop_loss: StopLoss, triggered_price: Decimal):
     try:
         if stop_loss.price:
             order = new_order(
-                stop_loss.symbol, stop_loss.wallet.account, stop_loss.unfilled_amount, stop_loss.price, stop_loss.side,
-                Order.LIMIT, raise_exception=False, market=stop_loss.wallet.market,
+                symbol=stop_loss.symbol,
+                account=stop_loss.wallet.account,
+                amount=stop_loss.unfilled_amount,
+                price=stop_loss.price,
+                side=stop_loss.side,
+                fill_type=Order.LIMIT,
+                raise_exception=False,
+                market=stop_loss.wallet.market,
                 parent_lock_group_id=stop_loss.group_id
             )
         else:
             order = new_order(
-                stop_loss.symbol, stop_loss.wallet.account, stop_loss.unfilled_amount, None, stop_loss.side,
-                Order.MARKET, raise_exception=False, market=stop_loss.wallet.market,
+                symbol=stop_loss.symbol,
+                account=stop_loss.wallet.account,
+                amount=stop_loss.unfilled_amount,
+                side=stop_loss.side,
+                fill_type=Order.MARKET,
+                raise_exception=False,
+                market=stop_loss.wallet.market,
                 parent_lock_group_id=stop_loss.group_id
             )
     except Exception:
