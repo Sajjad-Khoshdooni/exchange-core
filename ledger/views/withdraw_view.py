@@ -93,6 +93,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         amount = attrs['amount']
 
+        if not network_asset.can_withdraw_enabled():
+            raise ValidationError('در حال حاضر امکان برداشت {} روی شبکه {} وجود ندارد.'.format(asset.symbol, network.symbol))
+
         if get_precision(amount) > network_asset.withdraw_precision:
             raise ValidationError('مقدار وارد شده اشتباه است.')
 
@@ -101,6 +104,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         if amount > network_asset.withdraw_max:
             raise ValidationError('مقدار وارد شده بزرگ است.')
+
+        if DepositAddress.objects.filter(address=address, address_key__deleted=True):
+            raise ValidationError('آدرس برداشت نامعتبر است.')
 
         if DepositAddress.objects.filter(address=address, address_key__account=account):
             raise ValidationError('آدرس برداشت متعلق به خودتان است. لطفا آدرس دیگری را وارد نمایید.')
