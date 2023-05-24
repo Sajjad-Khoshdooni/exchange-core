@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from _base.settings import OTC_ACCOUNT_ID
 from accounting.models import TradeRevenue
-from accounts.models import Notification
+from accounts.models import Notification, Account
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
@@ -465,6 +465,25 @@ class Order(models.Model):
                 amount=to_hedge_amount,
                 scope=TRADE
             )
+
+            if settings.ZERO_USDT_HEDGE and symbol.name != 'USDTIRT' and symbol.base_asset.symbol == Asset.IRT:
+                usdt_irt = PairSymbol.objects.get('USDTIRT')
+
+                trade_values = Decimal()
+                for rev in trades_revenue:
+                    trade_values += rev.value
+
+                amount = floor_precision(trade_values, usdt_irt.tick_size)
+
+                from market.utils.order_utils import new_order
+                order = new_order(
+                    symbol=usdt_irt,
+                    account=Account.objects.get(id=settings.MARKET_MAKER_ACCOUNT_ID),
+                    side=side,
+                    amount=amount,
+                    fill_type=Order.MARKET,
+                    raise_exception=False
+                )
 
             if hedged:
                 for rev in trades_revenue:

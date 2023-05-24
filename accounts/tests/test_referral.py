@@ -38,8 +38,8 @@ class ReferralTestCase(TestCase):
 
     def test_referral_btc_irt(self):
         account_1, account_2, account_3, account_1_referral = self.init_accounts()
-        order_1 = new_order(self.btcitr, account_2, 2, 200000, SELL)
-        order_2 = new_order(self.btcitr, account_3, 2, 200005, BUY)
+        order_1 = new_order(self.btcitr, account_2, SELL, 2, 200000, )
+        order_2 = new_order(self.btcitr, account_3, BUY, 2, 200005)
 
         order_1.refresh_from_db(), order_2.refresh_from_db()
 
@@ -73,8 +73,8 @@ class ReferralTestCase(TestCase):
         set_price(self.usdt, 1)
         account_1, account_2, account_3, account_1_referral = self.init_accounts()
 
-        order_3 = new_order(self.btcusdt, account_2, 2, 200000, SELL)
-        order_4 = new_order(self.btcusdt, account_3, 2, 200000, BUY)
+        order_3 = new_order(self.btcusdt, account_2, SELL, 2, 200000)
+        order_4 = new_order(self.btcusdt, account_3, BUY, 2, 200000)
 
         order_3.refresh_from_db(), order_4.refresh_from_db()
 
@@ -109,11 +109,11 @@ class ReferralTestCase(TestCase):
         account_1, _, account_3, account_1_referral = self.init_accounts()
         account_3.print()
 
-        order_5 = new_order(self.usdtirt, Account.system(), 20, 20000, BUY)
-        order_6 = new_order(self.usdtirt, account_3, 20, 20000, SELL)
+        order_5 = new_order(self.usdtirt, Account.system(), BUY, 20, 20000)
+        order_6 = new_order(self.usdtirt, account_3, SELL, 20, 20000)
 
-        order_7 = new_order(self.usdtirt, Account.system(), 10, 20000, SELL)
-        order_8 = new_order(self.usdtirt, account_3, 10, 20000, BUY)
+        order_7 = new_order(self.usdtirt, Account.system(), SELL, 10, 20000)
+        order_8 = new_order(self.usdtirt, account_3, BUY, 10, 20000)
 
         order_5.refresh_from_db(), order_6.refresh_from_db(), order_7.refresh_from_db(), order_8.refresh_from_db()
 

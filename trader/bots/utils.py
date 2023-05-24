@@ -147,6 +147,6 @@ def place_carrot_order(symbol: PairSymbol, account: Account, side, top_user_pric
         return
     amount = floor_precision(symbol.maker_amount / get_time_based_factor(600) / 5, symbol.step_size)
     return new_order(
-        symbol, account, amount, new_top_price, side=side, fill_type=Order.LIMIT, raise_exception=False,
+        symbol, account, amount=amount, price=new_top_price, side=side, fill_type=Order.LIMIT, raise_exception=False,
         order_type=Order.BOT
     )
