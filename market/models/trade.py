@@ -184,7 +184,7 @@ def handle_trade_save(sender, instance, created, **kwargs):
         user_id=instance.account.user.id,
         amount=instance.amount,
         price=instance.price,
-        symbol=instance.symbol,
+        symbol=instance.symbol.name,
         trade_type='market',
         market=instance.market,
         created=instance.created,

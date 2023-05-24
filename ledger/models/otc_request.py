@@ -185,7 +185,7 @@ def handle_OTC_trade_save(sender, instance, created, **kwargs):
         user_id=instance.account.user.id,
         amount=instance.amount,
         price=instance.price,
-        symbol=instance.symbol,
+        symbol=instance.symbol.name,
         trade_type='otc',
         market=instance.market,
         created=instance.created,
