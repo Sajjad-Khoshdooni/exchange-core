@@ -4,7 +4,7 @@ from financial.models import FiatWithdrawRequest, Payment
 from ledger.models import OTCTrade
 from ledger.models.transfer import Transfer
 from ledger.utils.external_price import get_external_price
-from market.models import Trade
+from market.models import BaseTrade
 from .producer import get_kafka_producer
 from ..models import User, Account
 from ..models.login_activity import LoginActivity
@@ -14,7 +14,7 @@ from ..utils.dto import UserEvent, LoginEvent, TransferEvent, TradeEvent
 def produce_event(time_range):
     producer = get_kafka_producer()
 
-    for user in User.objects.filter(created__range=time_range):
+    for user in User.objects.filter(date_joined__range=time_range):
         referrer_id = None
         account = Account.objects.filter(user=user)
         referrer = account and account.referred_by and account.referred_by.owner.user
@@ -90,7 +90,7 @@ def produce_event(time_range):
 
         producer.produce(event)
 
-    for trade in Trade.objects.filter(created__range=time_range):
+    for trade in BaseTrade.objects.filter(created__range=time_range):
         _type = 'market'
 
         is_otc = OTCTrade.objects.filter(order_id=trade.id).exists()
