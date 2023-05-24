@@ -27,7 +27,7 @@ def produce_event(time_range):
             first_name=user.first_name,
             last_name=user.last_name,
             referrer_id=referrer_id,
-            created=user.created,
+            created=user.date_joined,
             event_id=uuid.uuid4()
         )
         producer.produce(event)
