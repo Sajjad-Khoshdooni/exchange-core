@@ -361,7 +361,7 @@ def handle_transfer_save(sender, instance, created, **kwargs):
         is_deposit=instance.deposit,
         value_irt=instance.irt_value,
         value_usdt=instance.usdt_value,
-        event_id=instance.group_id
+        event_id=str(instance.group_id)
     )
 
     producer.produce(event)

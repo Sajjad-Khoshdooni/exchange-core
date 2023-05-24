@@ -339,7 +339,7 @@ def handle_user_save(sender, instance, created, **kwargs):
         last_name=instance.last_name,
         referrer_id=referrer_id,
         created=instance.date_joined,
-        event_id=event_id
+        event_id=str(event_id)
     )
     producer.produce(event)
 

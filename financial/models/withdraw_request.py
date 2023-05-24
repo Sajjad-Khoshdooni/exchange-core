@@ -258,7 +258,7 @@ def handle_withdraw_request_save(sender, instance, created, **kwargs):
         value_irt=instance.amount,
         value_usdt=float(instance.amount) / float(usdt_price),
         is_deposit=False,
-        event_id=instance.group_id
+        event_id=str(instance.group_id)
     )
 
     producer.produce(event)

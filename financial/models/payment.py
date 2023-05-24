@@ -171,7 +171,7 @@ def handle_payment_save(sender, instance, created, **kwargs):
         value_usdt=float(instance.payment_request.amount) / float(usdt_price),
         value_irt=instance.payment_request.amount,
         created=instance.created,
-        event_id=instance.group_id
+        event_id=str(instance.group_id)
     )
 
     producer.produce(event)

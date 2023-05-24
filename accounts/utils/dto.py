@@ -1,8 +1,8 @@
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from typing import Union, ClassVar
-from uuid import UUID
 
 
 @dataclass
@@ -10,7 +10,7 @@ class BaseEvent:
     v: ClassVar[str] = '1'
     created: datetime
     user_id: int
-    event_id: UUID
+    event_id: uuid
 
     def serialize(self):
         pass

@@ -28,7 +28,7 @@ def produce_event(time_range):
             last_name=user.last_name,
             referrer_id=referrer_id,
             created=user.date_joined,
-            event_id=uuid.uuid4()
+            event_id=str(uuid.uuid4())
         )
         producer.produce(event)
 
@@ -38,7 +38,7 @@ def produce_event(time_range):
             device=login_activity.device,
             is_signup=login_activity.is_sign_up,
             created=login_activity.created,
-            event_id=uuid.uuid4()
+            event_id=str(uuid.uuid4())
         )
 
         producer.produce(event)
@@ -54,7 +54,7 @@ def produce_event(time_range):
             is_deposit=transfer.deposit,
             value_irt=transfer.irt_value,
             value_usdt=transfer.usdt_value,
-            event_id=transfer.group_id
+            event_id=str(transfer.group_id)
         )
 
         producer.produce(event)
@@ -71,7 +71,7 @@ def produce_event(time_range):
             value_irt=transfer.amount,
             value_usdt=float(transfer.amount) / float(usdt_price),
             is_deposit=False,
-            event_id=transfer.group_id
+            event_id=str(transfer.group_id)
         )
 
         producer.produce(event)
@@ -87,7 +87,7 @@ def produce_event(time_range):
             value_usdt=float(transfer.payment_request.amount) / float(usdt_price),
             value_irt=transfer.payment_request.amount,
             created=transfer.created,
-            event_id=transfer.group_id
+            event_id=str(transfer.group_id)
         )
 
         producer.produce(event)
@@ -104,7 +104,7 @@ def produce_event(time_range):
             created=trade.created,
             value_usdt=float(trade.base_irt_price) * float(trade.amount),
             value_irt=float(trade.base_usdt_price) * float(trade.amount),
-            event_id=uuid.uuid4()
+            event_id=str(uuid.uuid4())
         )
 
         producer.produce(event)
@@ -121,7 +121,7 @@ def produce_event(time_range):
             created=trade.created,
             value_usdt=float(trade.base_irt_price) * float(trade.amount),
             value_irt=float(trade.base_usdt_price) * float(trade.amount),
-            event_id=uuid.uuid4()
+            event_id=str(uuid.uuid4())
         )
 
         producer.produce(event)
