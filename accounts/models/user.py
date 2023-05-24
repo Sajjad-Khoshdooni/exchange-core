@@ -323,11 +323,11 @@ def handle_user_save(sender, instance, created, **kwargs):
     producer = get_kafka_producer()
 
     referrer_id = None
-    account = Account.objects.filter(user=instance)
+    account = Account.objects.filter(user=instance)[0]
     referrer = account and account.referred_by and account.referred_by.owner.user
 
     if referrer:
-        referrer_id = referrer.id
+        referrer_id = account.referred_by.owner.user.id
 
     event_id = uuid.uuid4()
     if created:

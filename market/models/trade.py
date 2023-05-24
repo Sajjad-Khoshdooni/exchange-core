@@ -1,12 +1,17 @@
 import logging
+import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.db import models
 from django.db.models import F, CheckConstraint, Q, Sum, Max, Min
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 
+from accounts.event.producer import get_kafka_producer
+from accounts.utils.dto import TradeEvent
 from ledger.utils.external_price import BUY
 from ledger.utils.fields import get_group_id_field
 from ledger.utils.precision import floor_precision, decimal_to_str
@@ -166,3 +171,26 @@ class Trade(BaseTrade):
                         group_id=trx.group_id,
                         scope=Trx.REVERT
                     )
+
+
+@receiver(post_save, sender=Trade)
+def handle_trade_save(sender, instance, created, **kwargs):
+
+    producer = get_kafka_producer()
+    _type = 'market'
+
+    event = TradeEvent(
+        id=instance.id,
+        user_id=instance.account.user.id,
+        amount=instance.amount,
+        price=instance.price,
+        symbol=instance.symbol,
+        trade_type='market',
+        market=instance.market,
+        created=instance.created,
+        value_usdt=float(instance.base_irt_price) * float(instance.amount),
+        value_irt=float(instance.base_usdt_price) * float(instance.amount),
+        event_id=uuid.uuid4()
+    )
+
+    producer.produce(event)

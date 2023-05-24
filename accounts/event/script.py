@@ -4,7 +4,7 @@ from financial.models import FiatWithdrawRequest, Payment
 from ledger.models import OTCTrade
 from ledger.models.transfer import Transfer
 from ledger.utils.external_price import get_external_price
-from market.models import BaseTrade
+from market.models import Trade
 from .producer import get_kafka_producer
 from ..models import User, Account
 from ..models.login_activity import LoginActivity
@@ -16,11 +16,11 @@ def produce_event(time_range):
 
     for user in User.objects.filter(date_joined__range=time_range):
         referrer_id = None
-        account = Account.objects.filter(user=user)
+        account = Account.objects.filter(user=user)[0]
         referrer = account and account.referred_by and account.referred_by.owner.user
 
         if referrer:
-            referrer_id = referrer.id
+            referrer_id = account.referred_by.owner.user.id
 
         event = UserEvent(
             user_id=user.id,
@@ -56,6 +56,7 @@ def produce_event(time_range):
             value_usdt=transfer.usdt_value,
             event_id=transfer.group_id
         )
+
         producer.produce(event)
 
     usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
@@ -72,6 +73,7 @@ def produce_event(time_range):
             is_deposit=False,
             event_id=transfer.group_id
         )
+
         producer.produce(event)
 
     for transfer in Payment.objects.filter(created__range=time_range, status='done'):
@@ -90,20 +92,31 @@ def produce_event(time_range):
 
         producer.produce(event)
 
-    for trade in BaseTrade.objects.filter(created__range=time_range):
-        _type = 'market'
-
-        is_otc = OTCTrade.objects.filter(order_id=trade.id).exists()
-        if is_otc:
-            _type = 'otc'
-
+    for trade in Trade.objects.filter(created__range=time_range):
         event = TradeEvent(
             id=trade.id,
             user_id=trade.account.user.id,
             amount=trade.amount,
             price=trade.price,
             symbol=trade.symbol,
-            trade_type=_type,
+            trade_type='market',
+            market=trade.market,
+            created=trade.created,
+            value_usdt=float(trade.base_irt_price) * float(trade.amount),
+            value_irt=float(trade.base_usdt_price) * float(trade.amount),
+            event_id=uuid.uuid4()
+        )
+
+        producer.produce(event)
+
+    for trade in OTCTrade.objects.filter(created__range=time_range):
+        event = TradeEvent(
+            id=trade.id,
+            user_id=trade.account.user.id,
+            amount=trade.amount,
+            price=trade.price,
+            symbol=trade.symbol,
+            trade_type='otc',
             market=trade.market,
             created=trade.created,
             value_usdt=float(trade.base_irt_price) * float(trade.amount),
