@@ -52,15 +52,14 @@ class Trx(models.Model):
         )
     )
 
-    def revert(self):
-        with WalletPipeline() as pipeline:
-            pipeline.new_trx(
-                sender=self.receiver,
-                receiver=self.sender,
-                amount=self.amount,
-                group_id=self.group_id,
-                scope=Trx.REVERT
-            )
+    def revert(self, pipeline):
+        pipeline.new_trx(
+            sender=self.receiver,
+            receiver=self.sender,
+            amount=self.amount,
+            group_id=self.group_id,
+            scope=Trx.REVERT
+        )
 
     class Meta:
         unique_together = ('group_id', 'sender', 'receiver', 'scope')

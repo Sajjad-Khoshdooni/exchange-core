@@ -1,8 +1,7 @@
 from django.contrib import admin
-from django.db import transaction
 
 from gamify import models
-from gamify.utils import clone_model
+from gamify.utils import clone_mission_template
 
 
 @admin.register(models.MissionJourney)
@@ -41,19 +40,8 @@ class MissionTemplateAdmin(admin.ModelAdmin):
 
     @admin.action(description='clone', permissions=['change'])
     def clone_mission(self, request, queryset):
-        with transaction.atomic():
-            for mission in queryset:
-                tasks = mission.task_set.all()
-                achievement = mission.achievement
-
-                new_mission = clone_model(mission)
-
-                achievement.mission = new_mission
-                clone_model(achievement)
-
-                for task in tasks:
-                    task.mission = new_mission
-                    clone_model(task)
+        for mission in queryset:
+            clone_mission_template(mission)
 
 
 @admin.register(models.UserMission)

@@ -1,4 +1,5 @@
 from celery import shared_task
+from django.db import IntegrityError
 
 from accounts.models import Account
 from ledger.models import Trx, Wallet
@@ -29,5 +30,5 @@ def create_stake_revenue():
                     scope=Trx.STAKE_REVENUE
                 )
 
-        except:
+        except IntegrityError:
             print('duplicate stake_revenue')
