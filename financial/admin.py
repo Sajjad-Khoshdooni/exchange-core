@@ -76,7 +76,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
 
-    actions = ('resend_withdraw_request', 'accept_withdraw_request', 'reject_withdraw_request')
+    actions = ('resend_withdraw_request', 'accept_withdraw_request', 'reject_withdraw_request', 'refund')
 
     @admin.display(description='نام و نام خانوادگی')
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
