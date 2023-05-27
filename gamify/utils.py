@@ -1,5 +1,6 @@
 import logging
 
+from django.db import transaction
 from django.db.models import Q
 
 from accounts.models import Account
@@ -35,3 +36,26 @@ def check_prize_achievements(account: Account, task_scope: str):
             'account': account.id,
             'exp': e
         })
+
+
+def clone_model(instance):
+    instance.pk = None
+    instance.save()
+    return instance
+
+
+def clone_mission_template(mission: MissionTemplate):
+    with transaction.atomic():
+        tasks = mission.task_set.all()
+        achievement = mission.achievement
+
+        new_mission = clone_model(mission)
+
+        achievement.mission = new_mission
+        clone_model(achievement)
+
+        for task in tasks:
+            task.mission = new_mission
+            clone_model(task)
+
+    return new_mission

@@ -31,7 +31,8 @@ logger = logging.getLogger(__name__)
 class FiatWithdrawRequest(models.Model):
     history = HistoricalRecords()
 
-    INIT, PROCESSING, PENDING, CANCELED, DONE = 'init', 'process', 'pending', 'canceled', 'done'
+    STATUSES = INIT, PROCESSING, PENDING, CANCELED, DONE, REFUND = \
+        'init', 'process', 'pending', 'canceled', 'done', 'refund'
 
     FREEZE_TIME = 3 * 60
 
@@ -46,7 +47,9 @@ class FiatWithdrawRequest(models.Model):
     status = models.CharField(
         default=INIT,
         max_length=10,
-        choices=[(INIT, INIT), (PROCESSING, PROCESSING), (PENDING, PENDING), (DONE, DONE), (CANCELED, CANCELED)]
+        choices=[
+            (s, s) for s in STATUSES
+        ]
     )
 
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
@@ -193,6 +196,16 @@ class FiatWithdrawRequest(models.Model):
                 'logo_elastic_url': config('LOGO_ELASTIC_URL'),
             }
         )
+
+    def refund(self):
+        assert self.status == self.DONE
+
+        with WalletPipeline() as pipeline:
+            for trx in Trx.objects.filter(group_id=self.group_id):
+                trx.revert(pipeline)
+
+            self.status = self.REFUND
+            self.save(update_fields=['status'])
 
     def change_status(self, new_status: str):
         with transaction.atomic():

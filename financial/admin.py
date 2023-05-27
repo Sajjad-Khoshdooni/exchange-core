@@ -76,7 +76,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
 
-    actions = ('resend_withdraw_request', 'accept_withdraw_request', 'reject_withdraw_request')
+    actions = ('resend_withdraw_request', 'accept_withdraw_request', 'reject_withdraw_request', 'refund')
 
     @admin.display(description='نام و نام خانوادگی')
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
@@ -143,6 +143,13 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
         for fiat_withdraw in valid_qs:
             fiat_withdraw.change_status(FiatWithdrawRequest.CANCELED)
+
+    @admin.action(description='refund', permissions=['change'])
+    def refund(self, request, queryset):
+        valid_qs = queryset.filter(status=FiatWithdrawRequest.DONE)
+
+        for fiat_withdraw in valid_qs:
+            fiat_withdraw.refund()
 
     def save_model(self, request, obj: FiatWithdrawRequest, form, change):
         if obj.id:
