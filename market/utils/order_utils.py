@@ -127,8 +127,12 @@ def trigger_stop_loss(stop_loss: StopLoss, triggered_price: Decimal):
                 market=stop_loss.wallet.market,
                 parent_lock_group_id=stop_loss.group_id
             )
-    except Exception:
+    except Exception as e:
         order = None
+        logger.exception(f'exception on place order for stop loss ({stop_loss.symbol})', extra={
+            'stop_loss': stop_loss.id,
+            'exp': str(e),
+        })
     if not order:
         logger.exception(f'could not place order for stop loss ({stop_loss.symbol})',
                          extra={
