@@ -20,7 +20,13 @@ def delivery_report(err, msg):
 class KafkaProducer:
     def __init__(self):
         try:
-            self.producer = Producer({'bootstrap.servers': settings.KAFKA_HOST_URL})
+            self.producer = Producer({
+                'bootstrap.servers': settings.KAFKA_HOST_URL,
+                'socket.timeout.ms': 5000,  # timeout to 5 seconds',
+                'delivery.timeout.ms': 5000,
+                'message.send.max.retries': 5,
+                'request.timeout.ms': 5
+            })
         except KafkaException as e:
             logger.warning('KafkaException', extra={
                 'e': e
