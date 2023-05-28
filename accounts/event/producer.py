@@ -1,7 +1,7 @@
 import json
 import logging
 
-from confluent_kafka import Producer
+from confluent_kafka import Producer, KafkaException
 from django.conf import settings
 
 from accounts.utils.dto import BaseEvent
@@ -19,15 +19,35 @@ def delivery_report(err, msg):
 
 class KafkaProducer:
     def __init__(self):
-        self.producer = Producer({'bootstrap.servers': settings.KAFKA_HOST_URL})
+        try:
+            self.producer = Producer({'bootstrap.servers': settings.KAFKA_HOST_URL})
+        except KafkaException as e:
+            logger.warning('KafkaException', extra={
+                'e': e
+            })
+        except Exception as e:
+            logger.warning('KafkaClientException', extra={
+                'e': e
+            })
 
     def produce(self, event: BaseEvent):
         data = json.dumps(event.serialize())
 
-        self.producer.poll(0)
-        self.producer.produce('crm-staging', data.encode('utf-8'), callback=delivery_report)
+        try:
+            self.producer.poll(0)
+            self.producer.produce('crm-staging', data.encode('utf-8'), callback=delivery_report)
 
-        self.producer.flush()
+            self.producer.flush()
+        except KafkaException as e:
+            logger.warning('KafkaException', extra={
+                'e': e,
+                'event': event
+            })
+        except Exception as e:
+            logger.warning('KafkaClientException', extra={
+                'e': e,
+                'event': event
+            })
 
 
 _producer = None
