@@ -323,6 +323,7 @@ def handle_user_save(sender, instance, created, **kwargs):
     producer = get_kafka_producer()
 
     referrer_id = None
+    referrer = None
 
     if instance.account:
         account = instance.account
