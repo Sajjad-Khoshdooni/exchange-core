@@ -403,7 +403,7 @@ class Order(models.Model):
 
             if taker_ordinary != maker_ordinary:
                 if self.symbol.name != 'USDTIRT' and self.fill_type == Order.MARKET and \
-                        self.wallet.account_id == settings.RANDOM_TRADER_ACCOUNT_ID:
+                        self.wallet.account_id == settings.MARKET_MAKER_ACCOUNT_ID:
                     raise Exception('Random trader took ordinary order!!!')
 
                 ordinary_order = self if self.type == Order.ORDINARY else maker_order
