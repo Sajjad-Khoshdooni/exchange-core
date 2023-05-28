@@ -325,8 +325,8 @@ def handle_user_save(sender, instance, created, **kwargs):
     referrer_id = None
     referrer = None
 
-    if instance.account:
-        account = instance.account
+    if not created and instance.get_account():
+        account = instance.get_account()
         referrer = account and account.referred_by and account.referred_by.owner.user
 
     if referrer:
