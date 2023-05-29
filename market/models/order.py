@@ -256,6 +256,7 @@ class Order(models.Model):
                 Q(side=BUY, trigger_price__lte=max_price) | Q(side=SELL, trigger_price__gte=min_price),
                 symbol=self.symbol,
             )
+            logger.info(f'to trigger stop loss: {list(to_trigger_stop_loss_qs.values_list("id", flat=True))}')
             for stop_loss in to_trigger_stop_loss_qs:
                 from market.utils.order_utils import trigger_stop_loss
                 triggered_price = min_price if stop_loss.side == SELL else max_price
