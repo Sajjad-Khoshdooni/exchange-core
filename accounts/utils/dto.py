@@ -55,8 +55,8 @@ class UserEvent(BaseEvent):
             'chat_uuid': str(self.chat_uuid),
             'verify_status': self.verify_status,
             'reject_reason': self.reject_reason,
-            'first_fiat_deposit_date': self.first_fiat_deposit_date,
-            'first_crypto_deposit_date': self.first_crypto_deposit_date
+            'first_fiat_deposit_date': self.first_fiat_deposit_date.isoformat() if self.first_fiat_deposit_date else None,
+            'first_crypto_deposit_date': self.first_crypto_deposit_date.isoformat()if self.first_crypto_deposit_date else None
         }
 
 

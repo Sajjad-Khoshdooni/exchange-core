@@ -18,7 +18,7 @@ def produce_event(time_range):
 
     for user in User.objects.filter(date_joined__range=time_range):
         referrer_id = None
-        account = Account.objects.filter(user=user)[0]
+        account = user.get_account()
         referrer = account and account.referred_by and account.referred_by.owner.user
 
         if referrer:
