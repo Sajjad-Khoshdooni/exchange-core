@@ -7,6 +7,7 @@ from accounts.utils.test import create_referral, set_referred_by
 from ledger.models import Trx, Asset, OTCRequest
 from ledger.utils.external_price import BUY, SELL
 from ledger.utils.test import new_account, set_price
+from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol, Trade, BaseTrade
 from market.utils.order_utils import new_order
 from market.utils.trade import get_fee_info
@@ -38,8 +39,9 @@ class ReferralTestCase(TestCase):
 
     def test_referral_btc_irt(self):
         account_1, account_2, account_3, account_1_referral = self.init_accounts()
-        order_1 = new_order(self.btcitr, account_2, SELL, 2, 200000, )
-        order_2 = new_order(self.btcitr, account_3, BUY, 2, 200005)
+        with WalletPipeline() as pipeline:
+            order_1 = new_order(pipeline, self.btcitr, account_2, SELL, 2, 200000, )
+            order_2 = new_order(pipeline, self.btcitr, account_3, BUY, 2, 200005)
 
         order_1.refresh_from_db(), order_2.refresh_from_db()
 
@@ -72,9 +74,9 @@ class ReferralTestCase(TestCase):
     def test_referral_btc_usdt(self):
         set_price(self.usdt, 1)
         account_1, account_2, account_3, account_1_referral = self.init_accounts()
-
-        order_3 = new_order(self.btcusdt, account_2, SELL, 2, 200000)
-        order_4 = new_order(self.btcusdt, account_3, BUY, 2, 200000)
+        with WalletPipeline() as pipeline:
+            order_3 = new_order(pipeline, self.btcusdt, account_2, SELL, 2, 200000)
+            order_4 = new_order(pipeline, self.btcusdt, account_3, BUY, 2, 200000)
 
         order_3.refresh_from_db(), order_4.refresh_from_db()
 
@@ -108,12 +110,12 @@ class ReferralTestCase(TestCase):
     def test_referral_usdt_irt(self):
         account_1, _, account_3, account_1_referral = self.init_accounts()
         account_3.print()
+        with WalletPipeline() as pipeline:
+            order_5 = new_order(pipeline, self.usdtirt, Account.system(), BUY, 20, 20000)
+            order_6 = new_order(pipeline, self.usdtirt, account_3, SELL, 20, 20000)
 
-        order_5 = new_order(self.usdtirt, Account.system(), BUY, 20, 20000)
-        order_6 = new_order(self.usdtirt, account_3, SELL, 20, 20000)
-
-        order_7 = new_order(self.usdtirt, Account.system(), SELL, 10, 20000)
-        order_8 = new_order(self.usdtirt, account_3, BUY, 10, 20000)
+            order_7 = new_order(pipeline, self.usdtirt, Account.system(), SELL, 10, 20000)
+            order_8 = new_order(pipeline, self.usdtirt, account_3, BUY, 10, 20000)
 
         order_5.refresh_from_db(), order_6.refresh_from_db(), order_7.refresh_from_db(), order_8.refresh_from_db()
 

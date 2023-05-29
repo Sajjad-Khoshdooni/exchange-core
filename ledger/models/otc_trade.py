@@ -115,6 +115,7 @@ class OTCTrade(models.Model):
             from market.models import Order
 
             fok_order = new_order(
+                pipeline=pipeline,
                 symbol=symbol,
                 account=Account.objects.get(id=OTC_ACCOUNT_ID),
                 amount=self.otc_request.amount,
@@ -218,6 +219,7 @@ class OTCTrade(models.Model):
                     amount = floor_precision(req.usdt_value, usdt_irt.tick_size)
 
                     order = new_order(
+                        pipeline=pipeline,
                         symbol=usdt_irt,
                         account=Account.objects.get(id=OTC_ACCOUNT_ID),
                         side=req.side,

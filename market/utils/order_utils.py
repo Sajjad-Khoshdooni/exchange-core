@@ -30,10 +30,11 @@ class MinNotionalError(Exception):
     pass
 
 
-def new_order(symbol: PairSymbol, account: Account, side: str, amount: Decimal, price: Decimal = None,
-              fill_type: str = Order.LIMIT, raise_exception: bool = True, market: str = Wallet.SPOT,
-              order_type: str = Order.ORDINARY, parent_lock_group_id: Union[UUID, None] = None,
-              time_in_force: str = Order.GTC, pass_min_notional: bool = False) -> Union[Order, None]:
+def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, side: str, amount: Decimal,
+              price: Decimal = None, fill_type: str = Order.LIMIT, raise_exception: bool = True,
+              market: str = Wallet.SPOT, order_type: str = Order.ORDINARY,
+              parent_lock_group_id: Union[UUID, None] = None, time_in_force: str = Order.GTC,
+              pass_min_notional: bool = False) -> Union[Order, None]:
 
     assert price or fill_type == Order.MARKET
 
@@ -79,33 +80,33 @@ def new_order(symbol: PairSymbol, account: Account, side: str, amount: Decimal, 
                 logger.info('new order failed: min_notional')
                 return
 
-    with WalletPipeline() as pipeline:
-        additional_params = {'group_id': parent_lock_group_id} if parent_lock_group_id else {}
-        order = Order.objects.create(
-            account=account,
-            wallet=wallet,
-            symbol=symbol,
-            amount=amount,
-            price=price,
-            side=side,
-            fill_type=fill_type,
-            type=order_type,
-            time_in_force=time_in_force,
-            **additional_params
-        )
+    additional_params = {'group_id': parent_lock_group_id} if parent_lock_group_id else {}
+    order = Order.objects.create(
+        account=account,
+        wallet=wallet,
+        symbol=symbol,
+        amount=amount,
+        price=price,
+        side=side,
+        fill_type=fill_type,
+        type=order_type,
+        time_in_force=time_in_force,
+        **additional_params
+    )
 
-        is_stop_loss = parent_lock_group_id is not None
-        matched_trades = order.submit(pipeline, is_stop_loss=is_stop_loss)
+    is_stop_loss = parent_lock_group_id is not None
+    matched_trades = order.submit(pipeline, is_stop_loss=is_stop_loss)
 
     extra = {} if matched_trades.trade_pairs else {'side': order.side}
     MarketStreamCache().execute(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
     return order
 
 
-def trigger_stop_loss(stop_loss: StopLoss, triggered_price: Decimal):
+def trigger_stop_loss(pipeline: WalletPipeline, stop_loss: StopLoss, triggered_price: Decimal):
     try:
         if stop_loss.price:
             order = new_order(
+                pipeline=pipeline,
                 symbol=stop_loss.symbol,
                 account=stop_loss.wallet.account,
                 amount=stop_loss.unfilled_amount,
@@ -114,10 +115,11 @@ def trigger_stop_loss(stop_loss: StopLoss, triggered_price: Decimal):
                 fill_type=Order.LIMIT,
                 raise_exception=False,
                 market=stop_loss.wallet.market,
-                parent_lock_group_id=stop_loss.group_id
+                parent_lock_group_id=stop_loss.group_id,
             )
         else:
             order = new_order(
+                pipeline=pipeline,
                 symbol=stop_loss.symbol,
                 account=stop_loss.wallet.account,
                 amount=stop_loss.unfilled_amount,
@@ -125,7 +127,7 @@ def trigger_stop_loss(stop_loss: StopLoss, triggered_price: Decimal):
                 fill_type=Order.MARKET,
                 raise_exception=False,
                 market=stop_loss.wallet.market,
-                parent_lock_group_id=stop_loss.group_id
+                parent_lock_group_id=stop_loss.group_id,
             )
     except Exception as e:
         order = None

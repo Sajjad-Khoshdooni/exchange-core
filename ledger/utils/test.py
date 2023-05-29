@@ -1,5 +1,6 @@
 from django.conf import settings
 
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 if settings.DEBUG_OR_TESTING:
     import random
@@ -105,11 +106,13 @@ if settings.DEBUG_OR_TESTING:
         return gateway
 
     def create_system_order_book(symbol: PairSymbol, side: str, data: list):
-        for d in data:
-            new_order(
-                symbol=symbol,
-                account=Account.system(),
-                price=d[0],
-                amount=d[1],
-                side=side
-            )
+        with WalletPipeline() as pipeline:
+            for d in data:
+                new_order(
+                    pipeline=pipeline,
+                    symbol=symbol,
+                    account=Account.system(),
+                    price=d[0],
+                    amount=d[1],
+                    side=side
+                )
