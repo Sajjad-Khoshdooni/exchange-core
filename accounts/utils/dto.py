@@ -22,6 +22,18 @@ class UserEvent(BaseEvent):
     last_name: str
     referrer_id: str
     type: ClassVar[str] = 'user'
+    level_2_verify_datetime: datetime
+    level_3_verify_datetime: datetime
+    level: int
+    birth_date: datetime
+    can_withdraw: bool
+    can_trade: bool
+    promotion: str
+    chat_uuid: uuid
+    verify_status: str
+    reject_reason: str
+    first_fiat_deposit_date: datetime
+    first_crypto_deposit_date: datetime
 
     def serialize(self):
         return {
@@ -32,7 +44,19 @@ class UserEvent(BaseEvent):
             'first_name': self.first_name,
             'last_name': self.last_name,
             'referrer_id': self.referrer_id,
-            'type': self.type
+            'type': self.type,
+            'level_2_verify_datetime': self.level_2_verify_datetime.isoformat(),
+            'level_3_verify_datetime': self.level_3_verify_datetime.isoformat(),
+            'level': self.level,
+            'birth_date': self.birth_date.isoformat(),
+            'can_withdraw': self.can_withdraw,
+            'can_trade': self.can_trade,
+            'promotion': self.promotion,
+            'chat_uuid': self.chat_uuid,
+            'verify_status': self.verify_status,
+            'reject_reason': self.reject_reason,
+            'first_fiat_deposit_date': self.first_fiat_deposit_date,
+            'first_crypto_deposit_date': self.first_crypto_deposit_date
         }
 
 
@@ -99,6 +123,14 @@ class LoginEvent(BaseEvent):
     device: str
     type: ClassVar[str] = 'login'
     is_signup: bool
+    user_agent: str
+    device_type: str
+    location: str
+    os: str
+    browser: str
+    city: str
+    country: str
+    native_app: bool
 
     def serialize(self):
         return {
@@ -108,5 +140,90 @@ class LoginEvent(BaseEvent):
             'event_id': str(self.event_id),
             'device': self.device,
             'type': self.type,
-            'is_signup': self.is_signup
+            'is_signup': self.is_signup,
+            'user_agent': self.user_agent,
+            'device_type': self.device_type,
+            'location': self.location,
+            'os': self.os,
+            'browser': self.browser,
+            'city': self.city,
+            'country': self.country,
+            'native_app': self.native_app
+
+        }
+
+
+@dataclass
+class TrafficSourceEvent(BaseEvent):
+    type: ClassVar[str] = 'traffic_source'
+    utm_source: str
+    utm_medium: str
+    utm_campaign: str
+    utm_content: str
+    utm_term: str
+
+    def serialize(self):
+        return {
+            'user_id': self.user_id,
+            'created': self.created.isoformat(),
+            'v': self.v,
+            'event_id': str(self.event_id),
+            'type': self.type,
+            'utm_source': self.utm_source,
+            'utm_medium': self.utm_medium,
+            'utm_campaign': self.utm_campaign,
+            'utm_content': self.utm_content,
+            'utm_term': self.utm_term,
+        }
+
+
+@dataclass
+class StakeRequestEvent(BaseEvent):
+    type: ClassVar[str] = 'staking'
+    stake_request_id: int
+    stake_option_id: int
+    amount: Union[int, float, Decimal]
+    status: str
+    coin: str
+    apr: str
+
+    def serialize(self):
+        return {
+            'user_id': self.user_id,
+            'created': self.created.isoformat(),
+            'v': self.v,
+            'event_id': str(self.event_id),
+            'type': self.type,
+            'stake_request_id': self.stake_request_id,
+            'stake_option_id': self.stake_option_id,
+            'amount': float(self.amount),
+            'status': self.status,
+            'coin': self.coin,
+            'apr': self.apr
+        }
+
+
+@dataclass
+class PrizeEvent(BaseEvent):
+    type: ClassVar[str] = 'prize'
+    id: int
+    amount: Union[int, float, Decimal]
+    coin: str
+    voucher_expiration: datetime
+    value: Union[int, float, Decimal]
+    achievement_type: str
+
+    def serialize(self):
+        return {
+            'user_id': self.user_id,
+            'created': self.created.isoformat(),
+            'v': self.v,
+            'event_id': str(self.event_id),
+            'type': self.type,
+            'id': self.id,
+            'amount': self.amount,
+            'coin': self.coin,
+            'voucher_expiration': self.voucher_expiration.isoformat(),
+            'value': float(self.value),
+            'achievement_type': self.achievement_type
         }

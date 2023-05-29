@@ -45,7 +45,15 @@ def handle_log_in_save(sender, instance, created, **kwargs):
         device=instance.device,
         is_signup=instance.is_sign_up,
         created=instance.created,
-        event_id=str(uuid.uuid4())
+        event_id=str(uuid.uuid4()),
+        user_agent=instance.user_agent,
+        device_type=instance.device_type,
+        location=instance.location,
+        os=instance.os,
+        browser=instance.browser,
+        city=instance.city,
+        country=instance.country,
+        native_app=instance.native_app
     )
 
     producer.produce(event)
