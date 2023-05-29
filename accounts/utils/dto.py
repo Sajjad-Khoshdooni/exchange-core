@@ -45,10 +45,10 @@ class UserEvent(BaseEvent):
             'last_name': self.last_name,
             'referrer_id': self.referrer_id,
             'type': self.type,
-            'level_2_verify_datetime': self.level_2_verify_datetime.isoformat(),
-            'level_3_verify_datetime': self.level_3_verify_datetime.isoformat(),
+            'level_2_verify_datetime': self.level_2_verify_datetime.isoformat() if self.level_2_verify_datetime else None,
+            'level_3_verify_datetime': self.level_3_verify_datetime.isoformat() if self.level_3_verify_datetime else None,
             'level': self.level,
-            'birth_date': self.birth_date.isoformat(),
+            'birth_date': self.birth_date.isoformat() if self.birth_date else None,
             'can_withdraw': self.can_withdraw,
             'can_trade': self.can_trade,
             'promotion': self.promotion,
@@ -223,7 +223,7 @@ class PrizeEvent(BaseEvent):
             'id': self.id,
             'amount': self.amount,
             'coin': self.coin,
-            'voucher_expiration': self.voucher_expiration.isoformat(),
+            'voucher_expiration': self.voucher_expiration.isoformat() if self.voucher_expiration else None,
             'value': float(self.value),
             'achievement_type': self.achievement_type
         }
