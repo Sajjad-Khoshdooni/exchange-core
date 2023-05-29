@@ -174,7 +174,7 @@ class AssetAdmin(AdvancedAdmin):
 
 @admin.register(models.Network)
 class NetworkAdmin(admin.ModelAdmin):
-    list_display = ('symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'address_regex')
+    list_display = ('symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'need_memo', 'address_regex')
     list_editable = ('can_withdraw', 'can_deposit')
     search_fields = ('symbol', )
     list_filter = ('can_withdraw', 'can_deposit')
