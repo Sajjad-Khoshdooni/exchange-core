@@ -105,11 +105,11 @@ class Order(models.Model):
     fill_type = models.CharField(max_length=8, choices=FILL_TYPE_CHOICES)
     status = models.CharField(default=NEW, max_length=8, choices=STATUS_CHOICES)
 
-    group_id = get_group_id_field(null=True, unique=True)
+    group_id = get_group_id_field(null=True)
 
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
-    stop_loss = models.OneToOneField(to='market.StopLoss', on_delete=models.SET_NULL, null=True, blank=True)
+    stop_loss = models.ForeignKey(to='market.StopLoss', on_delete=models.SET_NULL, null=True, blank=True)
 
     time_in_force = models.CharField(
         max_length=4,
@@ -135,7 +135,15 @@ class Order(models.Model):
                 fields=('account', 'client_order_id', 'status'),
                 condition=Q(status='new'),
                 name='unique_client_order_id_new_order'
-            )
+            ),
+            UniqueConstraint(
+                name='market_order_unique_group_id',
+                fields=('group_id', 'status'),
+            ),
+            UniqueConstraint(
+                name='market_order_unique_stop_loss',
+                fields=('stop_loss', 'status'),
+            ),
         ]
 
     objects = models.Manager()
