@@ -155,7 +155,7 @@ def trigger_stop_loss(pipeline: WalletPipeline, stop_loss: StopLoss, triggered_p
     stop_loss.save(update_fields=['filled_amount'])
     logger.info(f'filled order at {triggered_price} with amount: {order.filled_amount}, price: {order.price} for '
                 f'stop loss({stop_loss.id}) {stop_loss.filled_amount} {stop_loss.trigger_price} {stop_loss.price} '
-                f'{stop_loss.side} ')
+                f'{stop_loss.side} {timezone.now()}')
 
 
 def get_market_top_prices(order_type='all', symbol_ids=None):

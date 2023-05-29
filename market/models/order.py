@@ -259,7 +259,8 @@ class Order(models.Model):
             for stop_loss in to_trigger_stop_loss_qs:
                 from market.utils.order_utils import trigger_stop_loss
                 triggered_price = min_price if stop_loss.side == SELL else max_price
-                logger.info(f'triggering stop loss on {self.symbol} ({stop_loss.id}, {stop_loss.side}) at {triggered_price}')
+                stoploss_orders = list(Order.objects.filter(stop_loss_id=stop_loss.id).values_list("id", "stop_loss_id"))
+                logger.info(f'triggering stop loss on {self.symbol} ({stop_loss.id}, {stop_loss.side}) at {triggered_price}, ({stoploss_orders}) {timezone.now()}')
                 trigger_stop_loss(pipeline, stop_loss, triggered_price)
         return matched_trades
 
