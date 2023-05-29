@@ -234,7 +234,8 @@ class Order(models.Model):
     def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
         return amount * price if side == BUY else amount
 
-    def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False) -> MatchedTrades:
+    def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False, last_triggered=None) -> MatchedTrades:
+        last_triggered = last_triggered or []
         overriding_fill_amount = None
         if is_stop_loss:
             if self.side == BUY:
@@ -255,15 +256,18 @@ class Order(models.Model):
             to_trigger_stop_loss_qs = StopLoss.not_triggered_objects.filter(
                 Q(side=BUY, trigger_price__lte=max_price) | Q(side=SELL, trigger_price__gte=min_price),
                 symbol=self.symbol,
-            )
+            ).exclude(id__in=last_triggered)
             log_prefix = 'MM %s {%s}: ' % (self.symbol.name, self.id)
             logger.info(log_prefix + f'to trigger stop loss: {list(to_trigger_stop_loss_qs.values_list("id", flat=True))} {timezone.now()}')
+
+            for stop_loss in to_trigger_stop_loss_qs:
+                last_triggered.append(stop_loss.id)
+
             for stop_loss in to_trigger_stop_loss_qs:
                 from market.utils.order_utils import trigger_stop_loss
                 triggered_price = min_price if stop_loss.side == SELL else max_price
-                stoploss_orders = list(Order.objects.filter(stop_loss_id=stop_loss.id).values_list("id", "stop_loss_id"))
-                logger.info(log_prefix + f'triggering stop loss on {self.symbol} ({stop_loss.id}, {stop_loss.side}) at {triggered_price}, ({stoploss_orders}) {timezone.now()}')
-                trigger_stop_loss(pipeline, stop_loss, triggered_price)
+                logger.info(log_prefix + f'triggering stop loss on {self.symbol} ({stop_loss.id}, {stop_loss.side}) at {triggered_price} {timezone.now()}')
+                trigger_stop_loss(pipeline, stop_loss, triggered_price, last_triggered)
         return matched_trades
 
     def acquire_lock(self, pipeline: WalletPipeline):

@@ -34,8 +34,9 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
               price: Decimal = None, fill_type: str = Order.LIMIT, raise_exception: bool = True,
               market: str = Wallet.SPOT, order_type: str = Order.ORDINARY,
               parent_lock_group_id: Union[UUID, None] = None, time_in_force: str = Order.GTC,
-              pass_min_notional: bool = False) -> Union[Order, None]:
+              pass_min_notional: bool = False, already_triggered=None) -> Union[Order, None]:
 
+    already_triggered = already_triggered or []
     assert price or fill_type == Order.MARKET
 
     wallet = symbol.asset.get_wallet(account, market=market)
@@ -95,14 +96,14 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
     )
 
     is_stop_loss = parent_lock_group_id is not None
-    matched_trades = order.submit(pipeline, is_stop_loss=is_stop_loss)
+    matched_trades = order.submit(pipeline, is_stop_loss=is_stop_loss, last_triggered=already_triggered)
 
     extra = {} if matched_trades.trade_pairs else {'side': order.side}
     MarketStreamCache().execute(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
     return order
 
 
-def trigger_stop_loss(pipeline: WalletPipeline, stop_loss: StopLoss, triggered_price: Decimal):
+def trigger_stop_loss(pipeline: WalletPipeline, stop_loss: StopLoss, triggered_price: Decimal, already_triggered):
     try:
         if stop_loss.price:
             order = new_order(
@@ -116,6 +117,7 @@ def trigger_stop_loss(pipeline: WalletPipeline, stop_loss: StopLoss, triggered_p
                 raise_exception=False,
                 market=stop_loss.wallet.market,
                 parent_lock_group_id=stop_loss.group_id,
+                already_triggered=already_triggered
             )
         else:
             order = new_order(
@@ -128,6 +130,7 @@ def trigger_stop_loss(pipeline: WalletPipeline, stop_loss: StopLoss, triggered_p
                 raise_exception=False,
                 market=stop_loss.wallet.market,
                 parent_lock_group_id=stop_loss.group_id,
+                already_triggered=already_triggered
             )
     except Exception as e:
         order = None
