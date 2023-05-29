@@ -2,12 +2,16 @@ from decimal import Decimal
 
 from django.db import models
 from django.db.models import Sum
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 
+from accounts.event.producer import get_kafka_producer
 from accounts.models import Account
 from accounts.tasks import send_message_by_kavenegar
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
+from accounts.utils.dto import StakeRequestEvent
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet, Trx
 from ledger.utils.fields import get_group_id_field, get_amount_field
@@ -168,3 +172,20 @@ class StakeRequest(models.Model):
         else:
             self.status = new_status
             self.save()
+
+
+@receiver(post_save, sender=StakeRequest)
+def handle_stake_request_save(sender, instance, created, **kwargs):
+    producer = get_kafka_producer()
+    event = StakeRequestEvent(
+        created=instance.created,
+        user_id=instance.account.user.id,
+        event_id=instance.group_id,
+        stake_request_id=instance.id,
+        stake_option_id=instance.stake_option.id,
+        amount=instance.amount,
+        status=instance.status,
+        coin=instance.stake_option.asset.symbol,
+        apr=instance.stake_option.apr
+    )
+    producer.produce(event)

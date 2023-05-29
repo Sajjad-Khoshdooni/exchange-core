@@ -342,7 +342,19 @@ def handle_user_save(sender, instance, created, **kwargs):
         last_name=instance.last_name,
         referrer_id=referrer_id,
         created=instance.date_joined,
-        event_id=str(event_id)
+        event_id=str(event_id),
+        level_2_verify_datetime=instance.level_2_verify_datetime,
+        level_3_verify_datetime=instance.level_3_verify_datetime,
+        level=instance.level,
+        birth_date=instance.birth_date,
+        can_withdraw=instance.can_withdraw,
+        can_trade=instance.can_trade,
+        promotion=instance.promotion,
+        chat_uuid=instance.chat_uuid,
+        verify_status=instance.verify_status,
+        reject_reason=instance.reject_reason,
+        first_fiat_deposit_date=instance.first_fiat_deposit_date,
+        first_crypto_deposit_date=instance.first_crypto_deposit_date,
     )
     producer.produce(event)
 
