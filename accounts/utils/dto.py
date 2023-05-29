@@ -52,7 +52,7 @@ class UserEvent(BaseEvent):
             'can_withdraw': self.can_withdraw,
             'can_trade': self.can_trade,
             'promotion': self.promotion,
-            'chat_uuid': self.chat_uuid,
+            'chat_uuid': str(self.chat_uuid),
             'verify_status': self.verify_status,
             'reject_reason': self.reject_reason,
             'first_fiat_deposit_date': self.first_fiat_deposit_date,
