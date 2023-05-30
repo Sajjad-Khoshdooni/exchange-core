@@ -174,7 +174,7 @@ class AssetAdmin(AdvancedAdmin):
 
 @admin.register(models.Network)
 class NetworkAdmin(admin.ModelAdmin):
-    list_display = ('symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'address_regex')
+    list_display = ('symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'need_memo', 'address_regex')
     list_editable = ('can_withdraw', 'can_deposit')
     search_fields = ('symbol', )
     list_filter = ('can_withdraw', 'can_deposit')
@@ -369,7 +369,7 @@ class TransferAdmin(AdvancedAdmin):
         'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
         'usdt_value', 'get_remaining_time_to_pass_72h', 'get_jalali_created', 'get_jalali_finished'
     )
-    search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
+    search_fields = ('trx_hash', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
     readonly_fields = (
         'deposit_address', 'network', 'wallet', 'created', 'accepted_datetime', 'finished_datetime', 'get_risks',
