@@ -86,8 +86,9 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(resp.status_code, 201)
 
     def test_fill_order(self):
-        order = new_order(self.btcirt, Account.system(), SELL, 2, 200000)
-        order_2 = new_order(self.btcirt, Account.system(), BUY, 2, 200000)
+        with WalletPipeline() as pipeline:
+            order = new_order(pipeline, self.btcirt, Account.system(), SELL, 2, 200000)
+            order_2 = new_order(pipeline, self.btcirt, Account.system(), BUY, 2, 200000)
         order.refresh_from_db()
 
         trade_pair = Trade.objects.order_by('-id')[:2]
@@ -99,8 +100,9 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(trade_pair[1].amount, 2)
 
     def test_fill_order_with_different_price(self):
-        order_3 = new_order(self.btcirt, Account.system(), SELL, 2, 200000)
-        order_4 = new_order(self.btcirt, self.account, BUY, 2, 200010)
+        with WalletPipeline() as pipeline:
+            order_3 = new_order(pipeline, self.btcirt, Account.system(), SELL, 2, 200000)
+            order_4 = new_order(pipeline, self.btcirt, self.account, BUY, 2, 200010)
         order_3.refresh_from_db(), order_4.refresh_from_db()
 
         fill_order = Trade.objects.get(order_id=order_3.id)
@@ -147,10 +149,10 @@ class CreateOrderTestCase(TestCase):
     def test_fill_three_order(self):
         account = new_account()
         account.airdrop(self.irt, 6 * 200020)
-
-        order_5 = new_order(self.btcirt, Account.system(), SELL, 2, 200000)
-        order_6 = new_order(self.btcirt, Account.system(), SELL, 3, 200010)
-        order_7 = new_order(self.btcirt, account, BUY, 6, 200020)
+        with WalletPipeline() as pipeline:
+            order_5 = new_order(pipeline, self.btcirt, Account.system(), SELL, 2, 200000)
+            order_6 = new_order(pipeline, self.btcirt, Account.system(), SELL, 3, 200010)
+            order_7 = new_order(pipeline, self.btcirt, account, BUY, 6, 200020)
 
         order_5.refresh_from_db(), order_6.refresh_from_db(), order_7.refresh_from_db()
 
@@ -186,8 +188,9 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(trade_between_7_6.price, 200010)
 
     def test_not_fill_order(self):
-        order_8 = new_order(self.btcirt, Account.system(), SELL, 2, 200000)
-        order_9 = new_order(self.btcirt, Account.system(), BUY, 2, 150000)
+        with WalletPipeline() as pipeline:
+            order_8 = new_order(pipeline, self.btcirt, Account.system(), SELL, 2, 200000)
+            order_9 = new_order(pipeline, self.btcirt, Account.system(), BUY, 2, 150000)
 
         order_8.refresh_from_db(), order_9.refresh_from_db()
 
@@ -197,9 +200,9 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(order_9.status, Order.NEW)
 
     def test_cancel_order_after_partial_filled(self):
-
-        order_10 = new_order(self.btcirt, Account.system(), SELL, 20, 200000)
-        order_11 = new_order(self.btcirt, Account.system(), BUY, 10, 200005)
+        with WalletPipeline() as pipeline:
+            order_10 = new_order(pipeline, self.btcirt, Account.system(), SELL, 20, 200000)
+            order_11 = new_order(pipeline, self.btcirt, Account.system(), BUY, 10, 200005)
 
         order_10.cancel()
 
@@ -217,9 +220,9 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(fill_order.amount, 10)
 
     def test_cancel_order_after_complete_filled(self):
-
-        order_12 = new_order(self.btcirt, Account.system(), SELL, 20, 200000)
-        order_13 = new_order(self.btcirt, Account.system(), BUY, 20, 200005)
+        with WalletPipeline() as pipeline:
+            order_12 = new_order(pipeline, self.btcirt, Account.system(), SELL, 20, 200000)
+            order_13 = new_order(pipeline, self.btcirt, Account.system(), BUY, 20, 200005)
 
         order_12.cancel()
 
@@ -237,10 +240,10 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(fill_order.amount, 20)
 
     def test_cancel_before_fill(self):
-
-        order_14 = new_order(self.btcirt, Account.system(), SELL, 20, 200000)
-        order_14.cancel()
-        order_15 = new_order(self.btcirt, Account.system(), BUY, 20, 200000)
+        with WalletPipeline() as pipeline:
+            order_14 = new_order(pipeline, self.btcirt, Account.system(), SELL, 20, 200000)
+            order_14.cancel()
+            order_15 = new_order(pipeline, self.btcirt, Account.system(), BUY, 20, 200000)
 
         order_14.refresh_from_db(), order_15.refresh_from_db()
 
@@ -263,8 +266,9 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(resp.status_code, 400)
 
     def test_market_sell_order(self):
-        limit_order = new_order(self.btcirt, Account.system(), BUY, 2, 2000000)
-        order = new_order(self.btcirt, Account.system(), SELL, Decimal('0.1'), fill_type=Order.MARKET)
+        with WalletPipeline() as pipeline:
+            limit_order = new_order(pipeline, self.btcirt, Account.system(), BUY, 2, 2000000)
+            order = new_order(pipeline, self.btcirt, Account.system(), SELL, Decimal('0.1'), fill_type=Order.MARKET)
         order.refresh_from_db()
 
         trade_pair = Trade.objects.order_by('-id')[:2]
@@ -276,8 +280,9 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(trade_pair[1].amount, Decimal('0.1'))
 
     def test_market_order_large_amount(self):
-        new_order(self.btcirt, Account.system(), BUY, 1, 2000000)
-        order = new_order(self.btcirt, Account.system(), SELL, 2, fill_type=Order.MARKET)
+        with WalletPipeline() as pipeline:
+            new_order(pipeline, self.btcirt, Account.system(), BUY, 1, 2000000)
+            order = new_order(pipeline, self.btcirt, Account.system(), SELL, 2, fill_type=Order.MARKET)
         order.refresh_from_db()
 
         trade_pair = Trade.objects.order_by('-id')[:2]
@@ -289,9 +294,10 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(trade_pair[1].amount, 1)
 
     def test_market_order_multi_match_price(self):
-        new_order(self.btcirt, Account.system(), BUY, Decimal('0.5'), 2000000)
-        new_order(self.btcirt, Account.system(), BUY, Decimal('0.5'), 1980000)
-        order = new_order(self.btcirt, Account.system(), SELL, 2, fill_type=Order.MARKET)
+        with WalletPipeline() as pipeline:
+            new_order(pipeline, self.btcirt, Account.system(), BUY, Decimal('0.5'), 2000000)
+            new_order(pipeline, self.btcirt, Account.system(), BUY, Decimal('0.5'), 1980000)
+            order = new_order(pipeline, self.btcirt, Account.system(), SELL, 2, fill_type=Order.MARKET)
         order.refresh_from_db()
 
         self.assertEqual(order.status, Order.CANCELED)
@@ -304,10 +310,11 @@ class CreateOrderTestCase(TestCase):
             self.assertEqual(fill_order.amount, Decimal('0.5'))
 
     def test_market_order_multi_match_price_unmatched_orders(self):
-        new_order(self.btcirt, Account.system(), BUY, Decimal('0.5'), 2000000)
-        new_order(self.btcirt, Account.system(), BUY, Decimal('0.5'), 1980000)
-        new_order(self.btcirt, Account.system(), BUY, Decimal('0.5'), 1900000)
-        order = new_order(self.btcirt, Account.system(), SELL, 2, fill_type=Order.MARKET)
+        with WalletPipeline() as pipeline:
+            new_order(pipeline, self.btcirt, Account.system(), BUY, Decimal('0.5'), 2000000)
+            new_order(pipeline, self.btcirt, Account.system(), BUY, Decimal('0.5'), 1980000)
+            new_order(pipeline, self.btcirt, Account.system(), BUY, Decimal('0.5'), 1900000)
+            order = new_order(pipeline, self.btcirt, Account.system(), SELL, 2, fill_type=Order.MARKET)
         order.refresh_from_db()
 
         self.assertEqual(order.status, Order.CANCELED)
@@ -336,7 +343,8 @@ class CreateOrderTestCase(TestCase):
     def test_margin_match_order(self):
         self.client.force_login(self.account.user)
         # wallets = self.irt.get_wallet(self.account)
-        order = new_order(self.btcusdt, Account.system(), SELL, 2, 20000)
+        with WalletPipeline() as pipeline:
+            order = new_order(pipeline, self.btcusdt, Account.system(), SELL, 2, 20000)
         resp = self.client.post('/api/v1/market/orders/', {
             'symbol': 'BTCUSDT',
             'amount': '1.5',

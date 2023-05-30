@@ -1,8 +1,6 @@
 import logging
-from decimal import Decimal
 
 from django.db import models
-from django.db.models import CheckConstraint, Q
 
 from ledger.models import Wallet
 from ledger.utils.external_price import BUY, SELL
