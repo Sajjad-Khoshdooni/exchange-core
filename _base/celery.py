@@ -61,7 +61,7 @@ app.conf.beat_schedule = {
 
     'create_stake_revenue': {
         'task': 'stake.tasks.stake_revenue.create_stake_revenue',
-        'schedule': crontab(hour=19, minute=30),
+        'schedule': crontab(hour=22, minute=0),
         'options': {
             'queue': 'celery',
             'expire': 36000
@@ -69,7 +69,7 @@ app.conf.beat_schedule = {
     },
     'complete_stake_requests': {
         'task': 'stake.tasks.stake_finish.finish_stakes',
-        'schedule': crontab(hour=20, minute=0),
+        'schedule': crontab(hour=21, minute=0),
         'options': {
             'queue': 'celery',
             'expire': 36000

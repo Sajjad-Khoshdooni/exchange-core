@@ -135,7 +135,15 @@ class Order(models.Model):
                 fields=('account', 'client_order_id', 'status'),
                 condition=Q(status='new'),
                 name='unique_client_order_id_new_order'
-            )
+            ),
+            UniqueConstraint(
+                name='market_order_unique_group_id',
+                fields=('group_id', 'status'),
+            ),
+            UniqueConstraint(
+                name='market_order_unique_stop_loss',
+                fields=('stop_loss', 'status'),
+            ),
         ]
 
     objects = models.Manager()
@@ -261,8 +269,7 @@ class Order(models.Model):
             for stop_loss in to_trigger_stop_loss_qs:
                 from market.utils.order_utils import trigger_stop_loss
                 triggered_price = min_price if stop_loss.side == SELL else max_price
-                stoploss_orders = list(Order.objects.filter(stop_loss_id=stop_loss.id).values_list("id", "stop_loss_id"))
-                logger.info(log_prefix + f'triggering stop loss on {self.symbol} ({stop_loss.id}, {stop_loss.side}) at {triggered_price}, ({stoploss_orders}) {timezone.now()}')
+                logger.info(log_prefix + f'triggering stop loss on {self.symbol} ({stop_loss.id}, {stop_loss.side}) at {triggered_price}, {timezone.now()}')
                 trigger_stop_loss(pipeline, stop_loss, triggered_price)
         return matched_trades
 
@@ -406,7 +413,8 @@ class Order(models.Model):
             maker_ordinary = maker_order.wallet.account.is_ordinary_user()
 
             if taker_ordinary != maker_ordinary:
-                if self.wallet.account_id == settings.RANDOM_TRADER_ACCOUNT_ID:
+                if self.symbol.name != 'USDTIRT' and self.fill_type == Order.MARKET and \
+                        self.wallet.account_id == settings.MARKET_MAKER_ACCOUNT_ID:
                     raise Exception('Random trader took ordinary order!!!')
 
                 ordinary_order = self if self.type == Order.ORDINARY else maker_order
