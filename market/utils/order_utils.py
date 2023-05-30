@@ -33,10 +33,9 @@ class MinNotionalError(Exception):
 def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, side: str, amount: Decimal,
               price: Decimal = None, fill_type: str = Order.LIMIT, raise_exception: bool = True,
               market: str = Wallet.SPOT, order_type: str = Order.ORDINARY,
-              parent_lock_group_id: Union[UUID, None] = None, time_in_force: str = Order.GTC,
-              pass_min_notional: bool = False, already_triggered=None) -> Union[Order, None]:
+              parent_lock_group_id: Union[UUID, None] = None, stop_loss_id: Union[int, None] = None,
+              time_in_force: str = Order.GTC, pass_min_notional: bool = False) -> Union[Order, None]:
 
-    already_triggered = already_triggered or []
     assert price or fill_type == Order.MARKET
 
     wallet = symbol.asset.get_wallet(account, market=market)
@@ -82,6 +81,9 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
                 return
 
     additional_params = {'group_id': parent_lock_group_id} if parent_lock_group_id else {}
+    if stop_loss_id:
+        additional_params['stop_loss_id'] = stop_loss_id
+
     order = Order.objects.create(
         account=account,
         wallet=wallet,
@@ -96,14 +98,14 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
     )
 
     is_stop_loss = parent_lock_group_id is not None
-    matched_trades = order.submit(pipeline, is_stop_loss=is_stop_loss, last_triggered=already_triggered)
+    matched_trades = order.submit(pipeline, is_stop_loss=is_stop_loss)
 
     extra = {} if matched_trades.trade_pairs else {'side': order.side}
     MarketStreamCache().execute(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
     return order
 
 
-def trigger_stop_loss(pipeline: WalletPipeline, stop_loss: StopLoss, triggered_price: Decimal, already_triggered):
+def trigger_stop_loss(pipeline: WalletPipeline, stop_loss: StopLoss, triggered_price: Decimal):
     try:
         if stop_loss.price:
             order = new_order(
@@ -117,7 +119,7 @@ def trigger_stop_loss(pipeline: WalletPipeline, stop_loss: StopLoss, triggered_p
                 raise_exception=False,
                 market=stop_loss.wallet.market,
                 parent_lock_group_id=stop_loss.group_id,
-                already_triggered=already_triggered
+                stop_loss_id=stop_loss.id
             )
         else:
             order = new_order(
@@ -130,7 +132,7 @@ def trigger_stop_loss(pipeline: WalletPipeline, stop_loss: StopLoss, triggered_p
                 raise_exception=False,
                 market=stop_loss.wallet.market,
                 parent_lock_group_id=stop_loss.group_id,
-                already_triggered=already_triggered
+                stop_loss_id=stop_loss.id
             )
     except Exception as e:
         order = None
@@ -152,8 +154,6 @@ def trigger_stop_loss(pipeline: WalletPipeline, stop_loss: StopLoss, triggered_p
         return
 
     order.refresh_from_db()
-    order.stop_loss = stop_loss
-    order.save(update_fields=['stop_loss_id'])
     stop_loss.filled_amount += order.filled_amount
     stop_loss.save(update_fields=['filled_amount'])
     logger.info(f'filled order at {triggered_price} with amount: {order.filled_amount}, price: {order.price} for '
