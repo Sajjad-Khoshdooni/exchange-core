@@ -264,10 +264,13 @@ class Order(models.Model):
                 Q(side=BUY, trigger_price__lte=max_price) | Q(side=SELL, trigger_price__gte=min_price),
                 symbol=self.symbol,
             )
+            log_prefix = 'MM %s {%s}: ' % (self.symbol.name, self.id)
+            logger.info(log_prefix + f'to trigger stop loss: {list(to_trigger_stop_loss_qs.values_list("id", flat=True))} {timezone.now()}')
             for stop_loss in to_trigger_stop_loss_qs:
                 from market.utils.order_utils import trigger_stop_loss
                 triggered_price = min_price if stop_loss.side == SELL else max_price
-                trigger_stop_loss(stop_loss, triggered_price)
+                logger.info(log_prefix + f'triggering stop loss on {self.symbol} ({stop_loss.id}, {stop_loss.side}) at {triggered_price}, {timezone.now()}')
+                trigger_stop_loss(pipeline, stop_loss, triggered_price)
         return matched_trades
 
     def acquire_lock(self, pipeline: WalletPipeline):
@@ -486,6 +489,7 @@ class Order(models.Model):
 
                 from market.utils.order_utils import new_order
                 order = new_order(
+                    pipeline=pipeline,
                     symbol=usdt_irt,
                     account=Account.objects.get(id=settings.MARKET_MAKER_ACCOUNT_ID),
                     side=side,
