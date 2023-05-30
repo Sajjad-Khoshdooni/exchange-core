@@ -1,7 +1,6 @@
 import logging
 from decimal import Decimal
 
-from django.conf import settings
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.utils import timezone
 from rest_framework import serializers
@@ -13,7 +12,6 @@ from ledger.models import Network, Asset, DepositAddress, AddressKey, NetworkAss
 from ledger.models.transfer import Transfer
 from ledger.requester.architecture_requester import get_network_architecture
 from ledger.utils.external_price import get_external_price, SELL
-from ledger.utils.ip_check import get_ip_address
 from ledger.utils.precision import is_zero_by_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -28,8 +26,7 @@ class DepositSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transfer
-        fields = ['status', 'amount', 'trx_hash', 'block_hash',
-                  'block_number', 'network', 'sender_address', 'receiver_address', 'coin']
+        fields = ['status', 'amount', 'trx_hash', 'network', 'sender_address', 'receiver_address', 'coin']
 
     def create(self, validated_data):
         network_symbol = validated_data.get('network')
@@ -138,8 +135,6 @@ class DepositSerializer(serializers.ModelSerializer):
                     out_address=sender_address,
                     defaults={
                         'amount': amount,
-                        'block_hash': validated_data.get('block_hash'),
-                        'block_number': validated_data.get('block_number'),
                         'usdt_value': amount * price_usdt,
                         'irt_value': amount * price_irt,
                     }
