@@ -6,8 +6,6 @@ from decimal import Decimal
 
 from django.db import models
 from django.db.models import F, CheckConstraint, Q, Sum, Max, Min
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from django.utils import timezone
 
 from accounts.event.producer import get_kafka_producer
@@ -172,27 +170,25 @@ class Trade(BaseTrade):
                         scope=Trx.REVERT
                     )
 
+    def trigger_event(self):
+        if self.account is None or self.account.user is None:
+            return
 
-@receiver(post_save, sender=Trade)
-def handle_trade_save(sender, instance, created, **kwargs):
-    if instance.account is None or instance.account.user is None:
-        return
+        producer = get_kafka_producer()
+        _type = 'market'
 
-    producer = get_kafka_producer()
-    _type = 'market'
+        event = TradeEvent(
+            id=self.id,
+            user_id=self.account.user.id,
+            amount=self.amount,
+            price=self.price,
+            symbol=self.symbol.name,
+            trade_type='market',
+            market=self.market,
+            created=self.created,
+            value_usdt=float(self.base_irt_price) * float(self.amount),
+            value_irt=float(self.base_usdt_price) * float(self.amount),
+            event_id=str(uuid.uuid4())
+        )
 
-    event = TradeEvent(
-        id=instance.id,
-        user_id=instance.account.user.id,
-        amount=instance.amount,
-        price=instance.price,
-        symbol=instance.symbol.name,
-        trade_type='market',
-        market=instance.market,
-        created=instance.created,
-        value_usdt=float(instance.base_irt_price) * float(instance.amount),
-        value_irt=float(instance.base_usdt_price) * float(instance.amount),
-        event_id=str(uuid.uuid4())
-    )
-
-    producer.produce(event)
+        producer.produce(event)

@@ -99,8 +99,9 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
 
     is_stop_loss = parent_lock_group_id is not None
     matched_trades = order.submit(pipeline, is_stop_loss=is_stop_loss)
+
     for trade in matched_trades:
-        trade.save()  # dont delete me, just ignore
+        trade.trigger_event()
 
     extra = {} if matched_trades.trade_pairs else {'side': order.side}
     MarketStreamCache().execute(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
