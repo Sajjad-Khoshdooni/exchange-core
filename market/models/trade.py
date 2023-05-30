@@ -175,6 +175,8 @@ class Trade(BaseTrade):
 
 @receiver(post_save, sender=Trade)
 def handle_trade_save(sender, instance, created, **kwargs):
+    if instance.account is None or instance.account.user is None:
+        return
 
     producer = get_kafka_producer()
     _type = 'market'
