@@ -37,14 +37,7 @@ class PNLHistory(models.Model):
     def calculate_amounts_in_usdt(account_wallets: dict, account_input_outputs: dict, last_snapshot_balance: Decimal,
                                   usdt_price: Decimal):
         def get_price(coin: str):
-            return get_external_price(coin=coin, base_coin=Asset.USDT, side=BUY, allow_stale=True)
-
-        missing_price_coins = list(filter(
-            lambda coin: not get_price(coin),
-            set(account_wallets.keys()).union(set(account_input_outputs.keys())))
-        )
-        if missing_price_coins:
-            raise Exception(f'Missing coin prices for {missing_price_coins}')
+            return get_external_price(coin=coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
 
         snapshot_balance = sum(map(
             lambda coin_amount: Decimal(get_price(coin_amount[0])) * coin_amount[1], account_wallets.items()
