@@ -39,6 +39,9 @@ class KafkaProducer:
     def produce(self, event: BaseEvent):
         data = json.dumps(event.serialize())
 
+        if not settings.KAFKA_HOST_URL:
+            return
+
         try:
             self.producer.poll(0)
             self.producer.produce('crm', data.encode('utf-8'), callback=delivery_report)
