@@ -40,15 +40,16 @@ class CreateOrderTestCase(TestCase):
             (22000, Decimal('0.3')),
         ])
 
-        fok_order = new_order(
-            pipeline=pipeline,
-            symbol=btcusdt,
-            account=account,
-            amount=Decimal('0.3'),
-            price=Decimal(20500),
-            side=BUY,
-            time_in_force=Order.FOK
-        )
+        with WalletPipeline() as pipeline:
+            fok_order = new_order(
+                pipeline=pipeline,
+                symbol=btcusdt,
+                account=account,
+                amount=Decimal('0.3'),
+                price=Decimal(20500),
+                side=BUY,
+                time_in_force=Order.FOK
+            )
 
         fok_order.refresh_from_db()
         self.assertEqual(fok_order.status, Order.CANCELED)
@@ -56,15 +57,16 @@ class CreateOrderTestCase(TestCase):
 
         self.assertEqual(Order.objects.aggregate(sum=Sum('filled_amount'))['sum'], 0)
 
-        ordinary_order = new_order(
-            pipeline=pipeline,
-            symbol=btcusdt,
-            account=account,
-            amount=Decimal('0.3'),
-            price=Decimal(20500),
-            side=BUY,
-            time_in_force=Order.ORDINARY
-        )
+        with WalletPipeline() as pipeline:
+            ordinary_order = new_order(
+                pipeline=pipeline,
+                symbol=btcusdt,
+                account=account,
+                amount=Decimal('0.3'),
+                price=Decimal(20500),
+                side=BUY,
+                time_in_force=Order.ORDINARY
+            )
 
         ordinary_order.refresh_from_db()
         self.assertEqual(ordinary_order.status, Order.NEW)
@@ -73,28 +75,30 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(Order.objects.aggregate(sum=Sum('filled_amount'))['sum'], Decimal('0.4'))
 
         try:
-            new_order(
-                pipeline=pipeline,
-                symbol=btcusdt,
-                account=account,
-                amount=Decimal('0.2'),
-                price=Decimal(22000),
-                side=BUY,
-                time_in_force=Order.FOK
-            )
+            with WalletPipeline() as pipeline:
+                new_order(
+                    pipeline=pipeline,
+                    symbol=btcusdt,
+                    account=account,
+                    amount=Decimal('0.2'),
+                    price=Decimal(22000),
+                    side=BUY,
+                    time_in_force=Order.FOK
+                )
             self.fail('Should raise insufficient balance')
         except InsufficientBalance:
             pass
 
-        fok_order = new_order(
-            pipeline=pipeline,
-            symbol=btcusdt,
-            account=account,
-            amount=Decimal('0.1'),
-            price=Decimal(22000),
-            side=BUY,
-            time_in_force=Order.FOK
-        )
+        with WalletPipeline() as pipeline:
+            fok_order = new_order(
+                pipeline=pipeline,
+                symbol=btcusdt,
+                account=account,
+                amount=Decimal('0.1'),
+                price=Decimal(22000),
+                side=BUY,
+                time_in_force=Order.FOK
+            )
 
         fok_order.refresh_from_db()
         self.assertEqual(fok_order.status, Order.FILLED)
