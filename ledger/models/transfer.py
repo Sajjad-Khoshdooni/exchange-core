@@ -1,4 +1,5 @@
 import logging
+import uuid
 from decimal import Decimal
 from typing import Union
 from uuid import uuid4
@@ -8,11 +9,15 @@ from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import UniqueConstraint, Q
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 
+from accounts.event.producer import get_kafka_producer
 from accounts.models import Account, Notification
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
+from accounts.utils.dto import TransferEvent
 from accounts.utils.push_notif import send_push_notif_to_user
 from accounts.utils.telegram import send_support_message
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
@@ -336,3 +341,28 @@ class Transfer(models.Model):
             action = 'withdraw'
 
         return f'{action} {self.amount} {self.asset}'
+
+
+@receiver(post_save, sender=Transfer)
+def handle_transfer_save(sender, instance, created, **kwargs):
+    producer = get_kafka_producer()
+
+    user = instance.wallet.account.user
+
+    if not user or instance.status != Transfer.DONE:
+        return
+
+    event = TransferEvent(
+        id=instance.id,
+        user_id=user.id,
+        amount=instance.amount,
+        coin=instance.wallet.asset.symbol,
+        network=instance.network.symbol,
+        created=instance.created,
+        is_deposit=instance.deposit,
+        value_irt=instance.irt_value,
+        value_usdt=instance.usdt_value,
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type)
+    )
+
+    producer.produce(event)

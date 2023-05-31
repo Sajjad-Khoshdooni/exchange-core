@@ -1,10 +1,15 @@
 import logging
+import uuid
 from uuid import uuid4
 
 from django.db import models
 from django.db.models import CheckConstraint, Q
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
+from accounts.event.producer import get_kafka_producer
 from accounts.models import Account
+from accounts.utils.dto import PrizeEvent
 from ledger.models import Trx, Asset, Wallet
 from ledger.utils.fields import get_amount_field
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -67,3 +72,26 @@ class Prize(models.Model):
 
     def __str__(self):
         return '%s %s %s' % (self.account, self.amount, self.asset)
+
+
+@receiver(post_save, sender=Prize)
+def handle_prize_save(sender, instance, created, **kwargs):
+    producer = get_kafka_producer()
+
+    user = instance.account.user
+
+    if not user:
+        return
+
+    event = PrizeEvent(
+        created=instance.created,
+        user_id=user.id,
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + PrizeEvent.type),
+        id=instance.id,
+        amount=instance.amount,
+        coin=instance.asset.symbol,
+        voucher_expiration=instance.voucher_expiration,
+        achievement_type=instance.achievement.type,
+        value=instance.value
+    )
+    producer.produce(event)

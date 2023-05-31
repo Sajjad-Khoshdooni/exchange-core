@@ -118,8 +118,6 @@ msgid "Could not cancel order"
 msgstr "سفارش لغو نشد."
 
 #: market/serializers/cancel_request_serializer.py:44
-#, fuzzy
-#| msgid "Order not found"
 msgid "StopLoss not found"
 msgstr "سفارش موردنظر یافت نشد."
 
