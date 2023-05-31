@@ -8,10 +8,10 @@ from ledger.models.transfer import Transfer
 from ledger.utils.external_price import get_external_price
 from market.models import Trade
 from stake.models import StakeRequest
-from .producer import get_kafka_producer
-from ..models import User, TrafficSource
-from ..models.login_activity import LoginActivity
-from ..utils.dto import UserEvent, LoginEvent, TransferEvent, TradeEvent, TrafficSourceEvent, StakeRequestEvent, \
+from accounts.event.producer import get_kafka_producer
+from accounts.models import User, TrafficSource, Account
+from accounts.models.login_activity import LoginActivity
+from accounts.utils.dto import UserEvent, LoginEvent, TransferEvent, TradeEvent, TrafficSourceEvent, StakeRequestEvent, \
     PrizeEvent
 
 
@@ -120,7 +120,7 @@ def reproduce_events(start, end):
         producer.produce(event)
 
     for trade in Trade.objects.filter(created__range=time_range, account__user__isnull=False).exclude(
-            account_id__in=[settings.SYSTEM_ACCOUNT_ID, settings.OTC_ACCOUNT_ID]
+            account__type=Account.SYSTEM
     ).select_related('account__user', 'symbol'):
         event = TradeEvent(
             id=trade.id,
@@ -139,7 +139,7 @@ def reproduce_events(start, end):
         producer.produce(event)
 
     for trade in OTCTrade.objects.filter(created__range=time_range, otc_request__account__user__isnull=False).exclude(
-            account_id__in=[settings.SYSTEM_ACCOUNT_ID, settings.OTC_ACCOUNT_ID]
+            otc_request__account__type=Account.SYSTEM
     ).select_related('account__user', 'symbol'):
         trade_type = 'otc'
         if FastBuyToken.objects.filter(otc_request=trade).exists():
