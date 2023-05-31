@@ -69,10 +69,15 @@ class TradePairSerializer(TradeSerializer):
     symbol = serializers.CharField(source='symbol.name')
     maker_order_id = serializers.IntegerField(source='order_id')
     taker_order_id = serializers.SerializerMethodField()
+    client_order_id = serializers.SerializerMethodField()
 
     def get_taker_order_id(self, instance: Trade):
         return self.context['maker_taker_mapping'].get(instance.order_id)
 
+    def get_client_order_id(self, instance: Trade):
+        return self.context['client_order_id_mapping'].get(instance.order_id)
+
     class Meta:
         model = Trade
-        fields = ('id', 'symbol', 'created', 'amount', 'price', 'is_buyer_maker', 'maker_order_id', 'taker_order_id')
+        fields = ('id', 'symbol', 'created', 'amount', 'price', 'is_buyer_maker', 'is_maker', 'maker_order_id',
+                  'taker_order_id', 'client_order_id')

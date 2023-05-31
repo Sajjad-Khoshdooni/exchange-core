@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from accounts.authentication import CustomTokenAuthentication
 
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
-from market.models import Trade, PairSymbol, BaseTrade
+from market.models import Trade, PairSymbol, Order
 from market.pagination import FastLimitOffsetPagination
 from market.serializers.trade_serializer import TradePairSerializer, TradeSerializer, AccountTradeSerializer
 
@@ -98,7 +98,6 @@ class TradePairsHistoryView(ListAPIView):
         id_filter = {'id__gt': min_id} if min_id else {}
         return Trade.objects.filter(
             account=self.request.user.account,
-            is_maker=True,
             **id_filter
         ).prefetch_related('symbol').order_by('id')
 
@@ -111,7 +110,13 @@ class TradePairsHistoryView(ListAPIView):
                 maker_order_id=Min('order_id'), taker_order_id=Max('order_id')
             )
         }
-        serializer = TradePairSerializer(qs, context={'maker_taker_mapping': maker_taker_mapping}, many=True)
+        client_order_id_mapping = {
+            o['id']: o['client_order_id'] for o in Order.objects.filter(id__in=qs.values_list('order_id', flat=True))
+        }
+        serializer = TradePairSerializer(qs, context={
+            'maker_taker_mapping': maker_taker_mapping,
+            'client_order_id_mapping': client_order_id_mapping,
+        }, many=True)
 
         return Response({
             'results': serializer.data
