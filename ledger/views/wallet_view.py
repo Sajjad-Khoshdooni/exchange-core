@@ -274,8 +274,10 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
         return get_object_or_404(Asset, symbol=self.kwargs['symbol'].upper())
 
     def get_queryset(self):
+        account = self.request.user.get_account()
+
         disabled_assets = Wallet.objects.filter(
-            account=self.request.user.get_account(),
+            account=account,
             asset__enable=False
         ).exclude(balance=0).values_list('asset_id', flat=True)
 
@@ -293,12 +295,21 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
             ).distinct()
 
         can_withdraw = self.request.query_params.get('can_withdraw') == '1'
-
         if can_withdraw:
             assets = assets.filter(
                 networkasset__can_withdraw=True,
                 networkasset__network__can_withdraw=True
             ).distinct()
+
+        has_balance = self.request.query_params.get('has_balance') == '1'
+        if has_balance:
+            asset_ids = Wallet.objects.filter(
+                market=Wallet.SPOT,
+                account=account,
+                balance__gt=0
+            ).values_list('asset_id', flat=True)
+
+            assets = assets.filter(id__in=asset_ids)
 
         return assets
 
