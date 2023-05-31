@@ -179,6 +179,10 @@ class OTCRequest(BaseTrade):
 def handle_OTC_trade_save(sender, instance, created, **kwargs):
     from ledger.models import FastBuyToken
 
+    user = instance.account.user
+    if not user:
+        return
+
     producer = get_kafka_producer()
     trade_type = 'otc'
     if FastBuyToken.objects.filter(otc_request=instance).exists():
@@ -186,7 +190,7 @@ def handle_OTC_trade_save(sender, instance, created, **kwargs):
 
     event = TradeEvent(
         id=instance.id,
-        user_id=instance.account.user.id,
+        user_id=user.id,
         amount=instance.amount,
         price=instance.price,
         symbol=instance.symbol.name,

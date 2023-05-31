@@ -77,9 +77,15 @@ class Prize(models.Model):
 @receiver(post_save, sender=Prize)
 def handle_prize_save(sender, instance, created, **kwargs):
     producer = get_kafka_producer()
+
+    user = instance.account.user
+
+    if not user:
+        return
+
     event = PrizeEvent(
         created=instance.created,
-        user_id=instance.account.user.id,
+        user_id=user.id,
         event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + PrizeEvent.type),
         id=instance.id,
         amount=instance.amount,

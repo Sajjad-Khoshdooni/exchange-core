@@ -207,10 +207,10 @@ class StakeRequestEvent(BaseEvent):
 class PrizeEvent(BaseEvent):
     type: ClassVar[str] = 'prize'
     id: int
-    amount: Union[int, float, Decimal]
+    amount: Decimal
     coin: str
     voucher_expiration: datetime
-    value: Union[int, float, Decimal]
+    value: Decimal
     achievement_type: str
 
     def serialize(self):
@@ -221,7 +221,7 @@ class PrizeEvent(BaseEvent):
             'event_id': str(self.event_id),
             'type': self.type,
             'id': self.id,
-            'amount': self.amount,
+            'amount': float(self.amount),
             'coin': self.coin,
             'voucher_expiration': self.voucher_expiration.isoformat() if self.voucher_expiration else None,
             'value': float(self.value),

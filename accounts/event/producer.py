@@ -37,6 +37,7 @@ class KafkaProducer:
             })
 
     def produce(self, event: BaseEvent):
+        print(event)
         data = json.dumps(event.serialize())
 
         if not settings.KAFKA_HOST_URL:

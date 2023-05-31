@@ -347,12 +347,14 @@ class Transfer(models.Model):
 def handle_transfer_save(sender, instance, created, **kwargs):
     producer = get_kafka_producer()
 
-    if instance.status != Transfer.DONE:
+    user = instance.wallet.account.user
+
+    if not user or instance.status != Transfer.DONE:
         return
 
     event = TransferEvent(
         id=instance.id,
-        user_id=instance.wallet.account.user.id,
+        user_id=user.id,
         amount=instance.amount,
         coin=instance.wallet.asset.symbol,
         network=instance.network.symbol,

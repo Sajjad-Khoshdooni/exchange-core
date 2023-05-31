@@ -20,7 +20,7 @@ if settings.DEBUG_OR_TESTING:
     def new_account() -> Account:
         name = 'test' + str(get_rand_int())
         u = User.objects.create(username=name, phone=name)
-        return u.account
+        return u.get_account()
 
     def set_price(asset: Asset, ask: float, bid: float = None):
         if not bid:

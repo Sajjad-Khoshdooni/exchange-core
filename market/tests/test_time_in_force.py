@@ -41,6 +41,7 @@ class CreateOrderTestCase(TestCase):
         ])
 
         fok_order = new_order(
+            pipeline=pipeline,
             symbol=btcusdt,
             account=account,
             amount=Decimal('0.3'),
@@ -56,6 +57,7 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(Order.objects.aggregate(sum=Sum('filled_amount'))['sum'], 0)
 
         ordinary_order = new_order(
+            pipeline=pipeline,
             symbol=btcusdt,
             account=account,
             amount=Decimal('0.3'),
@@ -72,6 +74,7 @@ class CreateOrderTestCase(TestCase):
 
         try:
             new_order(
+                pipeline=pipeline,
                 symbol=btcusdt,
                 account=account,
                 amount=Decimal('0.2'),
@@ -84,6 +87,7 @@ class CreateOrderTestCase(TestCase):
             pass
 
         fok_order = new_order(
+            pipeline=pipeline,
             symbol=btcusdt,
             account=account,
             amount=Decimal('0.1'),

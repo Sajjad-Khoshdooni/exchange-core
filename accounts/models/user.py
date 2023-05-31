@@ -286,12 +286,7 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         old = self.id and User.objects.get(id=self.id)
-        creating = not self.id
         super(User, self).save(*args, **kwargs)
-
-        if creating:
-            from accounts.models import Account
-            Account.objects.create(user=self)
 
         if self.level == self.LEVEL2 and self.verify_status == self.PENDING:
             if self.national_code_phone_verified and self.selfie_image_verified:
@@ -323,14 +318,12 @@ def handle_user_save(sender, instance, created, **kwargs):
     producer = get_kafka_producer()
     account = instance.get_account()
 
-    if account and account.type != Account.ORDINARY:
+    if account.type != Account.ORDINARY:
         return
 
     referrer_id = None
-    referrer = None
 
-    if not created and account:
-        referrer = account and account.referred_by and account.referred_by.owner.user
+    referrer = account.referred_by and account.referred_by.owner.user
 
     if referrer:
         referrer_id = referrer.id
