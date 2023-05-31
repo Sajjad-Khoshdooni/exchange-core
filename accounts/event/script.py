@@ -1,18 +1,17 @@
 import uuid
 
-from django.conf import settings
-
-from financial.models import FiatWithdrawRequest, Payment
-from ledger.models import OTCTrade, FastBuyToken, Prize
-from ledger.models.transfer import Transfer
-from ledger.utils.external_price import get_external_price
-from market.models import Trade
-from stake.models import StakeRequest
 from accounts.event.producer import get_kafka_producer
 from accounts.models import User, TrafficSource, Account
 from accounts.models.login_activity import LoginActivity
 from accounts.utils.dto import UserEvent, LoginEvent, TransferEvent, TradeEvent, TrafficSourceEvent, StakeRequestEvent, \
     PrizeEvent
+from financial.models import FiatWithdrawRequest, Payment
+from ledger.models import OTCTrade, FastBuyToken, Prize
+from ledger.models.transfer import Transfer
+from ledger.utils.external_price import get_external_price
+from ledger.utils.fields import DONE
+from market.models import Trade
+from stake.models import StakeRequest
 
 
 def reproduce_events(start, end):
@@ -103,7 +102,7 @@ def reproduce_events(start, end):
 
         producer.produce(event)
 
-    for transfer in Payment.objects.filter(created__range=time_range, status='done').select_related('payment_request__bank_card'):
+    for transfer in Payment.objects.filter(created__range=time_range, status=DONE).select_related('payment_request__bank_card'):
         event = TransferEvent(
             id=transfer.id,
             user_id=transfer.payment_request.bank_card.user_id,
@@ -138,14 +137,14 @@ def reproduce_events(start, end):
 
         producer.produce(event)
 
-    for trade in OTCTrade.objects.filter(created__range=time_range, otc_request__account__user__isnull=False).exclude(
+    for trade in OTCTrade.objects.filter(created__range=time_range, otc_request__account__user__isnull=False, status=OTCTrade.DONE).exclude(
             otc_request__account__type=Account.SYSTEM
-    ).select_related('otc_request__account__user', 'symbol'):
+    ).select_related('otc_request__account__user', 'otc_request__symbol'):
         trade_type = 'otc'
-        if FastBuyToken.objects.filter(otc_request=trade).exists():
-            trade_type = 'fast_buy'
 
         req = trade.otc_request
+        if FastBuyToken.objects.filter(otc_request=req).exists():
+            trade_type = 'fast_buy'
 
         event = TradeEvent(
             id=trade.id,
@@ -176,7 +175,7 @@ def reproduce_events(start, end):
         )
         producer.produce(event)
 
-    for stake_request in StakeRequest.objects.filter(created__range=time_range).select_related('stake_request__account', 'stake_request__stake_option'):
+    for stake_request in StakeRequest.objects.filter(created__range=time_range).select_related('account', 'stake_option'):
         event = StakeRequestEvent(
             created=stake_request.created,
             user_id=stake_request.account.user_id,

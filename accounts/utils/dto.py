@@ -182,10 +182,10 @@ class StakeRequestEvent(BaseEvent):
     type: ClassVar[str] = 'staking'
     stake_request_id: int
     stake_option_id: int
-    amount: Union[int, float, Decimal]
+    amount: Decimal
     status: str
     coin: str
-    apr: str
+    apr: Decimal
 
     def serialize(self):
         return {
