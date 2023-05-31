@@ -140,7 +140,7 @@ def reproduce_events(start, end):
 
     for trade in OTCTrade.objects.filter(created__range=time_range, otc_request__account__user__isnull=False).exclude(
             otc_request__account__type=Account.SYSTEM
-    ).select_related('account__user', 'symbol'):
+    ).select_related('otc_request__account__user', 'symbol'):
         trade_type = 'otc'
         if FastBuyToken.objects.filter(otc_request=trade).exists():
             trade_type = 'fast_buy'
