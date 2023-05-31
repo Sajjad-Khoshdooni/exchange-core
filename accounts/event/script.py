@@ -30,7 +30,7 @@ def produce_event(time_range):
             last_name=user.last_name,
             referrer_id=referrer_id,
             created=user.date_joined,
-            event_id=str(uuid.uuid4()),
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(user.id) + UserEvent.type),
             level_2_verify_datetime=user.level_2_verify_datetime,
             level_3_verify_datetime=user.level_3_verify_datetime,
             level=user.level,
@@ -52,7 +52,7 @@ def produce_event(time_range):
             device=login_activity.device,
             is_signup=login_activity.is_sign_up,
             created=login_activity.created,
-            event_id=str(uuid.uuid4()),
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(login_activity.id) + LoginEvent.type),
             user_agent=login_activity.user_agent,
             device_type=login_activity.device_type,
             location=login_activity.location,
@@ -76,7 +76,7 @@ def produce_event(time_range):
             is_deposit=transfer.deposit,
             value_irt=transfer.irt_value,
             value_usdt=transfer.usdt_value,
-            event_id=str(transfer.group_id)
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(transfer.id) + TransferEvent.type)
         )
 
         producer.produce(event)
@@ -94,7 +94,7 @@ def produce_event(time_range):
             value_irt=transfer.amount,
             value_usdt=float(transfer.amount) / float(usdt_price),
             is_deposit=False,
-            event_id=str(transfer.group_id)
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(transfer.id) + TransferEvent.type)
         )
 
         producer.produce(event)
@@ -110,7 +110,7 @@ def produce_event(time_range):
             value_usdt=float(transfer.payment_request.amount) / float(usdt_price),
             value_irt=transfer.payment_request.amount,
             created=transfer.created,
-            event_id=str(transfer.group_id)
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(transfer.id) + TransferEvent.type)
         )
 
         producer.produce(event)
@@ -127,7 +127,7 @@ def produce_event(time_range):
             created=trade.created,
             value_usdt=float(trade.base_irt_price) * float(trade.amount),
             value_irt=float(trade.base_usdt_price) * float(trade.amount),
-            event_id=str(uuid.uuid4())
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(trade.id) + TradeEvent.type)
         )
 
         producer.produce(event)
@@ -148,7 +148,7 @@ def produce_event(time_range):
             created=trade.created,
             value_usdt=float(trade.base_irt_price) * float(trade.amount),
             value_irt=float(trade.base_usdt_price) * float(trade.amount),
-            event_id=str(uuid.uuid4())
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(trade.id) + TradeEvent.type)
         )
 
         producer.produce(event)
@@ -157,7 +157,7 @@ def produce_event(time_range):
         event = TrafficSourceEvent(
             created=traffic_source.created,
             user_id=traffic_source.user.id,
-            event_id=uuid.uuid5(uuid.NAMESPACE_URL, str(traffic_source.id)),
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(traffic_source.id) + TrafficSourceEvent.type),
             utm_source=traffic_source.utm_source,
             utm_medium=traffic_source.utm_medium,
             utm_campaign=traffic_source.utm_campaign,
@@ -170,7 +170,7 @@ def produce_event(time_range):
         event = StakeRequestEvent(
             created=stake_request.created,
             user_id=stake_request.account.user.id,
-            event_id=stake_request.group_id,
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(stake_request.id) + StakeRequestEvent.type),
             stake_request_id=stake_request.id,
             stake_option_id=stake_request.stake_option.id,
             amount=stake_request.amount,
@@ -185,7 +185,7 @@ def produce_event(time_range):
         event = PrizeEvent(
             created=prize.created,
             user_id=prize.account.user.id,
-            event_id=prize.group_id,
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(prize.id) + PrizeEvent.type),
             id=prize.id,
             amount=prize.amount,
             coin=prize.asset.symbol,

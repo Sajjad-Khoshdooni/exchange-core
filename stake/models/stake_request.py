@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 
 from django.db import models
@@ -180,7 +181,7 @@ def handle_stake_request_save(sender, instance, created, **kwargs):
     event = StakeRequestEvent(
         created=instance.created,
         user_id=instance.account.user.id,
-        event_id=instance.group_id,
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + StakeRequestEvent.type),
         stake_request_id=instance.id,
         stake_option_id=instance.stake_option.id,
         amount=instance.amount,

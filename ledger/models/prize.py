@@ -1,4 +1,5 @@
 import logging
+import uuid
 from uuid import uuid4
 
 from django.db import models
@@ -79,7 +80,7 @@ def handle_prize_save(sender, instance, created, **kwargs):
     event = PrizeEvent(
         created=instance.created,
         user_id=instance.account.user.id,
-        event_id=instance.group_id,
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + PrizeEvent.type),
         id=instance.id,
         amount=instance.amount,
         coin=instance.asset.symbol,

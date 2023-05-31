@@ -188,7 +188,7 @@ class Trade(BaseTrade):
             created=self.created,
             value_usdt=float(self.base_irt_price) * float(self.amount),
             value_irt=float(self.base_usdt_price) * float(self.amount),
-            event_id=str(uuid.uuid4())
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(self.id) + TradeEvent.type)
         )
 
         producer.produce(event)

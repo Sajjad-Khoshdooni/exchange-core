@@ -40,7 +40,7 @@ def handle_traffic_source_save(sender, instance, created, **kwargs):
     event = TrafficSourceEvent(
         created=instance.created,
         user_id=instance.user.id,
-        event_id=uuid.uuid5(uuid.NAMESPACE_URL, str(instance.id)),
+        event_id=uuid.uuid5(uuid.NAMESPACE_URL, str(instance.id) + TrafficSourceEvent.type),
         utm_source=instance.utm_source,
         utm_medium=instance.utm_medium,
         utm_campaign=instance.utm_campaign,

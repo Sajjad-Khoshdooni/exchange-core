@@ -1,4 +1,5 @@
 import logging
+import uuid
 from decimal import Decimal
 from typing import Union
 from uuid import uuid4
@@ -359,7 +360,7 @@ def handle_transfer_save(sender, instance, created, **kwargs):
         is_deposit=instance.deposit,
         value_irt=instance.irt_value,
         value_usdt=instance.usdt_value,
-        event_id=str(instance.group_id)
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type)
     )
 
     producer.produce(event)

@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 from decouple import config
 from django.conf import settings
@@ -271,7 +272,7 @@ def handle_withdraw_request_save(sender, instance, created, **kwargs):
         value_irt=instance.amount,
         value_usdt=float(instance.amount) / float(usdt_price),
         is_deposit=False,
-        event_id=str(instance.group_id)
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type)
     )
 
     producer.produce(event)

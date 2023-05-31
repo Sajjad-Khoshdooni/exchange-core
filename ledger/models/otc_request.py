@@ -195,7 +195,7 @@ def handle_OTC_trade_save(sender, instance, created, **kwargs):
         created=instance.created,
         value_usdt=float(instance.base_irt_price) * float(instance.amount),
         value_irt=float(instance.base_usdt_price) * float(instance.amount),
-        event_id=str(uuid.uuid4())
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TradeEvent.type)
     )
 
     producer.produce(event)

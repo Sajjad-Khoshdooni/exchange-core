@@ -321,23 +321,23 @@ class User(AbstractUser):
 @receiver(post_save, sender=User)
 def handle_user_save(sender, instance, created, **kwargs):
     producer = get_kafka_producer()
+    account = instance.get_account()
 
-    if instance.get_account() and instance.get_account().type != Account.ORDINARY:
+    if account and account.type != Account.ORDINARY:
         return
 
     referrer_id = None
     referrer = None
 
-    if not created and instance.get_account():
-        account = instance.get_account()
+    if not created and account:
         referrer = account and account.referred_by and account.referred_by.owner.user
 
     if referrer:
-        referrer_id = account.referred_by.owner.user.id
+        referrer_id = referrer.id
 
     event_id = uuid.uuid4()
     if created:
-        event_id = uuid.uuid5(uuid.NAMESPACE_DNS, 'python.org')
+        event_id = uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + UserEvent.type)
 
     event = UserEvent(
         user_id=instance.id,
