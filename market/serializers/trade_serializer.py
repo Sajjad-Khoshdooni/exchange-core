@@ -75,8 +75,9 @@ class TradePairSerializer(TradeSerializer):
         return self.context['client_order_id_mapping'].get(instance.order_id)
 
     def get_pair_order_id(self, instance: Trade):
-        mapping = self.context['maker_taker_mapping'] if instance.is_maker else self.context['taker_maker_mapping']
-        return mapping.get(instance.order_id)
+        mapping = self.context['maker_taker_mapping'].get(instance.group_id)
+        if mapping:
+            return mapping[1] if instance.is_maker else mapping[0]
 
     def get_pair_client_order_id(self, instance: Trade):
         return self.context['client_order_id_mapping'].get(self.get_pair_order_id(instance))
