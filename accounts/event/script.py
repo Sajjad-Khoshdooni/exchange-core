@@ -7,14 +7,16 @@ from ledger.utils.external_price import get_external_price
 from market.models import Trade
 from stake.models import StakeRequest
 from .producer import get_kafka_producer
-from ..models import User, Account, TrafficSource
+from ..models import User, TrafficSource
 from ..models.login_activity import LoginActivity
 from ..utils.dto import UserEvent, LoginEvent, TransferEvent, TradeEvent, TrafficSourceEvent, StakeRequestEvent, \
     PrizeEvent
 
 
-def produce_event(time_range):
+def reproduce_events(start, end):
     producer = get_kafka_producer()
+
+    time_range = (start, end)
 
     for user in User.objects.filter(date_joined__range=time_range):
         referrer_id = None
@@ -22,7 +24,7 @@ def produce_event(time_range):
         referrer = account and account.referred_by and account.referred_by.owner.user
 
         if referrer:
-            referrer_id = account.referred_by.owner.user.id
+            referrer_id = account.referred_by.owner.user_id
 
         event = UserEvent(
             user_id=user.id,
@@ -48,7 +50,7 @@ def produce_event(time_range):
 
     for login_activity in LoginActivity.objects.filter(created__range=time_range):
         event = LoginEvent(
-            user_id=login_activity.user.id,
+            user_id=login_activity.user_id,
             device=login_activity.device,
             is_signup=login_activity.is_sign_up,
             created=login_activity.created,
@@ -65,10 +67,10 @@ def produce_event(time_range):
 
         producer.produce(event)
 
-    for transfer in Transfer.objects.filter(created__range=time_range, status=Transfer.DONE):
+    for transfer in Transfer.objects.filter(created__range=time_range, status=Transfer.DONE).select_related('wallet__account', 'wallet__asset', 'network'):
         event = TransferEvent(
             id=transfer.id,
-            user_id=transfer.wallet.account.user.id,
+            user_id=transfer.wallet.account.user_id,
             amount=transfer.amount,
             coin=transfer.wallet.asset.symbol,
             network=transfer.network.symbol,
@@ -83,10 +85,10 @@ def produce_event(time_range):
 
     usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
 
-    for transfer in FiatWithdrawRequest.objects.filter(created__range=time_range, status=FiatWithdrawRequest.DONE):
+    for transfer in FiatWithdrawRequest.objects.filter(created__range=time_range, status=FiatWithdrawRequest.DONE).select_related('bank_account'):
         event = TransferEvent(
             id=transfer.id,
-            user_id=transfer.bank_account.user.id,
+            user_id=transfer.bank_account.user_id,
             amount=transfer.amount,
             coin='IRT',
             network='IRT',
@@ -99,10 +101,10 @@ def produce_event(time_range):
 
         producer.produce(event)
 
-    for transfer in Payment.objects.filter(created__range=time_range, status='done'):
+    for transfer in Payment.objects.filter(created__range=time_range, status='done').select_related('payment_request__bank_card'):
         event = TransferEvent(
             id=transfer.id,
-            user_id=transfer.payment_request.bank_card.user.id,
+            user_id=transfer.payment_request.bank_card.user_id,
             amount=transfer.payment_request.amount,
             coin='IRT',
             network='IRT',
@@ -115,10 +117,10 @@ def produce_event(time_range):
 
         producer.produce(event)
 
-    for trade in Trade.objects.filter(created__range=time_range):
+    for trade in Trade.objects.filter(created__range=time_range, account__user__isnull=False).select_related('account__user', 'symbol'):
         event = TradeEvent(
             id=trade.id,
-            user_id=trade.account.user.id,
+            user_id=trade.account.user_id,
             amount=trade.amount,
             price=trade.price,
             symbol=trade.symbol.name,
@@ -132,14 +134,14 @@ def produce_event(time_range):
 
         producer.produce(event)
 
-    for trade in OTCTrade.objects.filter(created__range=time_range):
+    for trade in OTCTrade.objects.filter(created__range=time_range, account__user__isnull=False).select_related('account__user', 'symbol'):
         trade_type = 'otc'
         if FastBuyToken.objects.filter(otc_request=trade).exists():
             trade_type = 'fast_buy'
 
         event = TradeEvent(
             id=trade.id,
-            user_id=trade.account.user.id,
+            user_id=trade.account.user_id,
             amount=trade.amount,
             price=trade.price,
             symbol=trade.symbol.name,
@@ -156,7 +158,7 @@ def produce_event(time_range):
     for traffic_source in TrafficSource.objects.filter(created__range=time_range):
         event = TrafficSourceEvent(
             created=traffic_source.created,
-            user_id=traffic_source.user.id,
+            user_id=traffic_source.user_id,
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(traffic_source.id) + TrafficSourceEvent.type),
             utm_source=traffic_source.utm_source,
             utm_medium=traffic_source.utm_medium,
@@ -166,10 +168,10 @@ def produce_event(time_range):
         )
         producer.produce(event)
 
-    for stake_request in StakeRequest.objects.filter(created__range=time_range):
+    for stake_request in StakeRequest.objects.filter(created__range=time_range).select_related('stake_request__account', 'stake_request__stake_option'):
         event = StakeRequestEvent(
             created=stake_request.created,
-            user_id=stake_request.account.user.id,
+            user_id=stake_request.account.user_id,
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(stake_request.id) + StakeRequestEvent.type),
             stake_request_id=stake_request.id,
             stake_option_id=stake_request.stake_option.id,
@@ -184,7 +186,7 @@ def produce_event(time_range):
     for prize in Prize.objects.filter(created__range=time_range):
         event = PrizeEvent(
             created=prize.created,
-            user_id=prize.account.user.id,
+            user_id=prize.account.user_id,
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(prize.id) + PrizeEvent.type),
             id=prize.id,
             amount=prize.amount,

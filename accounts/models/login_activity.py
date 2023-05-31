@@ -41,7 +41,7 @@ def handle_log_in_save(sender, instance, created, **kwargs):
     producer = get_kafka_producer()
 
     event = LoginEvent(
-        user_id=instance.user.id,
+        user_id=instance.user_id,
         device=instance.device,
         is_signup=instance.is_sign_up,
         created=instance.created,
