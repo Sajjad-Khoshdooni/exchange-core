@@ -1,5 +1,7 @@
 import uuid
 
+from django.conf import settings
+
 from financial.models import FiatWithdrawRequest, Payment
 from ledger.models import OTCTrade, FastBuyToken, Prize
 from ledger.models.transfer import Transfer
@@ -117,7 +119,9 @@ def reproduce_events(start, end):
 
         producer.produce(event)
 
-    for trade in Trade.objects.filter(created__range=time_range, account__user__isnull=False).select_related('account__user', 'symbol'):
+    for trade in Trade.objects.filter(created__range=time_range, account__user__isnull=False).exclude(
+            account_id__in=[settings.SYSTEM_ACCOUNT_ID, settings.OTC_ACCOUNT_ID]
+    ).select_related('account__user', 'symbol'):
         event = TradeEvent(
             id=trade.id,
             user_id=trade.account.user_id,
@@ -134,22 +138,26 @@ def reproduce_events(start, end):
 
         producer.produce(event)
 
-    for trade in OTCTrade.objects.filter(created__range=time_range, account__user__isnull=False).select_related('account__user', 'symbol'):
+    for trade in OTCTrade.objects.filter(created__range=time_range, otc_request__account__user__isnull=False).exclude(
+            account_id__in=[settings.SYSTEM_ACCOUNT_ID, settings.OTC_ACCOUNT_ID]
+    ).select_related('account__user', 'symbol'):
         trade_type = 'otc'
         if FastBuyToken.objects.filter(otc_request=trade).exists():
             trade_type = 'fast_buy'
 
+        req = trade.otc_request
+
         event = TradeEvent(
             id=trade.id,
-            user_id=trade.account.user_id,
-            amount=trade.amount,
-            price=trade.price,
-            symbol=trade.symbol.name,
+            user_id=req.account.user_id,
+            amount=req.amount,
+            price=req.price,
+            symbol=req.symbol.name,
             trade_type=trade_type,
-            market=trade.market,
-            created=trade.created,
-            value_usdt=float(trade.base_irt_price) * float(trade.amount),
-            value_irt=float(trade.base_usdt_price) * float(trade.amount),
+            market=req.market,
+            created=req.created,
+            value_usdt=float(req.irt_value),
+            value_irt=float(req.usdt_value),
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(trade.id) + TradeEvent.type)
         )
 
