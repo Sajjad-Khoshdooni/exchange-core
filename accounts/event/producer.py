@@ -14,7 +14,7 @@ def delivery_report(err, msg):
     if err is not None:
         logger.info('Message delivery failed: {}'.format(err))
     else:
-        logger.warning('Message delivered to {} [{}]'.format(msg.topic(), msg.partition()))
+        logger.info('Message delivered to {} [{}]'.format(msg.topic(), msg.partition()))
 
 
 class KafkaProducer:
