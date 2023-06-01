@@ -39,13 +39,14 @@ def reproduce_events(start, end):
 
     time_range = (start, end)
 
-    for user in User.objects.filter(date_joined__range=time_range):
-        referrer_id = None
-        account = user.get_account()
-        referrer = account and account.referred_by and account.referred_by.owner.user
+    for user in User.objects.filter(date_joined__range=time_range).select_related('account__referred_by__owner'):
 
-        if referrer:
-            referrer_id = account.referred_by.owner.user_id
+        if not hasattr(user, 'account'):
+            account = user.get_account()
+        else:
+            account = user.account
+
+        referrer_id = account and account.referred_by and account.referred_by.owner.user_id
 
         event = UserEvent(
             user_id=user.id,
