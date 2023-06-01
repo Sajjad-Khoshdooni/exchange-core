@@ -199,7 +199,7 @@ class StakeRequestEvent(BaseEvent):
             'amount': float(self.amount),
             'status': self.status,
             'coin': self.coin,
-            'apr': self.apr
+            'apr': float(self.apr)
         }
 
 
