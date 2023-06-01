@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from django.utils import timezone
 
@@ -20,8 +20,9 @@ from stake.models import StakeRequest
 logger = logging.getLogger(__name__)
 
 
-def reproduce_all(step: int = 30):
-    start = User.objects.order_by('id').first().date_joined
+def reproduce_all(start: datetime = None, step: int = 30):
+    if not start:
+        start = User.objects.order_by('id').first().date_joined
 
     while start < timezone.now():
         end = start + timedelta(days=step)
