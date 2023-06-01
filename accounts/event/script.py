@@ -1,4 +1,8 @@
+import logging
 import uuid
+from datetime import timedelta
+
+from django.utils import timezone
 
 from accounts.event.producer import get_kafka_producer
 from accounts.models import User, TrafficSource, Account
@@ -12,6 +16,21 @@ from ledger.utils.external_price import get_external_price
 from ledger.utils.fields import DONE
 from market.models import Trade
 from stake.models import StakeRequest
+
+logger = logging.getLogger(__name__)
+
+
+def reproduce_all(step: int = 30):
+    start = User.objects.order_by('id').first().date_joined
+
+    while start < timezone.now():
+        end = start + timedelta(days=step)
+
+        logger.info('Producing events of %s and %s' % (start, end))
+
+        reproduce_events(start, end)
+
+        start = end
 
 
 def reproduce_events(start, end):
