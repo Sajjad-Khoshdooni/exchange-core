@@ -14,7 +14,8 @@ def delivery_report(err, msg):
     if err is not None:
         logger.info('Message delivery failed: {}'.format(err))
     else:
-        logger.info('Message delivered to {} [{}]'.format(msg.topic(), msg.partition()))
+        pass
+        # logger.info('Message delivered to {} [{}]'.format(msg.topic(), msg.partition()))
 
 
 class KafkaProducer:
@@ -37,7 +38,6 @@ class KafkaProducer:
             })
 
     def produce(self, event: BaseEvent):
-        print(event)
         data = json.dumps(event.serialize())
 
         if not settings.KAFKA_HOST_URL:
@@ -49,11 +49,13 @@ class KafkaProducer:
 
             self.producer.flush()
         except KafkaException as e:
+            logger.info(event)
             logger.warning('KafkaException', extra={
                 'e': e,
                 'event': event
             })
         except Exception as e:
+            logger.info(event)
             logger.warning('KafkaClientException', extra={
                 'e': e,
                 'event': event

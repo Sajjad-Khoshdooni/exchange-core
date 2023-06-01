@@ -264,7 +264,7 @@ def handle_withdraw_request_save(sender, instance, created, **kwargs):
 
     event = TransferEvent(
         id=instance.id,
-        user_id=instance.bank_account.user.id,
+        user_id=instance.bank_account.user_id,
         amount=instance.amount,
         coin='IRT',
         network='IRT',

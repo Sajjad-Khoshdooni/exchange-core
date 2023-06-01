@@ -179,7 +179,7 @@ class Trade(BaseTrade):
 
         event = TradeEvent(
             id=self.id,
-            user_id=self.account.user.id,
+            user_id=self.account.user_id,
             amount=self.amount,
             price=self.price,
             symbol=self.symbol.name,

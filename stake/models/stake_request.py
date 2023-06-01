@@ -180,7 +180,7 @@ def handle_stake_request_save(sender, instance, created, **kwargs):
     producer = get_kafka_producer()
     event = StakeRequestEvent(
         created=instance.created,
-        user_id=instance.account.user.id,
+        user_id=instance.account.user_id,
         event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + StakeRequestEvent.type),
         stake_request_id=instance.id,
         stake_option_id=instance.stake_option.id,
