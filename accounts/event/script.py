@@ -150,8 +150,8 @@ def reproduce_events(start, end):
             trade_type='market',
             market=trade.market,
             created=trade.created,
-            value_usdt=float(trade.base_irt_price) * float(trade.amount),
-            value_irt=float(trade.base_usdt_price) * float(trade.amount),
+            value_usdt=trade.usdt_value,
+            value_irt=trade.irt_value,
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(trade.id) + TradeEvent.type)
         )
 
@@ -173,10 +173,10 @@ def reproduce_events(start, end):
             price=req.price,
             symbol=req.symbol.name,
             trade_type=trade_type,
-            market=req.market,
-            created=req.created,
-            value_usdt=float(req.irt_value),
-            value_irt=float(req.usdt_value),
+            market=trade.market,
+            created=trade.created,
+            value_usdt=trade.otc_request.usdt_value,
+            value_irt=trade.otc_request.irt_value,
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(trade.id) + TradeEvent.type)
         )
 

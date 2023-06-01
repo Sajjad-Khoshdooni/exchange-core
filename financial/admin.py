@@ -14,7 +14,7 @@ from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
-    FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost
+    FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, BankPaymentId
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.precision import humanize_number
@@ -358,3 +358,17 @@ class ManualTransferAdmin(admin.ModelAdmin):
 
             obj.status = ManualTransfer.DONE
             obj.save(update_fields=['status'])
+
+
+@admin.register(PaymentIdRequest)
+class PaymentIdRequestAdmin(admin.ModelAdmin):
+    list_display = ('created', 'bank_payment_id', 'amount', 'payment_id', 'status')
+    search_fields = ('payment_id', )
+    list_filter = ('status',)
+
+
+@admin.register(BankPaymentId)
+class BankPaymentIdAdmin(admin.ModelAdmin):
+    list_display = ('created', 'bank_account', 'gateway', 'destination_iban', 'registry_status')
+    search_fields = ('destination_iban', )
+    list_filter = ('registry_status',)
