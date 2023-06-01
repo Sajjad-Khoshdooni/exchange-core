@@ -95,6 +95,10 @@ raastin_deploy_production:
     - 'darkube deploy --token ${RAASTIN_NOTIF_MANAGER_DEPLOY_TOKEN}
       --app-id ${RAASTIN_NOTIF_MANAGER_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
       --job-id "${CI_JOB_ID}"'
+    - 'darkube deploy --token ${RAASTIN_TEST_DEPLOY_TOKEN}
+      --app-id ${RAASTIN_TEST_APP_ID}  --image-tag "${CI_COMMIT_SHORT_SHA}"
+      --job-id "${CI_JOB_ID}"'
+
   stage: deploy
   tags:
     - hamravesh
