@@ -179,15 +179,15 @@ class Trade(BaseTrade):
 
         event = TradeEvent(
             id=self.id,
-            user_id=self.account.user.id,
+            user_id=self.account.user_id,
             amount=self.amount,
             price=self.price,
             symbol=self.symbol.name,
             trade_type='market',
             market=self.market,
             created=self.created,
-            value_usdt=float(self.base_irt_price) * float(self.amount),
-            value_irt=float(self.base_usdt_price) * float(self.amount),
+            value_usdt=self.usdt_value,
+            value_irt=self.irt_value,
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(self.id) + TradeEvent.type)
         )
 

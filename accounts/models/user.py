@@ -328,17 +328,13 @@ def handle_user_save(sender, instance, created, **kwargs):
     if referrer:
         referrer_id = referrer.id
 
-    event_id = uuid.uuid4()
-    if created:
-        event_id = uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + UserEvent.type)
-
     event = UserEvent(
         user_id=instance.id,
         first_name=instance.first_name,
         last_name=instance.last_name,
         referrer_id=referrer_id,
         created=instance.date_joined,
-        event_id=str(event_id),
+        event_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + UserEvent.type)),
         level_2_verify_datetime=instance.level_2_verify_datetime,
         level_3_verify_datetime=instance.level_3_verify_datetime,
         level=instance.level,

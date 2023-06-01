@@ -164,7 +164,7 @@ def handle_payment_save(sender, instance, created, **kwargs):
 
     event = TransferEvent(
         id=instance.id,
-        user_id=instance.payment_request.bank_card.user.id,
+        user_id=instance.payment_request.bank_card.user_id,
         amount=instance.payment_request.amount,
         coin='IRT',
         network='IRT',

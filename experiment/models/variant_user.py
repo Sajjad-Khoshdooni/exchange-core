@@ -15,4 +15,4 @@ class VariantUser(models.Model):
         )
 
     def __str__(self):
-        return 'UserId:{user} ,VariantId:{variant}'.format(user=self.user.id, variant=self.variant.id)
+        return 'UserId:{user} ,VariantId:{variant}'.format(user=self.user_id, variant=self.variant.id)
