@@ -3,16 +3,15 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.views.generic import TemplateView
+from django_otp.admin import OTPAdminSite
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 
 from accounts.views import HealthView
 from accounts.views.dashboard import dashboard
-from django_otp.admin import OTPAdminSite
 
-
-# admin.site.__class__ = OTPAdminSite
+admin.site.__class__ = OTPAdminSite
 
 
 schema_view = get_schema_view(
