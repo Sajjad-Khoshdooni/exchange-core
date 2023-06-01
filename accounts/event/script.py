@@ -175,19 +175,19 @@ def reproduce_events(start, end):
         )
         producer.produce(event)
 
-for stake_request in StakeRequest.objects.filter(created__range=time_range).select_related('account', 'stake_option'):
-    event = StakeRequestEvent(
-        created=stake_request.created,
-        user_id=stake_request.account.user_id,
-        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(stake_request.id) + StakeRequestEvent.type),
-        stake_request_id=stake_request.id,
-        stake_option_id=stake_request.stake_option.id,
-        amount=stake_request.amount,
-        status=stake_request.status,
-        coin=stake_request.stake_option.asset.symbol,
-        apr=stake_request.stake_option.apr
-    )
-    producer.produce(event)
+    for stake_request in StakeRequest.objects.filter(created__range=time_range).select_related('account', 'stake_option'):
+        event = StakeRequestEvent(
+            created=stake_request.created,
+            user_id=stake_request.account.user_id,
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(stake_request.id) + StakeRequestEvent.type),
+            stake_request_id=stake_request.id,
+            stake_option_id=stake_request.stake_option.id,
+            amount=stake_request.amount,
+            status=stake_request.status,
+            coin=stake_request.stake_option.asset.symbol,
+            apr=stake_request.stake_option.apr
+        )
+        producer.produce(event)
 
     for prize in Prize.objects.filter(created__range=time_range):
         event = PrizeEvent(
