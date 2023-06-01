@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'drf_yasg',
     'simple_history',
     'django_user_agents',
+    'django_otp',
+    'django_otp.plugins.otp_totp',
 
     'analytics',
     'financial',
@@ -85,6 +87,7 @@ MIDDLEWARE = [
     'django_user_agents.middleware.UserAgentMiddleware',
 
     'accounts.middleware.SetLocaleMiddleware',
+    'django_otp.middleware.OTPMiddleware'
 ]
 
 # todo: fix csrf check
