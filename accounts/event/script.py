@@ -40,14 +40,11 @@ def reproduce_events(start, end):
     time_range = (start, end)
 
     for user in User.objects.filter(date_joined__range=time_range).select_related('account__referred_by__owner'):
-
         if not hasattr(user, 'account'):
             account = user.get_account()
         else:
             account = user.account
-
         referrer_id = account and account.referred_by and account.referred_by.owner.user_id
-
         event = UserEvent(
             user_id=user.id,
             first_name=user.first_name,
@@ -174,10 +171,10 @@ def reproduce_events(start, end):
             price=req.price,
             symbol=req.symbol.name,
             trade_type=trade_type,
-            market=trade.market,
+            market=req.market,
             created=trade.created,
-            value_usdt=trade.otc_request.usdt_value,
-            value_irt=trade.otc_request.irt_value,
+            value_usdt=req.usdt_value,
+            value_irt=req.irt_value,
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(trade.id) + TradeEvent.type)
         )
 
