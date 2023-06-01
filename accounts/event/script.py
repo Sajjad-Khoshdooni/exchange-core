@@ -125,8 +125,8 @@ def produce_event(time_range):
             trade_type='market',
             market=trade.market,
             created=trade.created,
-            value_usdt=float(trade.base_irt_price) * float(trade.amount),
-            value_irt=float(trade.base_usdt_price) * float(trade.amount),
+            value_usdt=float(trade.amount) / float(trade.base_usdt_price),
+            value_irt=float(trade.amount) / float(trade.base_irt_price),
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(trade.id) + TradeEvent.type)
         )
 
@@ -146,8 +146,8 @@ def produce_event(time_range):
             trade_type=trade_type,
             market=trade.market,
             created=trade.created,
-            value_usdt=float(trade.base_irt_price) * float(trade.amount),
-            value_irt=float(trade.base_usdt_price) * float(trade.amount),
+            value_usdt=float(trade.amount) / float(trade.base_usdt_price),
+            value_irt=float(trade.amount) / float(trade.base_irt_price),
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(trade.id) + TradeEvent.type)
         )
 
