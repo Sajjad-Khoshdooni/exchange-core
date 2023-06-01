@@ -9,6 +9,11 @@ from rest_framework import permissions
 
 from accounts.views import HealthView
 from accounts.views.dashboard import dashboard
+from django_otp.admin import OTPAdminSite
+
+
+# admin.site.__class__ = OTPAdminSite
+
 
 schema_view = get_schema_view(
     openapi.Info(
