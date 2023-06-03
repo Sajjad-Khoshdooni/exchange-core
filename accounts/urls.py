@@ -71,8 +71,15 @@ urlpatterns = [
 
     path('referrals/overview/', views.ReferralOverviewAPIView.as_view()),
     path('referrals/report/', views.ReferralReportAPIView.as_view()),
-    path('login/activity/', views.LoginActivityView.as_view()),
     path('fee/', views.TradingFeeView.as_view()),
+
+    path('login/activity/', views.LoginActivityViewSet.as_view({
+        'get': 'list',
+        'delete': 'destroy_all',
+    })),
+    path('login/activity/<int:pk>/', views.LoginActivityViewSet.as_view({
+        'delete': 'destroy'
+    })),
 
     path('', include(router.urls)),
 
