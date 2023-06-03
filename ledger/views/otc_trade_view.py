@@ -18,6 +18,7 @@ from ledger.utils.fields import get_serializer_amount_field
 
 
 class OTCInfoView(APIView):
+    permission_classes = []
 
     def get(self, request: Request):
         from_symbol = request.query_params.get('from')
