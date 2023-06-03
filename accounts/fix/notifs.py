@@ -108,3 +108,26 @@ for user in users:
             'push_status': Notification.PUSH_WAITING
         }
     )
+
+
+############################
+
+user_ids = Wallet.objects.filter(
+    asset__symbol__in=['COMBO'],
+    balance__gt=0
+).values_list('account__user_id', flat=True).distinct()
+users = User.objects.filter(id__in=user_ids)
+
+group_id = uuid.uuid5(uuid.NAMESPACE_URL, f'cocos-combo')
+
+for u in users:
+    Notification.objects.get_or_create(
+        recipient=u,
+        group_id=group_id,
+        defaults={
+            'title': 'ریبرندینگ توکن COCOS',
+            'message': 'به دلیل ریبرندینگ توکن کوکاس (COCOS) به کومبو (COMBO) هم اکنون می‌توانید این توکن را با نام جدید کومبو (COMBO) خرید و فروش کنید.',
+            'level': Notification.INFO,
+            'push_status': Notification.PUSH_WAITING
+        }
+    )
