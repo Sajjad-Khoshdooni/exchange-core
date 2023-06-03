@@ -42,7 +42,7 @@ def create_symbols_for_asset(asset: Asset):
                 'step_size': step_size,
                 'min_trade_quantity': 1,
                 'max_trade_quantity': 1e8,
-                'maker_amount': 1000 / price_usdt
+                'maker_amount': 1000 / price_usdt,
             }
         )
 
