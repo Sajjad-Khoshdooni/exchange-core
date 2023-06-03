@@ -1,6 +1,7 @@
 import logging
 
 from django.contrib.auth import authenticate, login, logout
+from django.utils import timezone
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
@@ -56,7 +57,7 @@ class LoginActivitySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LoginActivity
-        fields = ('id', 'created', 'ip', 'device', 'os', 'browser',)
+        fields = ('id', 'created', 'ip', 'device', 'os', 'browser', 'session')
 
 
 class LoginActivityView(ListAPIView):
@@ -65,7 +66,12 @@ class LoginActivityView(ListAPIView):
     serializer_class = LoginActivitySerializer
 
     def get_queryset(self):
-        return LoginActivity.objects.filter(user=self.request.user).order_by('-id')
+        logins = LoginActivity.objects.filter(user=self.request.user).order_by('-id')
+
+        if self.request.query_params.get('active') == '1':
+            logins = logins.filter(session__isnull=False, session__expire_date__gt=timezone.now())
+
+        return logins
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
