@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class DepositSerializer(serializers.ModelSerializer):
     network = serializers.CharField(max_length=16, write_only=True)
-    sender_address = serializers.CharField(max_length=256, write_only=True)
+    sender_address = serializers.CharField(max_length=256, write_only=True, allow_blank=True)
     receiver_address = serializers.CharField(max_length=256, write_only=True)
     coin = serializers.CharField(max_length=8, write_only=True)
 
