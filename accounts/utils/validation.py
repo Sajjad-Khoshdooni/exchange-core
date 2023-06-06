@@ -86,38 +86,35 @@ def get_ip_data(ip):
 
 
 def get_login_activity_from_request(request) -> LoginActivity:
-    try:
-        os = request.user_agent.os.family
-        os_version = request.user_agent.os.version_string
-        if os_version:
-            os += ' ' + os_version
+    os = request.user_agent.os.family
+    os_version = request.user_agent.os.version_string
+    if os_version:
+        os += ' ' + os_version
 
-        device = request.user_agent.device.family
+    device = request.user_agent.device.family
 
-        browser = request.user_agent.browser.family
-        browser_version = request.user_agent.browser.version_string
+    browser = request.user_agent.browser.family
+    browser_version = request.user_agent.browser.version_string
 
-        if browser_version:
-            browser += ' ' + browser_version
+    if browser_version:
+        browser += ' ' + browser_version
 
-        if request.user_agent.is_mobile:
-            device_type = LoginActivity.MOBILE
-        elif request.user_agent.is_tablet:
-            device_type = LoginActivity.TABLET
-        elif request.user_agent.is_pc:
-            device_type = LoginActivity.PC
-        else:
-            device_type = LoginActivity.UNKNOWN
+    if request.user_agent.is_mobile:
+        device_type = LoginActivity.MOBILE
+    elif request.user_agent.is_tablet:
+        device_type = LoginActivity.TABLET
+    elif request.user_agent.is_pc:
+        device_type = LoginActivity.PC
+    else:
+        device_type = LoginActivity.UNKNOWN
 
-        return LoginActivity(
-            user_agent=request.META['HTTP_USER_AGENT'],
-            device_type=device_type,
-            device=device,
-            os=os,
-            browser=browser,
-        )
-    except:
-        pass
+    return LoginActivity(
+        user_agent=request.META['HTTP_USER_AGENT'],
+        device_type=device_type,
+        device=device,
+        os=os,
+        browser=browser,
+    )
 
 
 def get_login_activity_from_client_info(client_info: dict) -> LoginActivity:

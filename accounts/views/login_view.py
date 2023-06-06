@@ -56,14 +56,19 @@ class LogoutView(APIView):
 
 class LoginActivitySerializer(serializers.ModelSerializer):
     active = serializers.SerializerMethodField()
+    current = serializers.SerializerMethodField()
 
     def get_active(self, login_activity: LoginActivity):
         session = login_activity.session
         return session and session.expire_date > timezone.now()
 
+    def get_current(self, login_activity: LoginActivity):
+        session = login_activity.session
+        return session.session_key == self.context['request'].session.session_key
+
     class Meta:
         model = LoginActivity
-        fields = ('id', 'created', 'ip', 'device', 'os', 'browser', 'session', 'active')
+        fields = ('id', 'created', 'ip', 'device', 'os', 'browser', 'session', 'active', 'current')
 
 
 class LoginActivityViewSet(ModelViewSet):
@@ -84,11 +89,12 @@ class LoginActivityViewSet(ModelViewSet):
         ctx['user_agent'] = self.request.user_agent
         return ctx
 
-    def perform_destroy(self, instance):
-        instance.session.delete()
+    def perform_destroy(self, instance: LoginActivity):
+        if self.request.session.session_key != instance.session.session_key:
+            instance.session.delete()
 
     def destroy_all(self, request, *args, **kwargs):
-        for login_activity in self.get_queryset(only_active=True):
+        for login_activity in self.get_queryset(only_active=True).exclude(session__session_key=request.sesion.session_key):
             login_activity.session.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
