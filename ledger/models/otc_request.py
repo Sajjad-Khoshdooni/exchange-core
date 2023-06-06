@@ -1,17 +1,12 @@
-import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.db import models
 from django.db.models import CheckConstraint, Q
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from accounts.event.producer import get_kafka_producer
 from accounts.models import Account
-from accounts.utils.dto import TradeEvent
 from ledger.exceptions import SmallAmountTrade
 from ledger.models import Asset, Wallet
 from ledger.utils.external_price import get_external_price, get_other_side, BUY
@@ -173,33 +168,3 @@ class OTCRequest(BaseTrade):
                 fee_amount__gte=0,
             ), name='otc_request_check_trade_amounts', ),
         ]
-
-
-@receiver(post_save, sender=OTCRequest)
-def handle_OTC_trade_save(sender, instance, created, **kwargs):
-    from ledger.models import FastBuyToken
-
-    user = instance.account.user
-    if not user:
-        return
-
-    producer = get_kafka_producer()
-    trade_type = 'otc'
-    if FastBuyToken.objects.filter(otc_request=instance).exists():
-        trade_type = 'fast_buy'
-
-    event = TradeEvent(
-        id=instance.id,
-        user_id=user.id,
-        amount=instance.amount,
-        price=instance.price,
-        symbol=instance.symbol.name,
-        trade_type=trade_type,
-        market=instance.market,
-        created=instance.created,
-        value_usdt=instance.usdt_value,
-        value_irt=instance.irt_value,
-        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TradeEvent.type)
-    )
-
-    producer.produce(event)
