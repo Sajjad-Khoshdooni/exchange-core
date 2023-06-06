@@ -1,16 +1,21 @@
+import logging
+
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
 from rest_framework.response import Response
 
-from financial.models import PaymentRequest, Payment, PaymentIdRequest, Gateway, BankAccount, BankPaymentId
+from financial.models import PaymentRequest, Payment, PaymentIdRequest, Gateway, BankPaymentId
 from ledger.utils.fields import CANCELED
+
+logger = logging.getLogger(__name__)
 
 
 class JibitCallbackView(TemplateView):
     authentication_classes = permission_classes = ()
 
     def post(self, request, *args, **kwargs):
+        logger.info('jibit callback %s' % request.POST)
 
         status = request.POST['status']
         authority = request.POST['purchaseId']
@@ -38,10 +43,12 @@ class JibitCallbackView(TemplateView):
         return payment.redirect_to_app()
 
 
-class JibitPaymentidCallbackView(TemplateView):
+class JibitPaymentIdCallbackView(TemplateView):
     authentication_classes = permission_classes = ()
 
     def post(self, request):
+        logger.info('jibit paymentId callback %s' % request.POST)
+
         status = request.POST['status']
 
         if status not in ('SUCCESSFUL', 'FAILED'):
