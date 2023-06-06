@@ -11,9 +11,8 @@ token_cache = caches['token']
 JIBIT_GATEWAY_ACCESS_KEY = 'jibit_gateway_key'
 
 
-class Jibitclient():
-    def __init__(self):
-        self.BASE_URL = 'https://napi.jibit.cloud/ppg'
+class JibitClient:
+    BASE_URL = 'https://napi.jibit.cloud/ppg'
 
     def _get_token(self, force_renew: bool = False):
         if not force_renew:
