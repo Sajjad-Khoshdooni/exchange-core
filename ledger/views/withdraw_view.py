@@ -34,7 +34,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         request = self.context['request']
         user = request.user
 
-        if not can_withdraw(user.get_account(), request):
+        if not can_withdraw(user.get_account(), request) or not user.can_withdraw_crypto:
             raise ValidationError('امکان برداشت وجود ندارد.')
 
         account = user.get_account()
