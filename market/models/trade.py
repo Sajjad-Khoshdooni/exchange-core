@@ -9,6 +9,7 @@ from django.db.models import F, CheckConstraint, Q, Sum, Max, Min
 from django.utils import timezone
 
 from accounts.event.producer import get_kafka_producer
+from accounts.models import Account
 from accounts.utils.dto import TradeEvent
 from ledger.utils.external_price import BUY
 from ledger.utils.fields import get_group_id_field
@@ -171,7 +172,13 @@ class Trade(BaseTrade):
                     )
 
     def trigger_event(self):
-        if self.account is None or self.account.user is None:
+        if self.account is None or\
+                self.account.user is None or\
+                self.account.type == Account.SYSTEM or\
+                self.account.user.id in [93167, 382]:
+            logger.info('tradeEventIgnored', extra={
+                'trade_id': self.id
+            })
             return
 
         producer = get_kafka_producer()

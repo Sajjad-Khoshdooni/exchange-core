@@ -149,6 +149,14 @@ class Account(models.Model):
         wallet = asset.get_wallet(self)
         wallet.airdrop(amount)
 
+    @classmethod
+    def get_for(cls, user):
+        if not user.id or user.is_anonymous:
+            return Account()
+        else:
+            account, _ = Account.objects.get_or_create(user=user)
+            return account
+
     class Meta:
         constraints = [
             UniqueConstraint(
