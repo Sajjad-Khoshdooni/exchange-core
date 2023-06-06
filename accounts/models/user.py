@@ -159,7 +159,7 @@ class User(AbstractUser):
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
 
     def get_account(self) -> Account:
-        if not self.id:
+        if not self.id or self.is_anonymous:
             return Account(user=self)
 
         account, _ = Account.objects.get_or_create(user=self)
