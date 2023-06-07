@@ -687,7 +687,7 @@ class BulkNotificationAdmin(admin.ModelAdmin):
     list_display = ('created', 'status', 'level', 'title', 'message')
     list_filter = ('level', )
     search_fields = ('title', 'message', 'group_id')
-    readonly_fields = ('group_id', )
+    readonly_fields = ('group_id', 'status')
 
 
 @admin.register(SmsNotification)
