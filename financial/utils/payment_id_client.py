@@ -26,8 +26,8 @@ class JibitClient:
         resp = requests.post(
             url=self.BASE_URL + '/v1/tokens/generate',
             json={
-                'apiKey': self.gateway.deposit_api_key,
-                'secretKey': self.gateway.deposit_api_secret,
+                'apiKey': self.gateway.payment_id_api_key,
+                'secretKey': self.gateway.payment_id_secret,
             },
             timeout=30,
         )

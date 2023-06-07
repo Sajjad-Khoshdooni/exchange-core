@@ -49,6 +49,9 @@ class Gateway(models.Model):
     deposit_api_key = models.CharField(max_length=1024, blank=True)
     deposit_api_secret_encrypted = models.CharField(max_length=4096, blank=True)
 
+    payment_id_api_key = models.CharField(max_length=1024, blank=True)
+    payment_id_secret_encrypted = models.CharField(max_length=4096, blank=True)
+
     wallet_id = models.PositiveIntegerField(null=True, blank=True)
 
     def clean(self):
@@ -62,6 +65,10 @@ class Gateway(models.Model):
     @property
     def deposit_api_secret(self):
         return decrypt(self.deposit_api_secret_encrypted)
+
+    @property
+    def payment_id_secret(self):
+        return decrypt(self.payment_id_secret_encrypted)
 
     @classmethod
     def get_active_deposit(cls, user: User = None) -> 'Gateway':
