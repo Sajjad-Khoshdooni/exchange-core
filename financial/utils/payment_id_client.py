@@ -4,6 +4,7 @@ import requests
 from django.conf import settings
 from django.core.cache import caches
 
+from accounts.models import User
 from financial.models import BankAccount, BankPaymentId, PaymentIdRequest, Gateway
 
 token_cache = caches['token']
@@ -11,7 +12,7 @@ JIBIT_GATEWAY_ACCESS_KEY = 'jibit_gateway_key'
 
 
 class JibitClient:
-    BASE_URL = 'https://napi.jibit.cloud/ppg'
+    BASE_URL = 'https://napi.jibit.cloud/pip'
 
     def __init__(self, gateway):
         self.gateway = gateway
@@ -23,7 +24,7 @@ class JibitClient:
                 return token
 
         resp = requests.post(
-            url=self.BASE_URL + '/v3/tokens',
+            url=self.BASE_URL + '/v1/tokens/generate',
             json={
                 'apiKey': self.gateway.deposit_api_key,
                 'secretKey': self.gateway.deposit_api_secret,
@@ -39,21 +40,21 @@ class JibitClient:
 
             return token
 
-    def create_payment_id(self, bank_account: BankAccount):
+    def create_payment_id(self, user: User):
         token = self._get_token()
         host_url = settings.HOST_URL
+
+        ibans = list(BankAccount.objects.filter(user=user).values_list('iban', flat=True))
 
         resp = requests.post(
             url=self.BASE_URL + '/v1/paymentIds',
             headers={'Authorization': 'Bearer ' + token},
-            params={
-                "callbackUrl": host_url + f"/api/v1/finance/paymentIds/callback/jibit/?id={bank_account.id}",
-                "merchantReferenceNumber": bank_account.id,
-                "userFullName": bank_account.user.get_full_name(),
-                "userIban": bank_account.iban,
-                "userIbans": [
-                    bank_account.iban
-                ],
+            json={
+                "callbackUrl": host_url + f"/api/v1/finance/paymentIds/callback/jibit/?id={user.id}",
+                "merchantReferenceNumber": 'user-%s' % user.id,
+                "userFullName": user.get_full_name(),
+                "userIbans": ibans,
+                "userMobile": "09121234567",
             },
             timeout=30
         )
