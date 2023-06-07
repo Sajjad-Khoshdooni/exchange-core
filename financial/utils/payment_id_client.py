@@ -1,19 +1,21 @@
 import json
 
 import requests
-from decouple import config
 from django.conf import settings
 from django.core.cache import caches
 
+from accounts.models import User
 from financial.models import BankAccount, BankPaymentId, PaymentIdRequest, Gateway
 
 token_cache = caches['token']
 JIBIT_GATEWAY_ACCESS_KEY = 'jibit_gateway_key'
 
 
-class Jibitclient():
-    def __init__(self):
-        self.BASE_URL = 'https://napi.jibit.cloud/ppg'
+class JibitClient:
+    BASE_URL = 'https://napi.jibit.cloud/pip'
+
+    def __init__(self, gateway):
+        self.gateway = gateway
 
     def _get_token(self, force_renew: bool = False):
         if not force_renew:
@@ -22,10 +24,10 @@ class Jibitclient():
                 return token
 
         resp = requests.post(
-            url=self.BASE_URL + '/v3/tokens',
+            url=self.BASE_URL + '/v1/tokens/generate',
             json={
-                'apiKey': config('JIBIT_PAYMENT_API_KEY'),
-                'secretKey': config('JIBIT_PAYMENT_SECRET_KEY'),
+                'apiKey': self.gateway.payment_id_api_key,
+                'secretKey': self.gateway.payment_id_secret,
             },
             timeout=30,
         )
@@ -38,21 +40,21 @@ class Jibitclient():
 
             return token
 
-    def create_payment_id(self, bank_account: BankAccount):
+    def create_payment_id(self, user: User):
         token = self._get_token()
         host_url = settings.HOST_URL
+
+        ibans = list(BankAccount.objects.filter(user=user).values_list('iban', flat=True))
 
         resp = requests.post(
             url=self.BASE_URL + '/v1/paymentIds',
             headers={'Authorization': 'Bearer ' + token},
-            params={
-                "callbackUrl": host_url + f"/api/v1/finance/paymentIds/callback/jibit/?id={bank_account.id}",
-                "merchantReferenceNumber": bank_account.id,
-                "userFullName": bank_account.user.get_full_name(),
-                "userIban": bank_account.iban,
-                "userIbans": [
-                    bank_account.iban
-                ],
+            json={
+                "callbackUrl": host_url + f"/api/v1/finance/paymentIds/callback/jibit/?id={user.id}",
+                "merchantReferenceNumber": 'user-%s' % user.id,
+                "userFullName": user.get_full_name(),
+                "userIbans": ibans,
+                "userMobile": "09121234567",
             },
             timeout=30
         )

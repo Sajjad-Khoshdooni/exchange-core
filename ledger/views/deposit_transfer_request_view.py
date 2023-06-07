@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class DepositSerializer(serializers.ModelSerializer):
     network = serializers.CharField(max_length=16, write_only=True)
-    sender_address = serializers.CharField(max_length=256, write_only=True, allow_blank=True)
+    sender_address = serializers.CharField(max_length=256, write_only=True)
     receiver_address = serializers.CharField(max_length=256, write_only=True)
     coin = serializers.CharField(max_length=8, write_only=True)
 
@@ -36,11 +36,15 @@ class DepositSerializer(serializers.ModelSerializer):
 
         deposit_address = DepositAddress.objects.filter(network=network, address=receiver_address).first()
 
+        if deposit_address and deposit_address.address_key.deleted:
+            raise ValidationError({'receiver_address': 'old deposit address not supported'})
+
         if not deposit_address:
             address_key = get_object_or_404(
                 AddressKey,
                 address=receiver_address,
-                architecture=get_network_architecture(network)
+                architecture=get_network_architecture(network),
+                deleted=False
             )
             deposit_address, _ = DepositAddress.objects.get_or_create(
                 address=receiver_address,
