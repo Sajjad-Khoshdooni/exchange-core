@@ -64,7 +64,7 @@ class JibitGateway(Gateway):
         )
 
         if not resp.ok:
-            print(resp.json())
+            logger.info('jibit gateway connection error %s' % resp.json())
             raise GatewayFailed
 
         authority = resp.json()['purchaseId']
