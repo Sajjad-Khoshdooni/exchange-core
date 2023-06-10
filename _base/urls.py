@@ -11,7 +11,8 @@ from rest_framework import permissions
 from accounts.views import HealthView
 from accounts.views.dashboard import dashboard
 
-admin.site.__class__ = OTPAdminSite
+if not settings.DEBUG_OR_TESTING_OR_STAGING:
+    admin.site.__class__ = OTPAdminSite
 
 
 schema_view = get_schema_view(
