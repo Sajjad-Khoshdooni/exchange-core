@@ -49,7 +49,7 @@ class OrderSerializer(serializers.ModelSerializer):
         if not can_trade(request):
             raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
 
-        if not settings.MARKET_TRADE_ENABLE and request.user.account_id != settings.MARKET_MAKER_ACCOUNT_ID:
+        if not settings.MARKET_TRADE_ENABLE and request.user.account.id != settings.MARKET_MAKER_ACCOUNT_ID:
             raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
 
         symbol = get_object_or_404(PairSymbol, name=symbol_name)
