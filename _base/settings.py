@@ -385,6 +385,7 @@ BRAND = config('BRAND', default='')
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 2000
 
 TRADE_ENABLE = config('TRADE_ENABLE', cast=bool, default=True)
+MARKET_TRADE_ENABLE = config('MARKET_TRADE_ENABLE', cast=bool, default=True)
 WITHDRAW_ENABLE = config('WITHDRAW_ENABLE', cast=bool, default=True)
 
 TINYMCE_JS_URL = os.path.join(MINIO_STORAGE_STATIC_URL, "tinymce/tinymce.min.js")
