@@ -19,7 +19,7 @@ from ledger.models.wallet import ReserveWallet
 from market.models import Order, CancelRequest, PairSymbol
 from market.models import StopLoss, Trade
 from market.serializers.cancel_request_serializer import CancelRequestSerializer
-from market.serializers.order_serializer import OrderSerializer
+from market.serializers.order_serializer import OrderIDSerializer, OrderSerializer
 from market.serializers.order_stoploss_serializer import OrderStopLossSerializer
 from market.serializers.stop_loss_serializer import StopLossSerializer
 
@@ -27,11 +27,12 @@ from market.serializers.stop_loss_serializer import StopLossSerializer
 class OrderFilter(django_filters.FilterSet):
     symbol = django_filters.CharFilter(field_name='symbol__name', lookup_expr='iexact')
     market = django_filters.CharFilter(field_name='wallet__market')
+    created_after = django_filters.DateTimeFilter(field_name='created_at', lookup_expr='gte')
     created = django_filters.IsoDateTimeFromToRangeFilter()
 
     class Meta:
         model = Order
-        fields = ('symbol', 'status', 'market', 'side', 'client_order_id')
+        fields = ('symbol', 'status', 'market', 'side', 'client_order_id', 'created_after')
 
 
 class StopLossFilter(django_filters.FilterSet):
@@ -51,10 +52,15 @@ class OrderViewSet(mixins.CreateModelMixin,
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     pagination_class = LimitOffsetPagination
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
-    serializer_class = OrderSerializer
 
     filter_backends = [DjangoFilterBackend]
     filter_class = OrderFilter
+
+    def get_serializer_class(self):
+        if self.request.query_params.get('only_id') == '1':
+            return OrderIDSerializer
+        else:
+            return OrderSerializer
 
     def get_queryset(self):
         account, variant = self.get_account_variant(self.request)
@@ -69,19 +75,22 @@ class OrderViewSet(mixins.CreateModelMixin,
             if reserve_wallet:
                 filters = {'wallet__variant': reserve_wallet.group_id}
 
-        return Order.objects.filter(
-            wallet__account=account,
-            **filters
-        ).select_related('symbol', 'wallet', 'stop_loss').order_by('-created')
+        return Order.objects.filter(account=account, **filters).select_related(
+            'symbol', 'wallet', 'stop_loss').order_by('-created')
 
     def get_serializer_context(self):
         account, variant = self.get_account_variant(self.request)
-        return {
+        context = {
             **super(OrderViewSet, self).get_serializer_context(),
             'account': account,
-            'trades': Trade.get_account_orders_filled_price(account),
             'variant': variant,
         }
+        if self.request.query_params.get('only_id') == '1':
+            return context
+        else:
+            context['trades'] = Trade.get_account_orders_filled_price(account)
+            return context
+
 
 
 class OpenOrderListAPIView(APIView):
