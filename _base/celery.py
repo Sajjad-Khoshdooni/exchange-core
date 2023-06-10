@@ -173,6 +173,15 @@ app.conf.beat_schedule = {
         }
     },
 
+    'trigger_events': {
+        'task': 'analytics.tasks.trigger_kafka_event',
+        'schedule': 2,
+        'options': {
+            'queue': 'history',
+            'expire': 5
+        }
+    },
+
     'create_snapshot': {
         'task': 'ledger.tasks.snapshot.create_snapshot',
         'schedule': crontab(minute='1-59/5'),

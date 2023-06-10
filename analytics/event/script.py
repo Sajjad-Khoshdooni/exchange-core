@@ -4,10 +4,10 @@ from datetime import timedelta, datetime
 
 from django.utils import timezone
 
-from accounts.event.producer import get_kafka_producer
+from analytics.event.producer import get_kafka_producer
 from accounts.models import User, TrafficSource, Account
 from accounts.models.login_activity import LoginActivity
-from accounts.utils.dto import UserEvent, LoginEvent, TransferEvent, TradeEvent, TrafficSourceEvent, StakeRequestEvent, \
+from analytics.utils.dto import UserEvent, LoginEvent, TransferEvent, TradeEvent, TrafficSourceEvent, StakeRequestEvent, \
     PrizeEvent
 from financial.models import FiatWithdrawRequest, Payment
 from ledger.models import OTCTrade, FastBuyToken, Prize

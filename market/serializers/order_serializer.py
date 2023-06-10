@@ -74,10 +74,6 @@ class OrderSerializer(serializers.ModelSerializer):
             filled_amount = Decimal(sum(map(lambda t: t.amount, filtered_trades)))
             created_order.filled_amount = filled_amount
             filled_value = Decimal(sum(map(lambda t: t.price * t.amount, filtered_trades)))
-
-            for trade in matched_trades.trades:
-                trade.trigger_event()
-
             self.context['trades'] = {created_order.id: (filled_amount, filled_value)}
 
         except InsufficientBalance:
