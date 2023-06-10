@@ -75,19 +75,22 @@ class OrderViewSet(mixins.CreateModelMixin,
             if reserve_wallet:
                 filters = {'wallet__variant': reserve_wallet.group_id}
 
-        return Order.objects.filter(
-            wallet__account=account,
-            **filters
-        ).select_related('symbol', 'wallet', 'stop_loss').order_by('-created')
+        return Order.objects.filter(account=account, **filters).select_related(
+            'symbol', 'wallet', 'stop_loss').order_by('-created')
 
     def get_serializer_context(self):
         account, variant = self.get_account_variant(self.request)
-        return {
+        context = {
             **super(OrderViewSet, self).get_serializer_context(),
             'account': account,
-            'trades': Trade.get_account_orders_filled_price(account),
             'variant': variant,
         }
+        if self.request.query_params.get('only_id') == '1':
+            return context
+        else:
+            context['trades'] = Trade.get_account_orders_filled_price(account)
+            return context
+
 
 
 class OpenOrderListAPIView(APIView):

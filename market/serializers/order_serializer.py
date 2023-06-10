@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class OrderIDSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
-        fields = ('id',)
+        fields = ('id', 'client_order_id')
 
 
 class OrderSerializer(serializers.ModelSerializer):
