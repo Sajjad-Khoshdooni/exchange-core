@@ -172,6 +172,7 @@ class AssetsViewSet(ModelViewSet):
     filterset_fields = ['margin_enable']
 
     def get_serializer_context(self):
+
         ctx = super().get_serializer_context()
 
         if self.request.user.is_authenticated:
