@@ -64,7 +64,7 @@ class LoginActivitySerializer(serializers.ModelSerializer):
 
     def get_current(self, login_activity: LoginActivity):
         session = login_activity.session
-        return session.session_key == self.context['request'].session.session_key
+        return session and session.session_key == self.context['request'].session.session_key
 
     class Meta:
         model = LoginActivity
@@ -90,11 +90,13 @@ class LoginActivityViewSet(ModelViewSet):
         return ctx
 
     def perform_destroy(self, instance: LoginActivity):
-        if self.request.session.session_key != instance.session.session_key:
+        if instance.session and self.request.session.session_key != instance.session.session_key:
             instance.session.delete()
 
     def destroy_all(self, request, *args, **kwargs):
-        for login_activity in self.get_queryset(only_active=True).exclude(session__session_key=request.sesion.session_key):
+        to_delete_sessions = self.get_queryset(only_active=True).exclude(session__session_key=request.sesion.session_key)
+
+        for login_activity in to_delete_sessions:
             login_activity.session.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
