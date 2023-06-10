@@ -27,12 +27,12 @@ from market.serializers.stop_loss_serializer import StopLossSerializer
 class OrderFilter(django_filters.FilterSet):
     symbol = django_filters.CharFilter(field_name='symbol__name', lookup_expr='iexact')
     market = django_filters.CharFilter(field_name='wallet__market')
-    after = django_filters.DateTimeFilter(field_name='created_at', lookup_expr='gte')
+    created_after = django_filters.DateTimeFilter(field_name='created_at', lookup_expr='gte')
     created = django_filters.IsoDateTimeFromToRangeFilter()
 
     class Meta:
         model = Order
-        fields = ('symbol', 'status', 'market', 'side', 'client_order_id', 'after')
+        fields = ('symbol', 'status', 'market', 'side', 'client_order_id', 'created_after')
 
 
 class StopLossFilter(django_filters.FilterSet):
