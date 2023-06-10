@@ -4,6 +4,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from json import JSONDecodeError
 from math import log10
 from typing import List, Dict, Union
 
@@ -17,11 +18,11 @@ from urllib3.exceptions import ReadTimeoutError
 
 from accounts.verifiers.jibit import Response
 from ledger.exceptions import HedgeError
-from ledger.models import Asset, Network, Wallet, Transfer
+from ledger.models import Asset, Wallet, Transfer
 from ledger.utils.cache import get_cache_func_key
+from ledger.utils.external_price import SELL, BUY, get_external_price
 from ledger.utils.fields import DONE
 from ledger.utils.precision import floor_precision
-from ledger.utils.price import SELL, BUY, get_trading_price_usdt
 
 TRADE, BORROW, LIQUIDATION, WITHDRAW, HEDGE, PROVIDE_BASE, FAKE = \
     'trade', 'borrow', 'liquid', 'withdraw', 'hedge', 'prv-base', 'fake'
@@ -131,10 +132,15 @@ class ProviderRequester:
         except (requests.exceptions.ConnectionError, ReadTimeoutError, requests.exceptions.Timeout):
             raise TimeoutError
 
-        if not resp.ok:
-            logger.info('PROVIDER', path, method, data, resp.json())
+        try:
+            resp_json = resp.json()
+        except JSONDecodeError:
+            resp_json = None
 
-        return Response(data=resp.json(), success=resp.ok, status_code=resp.status_code)
+        if not resp.ok:
+            logger.info('PROVIDER', path, method, data, resp_json)
+
+        return Response(data=resp_json, success=resp.ok, status_code=resp.status_code)
 
     def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:
         if asset:
@@ -259,7 +265,11 @@ class ProviderRequester:
 
             order_amount = round(hedge_amount, round_digits)
 
-            price = get_trading_price_usdt(asset.symbol, side=BUY)
+            price = get_external_price(
+                coin=asset.symbol,
+                base_coin=Asset.USDT,
+                side=BUY
+            )
             min_notional = market_info.min_notional * Decimal('1.1')
 
             if order_amount * price < min_notional:
@@ -307,6 +317,8 @@ class ProviderRequester:
             if not order:
                 raise HedgeError
 
+            return True
+
     def new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal, side: str):
         resp = self.collect_api('/api/v1/orders/', method='POST', data={
             'request_id': request_id,
@@ -347,6 +359,11 @@ class ProviderRequester:
             status=data['status'],
             tx_id=data.get('tx_id') or ''
         )
+
+    def get_order(self, request_id: str):
+        return self.collect_api('/api/v1/orders/details/', method='GET', data={
+            'request_id': request_id,
+        }).data
 
     # todo: add caching
     def get_coins_info(self, coins: List[str]) -> Dict[str, CoinInfo]:
@@ -404,6 +421,15 @@ class ProviderRequester:
 
         return resp.data
 
+    def get_income_history(self, profile_id: int, start: datetime, end: datetime) -> list:
+        resp = self.collect_api('/api/v1/incomes/', data={
+            'profile_id': profile_id,
+            'start': start,
+            'end': end
+        })
+
+        return resp.data
+
 
 class MockProviderRequester(ProviderRequester):
     def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:
@@ -430,16 +456,19 @@ class MockProviderRequester(ProviderRequester):
     def get_futures_info(self, exchange: str) -> dict:
         return {}
 
-    def get_network_info(self, asset: Asset, network: Network) -> NetworkInfo:
-        return NetworkInfo(
-            coin=asset.symbol,
-            network=network.symbol,
-            withdraw_min=Decimal(1),
-            withdraw_max=Decimal(100),
-            withdraw_fee=Decimal(1),
-            withdraw_enable=True,
-            deposit_enable=True,
-        )
+    def get_network_info(self, asset: str, network: str = None) -> List[NetworkInfo]:
+        return [
+            NetworkInfo(
+                coin=asset,
+                network=network,
+                withdraw_min=Decimal(1),
+                withdraw_max=Decimal(100),
+                withdraw_fee=Decimal(1),
+                withdraw_enable=True,
+                deposit_enable=True,
+                address_regex='\w+'
+            )
+        ]
 
     def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
         pass
@@ -469,6 +498,26 @@ class MockProviderRequester(ProviderRequester):
 
     def get_avg_trade_price(self, symbol: str, start: datetime, end: datetime) -> Decimal:
         return Decimal(30000)
+
+    def get_order(self, request_id: str):
+        return {
+            'filled_price': Decimal(1),
+            'filled_amount': Decimal(1),
+        }
+
+    def get_income_history(self, profile_id: int, start: datetime, end: datetime) -> list:
+        return [
+            {
+                "symbol": "BTCUSDT",
+                "incomeType": "FUNDING_FEE",
+                "income": "-0.05900757",
+                "asset": "USDT",
+                "time": 1678032000000,
+                "info": "FUNDING_FEE",
+                "tranId": 6847922729675042940,
+                "tradeId": ""
+            },
+        ]
 
 
 def get_provider_requester() -> ProviderRequester:

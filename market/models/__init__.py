@@ -1,3 +1,4 @@
+from .base_trade import BaseTrade
 from .pair_symbol import PairSymbol
 from .order import Order
 from .trade import Trade

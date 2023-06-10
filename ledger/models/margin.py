@@ -9,8 +9,8 @@ from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import Asset, Wallet, Trx
+from ledger.utils.external_price import SELL, get_external_price
 from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field, DONE, PENDING
-from ledger.utils.price import SELL, get_trading_price_usdt
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
@@ -44,7 +44,7 @@ class MarginTransfer(models.Model):
 
             margin_info = MarginInfo.get(self.account)
 
-            price = get_trading_price_usdt(self.asset.symbol, SELL, raw_price=True)
+            price = get_external_price(self.asset.symbol, base_coin=Asset.USDT, side=SELL)
 
             if self.amount > margin_info.get_max_transferable() / price:
                 raise InsufficientBalance
@@ -107,7 +107,9 @@ class MarginLoan(models.Model):
                 loan.margin_wallet.has_balance(amount, raise_exception=True)
             else:
                 margin_info = MarginInfo.get(account)
-                max_borrowable = margin_info.get_max_borrowable() / get_trading_price_usdt(asset.symbol, SELL, raw_price=True)
+                price = get_external_price(asset.symbol, base_coin=Asset.USDT, side=SELL)
+
+                max_borrowable = margin_info.get_max_borrowable() / price
 
                 if amount > max_borrowable:
                     raise MaxBorrowableExceeds()

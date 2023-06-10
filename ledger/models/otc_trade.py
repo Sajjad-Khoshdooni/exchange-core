@@ -1,15 +1,28 @@
 import logging
-from decimal import Decimal
+import uuid
 from uuid import uuid4
 
-from django.db import models, IntegrityError
+from django.conf import settings
+from django.db import models
+from django.db.models import F, Sum
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
+from _base.settings import OTC_ACCOUNT_ID
+from accounting.models import TradeRevenue
+from accounts.event.producer import get_kafka_producer
 from accounts.models import Account
-from ledger.exceptions import AbruptDecrease, HedgeError
-from ledger.models import OTCRequest, Trx, Wallet
-from ledger.utils.price import SELL
+from accounts.utils.dto import TradeEvent
+from ledger.exceptions import HedgeError
+from ledger.models import OTCRequest, Trx, Wallet, Asset
+from ledger.utils.external_price import SELL
+from ledger.utils.fields import get_amount_field
+from ledger.utils.precision import floor_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.exceptions import NegativeGapRevenue
+from market.models import Trade, PairSymbol
+from market.utils.order_utils import new_order
+from market.utils.trade import register_fee_transactions
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +33,9 @@ class TokenExpired(Exception):
 
 class OTCTrade(models.Model):
     PENDING, CANCELED, DONE, REVERT = 'pending', 'canceled', 'done', 'revert'
+    MARKET, PROVIDER = 'm', 'p'
 
-    created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
+    created = models.DateTimeField(auto_now_add=True)
     otc_request = models.OneToOneField('ledger.OTCRequest', on_delete=models.PROTECT)
 
     group_id = models.UUIDField(default=uuid4, db_index=True)
@@ -30,15 +44,17 @@ class OTCTrade(models.Model):
         default=PENDING,
         max_length=8,
         choices=[(PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE), (REVERT, REVERT)],
-        verbose_name='وضعیت'
     )
+    execution_type = models.CharField(max_length=1, choices=((MARKET, 'market'), (PROVIDER, 'provider')))
+
+    gap_revenue = get_amount_field(default=0)
+    order_id = models.PositiveIntegerField(null=True, blank=True)
 
     def change_status(self, status: str):
         self.status = status
-        self.save()
+        self.save(update_fields=['status'])
 
     def create_ledger(self, pipeline: WalletPipeline):
-        system = Account.system()
         user = self.otc_request.account
 
         from_asset = self.otc_request.from_asset
@@ -46,15 +62,15 @@ class OTCTrade(models.Model):
 
         pipeline.new_trx(
             sender=from_asset.get_wallet(user, market=self.otc_request.market),
-            receiver=from_asset.get_wallet(system, market=self.otc_request.market),
-            amount=self.otc_request.from_amount,
+            receiver=from_asset.get_wallet(OTC_ACCOUNT_ID, market=self.otc_request.market),
+            amount=self.otc_request.get_paying_amount(),
             group_id=self.group_id,
             scope=Trx.TRADE
         )
         pipeline.new_trx(
-            sender=to_asset.get_wallet(system, market=self.otc_request.market),
+            sender=to_asset.get_wallet(OTC_ACCOUNT_ID, market=self.otc_request.market),
             receiver=to_asset.get_wallet(user, market=self.otc_request.market),
-            amount=self.otc_request.to_amount,
+            amount=self.otc_request.get_receiving_amount(),
             group_id=self.group_id,
             scope=Trx.TRADE
         )
@@ -72,81 +88,161 @@ class OTCTrade(models.Model):
         account = otc_request.account
 
         from_asset = otc_request.from_asset
-        conf = otc_request.get_trade_config()
-
-        if not force:
-            conf.coin.is_trade_amount_valid(conf.coin_amount, raise_exception=True)
 
         from_wallet = from_asset.get_wallet(account, market=otc_request.market)
-        amount = otc_request.from_amount
+        amount = otc_request.get_paying_amount()
         from_wallet.has_balance(amount, raise_exception=True)
 
-        if not force:
-            cls.check_abrupt_decrease(otc_request)
-
-        with WalletPipeline() as pipeline:  # type: WalletPipeline
+        with WalletPipeline() as pipeline:
             otc_trade = OTCTrade.objects.create(
                 otc_request=otc_request,
+                execution_type=OTCTrade.MARKET,
             )
-            pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount, reason=WalletPipeline.TRADE)
 
-        otc_trade.hedge_and_finalize()
+            fok_success = otc_trade.try_fok_fill(pipeline)
+
+            if not fok_success:
+                otc_trade.execution_type = OTCTrade.PROVIDER
+                otc_trade.save(update_fields=['execution_type'])
+                pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount,
+                                  reason=WalletPipeline.TRADE)
+
+        if not fok_success:
+            otc_trade.try_provider_fill()
 
         return otc_trade
 
-    def hedge_and_finalize(self):
+    def try_fok_fill(self, pipeline: WalletPipeline) -> bool:
+        assert self.execution_type == self.MARKET
+
+        symbol = self.otc_request.symbol
+        if symbol.enable:
+            from market.models import Order
+
+            fok_order = new_order(
+                pipeline=pipeline,
+                symbol=symbol,
+                account=Account.objects.get(id=OTC_ACCOUNT_ID),
+                amount=self.otc_request.amount,
+                price=self.otc_request.price,
+                side=self.otc_request.side,
+                time_in_force=Order.FOK,
+                pass_min_notional=True
+            )
+
+            self.order_id = fok_order.id
+
+            if fok_order.status == Order.FILLED:
+                trades_base_sum = Trade.objects.filter(order_id=fok_order.id).aggregate(
+                    sum=Sum(F('amount') * F('price'))
+                )['sum'] or 0
+
+                otc_base_amount = self.otc_request.amount * self.otc_request.price
+                self.gap_revenue = (otc_base_amount - trades_base_sum) * self.otc_request.base_usdt_price
+                if self.otc_request.side == SELL:
+                    self.gap_revenue = -self.gap_revenue
+
+                self.save(update_fields=['order_id', 'gap_revenue'])
+                self.accept(pipeline)
+
+                TradeRevenue.new(
+                    user_trade=self.otc_request,
+                    group_id=self.group_id,
+                    source=TradeRevenue.OTC_MARKET,
+                    hedge_key=str(fok_order.id),
+                ).save()
+
+                return True
+            else:
+                self.save(update_fields=['order_id'])
+
+        return False
+
+    def try_provider_fill(self):
 
         if self.otc_request.account.is_ordinary_user():
             try:
-                self.accept()
+                self.hedge_with_provider()
             except (HedgeError, NegativeGapRevenue):
                 logger.exception('Error in hedging otc request')
                 self.cancel()
                 raise
 
-    def cancel(self):
+    def cancel(self, ):
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             pipeline.release_lock(self.group_id)
             self.change_status(self.CANCELED)
 
-    def accept(self, hedge: bool = True):
-        with WalletPipeline() as pipeline:  # type: WalletPipeline
+    def accept(self, pipeline: WalletPipeline):
+        if self.execution_type == self.PROVIDER:
             pipeline.release_lock(self.group_id)
-            from market.models import Trade
-            self.change_status(self.DONE)
-            self.create_ledger(pipeline)
-            Trade.create_for_otc_trade(self, pipeline)
+
+        self.change_status(self.DONE)
+        self.create_ledger(pipeline)
+
+        register_fee_transactions(
+            pipeline=pipeline,
+            trade=self.otc_request,
+            wallet=self.otc_request.symbol.asset.get_wallet(self.otc_request.account),
+            base_wallet=self.otc_request.symbol.base_asset.get_wallet(self.otc_request.account),
+            group_id=self.group_id
+        )
+
+        # updating trade_volume_irt of accounts
+        account = self.otc_request.account
+        account.trade_volume_irt = F('trade_volume_irt') + self.otc_request.irt_value
+        account.save(update_fields=['trade_volume_irt'])
+        account.refresh_from_db()
+
+        from gamify.utils import check_prize_achievements, Task
+        check_prize_achievements(account, Task.TRADE)
+
+    def hedge_with_provider(self, hedge: bool = True):
+        assert self.execution_type == self.PROVIDER
+
+        with WalletPipeline() as pipeline:  # type: WalletPipeline
+            self.accept(pipeline)
+            hedge_key = ''
 
             if hedge:
-                conf = self.otc_request.get_trade_config()
+                req = self.otc_request
+                _key = 'otc:%s' % self.id
 
                 from ledger.utils.provider import TRADE, get_provider_requester
-                get_provider_requester().try_hedge_new_order(
-                    request_id='otc:%s' % self.id,
-                    asset=conf.coin,
-                    side=conf.side,
-                    amount=conf.coin_amount,
+                hedged = get_provider_requester().try_hedge_new_order(
+                    request_id=_key,
+                    asset=req.symbol.asset,
+                    side=req.side,
+                    amount=req.amount,
                     scope=TRADE
                 )
 
-    @classmethod
-    def check_abrupt_decrease(cls, otc_request: OTCRequest):
-        return
-        old_coin_price = otc_request.to_price
-        new_coin_price = otc_request.get_to_price()
+                if settings.ZERO_USDT_HEDGE and req.symbol.name != 'USDTIRT' and req.symbol.base_asset.symbol == Asset.IRT:
+                    from market.models import Order
+                    usdt_irt = PairSymbol.objects.get(name='USDTIRT')
 
-        rate = new_coin_price / old_coin_price - 1
+                    amount = floor_precision(req.usdt_value, usdt_irt.tick_size)
 
-        threshold = Decimal('0.002')
+                    order = new_order(
+                        pipeline=pipeline,
+                        symbol=usdt_irt,
+                        account=Account.objects.get(id=OTC_ACCOUNT_ID),
+                        side=req.side,
+                        amount=amount,
+                        fill_type=Order.MARKET,
+                        raise_exception=False
+                    )
 
-        conf = otc_request.get_trade_config()
+                if hedged:
+                    hedge_key = _key
 
-        if conf.side == SELL:
-            rate = -rate
-
-        if rate > threshold:
-            logger.error('otc failed because of abrupt change!')
-            raise AbruptDecrease()
+            from accounting.models.revenue import TradeRevenue
+            TradeRevenue.new(
+                user_trade=self.otc_request,
+                group_id=self.group_id,
+                source=TradeRevenue.OTC_PROVIDER,
+                hedge_key=hedge_key,
+            ).save()
 
     def revert(self):
         with WalletPipeline() as pipeline:
@@ -176,3 +272,33 @@ class OTCTrade(models.Model):
 
     def __str__(self):
         return '%s [%s]' % (self.otc_request, self.status)
+
+
+@receiver(post_save, sender=OTCTrade)
+def handle_OTC_trade_save(sender, instance, created, **kwargs):
+    from ledger.models import FastBuyToken
+
+    user = instance.otc_request.account.user
+    if not user or instance.otc_request.account.type == Account.SYSTEM or instance.status != OTCTrade.DONE:
+        return
+
+    producer = get_kafka_producer()
+    trade_type = 'otc'
+    if FastBuyToken.objects.filter(otc_request=instance.otc_request).exists():
+        trade_type = 'fast_buy'
+
+    event = TradeEvent(
+        id=instance.id,
+        user_id=user.id,
+        amount=instance.otc_request.amount,
+        price=instance.otc_request.price,
+        symbol=instance.otc_request.symbol.name,
+        trade_type=trade_type,
+        market=instance.otc_request.market,
+        created=instance.created,
+        value_usdt=instance.otc_request.usdt_value,
+        value_irt=instance.otc_request.irt_value,
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TradeEvent.type)
+    )
+
+    producer.produce(event)

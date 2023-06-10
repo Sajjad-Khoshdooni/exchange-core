@@ -20,7 +20,7 @@ def check_margin_view_permission(account: Account, asset: Asset):
     if not user.margin_quiz_pass_date:
         raise ValidationError('لطفا ابتدا به سوالات آزمون معاملات تعهدی پاسخ دهید.')
 
-    if CloseRequest.is_liquidating(user.account):
+    if CloseRequest.is_liquidating(user.get_account()):
         raise ValidationError('حساب تعهدی شما در حال تسویه خودکار است. فعلا امکان این عملیات وجود ندارد.')
 
 
@@ -28,13 +28,13 @@ def close_margin_account(user: User):
     if not user.show_margin:
         return
 
-    close_request = CloseRequest.close_margin(user.account, reason=CloseRequest.SYSTEM)
+    close_request = CloseRequest.close_margin(user.get_account(), reason=CloseRequest.SYSTEM)
 
     if not close_request:
         return
 
     with WalletPipeline() as pipeline:
-        for wallet in Wallet.objects.filter(account=user.account, balance__gt=0, market=Wallet.MARGIN):
+        for wallet in Wallet.objects.filter(account=user.get_account(), balance__gt=0, market=Wallet.MARGIN):
             pipeline.new_trx(
                 sender=wallet,
                 receiver=wallet.asset.get_wallet(wallet.account),

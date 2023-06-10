@@ -1,23 +1,22 @@
 import re
 
-from decouple import config
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
+from accounts.authentication import CustomTokenAuthentication
 from accounts.models import VerificationCode
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
 from accounts.verifiers.legal import is_48h_rule_passed
-from accounts.authentication import CustomTokenAuthentication
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Asset, Network, Transfer, NetworkAsset, AddressBook
+from ledger.models import Asset, Network, Transfer, NetworkAsset, AddressBook, DepositAddress
+from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
-from ledger.utils.price import get_trading_price_irt, BUY
 from ledger.utils.withdraw_verify import can_withdraw
 
 
@@ -31,12 +30,13 @@ class WithdrawSerializer(serializers.ModelSerializer):
     code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     def validate(self, attrs):
-        user = self.context['request'].user
+        request = self.context['request']
+        user = request.user
 
-        if not can_withdraw(user.account):
-            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
+        if not can_withdraw(user.get_account(), request) or not user.can_withdraw_crypto:
+            raise ValidationError('امکان برداشت وجود ندارد.')
 
-        account = user.account
+        account = user.get_account()
         api = self.context.get('api')
 
         if attrs['address_book_id'] and (not api):
@@ -92,6 +92,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         amount = attrs['amount']
 
+        if not network_asset.can_withdraw_enabled():
+            raise ValidationError('در حال حاضر امکان برداشت {} روی شبکه {} وجود ندارد.'.format(asset.symbol, network.symbol))
+
         if get_precision(amount) > network_asset.withdraw_precision:
             raise ValidationError('مقدار وارد شده اشتباه است.')
 
@@ -100,6 +103,12 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         if amount > network_asset.withdraw_max:
             raise ValidationError('مقدار وارد شده بزرگ است.')
+
+        if DepositAddress.objects.filter(address=address, address_key__deleted=True):
+            raise ValidationError('آدرس برداشت نامعتبر است.')
+
+        if DepositAddress.objects.filter(address=address, address_key__account=account):
+            raise ValidationError('آدرس برداشت متعلق به خودتان است. لطفا آدرس دیگری را وارد نمایید.')
 
         wallet = asset.get_wallet(account)
 
@@ -113,7 +122,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             raise ValidationError(
                 'در این سطح کاربری نمی‌توانید ریال واریزی را به صورت رمزارز برداشت کنید. لطفا احراز هویت سطح ۳ را انجام دهید.')
 
-        price = get_trading_price_irt(asset.symbol, BUY, raw_price=False)
+        price = get_external_price(asset.symbol, base_coin=Asset.IRT, side=BUY, allow_stale=True)
 
         if price:
             irt_value = price * amount

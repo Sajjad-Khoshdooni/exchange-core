@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Union
 from uuid import uuid4
 
 from django.core.validators import MinValueValidator
@@ -8,16 +9,13 @@ from rest_framework import serializers
 
 
 from ledger.utils.cache import cache_for
-from ledger.utils.precision import normalize_fraction
-
+from ledger.utils.precision import normalize_fraction, AMOUNT_PRECISION
 
 PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
 
-AMOUNT_PRECISION = 8
 
-
-def get_amount_field(default: Decimal = None, max_digits: int = None, decimal_places: int = None, null: bool = False,
-                     validators: tuple = (MinValueValidator(0), ), verbose_name: str = None):
+def get_amount_field(default: Union[Decimal, int] = None, max_digits: int = None, decimal_places: int = None,
+                     null: bool = False, validators: tuple = (MinValueValidator(0), ), verbose_name: str = None):
 
     if validators is None:
         validators = [MinValueValidator(0)]
@@ -38,7 +36,6 @@ def get_amount_field(default: Decimal = None, max_digits: int = None, decimal_pl
 
 
 def get_serializer_amount_field(**kwargs):
-
     return SerializerDecimalField(
         max_digits=30,
         decimal_places=8,
@@ -56,8 +53,8 @@ def get_status_field():
     )
 
 
-def get_group_id_field(db_index: bool = False, null: bool = False):
-    return models.UUIDField(default=uuid4, editable=False, db_index=db_index, null=null, blank=null)
+def get_group_id_field(db_index: bool = False, null: bool = False, default=uuid4, unique: bool = False):
+    return models.UUIDField(default=default, db_index=db_index, null=null, blank=null, unique=unique)
 
 
 def get_address_field():

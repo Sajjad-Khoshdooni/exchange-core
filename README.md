@@ -36,7 +36,6 @@ CREATE VIEW accounts_users AS SELECT id, last_login, is_superuser, username, fir
 FROM accounts_user;
 
 GRANT SELECT ON accounts_users TO metabase;
-
 ```
 
 # Rabbitmq

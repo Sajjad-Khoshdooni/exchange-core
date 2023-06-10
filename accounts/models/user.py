@@ -1,14 +1,19 @@
+import uuid
 from uuid import uuid4
 
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
 from django.db.models import Q, UniqueConstraint, Sum
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
 
-from accounts.models import Notification
+from accounts.event.producer import get_kafka_producer
+from accounts.models import Notification, Account
 from accounts.utils.admin import url_to_edit_object
+from accounts.utils.dto import UserEvent
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import PHONE_MAX_LENGTH
 from accounts.validators import mobile_number_validator, national_card_code_validator, telephone_number_validator
@@ -131,7 +136,7 @@ class User(AbstractUser):
     show_margin = models.BooleanField(default=True, verbose_name='امکان مشاهده حساب تعهدی')
     show_strategy_bot = models.BooleanField(default=False, verbose_name='امکان مشاهده ربات')
     show_community = models.BooleanField(default=False, verbose_name='امکان مشاهده کامیونیتی')
-    show_staking = models.BooleanField(default=False, verbose_name='امکان مشاهده سرمایه‌گذاری')
+    show_staking = models.BooleanField(default=True, verbose_name='امکان مشاهده سرمایه‌گذاری')
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
 
@@ -141,6 +146,7 @@ class User(AbstractUser):
     )
 
     can_withdraw = models.BooleanField(default=True)
+    can_withdraw_crypto = models.BooleanField(default=True)
     can_trade = models.BooleanField(default=True)
 
     withdraw_limit_whitelist = models.BooleanField(default=False)
@@ -152,6 +158,13 @@ class User(AbstractUser):
     promotion = models.CharField(max_length=256, blank=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
 
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
+
+    def get_account(self) -> Account:
+        if not self.id or self.is_anonymous:
+            return Account(user=self)
+
+        account, _ = Account.objects.get_or_create(user=self)
+        return account
 
     @property
     def kyc_bank_card(self):
@@ -174,6 +187,10 @@ class User(AbstractUser):
                 name="unique_verified_national_code",
                 condition=Q(level__gt=1),
             )
+        ]
+
+        permissions = [
+            ("can_generate_notification", "Can Generate All Kind Of Notification"),
         ]
 
     def change_status(self, status: str, reason: str = ''):
@@ -273,12 +290,7 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         old = self.id and User.objects.get(id=self.id)
-        creating = not self.id
         super(User, self).save(*args, **kwargs)
-
-        if creating:
-            from accounts.models import Account
-            Account.objects.create(user=self)
 
         if self.level == self.LEVEL2 and self.verify_status == self.PENDING:
             if self.national_code_phone_verified and self.selfie_image_verified:
@@ -303,3 +315,42 @@ class User(AbstractUser):
             )
             self.selfie_image_discard_text = ''
             super(User, self).save(*args, **kwargs)
+
+
+@receiver(post_save, sender=User)
+def handle_user_save(sender, instance, created, **kwargs):
+    producer = get_kafka_producer()
+    account = instance.get_account()
+
+    if account.type != Account.ORDINARY:
+        return
+
+    referrer_id = None
+
+    referrer = account.referred_by and account.referred_by.owner.user
+
+    if referrer:
+        referrer_id = referrer.id
+
+    event = UserEvent(
+        user_id=instance.id,
+        first_name=instance.first_name,
+        last_name=instance.last_name,
+        referrer_id=referrer_id,
+        created=instance.date_joined,
+        event_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + UserEvent.type)),
+        level_2_verify_datetime=instance.level_2_verify_datetime,
+        level_3_verify_datetime=instance.level_3_verify_datetime,
+        level=instance.level,
+        birth_date=instance.birth_date,
+        can_withdraw=instance.can_withdraw,
+        can_trade=instance.can_trade,
+        promotion=instance.promotion,
+        chat_uuid=instance.chat_uuid,
+        verify_status=instance.verify_status,
+        reject_reason=instance.reject_reason,
+        first_fiat_deposit_date=instance.first_fiat_deposit_date,
+        first_crypto_deposit_date=instance.first_crypto_deposit_date,
+    )
+    producer.produce(event)
+

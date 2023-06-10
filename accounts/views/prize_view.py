@@ -10,9 +10,10 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class PrizeSerializer(serializers.ModelSerializer):
-    asset = AssetSerializerMini(read_only=True)
+    asset = serializers.SerializerMethodField()
     reason = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
+    voucher = serializers.SerializerMethodField()
 
     def update(self, prize: Prize, validated_data):
         redeemed = validated_data['redeemed']
@@ -25,14 +26,30 @@ class PrizeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Prize
-        fields = ('id', 'amount', 'asset', 'redeemed', 'reason', 'created')
+        fields = ('id', 'amount', 'asset', 'redeemed', 'reason', 'created', 'voucher', 'voucher_expiration')
         read_only_fields = ('id', 'amount', 'scope', 'coin', 'created')
 
     def get_reason(self, prize: Prize):
         return ''
 
+    def get_voucher(self, prize: Prize):
+        return prize.voucher_expiration is not None
+
+    def get_asset(self, prize: Prize):
+        from gamify.models import Achievement
+
+        achievement = prize.achievement
+
+        if achievement.type == Achievement.NORMAL or prize.redeemed:
+            return AssetSerializerMini(prize.asset).data
+
     def get_amount(self, prize: Prize):
-        return prize.asset.get_presentation_amount(prize.amount)
+        from gamify.models import Achievement
+
+        achievement = prize.achievement
+
+        if achievement.type == Achievement.NORMAL or prize.redeemed:
+            return prize.asset.get_presentation_amount(prize.amount)
 
 
 class PrizeView(ModelViewSet):
@@ -41,4 +58,4 @@ class PrizeView(ModelViewSet):
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
-        return Prize.objects.filter(account=self.request.user.account, amount__gt=0)
+        return Prize.objects.filter(account=self.request.user.get_account(), amount__gt=0)

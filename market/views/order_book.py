@@ -9,7 +9,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.throttle import BursAPIRateThrottle
-from ledger.utils.precision import floor_precision, decimal_to_str
+from ledger.utils.external_price import BUY, SELL
+from ledger.utils.precision import floor_precision
 from market.models import PairSymbol, Order, Trade
 
 logger = logging.getLogger(__name__)
@@ -29,8 +30,8 @@ class OrderBookAPIView(APIView):
 
         open_orders = Order.quantize_values(symbol, open_orders)
 
-        bids = Order.get_formatted_orders(open_orders, symbol, Order.BUY)
-        asks = Order.get_formatted_orders(open_orders, symbol, Order.SELL)
+        bids = Order.get_formatted_orders(open_orders, symbol, BUY)
+        asks = Order.get_formatted_orders(open_orders, symbol, SELL)
 
         top_ask = Decimal(asks[0]['price']) if asks else Decimal('inf')
 
@@ -55,11 +56,11 @@ class OrderBookAPIView(APIView):
             open_orders = {
                 (order['side'], str(floor_precision(order['price'], symbol.tick_size))): True for order in
                 Order.open_objects.filter(
-                    symbol=symbol, wallet__account=self.request.user.account
+                    symbol=symbol, wallet__account=self.request.user.get_account()
                 ).values('side', 'price')
             }
-            for side in (Order.BUY, Order.SELL):
-                key = 'bids' if side == Order.BUY else 'asks'
+            for side in (BUY, SELL):
+                key = 'bids' if side == BUY else 'asks'
                 results[key] = [
                     {**order, 'user_order': open_orders.get((side, order['price']), False)} for order in results[key]
                 ]

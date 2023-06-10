@@ -18,7 +18,7 @@ def handle_missing_payments():
         payment.payment_request.get_gateway().verify(payment)
 
     # update missing payments
-    gateway = Gateway.get_active()
-    channel = FiatWithdraw.get_withdraw_channel(gateway.type)
+    gateway = Gateway.get_active_deposit()
+    channel = FiatWithdraw.get_withdraw_channel(gateway)
 
     channel.update_missing_payments(gateway)

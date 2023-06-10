@@ -1,3 +1,7 @@
+import logging
+from decimal import Decimal
+
+from django.contrib.auth.mixins import UserPassesTestMixin
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -6,9 +10,12 @@ from rest_framework.generics import CreateAPIView, get_object_or_404
 from accounts.authentication import CustomTokenAuthentication
 from ledger.models import Network, Asset, DepositAddress, AddressKey, NetworkAsset
 from ledger.models.transfer import Transfer
-from ledger.requester.architecture_requester import request_architecture
-from ledger.utils.price import get_trading_price_usdt, get_trading_price_irt, SELL
+from ledger.requester.architecture_requester import get_network_architecture
+from ledger.utils.external_price import get_external_price, SELL
+from ledger.utils.precision import is_zero_by_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
+
+logger = logging.getLogger(__name__)
 
 
 class DepositSerializer(serializers.ModelSerializer):
@@ -19,8 +26,7 @@ class DepositSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transfer
-        fields = ['status', 'amount', 'trx_hash', 'block_hash',
-                  'block_number', 'network', 'sender_address', 'receiver_address', 'coin']
+        fields = ['status', 'amount', 'trx_hash', 'network', 'sender_address', 'receiver_address', 'coin']
 
     def create(self, validated_data):
         network_symbol = validated_data.get('network')
@@ -30,11 +36,15 @@ class DepositSerializer(serializers.ModelSerializer):
 
         deposit_address = DepositAddress.objects.filter(network=network, address=receiver_address).first()
 
+        if deposit_address and deposit_address.address_key.deleted:
+            raise ValidationError({'receiver_address': 'old deposit address not supported'})
+
         if not deposit_address:
             address_key = get_object_or_404(
                 AddressKey,
                 address=receiver_address,
-                architecture=request_architecture(network)
+                architecture=get_network_architecture(network),
+                deleted=False
             )
             deposit_address, _ = DepositAddress.objects.get_or_create(
                 address=receiver_address,
@@ -44,7 +54,21 @@ class DepositSerializer(serializers.ModelSerializer):
                 }
             )
 
-        asset = Asset.objects.get(symbol=validated_data.get('coin'))
+        coin = validated_data.get('coin')
+
+        asset = Asset.objects.filter(symbol=coin).first()
+        coin_mult = 1
+
+        if not asset and coin:
+            asset = Asset.objects.filter(original_symbol=coin).first()
+
+            if asset:
+                coin_mult = asset.get_coin_multiplier()
+
+        if not asset:
+            logger.warning('invalid coin for deposit', extra={'coin': coin})
+            raise ValidationError({'coin': 'invalid coin'})
+
         wallet = asset.get_wallet(deposit_address.address_key.account)
 
         network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
@@ -97,9 +121,13 @@ class DepositSerializer(serializers.ModelSerializer):
             return prev_transfer
 
         else:
-            amount = validated_data.get('amount')
-            price_usdt = get_trading_price_usdt(coin=asset.symbol, raw_price=True, side=SELL)
-            price_irt = get_trading_price_irt(coin=asset.symbol, raw_price=True, side=SELL)
+            amount = Decimal(validated_data.get('amount')) / coin_mult
+
+            if is_zero_by_precision(amount):
+                raise ValidationError({'amount': 'small amount'})
+
+            price_usdt = get_external_price(coin=asset.symbol, base_coin=Asset.USDT, side=SELL, allow_stale=True)
+            price_irt = get_external_price(coin=asset.symbol, base_coin=Asset.IRT, side=SELL, allow_stale=True)
 
             with WalletPipeline() as pipeline:
                 transfer, _ = Transfer.objects.get_or_create(
@@ -111,8 +139,6 @@ class DepositSerializer(serializers.ModelSerializer):
                     out_address=sender_address,
                     defaults={
                         'amount': amount,
-                        'block_hash': validated_data.get('block_hash'),
-                        'block_number': validated_data.get('block_number'),
                         'usdt_value': amount * price_usdt,
                         'irt_value': amount * price_irt,
                     }
@@ -137,6 +163,11 @@ class DepositSerializer(serializers.ModelSerializer):
             return transfer
 
 
-class DepositTransferUpdateView(CreateAPIView):
+class DepositTransferUpdateView(CreateAPIView, UserPassesTestMixin):
     authentication_classes = [CustomTokenAuthentication]
     serializer_class = DepositSerializer
+
+    def test_func(self):
+        permission_check = self.request.user.has_perm('ledger.add_transfer') and\
+                           self.request.user.has_perm('ledger.change_transfer')
+        return permission_check

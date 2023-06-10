@@ -16,13 +16,15 @@ def revert_otc_trades(user: User, min_otc_trade_id: int, max_otc_trade_id: int):
         print('reverting %s' % t)
         t.revert()
 
-    clear_debt(user)
+    clear_user_debts(user)
 
 
-def clear_debt(user: User):
-    spot_wallets_list = Wallet.objects.filter(account=user.account, market=Wallet.SPOT).exclude(balance=0)
+def clear_user_debts(user: User):
+    account = user.get_account()
+
+    spot_wallets_list = Wallet.objects.filter(account=account, market=Wallet.SPOT).exclude(balance=0)
     spot_dict = {w.asset: w for w in spot_wallets_list}
-    debt_wallets_list = Wallet.objects.filter(account=user.account, market=Wallet.DEBT).exclude(balance=0)
+    debt_wallets_list = Wallet.objects.filter(account=account, market=Wallet.DEBT).exclude(balance=0)
     debt_dict = {w.asset: w for w in debt_wallets_list}
 
     to_clear_assets = set(spot_dict) & set(debt_dict)
@@ -31,14 +33,18 @@ def clear_debt(user: User):
         sw = spot_dict[asset]
         dw = debt_dict[asset]
 
-        amount = min(sw.balance, -dw.balance)
+        clear_debt(sw, dw)
 
-        if amount > 0:
-            with WalletPipeline() as pipeline:
-                pipeline.new_trx(
-                    sender=sw,
-                    receiver=dw,
-                    amount=amount,
-                    scope='dc',
-                    group_id=uuid4()
-                )
+
+def clear_debt(spot_wallet: Wallet, debt_wallet: Wallet):
+    amount = min(spot_wallet.get_free(), -debt_wallet.balance)
+
+    if amount > 0:
+        with WalletPipeline() as pipeline:
+            pipeline.new_trx(
+                sender=spot_wallet,
+                receiver=debt_wallet,
+                amount=amount,
+                scope=Trx.DEBT_CLEAR,
+                group_id=uuid4()
+            )

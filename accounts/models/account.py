@@ -5,8 +5,7 @@ from django.db import models
 from django.db.models import UniqueConstraint, Q
 from django.utils import timezone
 
-from accounts.models import User
-from ledger.utils.price import BUY
+from ledger.utils.external_price import BUY, get_external_price
 
 
 class Account(models.Model):
@@ -18,7 +17,7 @@ class Account(models.Model):
 
     name = models.CharField(max_length=16, blank=True)
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.OneToOneField('User', on_delete=models.CASCADE, null=True, blank=True)
 
     type = models.CharField(
         max_length=1,
@@ -43,10 +42,13 @@ class Account(models.Model):
     bookmark_market = models.ManyToManyField("market.PairSymbol")
     bookmark_assets = models.ManyToManyField("ledger.Asset")
 
+    owned = models.BooleanField(default=False)
+
     def is_system(self) -> bool:
         return self.type == self.SYSTEM
 
     def is_ordinary_user(self) -> bool:
+        # be careful about new market maker account, should be ordinary if dont want to hedge in Core 
         return not bool(self.type)
 
     @classmethod
@@ -91,7 +93,8 @@ class Account(models.Model):
         total = Decimal('0')
 
         for wallet in wallets:
-            balance = wallet.get_balance_usdt(side)
+            price = get_external_price(coin=wallet.asset.symbol, base_coin=Asset.USDT, side=side, allow_stale=True) or 0
+            balance = wallet.balance * price
 
             if balance:
                 total += balance
@@ -99,7 +102,7 @@ class Account(models.Model):
         return total
 
     def get_total_balance_irt(self, market: str = None, side: str = BUY):
-        from ledger.models import Wallet
+        from ledger.models import Wallet, Asset
 
         wallets = Wallet.objects.filter(account=self).prefetch_related('asset')
 
@@ -114,7 +117,8 @@ class Account(models.Model):
             if wallet.balance == 0:
                 continue
 
-            balance = wallet.get_balance_irt(side)
+            price = get_external_price(coin=wallet.asset.symbol, base_coin=Asset.IRT, side=side, allow_stale=True) or 0
+            balance = wallet.balance * price
 
             if balance:
                 total += balance
@@ -144,6 +148,14 @@ class Account(models.Model):
     def airdrop(self, asset, amount: Union[Decimal, int]):
         wallet = asset.get_wallet(self)
         wallet.airdrop(amount)
+
+    @classmethod
+    def get_for(cls, user):
+        if not user.id or user.is_anonymous:
+            return Account()
+        else:
+            account, _ = Account.objects.get_or_create(user=user)
+            return account
 
     class Meta:
         constraints = [

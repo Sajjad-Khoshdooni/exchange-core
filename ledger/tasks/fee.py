@@ -1,11 +1,8 @@
 import logging
-import math
-from decimal import Decimal
 
 from celery import shared_task
 
 from ledger.models import NetworkAsset
-from ledger.utils.price import get_trading_price_usdt, BUY
 from ledger.utils.provider import get_provider_requester
 
 logger = logging.getLogger()
@@ -13,7 +10,10 @@ logger = logging.getLogger()
 
 @shared_task(queue='celery')
 def update_network_fees():
-    network_assets = NetworkAsset.objects.all().exclude(can_withdraw=False, can_deposit=False)
+    network_assets = NetworkAsset.objects.filter(
+        update_fee_with_provider=True,
+        can_withdraw=True,
+    )
 
     for ns in network_assets:
         info = get_provider_requester().get_network_info(ns.asset.symbol, ns.network.symbol)

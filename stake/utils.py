@@ -10,7 +10,7 @@ def close_staking(user: User):
     if not user.show_staking:
         return
 
-    account = user.account
+    account = user.get_account()
 
     stake_requests = StakeRequest.objects.filter(
         status=StakeRequest.DONE,

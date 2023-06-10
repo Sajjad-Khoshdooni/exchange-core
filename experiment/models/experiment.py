@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.utils.safestring import mark_safe
 from django.utils.html import format_html
 
-from analytics.utils import produce_users_analytics
+from accounting.utils.analytics import produce_users_analytics
 from experiment.models.variant import Variant
 from experiment.models.variant_user import VariantUser
 

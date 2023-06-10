@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 
+from ledger.utils.precision import get_presentation_amount
 from market.models import *
 from ledger.models import Asset
 
@@ -40,7 +41,7 @@ class PairSymbolAdmin(admin.ModelAdmin):
     list_display = ('name', 'enable', 'market_maker_enabled', 'maker_amount', 'taker_fee', 'maker_fee',)
     list_editable = ('enable',)
     list_filter = ('enable', BaseAssetFilter, 'market_maker_enabled',)
-    readonly_fields = ('name', 'last_trade_time', 'last_trade_price')
+    readonly_fields = ('last_trade_time', 'last_trade_price')
     search_fields = ('name', )
     ordering = ('-enable', 'asset__order', 'base_asset__order')
 
@@ -81,22 +82,50 @@ class UserFilter(SimpleListFilter):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('created', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount', 'wallet')
+    list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount',
+                    'wallet')
     list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
     readonly_fields = ('wallet', 'symbol')
+
+    def created_at_millis(self, instance):
+        created = instance.created.astimezone()
+        return created.strftime('%S.%f')[:-3]
+
+    created_at_millis.short_description = 'Created Second'
 
 
 @admin.register(CancelRequest)
 class CancelRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'order_id')
+    list_display = ('created', 'created_at_millis', 'order_id')
+
+    def created_at_millis(self, instance):
+        created = instance.created.astimezone()
+        return created.strftime('%S.%f')[:-3]
+
+    created_at_millis.short_description = 'Created Second'
 
 
 @admin.register(Trade)
 class TradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'symbol', 'amount', 'price', 'gap_revenue', 'hedge_price', 'side', 'trade_source', 'account')
+    list_display = ('created', 'created_at_millis', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount',
+                    'fee_revenue', 'get_value_irt', 'get_value_usdt')
     list_filter = ('trade_source', UserTradeFilter)
     readonly_fields = ('symbol', 'order_id', 'account')
     search_fields = ('symbol__name', )
+
+    def created_at_millis(self, instance):
+        created = instance.created.astimezone()
+        return created.strftime('%S.%f')[:-3]
+
+    created_at_millis.short_description = 'Created Second'
+
+    @admin.display(description='value irt', ordering='value_irt')
+    def get_value_irt(self, trade: Trade):
+        return get_presentation_amount(trade.irt_value)
+
+    @admin.display(description='value usdt', ordering='value_usdt')
+    def get_value_usdt(self, trade: Trade):
+        return get_presentation_amount(trade.usdt_value)
 
 
 @admin.register(ReferralTrx)

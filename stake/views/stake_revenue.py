@@ -1,3 +1,4 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 
 from rest_framework.generics import ListAPIView
@@ -21,7 +22,10 @@ class StakeRevenueSerializer(serializers.ModelSerializer):
 
 
 class StakeRevenueAPIView(ListAPIView):
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['stake_request']
+
     serializer_class = StakeRevenueSerializer
 
     def get_queryset(self):
-        return StakeRevenue.objects.filter(stake_request__account=self.request.user.account).order_by('-created')
+        return StakeRevenue.objects.filter(stake_request__account=self.request.user.get_account()).order_by('-created')

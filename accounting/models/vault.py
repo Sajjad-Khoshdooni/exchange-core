@@ -24,9 +24,9 @@ class Vault(models.Model):
     MARKETS = SPOT, FUTURES = 'spot', 'futures'
 
     name = models.CharField(max_length=32)
+
     type = models.CharField(max_length=8, choices=[(t, t) for t in TYPES])
     market = models.CharField(max_length=8, choices=[(t, t) for t in MARKETS], default=SPOT)
-
     key = models.CharField(max_length=128, blank=True)
 
     real_value = get_amount_field(default=Decimal())
@@ -41,19 +41,18 @@ class Vault(models.Model):
         coins = []
 
         for vd in data:
-            if vd.balance != 0:
-                VaultItem.objects.update_or_create(
-                    vault=self,
-                    coin=vd.coin,
-                    defaults={
-                        'updated': now,
-                        'balance': vd.balance,
-                        'value_usdt': vd.value_usdt,
-                        'value_irt': vd.value_irt
-                    }
-                )
+            VaultItem.objects.update_or_create(
+                vault=self,
+                coin=vd.coin,
+                defaults={
+                    'updated': now,
+                    'balance': vd.balance,
+                    'value_usdt': vd.value_usdt,
+                    'value_irt': vd.value_irt
+                }
+            )
 
-                coins.append(vd.coin)
+            coins.append(vd.coin)
 
         VaultItem.objects.filter(vault=self).exclude(coin__in=coins).update(
             balance=0,
@@ -81,8 +80,8 @@ class VaultItem(models.Model):
     vault = models.ForeignKey(Vault, on_delete=models.CASCADE)
     coin = models.CharField(max_length=32, db_index=True)
     balance = get_amount_field(validators=())
-    value_usdt = get_amount_field(validators=())
-    value_irt = get_amount_field(validators=())
+    value_usdt = get_amount_field(validators=(), default=0)
+    value_irt = get_amount_field(validators=(), default=0)
 
     class Meta:
         unique_together = ('vault', 'coin')
@@ -112,7 +111,7 @@ class AssetPrice(models.Model):
     updated = models.DateTimeField(auto_now=True)
 
     coin = models.CharField(max_length=32, unique=True)
-    price = get_amount_field()
+    price = get_amount_field(decimal_places=12)
 
     def __str__(self):
         return self.coin

@@ -9,8 +9,8 @@ from django.db.models import Max, Min
 
 from accounts.models import Account
 from ledger.models import Asset
+from ledger.utils.external_price import get_external_price, BUY, SELL
 from ledger.utils.precision import floor_precision
-from ledger.utils.price import get_trading_price_irt, get_trading_price_usdt, SELL, BUY
 from market.models import PairSymbol, Order
 from market.utils.order_utils import get_market_top_prices, new_order
 
@@ -19,16 +19,14 @@ logger = logging.getLogger(__name__)
 
 def get_current_price(symbol: PairSymbol, side: str) -> Decimal:
     if symbol.name.endswith(Asset.IRT):
-        base_symbol = Asset.IRT
-        get_trading_price = get_trading_price_irt
+        base_coin = Asset.IRT
     elif symbol.name.endswith(Asset.USDT):
-        base_symbol = Asset.USDT
-        get_trading_price = get_trading_price_usdt
+        base_coin = Asset.USDT
     else:
         raise NotImplementedError
 
-    coin = symbol.name.split(base_symbol)[0]
-    return get_trading_price(coin, side)
+    coin = symbol.name.split(base_coin)[0]
+    return get_external_price(coin=coin, base_coin=base_coin, side=side)
 
 
 def min_order_value(base_symbol: str):
@@ -83,7 +81,8 @@ def random_buy(symbol: PairSymbol, account: Account, max_amount, market_price, d
     amount = floor_precision(min(max_amount, Decimal(amount_value / ask)), symbol.step_size)
 
     return new_order(
-        symbol, account, amount, None, side=BUY, fill_type=Order.MARKET, raise_exception=False, order_type=Order.BOT
+        symbol, account, amount, market_price, side=BUY, fill_type=Order.LIMIT, raise_exception=False,
+        order_type=Order.BOT, time_in_force=Order.IOC
     )
 
 
@@ -98,32 +97,9 @@ def random_sell(symbol: PairSymbol, account: Account, max_amount, market_price, 
     amount = floor_precision(min(max_amount, random_min_order_value(symbol, daily_factor) / bid), symbol.step_size)
     logger.info(f'random sell {symbol}, {amount}')
     return new_order(
-        symbol, account, amount, None, fill_type=Order.MARKET, side=SELL, raise_exception=False, order_type=Order.BOT
+        symbol, account, amount, market_price, fill_type=Order.LIMIT, side=SELL, raise_exception=False,
+        order_type=Order.BOT, time_in_force=Order.IOC
     )
-
-
-def balance_tether(account: Account):
-    usdt_wallet = Asset.get(Asset.USDT).get_wallet(account)
-    irt_wallet = Asset.get(Asset.IRT).get_wallet(account)
-
-    usdt, irt = usdt_wallet.get_free(), irt_wallet.get_free()
-
-    usdt_irt_price = get_trading_price_irt(Asset.USDT, SELL, raw_price=True)
-
-    total_usdt = usdt + irt / usdt_irt_price
-
-    if total_usdt < 100:
-        logger.warning('Small free balance in account=%s' % account)
-        return
-
-    if usdt / total_usdt < Decimal('0.2'):
-        to_buy_usdt = total_usdt * Decimal('0.45') - usdt
-
-        pair = PairSymbol.objects.get(name='USDTIRT')
-        amount = floor_precision(to_buy_usdt, pair.step_size)
-
-        return new_order(pair, account, amount, None, side=BUY, fill_type=Order.MARKET, raise_exception=False,
-                         order_type=Order.BOT)
 
 
 def user_top_prices(symbol_ids=None):
@@ -139,7 +115,7 @@ def get_top_prices_exclude_system_orders(symbol_ids=None):
     top_ordinary_prices = defaultdict(lambda: Decimal())
 
     user_orders = {
-        (o['symbol'], o['side']): o['max_price'] if o['side'] == Order.BUY else o['min_price'] for o in
+        (o['symbol'], o['side']): o['max_price'] if o['side'] == BUY else o['min_price'] for o in
         user_top_prices(symbol_ids)
     }
     for key, top_price in no_filter_top_prices.items():
@@ -162,15 +138,15 @@ def place_carrot_order(symbol: PairSymbol, account: Account, side, top_user_pric
     random_precision = random.randint(min_precision, symbol.tick_size)
 
     one_tick_price = Decimal(f'1e{-random_precision}')
-    new_top_price = top_user_price + one_tick_price if side == Order.BUY else top_user_price - one_tick_price
+    new_top_price = top_user_price + one_tick_price if side == BUY else top_user_price - one_tick_price
     if top_opposite_user_price and (
-            (side == Order.BUY and new_top_price >= top_opposite_user_price) or (
-            side == Order.SELL and new_top_price <= top_opposite_user_price)
+            (side == BUY and new_top_price >= top_opposite_user_price) or (
+            side == SELL and new_top_price <= top_opposite_user_price)
     ):
         logger.info(f'no need to place carrot order on {symbol} {new_top_price} {top_opposite_user_price}')
         return
     amount = floor_precision(symbol.maker_amount / get_time_based_factor(600) / 5, symbol.step_size)
     return new_order(
-        symbol, account, amount, new_top_price, side=side, fill_type=Order.LIMIT, raise_exception=False,
+        symbol, account, amount=amount, price=new_top_price, side=side, fill_type=Order.LIMIT, raise_exception=False,
         order_type=Order.BOT
     )

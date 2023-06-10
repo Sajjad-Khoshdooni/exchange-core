@@ -2,10 +2,9 @@ import logging
 
 import requests
 from celery import shared_task
+from decouple import config
 from django.conf import settings
 from kavenegar import KavenegarAPI, APIException, HTTPException
-from decouple import config
-from decouple import config
 
 from accounts.verifiers.finotech import token_cache
 
@@ -13,6 +12,13 @@ logger = logging.getLogger(__name__)
 
 
 SMS_IR_TOKEN_KEY = 'sms-ir-token'
+
+
+TEMPLATES = {
+    'crypto_address_change': 'آدرس های واریز {brand} تغییر کرد.\nمی توانید آدرس های جدید را از بخش کیف پول در حساب کاربری خود دریافت کنید.\n{brand}',
+    'recent_not_deposit': 'به {brand} خوش آمدید. با اولین واریز جایزه ماموریت خود را دریافت کنید.\n{link}',
+    'weekly_mission_activated': 'تا آخر هفته ۵ میلیون معامله کنید و تا ۲ میلیون پپه هدیه بگیرید.\nراستین\nyun.ir/27wub1',
+}
 
 
 @shared_task(queue='sms')
@@ -39,8 +45,41 @@ def send_message_by_kavenegar(phone: str, template: str, token: str, send_type: 
         logger.exception("Failed to send sms by kavenegar")
 
 
-def get_sms_ir_token():
+def send_kavenegar_exclusive_sms(phone: str, template: str = None, params: dict = None, content: str = None):
+    if settings.DEBUG_OR_TESTING_OR_STAGING or not settings.EXCLUSIVE_SMS_NUMBER:
+        return
 
+    assert template or content
+
+    api_key = config('KAVENEGAR_KEY')
+    api = KavenegarAPI(apikey=api_key)
+
+    if template:
+        params = params or {}
+        params['brand'] = settings.BRAND
+
+        message = TEMPLATES[template].format(**params)
+    else:
+        message = content
+
+    message += '\nلغو= 11'
+
+    try:
+        params = {
+            'receptor': phone,
+            'message': message,
+            'sender': settings.EXCLUSIVE_SMS_NUMBER,
+        }
+
+        api.sms_send(params)
+        return True
+    except (APIException, HTTPException) as e:
+        logger.exception("Failed to send sms by kavenegar")
+
+    return False
+
+
+def get_sms_ir_token():
     token = token_cache.get(SMS_IR_TOKEN_KEY)
 
     if token:

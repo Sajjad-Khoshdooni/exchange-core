@@ -59,6 +59,7 @@ class SignupSerializer(serializers.Serializer):
     utm = serializers.JSONField(allow_null=True, required=False, write_only=True)
     referral_code = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
     promotion = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
+    source = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
 
     @staticmethod
     def validate_referral_code(code):
@@ -80,7 +81,6 @@ class SignupSerializer(serializers.Serializer):
         validate_password(password=password)
 
         phone = otp_code.phone
-        # otp_code.set_token_used()
         promotion = validated_data.get('promotion') or ''
 
         user = User.objects.create_user(
@@ -93,15 +93,19 @@ class SignupSerializer(serializers.Serializer):
             if not config('ENABLE_MARGIN_SHOW_TO_ALL', cast=bool, default=True):
                 user.show_margin = False
 
+            if config('SHOW_NINJA_TO_ALL', cast=bool, default=False):
+                user.show_community = True
+
             user.set_password(password)
             user.save()
 
             if validated_data.get('referral_code'):
-                user.account.referred_by = Referral.objects.get(code=validated_data['referral_code'])
-                user.account.save()
+                account = user.get_account()
+                account.referred_by = Referral.objects.get(code=validated_data['referral_code'])
+                account.save()
 
                 from gamify.utils import check_prize_achievements, Task
-                check_prize_achievements(user.account.referred_by.owner, Task.REFERRAL)
+                check_prize_achievements(account.referred_by.owner, Task.REFERRAL)
 
             # otp_code.set_token_used()
 
@@ -201,4 +205,9 @@ class SignupView(CreateAPIView):
     def perform_create(self, serializer):
         user = serializer.save()
         login(self.request, user)
-        set_login_activity(self.request, user, is_sign_up=True)
+        set_login_activity(
+            request=self.request,
+            user=user,
+            is_sign_up=True,
+            native_app=serializer.validated_data.get('source') == 'app'
+        )

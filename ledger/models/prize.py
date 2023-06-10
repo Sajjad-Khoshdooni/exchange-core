@@ -1,12 +1,15 @@
 import logging
-from datetime import timedelta
+import uuid
 from uuid import uuid4
 
 from django.db import models
 from django.db.models import CheckConstraint, Q
-from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
+from accounts.event.producer import get_kafka_producer
 from accounts.models import Account
+from accounts.utils.dto import PrizeEvent
 from ledger.models import Trx, Asset, Wallet
 from ledger.utils.fields import get_amount_field
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -23,6 +26,7 @@ class Prize(models.Model):
 
     amount = get_amount_field()
     asset = models.ForeignKey(to=Asset, on_delete=models.CASCADE)
+    voucher_expiration = models.DateTimeField(null=True, blank=True)
     redeemed = models.BooleanField(default=False)
 
     fake = models.BooleanField(default=False)
@@ -43,12 +47,14 @@ class Prize(models.Model):
 
         system = Account.system()
 
-        if self.achievement.voucher:
+        if self.voucher_expiration:
             market = Wallet.VOUCHER
-            expiration = self.get_voucher_expiration(self.account)
+            expiration = self.voucher_expiration
         else:
             market = Wallet.SPOT
             expiration = None
+
+        assert market == Wallet.VOUCHER or not self.asset.symbol == Asset.USDT
 
         receiver = self.asset.get_wallet(self.account, market=market, expiration=expiration)
 
@@ -64,9 +70,28 @@ class Prize(models.Model):
             receiver.expiration = expiration
             receiver.save(update_fields=['expiration'])
 
-    @classmethod
-    def get_voucher_expiration(cls, account: Account):
-        return timezone.now() + timedelta(days=30)
-
     def __str__(self):
         return '%s %s %s' % (self.account, self.amount, self.asset)
+
+
+@receiver(post_save, sender=Prize)
+def handle_prize_save(sender, instance, created, **kwargs):
+    producer = get_kafka_producer()
+
+    user = instance.account.user
+
+    if not user:
+        return
+
+    event = PrizeEvent(
+        created=instance.created,
+        user_id=user.id,
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + PrizeEvent.type),
+        id=instance.id,
+        amount=instance.amount,
+        coin=instance.asset.symbol,
+        voucher_expiration=instance.voucher_expiration,
+        achievement_type=instance.achievement.type,
+        value=instance.value
+    )
+    producer.produce(event)

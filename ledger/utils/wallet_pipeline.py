@@ -6,7 +6,7 @@ from uuid import UUID
 from django.db.models import F
 from django.db.transaction import Atomic
 
-from ledger.utils.fields import AMOUNT_PRECISION
+from ledger.utils.precision import is_zero_by_precision
 
 
 def sorted_flatten_dict(data: dict) -> list:
@@ -116,7 +116,7 @@ class WalletPipeline(Atomic):
         from ledger.models.trx import Trx
         assert sender.asset == receiver.asset
 
-        if amount == 0 or int(amount * 10 ** AMOUNT_PRECISION) == 0 or sender == receiver:
+        if is_zero_by_precision(amount) or sender == receiver:
             return
 
         # ignore system vs system trx
@@ -171,8 +171,7 @@ class WalletPipeline(Atomic):
             print('new locks count', len(self._locks))
             print('new trxs', len(self._trxs))
 
-        from ledger.models import Wallet, BalanceLock
-        from ledger.models.trx import Trx
+        from ledger.models import Wallet, BalanceLock, Trx
 
         for lock_id, lock_update in self._build_lock_updates().items():
             BalanceLock.objects.filter(key=lock_id).update(**lock_update)

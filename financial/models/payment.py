@@ -1,16 +1,22 @@
+import uuid
 from decimal import Decimal
 
+from decouple import config
 from django.conf import settings
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils import timezone
-from decouple import config
 
+from accounts.event.producer import get_kafka_producer
 from accounts.models import Account
 from accounts.models import Notification
 from accounts.utils import email
+from accounts.utils.dto import TransferEvent
 from ledger.models import Trx, Asset
+from ledger.utils.external_price import get_external_price
 from ledger.utils.fields import DONE
 from ledger.utils.fields import get_group_id_field, get_status_field
 from ledger.utils.precision import humanize_number, get_presentation_amount
@@ -93,7 +99,7 @@ class Payment(models.Model):
     def accept(self, pipeline: WalletPipeline):
         asset = Asset.get(Asset.IRT)
         user = self.payment_request.bank_card.user
-        account = user.account
+        account = user.get_account()
 
         pipeline.new_trx(
             sender=asset.get_wallet(Account.out()),
@@ -108,7 +114,7 @@ class Payment(models.Model):
             user.save()
 
         from gamify.utils import check_prize_achievements, Task
-        check_prize_achievements(user.account, Task.DEPOSIT)
+        check_prize_achievements(account, Task.DEPOSIT)
 
         self.alert_payment()
 
@@ -145,3 +151,28 @@ class Payment(models.Model):
             response = HttpResponse("", status=302)
             response['Location'] = url
             return response
+
+
+@receiver(post_save, sender=Payment)
+def handle_payment_save(sender, instance, created, **kwargs):
+    producer = get_kafka_producer()
+
+    if instance.status != 'done':
+        return
+
+    usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
+
+    event = TransferEvent(
+        id=instance.id,
+        user_id=instance.payment_request.bank_card.user_id,
+        amount=instance.payment_request.amount,
+        coin='IRT',
+        network='IRT',
+        is_deposit=True,
+        value_usdt=float(instance.payment_request.amount) / float(usdt_price),
+        value_irt=instance.payment_request.amount,
+        created=instance.created,
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type)
+    )
+
+    producer.produce(event)

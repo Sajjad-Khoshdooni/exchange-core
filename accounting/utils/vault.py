@@ -6,10 +6,11 @@ from django.utils import timezone
 
 from accounting.models import Vault
 from accounting.models.vault import VaultData, AssetPrice, VaultItem, ReservedAsset
-from financial.utils.stats import get_total_fiat_irt
+from financial.models import Gateway
+from financial.utils.withdraw import FiatWithdraw
 from ledger.models import Asset
+from ledger.utils.external_price import get_external_usdt_prices, get_external_price, BUY
 from ledger.utils.overview import get_internal_asset_deposits
-from ledger.utils.price import get_prices_dict, BUY, get_price
 from ledger.utils.provider import get_provider_requester
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ def update_provider_vaults(now: datetime, usdt_irt: Decimal):
                 key=profile_id,
 
                 defaults={
-                    'name': '%s-%s' % (exchange, profile['scope'])
+                    'name': '%s-%s' % (exchange, profile['id'])
                 }
             )
 
@@ -54,11 +55,23 @@ def update_provider_vaults(now: datetime, usdt_irt: Decimal):
             balances = balances_data['balances']
             real_value = balances_data['real_value'] and Decimal(balances_data['real_value'])
 
-            prices = get_prices_dict(coins=list(balances.keys()), side=BUY)
+            if not balances:
+                continue
+
+            prices = get_external_usdt_prices(
+                coins=list(balances.keys()),
+                side=BUY,
+                allow_stale=True,
+            )
 
             for coin, balance in balances.items():
                 balance = Decimal(balance)
-                value = balance * prices.get(coin, 0)
+                price = prices.get(coin, 0)
+
+                if coin == Asset.IRT:
+                    price = get_external_price(Asset.IRT, base_coin=Asset.USDT, side=BUY)
+
+                value = balance * price
 
                 vault_data.append(
                     VaultData(
@@ -76,7 +89,11 @@ def update_hot_wallet_vault(now: datetime, usdt_irt: Decimal):
     logger.info('updating hotwallet vaults')
 
     data = get_internal_asset_deposits()
-    prices = get_prices_dict(coins=list(data.keys()), side=BUY)
+    prices = get_external_usdt_prices(
+        coins=list(data.keys()),
+        side=BUY,
+        allow_stale=True
+    )
 
     vault, _ = Vault.objects.get_or_create(
         type=Vault.HOT_WALLET,
@@ -108,37 +125,42 @@ def update_hot_wallet_vault(now: datetime, usdt_irt: Decimal):
 def update_gateway_vaults(now: datetime, usdt_irt: Decimal):
     logger.info('updating gateway vaults')
 
-    vault, _ = Vault.objects.get_or_create(
-        type=Vault.GATEWAY,
-        market=Vault.SPOT,
-        key='main',
-        defaults={
-            'name': 'main'
-        }
-    )
+    vault_data = []
 
-    try:
-        amount = get_total_fiat_irt(strict=True)
+    for gateway in Gateway.objects.exclude(withdraw_api_secret_encrypted=''):
+        vault, _ = Vault.objects.get_or_create(
+            type=Vault.GATEWAY,
+            market=Vault.SPOT,
+            key=gateway.id,
+            defaults={
+                'name': str(gateway)
+            }
+        )
 
-        vault_data = [
-            VaultData(
-                coin=Asset.IRT,
-                balance=amount,
-                value_usdt=amount / usdt_irt,
-                value_irt=amount
+        try:
+            handler = FiatWithdraw.get_withdraw_channel(gateway)
+            amount = handler.get_total_wallet_irt_value()
+
+            vault_data.append(
+                VaultData(
+                    coin=Asset.IRT,
+                    balance=amount,
+                    value_usdt=amount / usdt_irt,
+                    value_irt=amount
+                )
             )
-        ]
 
-        vault.update_vault_all_items(now, vault_data)
-    except:
-        pass
+            vault.update_vault_all_items(now, vault_data)
+        except:
+            pass
 
 
 def update_cold_wallet_vaults(usdt_irt: Decimal):
     logger.info('updating cold & manual wallet vaults')
 
     for vault_item in VaultItem.objects.filter(vault__type__in=(Vault.COLD_WALLET, Vault.MANUAL)):
-        vault_item.value_usdt = vault_item.balance * get_price(vault_item.coin, side=BUY)
+        price = get_external_price(vault_item.coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
+        vault_item.value_usdt = vault_item.balance * price
         vault_item.value_irt = vault_item.value_usdt * usdt_irt
         vault_item.save(update_fields=['value_usdt', 'value_irt'])
 
@@ -148,7 +170,7 @@ def update_cold_wallet_vaults(usdt_irt: Decimal):
 
 def update_reserved_assets_value(usdt_irt):
     coins = list(ReservedAsset.objects.values_list('coin', flat=True))
-    prices = get_prices_dict(coins=coins, side=BUY)
+    prices = get_external_usdt_prices(coins=coins, side=BUY, allow_stale=True)
 
     for res in ReservedAsset.objects.all():
         res.value_usdt = res.amount * prices.get(res.coin, 0)
@@ -159,7 +181,19 @@ def update_reserved_assets_value(usdt_irt):
 def update_asset_prices():
     logger.info('updating asset prices')
 
-    prices = get_prices_dict(coins=list(Asset.live_objects.values_list('symbol', flat=True)), side=BUY)
+    prices = get_external_usdt_prices(
+        coins=list(Asset.live_objects.values_list('symbol', flat=True)),
+        side=BUY,
+        allow_stale=True,
+        set_bulk_cache=True
+    )
+
+    prices['IRT'] = get_external_price(
+        coin=Asset.IRT,
+        base_coin=Asset.USDT,
+        side=BUY,
+        allow_stale=True,
+    )
 
     existing_assets = AssetPrice.objects.filter(coin__in=prices)
     existing_coins = set(existing_assets.values_list('coin', flat=True))

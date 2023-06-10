@@ -4,7 +4,7 @@ import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.generics import CreateAPIView, get_object_or_404
+from rest_framework.generics import CreateAPIView, get_object_or_404, RetrieveAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -28,10 +28,11 @@ class OrderFilter(django_filters.FilterSet):
     symbol = django_filters.CharFilter(field_name='symbol__name', lookup_expr='iexact')
     market = django_filters.CharFilter(field_name='wallet__market')
     after = django_filters.DateTimeFilter(field_name='created_at', lookup_expr='gte')
+    created = django_filters.IsoDateTimeFromToRangeFilter()
 
     class Meta:
         model = Order
-        fields = ('symbol', 'status', 'market', 'side', 'after')
+        fields = ('symbol', 'status', 'market', 'side', 'client_order_id', 'after')
 
 
 class StopLossFilter(django_filters.FilterSet):
@@ -94,8 +95,10 @@ class OpenOrderListAPIView(APIView):
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
 
     def get(self, request, *args, **kwargs):
+        account = self.request.user.get_account()
+
         context = {
-            'trades': Trade.get_account_orders_filled_price(self.request.user.account),
+            'trades': Trade.get_account_orders_filled_price(account),
         }
         filters = {}
         symbol_filter = self.request.query_params.get('symbol')
@@ -107,14 +110,14 @@ class OpenOrderListAPIView(APIView):
         if side_filter:
             filters['side'] = side_filter
         if bot_filter:
-            filters['wallet__variant__isnull'] = not(str(bot_filter) == 'true')
+            filters['wallet__variant__isnull'] = not (str(bot_filter) == 'true')
 
         open_orders = Order.open_objects.filter(
-            wallet__account=self.request.user.account, stop_loss__isnull=True, **filters
-        ).select_related('symbol', 'wallet',)
+            wallet__account=account, stop_loss__isnull=True, **filters
+        ).select_related('symbol', 'wallet', )
 
         open_stop_losses = StopLoss.open_objects.filter(
-            wallet__account=self.request.user.account, **filters
+            wallet__account=account, **filters
         ).select_related('symbol', 'wallet')
 
         serialized_orders = OrderStopLossSerializer(open_orders, many=True, context=context)

@@ -1,21 +1,28 @@
 import logging
+import uuid
 
+from decouple import config
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
-from decouple import config
+from simple_history.models import HistoricalRecords
 
+from accounts.event.producer import get_kafka_producer
 from accounts.models import Account
 from accounts.models import Notification
 from accounts.tasks.send_sms import send_message_by_kavenegar
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
+from accounts.utils.dto import TransferEvent
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
-from ledger.utils.fields import get_group_id_field, PENDING, CANCELED
+from ledger.utils.external_price import get_external_price
+from ledger.utils.fields import get_group_id_field
 from ledger.utils.precision import humanize_number
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -23,10 +30,10 @@ logger = logging.getLogger(__name__)
 
 
 class FiatWithdrawRequest(models.Model):
-    INIT, PROCESSING, PENDING, CANCELED, DONE = 'init', 'process', 'pending', 'canceled', 'done'
+    history = HistoricalRecords()
 
-    MANUAL, ZIBAL, PAYIR, ZARINPAL, JIBIT = 'manual', 'zibal', 'payir', 'zarinpal', 'jibit'
-    CHANEL_CHOICES = ((ZIBAL, ZIBAL), (PAYIR, PAYIR), (JIBIT, JIBIT), (MANUAL, MANUAL))
+    STATUSES = INIT, PROCESSING, PENDING, CANCELED, DONE, REFUND = \
+        'init', 'process', 'pending', 'canceled', 'done', 'refund'
 
     FREEZE_TIME = 3 * 60
 
@@ -41,19 +48,19 @@ class FiatWithdrawRequest(models.Model):
     status = models.CharField(
         default=INIT,
         max_length=10,
-        choices=[(INIT, INIT), (PROCESSING, PROCESSING), (PENDING, PENDING), (DONE, DONE), (CANCELED, CANCELED)]
+        choices=[
+            (s, s) for s in STATUSES
+        ]
     )
 
     ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
-    ref_doc = models.FileField(verbose_name='رسید انتقال', null=True, blank=True)
 
     comment = models.TextField(verbose_name='نظر', blank=True)
 
     withdraw_datetime = models.DateTimeField(null=True, blank=True)
     receive_datetime = models.DateTimeField(null=True, blank=True)
-    provider_withdraw_id = models.CharField(max_length=64, blank=True)
 
-    withdraw_channel = models.CharField(max_length=10, choices=CHANEL_CHOICES, default=PAYIR)
+    gateway = models.ForeignKey('Gateway', on_delete=models.PROTECT)
 
     risks = models.JSONField(null=True, blank=True)
 
@@ -61,17 +68,11 @@ class FiatWithdrawRequest(models.Model):
     def total_amount(self):
         return self.amount + self.fee_amount
 
-    @property
-    def channel_handler(self):
-        from financial.utils.withdraw import FiatWithdraw
-
-        return FiatWithdraw.get_withdraw_channel(self.withdraw_channel)
-
     def build_trx(self, pipeline: WalletPipeline):
         asset = Asset.get(Asset.IRT)
         out_wallet = asset.get_wallet(Account.out())
 
-        account = self.bank_account.user.account
+        account = self.bank_account.user.get_account()
 
         sender, receiver = asset.get_wallet(account), out_wallet
 
@@ -93,17 +94,20 @@ class FiatWithdrawRequest(models.Model):
             )
 
     def create_withdraw_request(self):
-        if self.withdraw_channel == self.MANUAL:
-            return
-
-        assert not self.provider_withdraw_id
         assert self.status == self.PROCESSING
 
+        if self.ref_id:
+            self.status = self.PENDING
+            self.save(update_fields=['status'])
+            return
+
         from financial.utils.withdraw import ProviderError
+        from financial.utils.withdraw import FiatWithdraw
 
-        wallet_id = self.channel_handler.get_wallet_id()
+        wallet_id = self.gateway.wallet_id
+        api_handler = FiatWithdraw.get_withdraw_channel(self.gateway)
 
-        wallet = self.channel_handler.get_wallet_data(wallet_id)
+        wallet = api_handler.get_wallet_data(wallet_id)
 
         if wallet.free < self.amount:
             logger.info(f'Not enough wallet balance to full fill bank acc')
@@ -116,19 +120,19 @@ class FiatWithdrawRequest(models.Model):
             return
 
         try:
-            withdraw = self.channel_handler.create_withdraw(
+            withdraw = api_handler.create_withdraw(
                 wallet_id,
                 self.bank_account,
                 self.amount,
                 self.id
             )
-            self.provider_withdraw_id = self.ref_id = withdraw.tracking_id
-            self.change_status(withdraw.status)
+            self.ref_id = withdraw.tracking_id
             self.withdraw_datetime = timezone.now()
             self.receive_datetime = withdraw.receive_datetime
             self.comment = withdraw.message
 
-            self.save()
+            self.save(update_fields=['ref_id', 'withdraw_datetime', 'receive_datetime', 'comment'])
+            self.change_status(withdraw.status)
 
         except ProviderError as e:
             self.comment = str(e)
@@ -137,18 +141,23 @@ class FiatWithdrawRequest(models.Model):
     def update_status(self):
         from financial.utils.withdraw import FiatWithdraw
 
-        withdraw_handler = FiatWithdraw.get_withdraw_channel(self.withdraw_channel)
-        status = withdraw_handler.get_withdraw_status(self.id, self.provider_withdraw_id)
+        withdraw_handler = FiatWithdraw.get_withdraw_channel(self.gateway)
+        withdraw_data = withdraw_handler.get_withdraw_status(self.id, self.ref_id)
+        status = withdraw_data.status
 
         logger.info(f'FiatRequest {self.id} status: {status}')
 
         if status in (FiatWithdraw.DONE, FiatWithdraw.CANCELED):
             self.change_status(status)
 
+        if not self.ref_id and withdraw_data.tracking_id:
+            self.ref_id = withdraw_data.tracking_id
+            self.save(update_fields=['ref_id'])
+
     def alert_withdraw_verify_status(self):
         user = self.bank_account.user
 
-        if self.status == PENDING and self.withdraw_datetime:
+        if self.status == self.PENDING and self.withdraw_datetime:
             title = 'درخواست برداشت شما به بانک ارسال گردید.'
             description = 'وجه درخواستی شما در سیکل بعدی پایا {} به حساب شما واریز خواهد شد.'.format(
                 gregorian_to_jalali_datetime_str(self.withdraw_datetime)
@@ -157,7 +166,7 @@ class FiatWithdrawRequest(models.Model):
             template = 'withdraw-accepted'
             email_template = email.SCOPE_SUCCESSFUL_FIAT_WITHDRAW
 
-        elif self.status == CANCELED:
+        elif self.status == self.CANCELED:
             title = 'درخواست برداشت شما لغو شد.'
             description = ''
             level = Notification.ERROR
@@ -189,25 +198,38 @@ class FiatWithdrawRequest(models.Model):
             }
         )
 
-    def change_status(self, new_status: str):
-        old_status = self.status
+    def refund(self):
+        assert self.status == self.DONE
 
-        if old_status == new_status:
-            return
+        with WalletPipeline() as pipeline:
+            for trx in Trx.objects.filter(group_id=self.group_id):
+                trx.revert(pipeline)
 
-        assert old_status not in (CANCELED, self.DONE)
-
-        with WalletPipeline() as pipeline:  # type: WalletPipeline
-            if new_status in (self.CANCELED, self.DONE):
-                pipeline.release_lock(self.group_id)
-
-            if (old_status, new_status) in (self.PROCESSING, self.PENDING):
-                self.withdraw_datetime = timezone.now()
-            elif new_status == self.DONE:
-                self.build_trx(pipeline)
-
-            self.status = new_status
+            self.status = self.REFUND
             self.save(update_fields=['status'])
+
+    def change_status(self, new_status: str):
+        with transaction.atomic():
+            withdraw = FiatWithdrawRequest.objects.select_for_update().get(id=self.id)
+
+            old_status = withdraw.status
+
+            if old_status == new_status:
+                return
+
+            assert old_status not in (self.CANCELED, self.DONE)
+
+            with WalletPipeline() as pipeline:  # type: WalletPipeline
+                if new_status in (self.CANCELED, self.DONE):
+                    pipeline.release_lock(withdraw.group_id)
+
+                if (old_status, new_status) in (self.PROCESSING, self.PENDING):
+                    withdraw.withdraw_datetime = timezone.now()
+                elif new_status == self.DONE:
+                    withdraw.build_trx(pipeline)
+
+                withdraw.status = new_status
+                withdraw.save(update_fields=['status'])
 
         self.alert_withdraw_verify_status()
 
@@ -216,14 +238,12 @@ class FiatWithdrawRequest(models.Model):
         if self.id:
             old = FiatWithdrawRequest.objects.get(id=self.id)
 
-        if old and old.status in (FiatWithdrawRequest.DONE, FiatWithdrawRequest.CANCELED) and\
+        if old and old.status in (FiatWithdrawRequest.DONE, FiatWithdrawRequest.CANCELED) and \
                 self.status != old.status:
             raise ValidationError('امکان تغییر وضعیت برای این تراکنش وجود ندارد.')
 
         if old:
             old.change_status(self.status)
-
-        # super().save_model(request, fiat_withdraw_request, form, change)
 
     def __str__(self):
         return '%s %s' % (self.bank_account, self.amount)
@@ -231,3 +251,28 @@ class FiatWithdrawRequest(models.Model):
     class Meta:
         verbose_name = 'درخواست برداشت'
         verbose_name_plural = 'درخواست‌های برداشت'
+
+
+@receiver(post_save, sender=FiatWithdrawRequest)
+def handle_withdraw_request_save(sender, instance, created, **kwargs):
+    producer = get_kafka_producer()
+
+    if instance.status != FiatWithdrawRequest.DONE:
+        return
+
+    usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
+
+    event = TransferEvent(
+        id=instance.id,
+        user_id=instance.bank_account.user_id,
+        amount=instance.amount,
+        coin='IRT',
+        network='IRT',
+        created=instance.created,
+        value_irt=instance.amount,
+        value_usdt=float(instance.amount) / float(usdt_price),
+        is_deposit=False,
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type)
+    )
+
+    producer.produce(event)

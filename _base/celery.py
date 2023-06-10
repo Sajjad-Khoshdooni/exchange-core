@@ -33,6 +33,14 @@ app.conf.beat_schedule = {
             'expire': 30 * 60
         },
     },
+    'auto_clear_debts': {
+        'task': 'ledger.tasks.debt.auto_clear_debts',
+        'schedule': 60 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'celery',
+            'expire': 60 * TASK_MULTIPLIER
+        },
+    },
     'update_provider_withdraw': {
         'task': 'ledger.tasks.withdraw.update_provider_withdraw',
         'schedule': 10 * TASK_MULTIPLIER,
@@ -51,18 +59,9 @@ app.conf.beat_schedule = {
         },
     },
 
-    # market tasks
-    'handle open stop loss': {
-        'task': 'market.tasks.stop_loss.handle_stop_loss',
-        'schedule': 1 * TASK_MULTIPLIER,
-        'options': {
-            'queue': 'stop_loss',
-            'expire': 1 * TASK_MULTIPLIER
-        },
-    },
     'create_stake_revenue': {
         'task': 'stake.tasks.stake_revenue.create_stake_revenue',
-        'schedule': crontab(hour=19, minute=30),
+        'schedule': crontab(hour=22, minute=0),
         'options': {
             'queue': 'celery',
             'expire': 36000
@@ -70,10 +69,37 @@ app.conf.beat_schedule = {
     },
     'complete_stake_requests': {
         'task': 'stake.tasks.stake_finish.finish_stakes',
-        'schedule': crontab(hour=20, minute=0),
+        'schedule': crontab(hour=21, minute=0),
         'options': {
             'queue': 'celery',
             'expire': 36000
+        },
+    },
+
+    'free_missing_locks': {
+        'task': 'ledger.tasks.locks.free_missing_locks',
+        'schedule': 15,
+        'options': {
+            'queue': 'celery',
+            'expire': 15
+        },
+    },
+
+    'pending_otc_trades': {
+        'task': 'ledger.tasks.otc.accept_pending_otc_trades',
+        'schedule': 30,
+        'options': {
+            'queue': 'celery',
+            'expire': 30
+        },
+    },
+
+    'fill_trades_revenue': {
+        'task': 'accounting.tasks.revenue.fill_revenue_filled_prices',
+        'schedule': 30 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'celery',
+            'expire': 30 * TASK_MULTIPLIER
         },
     },
 
@@ -124,28 +150,11 @@ app.conf.beat_schedule = {
 
     'handle_missing_payments': {
         'task': 'financial.tasks.gateway.handle_missing_payments',
-        'schedule': 30 * TASK_MULTIPLIER,
+        'schedule': 60 * TASK_MULTIPLIER,
         'options': {
             'queue': 'finance',
-            'expire': 30 * TASK_MULTIPLIER
+            'expire': 60 * TASK_MULTIPLIER
         },
-    },
-
-    'random_trader': {
-        'task': 'trader.tasks.random_trader.random_trader',
-        'schedule': 17 * TASK_MULTIPLIER,
-        'options': {
-            'queue': 'trader',
-            'expire': 17 * TASK_MULTIPLIER
-        }
-    },
-    'carrot_trader': {
-        'task': 'trader.tasks.carrot_trader.carrot_trader',
-        'schedule': 7 * TASK_MULTIPLIER,
-        'options': {
-            'queue': 'trader',
-            'expire': 7 * TASK_MULTIPLIER
-        }
     },
 
     'update_accounts_pnl': {
@@ -155,14 +164,40 @@ app.conf.beat_schedule = {
             'queue': 'history',
         }
     },
+
+    'create_analytics': {
+        'task': 'analytics.tasks.create_analytics',
+        'schedule': crontab(hour=21, minute=0),
+        'options': {
+            'queue': 'history',
+        }
+    },
+
     'create_snapshot': {
         'task': 'ledger.tasks.snapshot.create_snapshot',
-        'schedule': crontab(minute='*/5'),
+        'schedule': crontab(minute='1-59/5'),
         'options': {
             'queue': 'history',
             'expire': 200
         }
     },
+    'provider_income': {
+        'task': 'accounting.tasks.provider.fill_provider_incomes',
+        'schedule': crontab(minute=30),
+        'options': {
+            'queue': 'history',
+            'expire': 3600,
+        },
+    },
+    'blocklink_incomes': {
+        'task': 'accounting.tasks.blocklink.fill_blocklink_incomes',
+        'schedule': crontab(minute=30),
+        'options': {
+            'queue': 'history',
+            'expire': 3600,
+        },
+    },
+
     'create_vault_snapshot': {
         'task': 'accounting.tasks.vault.update_vaults',
         'schedule': crontab(minute='*/5'),
@@ -185,6 +220,58 @@ app.conf.beat_schedule = {
         'options': {
             'queue': 'celery',
             'expire': 300 * TASK_MULTIPLIER
+        },
+    },
+
+    'send_notifications_push': {
+        'task': 'accounts.tasks.notification.send_notifications_push',
+        'schedule': 5 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'notif-manager',
+            'expire': 5 * TASK_MULTIPLIER
+        },
+    },
+    'process_bulk_notifications': {
+        'task': 'accounts.tasks.notification.process_bulk_notifications',
+        'schedule': 60 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'notif-manager',
+            'expire': 60 * TASK_MULTIPLIER
+        },
+    },
+    'send_sms_notifications': {
+        'task': 'accounts.tasks.notification.send_sms_notifications',
+        'schedule': 10 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'notif-manager',
+            'expire': 10 * TASK_MULTIPLIER
+        },
+    },
+
+    'send_signup_not_deposited_sms': {
+        'task': 'retention.tasks.send_signup_not_deposited_sms',
+        'schedule': 60,
+        'options': {
+            'queue': 'celery',
+            'expire': 60
+        },
+    },
+
+    'send_signup_not_verified_push': {
+        'task': 'retention.tasks.send_signup_not_verified_push',
+        'schedule': 60,
+        'options': {
+            'queue': 'celery',
+            'expire': 60
+        },
+    },
+
+    'expire_missions': {
+        'task': 'gamify.tasks.deactivate_expired_missions',
+        'schedule': crontab(hour=20, minute=30),
+        'options': {
+            'queue': 'celery',
+            'expire': 3600
         },
     },
 }

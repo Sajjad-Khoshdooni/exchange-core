@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class ReferralTrx(models.Model):
-    REFERRAL_MAX_RETURN_PERCENT = 30
 
     REFERRER = 'referrer'
     TRADER = 'trader'

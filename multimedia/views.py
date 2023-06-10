@@ -2,6 +2,7 @@ from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework import serializers
 from rest_framework.parsers import FormParser, MultiPartParser, FileUploadParser
 
+from accounts.authentication import is_app
 from multimedia.models import Image, Banner
 
 
@@ -31,7 +32,13 @@ class BannerSerializer(serializers.ModelSerializer):
 
 
 class BannerListView(ListAPIView):
-    authentication_classes = []
-    permission_classes = []
     serializer_class = BannerSerializer
-    queryset = Banner.objects.filter(active=True)
+    permission_classes = []
+
+    def get_queryset(self):
+        banners = Banner.objects.filter(active=True)
+
+        if is_app(self.request):
+            banners = banners.exclude(limit=Banner.ONLY_DESKTOP)
+
+        return banners

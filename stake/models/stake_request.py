@@ -1,12 +1,18 @@
+import uuid
 from decimal import Decimal
 
 from django.db import models
 from django.db.models import Sum
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.utils import timezone
 
+from accounts.event.producer import get_kafka_producer
 from accounts.models import Account
 from accounts.tasks import send_message_by_kavenegar
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
+from accounts.utils.dto import StakeRequestEvent
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet, Trx
 from ledger.utils.fields import get_group_id_field, get_amount_field
@@ -35,6 +41,10 @@ class StakeRequest(models.Model):
     account = models.ForeignKey(Account, on_delete=models.CASCADE)
 
     created = models.DateTimeField(auto_now_add=True)
+    start_at = models.DateTimeField(null=True, blank=True)
+    cancel_request_at = models.DateTimeField(null=True, blank=True)
+    cancel_pending_at = models.DateTimeField(null=True, blank=True)
+    end_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return str(self.stake_option) + ' ' + str(self.account_id)
@@ -71,6 +81,16 @@ class StakeRequest(models.Model):
         ]
 
         assert (old_status, new_status) in valid_change_status, 'invalid change_status'
+
+        updating_datetime_field_mapping = {
+            self.PENDING: 'start_at',
+            self.CANCEL_PROCESS: 'cancel_request_at',
+            self.CANCEL_PENDING: 'cancel_pending_at',
+            self.CANCEL_COMPLETE: 'end_at',
+            self.DONE: 'end_at',
+            self.FINISHED: 'end_at'
+        }
+        setattr(self, updating_datetime_field_mapping[new_status], timezone.now())
 
         if new_status == self.CANCEL_COMPLETE and \
                 old_status in [self.PROCESS, self.CANCEL_PROCESS, self.CANCEL_PENDING]:
@@ -153,3 +173,20 @@ class StakeRequest(models.Model):
         else:
             self.status = new_status
             self.save()
+
+
+@receiver(post_save, sender=StakeRequest)
+def handle_stake_request_save(sender, instance, created, **kwargs):
+    producer = get_kafka_producer()
+    event = StakeRequestEvent(
+        created=instance.created,
+        user_id=instance.account.user_id,
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + StakeRequestEvent.type),
+        stake_request_id=instance.id,
+        stake_option_id=instance.stake_option.id,
+        amount=instance.amount,
+        status=instance.status,
+        coin=instance.stake_option.asset.symbol,
+        apr=instance.stake_option.apr
+    )
+    producer.produce(event)

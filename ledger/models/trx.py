@@ -5,6 +5,7 @@ from django.db import models
 from django.db.models import CheckConstraint, Q
 
 from ledger.utils.fields import get_amount_field
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,9 @@ class Trx(models.Model):
     STAKE_FEE = 'sf'
     CLOSE_MARGIN = 'cm'
     DEBT_CLEAR = 'dc'
+    DUST = 'du'
+    MANUAL = 'mn'
+    DELIST = 'dl'
 
     created = models.DateTimeField(auto_now_add=True)
 
@@ -39,11 +43,23 @@ class Trx(models.Model):
 
     scope = models.CharField(
         max_length=2,
-        choices=((TRADE, 'trade'), (TRANSFER, 'transfer'), (MARGIN_TRANSFER, 'margin transfer'),
-                 (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (LIQUID, 'liquid'),
-                 (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'), (REVERT, 'revert'), (AIRDROP, 'airdrop'),
-                 (STAKE, 'stake'), (STAKE_REVENUE, 'stake revenue'), (STAKE_FEE, 'stake fee'), (RESERVE, 'reserve'))
+        choices=(
+            (TRADE, 'trade'), (TRANSFER, 'transfer'), (MARGIN_TRANSFER, 'margin transfer'),
+            (MARGIN_BORROW, 'margin borrow'), (COMMISSION, 'commission'), (LIQUID, 'liquid'),
+            (FAST_LIQUID, 'fast liquid'), (PRIZE, 'prize'), (REVERT, 'revert'), (AIRDROP, 'airdrop'),
+            (STAKE, 'stake'), (STAKE_REVENUE, 'stake revenue'), (STAKE_FEE, 'stake fee'), (RESERVE, 'reserve'),
+            (DUST, 'dust'), (MANUAL, 'manual'), (DELIST, 'delist')
+        )
     )
+
+    def revert(self, pipeline):
+        pipeline.new_trx(
+            sender=self.receiver,
+            receiver=self.sender,
+            amount=self.amount,
+            group_id=self.group_id,
+            scope=Trx.REVERT
+        )
 
     class Meta:
         unique_together = ('group_id', 'sender', 'receiver', 'scope')

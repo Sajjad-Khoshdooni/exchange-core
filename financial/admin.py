@@ -3,43 +3,35 @@ from decimal import Decimal
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import Sum
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
+from accounting.models import VaultItem, Vault
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str
-from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, FiatTransaction, \
-    FiatWithdrawRequest, ManualTransferHistory, MarketingSource, MarketingCost, FiatHedgeTrx
+from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
+    FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, BankPaymentId
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.withdraw import FiatWithdraw
-from ledger.utils.precision import humanize_number, get_presentation_amount
-from ledger.utils.price import get_tether_irt_price, BUY, SELL
+from ledger.utils.precision import humanize_number
 from ledger.utils.withdraw_verify import RiskFactor
 
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'merchant_id', 'active', 'active_for_staff', 'get_total_wallet_irt_value',
+    list_display = ('name', 'type', 'merchant_id', 'active', 'active_for_staff', 'withdraw_enable', 'get_balance',
                     'get_min_deposit_amount', 'get_max_deposit_amount')
-    list_editable = ('active', 'active_for_staff', )
-    readonly_fields = ('get_total_wallet_irt_value', 'get_min_deposit_amount', 'get_max_deposit_amount')
+    list_editable = ('active', 'active_for_staff', 'withdraw_enable')
+    readonly_fields = ('get_balance', 'get_min_deposit_amount', 'get_max_deposit_amount')
 
     @admin.display(description='balance')
-    def get_total_wallet_irt_value(self, gateway: Gateway):
-        if not gateway.type:
-            return
-
-        channel = FiatWithdraw.get_withdraw_channel(gateway.type)
-
-        try:
-            return humanize_number(Decimal(channel.get_total_wallet_irt_value()))
-        except:
-            return
+    def get_balance(self, gateway: Gateway):
+        v = VaultItem.objects.filter(vault__type=Vault.GATEWAY, vault__key=gateway.id).first()
+        return v and v.value_irt
 
     @admin.display(description='min deposit')
     def get_min_deposit_amount(self, gateway: Gateway):
@@ -48,14 +40,6 @@ class GatewayAdmin(admin.ModelAdmin):
     @admin.display(description='max deposit')
     def get_max_deposit_amount(self, gateway: Gateway):
         return humanize_number(Decimal(gateway.max_deposit_amount))
-
-
-@admin.register(FiatTransaction)
-class FiatTransferRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'deposit', 'status', 'amount')
-    raw_id_fields = ('account', )
-    list_filter = ('deposit', 'status')
-    ordering = ('-created', )
 
 
 class UserRialWithdrawRequestFilter(SimpleListFilter):
@@ -74,11 +58,11 @@ class UserRialWithdrawRequestFilter(SimpleListFilter):
 
 
 @admin.register(FiatWithdrawRequest)
-class FiatWithdrawRequestAdmin(admin.ModelAdmin):
+class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     fieldsets = (
         ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'bank_account',
-         'ref_doc', 'get_withdraw_request_receive_time', 'provider_withdraw_id', 'get_risks')}),
+         'get_withdraw_request_receive_time', 'gateway', 'get_risks')}),
         ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
                                       'get_user')}),
         ('نظر', {'fields': ('comment',)})
@@ -87,12 +71,12 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
     ordering = ('-created', )
     readonly_fields = (
         'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount', 'get_risks',
-        'get_withdraw_request_user', 'withdraw_channel', 'get_withdraw_request_receive_time', 'get_user'
+        'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user'
     )
 
-    list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'withdraw_channel', 'ref_id')
+    list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
 
-    actions = ('resend_withdraw_request', 'accept_withdraw_request', 'reject_withdraw_request')
+    actions = ('resend_withdraw_request', 'accept_withdraw_request', 'reject_withdraw_request', 'refund')
 
     @admin.display(description='نام و نام خانوادگی')
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
@@ -159,6 +143,13 @@ class FiatWithdrawRequestAdmin(admin.ModelAdmin):
 
         for fiat_withdraw in valid_qs:
             fiat_withdraw.change_status(FiatWithdrawRequest.CANCELED)
+
+    @admin.action(description='refund', permissions=['change'])
+    def refund(self, request, queryset):
+        valid_qs = queryset.filter(status=FiatWithdrawRequest.DONE)
+
+        for fiat_withdraw in valid_qs:
+            fiat_withdraw.refund()
 
     def save_model(self, request, obj: FiatWithdrawRequest, form, change):
         if obj.id:
@@ -335,12 +326,6 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
                 user.change_status(User.REJECTED)
 
 
-@admin.register(ManualTransferHistory)
-class ManualTransferHistoryAdmin(SimpleHistoryAdmin):
-    list_display = ('created', 'asset', 'amount', 'full_fill_amount', 'deposit', 'done')
-    list_filter = ('deposit', 'done')
-
-
 @admin.register(MarketingSource)
 class MarketingSourceAdmin(admin.ModelAdmin):
     list_display = ('utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term')
@@ -353,31 +338,37 @@ class MarketingCostAdmin(admin.ModelAdmin):
     search_fields = ('source__utm_source', )
 
 
-@admin.register(FiatHedgeTrx)
-class FiatHedgeTrxAdmin(admin.ModelAdmin):
-    list_display = ('base_amount', 'target_amount', 'price', 'get_side', 'source', 'reason')
-    list_filter = ('source', )
+@admin.register(ManualTransfer)
+class ManualTransferAdmin(admin.ModelAdmin):
+    list_display = ('created', 'amount', 'bank_account', 'status')
+    readonly_fields = ('status', )
 
-    @admin.display(description='side')
-    def get_side(self, fiat_hedge: FiatHedgeTrx):
-        return SELL if fiat_hedge.target_amount > 0 else BUY
+    def save_model(self, request, obj: ManualTransfer, form, change):
+        obj.save()
 
-    def changelist_view(self, request, extra_context=None):
+        if obj.status == ManualTransfer.PROCESS:
+            handler = FiatWithdraw.get_withdraw_channel(obj.gateway)
 
-        aggregates = FiatHedgeTrx.objects.aggregate(
-            total_base_amount=Sum('base_amount'),
-            total_target_amount=Sum('target_amount'),
-        )
+            handler.create_withdraw(
+                wallet_id=handler.gateway.wallet_id,
+                receiver=obj.bank_account,
+                amount=obj.amount,
+                request_id='mt-%s' % obj.id
+            )
 
-        total_base = aggregates['total_base_amount'] or 0
-        total_target = aggregates['total_target_amount'] or 0
+            obj.status = ManualTransfer.DONE
+            obj.save(update_fields=['status'])
 
-        usdt_irt = get_tether_irt_price(BUY)
 
-        context = {
-            'irt': round(total_base),
-            'usdt': round(total_target, 2),
-            'total_value': round(total_target + total_base / usdt_irt, 2),
-        }
+@admin.register(PaymentIdRequest)
+class PaymentIdRequestAdmin(admin.ModelAdmin):
+    list_display = ('created', 'bank_payment_id', 'amount', 'payment_id', 'status')
+    search_fields = ('payment_id', )
+    list_filter = ('status',)
 
-        return super().changelist_view(request, extra_context=context)
+
+@admin.register(BankPaymentId)
+class BankPaymentIdAdmin(admin.ModelAdmin):
+    list_display = ('created', 'bank_account', 'gateway', 'destination_iban', 'registry_status')
+    search_fields = ('destination_iban', )
+    list_filter = ('registry_status',)

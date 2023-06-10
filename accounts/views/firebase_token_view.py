@@ -8,10 +8,11 @@ from accounts.utils.ip import get_client_ip
 
 class FirebaseTokenSerializer(serializers.ModelSerializer):
     token = serializers.CharField()
+    source = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
 
     class Meta:
         model = FirebaseToken
-        fields = ('token', 'user_agent', 'ip')
+        fields = ('token', 'user_agent', 'ip', 'source')
 
 
 class FirebaseTokenView(APIView):
@@ -39,5 +40,11 @@ class FirebaseTokenView(APIView):
             else:
                 return Response({'msg': 'change user of token impossible'})
         else:
-            FirebaseToken.objects.create(token=token, user=user, ip=ip, user_agent=user_agent)
+            FirebaseToken.objects.create(
+                token=token,
+                user=user,
+                ip=ip,
+                user_agent=user_agent,
+                native_app=serializer.validated_data.get('source') == 'app'
+            )
             return Response({'msg': 'token create'})

@@ -5,13 +5,15 @@ from decimal import Decimal
 
 from celery import shared_task
 from decouple import config
+from django.conf import settings
 
 from accounts.models import Account
+from ledger.utils.external_price import BUY, SELL
 from market.models import PairSymbol
 from market.models.order import CancelOrder, Order
 from market.utils.order_utils import get_market_top_price_amounts
 from market.utils.redis import get_daily_order_size_factors
-from trader.bots.utils import random_buy, random_sell
+from trader.bots.utils import get_top_prices_exclude_system_orders, random_buy, random_sell
 
 logger = logging.getLogger(__name__)
 
@@ -26,29 +28,39 @@ def random_trader():
 
     symbols = set(random.choices(symbols, k=choices_count))
 
-    account = get_account()
+    account = Account.objects.get(id=settings.RANDOM_TRADER_ACCOUNT_ID)
     daily_factors = get_daily_order_size_factors(symbol_ids=list(map(lambda s: s.id, symbols)))
-    market_top_price_amounts = get_market_top_price_amounts(symbol_ids=list(map(lambda s: s.id, symbols)))
+    system_top_price_amounts = get_market_top_price_amounts(
+        order_types_in=(Order.DEPTH, Order.BOT),
+        symbol_ids=list(map(lambda s: s.id, symbols))
+    )
+    users_top_prices = get_top_prices_exclude_system_orders([s.id for s in symbols])
 
     for symbol in symbols:
         top_price_amounts = {
-            order_type: market_top_price_amounts[(symbol.id, order_type)] for order_type in (Order.BUY, Order.SELL)
+            side: system_top_price_amounts[(symbol.id, side)] for side in (BUY, SELL)
         }
-        random_trade(symbol, account, top_price_amounts, daily_factors[symbol.id])
+        user_top_prices = {side: users_top_prices[symbol.id, side] for side in [BUY, SELL]}
+        random_trade(symbol, account, top_price_amounts, user_top_prices, daily_factors[symbol.id])
 
 
-def get_account():
-    account_id = config('BOT_RANDOM_TRADER_ACCOUNT_ID')
-    return Account.objects.get(id=account_id)
-
-
-def random_trade(symbol: PairSymbol, account, top_price_amounts, daily_factor: int):
+def random_trade(symbol: PairSymbol, account, top_price_amounts, user_top_prices, daily_factor: int):
     logger.info(f'random trading {symbol} ({top_price_amounts}) {daily_factor}')
 
-    random_func, max_amount, market_price = random.choices([
-        (random_buy, top_price_amounts[Order.SELL]['amount'], top_price_amounts[Order.SELL]['price']),
-        (random_sell, top_price_amounts[Order.BUY]['amount'], top_price_amounts[Order.BUY]['price'])
-    ])[0]
+    available_choices = []
+    random_funcs = {BUY: random_sell, SELL: random_buy}
+
+    for side in (BUY, SELL):
+        if (not user_top_prices[side]) and top_price_amounts[side]['price']:
+            available_choices.append(
+                (random_funcs[side], top_price_amounts[side]['amount'], top_price_amounts[side]['price'])
+            )
+
+    if not available_choices:
+        logger.info(f'skip random trading {symbol}')
+        return
+
+    random_func, max_amount, market_price = random.choices(available_choices)[0]
 
     try:
         logger.info(f'random trading {symbol} {random_func.__name__}')

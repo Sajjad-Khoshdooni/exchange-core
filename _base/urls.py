@@ -3,12 +3,16 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.views.generic import TemplateView
+from django_otp.admin import OTPAdminSite
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 
 from accounts.views import HealthView
 from accounts.views.dashboard import dashboard
+
+admin.site.__class__ = OTPAdminSite
+
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -27,17 +31,20 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/health/ready/', HealthView.as_view()),
     path('api/v1/accounts/', include('accounts.urls')),
+    path('analytics/', include('analytics.urls')),
     path('api/v1/media/', include('multimedia.urls')),
     path('api/v1/finance/', include(('financial.urls', 'financial'), 'finance', )),
     path('api/v1/market/', include('market.urls')),
     path('api/v1/stake/', include('stake.urls')),
+    path('api/v2/stake/', include('stake.urls_v2')),
     path('api/v1/gamify/', include('gamify.urls')),
-    path('api/v1/experiment/', include('experiment.urls')),
+    path('api/v1/retention/', include('retention.urls')),
     path('api/', include('ledger.urls')),
     path('hijack/', include('hijack.urls')),
     path('robots.txt', TemplateView.as_view(template_name="robots.txt", content_type="text/plain")),
     path('dashboard/', dashboard),
 
+    path('tinymce/', include('tinymce.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.STAGING:

@@ -1,7 +1,6 @@
 import logging
 from datetime import timedelta
 
-from decouple import config
 from django.conf import settings
 from django.db.models import Sum
 from django.utils import timezone
@@ -38,10 +37,12 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
     code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     def create(self, validated_data):
-        user = self.context['request'].user
+        request = self.context['request']
+        user = request.user
+        account = user.get_account()
 
-        if not can_withdraw(user.account):
-            raise ValidationError('در حال حاضر امکان برداشت وجود ندارد.')
+        if not can_withdraw(account, request):
+            raise ValidationError('امکان برداشت وجود ندارد.')
 
         if user.level < user.LEVEL2:
             raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
@@ -52,7 +53,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         bank_account = get_object_or_404(BankAccount, iban=iban, user=user, verified=True, deleted=False)
 
-        assert user.account.is_ordinary_user()
+        assert account.is_ordinary_user()
 
         if not is_48h_rule_passed(user):
             logger.info('FiatRequest rejected due to 48h rule. user=%s' % user.id)
@@ -79,6 +80,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         today_withdraws = FiatWithdrawRequest.objects.filter(
             bank_account=bank_account,
             created__gte=today,
+        ).exclude(
+            status=FiatWithdrawRequest.CANCELED
         ).aggregate(amount=Sum('amount'))['amount'] or 0
 
         if amount + today_withdraws > MAX_WITHDRAW:
@@ -86,7 +89,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             raise ValidationError({'amount': 'حداکثر میزان برداشت به حساب بانکی در روز ۱۰۰ میلیون تومان است.'})
 
         asset = Asset.get(Asset.IRT)
-        wallet = asset.get_wallet(user.account)
+        wallet = asset.get_wallet(account)
 
         if not wallet.has_balance(amount):
             raise ValidationError({'amount': 'موجودی کافی نیست.'})
@@ -99,6 +102,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         fee_amount = 5000
         withdraw_amount = amount - fee_amount
 
+        gateway = Gateway.get_active_withdraw()
+
         try:
             with WalletPipeline() as pipeline:  # type: WalletPipeline
                 withdraw_request = FiatWithdrawRequest.objects.create(
@@ -106,7 +111,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
                     amount=withdraw_amount,
                     fee_amount=fee_amount,
                     bank_account=bank_account,
-                    withdraw_channel=config('WITHDRAW_CHANNEL')
+                    gateway=gateway,
                 )
 
                 pipeline.new_lock(
@@ -165,20 +170,19 @@ class WithdrawHistorySerializer(serializers.ModelSerializer):
         fields = ('id', 'created', 'status', 'fee_amount', 'amount', 'bank_account', 'ref_id',
                   'rial_estimate_receive_time',)
 
-    def get_rial_estimate_receive_time(self, fiat_withdraw_request: FiatWithdrawRequest):
-        if fiat_withdraw_request.status in (FiatWithdrawRequest.INIT, FiatWithdrawRequest.PROCESSING):
-            gateway = Gateway.get_active()
+    def get_rial_estimate_receive_time(self, withdraw_request: FiatWithdrawRequest):
+        if withdraw_request.status in (FiatWithdrawRequest.INIT, FiatWithdrawRequest.PROCESSING):
+
+            gateway = withdraw_request.gateway
 
             if gateway.expected_withdraw_datetime and gateway.expected_withdraw_datetime > timezone.now():
                 return gateway.expected_withdraw_datetime
 
-        return fiat_withdraw_request.receive_datetime
+        return withdraw_request.receive_datetime
 
     def get_status(self, withdraw: FiatWithdrawRequest):
         if withdraw.status == FiatWithdrawRequest.INIT:
             return FiatWithdrawRequest.PROCESSING
-        if withdraw.status == FiatWithdrawRequest.PENDING:
-            return FiatWithdrawRequest.DONE
         else:
             return withdraw.status
 

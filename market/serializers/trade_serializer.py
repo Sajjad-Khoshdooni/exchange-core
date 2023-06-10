@@ -3,17 +3,17 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from ledger.models import Asset
-from ledger.models.asset import AssetSerializerMini
+from ledger.utils.external_price import BUY
 from ledger.utils.precision import floor_precision, decimal_to_str
-from market.models import Trade, Order
+from market.models import Trade, BaseTrade
 
 
 class AccountTradeSerializer(serializers.ModelSerializer):
-    coin = serializers.CharField(source='symbol.asset.symbol')
-    pair = serializers.CharField(source='symbol.base_asset.symbol')
-    pair_amount = serializers.SerializerMethodField()
+    asset = serializers.CharField(source='symbol.asset.symbol')
+    base_asset = serializers.CharField(source='symbol.base_asset.symbol')
+    base_amount = serializers.SerializerMethodField()
 
-    def get_pair_amount(self, trade: Trade):
+    def get_base_amount(self, trade: Trade):
         return trade.price * trade.amount
 
     def to_representation(self, trade: Trade):
@@ -23,20 +23,21 @@ class AccountTradeSerializer(serializers.ModelSerializer):
             amount = floor_precision(trade.symbol.min_trade_quantity, trade.symbol.step_size)
         data['amount'] = str(amount)
         data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), trade.symbol.tick_size))
-        data['pair_amount'] = decimal_to_str(floor_precision(Decimal(data['pair_amount']), trade.symbol.tick_size))
+        data['base_amount'] = decimal_to_str(floor_precision(Decimal(data['base_amount']), trade.symbol.tick_size))
+
         if 'fee_amount' in data:
-            if data['side'] == Order.BUY:
+            if data['side'] == BUY:
                 data['fee_amount'] = trade.symbol.asset.get_presentation_amount(data['fee_amount'])
             elif trade.symbol.base_asset.symbol == Asset.IRT:
                 data['fee_amount'] = trade.symbol.asset.get_presentation_price_irt(data['fee_amount'])
             elif trade.symbol.base_asset.symbol == Asset.USDT:
                 data['fee_amount'] = trade.symbol.asset.get_presentation_price_usdt(data['fee_amount'])
-            data['fee_asset'] = data['coin'] if data['side'] == Order.BUY else data['pair']
+            data['fee_asset'] = data['asset'] if data['side'] == BUY else data['base_asset']
         return data
 
     class Meta:
         model = Trade
-        fields = ('created', 'coin', 'pair', 'side', 'amount', 'price', 'pair_amount', 'fee_amount', 'market')
+        fields = ('created', 'asset', 'base_asset', 'side', 'amount', 'price', 'base_amount', 'fee_amount', 'market')
 
 
 class TradeSerializer(serializers.ModelSerializer):
@@ -44,7 +45,7 @@ class TradeSerializer(serializers.ModelSerializer):
 
     @classmethod
     def get_is_buyer_maker(cls, instance: Trade):
-        return (instance.side == Order.BUY) == instance.is_maker
+        return (instance.side == BUY) == instance.is_maker
 
     class Meta:
         model = Trade
@@ -62,3 +63,26 @@ class TradeSerializer(serializers.ModelSerializer):
         data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), trade.symbol.tick_size))
 
         return data
+
+
+class TradePairSerializer(TradeSerializer):
+    symbol = serializers.CharField(source='symbol.name')
+    client_order_id = serializers.SerializerMethodField()
+    pair_order_id = serializers.SerializerMethodField()
+    pair_client_order_id = serializers.SerializerMethodField()
+
+    def get_client_order_id(self, instance: Trade):
+        return self.context['client_order_id_mapping'].get(instance.order_id)
+
+    def get_pair_order_id(self, instance: Trade):
+        mapping = self.context['maker_taker_mapping'].get(instance.group_id)
+        if mapping:
+            return mapping[1] if instance.is_maker else mapping[0]
+
+    def get_pair_client_order_id(self, instance: Trade):
+        return self.context['client_order_id_mapping'].get(self.get_pair_order_id(instance))
+
+    class Meta:
+        model = Trade
+        fields = ('id', 'symbol', 'side', 'created', 'amount', 'price', 'is_maker', 'order_id', 'client_order_id',
+                  'pair_order_id', 'pair_client_order_id')

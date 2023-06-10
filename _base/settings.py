@@ -5,9 +5,8 @@ from datetime import timedelta
 from pathlib import Path
 
 import sentry_sdk
-from decouple import Csv
+from decouple import Csv, config
 from sentry_sdk.integrations.django import DjangoIntegration
-from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -17,13 +16,19 @@ DEBUG = config('DEBUG', cast=bool, default=False)
 STAGING = config('STAGING', cast=bool, default=False)
 TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
+BLOCKLINK_TOKEN = config('BLOCKLINK_TOKEN')
+BLOCKLINK_BASE_URL = config('BLOCKLINK_BASE_URL', default='https://blocklink.raastin.com')
+
 DEBUG_OR_TESTING = DEBUG or TESTING
 DEBUG_OR_TESTING_OR_STAGING = DEBUG or TESTING or STAGING
+
 
 HOST_URL = config('HOST_URL', default='https://api.raastin.com')
 PANEL_URL = config('PANEL_URL', default='https://raastin.com')
 
 CELERY_TASK_ALWAYS_EAGER = config('CELERY_ALWAYS_EAGER', default=False)
+
+KAFKA_HOST_URL = config('KAFKA_HOST_URL', default='')
 
 # Application definition
 
@@ -46,7 +51,10 @@ INSTALLED_APPS = [
     'drf_yasg',
     'simple_history',
     'django_user_agents',
+    'django_otp',
+    'django_otp.plugins.otp_totp',
 
+    'analytics',
     'financial',
     'multimedia',
     'accounts',
@@ -57,7 +65,10 @@ INSTALLED_APPS = [
     'jalali_date',
     'stake',
     'gamify',
-    'experiment'
+    'experiment',
+    'retention',
+
+    'tinymce',
 ]
 
 
@@ -75,7 +86,8 @@ MIDDLEWARE = [
     'simple_history.middleware.HistoryRequestMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
 
-    'utilities.middleware.SetLocaleMiddleware',
+    'accounts.middleware.SetLocaleMiddleware',
+    'django_otp.middleware.OTPMiddleware'
 ]
 
 # todo: fix csrf check
@@ -157,6 +169,7 @@ MARKET_CACHE_LOCATION = LOCAL_REDIS_URL + '/3'
 METRICS_CACHE_LOCATION = LOCAL_REDIS_URL + '/4'
 
 PRICE_CACHE_LOCATION = config('PRICE_CACHE_LOCATION', default='redis://127.0.0.1:6379/2')
+SOCKET_SERVER_CACHE_LOCATION = config('SOCKET_SERVER_CACHE_LOCATION', default='redis://127.0.0.1:6379')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -216,7 +229,6 @@ if not DEBUG_OR_TESTING:
     MINIO_SECRET_KEY = config('MINIO_STORAGE_SECRET_KEY')
     MINIO_EXTERNAL_ENDPOINT_USE_HTTPS = True
     MINIO_USE_HTTPS = False
-    MINIO_CONSISTENCY_CHECK_ON_START = True
 
     MINIO_PRIVATE_BUCKETS = [
         'core-media',
@@ -246,7 +258,7 @@ sentry_sdk.init(
     # Set traces_sample_rate to 1.0 to capture 100%
     # of transactions for performance monitoring.
     # We recommend adjusting this value in production.
-    traces_sample_rate=0.1,
+    traces_sample_rate=0,
 
     # If you wish to associate users to errors (assuming you are using
     # django.contrib.auth) you may enable sending PII data.
@@ -293,7 +305,7 @@ if config('JWT_PRIVATE_KEY', None):
         'ALGORITHM': 'RS256',
         'SIGNING_KEY': config('JWT_PRIVATE_KEY', default=''),
         'VERIFYING_KEY': config('JWT_PUBLIC_KEY', default=''),
-        'REFRESH_TOKEN_LIFETIME': timedelta(hours=6),
+        'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     }
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -363,6 +375,9 @@ JALALI_DATE_DEFAULTS = {
 }
 
 SYSTEM_ACCOUNT_ID = config('SYSTEM_ACCOUNT_ID', default=1)
+OTC_ACCOUNT_ID = config('OTC_ACCOUNT', cast=int)
+RANDOM_TRADER_ACCOUNT_ID = config('BOT_RANDOM_TRADER_ACCOUNT_ID', default=None)
+MARKET_MAKER_ACCOUNT_ID = config('MARKET_MAKER_ACCOUNT_ID', default=None)
 
 BRAND_EN = config('BRAND_EN', default='')
 BRAND = config('BRAND', default='')
@@ -370,4 +385,12 @@ BRAND = config('BRAND', default='')
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 2000
 
 TRADE_ENABLE = config('TRADE_ENABLE', cast=bool, default=True)
+MARKET_TRADE_ENABLE = config('MARKET_TRADE_ENABLE', cast=bool, default=True)
 WITHDRAW_ENABLE = config('WITHDRAW_ENABLE', cast=bool, default=True)
+
+TINYMCE_JS_URL = os.path.join(MINIO_STORAGE_STATIC_URL, "tinymce/tinymce.min.js")
+
+EXCLUSIVE_SMS_NUMBER = config('EXCLUSIVE_SMS_NUMBER', default=None)
+RETENTION_ENABLE = bool(EXCLUSIVE_SMS_NUMBER)
+
+ZERO_USDT_HEDGE = config('ZERO_USDT_HEDGE', cast=bool, default=False)

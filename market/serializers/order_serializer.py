@@ -3,20 +3,22 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _, to_locale, get_language
 from rest_framework import serializers
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.generics import get_object_or_404
 
+from accounts.permissions import can_trade
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet, Asset, CloseRequest
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
     decimal_to_str
-from ledger.utils.price import IRT
+from ledger.utils.external_price import IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
-from market.utils.redis import MarketCacheHandler
+from market.utils.redis import MarketStreamCache
 
 logger = logging.getLogger(__name__)
 
@@ -45,28 +47,48 @@ class OrderSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        user = self.context['request'].user
-        if not settings.TRADE_ENABLE or not user.can_trade:
+        symbol_name = validated_data['symbol']['name'].upper()
+        log_prefix = 'CO %s: ' % symbol_name
+        logger.info(log_prefix + f' started creating... {timezone.now()}')
+        request = self.context['request']
+
+        if not can_trade(request):
             raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
 
-        symbol = get_object_or_404(PairSymbol, name=validated_data['symbol']['name'].upper())
+        if not settings.MARKET_TRADE_ENABLE and request.user.account.id != settings.MARKET_MAKER_ACCOUNT_ID:
+            raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
+
+        symbol = get_object_or_404(PairSymbol, name=symbol_name)
+
         if validated_data['fill_type'] == Order.LIMIT:
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
+
         elif validated_data['fill_type'] == Order.MARKET:
             validated_data['price'] = Order.get_market_price(symbol, Order.get_opposite_side(validated_data['side']))
             if not validated_data['price']:
                 raise Exception('Empty order book')
+
         wallet = self.post_validate(symbol, validated_data)
 
         try:
-            market_cache_handler = MarketCacheHandler()
             with WalletPipeline() as pipeline:
                 created_order = super(OrderSerializer, self).create(
-                    {**validated_data, 'wallet': wallet, 'symbol': symbol}
+                    {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol}
                 )
-                created_order.submit(pipeline, cache_handler=market_cache_handler)
-                
-            market_cache_handler.execute()
+                matched_trades = created_order.submit(pipeline)
+
+            extra = {} if matched_trades.trade_pairs else {'side': created_order.side}
+            MarketStreamCache().execute(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
+            filtered_trades = list(filter(lambda t: t.order_id == created_order.id, matched_trades.trades))
+            filled_amount = Decimal(sum(map(lambda t: t.amount, filtered_trades)))
+            created_order.filled_amount = filled_amount
+            filled_value = Decimal(sum(map(lambda t: t.price * t.amount, filtered_trades)))
+
+            for trade in matched_trades.trades:
+                trade.trigger_event()
+
+            self.context['trades'] = {created_order.id: (filled_amount, filled_value)}
+
         except InsufficientBalance:
             raise ValidationError(_('Insufficient Balance'))
         except Exception as e:
@@ -74,7 +96,7 @@ class OrderSerializer(serializers.ModelSerializer):
             if settings.DEBUG_OR_TESTING_OR_STAGING:
                 raise e
             raise APIException(_('Could not place order'))
-
+        logger.info(log_prefix + f' finished creating... {created_order.id} {timezone.now()}')
         return created_order
 
     def post_validate(self, symbol, validated_data):
@@ -173,7 +195,8 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
-                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel')
+                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel',
+                  'client_order_id')
         read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},

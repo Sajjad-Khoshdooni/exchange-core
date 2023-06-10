@@ -6,10 +6,11 @@ from django.conf import settings
 from django.db import models
 from rest_framework import serializers
 
-from _base.settings import SYSTEM_ACCOUNT_ID
+from _base.settings import SYSTEM_ACCOUNT_ID, OTC_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
-from ledger.utils.precision import get_precision, get_presentation_amount
+from ledger.utils.external_price import BUY, SELL
+from ledger.utils.precision import get_presentation_amount
 
 
 class InvalidAmount(Exception):
@@ -26,6 +27,8 @@ class Asset(models.Model):
     USDT = 'USDT'
     SHIB = 'SHIB'
 
+    ACTIVE, DISABLED = 'active', 'disabled'
+
     PRECISION = 8
 
     objects = models.Manager()
@@ -41,10 +44,6 @@ class Asset(models.Model):
     symbol = models.CharField(max_length=16, unique=True, db_index=True)
     original_symbol = models.CharField(max_length=16, blank=True)
 
-    trade_quantity_step = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
-    min_trade_quantity = models.DecimalField(max_digits=15, decimal_places=10, default='0.000001')
-    max_trade_quantity = models.DecimalField(max_digits=18, decimal_places=2, default=1e9)
-
     price_precision_usdt = models.SmallIntegerField(default=2)
     price_precision_irt = models.SmallIntegerField(default=0)
 
@@ -59,7 +58,14 @@ class Asset(models.Model):
 
     margin_enable = models.BooleanField(default=False)
     spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.PROTECT, null=True, blank=True)
-    new_coin = models.BooleanField(default=False)
+
+    publish_date = models.DateTimeField(null=True, blank=True)
+
+    otc_status = models.CharField(
+        max_length=8,
+        default=ACTIVE,
+        choices=((ACTIVE, ACTIVE), (BUY, BUY), (SELL, SELL), (DISABLED, DISABLED)),
+    )
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
@@ -80,7 +86,7 @@ class Asset(models.Model):
         if isinstance(account, int):
             account_filter = {'account_id': account}
 
-            if account == SYSTEM_ACCOUNT_ID:
+            if account in (SYSTEM_ACCOUNT_ID, OTC_ACCOUNT_ID):
                 account_type = Account.SYSTEM
             else:
                 account_type = Account.ORDINARY
@@ -114,20 +120,6 @@ class Asset(models.Model):
     def is_trade_base(self):
         return self.symbol in (self.IRT, self.USDT)
 
-    def is_trade_amount_valid(self, amount: Decimal, raise_exception: bool = False):
-        if raise_exception:
-            if amount < self.min_trade_quantity:
-                raise InvalidAmount('واحد وارد شده کوچک است.')
-            elif amount > self.max_trade_quantity:
-                raise InvalidAmount('واحد وارد شده بزرگ است.')
-            elif amount % self.trade_quantity_step != 0:
-                raise InvalidAmount('واحد وارد شده باید مضربی از %s باشد.' % self.get_presentation_amount(self.trade_quantity_step))
-
-        else:
-            return \
-                self.min_trade_quantity <= amount <= self.max_trade_quantity and \
-                amount % self.trade_quantity_step == 0
-
     def get_presentation_amount(self, amount: Decimal) -> str:
         return get_presentation_amount(amount, self.get_precision())
 
@@ -136,6 +128,19 @@ class Asset(models.Model):
 
     def get_presentation_price_usdt(self, price: Decimal) -> str:
         return get_presentation_amount(price, self.price_precision_usdt)
+
+    def get_original_symbol(self):
+        return self.original_symbol or self.symbol
+
+    def get_coin_multiplier(self) -> int:
+        if not self.original_symbol or self.symbol == self.original_symbol:
+            return 1
+        elif self.symbol.startswith('1M-'):
+            return 10 ** 6
+        elif self.symbol.startswith('1000'):
+            return 10 ** 3
+        else:
+            return 1
 
     @property
     def future_symbol(self):
@@ -148,7 +153,7 @@ class Asset(models.Model):
 class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
-        fields = ('symbol', 'trade_quantity_step', 'min_trade_quantity', 'max_trade_quantity')
+        fields = ('symbol', )
 
 
 class AssetSerializerMini(serializers.ModelSerializer):
@@ -162,13 +167,13 @@ class AssetSerializerMini(serializers.ModelSerializer):
         return asset.get_precision()
 
     def get_step_size(self, asset: Asset):
-        return get_precision(asset.trade_quantity_step)
+        return Asset.PRECISION
 
     def get_logo(self, asset: Asset):
         return settings.MINIO_STORAGE_STATIC_URL + '/coins/%s.png' % asset.symbol
 
     def get_original_symbol(self, asset: Asset):
-        return asset.original_symbol or asset.symbol
+        return asset.get_original_symbol()
 
     def get_original_name_fa(self, asset: Asset):
         return asset.original_name_fa or asset.name_fa

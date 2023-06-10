@@ -3,11 +3,13 @@ from uuid import uuid4
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import F
+from django.db.models import F, Sum
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
+from simple_history.admin import SimpleHistoryAdmin
 
+from accounting.models import ReservedAsset
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.admin_guard.html_tags import anchor_tag
@@ -16,12 +18,11 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network
+from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock
+from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE
-from ledger.utils.overview import AssetOverview
 from ledger.utils.precision import get_presentation_amount, humanize_presentation
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import get_trading_price_usdt, SELL
 from ledger.utils.provider import HEDGE, get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor
 from market.utils.fix import create_symbols_for_asset
@@ -37,35 +38,16 @@ class AssetAdmin(AdvancedAdmin):
     }
 
     list_display = (
-        'symbol', 'enable', 'get_hedge_value', 'get_hedge_amount', 'get_calc_hedge_amount',
+        'symbol', 'enable', 'get_hedge_value', 'get_hedge_value_abs', 'get_hedge_amount', 'get_calc_hedge_amount',
         'get_total_asset', 'get_users_balance', 'get_reserved_amount',
         'order', 'trend', 'trade_enable', 'hedge',
-        'margin_enable', 'new_coin', 'spread_category'
+        'margin_enable', 'publish_date', 'spread_category', 'otc_status'
     )
     list_filter = ('enable', 'trend', 'margin_enable', 'spread_category')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'new_coin', 'hedge')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'hedge')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('hedge_asset', 'setup_asset')
-
-    def changelist_view(self, request, extra_context=None):
-        self.overview = AssetOverview(calculated_hedge=True)
-
-        context = {
-            'hedge_value': round(self.overview.get_total_hedge_value(), 2),
-            'cum_hedge_value': round(self.overview.get_total_cumulative_hedge_value(), 2),
-
-            'margin_insurance_balance': self.overview.get_margin_insurance_balance(),
-            # 'binance_margin_ratio': round(self.overview.get_binance_margin_ratio(), 2),
-
-            'total_assets_usdt': round(self.overview.get_all_real_assets_value(), 0),
-            'users_usdt': round(self.overview.get_all_users_asset_value(), 0),
-            'exchange_assets_usdt': round(self.overview.get_exchange_assets_usdt(), 0),
-            'exchange_potential_usdt': round(self.overview.get_exchange_potential_usdt(), 0),
-            'reserved_assets_value': round(self.overview.get_total_reserved_assets_value(), 0),
-        }
-
-        return super().changelist_view(request, extra_context=context)
 
     def save_model(self, request, obj, form, change):
         if Asset.objects.filter(order=obj.order).exclude(id=obj.id).exists():
@@ -73,34 +55,78 @@ class AssetAdmin(AdvancedAdmin):
 
         return super(AssetAdmin, self).save_model(request, obj, form, change)
 
+    def get_queryset(self, request):
+        return super(AssetAdmin, self).get_queryset(request)\
+            .annotate(
+                hedge_value=F('assetsnapshot__hedge_value'),
+                hedge_value_abs=F('assetsnapshot__hedge_value_abs'),
+                hedge_amount=F('assetsnapshot__hedge_amount'),
+                calc_hedge_amount=F('assetsnapshot__calc_hedge_amount'),
+                users_amount=F('assetsnapshot__users_amount'),
+                total_amount=F('assetsnapshot__total_amount'),
+            )
+
     @admin.display(description='users')
     def get_users_balance(self, asset: Asset):
-        return humanize_presentation(self.overview.get_users_asset_amount(asset.symbol))
-    
+        users_amount = asset.users_amount
+
+        if users_amount is None:
+            return
+
+        return humanize_presentation(users_amount)
+
     @admin.display(description='total assets')
     def get_total_asset(self, asset: Asset):
-        return humanize_presentation(self.overview.get_real_assets(asset.symbol))
+        total_amount = asset.total_amount
+
+        if total_amount is None:
+            return
+
+        return humanize_presentation(total_amount)
 
     @admin.display(description='hedge amount')
     def get_hedge_amount(self, asset: Asset):
-        return humanize_presentation(self.overview.get_hedge_amount(asset.symbol))
+        hedge_amount = asset.hedge_amount
+
+        if hedge_amount is None:
+            return
+
+        return humanize_presentation(hedge_amount)
 
     @admin.display(description='calc hedge amount')
     def get_calc_hedge_amount(self, asset: Asset):
-        return humanize_presentation(self.overview.get_calculated_hedge(asset.symbol))
+        calc_hedge_amount = asset.calc_hedge_amount
+
+        if calc_hedge_amount is None:
+            return
+
+        return humanize_presentation(calc_hedge_amount)
 
     @admin.display(description='reserved amount')
     def get_reserved_amount(self, asset: Asset):
-        return humanize_presentation(self.overview.get_reserved_assets_amount(asset.symbol))
+        return ReservedAsset.objects.filter(coin=asset.symbol).aggregate(s=Sum('amount'))['s']
 
-    @admin.display(description='hedge value')
+    @admin.display(description='hedge value', ordering='hedge_value')
     def get_hedge_value(self, asset: Asset):
-        hedge_value = self.overview.get_hedge_value(asset.symbol)
+        hedge_value = asset.hedge_value
 
-        if hedge_value is not None:
-            hedge_value = round(hedge_value, 2)
+        if hedge_value is None:
+            return
+
+        hedge_value = round(hedge_value, 2)
 
         return humanize_presentation(hedge_value)
+
+    @admin.display(description='hedge value abs', ordering='hedge_value_abs')
+    def get_hedge_value_abs(self, asset: Asset):
+        hedge_value_abs = asset.hedge_value_abs
+
+        if hedge_value_abs is None:
+            return
+
+        hedge_value_abs = round(hedge_value_abs, 2)
+
+        return humanize_presentation(hedge_value_abs)
 
     @admin.action(description='hedge assets', permissions=['view'])
     def hedge_asset(self, request, queryset):
@@ -148,7 +174,7 @@ class AssetAdmin(AdvancedAdmin):
 
 @admin.register(models.Network)
 class NetworkAdmin(admin.ModelAdmin):
-    list_display = ('symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'address_regex')
+    list_display = ('symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'need_memo', 'address_regex')
     list_editable = ('can_withdraw', 'can_deposit')
     search_fields = ('symbol', )
     list_filter = ('can_withdraw', 'can_deposit')
@@ -158,10 +184,11 @@ class NetworkAdmin(admin.ModelAdmin):
 @admin.register(models.NetworkAsset)
 class NetworkAssetAdmin(admin.ModelAdmin):
     list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'can_deposit', 'can_withdraw',
-                    'allow_provider_withdraw', 'hedger_withdraw_enable')
+                    'allow_provider_withdraw', 'hedger_withdraw_enable', 'update_fee_with_provider')
     search_fields = ('asset__symbol', )
-    list_editable = ('can_deposit', 'can_withdraw', 'allow_provider_withdraw')
-    list_filter = ('network', 'allow_provider_withdraw')
+    list_editable = ('can_deposit', 'can_withdraw', 'allow_provider_withdraw', 'hedger_withdraw_enable',
+                     'update_fee_with_provider')
+    list_filter = ('network', 'allow_provider_withdraw', 'hedger_withdraw_enable', 'update_fee_with_provider')
 
 
 class DepositAddressUserFilter(admin.SimpleListFilter):
@@ -187,25 +214,27 @@ class DepositAddressAdmin(admin.ModelAdmin):
     search_fields = ('address',)
 
 
+class OTCRequestUserFilter(SimpleListFilter):
+    title = 'کاربر'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(account__user_id=user)
+        else:
+            return queryset
+
+
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'from_asset', 'to_asset', 'to_price', 'from_amount', 'to_amount', 'token')
+    list_display = ('created', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount', 'fee_revenue')
     readonly_fields = ('account', )
-
-    def get_from_amount(self, otc_request: models.OTCRequest):
-        return humanize_number((otc_request.from_asset.get_presentation_amount(otc_request.from_amount)))
-
-    get_from_amount.short_description = 'from_amount'
-
-    def get_to_amount(self, otc_request: models.OTCRequest):
-        return otc_request.to_asset.get_presentation_amount(otc_request.to_amount)
-
-    get_to_amount.short_description = 'to_amount'
-
-    def get_to_price(self, otc_request: models.OTCRequest):
-        return otc_request.to_asset.get_presentation_amount(otc_request.to_price)
-
-    get_to_price.short_description = 'to_price'
+    search_fields = ('token', )
+    list_filter = (OTCRequestUserFilter, )
 
 
 class OTCUserFilter(SimpleListFilter):
@@ -225,36 +254,31 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request', 'status', 'get_otc_trade_to_price_absolute_irt', )
+    list_display = ('created', 'otc_request', 'status', 'get_value', 'get_value_irt', 'execution_type', 'gap_revenue')
     list_filter = (OTCUserFilter, 'status')
-    search_fields = ('group_id', )
+    search_fields = ('group_id', 'order_id', 'otc_request__symbol__asset__symbol', 'otc_request__account__user__phone')
     readonly_fields = ('otc_request', )
     actions = ('accept_trade', 'accept_trade_without_hedge', 'cancel_trade')
 
-    def get_otc_trade_from_amount(self, otc_trade: models.OTCTrade):
-        return humanize_number(
-            otc_trade.otc_request.from_asset.get_presentation_amount(otc_trade.otc_request.from_amount)
-        )
+    @admin.display(description='value')
+    def get_value(self, otc_trade: models.OTCTrade):
+        return humanize_number(round(otc_trade.otc_request.usdt_value, 2))
 
-    get_otc_trade_from_amount.short_description = 'مقدار پایه'
+    @admin.display(description='value_irt')
+    def get_value_irt(self, otc_trade: models.OTCTrade):
+        return humanize_number(round(otc_trade.otc_request.irt_value, 0))
 
-    def get_otc_trade_to_price_absolute_irt(self, otc_trade: models.OTCTrade):
-        return humanize_number(int(
-            otc_trade.otc_request.to_price_absolute_irt * otc_trade.otc_request.to_amount
-        ))
-    get_otc_trade_to_price_absolute_irt.short_description = 'ارزش ریالی'
-
-    @admin.action(description='تایید معامله')
+    @admin.action(description='Accept Trade')
     def accept_trade(self, request, queryset):
         for otc in queryset.filter(status='pending'):
-            otc.accept()
+            otc.hedge_with_provider()
 
-    @admin.action(description='تایید معامله بدون هج')
+    @admin.action(description='Accept without Hedge')
     def accept_trade_without_hedge(self, request, queryset):
         for otc in queryset.filter(status='pending'):
-            otc.accept(hedge=False)
+            otc.hedge_with_provider(hedge=False)
 
-    @admin.action(description='لغو معامله')
+    @admin.action(description='Cancel Trade')
     def cancel_trade(self, request, queryset):
         for otc in queryset.filter(status='pending'):
             otc.cancel()
@@ -285,30 +309,35 @@ class WalletUserFilter(SimpleListFilter):
 
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'asset', 'market', 'get_free', 'get_locked', 'get_free_usdt', 'get_free_irt')
+    list_display = ('created', 'account', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt')
     list_filter = [
         ('asset', RelatedDropdownFilter),
         WalletUserFilter
     ]
-    readonly_fields = ('account', 'asset', 'market')
+    readonly_fields = ('account', 'asset', 'market', 'balance', 'locked')
+    search_fields = ('account__user__phone', 'asset__symbol')
 
+    @admin.display(description='free')
     def get_free(self, wallet: models.Wallet):
-        return float(wallet.get_free())
+        return wallet.get_free()
 
-    get_free.short_description = 'free'
+    @admin.display(description='irt value')
+    def get_value_irt(self, wallet: models.Wallet):
+        price = get_external_price(
+            coin=wallet.asset.symbol,
+            base_coin=Asset.IRT,
+            side=BUY
+        ) or 0
+        return wallet.asset.get_presentation_price_irt(wallet.balance * price)
 
-    def get_locked(self, wallet: models.Wallet):
-        return float(wallet.get_locked())
-
-    get_locked.short_description = 'locked'
-
-    def get_free_irt(self, wallet: models.Wallet):
-        return wallet.asset.get_presentation_price_irt(wallet.get_balance_irt())
-    get_free_irt.short_description = 'ارزش ریالی'
-
-    def get_free_usdt(self, wallet: models.Wallet):
-        return wallet.asset.get_presentation_price_usdt(wallet.get_balance_usdt())
-    get_free_usdt.short_description = 'ارزش دلاری'
+    @admin.display(description='usdt value')
+    def get_value_usdt(self, wallet: models.Wallet):
+        price = get_external_price(
+            coin=wallet.asset.symbol,
+            base_coin=Asset.USDT,
+            side=BUY
+        ) or 0
+        return wallet.asset.get_presentation_price_usdt(wallet.balance * price)
 
 
 class TransferUserFilter(SimpleListFilter):
@@ -331,23 +360,27 @@ class TransferAdmin(AdvancedAdmin):
     default_edit_condition = M.superuser
 
     fields_edit_conditions = {
-        'comment': True
+        'comment': True,
+        'status': True,
+        'trx_hash': True,
     }
 
     list_display = (
         'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
-        'get_total_volume_usdt', 'get_remaining_time_to_pass_72h', 'get_jalali_created'
+        'usdt_value', 'get_remaining_time_to_pass_72h', 'get_jalali_created', 'get_jalali_finished'
     )
-    search_fields = ('trx_hash', 'block_hash', 'block_number', 'out_address', 'wallet__asset__symbol')
+    search_fields = ('trx_hash', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
-    readonly_fields = ('deposit_address', 'network', 'wallet', 'get_total_volume_usdt', 'created', 'accepted_datetime',
-                       'finished_datetime', 'get_risks')
+    readonly_fields = (
+        'deposit_address', 'network', 'wallet', 'created', 'accepted_datetime', 'finished_datetime', 'get_risks',
+        'out_address', 'memo', 'amount', 'irt_value', 'usdt_value', 'deposit', 'group_id'
+    )
     exclude = ('risks', )
 
     actions = ('accept_withdraw', 'reject_withdraw')
 
     def save_model(self, request, obj: models.Transfer, form, change):
-        if obj.id and obj.status == models.Transfer.DONE and obj.trx_hash:
+        if obj.id and obj.status == models.Transfer.DONE:
             old = models.Transfer.objects.get(id=obj.id)
 
             if old.status != models.Transfer.DONE:
@@ -355,18 +388,8 @@ class TransferAdmin(AdvancedAdmin):
 
         obj.save()
 
-    @admin.display(description='ارزش تتری')
-    def get_total_volume_usdt(self, transfer: models.Transfer):
-        price = get_trading_price_usdt(coin=transfer.wallet.asset.symbol, side=SELL)
-        if price:
-            return round(transfer.amount * price, 1)
-
     def get_queryset(self, request):
-        queryset = super(TransferAdmin, self).get_queryset(request).select_related('wallet__account__user')
-
-        users = set(queryset.filter(deposit=False).values_list('wallet__account__user_id', flat=True))
-
-        return queryset
+        return super(TransferAdmin, self).get_queryset(request).select_related('wallet__account__user')
 
     @admin.display(description='Asset')
     def get_asset(self, transfer: models.Transfer):
@@ -375,6 +398,10 @@ class TransferAdmin(AdvancedAdmin):
     @admin.display(description='created jalali')
     def get_jalali_created(self, transfer: models.Transfer):
         return gregorian_to_jalali_datetime_str(transfer.created)
+
+    @admin.display(description='finished jalali')
+    def get_jalali_finished(self, transfer: models.Transfer):
+        return transfer.finished_datetime and gregorian_to_jalali_datetime_str(transfer.finished_datetime)
 
     @admin.display(description='User')
     def get_user(self, transfer: models.Transfer):
@@ -475,10 +502,26 @@ class AddressBookAdmin(admin.ModelAdmin):
     search_fields = ('address', 'name')
 
 
+class PrizeUserFilter(admin.SimpleListFilter):
+    title = 'کاربران'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        return [(1, 1)]
+
+    def queryset(self, request, queryset):
+        user = request.GET.get('user')
+        if user is not None:
+            return queryset.filter(account__user_id=user)
+        else:
+            return queryset
+
+
 @admin.register(models.Prize)
 class PrizeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'achievement', 'account', 'get_asset_amount')
+    list_display = ('created', 'achievement', 'account', 'get_asset_amount', 'redeemed', 'value')
     readonly_fields = ('account', 'asset', )
+    list_filter = ('achievement', 'redeemed', PrizeUserFilter)
 
     def get_asset_amount(self, prize: Prize):
         return '%s %s' % (get_presentation_amount(prize.amount), prize.asset)
@@ -498,10 +541,10 @@ class CoinCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(models.AddressKey)
 class AddressKeyAdmin(admin.ModelAdmin):
-    list_display = ('address', )
+    list_display = ('address', 'deleted', 'account', 'architecture')
     readonly_fields = ('address', 'account')
-    search_fields = ('address', 'public_address')
-    list_filter = ('architecture', )
+    search_fields = ('address', 'public_address', 'account__user__phone')
+    list_filter = ('architecture', 'deleted', 'architecture')
 
 
 @admin.register(models.AssetSpreadCategory)
@@ -548,9 +591,9 @@ class SystemSnapshotAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.AssetSnapshot)
-class AssetSnapshotAdmin(admin.ModelAdmin):
-    list_display = ('created', 'asset', 'total_amount', 'users_amount', 'hedge_amount', 'hedge_value', 'get_hedge_diff')
-    ordering = ('-created', 'asset__order')
+class AssetSnapshotAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    list_display = ('updated', 'asset', 'total_amount', 'users_amount', 'hedge_amount', 'hedge_value', 'get_hedge_diff')
+    ordering = ('asset__order', )
     list_filter = ('asset', )
 
     def get_hedge_diff(self, asset_snapshot: models.AssetSnapshot):
@@ -569,3 +612,20 @@ class FastBuyTokenAdmin(admin.ModelAdmin):
         return humanize_number(fast_buy_token.amount)
 
     get_amount.short_description = 'مقدار'
+
+
+@admin.register(ManualTransaction)
+class ManualTransactionAdmin(admin.ModelAdmin):
+    list_display = ('created', 'wallet', 'type', 'status', 'amount')
+    raw_id_fields = ('wallet', )
+    list_filter = ('type', 'status')
+    ordering = ('-created', )
+    readonly_fields = ('group_id', )
+
+
+@admin.register(BalanceLock)
+class BalanceLockAdmin(admin.ModelAdmin):
+    list_display = ('created', 'key', 'wallet', 'original_amount', 'amount', 'reason')
+    readonly_fields = ('wallet', 'key', 'original_amount', 'amount', 'reason')
+    list_filter = ('reason', )
+    search_fields = ('wallet__account__user__phone', 'key')

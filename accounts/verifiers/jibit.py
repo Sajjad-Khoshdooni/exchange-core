@@ -4,11 +4,10 @@ from dataclasses import dataclass
 from typing import Union
 
 import requests
+from decouple import config
 from django.core.cache import caches
 from django.utils import timezone
 from urllib3.exceptions import ReadTimeoutError
-from decouple import config
-from decouple import config
 
 from accounts.models import FinotechRequest
 from accounts.utils.validation import gregorian_to_jalali_date_str
@@ -25,6 +24,12 @@ class Response:
     data: Union[dict, list]
     success: bool = True
     status_code: int = 200
+
+    def get_success_data(self):
+        if not self.success:
+            raise ServerError
+
+        return self.data
 
 
 class JibitRequester:
@@ -133,7 +138,7 @@ class JibitRequester:
         req_object.response = resp_data
         req_object.status_code = resp.status_code
 
-        if resp.status_code in (403, 401) and resp.status_code < 500 and \
+        if resp.status_code not in (403, 401) and resp.status_code < 500 and \
                 resp_data.get('code') not in ['card.provider_is_not_active']:
 
             req_object.search_key = search_key

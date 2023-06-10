@@ -1,4 +1,5 @@
 import logging
+import uuid
 from decimal import Decimal
 from typing import Union
 from uuid import uuid4
@@ -8,18 +9,22 @@ from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import UniqueConstraint, Q
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 
+from accounts.event.producer import get_kafka_producer
 from accounts.models import Account, Notification
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
+from accounts.utils.dto import TransferEvent
 from accounts.utils.push_notif import send_push_notif_to_user
 from accounts.utils.telegram import send_support_message
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
+from ledger.utils.external_price import get_external_price, SELL
 from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import get_trading_price_usdt, SELL, get_trading_price_irt
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -54,8 +59,6 @@ class Transfer(models.Model):
     )
 
     trx_hash = models.CharField(max_length=128, db_index=True, null=True, blank=True)
-    block_hash = models.CharField(max_length=128, db_index=True, blank=True)
-    block_number = models.PositiveIntegerField(null=True, blank=True)
 
     out_address = get_address_field()
     memo = models.CharField(max_length=64, blank=True)
@@ -145,8 +148,18 @@ class Transfer(models.Model):
 
         group_id = uuid4()
 
-        price_usdt = get_trading_price_usdt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL) or 0
-        price_irt = get_trading_price_irt(coin=sender_wallet.asset.symbol, raw_price=True, side=SELL) or 0
+        price_usdt = get_external_price(
+            coin=sender_wallet.asset.symbol,
+            base_coin=Asset.USDT,
+            side=SELL,
+            allow_stale=True,
+        ) or 0
+        price_irt = get_external_price(
+            coin=sender_wallet.asset.symbol,
+            base_coin=Asset.IRT,
+            side=SELL,
+            allow_stale=True,
+        ) or 0
 
         with WalletPipeline() as pipeline:
             pipeline.new_trx(
@@ -210,8 +223,18 @@ class Transfer(models.Model):
 
         commission = network_asset.withdraw_fee
 
-        price_usdt = get_trading_price_usdt(coin=wallet.asset.symbol, raw_price=True, side=SELL) or 0
-        price_irt = get_trading_price_irt(coin=wallet.asset.symbol, raw_price=True, side=SELL) or 0
+        price_usdt = get_external_price(
+            coin=wallet.asset.symbol,
+            base_coin=Asset.USDT,
+            side=SELL,
+            allow_stale=True,
+        ) or 0
+        price_irt = get_external_price(
+            coin=wallet.asset.symbol,
+            base_coin=Asset.IRT,
+            side=SELL,
+            allow_stale=True,
+        ) or 0
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             transfer = Transfer.objects.create(
@@ -318,3 +341,28 @@ class Transfer(models.Model):
             action = 'withdraw'
 
         return f'{action} {self.amount} {self.asset}'
+
+
+@receiver(post_save, sender=Transfer)
+def handle_transfer_save(sender, instance, created, **kwargs):
+    producer = get_kafka_producer()
+
+    user = instance.wallet.account.user
+
+    if not user or instance.status != Transfer.DONE:
+        return
+
+    event = TransferEvent(
+        id=instance.id,
+        user_id=user.id,
+        amount=instance.amount,
+        coin=instance.wallet.asset.symbol,
+        network=instance.network.symbol,
+        created=instance.created,
+        is_deposit=instance.deposit,
+        value_irt=instance.irt_value,
+        value_usdt=instance.usdt_value,
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type)
+    )
+
+    producer.produce(event)

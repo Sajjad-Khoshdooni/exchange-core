@@ -34,7 +34,7 @@ class BannerAlertAPIView(APIView):
 
     def get_alert_condition(self):
         return
-        account = self.request.user.account
+        account = self.request.user.get_account()
         task = None
 
         if Prize.objects.filter(account=account, fake=False, redeemed=False).exists():

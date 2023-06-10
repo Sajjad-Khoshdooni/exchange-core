@@ -49,8 +49,8 @@ def update_provider_withdraw():
 
 @shared_task(queue='transfer')
 def create_withdraw(transfer_id: int):
-    if settings.DEBUG_OR_TESTING_OR_STAGING:
-        return
+    # if settings.DEBUG_OR_TESTING_OR_STAGING:
+    #     return
 
     transfer = Transfer.objects.get(id=transfer_id)
 
@@ -64,11 +64,16 @@ def create_withdraw(transfer_id: int):
 
     from ledger.requester.withdraw_requester import RequestWithdraw
 
+    asset = transfer.wallet.asset
+    coin_mult = asset.get_coin_multiplier()
+
+    assert coin_mult == 1 or (asset.symbol != asset.original_symbol and asset.original_symbol)
+
     response = RequestWithdraw().withdraw_from_hot_wallet(
         receiver_address=transfer.out_address,
-        amount=transfer.amount,
+        amount=transfer.amount * coin_mult,
         network=transfer.network.symbol,
-        asset=transfer.wallet.asset.symbol,
+        asset=asset.get_original_symbol(),
         transfer_id=transfer.id
     )
 
@@ -77,6 +82,21 @@ def create_withdraw(transfer_id: int):
     if response.ok:
         transfer.status = Transfer.PENDING
         transfer.save(update_fields=['status'])
+
+    elif response.status_code == 400 and resp_data.get('type') == 'Invalid':
+        logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
+
+        transfer.reject()
+
+        if resp_data.get('reason') == 'InvalidReceiverAddress':
+            user = transfer.wallet.account.user
+            from accounts.models import Notification
+            Notification.send(
+                recipient=user,
+                title='برداشت ناموفق',
+                level=Notification.ERROR,
+                message='آدرس مقصد وارد شده نامعتبر است'
+            )
 
     elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
         logger.info('withdraw switch %s %s' % (transfer.id, resp_data))

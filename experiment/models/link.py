@@ -19,7 +19,7 @@ class Link(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     token = models.CharField(max_length=6, unique=True, db_index=True, default=create_token)
-    user = models.ForeignKey('accounts.user', on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey('accounts.user', related_name='exp_link', on_delete=models.CASCADE, null=True, blank=True)
 
     @classmethod
     def create(cls, user):

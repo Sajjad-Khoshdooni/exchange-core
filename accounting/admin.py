@@ -3,7 +3,8 @@ from django.db.models import Sum
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset, \
-    AssetPrice
+    AssetPrice, TradeRevenue, PeriodicFetcher, BlocklinkIncome, BlocklinkDustCost
+from accounting.models.provider_income import ProviderIncome
 from ledger.utils.precision import humanize_number
 
 
@@ -56,6 +57,7 @@ class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     search_fields = ('coin', )
     list_filter = ('vault__name', 'vault__type', 'vault__market')
     ordering = ('-value_usdt', )
+    readonly_fields = ('value_usdt', 'value_irt')
 
     def save_model(self, request, obj, form, change):
         super(VaultItemAdmin, self).save_model(request, obj, form, change)
@@ -72,3 +74,42 @@ class ReservedAssetAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 class AssetPriceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = ('coin', 'price', 'updated')
     search_fields = ('coin', )
+
+
+@admin.register(TradeRevenue)
+class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    list_display = (
+        'created', 'symbol', 'source', 'side', 'amount', 'price', 'gap_revenue', 'fee_revenue', 'get_hedge_revenue',
+        'coin_price', 'coin_filled_price', 'hedge_key', 'fiat_hedge_usdt', 'fiat_hedge_base')
+
+    search_fields = ('group_id', 'hedge_key', 'symbol__name', )
+    list_filter = ('symbol', 'source',)
+    readonly_fields = ('account', 'symbol', 'group_id')
+
+    @admin.display(description='hedge revenue')
+    def get_hedge_revenue(self, revenue: TradeRevenue):
+        return round(revenue.fiat_hedge_base * revenue.base_usdt_price + revenue.fiat_hedge_usdt, 3)
+
+
+@admin.register(ProviderIncome)
+class BinanceIncomeAdmin(admin.ModelAdmin):
+    list_display = ('income_date', 'income_type', 'income', 'coin', 'symbol')
+    search_fields = ('symbol', 'coin')
+    list_filter = ('income_type', )
+    ordering = ('-income_date', 'income_type')
+
+
+@admin.register(PeriodicFetcher)
+class PeriodicFetcherAdmin(admin.ModelAdmin):
+    list_display = ('name', 'end')
+
+
+@admin.register(BlocklinkIncome)
+class BlocklinkIncomeAdmin(admin.ModelAdmin):
+    list_display = ('start', 'network', 'real_fee_amount', 'fee_cost', 'fee_income',)
+    list_filter = ('network', )
+
+
+@admin.register(BlocklinkDustCost)
+class BlocklinkDustCostAdmin(admin.ModelAdmin):
+    list_display = ('updated', 'network', 'amount', 'usdt_value',)

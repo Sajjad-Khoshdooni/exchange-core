@@ -8,7 +8,8 @@ from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import FirebaseToken, ExternalNotification, Attribution, AppStatus, Auth2Fa, VerificationCode
+from accounts.models import FirebaseToken, ExternalNotification, Attribution, AppStatus, Auth2Fa, VerificationCode, \
+    UserFeedback, BulkNotification
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -16,16 +17,18 @@ from financial.models.payment import Payment
 from financial.models.withdraw_request import FiatWithdrawRequest
 from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdraw_irt_value, CRYPTO_WITHDRAW_LIMIT, \
     get_crypto_withdraw_irt_value
-from ledger.models import OTCTrade, DepositAddress
+from ledger.models import OTCTrade, DepositAddress, Prize
 from ledger.models.transfer import Transfer
 from ledger.models.wallet import Wallet
 from ledger.utils.precision import humanize_number
-from ledger.utils.price import BUY
+from ledger.utils.external_price import BUY
 from market.models import Trade, ReferralTrx, Order
+from stake.models import StakeRequest
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
 from .models.login_activity import LoginActivity
+from .models.sms_notification import SmsNotification
 from .tasks import basic_verify_user
 from .utils.validation import gregorian_to_jalali_date_str, gregorian_to_jalali_datetime_str
 from .verifiers.legal import is_48h_rule_passed
@@ -171,8 +174,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     fields_edit_conditions = {
         'password': None,
-        'first_name': M.superuser | ~M('first_name_verified'),
-        'last_name': M.superuser | ~M('last_name_verified'),
+        'first_name': True,
+        'last_name': True,
         'national_code': M.superuser | ~M('national_code_verified'),
         'national_code_phone_verified': True,
         'birth_date': M.superuser | ~M('birth_date_verified'),
@@ -184,6 +187,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'birth_date_verified': M.superuser | M.is_none('birth_date_verified'),
         'withdraw_before_48h_option': True,
         'can_withdraw': True,
+        'can_withdraw_crypto': True,
         'can_trade': True,
         'withdraw_limit_whitelist': True,
         'withdraw_risk_level_multiplier': True,
@@ -205,8 +209,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             'fields': (
                 'is_active', 'is_staff', 'is_superuser',
                 'groups', 'user_permissions', 'show_margin', 'show_strategy_bot', 'show_community', 'show_staking',
-                'withdraw_before_48h_option', 'can_trade', 'can_withdraw', 'withdraw_limit_whitelist',
-                'withdraw_risk_level_multiplier', 'custom_crypto_withdraw_ceil'
+                'withdraw_before_48h_option', 'can_trade', 'can_withdraw', 'can_withdraw_crypto',
+                'withdraw_limit_whitelist', 'withdraw_risk_level_multiplier', 'custom_crypto_withdraw_ceil'
             ),
         }),
         (_('Important dates'), {'fields': (
@@ -219,8 +223,9 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                 'get_wallet', 'get_transfer_link', 'get_payment_address',
                 'get_withdraw_address', 'get_otctrade_address', 'get_fill_order_address', 'get_order_link',
                 'get_open_order_address', 'get_deposit_address', 'get_bank_card_link',
-                'get_bank_account_link', 'get_finotech_request_link',
+                'get_bank_account_link', 'get_finotech_request_link', 'get_staking_link',
                 'get_user_with_same_national_code', 'get_referred_user', 'get_login_activity_link',
+                'get_notifications_link', 'get_external_notifications_link', 'get_prizes_link',
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
@@ -239,7 +244,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
         'is_staff', 'is_superuser', 'is_active', 'groups', UserReferredFilter
     )
-    inlines = [UserCommentInLine, ExternalNotificationInLine, NotificationInLine]
+    inlines = [UserCommentInLine, ]
     ordering = ('-id', )
     actions = (
         'verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify',
@@ -256,6 +261,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
+        'get_external_notifications_link', 'get_notifications_link', 'get_staking_link', 'get_prizes_link'
     )
     preserve_filters = ('archived', )
 
@@ -410,7 +416,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_user_reject_reason.short_description = 'وضعیت احراز'
 
     def get_wallet(self, user: User):
-        link = url_to_admin_list(Wallet) + '?account={}'.format(user.account.id)
+        link = url_to_admin_list(Wallet) + '?account={}'.format(user.get_account().id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_wallet.short_description = 'لیست کیف‌ها'
 
@@ -418,12 +424,12 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         if not hasattr(user, 'account'):
             return 0
 
-        return humanize_number(user.account.trade_volume_irt)
+        return humanize_number(user.get_account().trade_volume_irt)
 
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
 
     def get_last_trade(self, user: User):
-        return gregorian_to_jalali_datetime_str(Trade.objects.filter(account=user.account).last().created)
+        return gregorian_to_jalali_datetime_str(Trade.objects.filter(account=user.get_account()).last().created)
     get_last_trade.short_description = 'تاریخ آخرین معامله'
 
     def get_bank_card_link(self, user: User):
@@ -520,7 +526,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_selfie_image.short_description = 'عکس سلفی'
 
     def get_user_prizes(self, user: User):
-        prizes = user.account.prize_set.all()
+        prizes = user.get_account().prize_set.all()
         prize_list = []
         for prize in prizes:
             prize_list.append(str(prize.achievement))
@@ -529,7 +535,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_user_prizes.short_description = 'جایزه‌های دریافتی کاربر'
 
     def get_referred_count(self, user: User):
-        referrals = Referral.objects.filter(owner=user.account)
+        referrals = Referral.objects.filter(owner=user.get_account())
         referred_count = 0
         for referral in referrals:
             referred_count += Account.objects.filter(referred_by=referral).count()
@@ -537,7 +543,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_referred_count.short_description = ' تعداد دوستان دعوت شده'
 
     def get_revenue_of_referral(self, user: User):
-        referrals = Referral.objects.filter(owner=user.account)
+        referrals = Referral.objects.filter(owner=user.get_account())
         revenues = 0
         for referral in referrals:
             revenue = ReferralTrx.objects.filter(referral=referral).aggregate(total=Sum('referrer_amount'))
@@ -547,7 +553,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     get_revenue_of_referral.short_description = 'درآمد حاصل از کدهای دعوت ارسال شده به دوستان '
 
     def get_revenue_of_referred(self, user: User):
-        referral = user.account.referred_by
+        referral = user.get_account().referred_by
 
         revenue = ReferralTrx.objects.filter(referral=referral).aggregate(total=Sum('trader_amount'))
         return int(revenue['total'] or 0)
@@ -576,12 +582,32 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     def get_total_balance_irt_admin(self, user: User):
         try:
-            total_balance_irt = user.account.get_total_balance_irt(side=BUY)
+            total_balance_irt = user.get_account().get_total_balance_irt(side=BUY)
             return humanize_number(int(total_balance_irt))
         except:
             pass
 
     get_total_balance_irt_admin.short_description = 'دارایی به تومان'
+
+    @admin.display(description='اعلانات')
+    def get_notifications_link(self, user: User):
+        link = url_to_admin_list(Notification) + '?recipient_id={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+
+    @admin.display(description='اعلانات بیرون پنل')
+    def get_external_notifications_link(self, user: User):
+        link = url_to_admin_list(Notification) + '?user_id={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+
+    @admin.display(description='جوایز')
+    def get_prizes_link(self, user: User):
+        link = url_to_admin_list(Prize) + '?user={}'.format(user.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+
+    @admin.display(description='لیست استیکینگ‌ (staking) کاربر')
+    def get_staking_link(self, user: User):
+        link = url_to_admin_list(StakeRequest) + '?account_id={}'.format(user.account.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
 
 
 @admin.register(Account)
@@ -592,7 +618,7 @@ class AccountAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('اطلاعات', {'fields': (
-            'name', 'user', 'type', 'primary', 'trade_volume_irt', 'get_wallet',
+            'name', 'user', 'type', 'primary', 'owned', 'trade_volume_irt', 'get_wallet',
             'get_total_balance_irt_admin', 'get_total_balance_usdt_admin', 'referred_by'
         )}),
     )
@@ -650,9 +676,26 @@ class FinotechRequestAdmin(admin.ModelAdmin):
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ('created', 'recipient', 'level', 'title', 'message')
+    list_display = ('created', 'recipient', 'level', 'title', 'message', 'push_status')
     list_filter = ('level', 'recipient')
-    search_fields = ('title', 'message', )
+    search_fields = ('title', 'message', 'group_id', 'recipient__phone')
+    readonly_fields = ('recipient', 'group_id')
+
+
+@admin.register(BulkNotification)
+class BulkNotificationAdmin(admin.ModelAdmin):
+    list_display = ('created', 'status', 'level', 'title', 'message')
+    list_filter = ('level', )
+    search_fields = ('title', 'message', 'group_id')
+    readonly_fields = ('group_id', 'status')
+
+
+@admin.register(SmsNotification)
+class SmsNotificationAdmin(admin.ModelAdmin):
+    list_display = ('created', 'recipient', 'template', 'params', 'sent')
+    list_filter = ('template', )
+    search_fields = ('recipient__phone', 'group_id')
+    readonly_fields = ('recipient', 'group_id')
 
 
 @admin.register(UserComment)
@@ -669,15 +712,18 @@ class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
 @admin.register(LoginActivity)
 class LoginActivityAdmin(admin.ModelAdmin):
-    list_display = ['created', 'user', 'ip', 'device', 'os', 'browser', 'device_type', 'is_sign_up']
-    search_fields = ['user__phone', 'ip']
-    readonly_fields = ('user', )
+    list_display = ('created', 'user', 'ip', 'device', 'os', 'browser', 'device_type', 'is_sign_up', 'native_app',
+                    'session')
+    search_fields = ('user__phone', 'ip')
+    readonly_fields = ('user', 'session', 'ip', )
 
 
 @admin.register(FirebaseToken)
 class FirebaseTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
-    list_display = ['user', 'token']
-    readonly_fields = ('created',)
+    list_display = ['user', 'ip', 'native_app']
+    readonly_fields = ('created', 'user')
+    list_filter = ('native_app', )
+    search_fields = ('user__phone', 'token')
 
 
 @admin.register(ExternalNotification)
@@ -709,3 +755,19 @@ class VerificationCodeAdmin(admin.ModelAdmin):
     search_fields = ('user__phone', 'phone', 'user__first_name', 'user__last_name')
     list_filter = ('scope', )
     readonly_fields = ('user', )
+
+
+@admin.register(UserFeedback)
+class UserFeedbackAdmin(admin.ModelAdmin):
+    list_display = ['created', 'user', 'score', 'get_comment']
+    search_fields = ('user__phone', 'user__first_name', 'user__last_name')
+    readonly_fields = ('user', )
+
+    @admin.display(description='comment', ordering='comment')
+    def get_comment(self, feedback: UserFeedback):
+        n = 300
+
+        if len(feedback.comment) > n:
+            return feedback.comment[:n] + '...'
+        else:
+            return feedback.comment

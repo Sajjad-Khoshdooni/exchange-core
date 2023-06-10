@@ -7,8 +7,8 @@ from django.db.models import F, Sum, Case, When, Value as V
 
 from accounts.models import Account
 from ledger.models import Wallet, Asset, Trx
+from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import get_amount_field
-from ledger.utils.price import get_trading_price_usdt, BUY
 
 
 logger = logging.getLogger(__name__)
@@ -37,18 +37,7 @@ class PNLHistory(models.Model):
     def calculate_amounts_in_usdt(account_wallets: dict, account_input_outputs: dict, last_snapshot_balance: Decimal,
                                   usdt_price: Decimal):
         def get_price(coin: str):
-            if coin == Asset.USDT:
-                return 1
-            elif coin == Asset.IRT:
-                return 1 / usdt_price
-            return get_trading_price_usdt(coin, BUY, raw_price=True)
-
-        missing_price_coins = list(filter(
-            lambda coin: not get_price(coin),
-            set(account_wallets.keys()).union(set(account_input_outputs.keys())))
-        )
-        if missing_price_coins:
-            raise Exception(f'Missing coin prices for {missing_price_coins}')
+            return get_external_price(coin=coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
 
         snapshot_balance = sum(map(
             lambda coin_amount: Decimal(get_price(coin_amount[0])) * coin_amount[1], account_wallets.items()
@@ -74,7 +63,9 @@ class PNLHistory(models.Model):
                 account__type=Account.ORDINARY,
                 asset__enable=True,
             ).exclude(balance=0).annotate(
-                wallet_market=Case(When(market=Wallet.LOAN, then=V(Wallet.MARGIN)), default='market')
+                wallet_market=Case(
+                    When(market=Wallet.LOAN, then=V(Wallet.MARGIN)),
+                    When(market=Wallet.STAKE, then=V(Wallet.SPOT)), default=F('market')),
             ).values('wallet_market', 'account', 'asset__symbol').annotate(total_balance=Sum('balance')).values(
                 'wallet_market', 'account', 'asset__symbol', 'total_balance'
             )
@@ -106,3 +97,7 @@ class PNLHistory(models.Model):
                 'account', 'market', 'base_asset'
             ).values('account', 'market', 'base_asset', 'snapshot_balance')
         }
+
+    @classmethod
+    def get_already_created_pnl_accounts(cls, date):
+        return PNLHistory.objects.filter(date=date).values_list('account_id', flat=True).distinct()

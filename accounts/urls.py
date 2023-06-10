@@ -58,7 +58,7 @@ urlpatterns = [
         'patch': 'partial_update',
     })),
 
-    path('notifs/all/', views.UnreadAllNotificationView.as_view()),
+    path('notifs/all/', views.ReadAllNotificationView.as_view()),
     path('password/', views.ChangePasswordView.as_view()),
 
     path('quiz/passed/', views.QuizPassedView.as_view()),
@@ -95,7 +95,11 @@ urlpatterns = [
 
     path('attribution/', views.AttributionAPIView.as_view()),
     path('2fa/', views.Create2FaQrCodeAPIView.as_view()),
-    path('2fa/verify', views.Verify2FaVerificationAPIView.as_view()),
+    path('2fa/verify/', views.Verify2FaVerificationAPIView.as_view()),
 
     path('users/<int:pk>/', views.UserDigestView.as_view()),
+
+    path('feedback/', views.UserFeedbackView.as_view()),
+
+    path('notify/', views.NotifyView.as_view())
 ]

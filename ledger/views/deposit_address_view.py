@@ -8,7 +8,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from accounts.authentication import CustomTokenAuthentication
 from accounts.models import User
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
-from ledger.models import Network
+from ledger.models import Network, DepositAddress
 
 
 class InputAddressSerializer(serializers.Serializer):
@@ -32,7 +32,7 @@ class DepositAddressView(RetrieveAPIView):
 
         network = get_object_or_404(Network, symbol=data['network'], can_deposit=True)
 
-        deposit_address = network.get_deposit_address(request.user.account)
+        deposit_address = DepositAddress.get_deposit_address(account=request.user.get_account(), network=network)
 
         return Response(data={
             'address': deposit_address.address
