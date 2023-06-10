@@ -94,7 +94,9 @@ class LoginActivityViewSet(ModelViewSet):
             instance.session.delete()
 
     def destroy_all(self, request, *args, **kwargs):
-        to_delete_sessions = self.get_queryset(only_active=True).exclude(session__session_key=request.sesion.session_key)
+        to_delete_sessions = self.get_queryset(only_active=True).exclude(
+            session__session_key=request.session.session_key
+        )
 
         for login_activity in to_delete_sessions:
             login_activity.session.delete()
