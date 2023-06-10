@@ -42,7 +42,6 @@ class JibitClient:
 
     def create_payment_id(self, user: User):
         token = self._get_token()
-        host_url = settings.HOST_URL
 
         ibans = list(BankAccount.objects.filter(user=user).values_list('iban', flat=True))
 
@@ -50,7 +49,7 @@ class JibitClient:
             url=self.BASE_URL + '/v1/paymentIds',
             headers={'Authorization': 'Bearer ' + token},
             json={
-                "callbackUrl": host_url + f"/api/v1/finance/paymentIds/callback/jibit/?id={user.id}",
+                # "callbackUrl": host_url + f"/api/v1/finance/paymentIds/callback/jibit/?id={user.id}",
                 "merchantReferenceNumber": 'user-%s' % user.id,
                 "userFullName": user.get_full_name(),
                 "userIbans": ibans,
@@ -110,7 +109,7 @@ class JibitClient:
         token = self._get_token()
 
         resp = requests.get(
-            url=self.BASE_URL + f'/v1/paymentIds/{payment_id_request.external_reference_number}',
+            url=self.BASE_URL + f'/v1/paymentIds/user-{user.id}',
             headers={'Authorization': 'Bearer ' + token},
             timeout=30
         )
