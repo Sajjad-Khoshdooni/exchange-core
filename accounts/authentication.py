@@ -40,7 +40,7 @@ class CustomTokenAuthentication(TokenAuthentication):
     def authenticate_credentials(self, key, request):
         model = self.get_model()
         request_ip = get_client_ip(request=request)
-        logger.info('request ip %s for %s' % (request_ip, request.path))
+        logger.info('request ip for %s is %s' % (request.path, request_ip))
 
         try:
             token = model.objects.select_related('user').get(
