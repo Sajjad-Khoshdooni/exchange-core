@@ -85,12 +85,11 @@ class OrderViewSet(mixins.CreateModelMixin,
             'account': account,
             'variant': variant,
         }
-        if self.request.query_params.get('only_id') == '1':
+        if self.request.query_params.get('only_id') == '1' or self.request.method != 'GET':
             return context
         else:
             context['trades'] = Trade.get_account_orders_filled_price(account)
             return context
-
 
 
 class OpenOrderListAPIView(APIView):
