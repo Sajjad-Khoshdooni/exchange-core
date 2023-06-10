@@ -60,7 +60,7 @@ class NotifyView(APIView):
                 title=data.get('content', None),
                 link=data.get('content', None),
                 message=data.get('content', None),
-                hidden=data.get('group_id', True),
+                hidden=data.get('hidden', True),
                 push_status=Notification.PUSH_WAITING,
                 group_id=data['group_id']
             )
