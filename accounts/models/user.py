@@ -10,10 +10,10 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
 
-from accounts.event.producer import get_kafka_producer
+from analytics.event.producer import get_kafka_producer
 from accounts.models import Notification, Account
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.dto import UserEvent
+from analytics.utils.dto import UserEvent
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import PHONE_MAX_LENGTH
 from accounts.validators import mobile_number_validator, national_card_code_validator, telephone_number_validator
