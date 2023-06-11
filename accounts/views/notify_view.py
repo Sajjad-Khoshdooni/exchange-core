@@ -21,6 +21,7 @@ class NotifyView(APIView):
                 (EMAIL, EMAIL),
             ])
         content = serializers.CharField(required=False)
+        content_html = serializers.CharField(required=False)
         title = serializers.CharField(required=False)
         link = serializers.CharField(required=False)
         hidden = serializers.BooleanField(required=False, default=True)
