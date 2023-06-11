@@ -77,7 +77,7 @@ def send_email_notifications():
 
         resp = send_email(
             subject=email_notif.title,
-            body_html=render_to_string('accounts/email/template_email.html', a),
+            body_html=render_to_string('accounts/email/template_email.html', email_notif.context),
             body_text=render_to_string(email_notif.content, {}),
             to=[email_notif.user.email]
         )
