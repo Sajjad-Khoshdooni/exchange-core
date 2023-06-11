@@ -30,7 +30,7 @@ TEMPLATES = {
         'text': 'accounts/text/verify_email.txt',
     },
     SCOPE_WITHDRAW_EMAIL: {
-        'subject': '{} | اطلاع‌رسانی برداشت رمز ارزی'.format(settings.BRAND),
+        'subject': '{} | اطلاع‌رسانی برداشت رمزارزی'.format(settings.BRAND),
         'html': 'accounts/email/withdraw_email.min.html',
         'text': 'accounts/text/withdraw_email.txt',
     },
@@ -131,6 +131,6 @@ def send_email(subject: str, body_html: str, body_text: str, to: list, transacti
             'data': data
         })
 
-        print('elasticmail error', data)
+        logger.info('elasticmail error', data)
 
     return data
