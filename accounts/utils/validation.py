@@ -128,6 +128,11 @@ def get_login_user_agent_data_from_client_info(client_info: dict) -> dict:
 
 
 def set_login_activity(request, user, is_sign_up: bool = False, client_info: dict = None, native_app: bool = False):
+    session = Session.objects.filter(session_key=request.session.session_key).first()
+
+    if not session:
+        return
+
     if client_info:
         user_agent_data = get_login_user_agent_data_from_client_info(client_info)
     else:
@@ -135,10 +140,6 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
 
     ip = get_client_ip(request)
     ip_data = get_ip_data(ip)
-
-    session = Session.objects.filter(session_key=request.session.session_key).first()
-
-    assert session
 
     return LoginActivity.objects.get_or_create(
         session=session,
