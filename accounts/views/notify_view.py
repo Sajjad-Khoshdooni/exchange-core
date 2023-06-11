@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from accounts.authentication import CustomTokenAuthentication
-from accounts.models import SmsNotification, User, Notification
+from accounts.models import SmsNotification, User, Notification, EmailNotification
 
 SMS, EMAIL, PUSH = 'sms', 'email', 'push'
 
@@ -46,26 +46,42 @@ class NotifyView(APIView):
 
         _type = data['type']
 
+        created = False
         if _type == SMS:
-            SmsNotification.objects.create(
+            _, created = SmsNotification.objects.get_or_create(
                 recipient=User.objects.get(id=data['user_id']),
-                template=data.get('template', None),
-                params=data.get('params', None),
-                content=data.get('content', None),
-                group_id=data['group_id']
+                group_id=data['group_id'],
+                defaults={
+                    'template': data.get('template', None),
+                    'params': data.get('params', None),
+                    'content': data.get('content', None),
+                }
             )
         elif _type == PUSH:
-            Notification.objects.create(
+            _, created = Notification.objects.get_or_create(
                 recipient=User.objects.get(id=data['user_id']),
-                title=data.get('content', None),
-                link=data.get('content', None),
-                message=data.get('content', None),
-                hidden=data.get('hidden', True),
-                push_status=Notification.PUSH_WAITING,
-                group_id=data['group_id']
+                group_id=data['group_id'],
+                defaults={
+                    'title': data.get('title', None),
+                    'link': data.get('link', None),
+                    'message': data.get('content', None),
+                    'hidden': data.get('hidden', True),
+                    'push_status': Notification.PUSH_WAITING,
+                }
             )
 
         elif _type == EMAIL:
-            pass
+            _, created = EmailNotification.objects.get_or_create(
+                recipient=User.objects.get(id=data['user_id']),
+                group_id=data['group_id'],
+                defaults={
+                    'title': data.get('title', None),
+                    'content': data.get('content', None),
+                    'content_html': data.get('content_html', None),
+                }
+            )
 
-        return Response(status=status.HTTP_201_CREATED)
+        if created:
+            return Response(status=status.HTTP_201_CREATED)
+        else:
+            return Response(status=status.HTTP_200_OK)

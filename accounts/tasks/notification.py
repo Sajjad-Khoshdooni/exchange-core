@@ -1,8 +1,10 @@
 from celery import shared_task
+from django.template.loader import render_to_string
 
-from accounts.models import Notification, BulkNotification, User
+from accounts.models import Notification, BulkNotification, User, EmailNotification
 from accounts.models.sms_notification import SmsNotification
 from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
+from accounts.utils.email import send_email
 from accounts.utils.push_notif import send_push_notif_to_user
 from ledger.utils.fields import PENDING, DONE
 
@@ -67,3 +69,19 @@ def send_sms_notifications():
         if resp:
             notif.sent = True
             notif.save(update_fields=['sent'])
+
+
+@shared_task(queue='notif-manager')
+def send_email_notifications():
+    for email_notif in EmailNotification.objects.filter(sent=False):
+
+        resp = send_email(
+            subject=email_notif.title,
+            body_html=render_to_string('accounts/email/template_email.html', a),
+            body_text=render_to_string(email_notif.content, {}),
+            to=[email_notif.user.email]
+        )
+        if resp:
+            email_notif.sent = True
+            email_notif.save(update_fields=['sent'])
+
