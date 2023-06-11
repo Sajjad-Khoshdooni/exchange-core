@@ -2,16 +2,17 @@ from django.db import models
 
 
 class EventTracker(models.Model):
+    TRADE, OTC_TRADE = 'trade', 'otc_trade'
+    TRANSFER, FIAT_WITHDRAW, PAYMENT = 'transfer', 'fiat_withdraw', 'payment'
+    USER, LOGIN, TRAFFIC_SOURCE = 'user', 'login', 'traffic_source'
+    PRIZE, STAKING = 'prize', 'staking'
+
     created = models.DateField(auto_now_add=True)
     updated = models.DateField(auto_now=True)
-    name = models.CharField(max_length=30)
-    last_trade_id = models.IntegerField(default=0)
-    last_otc_trade_id = models.IntegerField(default=0)
-    last_transfer_id = models.IntegerField(default=0)
-    last_fiat_withdraw_id = models.IntegerField(default=0)
-    last_payment_id = models.IntegerField(default=0)
-    last_user_id = models.IntegerField(default=0)
-    last_login_id = models.IntegerField(default=0)
-    last_prize_id = models.IntegerField(default=0)
-    last_staking_id = models.IntegerField(default=0)
-    last_traffic_source_id = models.IntegerField(default=0)
+    last_id = models.IntegerField(default=0)
+    type = models.CharField(
+        max_length=20,
+        choices=[(TRADE, TRADE), (OTC_TRADE, OTC_TRADE), (TRANSFER, TRANSFER), (FIAT_WITHDRAW, FIAT_WITHDRAW),
+                 (PAYMENT, PAYMENT), (USER, USER), (LOGIN, LOGIN), (TRAFFIC_SOURCE, TRAFFIC_SOURCE),
+                 (PRIZE, PRIZE), (STAKING, STAKING)]
+    )
