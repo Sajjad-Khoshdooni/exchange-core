@@ -136,8 +136,12 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
     ip = get_client_ip(request)
     ip_data = get_ip_data(ip)
 
+    session = Session.objects.filter(session_key=request.session.session_key).first()
+
+    assert session
+
     return LoginActivity.objects.get_or_create(
-        session=Session.objects.filter(session_key=request.session.session_key).first(),
+        session=session,
 
         defaults={
             **user_agent_data,
