@@ -2,13 +2,9 @@ import json
 
 import requests
 from django.conf import settings
-from django.core.cache import caches
 
 from accounts.models import User
 from financial.models import BankAccount, BankPaymentId, PaymentIdRequest, Gateway
-
-token_cache = caches['token']
-JIBIT_GATEWAY_ACCESS_KEY = 'jibit_gateway_key'
 
 
 class JibitClient:
@@ -16,12 +12,12 @@ class JibitClient:
 
     def __init__(self, gateway):
         self.gateway = gateway
+        self._token = None
 
     def _get_token(self, force_renew: bool = False):
         if not force_renew:
-            token = token_cache.get(JIBIT_GATEWAY_ACCESS_KEY)
-            if token:
-                return token
+            if self._token:
+                return self._token
 
         resp = requests.post(
             url=self.BASE_URL + '/v1/tokens/generate',
@@ -34,14 +30,12 @@ class JibitClient:
 
         if resp.ok:
             resp_data = resp.json()
-            token = resp_data['accessToken']
-            expire = 23 * 3600
-            token_cache.set(JIBIT_GATEWAY_ACCESS_KEY, token, expire)
-
-            return token
+            self._token = resp_data['accessToken']
+            return self._token
 
     def create_payment_id(self, user: User):
         token = self._get_token()
+        host_url = settings.HOST_URL
 
         ibans = list(BankAccount.objects.filter(user=user).values_list('iban', flat=True))
 
@@ -49,7 +43,7 @@ class JibitClient:
             url=self.BASE_URL + '/v1/paymentIds',
             headers={'Authorization': 'Bearer ' + token},
             json={
-                # "callbackUrl": host_url + f"/api/v1/finance/paymentIds/callback/jibit/?id={user.id}",
+                "callbackUrl": host_url + f"/api/v1/finance/paymentIds/callback/jibit/?id={user.id}",
                 "merchantReferenceNumber": 'user-%s' % user.id,
                 "userFullName": user.get_full_name(),
                 "userIbans": ibans,

@@ -21,8 +21,6 @@ class NotifyView(APIView):
                 (EMAIL, EMAIL),
             ])
         content = serializers.CharField(required=False)
-        template = serializers.CharField(required=False)
-        param = serializers.CharField(required=False)
         title = serializers.CharField(required=False)
         link = serializers.CharField(required=False)
         hidden = serializers.BooleanField(required=False, default=True)
@@ -62,7 +60,7 @@ class NotifyView(APIView):
                 title=data.get('content', None),
                 link=data.get('content', None),
                 message=data.get('content', None),
-                hidden=data.get('group_id', True),
+                hidden=data.get('hidden', True),
                 push_status=Notification.PUSH_WAITING,
                 group_id=data['group_id']
             )
