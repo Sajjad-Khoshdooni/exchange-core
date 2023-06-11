@@ -85,7 +85,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount',
                     'wallet')
     list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
-    readonly_fields = ('wallet', 'symbol')
+    readonly_fields = ('wallet', 'symbol', 'account', 'stop_loss')
 
     def created_at_millis(self, instance):
         created = instance.created.astimezone()
