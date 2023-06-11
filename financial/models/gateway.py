@@ -94,7 +94,7 @@ class Gateway(models.Model):
             created__gte=today,
             status=DONE
         ).values('payment_request__gateway').annotate(
-            total=Sum('amount')
+            total=Sum('payment_request__amount')
         ).values_list('payment_request__gateway', 'total'))
 
         for g in gateways:
