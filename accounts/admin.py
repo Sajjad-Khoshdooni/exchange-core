@@ -716,6 +716,7 @@ class LoginActivityAdmin(admin.ModelAdmin):
                     'session')
     search_fields = ('user__phone', 'ip', 'session__session_key')
     readonly_fields = ('user', 'session', 'ip', )
+    list_filter = ('is_sign_up', 'native_app',)
 
 
 @admin.register(FirebaseToken)
