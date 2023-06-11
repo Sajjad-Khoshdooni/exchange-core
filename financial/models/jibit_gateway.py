@@ -1,7 +1,6 @@
 import requests
 from decouple import config
 from django.conf import settings
-from django.core.cache import caches
 from rest_framework.reverse import reverse
 
 from financial.models import Gateway, BankCard, PaymentRequest, Payment
@@ -9,18 +8,15 @@ from financial.models.gateway import GatewayFailed, logger
 from ledger.utils.fields import DONE, CANCELED
 from ledger.utils.wallet_pipeline import WalletPipeline
 
-token_cache = caches['token']
-JIBIT_GATEWAY_ACCESS_KEY = 'jibit_gateway_key'
-
 
 class JibitGateway(Gateway):
     BASE_URL = 'https://napi.jibit.cloud/ppg'
+    _token = None
 
     def _get_token(self, force_renew: bool = False):
         if not force_renew:
-            token = token_cache.get(JIBIT_GATEWAY_ACCESS_KEY)
-            if token:
-                return token
+            if self._token:
+                return self._token
 
         resp = requests.post(
             url=self.BASE_URL + '/v3/tokens',
@@ -33,11 +29,9 @@ class JibitGateway(Gateway):
 
         if resp.ok:
             resp_data = resp.json()
-            token = resp_data['accessToken']
-            expire = 23 * 3600
-            token_cache.set(JIBIT_GATEWAY_ACCESS_KEY, token, expire)
+            self._token = resp_data['accessToken']
 
-            return token
+            return self._token
 
     def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
         token = self._get_token()
@@ -64,7 +58,7 @@ class JibitGateway(Gateway):
         )
 
         if not resp.ok:
-            print(resp.json())
+            logger.info('jibit gateway connection error %s' % resp.json())
             raise GatewayFailed
 
         authority = resp.json()['purchaseId']
