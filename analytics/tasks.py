@@ -159,6 +159,14 @@ def trigger_kafka_event():
             account__type=Account.SYSTEM
     ).first()
     if trade:
+        if trade.account is None or \
+                trade.account.user is None or\
+                trade.account.type == Account.SYSTEM or\
+                trade.account.user.id in [93167, 382]:
+
+            tracker.last_payment_id = trade.id
+            tracker.save(update_fields=['last_payment_id'])
+
         event = TradeEvent(
             id=trade.id,
             user_id=trade.account.user_id,
