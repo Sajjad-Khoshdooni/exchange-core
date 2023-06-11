@@ -47,7 +47,6 @@ def create_analytics(now=None):
 
 @shared_task(queue='history')
 def trigger_kafka_event():
-    print('history')
     # tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.USER)
     # user_list = list(User.objects.filter(
     #     id__gt=tracker.last_id
