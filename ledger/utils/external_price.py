@@ -92,7 +92,7 @@ def _fetch_redis_prices(coins: list, side: str = None, allow_stale: bool = False
             if price is not None:
                 price = Decimal(price)
 
-            if allow_stale or not price_dict.get('t') or now - 30 <= price_dict.get('t') <= now:
+            if allow_stale or not price_dict.get('t') or now - 30 <= float(price_dict.get('t')) <= now:
                 results.append(
                     Price(coin=c, price=price, side=s)
                 )
