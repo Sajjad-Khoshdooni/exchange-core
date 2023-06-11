@@ -16,3 +16,4 @@ from .auth2fa import Auth2Fa
 from .feedback import UserFeedback
 from .sms_notification import SmsNotification
 from .login_activity import LoginActivity
+from .email_notification import EmailNotification

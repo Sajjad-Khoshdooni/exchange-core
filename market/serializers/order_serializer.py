@@ -23,6 +23,12 @@ from market.utils.redis import MarketStreamCache
 logger = logging.getLogger(__name__)
 
 
+class OrderIDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ('id', 'client_order_id')
+
+
 class OrderSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     symbol = serializers.CharField(source='symbol.name')
@@ -47,6 +53,9 @@ class OrderSerializer(serializers.ModelSerializer):
         request = self.context['request']
 
         if not can_trade(request):
+            raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
+
+        if not settings.MARKET_TRADE_ENABLE and not request.user.account.is_system():
             raise ValidationError('در حال حاضر امکان سفارش‌گذاری وجود ندارد.')
 
         symbol = get_object_or_404(PairSymbol, name=symbol_name)

@@ -85,70 +85,73 @@ def get_ip_data(ip):
         return {}
 
 
-def get_login_activity_from_request(request) -> LoginActivity:
-    try:
-        os = request.user_agent.os.family
-        if request.user_agent.os.version_string:
-            os += ' ' + request.user_agent.os.version_string
+def get_login_user_agent_data_from_request(request) -> dict:
+    os = request.user_agent.os.family
+    os_version = request.user_agent.os.version_string
+    if os_version:
+        os += ' ' + os_version
 
-        device = request.user_agent.device.family
+    device = request.user_agent.device.family
 
-        browser = request.user_agent.browser.family
+    browser = request.user_agent.browser.family
+    browser_version = request.user_agent.browser.version_string
 
-        if request.user_agent.browser.version_string:
-            browser += ' ' + request.user_agent.os.version_string
+    if browser_version:
+        browser += ' ' + browser_version
 
-        if request.user_agent.is_mobile:
-            device_type = LoginActivity.MOBILE
-        elif request.user_agent.is_tablet:
-            device_type = LoginActivity.TABLET
-        elif request.user_agent.is_pc:
-            device_type = LoginActivity.PC
-        else:
-            device_type = LoginActivity.UNKNOWN
+    if request.user_agent.is_mobile:
+        device_type = LoginActivity.MOBILE
+    elif request.user_agent.is_tablet:
+        device_type = LoginActivity.TABLET
+    elif request.user_agent.is_pc:
+        device_type = LoginActivity.PC
+    else:
+        device_type = LoginActivity.UNKNOWN
 
-        return LoginActivity(
-            user_agent=request.META['HTTP_USER_AGENT'],
-            device_type=device_type,
-            device=device,
-            os=os,
-            browser=browser,
-        )
-    except:
-        pass
+    return {
+        'user_agent': request.META['HTTP_USER_AGENT'],
+        'device_type': device_type,
+        'device': device,
+        'os': os,
+        'browser': browser
+    }
 
 
-def get_login_activity_from_client_info(client_info: dict) -> LoginActivity:
-    return LoginActivity(
-        user_agent=json.dumps(client_info),
-        device_type=LoginActivity.MOBILE,
-        device=client_info.get('device_name', ''),
-        os='%s %s' % (client_info.get('system_name', ''), client_info.get('system_version', '')),
-        browser=client_info.get('brand', ''),
-    )
+def get_login_user_agent_data_from_client_info(client_info: dict) -> dict:
+    return {
+        'user_agent': json.dumps(client_info),
+        'device_type': LoginActivity.MOBILE,
+        'device': client_info.get('device_name', ''),
+        'os': '%s %s' % (client_info.get('system_name', ''), client_info.get('system_version', '')),
+        'browser': client_info.get('brand', ''),
+    }
 
 
 def set_login_activity(request, user, is_sign_up: bool = False, client_info: dict = None, native_app: bool = False):
-    try:
-        if client_info:
-            login_activity = get_login_activity_from_client_info(client_info)
-        else:
-            login_activity = get_login_activity_from_request(request)
+    session = Session.objects.filter(session_key=request.session.session_key).first()
 
-        ip = get_client_ip(request)
-        ip_data = get_ip_data(ip)
+    if not session:
+        return
 
-        login_activity.user = user
-        login_activity.session = Session.objects.filter(session_key=request.session.session_key).first()
-        login_activity.is_sign_up = is_sign_up
-        login_activity.ip = ip
-        login_activity.ip_data = ip_data
-        login_activity.city = ip_data.get('city', '')
-        login_activity.country = ip_data.get('country', '')
-        login_activity.native_app = native_app
-        login_activity.save()
+    if client_info:
+        user_agent_data = get_login_user_agent_data_from_client_info(client_info)
+    else:
+        user_agent_data = get_login_user_agent_data_from_request(request)
 
-    except:
-        logger.exception('User login activity dos not saved ')
+    ip = get_client_ip(request)
+    ip_data = get_ip_data(ip)
 
-    return
+    LoginActivity.objects.get_or_create(
+        session=session,
+
+        defaults={
+            **user_agent_data,
+            'user': user,
+            'is_sign_up': is_sign_up,
+            'ip': ip,
+            'ip_data': ip_data,
+            'city': ip_data.get('city', ''),
+            'country': ip_data.get('country', ''),
+            'native_app': native_app
+        }
+    )

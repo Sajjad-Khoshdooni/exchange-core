@@ -7,6 +7,7 @@ from typing import Dict, List, Union
 import requests
 from django.conf import settings
 from django.core.cache import cache
+from django.utils import timezone
 from redis import Redis
 
 logger = logging.getLogger(__name__)
@@ -60,6 +61,8 @@ def _get_redis_price_key(coin: str):
 
 
 def _fetch_redis_prices(coins: list, side: str = None, allow_stale: bool = False) -> List[Price]:
+    now = timezone.now().timestamp()
+
     results = []
 
     if side:
@@ -89,9 +92,10 @@ def _fetch_redis_prices(coins: list, side: str = None, allow_stale: bool = False
             if price is not None:
                 price = Decimal(price)
 
-            results.append(
-                Price(coin=c, price=price, side=s)
-            )
+            if allow_stale or not price_dict.get('t') or now - 30 <= float(price_dict.get('t')) <= now:
+                results.append(
+                    Price(coin=c, price=price, side=s)
+                )
 
     return results
 

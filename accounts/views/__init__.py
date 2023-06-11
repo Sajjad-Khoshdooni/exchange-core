@@ -1,5 +1,5 @@
 from .dashboard import dashboard
-from .login_view import LoginView, LogoutView, LoginActivityView
+from .login_view import LoginView, LogoutView, LoginActivityViewSet
 from .user_view import UserDetailView
 from .signup_view import InitiateSignupView, SignupView
 from .otp_view import VerifyOTPView, SendOTPView

@@ -1,11 +1,13 @@
 import logging
 
 from django.contrib.auth import authenticate, login, logout
+from django.utils import timezone
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 
 from accounts.models.login_activity import LoginActivity
 from accounts.utils.validation import set_login_activity
@@ -53,21 +55,50 @@ class LogoutView(APIView):
 
 
 class LoginActivitySerializer(serializers.ModelSerializer):
+    active = serializers.SerializerMethodField()
+    current = serializers.SerializerMethodField()
+
+    def get_active(self, login_activity: LoginActivity):
+        session = login_activity.session
+        return session and session.expire_date > timezone.now()
+
+    def get_current(self, login_activity: LoginActivity):
+        session = login_activity.session
+        return session and session.session_key == self.context['request'].session.session_key
 
     class Meta:
         model = LoginActivity
-        fields = ('id', 'created', 'ip', 'device', 'os', 'browser',)
+        fields = ('id', 'created', 'ip', 'device', 'os', 'browser', 'session', 'active', 'current')
 
 
-class LoginActivityView(ListAPIView):
+class LoginActivityViewSet(ModelViewSet):
 
     pagination_class = LimitOffsetPagination
     serializer_class = LoginActivitySerializer
 
-    def get_queryset(self):
-        return LoginActivity.objects.filter(user=self.request.user).order_by('-id')
+    def get_queryset(self, only_active: bool = False):
+        logins = LoginActivity.objects.filter(user=self.request.user).order_by('-id')
+
+        if only_active or self.request.query_params.get('active') == '1':
+            logins = logins.filter(session__isnull=False, session__expire_date__gt=timezone.now())
+
+        return logins
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
         ctx['user_agent'] = self.request.user_agent
         return ctx
+
+    def perform_destroy(self, instance: LoginActivity):
+        if instance.session and self.request.session.session_key != instance.session.session_key:
+            instance.session.delete()
+
+    def destroy_all(self, request, *args, **kwargs):
+        to_delete_sessions = self.get_queryset(only_active=True).exclude(
+            session__session_key=request.session.session_key
+        )
+
+        for login_activity in to_delete_sessions:
+            login_activity.session.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
