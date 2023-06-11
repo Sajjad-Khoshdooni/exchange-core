@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='gateway',
             name='primary',
-            field=models.BooleanField(default=True),
+            field=models.BooleanField(default=False),
         ),
         migrations.AddConstraint(
             model_name='gateway',

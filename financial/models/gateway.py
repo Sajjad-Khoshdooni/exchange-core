@@ -40,7 +40,7 @@ class Gateway(models.Model):
     withdraw_enable = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
     active_for_staff = models.BooleanField(default=False)
-    primary = models.BooleanField(default=True)
+    primary = models.BooleanField(default=False)
 
     min_deposit_amount = models.PositiveIntegerField(default=10000)
     max_deposit_amount = models.PositiveIntegerField(default=50000000)
