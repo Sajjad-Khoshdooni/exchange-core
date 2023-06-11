@@ -1,10 +1,16 @@
-from celery import shared_task
+import logging
 
-from accounts.models import Notification, BulkNotification, User
+from celery import shared_task
+from django.template.loader import render_to_string
+
+from accounts.models import Notification, BulkNotification, User, EmailNotification
 from accounts.models.sms_notification import SmsNotification
 from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
+from accounts.utils.email import send_email
 from accounts.utils.push_notif import send_push_notif_to_user
 from ledger.utils.fields import PENDING, DONE
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='notif-manager')
@@ -67,3 +73,25 @@ def send_sms_notifications():
         if resp:
             notif.sent = True
             notif.save(update_fields=['sent'])
+
+
+@shared_task(queue='notif-manager')
+def send_email_notifications():
+    for email_notif in EmailNotification.objects.filter(sent=False):
+        if email_notif.user.email is None:
+            logger.info(f'SendingMailIgnoredDueToNullEmail user:{email_notif.user.id}')
+            continue
+
+        resp = send_email(
+            subject=email_notif.title,
+            body_html=render_to_string('accounts/email/template_email.html', {
+                'title': email_notif.title,
+                'bodyHTML': email_notif.content_html
+            }),
+            body_text=email_notif.content,
+            to=[email_notif.user.email]
+        )
+        if resp:
+            email_notif.sent = True
+            email_notif.save(update_fields=['sent'])
+

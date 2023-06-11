@@ -132,5 +132,6 @@ def send_email(subject: str, body_html: str, body_text: str, to: list, transacti
         })
 
         logger.info('elasticmail error', data)
+        return
 
     return data
