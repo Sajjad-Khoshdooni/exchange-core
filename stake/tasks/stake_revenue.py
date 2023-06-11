@@ -1,3 +1,5 @@
+import logging
+
 from celery import shared_task
 from django.db import IntegrityError
 
@@ -5,6 +7,8 @@ from accounts.models import Account
 from ledger.models import Trx, Wallet
 from ledger.utils.wallet_pipeline import WalletPipeline
 from stake.models import StakeRequest, StakeRevenue
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task(queue='celery')
@@ -31,4 +35,4 @@ def create_stake_revenue():
                 )
 
         except IntegrityError:
-            print('duplicate stake_revenue')
+            logger.info('duplicate stake_revenue')

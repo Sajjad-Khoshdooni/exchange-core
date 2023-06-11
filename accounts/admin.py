@@ -714,8 +714,9 @@ class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 class LoginActivityAdmin(admin.ModelAdmin):
     list_display = ('created', 'user', 'ip', 'device', 'os', 'browser', 'device_type', 'is_sign_up', 'native_app',
                     'session')
-    search_fields = ('user__phone', 'ip')
+    search_fields = ('user__phone', 'ip', 'session__session_key')
     readonly_fields = ('user', 'session', 'ip', )
+    list_filter = ('is_sign_up', 'native_app',)
 
 
 @admin.register(FirebaseToken)
