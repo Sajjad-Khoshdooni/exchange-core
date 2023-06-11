@@ -81,6 +81,8 @@ class NotifyView(APIView):
                     'content_html': data.get('content_html', None),
                 }
             )
+        else:
+            raise NotImplementedError
 
         if created:
             return Response(status=status.HTTP_201_CREATED)
