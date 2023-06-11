@@ -78,7 +78,10 @@ class Gateway(models.Model):
     @classmethod
     def _find_best_deposit_gateway(cls, user: User = None, amount: Decimal = 0) -> 'Gateway':
         if user and user.is_staff:
-            return Gateway.objects.filter(active_for_staff=True).order_by('id').first()
+            gateway = Gateway.objects.filter(active_for_staff=True).order_by('id').first()
+
+            if gateway:
+                return gateway
 
         gateways = Gateway.objects.filter(active=True).order_by('-primary')
 
