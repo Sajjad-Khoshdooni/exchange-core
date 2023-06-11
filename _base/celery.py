@@ -164,6 +164,47 @@ app.conf.beat_schedule = {
             'queue': 'history',
         }
     },
+    'create_analytics': {
+        'task': 'analytics.tasks.create_analytics',
+        'schedule': crontab(hour=21, minute=0),
+        'options': {
+            'queue': 'history',
+        }
+    },
+
+    'create_snapshot': {
+        'task': 'ledger.tasks.snapshot.create_snapshot',
+        'schedule': crontab(minute='1-59/5'),
+        'options': {
+            'queue': 'history',
+            'expire': 200
+        }
+    },
+    'provider_income': {
+        'task': 'accounting.tasks.provider.fill_provider_incomes',
+        'schedule': crontab(minute=30),
+        'options': {
+            'queue': 'history',
+            'expire': 3600,
+        },
+    },
+    'blocklink_incomes': {
+        'task': 'accounting.tasks.blocklink.fill_blocklink_incomes',
+        'schedule': crontab(minute=30),
+        'options': {
+            'queue': 'history',
+            'expire': 3600,
+        }
+    },
+
+    'create_vault_snapshot': {
+        'task': 'accounting.tasks.vault.update_vaults',
+        'schedule': crontab(minute='*/5'),
+        'options': {
+            'queue': 'vault',
+            'expire': 200
+        }
+    },
 
     'trigger_kafka_event': {
         'task': 'analytics.tasks.trigger_kafka_event',
