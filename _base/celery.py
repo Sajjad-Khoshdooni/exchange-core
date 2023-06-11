@@ -211,7 +211,7 @@ app.conf.beat_schedule = {
         'task': 'analytics.tasks.trigger_kafka_event',
         'schedule': 10,
         'options': {
-            'queue': 'history',
+            'queue': 'notif-manager',
             'expire': 12
         }
     },

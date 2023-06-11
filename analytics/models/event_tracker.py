@@ -14,5 +14,6 @@ class EventTracker(models.Model):
         max_length=20,
         choices=[(TRADE, TRADE), (OTC_TRADE, OTC_TRADE), (TRANSFER, TRANSFER), (FIAT_WITHDRAW, FIAT_WITHDRAW),
                  (PAYMENT, PAYMENT), (USER, USER), (LOGIN, LOGIN), (TRAFFIC_SOURCE, TRAFFIC_SOURCE),
-                 (PRIZE, PRIZE), (STAKING, STAKING)]
+                 (PRIZE, PRIZE), (STAKING, STAKING)],
+        unique=True
     )

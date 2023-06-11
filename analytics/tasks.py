@@ -47,77 +47,33 @@ def create_analytics(now=None):
 
 @shared_task(queue='history')
 def trigger_kafka_event():
-    # tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.USER)
-    # user_list = list(User.objects.filter(
-    #     id__gt=tracker.last_id
-    # ).values_list('id', flat=True))
-    # trigger_users_event.delay(user_list)
 
-    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.TRANSFER)
-    transfer_list = list(Transfer.objects.filter(
-        id__gt=tracker.last_id, status=Transfer.DONE
-    ).values_list('id', flat=True))
-    trigger_transfer_event.delay(transfer_list)
+    trigger_transfer_event()
 
-    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.FIAT_WITHDRAW)
-    fiat_transfer_list = list(FiatWithdrawRequest.objects.filter(
-        id__gt=tracker.last_id,
-        status=FiatWithdrawRequest.DONE
-    ).values_list('id', flat=True))
-    trigger_fiat_transfer_event.delay(fiat_transfer_list)
+    trigger_fiat_transfer_event()
 
-    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.PAYMENT)
-    payment_list = list(Payment.objects.filter(
-        id__gt=tracker.last_id, status=DONE
-    ).values_list('id', flat=True))
-    trigger_payment_event.delay(payment_list)
+    trigger_payment_event()
 
-    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.TRADE)
-    trade_list = list(Trade.objects.filter(
-        id__gt=tracker.last_id, account__user__isnull=False
-    ).exclude(
-        account__type=Account.SYSTEM
-    ).values_list('id', flat=True))
-    trigger_trade_event.delay(trade_list)
+    trigger_trade_event()
 
-    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.OTC_TRADE)
-    otc_trade_list = list(OTCTrade.objects.filter(
-        id__gt=tracker.last_id,
-        otc_request__account__user__isnull=False,
-        status=OTCTrade.DONE
-    ).exclude(
-        otc_request__account__type=Account.SYSTEM
-    ).values_list('id', flat=True))
-    trigger_otc_trade.delay(otc_trade_list)
+    trigger_otc_trade()
 
-    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.LOGIN)
-    login_activity_list = list(LoginActivity.objects.filter(
-        id__gt=tracker.last_id,
-    ).values_list('id', flat=True))
-    trigger_login_event.delay(login_activity_list)
+    trigger_login_event()
 
-    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.PRIZE)
-    prize_list = list(Prize.objects.filter(
-        id__gt=tracker.last_id,
-    ).values_list('id', flat=True))
-    trigger_prize_event.delay(prize_list)
+    trigger_prize_event()
 
-    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.STAKING)
-    stake_request_list = list(StakeRequest.objects.filter(
-        id__gt=tracker.last_id, status=Transfer.DONE
-    ).values_list('id', flat=True))
-    trigger_stake_event.delay(stake_request_list)
+    trigger_stake_event()
 
-    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.TRAFFIC_SOURCE)
-    traffic_source_list = list(TrafficSource.objects.filter(
+    trigger_traffic_source()
+
+
+def trigger_users_event(threshold=1000):
+    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.USER)
+    user_list = User.objects.filter(
         id__gt=tracker.last_id
-    ).values_list('id', flat=True))
-    trigger_traffic_source.delay(traffic_source_list)
+    ).order_by('id')[:threshold]
 
-
-@shared_task(queue='history')
-def trigger_users_event(id_list):
-    for user in User.objects.filter(id__in=id_list):
+    for user in user_list:
         if not hasattr(user, 'account'):
             account = user.get_account()
         else:
@@ -146,9 +102,13 @@ def trigger_users_event(id_list):
         get_kafka_producer().produce(event)
 
 
-@shared_task(queue='history')
-def trigger_transfer_event(id_list):
-    for transfer in Transfer.objects.filter(id__in=id_list):
+def trigger_transfer_event(threshold=1000):
+    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.TRANSFER)
+    transfer_list = Transfer.objects.filter(
+        id__gt=tracker.last_id, status=Transfer.DONE
+    ).order_by('id')[:threshold]
+
+    for transfer in transfer_list:
         event = TransferEvent(
             id=transfer.id,
             user_id=transfer.wallet.account.user_id,
@@ -165,11 +125,15 @@ def trigger_transfer_event(id_list):
         get_kafka_producer().produce(event, instance=transfer)
 
 
-@shared_task(queue='history')
-def trigger_fiat_transfer_event(id_list):
+def trigger_fiat_transfer_event(threshold=1000):
     usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
+    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.FIAT_WITHDRAW)
+    fiat_transfer_list = FiatWithdrawRequest.objects.filter(
+        id__gt=tracker.last_id,
+        status=FiatWithdrawRequest.DONE
+    ).order_by('id')[:threshold]
 
-    for fiat_transfer in FiatWithdrawRequest.objects.filter(id__in=id_list):
+    for fiat_transfer in fiat_transfer_list:
         event = TransferEvent(
             id=fiat_transfer.id,
             user_id=fiat_transfer.bank_account.user_id,
@@ -186,10 +150,14 @@ def trigger_fiat_transfer_event(id_list):
         get_kafka_producer().produce(event, instance=fiat_transfer)
 
 
-@shared_task(queue='history')
-def trigger_payment_event(id_list):
+def trigger_payment_event(threshold=1000):
+    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.PAYMENT)
+    payment_list = Payment.objects.filter(
+        id__gt=tracker.last_id, status=DONE
+    ).order_by('id')[:threshold]
     usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
-    for payment in Payment.objects.filter(id__in=id_list):
+
+    for payment in payment_list:
         event = TransferEvent(
             id=payment.id,
             user_id=payment.payment_request.bank_card.user_id,
@@ -206,9 +174,15 @@ def trigger_payment_event(id_list):
         get_kafka_producer().produce(event, instance=payment)
 
 
-@shared_task(queue='history')
-def trigger_trade_event(id_list):
-    for trade in Trade.objects.filter(id__in=id_list):
+def trigger_trade_event(threshold=1000):
+    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.TRADE)
+    trade_list = Trade.objects.filter(
+        id__gt=tracker.last_id, account__user__isnull=False
+    ).exclude(
+        account__type=Account.SYSTEM
+    ).order_by('id')[:threshold]
+
+    for trade in trade_list:
         if trade.account is None or \
                 trade.account.user is None or \
                 trade.account.type == Account.SYSTEM or \
@@ -232,9 +206,17 @@ def trigger_trade_event(id_list):
         get_kafka_producer().produce(event, instance=trade)
 
 
-@shared_task(queue='history')
-def trigger_otc_trade(id_list):
-    for otc_trade in OTCTrade.objects.filter(id__in=id_list):
+def trigger_otc_trade(threshold=1000):
+    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.OTC_TRADE)
+    otc_trade_list = OTCTrade.objects.filter(
+        id__gt=tracker.last_id,
+        otc_request__account__user__isnull=False,
+        status=OTCTrade.DONE
+    ).exclude(
+        otc_request__account__type=Account.SYSTEM
+    ).order_by('id')[:threshold]
+
+    for otc_trade in otc_trade_list:
         trade_type = 'otc'
 
         req = otc_trade.otc_request
@@ -258,9 +240,13 @@ def trigger_otc_trade(id_list):
         get_kafka_producer().produce(event, instance=otc_trade)
 
 
-@shared_task(queue='history')
-def trigger_login_event(id_list):
-    for login_activity in LoginActivity.objects.filter(id__in=id_list):
+def trigger_login_event(threshold=1000):
+    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.LOGIN)
+    login_activity_list = LoginActivity.objects.filter(
+        id__gt=tracker.last_id,
+    ).order_by('id')[:threshold]
+
+    for login_activity in login_activity_list:
         event = LoginEvent(
             user_id=login_activity.user_id,
             device=login_activity.device,
@@ -280,9 +266,13 @@ def trigger_login_event(id_list):
         get_kafka_producer().produce(event, instance=login_activity)
 
 
-@shared_task(queue='history')
-def trigger_prize_event(id_list):
-    for prize in Prize.objects.filter(id__in=id_list):
+def trigger_prize_event(threshold=1000):
+    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.PRIZE)
+    prize_list = Prize.objects.filter(
+        id__gt=tracker.last_id,
+    ).order_by('id')[:threshold]
+
+    for prize in prize_list:
         event = PrizeEvent(
             created=prize.created,
             user_id=prize.account.user_id,
@@ -297,9 +287,13 @@ def trigger_prize_event(id_list):
         get_kafka_producer().produce(event, instance=prize)
 
 
-@shared_task(queue='history')
-def trigger_stake_event(id_list):
-    for stake_request in StakeRequest.objects.filter(id__in=id_list):
+def trigger_stake_event(threshold=1000):
+    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.STAKING)
+    stake_request_list = StakeRequest.objects.filter(
+        id__gt=tracker.last_id, status=Transfer.DONE
+    ).order_by('id')[:threshold]
+
+    for stake_request in stake_request_list:
         event = StakeRequestEvent(
             created=stake_request.created,
             user_id=stake_request.account.user_id,
@@ -314,9 +308,13 @@ def trigger_stake_event(id_list):
         get_kafka_producer().produce(event, instance=stake_request)
 
 
-@shared_task(queue='history')
-def trigger_traffic_source(id_list):
-    for traffic_source in TrafficSource.objects.filter(id__in=id_list):
+def trigger_traffic_source(threshold=1000):
+    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.TRAFFIC_SOURCE)
+    traffic_source_list = TrafficSource.objects.filter(
+        id__gt=tracker.last_id
+    ).order_by('id')[:threshold]
+
+    for traffic_source in traffic_source_list:
         event = TrafficSourceEvent(
             created=traffic_source.created,
             user_id=traffic_source.user_id,
