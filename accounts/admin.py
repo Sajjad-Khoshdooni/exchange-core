@@ -9,7 +9,7 @@ from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounts.models import FirebaseToken, ExternalNotification, Attribution, AppStatus, Auth2Fa, VerificationCode, \
-    UserFeedback, BulkNotification
+    UserFeedback, BulkNotification, EmailNotification
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -694,6 +694,13 @@ class BulkNotificationAdmin(admin.ModelAdmin):
 class SmsNotificationAdmin(admin.ModelAdmin):
     list_display = ('created', 'recipient', 'template', 'params', 'sent')
     list_filter = ('template', )
+    search_fields = ('recipient__phone', 'group_id')
+    readonly_fields = ('recipient', 'group_id')
+
+
+@admin.register(EmailNotification)
+class EmailNotificationAdmin(admin.ModelAdmin):
+    list_display = ('created', 'recipient', 'title', 'sent')
     search_fields = ('recipient__phone', 'group_id')
     readonly_fields = ('recipient', 'group_id')
 
