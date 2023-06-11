@@ -1,8 +1,10 @@
+from django.db.models import Sum
 from rest_framework import serializers
 from rest_framework.generics import RetrieveAPIView
 
-from financial.models import Gateway
+from financial.models import Gateway, Payment
 from financial.utils.ach import next_ach_clear_time
+from ledger.utils.fields import DONE
 
 
 class GatewaySerializer(serializers.ModelSerializer):
@@ -21,4 +23,13 @@ class GatewayInfoView(RetrieveAPIView):
 
     def get_object(self):
         user = self.request.user
-        return Gateway.get_active_deposit(user)
+
+        total = Payment.objects.filter(
+            payment_request__bank_card__user=user,
+            status=DONE
+        ).aggregate(amount=Sum('amount'))['amount'] or 0
+
+        if total < 10_000_000:
+            return Gateway.get_active_deposit(user)
+        else:
+            return Gateway.objects.filter(active=True).order_by('-max_deposit_amount').first()
