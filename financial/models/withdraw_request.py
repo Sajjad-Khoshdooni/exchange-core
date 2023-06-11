@@ -192,9 +192,6 @@ class FiatWithdrawRequest(models.Model):
             template=email_template,
             context={
                 'estimated_receive_time': self.receive_datetime or None,
-                'brand': settings.BRAND,
-                'panel_url': settings.PANEL_URL,
-                'logo_elastic_url': config('LOGO_ELASTIC_URL'),
             }
         )
 
