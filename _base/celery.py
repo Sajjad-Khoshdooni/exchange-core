@@ -206,6 +206,15 @@ app.conf.beat_schedule = {
             'expire': 200
         }
     },
+
+    'trigger_kafka_event': {
+        'task': 'analytics.tasks.trigger_kafka_event',
+        'schedule': 10,
+        'options': {
+            'queue': 'notif-manager',
+            'expire': 12
+        }
+    },
     # 'create_accounting_report': {
     #     'task': 'accounting.tasks.weekly_fiat_transfer.create_weekly_accounting_report',
     #     'schedule': crontab(hour=19, minute=30, day_of_week=6),

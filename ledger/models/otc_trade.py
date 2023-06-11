@@ -1,18 +1,13 @@
 import logging
-import uuid
 from uuid import uuid4
 
 from django.conf import settings
 from django.db import models
 from django.db.models import F, Sum
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 
 from _base.settings import OTC_ACCOUNT_ID
 from accounting.models import TradeRevenue
-from accounts.event.producer import get_kafka_producer
 from accounts.models import Account
-from accounts.utils.dto import TradeEvent
 from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet, Asset
 from ledger.utils.external_price import SELL
@@ -272,33 +267,3 @@ class OTCTrade(models.Model):
 
     def __str__(self):
         return '%s [%s]' % (self.otc_request, self.status)
-
-
-@receiver(post_save, sender=OTCTrade)
-def handle_OTC_trade_save(sender, instance, created, **kwargs):
-    from ledger.models import FastBuyToken
-
-    user = instance.otc_request.account.user
-    if not user or instance.otc_request.account.type == Account.SYSTEM or instance.status != OTCTrade.DONE:
-        return
-
-    producer = get_kafka_producer()
-    trade_type = 'otc'
-    if FastBuyToken.objects.filter(otc_request=instance.otc_request).exists():
-        trade_type = 'fast_buy'
-
-    event = TradeEvent(
-        id=instance.id,
-        user_id=user.id,
-        amount=instance.otc_request.amount,
-        price=instance.otc_request.price,
-        symbol=instance.otc_request.symbol.name,
-        trade_type=trade_type,
-        market=instance.otc_request.market,
-        created=instance.created,
-        value_usdt=instance.otc_request.usdt_value,
-        value_irt=instance.otc_request.irt_value,
-        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TradeEvent.type)
-    )
-
-    producer.produce(event)
