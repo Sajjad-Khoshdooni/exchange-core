@@ -80,8 +80,8 @@ def send_sms_notifications():
 @shared_task(queue='notif-manager')
 def send_email_notifications():
     for email_notif in EmailNotification.objects.filter(sent=False):
-        if email_notif.user.email is None:
-            logger.info(f'SendingMailIgnoredDueToNullEmail user:{email_notif.user.id}')
+        if email_notif.recipient.email is None:
+            logger.info(f'SendingMailIgnoredDueToNullEmail user:{email_notif.recipient.id}')
             continue
 
         resp = send_email(
@@ -94,7 +94,7 @@ def send_email_notifications():
                 'logo_elastic_url': config('LOGO_ELASTIC_URL'),
             }),
             body_text=email_notif.content,
-            to=[email_notif.user.email]
+            to=[email_notif.recipient.email]
         )
         if resp:
             email_notif.sent = True
