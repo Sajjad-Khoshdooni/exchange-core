@@ -164,6 +164,7 @@ app.conf.beat_schedule = {
             'queue': 'history',
         }
     },
+
     'create_analytics': {
         'task': 'analytics.tasks.create_analytics',
         'schedule': crontab(hour=21, minute=0),
@@ -194,7 +195,7 @@ app.conf.beat_schedule = {
         'options': {
             'queue': 'history',
             'expire': 3600,
-        }
+        },
     },
 
     'create_vault_snapshot': {
