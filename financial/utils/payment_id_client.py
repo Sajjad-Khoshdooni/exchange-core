@@ -11,6 +11,7 @@ from accounts.verifiers.jibit import Response
 from financial.models import BankAccount, PaymentIdRequest, PaymentId
 from financial.models.bank import GeneralBankAccount
 from financial.utils.bank import get_bank
+from ledger.utils.fields import PROCESS, PENDING
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +144,35 @@ class JibitClient:
             bank_payment_id.user_iban_list = json.dumps(resp.json()['userIbans'])
             bank_payment_id.save(update_fields=['user_iban_list'])
 
+    def create_payment_request(self, external_ref: str) -> PaymentIdRequest:
+        resp = self._collect_api(f'/v1/paymentIds/{external_ref}')
+
+        user_id = int(resp.data['merchantReferenceNumber'][2:])
+        payment_id = PaymentId.objects.get(pay_id=resp.data['paymentId'], user_id=user_id)
+
+        payment_request, _ = PaymentIdRequest.objects.get_or_create(
+            external_ref=external_ref,
+
+            defaults={
+                'bank_ref': resp.data['bankReferenceNumber'],
+                'amount': resp.data['amount'] // 10,
+                'status': PROCESS,
+                'payment_id': payment_id
+            }
+        )
+
+        return payment_request
+
+    def verify_payment_request(self, payment_request: PaymentIdRequest):
+        if payment_request.status is not PROCESS:
+            return
+
+        resp = self._collect_api(f'/v1/paymentIds/{payment_request.external_ref}/verify')
+
+        if resp.success:
+            payment_request.status = PENDING
+            payment_request.save(update_fields=['status'])
+
     def get_payments_id_transaction_status(self, payment_id_request: PaymentIdRequest):
         token = self._get_token()
 
@@ -193,18 +223,6 @@ class JibitClient:
         )
         if resp.ok:
             payment_id_request.status = resp.json()['status']
-            payment_id_request.save(update_fields=['status'])
-
-    def fail_payments_id_transaction(self, payment_id_request: PaymentIdRequest):
-        token = self._get_token()
-
-        resp = requests.get(
-            url=self.BASE_URL + f'/v1/payments/{payment_id_request.external_reference_number}/fail',
-            headers={'Authorization': 'Bearer ' + token},
-            timeout=30
-        )
-        if resp.ok:
-            payment_id_request.status=resp.json()['status']
             payment_id_request.save(update_fields=['status'])
 
     def get_payments_id_payed_transaction_list(self, from_date, to_date, page_number=0, page_size=200):

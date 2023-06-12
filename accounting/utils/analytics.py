@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Q
 
 from accounting.models import TradeRevenue
 from accounts.models import User
@@ -12,7 +12,7 @@ from ledger.utils.fields import DONE
 def produce_users_analytics(user_ids: list, start: datetime = None, end: datetime = None):
     users = User.objects.filter(id__in=user_ids)
     payments = Payment.objects.filter(
-        payment_request__bank_card__user_id__in=user_ids,
+        Q(payment_request__bank_card__user_id__in=user_ids) | Q(payment_id_request__payment_id__user_id__in=user_ids),
         status=DONE
     )
 
