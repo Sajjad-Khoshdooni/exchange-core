@@ -14,7 +14,7 @@ class PaymentIdSerializer(serializers.ModelSerializer):
 
         client = JibitClient(gateway)
 
-        resp = client.create_payment_id(user)
+        return client.create_payment_id(user)
 
     class Meta:
         model = PaymentId

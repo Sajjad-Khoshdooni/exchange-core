@@ -83,35 +83,42 @@ class JibitClient:
         ibans = list(BankAccount.objects.filter(user=user).values_list('iban', flat=True))
 
         resp = self._collect_api('/v1/paymentIds', method='POST', data={
-            'callbackUrl': host_url + f'/api/v1/finance/paymentIds/callback/jibit/?id={user.id}',
+            'callbackUrl': host_url + f'/api/v1/finance/paymentId/callback/jibit/',
             'merchantReferenceNumber': self.get_client_ref(user),
             'userFullName': user.get_full_name(),
             'userIbans': ibans,
             'userMobile': '09121234567',
         })
 
-        if resp.success:
-            destination = GeneralBankAccount.objects.get_or_create(
-                iban=resp.data['destinationIban'],
-                defaults={
-                    'name': resp.data['destinationOwnerName'],
-                    'deposit_address': resp.data['destinationDepositNumber'],
-                    'bank': get_bank(swift_code=resp.data['destinationBank']).slug,
-                }
-            )
+        if resp.status_code == 400:
+            resp = self.get_pay_id_data(user)
 
-            payment_id = PaymentId.objects.create(
-                user=user,
-                gateway=self.gateway,
-                pay_id=resp.data['payId'],
-                verified=resp.data['registryStatus'] == 'VERIFIED',
-                destination=destination
-            )
-        
-    def check_payment_id_status(self, payment_id: PaymentId):
-        resp = self._collect_api(
-            path=f'/v1/paymentIds/{self.get_client_ref(payment_id.user)}',
+        assert resp.success
+
+        destination = GeneralBankAccount.objects.get_or_create(
+            iban=resp.data['destinationIban'],
+            defaults={
+                'name': resp.data['destinationOwnerName'],
+                'deposit_address': resp.data['destinationDepositNumber'],
+                'bank': get_bank(swift_code=resp.data['destinationBank']).slug,
+            }
         )
+
+        return PaymentId.objects.create(
+            user=user,
+            gateway=self.gateway,
+            pay_id=resp.data['payId'],
+            verified=resp.data['registryStatus'] == 'VERIFIED',
+            destination=destination
+        )
+
+    def get_pay_id_data(self, user: User) -> Response:
+        return self._collect_api(
+            path=f'/v1/paymentIds/{self.get_client_ref(user)}',
+        )
+
+    def check_payment_id_status(self, payment_id: PaymentId):
+        resp = self.get_pay_id_data(payment_id.user)
 
         payment_id.verified = resp.data['registryStatus'] == 'VERIFIED'
         payment_id.save(update_fields=['verified'])
