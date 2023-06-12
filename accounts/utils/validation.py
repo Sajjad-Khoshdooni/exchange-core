@@ -141,7 +141,7 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
     ip = get_client_ip(request)
     ip_data = get_ip_data(ip)
 
-    return LoginActivity.objects.get_or_create(
+    LoginActivity.objects.get_or_create(
         session=session,
 
         defaults={

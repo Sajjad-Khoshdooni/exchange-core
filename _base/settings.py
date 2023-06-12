@@ -61,7 +61,6 @@ INSTALLED_APPS = [
     'accounting',
     'ledger',
     'market',
-    'trader',
     'jalali_date',
     'stake',
     'gamify',
@@ -150,14 +149,6 @@ CACHES = {
     'token': {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': LOCAL_REDIS_URL + '/1',
-
-        'OPTIONS': {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-    },
-    'trader': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': LOCAL_REDIS_URL + '/2',
 
         'OPTIONS': {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",

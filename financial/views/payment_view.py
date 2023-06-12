@@ -30,7 +30,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
             raise ValidationError({'card_pan': 'شماره کارت تایید نشده است.'})
 
         from financial.models import Gateway
-        gateway = Gateway.get_active_deposit(user)
+        gateway = Gateway.get_active_deposit(user, amount=amount)
 
         if amount < gateway.min_deposit_amount:
             raise ValidationError('حداقل میزان واریز {} تومان است.'.format(humanize_number(gateway.min_deposit_amount)))

@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from accounts.models import Account
 from accounts.permissions import can_trade
-from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease, HedgeError
+from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease, HedgeError, LargeAmountTrade
 from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired
@@ -143,7 +143,9 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         except InvalidAmount as e:
             raise ValidationError(str(e))
         except SmallAmountTrade:
-            raise ValidationError('ارزش معامله باید حداقل ۱۰,۰۰۰ تومان باشد.')
+            raise ValidationError('ارزش معامله، باید حداقل ۱۰,۰۰۰ تومان باشد.')
+        except LargeAmountTrade:
+            raise ValidationError('ارزش معامله، حداکثر ۲ میلیارد تومان می‌تواند باشد.')
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست.'})
 

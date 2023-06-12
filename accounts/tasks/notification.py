@@ -1,6 +1,8 @@
 import logging
 
 from celery import shared_task
+from decouple import config
+from django.conf import settings
 from django.template.loader import render_to_string
 
 from accounts.models import Notification, BulkNotification, User, EmailNotification
@@ -78,18 +80,21 @@ def send_sms_notifications():
 @shared_task(queue='notif-manager')
 def send_email_notifications():
     for email_notif in EmailNotification.objects.filter(sent=False):
-        if email_notif.user.email is None:
-            logger.info(f'SendingMailIgnoredDueToNullEmail user:{email_notif.user.id}')
+        if email_notif.recipient.email is None:
+            logger.info(f'SendingMailIgnoredDueToNullEmail user:{email_notif.recipient.id}')
             continue
 
         resp = send_email(
             subject=email_notif.title,
-            body_html=render_to_string('accounts/email/template_email.html', {
+            body_html=render_to_string('accounts/email/email_template.min.html', {
                 'title': email_notif.title,
-                'bodyHTML': email_notif.content_html
+                'body_html': email_notif.content_html,
+                'brand': settings.BRAND,
+                'panel_url': settings.PANEL_URL,
+                'logo_elastic_url': config('LOGO_ELASTIC_URL'),
             }),
             body_text=email_notif.content,
-            to=[email_notif.user.email]
+            to=[email_notif.recipient.email]
         )
         if resp:
             email_notif.sent = True
