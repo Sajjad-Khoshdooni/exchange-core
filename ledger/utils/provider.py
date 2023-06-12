@@ -137,9 +137,6 @@ class ProviderRequester:
         except JSONDecodeError:
             resp_json = None
 
-        if not resp.ok:
-            logger.info('PROVIDER', path, method, data, resp_json)
-
         return Response(data=resp_json, success=resp.ok, status_code=resp.status_code)
 
     def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:

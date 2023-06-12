@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from decouple import config
 from django.conf import settings
+from django.core.validators import validate_integer
 from django.db import models
 from django.utils import timezone
 
@@ -12,6 +13,18 @@ from ledger.models import Trx, Asset
 from ledger.utils.fields import get_group_id_field
 from ledger.utils.precision import humanize_number, get_presentation_amount
 from ledger.utils.wallet_pipeline import WalletPipeline
+
+
+class PaymentId(models.Model):
+    gateway = models.ForeignKey('financial.Gateway', on_delete=models.PROTECT)
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
+    pay_id = models.CharField(validators=[validate_integer])
+    verified = models.BooleanField(default=False)
+
+    destination = models.ForeignKey('financial.GeneralBankAccount', on_delete=models.PROTECT)
+
+    class Meta:
+        unique_together = [('user', 'gateway'), ('pay_id', 'gateway')]
 
 
 class PaymentIdRequest(models.Model):
