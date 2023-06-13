@@ -14,9 +14,7 @@ from django.db import models, transaction
 from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum, UniqueConstraint
 from django.utils import timezone
 
-from _base.settings import OTC_ACCOUNT_ID
-from accounting.models import TradeRevenue
-from accounts.models import Notification, Account
+from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
@@ -47,6 +45,7 @@ class MatchedTrades:
 
     def __bool__(self):
         return bool(self.trades and self.trade_pairs and self.filled_orders)
+
 
 @dataclass
 class TopOrder:
@@ -299,8 +298,6 @@ class Order(models.Model):
 
         symbol = PairSymbol.objects.select_for_update().get(id=self.symbol_id)
 
-        trades_revenue = []
-
         log_prefix = 'MM %s {%s}: ' % (symbol.name, self.id)
 
         logger.info(log_prefix + f'make match started... {overriding_fill_amount} {timezone.now()}')
@@ -337,10 +334,7 @@ class Order(models.Model):
 
         tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY)
 
-        to_hedge_amount = Decimal(0)
-
         taker_is_system = self.wallet.account.is_system()
-        taker_ordinary = self.wallet.account_id == OTC_ACCOUNT_ID or self.wallet.account.is_ordinary_user()
 
         for maker_order in matching_orders:
             trade_price = maker_order.price
@@ -410,41 +404,6 @@ class Order(models.Model):
 
             self.update_filled_amount((self.id, maker_order.id), match_amount)
 
-            maker_ordinary = maker_order.wallet.account.is_ordinary_user()
-
-            if taker_ordinary != maker_ordinary:
-                if self.symbol.name != 'USDTIRT' and self.fill_type == Order.MARKET and \
-                        self.wallet.account_id == settings.MARKET_MAKER_ACCOUNT_ID:
-                    raise Exception('Random trader took ordinary order!!!')
-
-                ordinary_order = self if self.type == Order.ORDINARY else maker_order
-                ordinary_trade = trades_pair.taker_trade if taker_ordinary else trades_pair.maker_trade
-
-                if ordinary_order.side == SELL:
-                    to_hedge_amount -= match_amount
-                else:
-                    to_hedge_amount += match_amount
-
-                trades_revenue.append(
-                    TradeRevenue.new(
-                        user_trade=ordinary_trade,
-                        group_id=ordinary_trade.group_id,
-                        source=TradeRevenue.MAKER if ordinary_trade.is_maker else TradeRevenue.TAKER,
-                        hedge_key=''
-                    )
-                )
-
-            elif taker_ordinary and maker_ordinary:
-                for t in trades_pair.trades:
-                    trades_revenue.append(
-                        TradeRevenue.new(
-                            user_trade=t,
-                            group_id=t.group_id,
-                            source=TradeRevenue.USER,
-                            hedge_key=''
-                        )
-                    )
-
             unfilled_amount -= match_amount
             if match_amount == maker_order.unfilled_amount:  # unfilled_amount reduced in DB but not updated here :)
                 with transaction.atomic():
@@ -461,48 +420,6 @@ class Order(models.Model):
                 self.save(update_fields=['status'])
                 break
 
-        if to_hedge_amount != 0:
-            provider_request_id = 'taker:%s' % self.id
-            side = BUY
-
-            if to_hedge_amount < 0:
-                to_hedge_amount = -to_hedge_amount
-                side = SELL
-
-            from ledger.utils.provider import get_provider_requester, TRADE
-            hedged = get_provider_requester().try_hedge_new_order(
-                request_id=provider_request_id,
-                asset=self.wallet.asset,
-                side=side,
-                amount=to_hedge_amount,
-                scope=TRADE
-            )
-
-            if settings.ZERO_USDT_HEDGE and symbol.name != 'USDTIRT' and symbol.base_asset.symbol == Asset.IRT:
-                usdt_irt = PairSymbol.objects.get(name='USDTIRT')
-
-                trade_values = Decimal()
-                for rev in trades_revenue:
-                    trade_values += rev.value
-
-                amount = floor_precision(trade_values, usdt_irt.tick_size)
-
-                from market.utils.order_utils import new_order
-                order = new_order(
-                    pipeline=pipeline,
-                    symbol=usdt_irt,
-                    account=Account.objects.get(id=settings.MARKET_MAKER_ACCOUNT_ID),
-                    side=side,
-                    amount=amount,
-                    fill_type=Order.MARKET,
-                    raise_exception=False
-                )
-
-            if hedged:
-                for rev in trades_revenue:
-                    if rev.source != TradeRevenue.USER:
-                        rev.hedge_key = provider_request_id
-
         if (self.fill_type == Order.MARKET or self.time_in_force == self.IOC) and self.status == Order.NEW:
             self.status = Order.CANCELED
             pipeline.release_lock(self.group_id)
@@ -510,7 +427,6 @@ class Order(models.Model):
 
         trades = Trade.objects.bulk_create(trades)
         trade_pairs = list(zip(trades[0::2], trades[1::2]))
-        TradeRevenue.objects.bulk_create(trades_revenue)
 
         if trades:
             symbol.last_trade_time = timezone.now()
@@ -546,7 +462,7 @@ class Order(models.Model):
         key_func = (lambda o: o['price'])
         grouped_by_price = [(i[0], list(i[1])) for i in groupby(sorted(orders, key=key_func), key=key_func)]
         return [{
-            'price': str(price),
+            'price': format(price, 'f'),
             'amount': decimal_to_str(floor_precision(sum(map(lambda i: i['unfilled_amount'], price_orders)), symbol.step_size)),
             'depth': Order.get_depth_value(sum(map(lambda i: i['unfilled_amount'], price_orders)), price,
                                            symbol.base_asset.symbol),

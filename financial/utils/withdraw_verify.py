@@ -41,7 +41,7 @@ def get_fiat_withdraw_risks(withdraw: FiatWithdrawRequest) -> list:
             )
         )
 
-    gateway = Gateway.get_active_deposit()
+    gateway = Gateway.get_active_withdraw()
     if gateway.max_auto_withdraw_amount is not None and withdraw.amount > gateway.max_auto_withdraw_amount:
         risks.append(
             RiskFactor(

@@ -1,8 +1,11 @@
 import logging
+from decimal import Decimal
 from typing import Type
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import UniqueConstraint, Q, Sum
+from django.utils import timezone
 
 from accounts.models import User
 from financial.models import BankCard
@@ -10,6 +13,7 @@ from financial.models import PaymentRequest
 from financial.models.payment import Payment
 from financial.utils.encryption import decrypt
 from ledger.models import FastBuyToken
+from ledger.utils.fields import DONE
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +40,7 @@ class Gateway(models.Model):
     withdraw_enable = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
     active_for_staff = models.BooleanField(default=False)
+    primary = models.BooleanField(default=False)
 
     min_deposit_amount = models.PositiveIntegerField(default=10000)
     max_deposit_amount = models.PositiveIntegerField(default=50000000)
@@ -71,14 +76,39 @@ class Gateway(models.Model):
         return decrypt(self.payment_id_secret_encrypted)
 
     @classmethod
-    def get_active_deposit(cls, user: User = None) -> 'Gateway':
+    def _find_best_deposit_gateway(cls, user: User = None, amount: Decimal = 0) -> 'Gateway':
         if user and user.is_staff:
             gateway = Gateway.objects.filter(active_for_staff=True).order_by('id').first()
 
             if gateway:
-                return gateway.get_concrete_gateway()
+                return gateway
 
-        gateway = Gateway.objects.filter(active=True).order_by('id').first()
+        gateways = Gateway.objects.filter(active=True).order_by('-primary')
+
+        gateway = gateways.first()
+
+        if gateways.count() <= 1:
+            return gateway
+
+        today = timezone.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        today_payments = dict(Payment.objects.filter(
+            payment_request__bank_card__user=user,
+            created__gte=today,
+            status=DONE
+        ).values('payment_request__gateway').annotate(
+            total=Sum('payment_request__amount')
+        ).values_list('payment_request__gateway', 'total'))
+
+        for g in gateways:
+            if amount + today_payments.get(g.id, 0) <= g.max_deposit_amount:
+                return g
+
+        return gateway
+
+    @classmethod
+    def get_active_deposit(cls, user: User = None, amount: Decimal = 0) -> 'Gateway':
+        gateway = cls._find_best_deposit_gateway(user, amount)
 
         if gateway:
             return gateway.get_concrete_gateway()
@@ -126,3 +156,12 @@ class Gateway(models.Model):
 
     def __str__(self):
         return '%s (%s)' % (self.name, self.id)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['primary'],
+                name="financial_gateway_unique_primary",
+                condition=Q(primary=True),
+            )
+        ]

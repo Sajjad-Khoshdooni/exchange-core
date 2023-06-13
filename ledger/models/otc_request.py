@@ -7,14 +7,14 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from accounts.models import Account
-from ledger.exceptions import SmallAmountTrade
+from ledger.exceptions import SmallAmountTrade, LargeAmountTrade
 from ledger.models import Asset, Wallet
 from ledger.utils.external_price import get_external_price, get_other_side, BUY
 from ledger.utils.fields import get_amount_field
 from ledger.utils.otc import get_trading_pair, get_otc_spread, spread_to_multiplier
 from ledger.utils.precision import ceil_precision, floor_precision
 from ledger.utils.random import secure_uuid4
-from market.consts import OTC_MIN_HARD_FIAT_VALUE
+from market.consts import OTC_MIN_HARD_FIAT_VALUE, OTC_MAX_HARD_FIAT_VALUE
 from market.models import BaseTrade
 from market.utils.trade import get_fee_info
 
@@ -52,8 +52,13 @@ class OTCRequest(BaseTrade):
         )
 
         if not allow_dust:
-            if otc_request.price * otc_request.amount * otc_request.base_irt_price < OTC_MIN_HARD_FIAT_VALUE:
+            otc_irt_value = otc_request.irt_value
+
+            if otc_irt_value < OTC_MIN_HARD_FIAT_VALUE:
                 raise SmallAmountTrade()
+
+            if otc_irt_value > OTC_MAX_HARD_FIAT_VALUE:
+                raise LargeAmountTrade()
 
         if check_enough_balance:
             from_wallet = from_asset.get_wallet(account, otc_request.market)

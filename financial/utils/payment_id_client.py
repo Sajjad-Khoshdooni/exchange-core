@@ -44,7 +44,7 @@ class JibitClient:
             headers={'Authorization': 'Bearer ' + token},
             json={
                 "callbackUrl": host_url + f"/api/v1/finance/paymentIds/callback/jibit/?id={user.id}",
-                "merchantReferenceNumber": 'user-%s' % user.id,
+                "merchantReferenceNumber": 'u-%s' % user.id,
                 "userFullName": user.get_full_name(),
                 "userIbans": ibans,
                 "userMobile": "09121234567",
@@ -103,7 +103,7 @@ class JibitClient:
         token = self._get_token()
 
         resp = requests.get(
-            url=self.BASE_URL + f'/v1/paymentIds/user-{user.id}',
+            url=self.BASE_URL + f'/v1/paymentIds/u-{user.id}',
             headers={'Authorization': 'Bearer ' + token},
             timeout=30
         )
