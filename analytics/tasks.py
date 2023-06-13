@@ -144,7 +144,7 @@ def trigger_fiat_transfer_event(threshold=1000):
             value_irt=fiat_transfer.amount,
             value_usdt=float(fiat_transfer.amount) / float(usdt_price),
             is_deposit=False,
-            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(fiat_transfer.id) + TransferEvent.type + 'Fiat')
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(fiat_transfer.id) + TransferEvent.type + 'fiat_withdraw')
         )
 
         get_kafka_producer().produce(event, instance=fiat_transfer)
@@ -168,7 +168,7 @@ def trigger_payment_event(threshold=1000):
             value_usdt=float(payment.payment_request.amount) / float(usdt_price),
             value_irt=payment.payment_request.amount,
             created=payment.created,
-            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(payment.id) + TransferEvent.type + 'Payment')
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(payment.id) + TransferEvent.type + 'fiat_deposit')
         )
 
         get_kafka_producer().produce(event, instance=payment)
@@ -234,7 +234,7 @@ def trigger_otc_trade(threshold=1000):
             created=otc_trade.created,
             value_usdt=req.usdt_value,
             value_irt=req.irt_value,
-            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(otc_trade.id) + TradeEvent.type + 'otc')
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(otc_trade.id) + TradeEvent.type + 'otc_trade')
         )
 
         get_kafka_producer().produce(event, instance=otc_trade)
