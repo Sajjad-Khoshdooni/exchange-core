@@ -86,29 +86,30 @@ def handle_event_tracker(data, instance):
     elif _type == 'transfer':
         if data.get('coin') == 'IRT' and data.get('network') == 'IRT':
             if data.get('is_deposit'):
-                tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.PAYMENT)
+                event_type = EventTracker.PAYMENT
             else:
-                tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.FIAT_WITHDRAW)
+                event_type = EventTracker.FIAT_WITHDRAW
         else:
-            tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.TRANSFER)
+            event_type = EventTracker.TRANSFER
     elif _type == 'trade':
-        if data.get('trade_type') == 'otc':
-            tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.OTC_TRADE)
+        if data.get('trade_type') in ['otc', 'fast_buy']:
+            event_type = EventTracker.OTC_TRADE
         else:
-            tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.TRADE)
+            event_type = EventTracker.TRADE
 
     elif _type == 'login':
-        tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.LOGIN)
+        event_type = EventTracker.LOGIN
 
     elif _type == 'traffic_source':
-        tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.TRAFFIC_SOURCE)
+        event_type = EventTracker.TRAFFIC_SOURCE
 
     elif _type == 'staking':
-        tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.STAKING)
+        event_type = EventTracker.STAKING
     elif _type == 'prize':
-        tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.PRIZE)
+        event_type = EventTracker.PRIZE
     else:
         raise NotImplementedError
 
+    tracker, _ = EventTracker.objects.get_or_create(type=event_type)
     tracker.last_id = instance.id
     tracker.save(update_fields=['last_id'])
