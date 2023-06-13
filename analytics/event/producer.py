@@ -45,8 +45,8 @@ class KafkaProducer:
             return
 
         try:
-            self.producer.poll(0)
             self.producer.produce('crm', data.encode('utf-8'), callback=delivery_report)
+            self.producer.poll(0)
 
             handle_event_tracker(data=event.serialize(), instance=instance)
 
