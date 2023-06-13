@@ -92,7 +92,7 @@ def handle_event_tracker(data, instance):
         else:
             tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.TRANSFER)
     elif _type == 'trade':
-        if data.get('trade_type') == 'otc':
+        if data.get('trade_type') in ['otc', 'fast_buy']:
             tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.OTC_TRADE)
         else:
             tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.TRADE)
