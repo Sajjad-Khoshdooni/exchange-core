@@ -2,11 +2,19 @@ from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 
-from financial.models import PaymentId, Gateway
+from financial.models import PaymentId, Gateway, GeneralBankAccount
 from financial.utils.payment_id_client import get_payment_id_client
 
 
+class GeneralBankAccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneralBankAccount
+        fields = ('iban', 'name', 'bank', 'deposit_address')
+
+
 class PaymentIdSerializer(serializers.ModelSerializer):
+    pay_id = serializers.SerializerMethodField()
+    destination = serializers.SerializerMethodField()
 
     def create(self, validated_data):
         user = self.context['request'].user
@@ -16,10 +24,18 @@ class PaymentIdSerializer(serializers.ModelSerializer):
 
         return client.create_payment_id(user)
 
+    def get_pay_id(self, payment_id: PaymentId):
+        if not payment_id.verified:
+            return ''
+        else:
+            return payment_id.pay_id
+
+    def get_destination(self, payment_id: PaymentId):
+        return GeneralBankAccountSerializer(payment_id.destination).data
+
     class Meta:
         model = PaymentId
-        fields = ('pay_id', )
-        read_only_fields = ('pay_id', )
+        read_only_fields = fields = ('pay_id', 'verified', 'destination')
 
 
 class PaymentIdViewsSet(ModelViewSet):
