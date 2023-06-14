@@ -215,8 +215,6 @@ class PaymentAdmin(admin.ModelAdmin):
         link = url_to_edit_object(payment.payment_request.bank_card.user)
         return mark_safe("<a href='%s'>%s</a>" % (link, payment.payment_request.bank_card.user.phone))
 
-    get_user.short_description = 'کاربر'
-
 
 class BankCardUserFilter(SimpleListFilter):
     title = 'کاربر'
