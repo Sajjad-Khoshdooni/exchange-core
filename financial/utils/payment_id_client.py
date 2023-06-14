@@ -95,7 +95,7 @@ class JibitClient:
 
         assert resp.success
 
-        destination = GeneralBankAccount.objects.get_or_create(
+        destination, _ = GeneralBankAccount.objects.get_or_create(
             iban=resp.data['destinationIban'],
             defaults={
                 'name': resp.data['destinationOwnerName'],
