@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from financial.models import PaymentRequest, Payment, Gateway
-from financial.utils.payment_id_client import JibitClient
+from financial.utils.payment_id_client import get_payment_id_client
 from ledger.utils.fields import CANCELED
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ class JibitPaymentIdCallbackView(APIView):
         external_ref = request.data['externalReferenceNumber']
 
         gateway = Gateway.get_active_pay_id_deposit()
-        client = JibitClient(gateway)
+        client = get_payment_id_client(gateway)
 
         payment_request = client.create_payment_request(external_ref)
         client.verify_payment_request(payment_request)

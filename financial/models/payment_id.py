@@ -43,6 +43,9 @@ class PaymentIdRequest(models.Model):
         unique=True
     )
 
+    def __str__(self):
+        return '%s ref=%s' % (self.amount, self.bank_ref)
+
     def accept(self):
         with WalletPipeline() as pipeline:
             req = PaymentIdRequest.objects.select_for_update().get(id=self.id)

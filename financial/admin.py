@@ -14,7 +14,7 @@ from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
-    FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId
+    FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, GeneralBankAccount
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.precision import humanize_number
@@ -375,3 +375,8 @@ class PaymentIdAdmin(admin.ModelAdmin):
     list_display = ('created', 'updated', 'user', 'pay_id', 'verified')
     search_fields = ('user__phone', 'pay_id')
     list_filter = ('verified',)
+
+
+@admin.register(GeneralBankAccount)
+class GeneralBankAccountAdmin(admin.ModelAdmin):
+    list_display = ('created', 'name', 'iban', 'bank', 'deposit_address')

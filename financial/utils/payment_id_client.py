@@ -7,7 +7,7 @@ from urllib3.exceptions import ReadTimeoutError
 
 from accounts.models import User
 from accounts.verifiers.jibit import Response
-from financial.models import BankAccount, PaymentIdRequest, PaymentId
+from financial.models import BankAccount, PaymentIdRequest, PaymentId, Gateway
 from financial.models.bank import GeneralBankAccount
 from financial.utils.bank import get_bank
 from ledger.utils.fields import PROCESS, PENDING
@@ -15,12 +15,23 @@ from ledger.utils.fields import PROCESS, PENDING
 logger = logging.getLogger(__name__)
 
 
-class JibitClient:
-    BASE_URL = 'https://napi.jibit.cloud/pip'
-
+class BaseClient:
     def __init__(self, gateway):
         self.gateway = gateway
-        self._token = None
+
+    def create_payment_id(self, user: User) -> PaymentId:
+        raise NotImplementedError
+
+    def create_payment_request(self, external_ref: str) -> PaymentIdRequest:
+        raise NotImplementedError
+
+    def verify_payment_request(self, payment_request: PaymentIdRequest):
+        raise NotImplementedError
+
+
+class JibitClient(BaseClient):
+    BASE_URL = 'https://napi.jibit.cloud/pip'
+    _token = None
 
     def _get_token(self, force_renew: bool = False):
         if not force_renew:
@@ -161,3 +172,37 @@ class JibitClient:
         for data in resp.get_success_data():
             payment_request = self.create_payment_request(data['externalReferenceNumber'])
             self.verify_payment_request(payment_request)
+
+
+class MockClient(BaseClient):
+    def create_payment_id(self, user: User) -> PaymentId:
+        gateway = Gateway.get_active_pay_id_deposit()
+
+        destination, _ = GeneralBankAccount.objects.get_or_create(
+            iban='IR760120020000008992439961',
+            defaults={
+                'name': 'ایوان رایان پیام',
+                'bank': 'MELLAT',
+                'deposit_address': '8992439961'
+            }
+        )
+
+        pay_id, _ = PaymentId.objects.get_or_create(
+            gateway=gateway,
+            user=user,
+            defaults={
+                'pay_id': f'1111100000{user.id}',
+                'destination': destination
+            }
+        )
+
+        return pay_id
+
+
+def get_payment_id_client(gateway: Gateway) -> BaseClient:
+    if settings.DEBUG_OR_TESTING_OR_STAGING:
+        return MockClient(gateway)
+
+    assert gateway.type == Gateway.JIBIT
+
+    return JibitClient(gateway)
