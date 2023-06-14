@@ -118,6 +118,10 @@ class Gateway(models.Model):
         return Gateway.objects.filter(withdraw_enable=True).order_by('id').first()
 
     @classmethod
+    def get_active_pay_id_deposit(cls) -> 'Gateway':
+        return Gateway.objects.filter(payment_id_api_key__isnull=False).order_by('id').first()
+
+    @classmethod
     def get_gateway_class(cls, type: str) -> Type['Gateway']:
         from financial.models import ZarinpalGateway, PaydotirGateway, ZibalGateway, JibitGateway
         mapping = {
