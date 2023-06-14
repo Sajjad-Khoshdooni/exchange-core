@@ -375,6 +375,7 @@ class PaymentIdAdmin(admin.ModelAdmin):
     list_display = ('created', 'updated', 'user', 'pay_id', 'verified')
     search_fields = ('user__phone', 'pay_id')
     list_filter = ('verified',)
+    readonly_fields = ('user', )
 
 
 @admin.register(GeneralBankAccount)
