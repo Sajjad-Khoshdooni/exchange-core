@@ -1,3 +1,5 @@
+import logging
+
 import requests
 from django.conf import settings
 from django.urls import reverse
@@ -6,6 +8,8 @@ from financial.models import Gateway, BankCard, PaymentRequest, Payment
 from financial.models.gateway import GatewayFailed
 from ledger.utils.fields import DONE, CANCELED
 from ledger.utils.wallet_pipeline import WalletPipeline
+
+logger = logging.getLogger(__name__)
 
 
 class ZibalGateway(Gateway):
@@ -25,6 +29,7 @@ class ZibalGateway(Gateway):
         )
 
         if resp.json()['result'] != 100:
+            logger.info('zibal gateway connection error %s' % resp.json())
             raise GatewayFailed
 
         authority = resp.json()['trackId']
