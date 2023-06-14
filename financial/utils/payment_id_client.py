@@ -158,5 +158,6 @@ class JibitClient:
     def create_missing_payment_requests(self):
         resp = self._collect_api(f'/v1/paymentIds/waitingForVerify/?pageNumber=0&pageSize=200')
 
-        for payment in resp.get_success_data():
-            self.create_payment_request(payment['externalReferenceNumber'])
+        for data in resp.get_success_data():
+            payment_request = self.create_payment_request(data['externalReferenceNumber'])
+            self.verify_payment_request(payment_request)
