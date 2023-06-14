@@ -11,7 +11,7 @@ from rest_framework import serializers
 from ledger.utils.cache import cache_for
 from ledger.utils.precision import normalize_fraction, AMOUNT_PRECISION
 
-PENDING, CANCELED, DONE = 'pending', 'canceled', 'done'
+PROCESS, PENDING, CANCELED, DONE = 'process', 'pending', 'canceled', 'done'
 
 
 def get_amount_field(default: Union[Decimal, int] = None, max_digits: int = None, decimal_places: int = None,
@@ -49,7 +49,7 @@ def get_status_field():
     return models.CharField(
         default=PENDING,
         max_length=8,
-        choices=[(PENDING, 'در انتظار تایید'), (CANCELED, 'لغو شده'), (DONE, 'انجام شده')]
+        choices=[(PROCESS, 'در حال پردازش'), (PENDING, 'در انتظار تایید'), (CANCELED, 'لغو شده'), (DONE, 'انجام شده')]
     )
 
 

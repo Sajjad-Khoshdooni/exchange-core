@@ -51,7 +51,9 @@ class SymbolBriefStatsSerializer(serializers.ModelSerializer):
 
     def get_price(self, symbol: PairSymbol):
         last_prices = get_symbol_prices()['last']
-        return last_prices.get(symbol.id)
+        price = last_prices.get(symbol.id)
+        if price:
+            return decimal_to_str(floor_precision(price, symbol.tick_size))
 
     def get_bookmark(self, pair_symbol: PairSymbol):
         return pair_symbol.id in self.context.get('bookmarks')

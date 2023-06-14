@@ -2,7 +2,7 @@ from django.urls import path
 
 from financial.views import PaymentRequestView, ZarinpalCallbackView, BankCardView, PaymentHistoryView, \
     WithdrawRequestView, WithdrawHistoryView, BankAccountView, PaydotirCallbackView, ZibalCallbackView, \
-    ProxyPaymentRedirectView, JibitCallbackView, GatewayInfoView, JibitPaymentIdCallbackView
+    ProxyPaymentRedirectView, JibitCallbackView, GatewayInfoView, JibitPaymentIdCallbackView, PaymentIdViewsSet
 
 urlpatterns = [
     path('payment/request/', PaymentRequestView.as_view()),
@@ -12,7 +12,6 @@ urlpatterns = [
     path('payment/callback/paydotir/', PaydotirCallbackView.as_view(), name='paydotir-callback'),
     path('payment/callback/zibal/', ZibalCallbackView.as_view(), name='zibal-callback'),
     path('payment/callback/jibit/', JibitCallbackView.as_view(), name='jibit-callback'),
-    path('paymentIds/callback/jibit/', JibitPaymentIdCallbackView.as_view(), name='jibit-paymentIds-callback'),
     path('cards/', BankCardView.as_view({
         'get': 'list',
         'post': 'create'
@@ -37,4 +36,10 @@ urlpatterns = [
     })),
     path('withdraw/list/', WithdrawHistoryView.as_view()),
     path('gateways/active/', GatewayInfoView.as_view()),
+
+    path('paymentId/', PaymentIdViewsSet.as_view({
+        'get': 'retrieve',
+        'post': 'create',
+    })),
+    path('paymentId/callback/jibit/', JibitPaymentIdCallbackView.as_view(), name='jibit-paymentIds-callback'),
 ]

@@ -6,7 +6,8 @@ from django.views.generic import TemplateView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from financial.models import PaymentRequest, Payment, PaymentIdRequest, Gateway, BankPaymentId
+from financial.models import PaymentRequest, Payment, Gateway
+from financial.utils.payment_id_client import get_payment_id_client
 from ledger.utils.fields import CANCELED
 
 logger = logging.getLogger(__name__)
@@ -53,21 +54,12 @@ class JibitPaymentIdCallbackView(APIView):
         if status not in ('SUCCESSFUL', 'FAILED'):
             return HttpResponseBadRequest('Invalid data')
 
-        bank_payment_id = BankPaymentId.objects.get(
-            gateway=Gateway.objects.filter(type=Gateway.JIBIT).first(),
-            bank_account__id=request.data['id']
-        )
+        external_ref = request.data['externalReferenceNumber']
 
-        PaymentIdRequest.objects.create(
-            bank_payment_id=bank_payment_id,
-            amount=request.data['amount'],
-            bank=request.data['bank'],
-            bank_reference_number=request.POST['bankRefrenceNumber'],
-            destination_account_identifier=request.POST['destinationAccountIdentifier'],
-            external_reference_number=request.POST['externalRefrenceNumber'],
-            payment_id=request.POST['PaymentId'],
-            raw_bank_timestamp=request.POST['rawBankTimestamp'],
-            status=status
-        )
+        gateway = Gateway.get_active_pay_id_deposit()
+        client = get_payment_id_client(gateway)
 
-        return Response(200)
+        payment_request = client.create_payment_request(external_ref)
+        client.verify_payment_request(payment_request)
+
+        return Response(201)

@@ -3,6 +3,7 @@ from decimal import Decimal
 from decouple import config
 from django.conf import settings
 from django.db import models
+from django.db.models import CheckConstraint, Q
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils import timezone
@@ -57,7 +58,8 @@ class Payment(models.Model):
 
     group_id = get_group_id_field()
 
-    payment_request = models.OneToOneField(PaymentRequest, on_delete=models.PROTECT)
+    payment_request = models.OneToOneField(PaymentRequest, on_delete=models.PROTECT, blank=True, null=True)
+    payment_id_request = models.OneToOneField('financial.PaymentIdRequest', on_delete=models.PROTECT, blank=True, null=True)
 
     status = get_status_field()
 
@@ -145,3 +147,12 @@ class Payment(models.Model):
             response = HttpResponse("", status=302)
             response['Location'] = url
             return response
+
+    class Meta:
+        constraints = [
+            CheckConstraint(
+                check=Q(payment_request__isnull=False, payment_id_request__isnull=True) |
+                      Q(payment_request__isnull=True, payment_id_request__isnull=False),
+                name='check_financial_payment_requests',
+            )
+        ]

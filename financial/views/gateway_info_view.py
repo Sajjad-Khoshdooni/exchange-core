@@ -9,13 +9,18 @@ from ledger.utils.fields import DONE
 
 class GatewaySerializer(serializers.ModelSerializer):
     next_ach_time = serializers.SerializerMethodField()
+    pay_id_enable = serializers.SerializerMethodField()
 
     def get_next_ach_time(self, gateway):
         return next_ach_clear_time()
 
+    def get_pay_id_enable(self, gateway):
+        gateway = Gateway.get_active_pay_id_deposit()
+        return bool(gateway)
+
     class Meta:
         model = Gateway
-        fields = ('id', 'min_deposit_amount', 'max_deposit_amount', 'next_ach_time')
+        fields = ('id', 'min_deposit_amount', 'max_deposit_amount', 'next_ach_time', 'pay_id_enable')
 
 
 class GatewayInfoView(RetrieveAPIView):
