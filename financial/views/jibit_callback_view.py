@@ -6,7 +6,7 @@ from django.views.generic import TemplateView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from financial.models import PaymentRequest, Payment, PaymentIdRequest, Gateway
+from financial.models import PaymentRequest, Payment, Gateway
 from financial.utils.payment_id_client import JibitClient
 from ledger.utils.fields import CANCELED
 

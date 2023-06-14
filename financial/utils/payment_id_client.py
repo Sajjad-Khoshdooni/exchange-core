@@ -1,4 +1,3 @@
-import json
 import logging
 from json import JSONDecodeError
 
@@ -113,6 +112,9 @@ class JibitClient:
             destination=destination
         )
 
+    def update_payment_id(self, payment_id: PaymentId):
+        raise NotImplementedError
+
     def get_pay_id_data(self, user: User) -> Response:
         return self._collect_api(
             path=f'/v1/paymentIds/{self.get_client_ref(user)}',
@@ -123,26 +125,6 @@ class JibitClient:
 
         payment_id.verified = resp.data['registryStatus'] == 'VERIFIED'
         payment_id.save(update_fields=['verified'])
-
-    def update_payment_ids(self, user: User):
-        token = self._get_token()
-        host_url = settings.HOST_URL
-
-        resp = requests.put(
-            url=self.BASE_URL + '/v1/paymentIds',
-            headers={'Authorization': 'Bearer ' + token},
-            params={
-                'callbackUrl': host_url + f'/api/v1/finance/paymentIds/callback/jibit/?id={bank_account.id}',
-                'merchantReferenceNumber': bank_account.id,
-                'userFullName': bank_account.user.get_full_name(),
-                'userIban': bank_account.iban,
-                'userIbans': ibans,
-            },
-            timeout=30
-        )
-        if resp.ok:
-            bank_payment_id.user_iban_list = json.dumps(resp.json()['userIbans'])
-            bank_payment_id.save(update_fields=['user_iban_list'])
 
     def create_payment_request(self, external_ref: str) -> PaymentIdRequest:
         resp = self._collect_api(f'/v1/paymentIds/{external_ref}')
@@ -173,66 +155,8 @@ class JibitClient:
             payment_request.status = PENDING
             payment_request.save(update_fields=['status'])
 
-    def get_payments_id_transaction_status(self, payment_id_request: PaymentIdRequest):
-        token = self._get_token()
+    def create_missing_payment_requests(self):
+        resp = self._collect_api(f'/v1/paymentIds/waitingForVerify/?pageNumber=0&pageSize=200')
 
-        resp = requests.get(
-            url=self.BASE_URL + f'/v1/paymentIds/u-{user.id}',
-            headers={'Authorization': 'Bearer ' + token},
-            timeout=30
-        )
-
-        if resp.ok:
-            payment_id_request.status = resp.json()['status']
-            payment_id_request.save(update_fields=['status'])
-
-    def get_waiting_payments_id_transaction_list(self, page_number=0, page_size=200):
-        token = self._get_token()
-
-        resp = requests.get(
-            url=self.BASE_URL + f'/v1/paymentIds/waitingForVerify/?pageNumber={page_number}&pageSize={page_size}',
-            headers={'Authorization': 'Bearer ' + token},
-            timeout=30
-        )
-
-        if resp.ok:
-            payments_list = resp.json().get('content', None)
-
-            for payment in payments_list:
-                PaymentIdRequest.objects.get_or_create(
-                    external_reference_number=payment['externalReferenceNumber'],
-                    defaults={
-                        'bank_payment_id': BankPaymentId.objects.get(pay_id=payment['PaymentId']),
-                        'payment_id': payment['PaymentId'],
-                        'amount': payment['amount'],
-                        'bank': payment['bank'],
-                        'bank_reference_number': payment['bankReferenceNumber'],
-                        'destination_account_identifier': payment['destinationAccountIdentifier'],
-                        'raw_bank_timestamp': payment['rawBankTimestamp'],
-                        'status': payment['status']
-                    }
-                )
-
-    def verify_payments_id_transaction(self, payment_id_request: PaymentIdRequest):
-        token = self._get_token()
-
-        resp = requests.get(
-            url=self.BASE_URL + f'/v1/payments/{payment_id_request.external_reference_number}/verify/',
-            headers={'Authorization': 'Bearer ' + token},
-            timeout=30
-        )
-        if resp.ok:
-            payment_id_request.status = resp.json()['status']
-            payment_id_request.save(update_fields=['status'])
-
-    def get_payments_id_payed_transaction_list(self, from_date, to_date, page_number=0, page_size=200):
-        token = self._get_token()
-
-        resp = requests.get(
-            url=self.BASE_URL + f'/v1/payments/list/?pageNumber={page_number}&pageSize={page_size}&fromDate={from_date}'
-                                f'&toDate={to_date}',
-            headers={'Authorization': 'Bearer ' + token},
-            timeout=30
-        )
-        if resp.ok:
-            return resp.json()
+        for payment in resp.get_success_data():
+            self.create_payment_request(payment['externalReferenceNumber'])
