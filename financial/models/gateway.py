@@ -119,7 +119,7 @@ class Gateway(models.Model):
 
     @classmethod
     def get_active_pay_id_deposit(cls) -> 'Gateway':
-        return Gateway.objects.filter(payment_id_api_key__isnull=False).order_by('id').first()
+        return Gateway.objects.filter(active=True).exclude(payment_id_api_key=True).order_by('id').first()
 
     @classmethod
     def get_gateway_class(cls, type: str) -> Type['Gateway']:
