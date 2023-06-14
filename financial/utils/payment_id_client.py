@@ -166,7 +166,7 @@ class JibitClient(BaseClient):
         if payment_request.status is not PROCESS:
             return
 
-        resp = self._collect_api(f'/v1/paymentIds/{payment_request.external_ref}/verify')
+        resp = self._collect_api(f'/v1/payments/{payment_request.external_ref}/verify')
 
         if resp.success:
             payment_request.status = PENDING
