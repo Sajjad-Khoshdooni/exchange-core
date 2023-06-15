@@ -79,11 +79,18 @@ class Payment(models.Model):
         else:
             return self.payment_id_request.payment_id.user
 
+    @property
+    def amount(self):
+        if self.payment_request:
+            return self.payment_request.amount
+        else:
+            return self.payment_id_request.amount
+
     def alert_payment(self):
         user = self.user
         user_email = user.email
         title = 'واریز وجه با موفقیت انجام شد'
-        payment_amont = humanize_number(get_presentation_amount(Decimal(self.payment_request.amount)))
+        payment_amont = humanize_number(get_presentation_amount(Decimal(self.amount)))
         description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amont)
 
         Notification.send(
@@ -113,7 +120,7 @@ class Payment(models.Model):
         pipeline.new_trx(
             sender=asset.get_wallet(Account.out()),
             receiver=asset.get_wallet(account),
-            amount=self.payment_request.amount,
+            amount=self.amount,
             scope=Trx.TRANSFER,
             group_id=self.group_id,
         )
@@ -129,6 +136,9 @@ class Payment(models.Model):
 
     def get_redirect_url(self) -> str:
         from ledger.models import FastBuyToken
+
+        if not self.payment_request:
+            return
 
         source = self.payment_request.source
         desktop = PaymentRequest.DESKTOP
@@ -181,12 +191,12 @@ def handle_payment_save(sender, instance, created, **kwargs):
     event = TransferEvent(
         id=instance.id,
         user_id=instance.user.id,
-        amount=instance.payment_request.amount,
+        amount=instance.amount,
         coin='IRT',
         network='IRT',
         is_deposit=True,
-        value_usdt=float(instance.payment_request.amount) / float(usdt_price),
-        value_irt=instance.payment_request.amount,
+        value_usdt=float(instance.amount) / float(usdt_price),
+        value_irt=instance.amount,
         created=instance.created,
         event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type + 'fiat_deposit')
     )

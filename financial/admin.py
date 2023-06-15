@@ -209,7 +209,7 @@ class PaymentAdmin(admin.ModelAdmin):
 
     @admin.display(description='مقدار')
     def get_payment_amount(self, payment: Payment):
-        return humanize_number(payment.payment_request.amount)
+        return humanize_number(payment.amount)
 
     @admin.display(description='کاربر')
     def get_user(self, payment: Payment):
