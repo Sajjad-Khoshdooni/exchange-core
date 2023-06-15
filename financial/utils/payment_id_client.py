@@ -154,7 +154,7 @@ class JibitClient(BaseClient):
                 'status': PROCESS,
                 'payment_id': payment_id,
                 'source_iban': data['destinationAccountIdentifier'],
-                'deposit_time': jdatetime.datetime.strptime(data['rawBankTimeStamp'], '%Y/%m/%d %H:%M:%S').astimezone(),
+                'deposit_time': jdatetime.datetime.strptime(data['rawBankTimestamp'], '%Y/%m/%d %H:%M:%S').astimezone(),
             }
         )
 
