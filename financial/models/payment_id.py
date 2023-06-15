@@ -43,6 +43,8 @@ class PaymentIdRequest(models.Model):
         unique=True
     )
 
+    deposit_time = models.DateTimeField()
+
     def __str__(self):
         return '%s ref=%s' % (self.amount, self.bank_ref)
 

@@ -1,6 +1,7 @@
 import logging
 from json import JSONDecodeError
 
+import jdatetime
 import requests
 from django.conf import settings
 from urllib3.exceptions import ReadTimeoutError
@@ -153,6 +154,7 @@ class JibitClient(BaseClient):
                 'status': PROCESS,
                 'payment_id': payment_id,
                 'source_iban': data['destinationAccountIdentifier'],
+                'deposit_time': jdatetime.datetime.strptime(data['rawBankTimeStamp'], '%Y/%m/%d %H:%M:%S').astimezone(),
             }
         )
 
