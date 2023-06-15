@@ -145,6 +145,7 @@ class JibitClient(BaseClient):
         merchant_ref = data['merchantReferenceNumber']
         user_id = int(merchant_ref[2:])
         payment_id = PaymentId.objects.get(pay_id=data['paymentId'], user_id=user_id)
+        deposit_time = jdatetime.datetime.strptime(data['rawBankTimestamp'], '%Y/%m/%d %H:%M:%S').togregorian().astimezone()
 
         payment_request, _ = PaymentIdRequest.objects.get_or_create(
             external_ref=data['externalReferenceNumber'],
@@ -154,7 +155,7 @@ class JibitClient(BaseClient):
                 'status': PROCESS,
                 'payment_id': payment_id,
                 'source_iban': data['destinationAccountIdentifier'],
-                'deposit_time': jdatetime.datetime.strptime(data['rawBankTimestamp'], '%Y/%m/%d %H:%M:%S').astimezone(),
+                'deposit_time': deposit_time,
             }
         )
 
