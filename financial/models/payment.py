@@ -72,8 +72,15 @@ class Payment(models.Model):
     ref_id = models.PositiveBigIntegerField(null=True, blank=True)
     ref_status = models.SmallIntegerField(null=True, blank=True)
 
+    @property
+    def user(self):
+        if self.payment_request:
+            return self.payment_request.bank_card.user
+        else:
+            return self.payment_id_request.payment_id.user
+
     def alert_payment(self):
-        user = self.payment_request.bank_card.user
+        user = self.user
         user_email = user.email
         title = 'واریز وجه با موفقیت انجام شد'
         payment_amont = humanize_number(get_presentation_amount(Decimal(self.payment_request.amount)))
