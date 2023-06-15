@@ -326,7 +326,7 @@ def handle_user_save(sender, instance, created, **kwargs):
     producer = get_kafka_producer()
     account = instance.get_account()
 
-    if account.type != Account.ORDINARY :
+    if account.type != Account.ORDINARY:
         return
 
     referrer_id = None
