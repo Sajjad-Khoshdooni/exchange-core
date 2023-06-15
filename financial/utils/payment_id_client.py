@@ -166,7 +166,7 @@ class JibitClient(BaseClient):
         return self._create_and_verify_payment_data(resp.data)
 
     def verify_payment_request(self, payment_request: PaymentIdRequest):
-        if payment_request.status is not PROCESS:
+        if payment_request.status != PROCESS:
             return
 
         resp = self._collect_api(f'/v1/payments/{payment_request.external_ref}/verify')

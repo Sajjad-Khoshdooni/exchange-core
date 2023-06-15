@@ -50,7 +50,7 @@ class PaymentIdRequest(models.Model):
         with WalletPipeline() as pipeline:
             req = PaymentIdRequest.objects.select_for_update().get(id=self.id)
 
-            if req is not PENDING:
+            if req != PENDING:
                 return
 
             payment = Payment.objects.create(

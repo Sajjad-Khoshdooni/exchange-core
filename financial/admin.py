@@ -363,6 +363,7 @@ class PaymentIdRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'payment_id', 'status', 'amount', 'external_ref', 'source_iban')
     search_fields = ('payment_id__pay_id', 'payment_id__user__phone', 'external_ref', 'source_iban', 'bank_ref')
     list_filter = ('status',)
+    actions = ('accept', )
 
     @admin.action(description='accept deposit', permissions=['change'])
     def accept(self, request, queryset):
