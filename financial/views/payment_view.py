@@ -58,14 +58,27 @@ class PaymentRequestView(CreateAPIView):
 class PaymentHistorySerializer(serializers.ModelSerializer):
 
     amount = serializers.SerializerMethodField()
-    bank_card = BankCardSerializer(source='payment_request.bank_card')
+    bank_card = serializers.SerializerMethodField()
+    payment_id = serializers.SerializerMethodField()
 
     def get_amount(self, payment: Payment):
         return payment.amount
 
+    def get_bank_card(self, payment: Payment):
+        bank_card = payment.payment_request and payment.payment_request.bank_card
+
+        if bank_card:
+            return BankCardSerializer(bank_card).data
+
+    def get_payment_id(self, payment: Payment):
+        payment_id_request = payment.payment_id_request
+
+        if payment_id_request:
+            return BankCardSerializer(bank_card).data
+
     class Meta:
         model = Payment
-        fields = ('created', 'status', 'ref_id', 'amount', 'bank_card')
+        fields = ('created', 'status', 'ref_id', 'amount', 'bank_card', 'payment_id')
 
 
 class PaymentHistoryView(ListAPIView):

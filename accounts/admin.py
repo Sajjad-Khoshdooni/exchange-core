@@ -28,7 +28,7 @@ from .models import User, Account, Notification, FinotechRequest
 from .models.login_activity import LoginActivity
 from .models.sms_notification import SmsNotification
 from .tasks import basic_verify_user
-from .utils.validation import gregorian_to_jalali_date_str, gregorian_to_jalali_datetime_str
+from .utils.validation import gregorian_to_jalali_datetime_str
 from .verifiers.legal import is_48h_rule_passed
 
 MANUAL_VERIFY_CONDITION = Q(
@@ -506,12 +506,12 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         return mark_safe("<span>%s</span>" % date)
 
     def get_date_joined_jalali(self, user: User):
-        return gregorian_to_jalali_date_str(user.date_joined)
+        return gregorian_to_jalali_datetime_str(user.date_joined)
 
     get_date_joined_jalali.short_description = 'تاریخ پیوستن'
 
     def get_last_login_jalali(self, user: User):
-        return gregorian_to_jalali_date_str(user.last_login)
+        return gregorian_to_jalali_datetime_str(user.last_login)
 
     get_last_login_jalali.short_description = 'آخرین ورود'
 
