@@ -4,7 +4,7 @@ from typing import Type
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import UniqueConstraint, Q, Sum
+from django.db.models import Sum
 from django.utils import timezone
 
 from accounts.models import User
@@ -44,6 +44,7 @@ class Gateway(models.Model):
 
     min_deposit_amount = models.PositiveIntegerField(default=10000)
     max_deposit_amount = models.PositiveIntegerField(default=50000000)
+    max_daily_deposit_amount = models.PositiveIntegerField(default=100000000)
 
     max_auto_withdraw_amount = models.PositiveIntegerField(null=True, blank=True)
     expected_withdraw_datetime = models.DateTimeField(null=True, blank=True)
@@ -103,7 +104,7 @@ class Gateway(models.Model):
         ).values_list('payment_request__gateway', 'total'))
 
         for g in gateways:
-            if amount + today_payments.get(g.id, 0) <= g.max_deposit_amount:
+            if amount + today_payments.get(g.id, 0) <= g.max_daily_deposit_amount:
                 return g
 
         return gateway
