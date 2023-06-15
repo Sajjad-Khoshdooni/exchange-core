@@ -17,6 +17,7 @@ from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAcc
     FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, GeneralBankAccount
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.withdraw import FiatWithdraw
+from ledger.utils.fields import PENDING
 from ledger.utils.precision import humanize_number
 from ledger.utils.withdraw_verify import RiskFactor
 
@@ -367,7 +368,7 @@ class PaymentIdRequestAdmin(admin.ModelAdmin):
 
     @admin.action(description='accept deposit', permissions=['change'])
     def accept(self, request, queryset):
-        for payment_request in queryset:
+        for payment_request in queryset.filter(status=PENDING):
             payment_request.accept()
 
 
