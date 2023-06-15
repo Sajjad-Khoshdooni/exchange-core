@@ -6,6 +6,7 @@ from django.utils import timezone
 from financial.models import Gateway, Payment
 from financial.utils.payment_id_client import get_payment_id_client
 from financial.utils.withdraw import FiatWithdraw
+from ledger.utils.fields import PENDING
 
 
 @shared_task(queue='finance')
@@ -14,7 +15,7 @@ def handle_missing_payments():
     now = timezone.now()
 
     pending_payments = Payment.objects.filter(
-        status=Payment.PENDING,
+        status=PENDING,
         payment_request__isnull=False,
         created__lte=now - timedelta(minutes=2)
     )

@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 
 from financial.models import PaymentRequest, Payment, Gateway
 from financial.utils.payment_id_client import get_payment_id_client
-from ledger.utils.fields import CANCELED
+from ledger.utils.fields import CANCELED, PENDING
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class JibitCallbackView(TemplateView):
                 payment_request=payment_request
             )
 
-        if payment.status == Payment.PENDING:
+        if payment.status == PENDING:
             if status == 'FAILED':
                 payment.status = CANCELED
                 payment.save()

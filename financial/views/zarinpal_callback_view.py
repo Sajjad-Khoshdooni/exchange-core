@@ -6,7 +6,7 @@ from django.views.generic import TemplateView
 
 from financial.models import PaymentRequest
 from financial.models.payment import Payment
-from ledger.utils.fields import DONE, CANCELED
+from ledger.utils.fields import DONE, CANCELED, PENDING
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class ZarinpalCallbackView(TemplateView):
                 payment_request=payment_request
             )
 
-        if payment.status == Payment.PENDING:
+        if payment.status == PENDING:
             if status == 'NOK':
                 payment.status = CANCELED
                 payment.save()
