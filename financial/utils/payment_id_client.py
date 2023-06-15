@@ -7,6 +7,8 @@ from django.conf import settings
 from urllib3.exceptions import ReadTimeoutError
 
 from accounts.models import User
+from accounts.utils.admin import url_to_admin_list
+from accounts.utils.telegram import send_system_message
 from accounts.verifiers.jibit import Response
 from financial.models import BankAccount, PaymentIdRequest, PaymentId, Gateway
 from financial.models.bank import GeneralBankAccount
@@ -161,6 +163,9 @@ class JibitClient(BaseClient):
 
         if data['status'] == 'WAITING_FOR_MERCHANT_VERIFY':
             self.verify_payment_request(payment_request)
+
+        if payment_request.status == PENDING:
+            send_system_message("Manual withdraw", link=url_to_admin_list(payment_request))
 
         return payment_request
 
