@@ -151,7 +151,8 @@ class JibitClient(BaseClient):
                 'bank_ref': data['bankReferenceNumber'],
                 'amount': data['amount'] // 10,
                 'status': PROCESS,
-                'payment_id': payment_id
+                'payment_id': payment_id,
+                'source_iban': data['destinationAccountIdentifier'],
             }
         )
 
