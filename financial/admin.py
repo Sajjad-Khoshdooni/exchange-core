@@ -361,7 +361,7 @@ class ManualTransferAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentIdRequest)
 class PaymentIdRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'payment_id', 'status', 'amount', 'external_ref', 'source_iban')
+    list_display = ('created', 'payment_id', 'status', 'amount', 'external_ref', 'source_iban', 'deposit_time')
     search_fields = ('payment_id__pay_id', 'payment_id__user__phone', 'external_ref', 'source_iban', 'bank_ref')
     list_filter = ('status',)
     actions = ('accept', )
