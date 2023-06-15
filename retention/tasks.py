@@ -3,11 +3,9 @@ import uuid
 from datetime import timedelta
 
 from celery import shared_task
-from django.conf import settings
 from django.utils import timezone
 
-from accounts.models import User, SmsNotification, Notification
-from retention.models import Link
+from accounts.models import User, Notification
 
 logger = logging.getLogger(__name__)
 
