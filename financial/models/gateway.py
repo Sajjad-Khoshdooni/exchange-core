@@ -59,6 +59,8 @@ class Gateway(models.Model):
 
     wallet_id = models.PositiveIntegerField(null=True, blank=True)
 
+    deposit_priority = models.SmallIntegerField(default=1)
+
     def clean(self):
         if not self.active and not Gateway.objects.filter(active=True).exclude(id=self.id):
             raise ValidationError('At least one gateway should be active')
@@ -83,7 +85,7 @@ class Gateway(models.Model):
             if gateway:
                 return gateway
 
-        gateways = Gateway.objects.filter(active=True).order_by('-primary')
+        gateways = Gateway.objects.filter(active=True).order_by('-deposit_priority')
 
         gateway = gateways.first()
 
@@ -160,12 +162,3 @@ class Gateway(models.Model):
 
     def __str__(self):
         return '%s (%s)' % (self.name, self.id)
-
-    class Meta:
-        constraints = [
-            UniqueConstraint(
-                fields=['primary'],
-                name="financial_gateway_unique_primary",
-                condition=Q(primary=True),
-            )
-        ]
