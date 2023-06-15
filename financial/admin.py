@@ -14,7 +14,7 @@ from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
-    FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, BankPaymentId
+    FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, GeneralBankAccount
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.precision import humanize_number
@@ -215,8 +215,6 @@ class PaymentAdmin(admin.ModelAdmin):
         link = url_to_edit_object(payment.payment_request.bank_card.user)
         return mark_safe("<a href='%s'>%s</a>" % (link, payment.payment_request.bank_card.user.phone))
 
-    get_user.short_description = 'کاربر'
-
 
 class BankCardUserFilter(SimpleListFilter):
     title = 'کاربر'
@@ -362,13 +360,24 @@ class ManualTransferAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentIdRequest)
 class PaymentIdRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'bank_payment_id', 'amount', 'payment_id', 'status')
-    search_fields = ('payment_id', )
+    list_display = ('created', 'payment_id', 'status', 'amount', 'external_ref', 'source_iban')
+    search_fields = ('payment_id__pay_id', 'payment_id__user__phone', 'external_ref', 'source_iban', 'bank_ref')
     list_filter = ('status',)
 
+    @admin.action(description='accept deposit', permissions=['change'])
+    def accept(self, request, queryset):
+        for payment_request in queryset:
+            payment_request.accept()
 
-@admin.register(BankPaymentId)
-class BankPaymentIdAdmin(admin.ModelAdmin):
-    list_display = ('created', 'bank_account', 'gateway', 'destination_iban', 'registry_status')
-    search_fields = ('destination_iban', )
-    list_filter = ('registry_status',)
+
+@admin.register(PaymentId)
+class PaymentIdAdmin(admin.ModelAdmin):
+    list_display = ('created', 'updated', 'user', 'pay_id', 'verified')
+    search_fields = ('user__phone', 'pay_id')
+    list_filter = ('verified',)
+    readonly_fields = ('user', )
+
+
+@admin.register(GeneralBankAccount)
+class GeneralBankAccountAdmin(admin.ModelAdmin):
+    list_display = ('created', 'name', 'iban', 'bank', 'deposit_address')

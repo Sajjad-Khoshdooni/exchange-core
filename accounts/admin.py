@@ -17,11 +17,9 @@ from financial.models.payment import Payment
 from financial.models.withdraw_request import FiatWithdrawRequest
 from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdraw_irt_value, CRYPTO_WITHDRAW_LIMIT, \
     get_crypto_withdraw_irt_value
-from ledger.models import OTCTrade, DepositAddress, Prize
-from ledger.models.transfer import Transfer
-from ledger.models.wallet import Wallet
-from ledger.utils.precision import humanize_number
+from ledger.models import OTCTrade, DepositAddress, Prize, Transfer, Wallet
 from ledger.utils.external_price import BUY
+from ledger.utils.precision import humanize_number
 from market.models import Trade, ReferralTrx, Order
 from stake.models import StakeRequest
 from .admin_guard import M

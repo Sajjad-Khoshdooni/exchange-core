@@ -9,6 +9,7 @@ class Bank:
     name: str
     card_prefix: str
     iban_code: str
+    swift_code: str = ''
 
     def as_dict(self):
         return {
@@ -38,7 +39,7 @@ BANK_INFO = [
     Bank('POST', 'پست بانک ایران', '627760', '0210'),
     Bank('KHAVARMIANEH', 'بانک خاورمیانه', '585947', '0780'),
     Bank('SINA', 'بانک سینا', '639346', '0590'),
-    Bank('MELLAT', 'بانک ملت', '610433', '0120'),
+    Bank('MELLAT', 'بانک ملت', '610433', '0120', 'BKMTIR'),
     Bank('IRANZAMIN', 'بانک ایران زمین', '505785', '0690'),
     Bank('DAY', 'بانک دی', '502938', '0660'),
     Bank('AYANDEH', 'بانک آینده', '636214', '0620'),
@@ -54,8 +55,8 @@ def get_bank_code_from_iban(iban: str) -> str:
     return iban[4:8]
 
 
-def get_bank(slug: str) -> Bank:
-    return next(filter(lambda bank: bank.slug == slug, BANK_INFO), None)
+def get_bank(swift_code: str) -> Bank:
+    return next(filter(lambda bank: bank.swift_code == swift_code, BANK_INFO), None)
 
 
 def get_bank_from_card_pan(card_pan: str) -> Bank:

@@ -47,7 +47,7 @@ class AssetAdmin(AdvancedAdmin):
     list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'hedge')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
-    actions = ('hedge_asset', 'setup_asset')
+    actions = ('setup_asset', )
 
     def save_model(self, request, obj, form, change):
         if Asset.objects.filter(order=obj.order).exclude(id=obj.id).exists():
@@ -127,16 +127,6 @@ class AssetAdmin(AdvancedAdmin):
         hedge_value_abs = round(hedge_value_abs, 2)
 
         return humanize_presentation(hedge_value_abs)
-
-    @admin.action(description='hedge assets', permissions=['view'])
-    def hedge_asset(self, request, queryset):
-        assets = queryset.filter(hedge=True)
-        for asset in assets:
-            get_provider_requester().try_hedge_new_order(
-                request_id='manual:%s' % uuid4(),
-                asset=asset,
-                scope=HEDGE
-            )
 
     @admin.action(description='setup asset', permissions=['view'])
     def setup_asset(self, request, queryset):
