@@ -141,13 +141,12 @@ class JibitClient(BaseClient):
         payment_id.save(update_fields=['verified'])
 
     def _create_and_verify_payment_data(self, data: dict):
-        external_ref = data['merchantReferenceNumber']
-        user_id = int(external_ref[2:])
+        merchant_ref = data['merchantReferenceNumber']
+        user_id = int(merchant_ref[2:])
         payment_id = PaymentId.objects.get(pay_id=data['paymentId'], user_id=user_id)
 
         payment_request, _ = PaymentIdRequest.objects.get_or_create(
-            external_ref=external_ref,
-
+            external_ref=data['externalReferenceNumber'],
             defaults={
                 'bank_ref': data['bankReferenceNumber'],
                 'amount': data['amount'] // 10,
