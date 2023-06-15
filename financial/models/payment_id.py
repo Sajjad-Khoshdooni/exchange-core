@@ -40,7 +40,6 @@ class PaymentIdRequest(models.Model):
         max_length=26,
         validators=[iban_validator],
         verbose_name='شبا',
-        unique=True
     )
 
     deposit_time = models.DateTimeField()
