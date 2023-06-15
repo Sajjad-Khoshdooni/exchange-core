@@ -107,7 +107,7 @@ class Payment(models.Model):
 
     def accept(self, pipeline: WalletPipeline):
         asset = Asset.get(Asset.IRT)
-        user = self.payment_request.bank_card.user
+        user = self.user
         account = user.get_account()
 
         pipeline.new_trx(
@@ -180,7 +180,7 @@ def handle_payment_save(sender, instance, created, **kwargs):
 
     event = TransferEvent(
         id=instance.id,
-        user_id=instance.payment_request.bank_card.user_id,
+        user_id=instance.user.id,
         amount=instance.payment_request.amount,
         coin='IRT',
         network='IRT',

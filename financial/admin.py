@@ -213,8 +213,8 @@ class PaymentAdmin(admin.ModelAdmin):
 
     @admin.display(description='کاربر')
     def get_user(self, payment: Payment):
-        link = url_to_edit_object(payment.payment_request.bank_card.user)
-        return mark_safe("<a href='%s'>%s</a>" % (link, payment.payment_request.bank_card.user.phone))
+        link = url_to_edit_object(payment.user)
+        return mark_safe("<a href='%s'>%s</a>" % (link, payment.user.phone))
 
 
 class BankCardUserFilter(SimpleListFilter):

@@ -161,7 +161,7 @@ def trigger_payment_event(threshold=1000):
     for payment in payment_list:
         event = TransferEvent(
             id=payment.id,
-            user_id=payment.payment_request.bank_card.user_id,
+            user_id=payment.user.id,
             amount=payment.payment_request.amount,
             coin='IRT',
             network='IRT',

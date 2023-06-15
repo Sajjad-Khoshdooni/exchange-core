@@ -164,7 +164,7 @@ def create_fiat_deposit_details(start: datetime.date, end: datetime.date, upload
     deposits = []
 
     for p in payments:
-        user = p.payment_request.bank_card.user
+        user = p.user
 
         deposits.append({
             'id': p.id,
