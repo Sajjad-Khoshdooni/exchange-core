@@ -28,5 +28,9 @@ def handle_missing_payments():
 @shared_task(queue='finance')
 def handle_missing_payment_ids():
     gateway = Gateway.get_active_pay_id_deposit()
+
+    if not gateway:
+        return
+
     client = get_payment_id_client(gateway)
     client.create_missing_payment_requests()
