@@ -357,4 +357,3 @@ def handle_user_save(sender, instance, created, **kwargs):
         first_crypto_deposit_date=instance.first_crypto_deposit_date,
     )
     producer.produce(event)
-

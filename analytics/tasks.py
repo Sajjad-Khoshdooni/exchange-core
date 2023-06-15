@@ -47,6 +47,7 @@ def create_analytics(now=None):
 
 @shared_task(queue='history')
 def trigger_kafka_event():
+    trigger_users_event()
 
     trigger_transfer_event()
 
@@ -99,7 +100,7 @@ def trigger_users_event(threshold=1000):
             first_fiat_deposit_date=user.first_fiat_deposit_date,
             first_crypto_deposit_date=user.first_crypto_deposit_date,
         )
-        get_kafka_producer().produce(event)
+        get_kafka_producer().produce(event, instance=user)
 
 
 def trigger_transfer_event(threshold=1000):
