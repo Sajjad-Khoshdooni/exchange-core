@@ -1,4 +1,5 @@
 import logging
+import uuid
 from decimal import Decimal
 from typing import Union
 from uuid import uuid4
@@ -8,6 +9,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint
 from django.db.models import UniqueConstraint, Q
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 
 from accounts.models import Account, Notification
@@ -15,6 +18,9 @@ from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.push_notif import send_push_notif_to_user
 from accounts.utils.telegram import send_support_message
+from analytics.event.producer import get_kafka_producer
+from analytics.models import EventTracker
+from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
 from ledger.utils.external_price import get_external_price, SELL
@@ -336,3 +342,24 @@ class Transfer(models.Model):
             action = 'withdraw'
 
         return f'{action} {self.amount} {self.asset}'
+
+
+@receiver(post_save, sender=Transfer)
+def handle_transfer_save(sender, instance, created, **kwargs):
+    if instance.status != Transfer.DONE or settings.DEBUG_OR_TESTING_OR_STAGING:
+        return
+
+    event = TransferEvent(
+        id=instance.id,
+        user_id=instance.wallet.account.user_id,
+        amount=instance.amount,
+        coin=instance.wallet.asset.symbol,
+        network=instance.network.symbol,
+        created=instance.created,
+        is_deposit=instance.deposit,
+        value_irt=instance.irt_value,
+        value_usdt=instance.usdt_value,
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type + 'crypto')
+    )
+
+    get_kafka_producer().produce(event)
