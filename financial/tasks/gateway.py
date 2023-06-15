@@ -4,6 +4,7 @@ from celery import shared_task
 from django.utils import timezone
 
 from financial.models import Gateway, Payment
+from financial.utils.payment_id_client import get_payment_id_client
 from financial.utils.withdraw import FiatWithdraw
 
 
@@ -22,3 +23,10 @@ def handle_missing_payments():
     channel = FiatWithdraw.get_withdraw_channel(gateway)
 
     channel.update_missing_payments(gateway)
+
+
+@shared_task(queue='finance')
+def handle_missing_payment_ids():
+    gateway = Gateway.get_active_pay_id_deposit()
+    client = get_payment_id_client(gateway)
+    client.create_missing_payment_requests()

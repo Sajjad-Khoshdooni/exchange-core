@@ -8,9 +8,7 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from accounts.models import User
-from financial.models import BankCard
-from financial.models import PaymentRequest
-from financial.models.payment import Payment
+from financial.models import BankCard, Payment
 from financial.utils.encryption import decrypt
 from ledger.models import FastBuyToken
 from ledger.utils.fields import DONE

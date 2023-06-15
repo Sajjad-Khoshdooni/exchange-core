@@ -28,6 +28,9 @@ class BaseClient:
     def verify_payment_request(self, payment_request: PaymentIdRequest):
         raise NotImplementedError
 
+    def create_missing_payment_requests(self):
+        return
+
 
 class JibitClient(BaseClient):
     BASE_URL = 'https://napi.jibit.cloud/pip'

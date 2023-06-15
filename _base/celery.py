@@ -157,6 +157,15 @@ app.conf.beat_schedule = {
         },
     },
 
+    'handle_missing_payment_ids': {
+        'task': 'financial.tasks.gateway.handle_missing_payment_ids',
+        'schedule': 600 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'finance',
+            'expire': 600 * TASK_MULTIPLIER
+        },
+    },
+
     'update_accounts_pnl': {
         'task': 'ledger.tasks.pnl.create_pnl_histories',
         'schedule': crontab(hour=20, minute=30),
