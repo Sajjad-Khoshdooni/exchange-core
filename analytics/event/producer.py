@@ -82,7 +82,7 @@ def handle_event_tracker(data, instance):
     _type = data.get('type')
 
     if _type == 'user':
-        return
+        event_type = EventTracker.USER
     elif _type == 'transfer':
         if data.get('coin') == 'IRT' and data.get('network') == 'IRT':
             if data.get('is_deposit'):
