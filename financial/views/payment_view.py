@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -72,4 +73,9 @@ class PaymentHistoryView(ListAPIView):
     filterset_fields = ['status']
 
     def get_queryset(self):
-        return Payment.objects.filter(payment_request__bank_card__user=self.request.user).order_by('-created')
+        user = self.request.user
+
+        return Payment.objects.filter(
+            Q(payment_request__bank_card__user=user) |
+            Q(payment_id_request__payment_id__user=user)
+        ).order_by('-created')

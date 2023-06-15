@@ -60,8 +60,6 @@ class Payment(models.Model):
     created = models.DateTimeField(auto_now_add=True, db_index=True)
     modified = models.DateTimeField(auto_now=True)
 
-    PENDING, SUCCESS, FAIL = 'pending', 'success', 'fail'
-
     group_id = get_group_id_field()
 
     payment_request = models.OneToOneField(PaymentRequest, on_delete=models.PROTECT, blank=True, null=True)
@@ -183,7 +181,7 @@ class Payment(models.Model):
 
 @receiver(post_save, sender=Payment)
 def handle_payment_save(sender, instance, created, **kwargs):
-    if instance.status != 'done' or settings.DEBUG_OR_TESTING_OR_STAGING:
+    if instance.status != DONE or settings.DEBUG_OR_TESTING_OR_STAGING:
         return
 
     usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')

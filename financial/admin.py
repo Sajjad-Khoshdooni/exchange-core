@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
@@ -194,7 +195,7 @@ class PaymentUserFilter(SimpleListFilter):
     def queryset(self, request, queryset):
         user = request.GET.get('user')
         if user is not None:
-            return queryset.filter(payment_request__bank_card__user_id=user)
+            return queryset.filter(Q(payment_request__bank_card__user=user) | Q(payment_id_request__payment_id__user=user))
         else:
             return queryset
 

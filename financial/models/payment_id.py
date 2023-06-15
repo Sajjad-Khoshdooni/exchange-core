@@ -57,7 +57,7 @@ class PaymentIdRequest(models.Model):
 
             payment = Payment.objects.create(
                 payment_id_request=req,
-                status=Payment.SUCCESS,
+                status=DONE,
                 ref_id=req.bank_ref,
             )
             payment.accept(pipeline)

@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from django.db.models import Q
+
 from accounts.models import User
 from financial.models import Payment, FiatWithdrawRequest
 from ledger.models import Wallet, Asset
@@ -10,7 +12,7 @@ from ledger.utils.fields import DONE
 def get_user_irt_net_deposit(user: User) -> int:
 
     irt_deposits = Payment.objects.filter(
-        payment_request__bank_card__user=user,
+        Q(payment_request__bank_card__user=user) | Q(payment_id_request__payment_id__user=user),
         status=DONE
     ).order_by('created').values_list('created', 'payment_request__amount')
 
