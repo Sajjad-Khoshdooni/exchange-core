@@ -1,9 +1,10 @@
 import logging
+import uuid
 
-from decouple import config
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
@@ -14,8 +15,12 @@ from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
+from analytics.event.producer import get_kafka_producer
+from analytics.models import EventTracker
+from analytics.utils.dto import TransferEvent
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
+from ledger.utils.external_price import get_external_price
 from ledger.utils.fields import get_group_id_field
 from ledger.utils.precision import humanize_number
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -242,3 +247,27 @@ class FiatWithdrawRequest(models.Model):
     class Meta:
         verbose_name = 'درخواست برداشت'
         verbose_name_plural = 'درخواست‌های برداشت'
+
+
+@receiver(post_save, sender=FiatWithdrawRequest)
+def handle_withdraw_request_save(sender, instance, created, **kwargs):
+
+    if instance.status != FiatWithdrawRequest.DONE:
+        return
+
+    usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
+
+    event = TransferEvent(
+        id=instance.id,
+        user_id=instance.bank_account.user_id,
+        amount=instance.amount,
+        coin='IRT',
+        network='IRT',
+        created=instance.created,
+        value_irt=instance.amount,
+        value_usdt=float(instance.amount) / float(usdt_price),
+        is_deposit=False,
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type + 'fiat_withdraw')
+    )
+
+    get_kafka_producer().produce(event)
