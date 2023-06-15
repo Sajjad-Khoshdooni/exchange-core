@@ -1,6 +1,7 @@
 import logging
 import uuid
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models.signals import post_save
@@ -252,7 +253,7 @@ class FiatWithdrawRequest(models.Model):
 @receiver(post_save, sender=FiatWithdrawRequest)
 def handle_withdraw_request_save(sender, instance, created, **kwargs):
 
-    if instance.status != FiatWithdrawRequest.DONE:
+    if instance.status != FiatWithdrawRequest.DONE or settings.DEBUG_OR_TESTING_OR_STAGING:
         return
 
     usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')

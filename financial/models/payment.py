@@ -166,7 +166,7 @@ class Payment(models.Model):
 
 @receiver(post_save, sender=Payment)
 def handle_payment_save(sender, instance, created, **kwargs):
-    if instance.status != 'done':
+    if instance.status != 'done' or settings.DEBUG_OR_TESTING_OR_STAGING:
         return
 
     usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')

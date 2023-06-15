@@ -1,6 +1,7 @@
 import uuid
 from uuid import uuid4
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
 from django.db.models import Q, UniqueConstraint, Sum
@@ -319,10 +320,13 @@ class User(AbstractUser):
 
 @receiver(post_save, sender=User)
 def handle_user_save(sender, instance, created, **kwargs):
+    if settings.DEBUG_OR_TESTING_OR_STAGING:
+        return
+
     producer = get_kafka_producer()
     account = instance.get_account()
 
-    if account.type != Account.ORDINARY:
+    if account.type != Account.ORDINARY :
         return
 
     referrer_id = None

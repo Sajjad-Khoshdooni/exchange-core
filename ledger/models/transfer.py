@@ -346,7 +346,7 @@ class Transfer(models.Model):
 
 @receiver(post_save, sender=Transfer)
 def handle_transfer_save(sender, instance, created, **kwargs):
-    if instance.status != Transfer.DONE:
+    if instance.status != Transfer.DONE or settings.DEBUG_OR_TESTING_OR_STAGING:
         return
 
     event = TransferEvent(
