@@ -9,6 +9,7 @@ from accounts.permissions import IsBasicVerified
 from financial.models import BankCard, PaymentRequest, Payment
 from financial.models.bank_card import BankCardSerializer
 from financial.models.gateway import GatewayFailed
+from financial.utils.bank import get_bank_from_iban
 from ledger.utils.precision import humanize_number
 
 
@@ -74,7 +75,12 @@ class PaymentHistorySerializer(serializers.ModelSerializer):
         payment_id_request = payment.payment_id_request
 
         if payment_id_request:
-            return BankCardSerializer(bank_card).data
+            bank = get_bank_from_iban(payment_id_request.source_iban)
+
+            return {
+                'iban': payment_id_request.source_iban,
+                'bank': bank and bank.slug,
+            }
 
     class Meta:
         model = Payment
