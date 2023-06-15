@@ -57,8 +57,11 @@ class PaymentRequestView(CreateAPIView):
 
 class PaymentHistorySerializer(serializers.ModelSerializer):
 
-    amount = serializers.IntegerField(source='payment_request.amount')
+    amount = serializers.SerializerMethodField()
     bank_card = BankCardSerializer(source='payment_request.bank_card')
+
+    def get_amount(self, payment: Payment):
+        return payment.amount
 
     class Meta:
         model = Payment
