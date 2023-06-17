@@ -40,8 +40,9 @@ class PaymentIdRequest(models.Model):
         max_length=26,
         validators=[iban_validator],
         verbose_name='شبا',
-        unique=True
     )
+
+    deposit_time = models.DateTimeField()
 
     def __str__(self):
         return '%s ref=%s' % (self.amount, self.bank_ref)
@@ -50,12 +51,12 @@ class PaymentIdRequest(models.Model):
         with WalletPipeline() as pipeline:
             req = PaymentIdRequest.objects.select_for_update().get(id=self.id)
 
-            if req is not PENDING:
+            if req.status != PENDING:
                 return
 
             payment = Payment.objects.create(
                 payment_id_request=req,
-                status=Payment.SUCCESS,
+                status=DONE,
                 ref_id=req.bank_ref,
             )
             payment.accept(pipeline)

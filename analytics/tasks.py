@@ -47,6 +47,7 @@ def create_analytics(now=None):
 
 @shared_task(queue='history')
 def trigger_kafka_event():
+    trigger_users_event()
 
     trigger_transfer_event()
 
@@ -99,7 +100,7 @@ def trigger_users_event(threshold=1000):
             first_fiat_deposit_date=user.first_fiat_deposit_date,
             first_crypto_deposit_date=user.first_crypto_deposit_date,
         )
-        get_kafka_producer().produce(event)
+        get_kafka_producer().produce(event, instance=user)
 
 
 def trigger_transfer_event(threshold=1000):
@@ -160,13 +161,13 @@ def trigger_payment_event(threshold=1000):
     for payment in payment_list:
         event = TransferEvent(
             id=payment.id,
-            user_id=payment.payment_request.bank_card.user_id,
-            amount=payment.payment_request.amount,
+            user_id=payment.user.id,
+            amount=payment.amount,
             coin='IRT',
             network='IRT',
             is_deposit=True,
-            value_usdt=float(payment.payment_request.amount) / float(usdt_price),
-            value_irt=payment.payment_request.amount,
+            value_usdt=float(payment.amount) / float(usdt_price),
+            value_irt=payment.amount,
             created=payment.created,
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(payment.id) + TransferEvent.type + 'fiat_deposit')
         )

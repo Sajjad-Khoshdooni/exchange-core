@@ -1,11 +1,14 @@
 import logging
 from json import JSONDecodeError
 
+import jdatetime
 import requests
 from django.conf import settings
 from urllib3.exceptions import ReadTimeoutError
 
 from accounts.models import User
+from accounts.utils.admin import url_to_admin_list
+from accounts.utils.telegram import send_system_message
 from accounts.verifiers.jibit import Response
 from financial.models import BankAccount, PaymentIdRequest, PaymentId, Gateway
 from financial.models.bank import GeneralBankAccount
@@ -27,6 +30,9 @@ class BaseClient:
 
     def verify_payment_request(self, payment_request: PaymentIdRequest):
         raise NotImplementedError
+
+    def create_missing_payment_requests(self):
+        return
 
 
 class JibitClient(BaseClient):
@@ -137,41 +143,51 @@ class JibitClient(BaseClient):
         payment_id.verified = resp.data['registryStatus'] == 'VERIFIED'
         payment_id.save(update_fields=['verified'])
 
-    def create_payment_request(self, external_ref: str) -> PaymentIdRequest:
-        resp = self._collect_api(f'/v1/paymentIds/{external_ref}')
-
-        user_id = int(resp.data['merchantReferenceNumber'][2:])
-        payment_id = PaymentId.objects.get(pay_id=resp.data['paymentId'], user_id=user_id)
+    def _create_and_verify_payment_data(self, data: dict):
+        merchant_ref = data['merchantReferenceNumber']
+        user_id = int(merchant_ref[2:])
+        payment_id = PaymentId.objects.get(pay_id=data['paymentId'], user_id=user_id)
+        deposit_time = jdatetime.datetime.strptime(data['rawBankTimestamp'], '%Y/%m/%d %H:%M:%S').togregorian().astimezone()
 
         payment_request, _ = PaymentIdRequest.objects.get_or_create(
-            external_ref=external_ref,
-
+            external_ref=data['externalReferenceNumber'],
             defaults={
-                'bank_ref': resp.data['bankReferenceNumber'],
-                'amount': resp.data['amount'] // 10,
+                'bank_ref': data['bankReferenceNumber'],
+                'amount': data['amount'] // 10,
                 'status': PROCESS,
-                'payment_id': payment_id
+                'payment_id': payment_id,
+                'source_iban': data['destinationAccountIdentifier'],
+                'deposit_time': deposit_time,
             }
         )
 
+        if data['status'] == 'WAITING_FOR_MERCHANT_VERIFY':
+            self.verify_payment_request(payment_request)
+
+        if payment_request.status == PENDING:
+            send_system_message("Manual withdraw", link=url_to_admin_list(payment_request))
+
         return payment_request
 
+    def create_payment_request(self, external_ref: str) -> PaymentIdRequest:
+        resp = self._collect_api(f'/v1/paymentIds/{external_ref}')
+        return self._create_and_verify_payment_data(resp.data)
+
     def verify_payment_request(self, payment_request: PaymentIdRequest):
-        if payment_request.status is not PROCESS:
+        if payment_request.status != PROCESS:
             return
 
-        resp = self._collect_api(f'/v1/paymentIds/{payment_request.external_ref}/verify')
+        resp = self._collect_api(f'/v1/payments/{payment_request.external_ref}/verify')
 
         if resp.success:
             payment_request.status = PENDING
             payment_request.save(update_fields=['status'])
 
     def create_missing_payment_requests(self):
-        resp = self._collect_api(f'/v1/paymentIds/waitingForVerify/?pageNumber=0&pageSize=200')
+        resp = self._collect_api(f'/v1/payments/waitingForVerify?pageNumber=0&pageSize=100')
 
-        for data in resp.get_success_data():
-            payment_request = self.create_payment_request(data['externalReferenceNumber'])
-            self.verify_payment_request(payment_request)
+        for data in resp.get_success_data()['content']:
+            self._create_and_verify_payment_data(data)
 
 
 class MockClient(BaseClient):

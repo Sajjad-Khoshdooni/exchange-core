@@ -1,9 +1,12 @@
+import uuid
 from decimal import Decimal
 
 from decouple import config
 from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint, Q
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils import timezone
@@ -11,7 +14,10 @@ from django.utils import timezone
 from accounts.models import Account
 from accounts.models import Notification
 from accounts.utils import email
+from analytics.event.producer import get_kafka_producer
+from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, Asset
+from ledger.utils.external_price import get_external_price
 from ledger.utils.fields import DONE
 from ledger.utils.fields import get_group_id_field, get_status_field
 from ledger.utils.precision import humanize_number, get_presentation_amount
@@ -54,8 +60,6 @@ class Payment(models.Model):
     created = models.DateTimeField(auto_now_add=True, db_index=True)
     modified = models.DateTimeField(auto_now=True)
 
-    PENDING, SUCCESS, FAIL = 'pending', 'success', 'fail'
-
     group_id = get_group_id_field()
 
     payment_request = models.OneToOneField(PaymentRequest, on_delete=models.PROTECT, blank=True, null=True)
@@ -66,11 +70,25 @@ class Payment(models.Model):
     ref_id = models.PositiveBigIntegerField(null=True, blank=True)
     ref_status = models.SmallIntegerField(null=True, blank=True)
 
+    @property
+    def user(self):
+        if self.payment_request:
+            return self.payment_request.bank_card.user
+        else:
+            return self.payment_id_request.payment_id.user
+
+    @property
+    def amount(self):
+        if self.payment_request:
+            return self.payment_request.amount
+        else:
+            return self.payment_id_request.amount
+
     def alert_payment(self):
-        user = self.payment_request.bank_card.user
+        user = self.user
         user_email = user.email
         title = 'واریز وجه با موفقیت انجام شد'
-        payment_amont = humanize_number(get_presentation_amount(Decimal(self.payment_request.amount)))
+        payment_amont = humanize_number(get_presentation_amount(Decimal(self.amount)))
         description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amont)
 
         Notification.send(
@@ -94,13 +112,13 @@ class Payment(models.Model):
 
     def accept(self, pipeline: WalletPipeline):
         asset = Asset.get(Asset.IRT)
-        user = self.payment_request.bank_card.user
+        user = self.user
         account = user.get_account()
 
         pipeline.new_trx(
             sender=asset.get_wallet(Account.out()),
             receiver=asset.get_wallet(account),
-            amount=self.payment_request.amount,
+            amount=self.amount,
             scope=Trx.TRANSFER,
             group_id=self.group_id,
         )
@@ -116,6 +134,9 @@ class Payment(models.Model):
 
     def get_redirect_url(self) -> str:
         from ledger.models import FastBuyToken
+
+        if not self.payment_request:
+            return
 
         source = self.payment_request.source
         desktop = PaymentRequest.DESKTOP
@@ -156,3 +177,26 @@ class Payment(models.Model):
                 name='check_financial_payment_requests',
             )
         ]
+
+
+@receiver(post_save, sender=Payment)
+def handle_payment_save(sender, instance, created, **kwargs):
+    if instance.status != DONE or settings.DEBUG_OR_TESTING_OR_STAGING:
+        return
+
+    usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
+
+    event = TransferEvent(
+        id=instance.id,
+        user_id=instance.user.id,
+        amount=instance.amount,
+        coin='IRT',
+        network='IRT',
+        is_deposit=True,
+        value_usdt=float(instance.amount) / float(usdt_price),
+        value_irt=instance.amount,
+        created=instance.created,
+        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(instance.id) + TransferEvent.type + 'fiat_deposit')
+    )
+
+    get_kafka_producer().produce(event)

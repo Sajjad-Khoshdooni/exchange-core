@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
@@ -17,15 +18,16 @@ from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAcc
     FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, GeneralBankAccount
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.withdraw import FiatWithdraw
+from ledger.utils.fields import PENDING
 from ledger.utils.precision import humanize_number
 from ledger.utils.withdraw_verify import RiskFactor
 
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'merchant_id', 'active', 'primary', 'active_for_staff', 'withdraw_enable', 'get_balance',
-                    'get_min_deposit_amount', 'get_max_deposit_amount')
-    list_editable = ('active', 'primary', 'active_for_staff', 'withdraw_enable')
+    list_display = ('name', 'type', 'merchant_id', 'active', 'deposit_priority', 'active_for_staff', 'withdraw_enable',
+                    'get_balance', 'get_min_deposit_amount', 'get_max_deposit_amount')
+    list_editable = ('active', 'active_for_staff', 'withdraw_enable', 'deposit_priority')
     readonly_fields = ('get_balance', 'get_min_deposit_amount', 'get_max_deposit_amount')
 
     @admin.display(description='balance')
@@ -193,7 +195,7 @@ class PaymentUserFilter(SimpleListFilter):
     def queryset(self, request, queryset):
         user = request.GET.get('user')
         if user is not None:
-            return queryset.filter(payment_request__bank_card__user_id=user)
+            return queryset.filter(Q(payment_request__bank_card__user=user) | Q(payment_id_request__payment_id__user=user))
         else:
             return queryset
 
@@ -208,12 +210,12 @@ class PaymentAdmin(admin.ModelAdmin):
 
     @admin.display(description='مقدار')
     def get_payment_amount(self, payment: Payment):
-        return humanize_number(payment.payment_request.amount)
+        return humanize_number(payment.amount)
 
     @admin.display(description='کاربر')
     def get_user(self, payment: Payment):
-        link = url_to_edit_object(payment.payment_request.bank_card.user)
-        return mark_safe("<a href='%s'>%s</a>" % (link, payment.payment_request.bank_card.user.phone))
+        link = url_to_edit_object(payment.user)
+        return mark_safe("<a href='%s'>%s</a>" % (link, payment.user.phone))
 
 
 class BankCardUserFilter(SimpleListFilter):
@@ -360,13 +362,14 @@ class ManualTransferAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentIdRequest)
 class PaymentIdRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'payment_id', 'status', 'amount', 'external_ref', 'source_iban')
+    list_display = ('created', 'payment_id', 'status', 'amount', 'external_ref', 'source_iban', 'deposit_time')
     search_fields = ('payment_id__pay_id', 'payment_id__user__phone', 'external_ref', 'source_iban', 'bank_ref')
     list_filter = ('status',)
+    actions = ('accept', )
 
     @admin.action(description='accept deposit', permissions=['change'])
     def accept(self, request, queryset):
-        for payment_request in queryset:
+        for payment_request in queryset.filter(status=PENDING):
             payment_request.accept()
 
 
@@ -375,6 +378,7 @@ class PaymentIdAdmin(admin.ModelAdmin):
     list_display = ('created', 'updated', 'user', 'pay_id', 'verified')
     search_fields = ('user__phone', 'pay_id')
     list_filter = ('verified',)
+    readonly_fields = ('user', )
 
 
 @admin.register(GeneralBankAccount)

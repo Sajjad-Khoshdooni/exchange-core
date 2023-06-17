@@ -47,15 +47,12 @@ class NotifyView(APIView):
 
         _type = data['type']
 
-        created = False
         if _type == SMS:
             _, created = SmsNotification.objects.get_or_create(
                 recipient=User.objects.get(id=data['user_id']),
                 group_id=data['group_id'],
                 defaults={
-                    'template': data.get('template', None),
-                    'params': data.get('params', None),
-                    'content': data.get('content', None),
+                    'content': data['content'],
                 }
             )
         elif _type == PUSH:

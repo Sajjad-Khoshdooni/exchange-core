@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -8,6 +9,7 @@ from accounts.permissions import IsBasicVerified
 from financial.models import BankCard, PaymentRequest, Payment
 from financial.models.bank_card import BankCardSerializer
 from financial.models.gateway import GatewayFailed
+from financial.utils.bank import get_bank_from_iban
 from ledger.utils.precision import humanize_number
 
 
@@ -56,12 +58,33 @@ class PaymentRequestView(CreateAPIView):
 
 class PaymentHistorySerializer(serializers.ModelSerializer):
 
-    amount = serializers.IntegerField(source='payment_request.amount')
-    bank_card = BankCardSerializer(source='payment_request.bank_card')
+    amount = serializers.SerializerMethodField()
+    bank_card = serializers.SerializerMethodField()
+    payment_id = serializers.SerializerMethodField()
+
+    def get_amount(self, payment: Payment):
+        return payment.amount
+
+    def get_bank_card(self, payment: Payment):
+        bank_card = payment.payment_request and payment.payment_request.bank_card
+
+        if bank_card:
+            return BankCardSerializer(bank_card).data
+
+    def get_payment_id(self, payment: Payment):
+        payment_id_request = payment.payment_id_request
+
+        if payment_id_request:
+            bank = get_bank_from_iban(payment_id_request.source_iban)
+
+            return {
+                'iban': payment_id_request.source_iban,
+                'bank': bank and bank.slug,
+            }
 
     class Meta:
         model = Payment
-        fields = ('created', 'status', 'ref_id', 'amount', 'bank_card')
+        fields = ('created', 'status', 'ref_id', 'amount', 'bank_card', 'payment_id')
 
 
 class PaymentHistoryView(ListAPIView):
@@ -72,4 +95,9 @@ class PaymentHistoryView(ListAPIView):
     filterset_fields = ['status']
 
     def get_queryset(self):
-        return Payment.objects.filter(payment_request__bank_card__user=self.request.user).order_by('-created')
+        user = self.request.user
+
+        return Payment.objects.filter(
+            Q(payment_request__bank_card__user=user) |
+            Q(payment_id_request__payment_id__user=user)
+        ).order_by('-created')

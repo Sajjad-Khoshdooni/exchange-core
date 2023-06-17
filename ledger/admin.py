@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Q
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
@@ -409,10 +409,10 @@ class TransferAdmin(AdvancedAdmin):
         user = transfer.wallet.account.user
 
         last_payment = Payment.objects.filter(
+            Q(payment_request__bank_card__user=user) | Q(payment_id_request__payment_id__user=user),
             created__gt=timezone.now() - timedelta(days=3),
             created__lt=transfer.created,
             status=DONE,
-            payment_request__bank_card__user=user
         ).order_by('created').last()
 
         if last_payment:

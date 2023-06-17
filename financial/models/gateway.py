@@ -4,13 +4,11 @@ from typing import Type
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import UniqueConstraint, Q, Sum
+from django.db.models import Sum
 from django.utils import timezone
 
 from accounts.models import User
-from financial.models import BankCard
-from financial.models import PaymentRequest
-from financial.models.payment import Payment
+from financial.models import BankCard, Payment, PaymentRequest
 from financial.utils.encryption import decrypt
 from ledger.models import FastBuyToken
 from ledger.utils.fields import DONE
@@ -44,6 +42,7 @@ class Gateway(models.Model):
 
     min_deposit_amount = models.PositiveIntegerField(default=10000)
     max_deposit_amount = models.PositiveIntegerField(default=50000000)
+    max_daily_deposit_amount = models.PositiveIntegerField(default=100000000)
 
     max_auto_withdraw_amount = models.PositiveIntegerField(null=True, blank=True)
     expected_withdraw_datetime = models.DateTimeField(null=True, blank=True)
@@ -58,6 +57,8 @@ class Gateway(models.Model):
     payment_id_secret_encrypted = models.CharField(max_length=4096, blank=True)
 
     wallet_id = models.PositiveIntegerField(null=True, blank=True)
+
+    deposit_priority = models.SmallIntegerField(default=1)
 
     def clean(self):
         if not self.active and not Gateway.objects.filter(active=True).exclude(id=self.id):
@@ -83,7 +84,7 @@ class Gateway(models.Model):
             if gateway:
                 return gateway
 
-        gateways = Gateway.objects.filter(active=True).order_by('-primary')
+        gateways = Gateway.objects.filter(active=True).order_by('-deposit_priority')
 
         gateway = gateways.first()
 
@@ -101,7 +102,7 @@ class Gateway(models.Model):
         ).values_list('payment_request__gateway', 'total'))
 
         for g in gateways:
-            if amount + today_payments.get(g.id, 0) <= g.max_deposit_amount:
+            if amount + today_payments.get(g.id, 0) <= g.max_daily_deposit_amount:
                 return g
 
         return gateway
@@ -119,7 +120,7 @@ class Gateway(models.Model):
 
     @classmethod
     def get_active_pay_id_deposit(cls) -> 'Gateway':
-        return Gateway.objects.filter(active=True).exclude(payment_id_api_key=True).order_by('id').first()
+        return Gateway.objects.filter(active=True).exclude(payment_id_api_key='').order_by('id').first()
 
     @classmethod
     def get_gateway_class(cls, type: str) -> Type['Gateway']:
@@ -160,12 +161,3 @@ class Gateway(models.Model):
 
     def __str__(self):
         return '%s (%s)' % (self.name, self.id)
-
-    class Meta:
-        constraints = [
-            UniqueConstraint(
-                fields=['primary'],
-                name="financial_gateway_unique_primary",
-                condition=Q(primary=True),
-            )
-        ]

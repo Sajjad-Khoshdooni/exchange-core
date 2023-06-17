@@ -164,7 +164,7 @@ def create_fiat_deposit_details(start: datetime.date, end: datetime.date, upload
     deposits = []
 
     for p in payments:
-        user = p.payment_request.bank_card.user
+        user = p.user
 
         deposits.append({
             'id': p.id,
@@ -173,7 +173,7 @@ def create_fiat_deposit_details(start: datetime.date, end: datetime.date, upload
             'user_national_code': user.national_code,
             'gateway': p.payment_request.gateway.type,
             'date': str(gregorian_to_jalali_datetime(p.created)),
-            'amount': p.payment_request.amount * 10
+            'amount': p.amount * 10
         })
 
     file_path = '/tmp/accounting/deposit_details_{}_{}.csv'.format(str(start), str(end))
