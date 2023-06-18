@@ -55,6 +55,10 @@ def get_bank_code_from_iban(iban: str) -> str:
     return iban[4:8]
 
 
+def get_bank_from_slug(slug: str) -> Bank:
+    return next(filter(lambda bank: bank.slug == slug, BANK_INFO), None)
+
+
 def get_bank(swift_code: str) -> Bank:
     return next(filter(lambda bank: bank.swift_code == swift_code, BANK_INFO), None)
 

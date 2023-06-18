@@ -5,10 +5,18 @@ from rest_framework.viewsets import ModelViewSet
 
 from accounts.models import User
 from financial.models import PaymentId, Gateway, GeneralBankAccount, BankAccount
+from financial.utils.bank import get_bank_from_slug
 from financial.utils.payment_id_client import get_payment_id_client
 
 
 class GeneralBankAccountSerializer(serializers.ModelSerializer):
+    logo = serializers.SerializerMethodField()
+    slug = serializers.CharField(source='bank')
+
+    def get_logo(self, general_bank: GeneralBankAccount):
+        bank = get_bank_from_slug(general_bank.bank)
+        return bank.as_dict()['logo']
+
     class Meta:
         model = GeneralBankAccount
         fields = ('iban', 'name', 'bank', 'deposit_address')
