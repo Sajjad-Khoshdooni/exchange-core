@@ -4,7 +4,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 
 from accounts.models import User
-from financial.models import PaymentId, Gateway, GeneralBankAccount
+from financial.models import PaymentId, Gateway, GeneralBankAccount, BankAccount
 from financial.utils.payment_id_client import get_payment_id_client
 
 
@@ -22,7 +22,10 @@ class PaymentIdSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
 
         if user.level <= User.LEVEL1:
-            raise ValidationError({'user': 'ابتدا کاربر باید احراز هویت کند.'})
+            raise ValidationError({'user': 'ابتدا احراز هویت کنید.'})
+
+        if not BankAccount.objects.filter(user=user, verified=True):
+            raise ValidationError({'iban': 'شما باید حداقل یک حساب بانکی تایید شده داشته باشید.'})
 
         gateway = Gateway.get_active_pay_id_deposit()
 
