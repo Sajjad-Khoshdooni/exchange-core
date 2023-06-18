@@ -78,7 +78,7 @@ class PaymentHistorySerializer(serializers.ModelSerializer):
             bank = get_bank_from_iban(payment_id_request.source_iban)
 
             return {
-                **bank.as_dict(),
+                'info': bank and bank.as_dict(),
                 'iban': payment_id_request.source_iban,
             }
 

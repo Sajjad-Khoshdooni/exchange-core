@@ -10,16 +10,15 @@ from financial.utils.payment_id_client import get_payment_id_client
 
 
 class GeneralBankAccountSerializer(serializers.ModelSerializer):
-    logo = serializers.SerializerMethodField()
-    slug = serializers.CharField(source='bank')
+    bank = serializers.SerializerMethodField()
 
-    def get_logo(self, general_bank: GeneralBankAccount):
+    def get_bank(self, general_bank: GeneralBankAccount):
         bank = get_bank_from_slug(general_bank.bank)
-        return bank.as_dict()['logo']
+        return bank.as_dict()
 
     class Meta:
         model = GeneralBankAccount
-        fields = ('iban', 'name', 'slug', 'deposit_address', 'logo')
+        fields = ('iban', 'name', 'bank', 'deposit_address')
 
 
 class PaymentIdSerializer(serializers.ModelSerializer):
