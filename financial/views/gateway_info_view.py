@@ -2,6 +2,7 @@ from django.db.models import Sum
 from rest_framework import serializers
 from rest_framework.generics import RetrieveAPIView
 
+from accounts.models.user_feature_perm import UserFeaturePerm
 from financial.models import Gateway, Payment
 from financial.utils.ach import next_ach_clear_time
 from ledger.utils.fields import DONE
@@ -15,8 +16,10 @@ class GatewaySerializer(serializers.ModelSerializer):
         return next_ach_clear_time()
 
     def get_pay_id_enable(self, gateway):
+        user = self.context['request'].user
+
         gateway = Gateway.get_active_pay_id_deposit()
-        return bool(gateway)
+        return bool(gateway) and user.has_feature_perm(UserFeaturePerm.PAY_ID)
 
     class Meta:
         model = Gateway
