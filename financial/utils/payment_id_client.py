@@ -97,7 +97,7 @@ class JibitClient(BaseClient):
 
         host_url = settings.HOST_URL
 
-        ibans = list(BankAccount.objects.filter(user=user).values_list('iban', flat=True))
+        ibans = list(BankAccount.objects.filter(user=user, verified=True).values_list('iban', flat=True))
 
         resp = self._collect_api('/v1/paymentIds', method='POST', data={
             'callbackUrl': host_url + f'/api/v1/finance/paymentId/callback/jibit/',

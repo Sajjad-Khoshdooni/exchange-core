@@ -89,7 +89,7 @@ def send_email_notifications():
                 'body_html': email_notif.content_html,
                 'brand': settings.BRAND,
                 'panel_url': settings.PANEL_URL,
-                'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+                'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
             }),
             body_text=email_notif.content,
             to=[email_notif.recipient.email]

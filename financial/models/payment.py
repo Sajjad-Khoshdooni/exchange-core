@@ -106,7 +106,7 @@ class Payment(models.Model):
                     'payment_amount': payment_amont,
                     'brand': settings.BRAND,
                     'panel_url': settings.PANEL_URL,
-                    'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+                    'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
                 }
             )
 

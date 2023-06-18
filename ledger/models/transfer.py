@@ -302,7 +302,7 @@ class Transfer(models.Model):
                         'trx_hash': self.trx_hash,
                         'brand': settings.BRAND,
                         'panel_url': settings.PANEL_URL,
-                        'logo_elastic_url': config('LOGO_ELASTIC_URL'),
+                        'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
                     }
                 )
 
