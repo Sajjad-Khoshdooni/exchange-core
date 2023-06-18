@@ -39,6 +39,9 @@ class BaseClient:
     def create_missing_payment_requests_from_list(self):
         pass
 
+    def check_payment_id_status(self, payment_id: PaymentId):
+        raise NotImplementedError
+
 
 class JibitClient(BaseClient):
     BASE_URL = 'https://napi.jibit.cloud/pip'
@@ -126,13 +129,18 @@ class JibitClient(BaseClient):
             }
         )
 
-        return PaymentId.objects.create(
+        payment_id = PaymentId.objects.create(
             user=user,
             gateway=self.gateway,
             pay_id=resp.data['payId'],
             verified=resp.data['registryStatus'] == 'VERIFIED',
             destination=destination
         )
+
+        if not payment_id.verified:
+            self.check_payment_id_status(payment_id)
+
+        return payment_id
 
     def update_payment_id(self, payment_id: PaymentId):
         raise NotImplementedError
@@ -233,6 +241,10 @@ class MockClient(BaseClient):
         )
 
         return pay_id
+
+    def check_payment_id_status(self, payment_id: PaymentId):
+        payment_id.verified = True
+        payment_id.save(update_fields=['verified'])
 
 
 def get_payment_id_client(gateway: Gateway) -> BaseClient:

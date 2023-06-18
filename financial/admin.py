@@ -17,6 +17,7 @@ from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
     FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, GeneralBankAccount
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
+from financial.utils.payment_id_client import get_payment_id_client
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.fields import PENDING
 from ledger.utils.precision import humanize_number
@@ -386,6 +387,13 @@ class PaymentIdAdmin(admin.ModelAdmin):
     search_fields = ('user__phone', 'pay_id')
     list_filter = ('verified',)
     readonly_fields = ('user', )
+    actions = ('check_status', )
+
+    @admin.action(description='check status', permissions=['change'])
+    def check_status(self, request, queryset):
+        for payment_id in queryset.filter(status=PENDING):
+            client = get_payment_id_client(payment_id.gateway)
+            client.check_payment_id_status(payment_id)
 
 
 @admin.register(GeneralBankAccount)
