@@ -34,7 +34,10 @@ class BaseClient:
         raise NotImplementedError
 
     def create_missing_payment_requests(self):
-        return
+        pass
+
+    def create_missing_payment_requests_from_list(self):
+        pass
 
 
 class JibitClient(BaseClient):
@@ -156,7 +159,7 @@ class JibitClient(BaseClient):
         else:
             status = PROCESS
 
-        payment_request, _ = PaymentIdRequest.objects.get_or_create(
+        payment_request, created = PaymentIdRequest.objects.get_or_create(
             external_ref=data['externalReferenceNumber'],
             defaults={
                 'bank_ref': data['bankReferenceNumber'],
@@ -167,6 +170,9 @@ class JibitClient(BaseClient):
                 'deposit_time': deposit_time,
             }
         )
+
+        if not created and payment_request.status == PENDING:
+            return
 
         if data['status'] == 'WAITING_FOR_MERCHANT_VERIFY':
             self.verify_payment_request(payment_request)
@@ -196,6 +202,7 @@ class JibitClient(BaseClient):
         for data in resp.get_success_data()['content']:
             self._create_and_verify_payment_data(data)
 
+    def create_missing_payment_requests_from_list(self):
         now = timezone.now().astimezone().date() + timedelta(days=1)
         resp = self._collect_api(f'/v1/payments/list?fromDate={now - timedelta(days=7)}&toDate={now}')
 
