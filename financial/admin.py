@@ -362,15 +362,22 @@ class ManualTransferAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentIdRequest)
 class PaymentIdRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'payment_id', 'status', 'amount', 'external_ref', 'source_iban', 'deposit_time')
+    list_display = ('created', 'payment_id', 'status', 'amount', 'get_user', 'external_ref', 'source_iban', 'deposit_time')
     search_fields = ('payment_id__pay_id', 'payment_id__user__phone', 'external_ref', 'source_iban', 'bank_ref')
     list_filter = ('status',)
     actions = ('accept', )
+    readonly_fields = ('payment_id', 'get_user')
 
     @admin.action(description='accept deposit', permissions=['change'])
     def accept(self, request, queryset):
         for payment_request in queryset.filter(status=PENDING):
             payment_request.accept()
+
+    @admin.display(description='user')
+    def get_user(self, payment_id_request: PaymentIdRequest):
+        user = payment_id_request.payment_id.user
+        link = url_to_edit_object(user)
+        return mark_safe("<a href='%s'>%s</a>" % (link, user.get_full_name()))
 
 
 @admin.register(PaymentId)
