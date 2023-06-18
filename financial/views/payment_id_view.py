@@ -19,7 +19,7 @@ class GeneralBankAccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GeneralBankAccount
-        fields = ('iban', 'name', 'bank', 'deposit_address')
+        fields = ('iban', 'name', 'slug', 'deposit_address', 'logo')
 
 
 class PaymentIdSerializer(serializers.ModelSerializer):
