@@ -1,9 +1,11 @@
 import logging
+from datetime import timedelta
 from json import JSONDecodeError
 
 import jdatetime
 import requests
 from django.conf import settings
+from django.utils import timezone
 from urllib3.exceptions import ReadTimeoutError
 
 from accounts.models import User
@@ -149,12 +151,17 @@ class JibitClient(BaseClient):
         payment_id = PaymentId.objects.get(pay_id=data['paymentId'], user_id=user_id)
         deposit_time = jdatetime.datetime.strptime(data['rawBankTimestamp'], '%Y/%m/%d %H:%M:%S').togregorian().astimezone()
 
+        if data['status'] == 'SUCCESSFUL':
+            status = PENDING
+        else:
+            status = PROCESS
+
         payment_request, _ = PaymentIdRequest.objects.get_or_create(
             external_ref=data['externalReferenceNumber'],
             defaults={
                 'bank_ref': data['bankReferenceNumber'],
                 'amount': data['amount'] // 10,
-                'status': PROCESS,
+                'status': status,
                 'payment_id': payment_id,
                 'source_iban': data['destinationAccountIdentifier'],
                 'deposit_time': deposit_time,
@@ -185,6 +192,12 @@ class JibitClient(BaseClient):
 
     def create_missing_payment_requests(self):
         resp = self._collect_api(f'/v1/payments/waitingForVerify?pageNumber=0&pageSize=100')
+
+        for data in resp.get_success_data()['content']:
+            self._create_and_verify_payment_data(data)
+
+        now = timezone.now().astimezone().date() + timedelta(days=1)
+        resp = self._collect_api(f'/v1/payments/list?fromDate={now - timedelta(days=7)}&toDate={now}')
 
         for data in resp.get_success_data()['content']:
             self._create_and_verify_payment_data(data)
