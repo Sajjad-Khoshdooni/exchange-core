@@ -178,7 +178,7 @@ class JibitClient(BaseClient):
             self.verify_payment_request(payment_request)
 
         if payment_request.status == PENDING:
-            send_system_message("Manual withdraw", link=url_to_admin_list(payment_request))
+            send_system_message("New payment id request", link=url_to_admin_list(payment_request))
 
         return payment_request
 
