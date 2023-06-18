@@ -1,5 +1,4 @@
 from datetime import timedelta
-from uuid import uuid4
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
@@ -23,7 +22,7 @@ from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE
 from ledger.utils.precision import get_presentation_amount, humanize_presentation
 from ledger.utils.precision import humanize_number
-from ledger.utils.provider import HEDGE, get_provider_requester
+from ledger.utils.provider import get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor
 from market.utils.fix import create_symbols_for_asset
 
