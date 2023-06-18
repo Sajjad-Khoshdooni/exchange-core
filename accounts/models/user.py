@@ -317,6 +317,9 @@ class User(AbstractUser):
             self.selfie_image_discard_text = ''
             super(User, self).save(*args, **kwargs)
 
+    def has_feature_perm(self, feature: str):
+        return self.userfeatureperm_set.filter(feature=feature).exists()
+
 
 @receiver(post_save, sender=User)
 def handle_user_save(sender, instance, created, **kwargs):

@@ -27,6 +27,7 @@ from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
 from .models.login_activity import LoginActivity
 from .models.sms_notification import SmsNotification
+from .models.user_feature_perm import UserFeaturePerm
 from .tasks import basic_verify_user
 from .utils.validation import gregorian_to_jalali_datetime_str
 from .verifiers.legal import is_48h_rule_passed
@@ -121,6 +122,11 @@ class AnotherUserFilter(SimpleListFilter):
 
 class UserCommentInLine(admin.TabularInline):
     model = UserComment
+    extra = 1
+
+
+class UserFeatureInLine(admin.TabularInline):
+    model = UserFeaturePerm
     extra = 1
 
 
@@ -243,7 +249,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
         'is_staff', 'is_superuser', 'is_active', 'groups', UserReferredFilter
     )
-    inlines = [UserCommentInLine, ]
+    inlines = [UserCommentInLine, UserFeatureInLine]
     ordering = ('-id', )
     actions = (
         'verify_user_name', 'reject_user_name', 'archive_users', 'unarchive_users', 'reevaluate_basic_verify',
@@ -783,3 +789,10 @@ class UserFeedbackAdmin(admin.ModelAdmin):
             return feedback.comment[:n] + '...'
         else:
             return feedback.comment
+
+
+@admin.register(UserFeaturePerm)
+class UserFeaturePermAdmin(admin.ModelAdmin):
+    list_display = ('user', 'feature')
+    search_fields = ('user__phone', )
+    list_filter = ('feature', )
