@@ -72,10 +72,15 @@ class JibitClient(BaseClient):
 
         url = self.BASE_URL + path
 
+        token = self._get_token()
+
+        if not token:
+            return Response(None, False, status_code=0)
+
         request_kwargs = {
             'url': url,
             'timeout': 30,
-            'headers': {'Authorization': 'Bearer ' + self._get_token()},
+            'headers': {'Authorization': 'Bearer ' + token},
         }
 
         try:
