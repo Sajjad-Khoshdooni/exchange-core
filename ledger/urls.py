@@ -22,6 +22,13 @@ urlpatterns = [
 
     path('v1/withdraw/', views.WithdrawView.as_view()),
 
+    path('v1/withdraws/', views.WithdrawViewSet.as_view({
+        'get': 'list'
+    })),
+    path('v1/withdraws/<int:pk>/', views.WithdrawViewSet.as_view({
+        'delete': 'destroy'
+    })),
+
     path('v1/withdraw/list/', views.WithdrawHistoryView.as_view()),
     path('v1/deposit/list/', views.DepositHistoryView.as_view()),
 

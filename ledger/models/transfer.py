@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import timedelta
 from decimal import Decimal
 from typing import Union
 from uuid import uuid4
@@ -19,7 +20,6 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.push_notif import send_push_notif_to_user
 from accounts.utils.telegram import send_support_message
 from analytics.event.producer import get_kafka_producer
-from analytics.models import EventTracker
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 
 
 class Transfer(models.Model):
+    FREEZE_SECONDS = 30
+
     INIT, PROCESSING, PENDING, CANCELED, DONE = 'init', 'process', 'pending', 'canceled', 'done'
     STATUS_CHOICES = (INIT, INIT), (PROCESSING, PROCESSING), (PENDING, PENDING), (CANCELED, CANCELED), (DONE, DONE)
 
@@ -76,6 +78,9 @@ class Transfer(models.Model):
     comment = models.TextField(blank=True, verbose_name='نظر')
 
     risks = models.JSONField(null=True, blank=True)
+
+    def in_freeze_time(self):
+        return timezone.now() <= self.created + timedelta(seconds=self.FREEZE_SECONDS)
 
     @property
     def asset(self):

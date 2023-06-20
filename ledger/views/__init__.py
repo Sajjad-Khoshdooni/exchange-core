@@ -17,3 +17,4 @@ from .pnl_views import PNLOverview
 from .reserve_view import ReserveWalletCreateAPIView, ReserveWalletRefundAPIView
 from .fast_buy_token_view import FastBuyTokenAPI
 from .otc_history_view import OTCHistoryView
+from .withdraw_viewset import WithdrawViewSet

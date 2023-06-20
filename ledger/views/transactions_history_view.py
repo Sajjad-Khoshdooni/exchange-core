@@ -18,6 +18,7 @@ class TransferSerializer(serializers.ModelSerializer):
     network = serializers.SerializerMethodField()
     asset = AssetSerializerMini(source='wallet.asset', read_only=True)
     is_internal = serializers.SerializerMethodField()
+    cancelable = serializers.SerializerMethodField()
 
     def get_link(self, transfer: Transfer):
         return transfer.get_explorer_link()
@@ -34,14 +35,16 @@ class TransferSerializer(serializers.ModelSerializer):
     def get_is_internal(self, transfer: Transfer):
         return transfer.source == Transfer.INTERNAL
 
+    def get_cancelable(self, transfer: Transfer):
+        return transfer.in_freeze_time() or transfer.status == Transfer.INIT
+
     class Meta:
         model = Transfer
         fields = ('id', 'created', 'amount', 'status', 'link', 'out_address', 'asset', 'network', 'trx_hash',
-                  'fee_amount', 'is_internal')
+                  'fee_amount', 'is_internal', 'cancelable')
 
 
 class WithdrawHistoryView(ListAPIView):
-
     authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
 
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]

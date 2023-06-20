@@ -1,7 +1,9 @@
 import logging
+from datetime import timedelta
 
 from celery import shared_task
 from django.conf import settings
+from django.utils import timezone
 
 from ledger.models import Transfer
 from ledger.utils.provider import get_provider_requester
@@ -49,10 +51,10 @@ def update_provider_withdraw():
 
 @shared_task(queue='transfer')
 def create_withdraw(transfer_id: int):
-    # if settings.DEBUG_OR_TESTING_OR_STAGING:
-    #     return
-
     transfer = Transfer.objects.get(id=transfer_id)
+
+    if transfer.in_freeze_time():
+        return
 
     if transfer.source != Transfer.SELF:
         logger.info('ignored because non self source')
@@ -126,6 +128,7 @@ def update_withdraws():
         deposit=False,
         source=Transfer.SELF,
         status=Transfer.PROCESSING,
+        created__lte=timezone.now() - timedelta(seconds=Transfer.FREEZE_SECONDS),
     )
 
     for transfer in re_handle_transfers:
