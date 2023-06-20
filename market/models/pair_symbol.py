@@ -49,7 +49,7 @@ class PairSymbol(models.Model):
     class Meta:
         unique_together = ('asset', 'base_asset')
         constraints = [
-            CheckConstraint(check=Q(min_trade_quantity__gte=0, max_trade_quantity__gte=0, maker_amount__gte=0), name='check_market_pairsymbol_amounts', ),
+            CheckConstraint(check=Q(min_trade_quantity__gte=0, max_trade_quantity__gte=0,), name='check_market_pairsymbol_amounts', ),
         ]
 
     def get_fee_rate(self, account: Account, is_maker: bool) -> Decimal:
