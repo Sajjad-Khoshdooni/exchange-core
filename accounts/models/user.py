@@ -1,4 +1,6 @@
 import uuid
+from decimal import Decimal
+from typing import Union
 from uuid import uuid4
 
 from django.conf import settings
@@ -11,6 +13,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
 
+from accounts.models.user_feature_perm import UserFeaturePerm
 from analytics.event.producer import get_kafka_producer
 from accounts.models import Notification, Account
 from accounts.utils.admin import url_to_edit_object
@@ -159,6 +162,15 @@ class User(AbstractUser):
     promotion = models.CharField(max_length=256, blank=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
 
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
+
+    def __str__(self):
+        name = self.get_full_name()
+        super_name = super(User, self).__str__()
+
+        if name:
+            return '%s %s' % (super_name, name)
+        else:
+            return super_name
 
     def get_account(self) -> Account:
         if not self.id or self.is_anonymous:
@@ -319,6 +331,14 @@ class User(AbstractUser):
 
     def has_feature_perm(self, feature: str):
         return self.userfeatureperm_set.filter(feature=feature).exists()
+
+    def get_feature_limit(self, feature: str) -> Union[Decimal, None]:
+        feature = self.userfeatureperm_set.filter(feature=feature).first()
+
+        if feature:
+            return feature.limit
+        else:
+            return UserFeaturePerm.DEFAULT_LIMITS.get(feature.feature)
 
 
 @receiver(post_save, sender=User)

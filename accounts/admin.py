@@ -793,6 +793,6 @@ class UserFeedbackAdmin(admin.ModelAdmin):
 
 @admin.register(UserFeaturePerm)
 class UserFeaturePermAdmin(admin.ModelAdmin):
-    list_display = ('user', 'feature')
+    list_display = ('user', 'feature', 'limit')
     search_fields = ('user__phone', )
     list_filter = ('feature', )
