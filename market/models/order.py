@@ -197,42 +197,6 @@ class Order(models.Model):
     def get_price_filter(price, side):
         return {'price__lte': price} if side == BUY else {'price__gte': price}
 
-    @staticmethod
-    def get_maker_price(symbol: PairSymbol.IdName, side: str, loose_factor=Decimal(1), gap=None, last_trade_ts=None):
-        if symbol.name.endswith(Asset.IRT):
-            base_symbol = Asset.IRT
-        elif symbol.name.endswith(Asset.USDT):
-            base_symbol = Asset.USDT
-        else:
-            raise NotImplementedError('Invalid trading symbol')
-
-        coin = symbol.name.split(base_symbol)[0]
-        price = get_external_price(
-            coin=coin,
-            base_coin=base_symbol,
-            side=side
-        )
-
-        if gap is None and last_trade_ts:
-            spread_step = (time() - last_trade_ts) // 600
-            gap = {
-                0: (get_otc_spread(coin, side, base_coin=base_symbol)), 1: '0.0015', 2: '0.0008'
-            }.get(spread_step, '0.0008')
-
-            gap = Decimal(gap)
-
-            if spread_step != 0:
-                logger.info(f'override {coin} boundary_price gap with {gap}')
-
-        boundary_price = price * spread_to_multiplier(Decimal(gap or 0), side)
-
-        precision = Order.get_rounding_precision(boundary_price, symbol.tick_size)
-        # use bi-direction in roundness to avoid risky bid ask spread
-        if side == BUY:
-            return round_down_to_exponent(boundary_price * loose_factor, precision)
-        else:
-            return round_up_to_exponent(boundary_price / loose_factor, precision)
-
     @classmethod
     def get_to_lock_wallet(cls, wallet, base_wallet, side) -> Wallet:
         return base_wallet if side == BUY else wallet
@@ -490,80 +454,6 @@ class Order(models.Model):
         power = floor(log10(number))
         precision = min(3, -power / 3) if power > 2 else (2 - power)
         return int(min(precision, max_precision))
-
-    @staticmethod
-    def init_maker_order(symbol: PairSymbol.IdName, side, maker_price: Decimal, market=Wallet.SPOT):
-        symbol_instance = PairSymbol.objects.get(id=symbol.id)
-
-        _rand = random()
-
-        if _rand < 0.25:
-            amount_factor = Decimal(randrange(5, 30) / Decimal(100))
-        elif _rand < 0.8:
-            amount_factor = Decimal(randrange(30, 100) / Decimal(100))
-        elif _rand < 0.95:
-            amount_factor = Decimal(randrange(100, 200) / Decimal(100))
-        else:
-            amount_factor = Decimal(randrange(200, 300) / Decimal(100))
-
-        maker_amount = symbol_instance.maker_amount * amount_factor * Decimal(randrange(80, 120) / Decimal(100))
-        precision = Order.get_rounding_precision(maker_amount, symbol_instance.step_size)
-        amount = round_down_to_exponent(maker_amount, precision)
-        wallet = symbol_instance.asset.get_wallet(settings.SYSTEM_ACCOUNT_ID, market=market)
-        precision = Order.get_rounding_precision(maker_price, symbol_instance.tick_size)
-        return Order(
-            account=wallet.account,
-            type=Order.DEPTH,
-            wallet=wallet,
-            symbol=symbol_instance,
-            amount=amount,
-            price=round_down_to_exponent(maker_price, precision),
-            side=side,
-            fill_type=Order.LIMIT
-        )
-
-    @classmethod
-    def init_top_maker_order(cls, symbol, side, maker_price, best_order, market=Wallet.SPOT):
-        if not maker_price:
-            logger.warning(f'cannot calculate maker price for {symbol.name} {side}')
-            return
-
-        loose_factor = Decimal('1.001') if side == BUY else 1 / Decimal('1.001')
-        if not best_order or \
-                (side == BUY and maker_price > best_order * loose_factor) or \
-                (side == SELL and maker_price < best_order * loose_factor):
-            return cls.init_maker_order(symbol, side, maker_price, market)
-
-    @classmethod
-    def cancel_invalid_maker_orders(cls, symbol: PairSymbol.IdName, top_prices, gap=None, order_type=DEPTH, last_trade_ts=None):
-        for side in (BUY, SELL):
-            price = cls.get_maker_price(
-                symbol, side, loose_factor=Decimal('1.001'), gap=gap, last_trade_ts=last_trade_ts
-            )
-            if (side == BUY and Decimal(top_prices[side]) <= price) or (
-                    side == SELL and Decimal(top_prices[side]) >= price):
-                logger.info(f'{order_type} {side} ignore cancels with price: {price} top: {top_prices[side]}')
-                continue
-
-            invalid_orders = Order.open_objects.filter(
-                symbol_id=symbol.id, side=side, type=order_type
-            ).exclude(**cls.get_price_filter(price, side))
-
-            cls.cancel_orders(invalid_orders)
-
-            logger.info(f'{order_type} {side} cancels with price: {price}')
-
-    @classmethod
-    def cancel_waste_maker_orders(cls, symbol: PairSymbol.IdName, open_orders_count, side: str):
-        wasted_orders = Order.open_objects.filter(symbol_id=symbol.id, side=side, type=Order.DEPTH)
-        wasted_orders = wasted_orders.order_by('price') if side == BUY else wasted_orders.order_by('-price')
-        cancel_count = int(open_orders_count[side]) - Order.MAKER_ORDERS_COUNT
-
-        logger.info(f'maker {symbol.name} {side}: wasted={wasted_orders.count()} cancels={cancel_count}')
-
-        if cancel_count > 0:
-            cls.cancel_orders(wasted_orders[:cancel_count])
-            logger.info(f'maker {side} cancel wastes')
 
     @classmethod
     def update_filled_amount(cls, order_ids, match_amount):
