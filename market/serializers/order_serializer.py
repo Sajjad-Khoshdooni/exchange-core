@@ -96,7 +96,9 @@ class OrderSerializer(serializers.ModelSerializer):
         return created_order
 
     def post_validate(self, symbol, validated_data):
-        if not symbol.enable or not symbol.asset.enable:
+        if not symbol.asset.enable:
+            raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
+        if not symbol.enable and self.context['account'].id != settings.MARKET_MAKER_ACCOUNT_ID:
             raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
 
         market = validated_data.pop('wallet')['market']
