@@ -391,7 +391,7 @@ class PaymentIdAdmin(admin.ModelAdmin):
 
     @admin.action(description='check status', permissions=['change'])
     def check_status(self, request, queryset):
-        for payment_id in queryset.filter(status=PENDING):
+        for payment_id in queryset.filter(verified=False):
             client = get_payment_id_client(payment_id.gateway)
             client.check_payment_id_status(payment_id)
 
