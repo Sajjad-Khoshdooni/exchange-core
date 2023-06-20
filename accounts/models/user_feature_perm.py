@@ -10,9 +10,11 @@ class UserFeaturePerm(models.Model):
         FIAT_DEPOSIT_LIMIT: 200_000_000
     }
 
-    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
-    feature = models.CharField(max_length=32, choices=[(f, f) for f in FEATURES])
-    limit = get_amount_field(null=True)
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, verbose_name='کاربر')
+    feature = models.CharField(max_length=32, choices=[(f, f) for f in FEATURES], verbose_name='ویژگی')
+    limit = get_amount_field(null=True, verbose_name='محدودیت')
 
     class Meta:
         unique_together = ('user', 'feature')
+        verbose_name = 'دسترسی‌ کاربر'
+        verbose_name_plural = 'دسترسی‌های کاربر'
