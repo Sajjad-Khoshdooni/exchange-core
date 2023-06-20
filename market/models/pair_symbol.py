@@ -27,9 +27,6 @@ class PairSymbol(models.Model):
     min_trade_quantity = get_amount_field(default=Decimal('0.0001'))
     max_trade_quantity = get_amount_field(default=Decimal('10000'))
 
-    market_maker_enabled = models.BooleanField(default=True)
-    maker_amount = get_amount_field(default=Decimal('1'))
-
     enable = models.BooleanField(default=False)
     strategy_enable = models.BooleanField(default=False)
 
