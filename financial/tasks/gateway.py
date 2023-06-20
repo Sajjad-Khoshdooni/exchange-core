@@ -3,7 +3,7 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 
-from financial.models import Gateway, Payment
+from financial.models import Gateway, Payment, PaymentId
 from financial.utils.payment_id_client import get_payment_id_client
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.fields import PENDING
@@ -39,3 +39,7 @@ def handle_missing_payment_ids():
 
     client = get_payment_id_client(gateway)
     client.create_missing_payment_requests()
+
+    for payment_id in PaymentId.objects.filter(verified=False):
+        client = get_payment_id_client(payment_id.gateway)
+        client.check_payment_id_status(payment_id)
