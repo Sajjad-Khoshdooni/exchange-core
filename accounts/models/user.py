@@ -332,13 +332,13 @@ class User(AbstractUser):
     def has_feature_perm(self, feature: str):
         return self.userfeatureperm_set.filter(feature=feature).exists()
 
-    def get_feature_limit(self, feature: str) -> Union[Decimal, None]:
-        feature = self.userfeatureperm_set.filter(feature=feature).first()
+    def get_feature_limit(self, name: str) -> Union[Decimal, None]:
+        user_feature = self.userfeatureperm_set.filter(feature=name).first()
 
-        if feature:
-            return feature.limit
+        if user_feature:
+            return user_feature.limit
         else:
-            return UserFeaturePerm.DEFAULT_LIMITS.get(feature.feature)
+            return UserFeaturePerm.DEFAULT_LIMITS.get(name)
 
 
 @receiver(post_save, sender=User)
