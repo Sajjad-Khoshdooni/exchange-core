@@ -23,7 +23,7 @@ class NotifyView(APIView):
         content = serializers.CharField(required=False)
         content_html = serializers.CharField(required=False)
         title = serializers.CharField(required=False)
-        link = serializers.CharField(required=False)
+        link = serializers.CharField(required=False, allow_blank=True)
         hidden = serializers.BooleanField(required=False, default=True)
         group_id = serializers.UUIDField()
 
