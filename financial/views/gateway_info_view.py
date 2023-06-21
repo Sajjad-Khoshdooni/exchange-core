@@ -5,12 +5,14 @@ from rest_framework.generics import RetrieveAPIView
 from accounts.models.user_feature_perm import UserFeaturePerm
 from financial.models import Gateway, Payment
 from financial.utils.ach import next_ach_clear_time
+from financial.utils.user import get_today_fiat_deposits
 from ledger.utils.fields import DONE
 
 
 class GatewaySerializer(serializers.ModelSerializer):
     next_ach_time = serializers.SerializerMethodField()
     pay_id_enable = serializers.SerializerMethodField()
+    max_deposit_amount = serializers.SerializerMethodField()
 
     def get_next_ach_time(self, gateway):
         return next_ach_clear_time()
@@ -20,6 +22,14 @@ class GatewaySerializer(serializers.ModelSerializer):
 
         gateway = Gateway.get_active_pay_id_deposit()
         return bool(gateway) and user.has_feature_perm(UserFeaturePerm.PAY_ID)
+
+    def get_max_deposit_amount(self, gateway):
+        user = self.context['request'].user
+
+        today_deposits = get_today_fiat_deposits(user)
+        deposit_quota = user.get_feature_limit(UserFeaturePerm.FIAT_DEPOSIT_DAILY_LIMIT) - today_deposits
+
+        return max(0, min(deposit_quota, gateway.max_deposit_amount))
 
     class Meta:
         model = Gateway

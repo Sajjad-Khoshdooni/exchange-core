@@ -4,10 +4,10 @@ from ledger.utils.fields import get_amount_field
 
 
 class UserFeaturePerm(models.Model):
-    FEATURES = PAY_ID, FIAT_DEPOSIT_LIMIT = 'pay_id', 'fiat_deposit_limit'
+    FEATURES = PAY_ID, FIAT_DEPOSIT_DAILY_LIMIT = 'pay_id', 'fiat_deposit_daily_limit'
 
     DEFAULT_LIMITS = {
-        FIAT_DEPOSIT_LIMIT: 200_000_000
+        FIAT_DEPOSIT_DAILY_LIMIT: 200_000_000
     }
 
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, verbose_name='کاربر')
