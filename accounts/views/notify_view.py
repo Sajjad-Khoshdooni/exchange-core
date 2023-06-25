@@ -47,9 +47,14 @@ class NotifyView(APIView):
 
         _type = data['type']
 
+        recipient = User.objects.filter(id=data['user_id']).first()
+
+        if not recipient:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
         if _type == SMS:
             _, created = SmsNotification.objects.get_or_create(
-                recipient=User.objects.get(id=data['user_id']),
+                recipient=recipient,
                 group_id=data['group_id'],
                 defaults={
                     'content': data['content'],
@@ -57,7 +62,7 @@ class NotifyView(APIView):
             )
         elif _type == PUSH:
             _, created = Notification.objects.get_or_create(
-                recipient=User.objects.get(id=data['user_id']),
+                recipient=recipient,
                 group_id=data['group_id'],
                 defaults={
                     'title': data.get('title', None),
@@ -70,7 +75,7 @@ class NotifyView(APIView):
 
         elif _type == EMAIL:
             _, created = EmailNotification.objects.get_or_create(
-                recipient=User.objects.get(id=data['user_id']),
+                recipient=recipient,
                 group_id=data['group_id'],
                 defaults={
                     'title': data.get('title', None),
