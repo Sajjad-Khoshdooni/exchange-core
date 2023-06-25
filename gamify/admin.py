@@ -49,3 +49,9 @@ class UserMissionAdmin(admin.ModelAdmin):
     list_display = ('user', 'mission')
     readonly_fields = ('user', )
     list_filter = ('mission', )
+
+
+@admin.register(models.Task)
+class TaskAdmin(admin.ModelAdmin):
+    list_display = ('mission', 'scope', 'title', 'type', 'max')
+    list_filter = ('mission', )

@@ -46,9 +46,10 @@ def clone_model(instance):
 
 def clone_mission_template(mission: MissionTemplate):
     with transaction.atomic():
-        tasks = mission.task_set.all()
+        tasks = list(mission.task_set.all())
         achievement = mission.achievement
 
+        mission.name = mission.name + ' cloned'
         new_mission = clone_model(mission)
 
         achievement.mission = new_mission
