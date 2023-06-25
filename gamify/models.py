@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.db import models
 from django.utils import timezone
 
-from accounts.models import Notification, Account, TrafficSource
+from accounts.models import Notification, Account, TrafficSource, User
 from ledger.models import Prize, Asset
 from ledger.utils.external_price import BUY, get_external_price
 from ledger.utils.fields import get_amount_field, get_created_field
@@ -17,11 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 class MissionJourney(models.Model):
-    SHIB, VOUCHER = 'true', 'voucher'
-
     name = models.CharField(max_length=64)
     active = models.BooleanField(default=False)
-    promotion = models.CharField(max_length=8, unique=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
+    promotion = models.CharField(max_length=8, unique=True, choices=[(p, p) for p in User.PROMOTIONS])
 
     default = models.BooleanField(default=True)
 
