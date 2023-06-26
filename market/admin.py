@@ -75,7 +75,7 @@ class UserFilter(SimpleListFilter):
     def queryset(self, request, queryset):
         user = request.GET.get('user')
         if user is not None:
-            return queryset.filter(wallet__account__user__id=user)
+            return queryset.filter(wallet__account__user_id=user)
         else:
             return queryset
 

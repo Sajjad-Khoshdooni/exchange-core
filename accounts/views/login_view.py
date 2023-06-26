@@ -1,9 +1,9 @@
 import logging
 
 from django.contrib.auth import authenticate, login, logout
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import serializers, status
-from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -60,7 +60,7 @@ class LoginActivitySerializer(serializers.ModelSerializer):
 
     def get_active(self, login_activity: LoginActivity):
         session = login_activity.session
-        return session and session.expire_date > timezone.now()
+        return (session and session.expire_date > timezone.now()) or not login_activity.refresh_token is None
 
     def get_current(self, login_activity: LoginActivity):
         session = login_activity.session
@@ -80,7 +80,10 @@ class LoginActivityViewSet(ModelViewSet):
         logins = LoginActivity.objects.filter(user=self.request.user).order_by('-id')
 
         if only_active or self.request.query_params.get('active') == '1':
-            logins = logins.filter(session__isnull=False, session__expire_date__gt=timezone.now())
+            logins = logins.filter(
+                Q(session__isnull=False, session__expire_date__gt=timezone.now()) |
+                Q(refresh_token__isnull=False)
+            )
 
         return logins
 
@@ -90,15 +93,20 @@ class LoginActivityViewSet(ModelViewSet):
         return ctx
 
     def perform_destroy(self, instance: LoginActivity):
-        if instance.session and self.request.session.session_key != instance.session.session_key:
-            instance.session.delete()
+        if (instance.session and self.request.session.session_key != instance.session.session_key) or \
+                instance.refresh_token:
+            instance.destroy()
 
     def destroy_all(self, request, *args, **kwargs):
-        to_delete_sessions = self.get_queryset(only_active=True).exclude(
-            session__session_key=request.session.session_key
-        )
+        to_delete_sessions = self.get_queryset(only_active=True)
+
+        session_key = request.session and request.session.session_key
+        if session_key:
+            to_delete_sessions.exclude(
+                session__session_key=request.session.session_key
+            )
 
         for login_activity in to_delete_sessions:
-            login_activity.session.delete()
+            login_activity.destroy()
 
         return Response(status=status.HTTP_204_NO_CONTENT)

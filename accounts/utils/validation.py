@@ -128,17 +128,16 @@ def get_login_user_agent_data_from_client_info(client_info: dict) -> dict:
     }
 
 
-def get_refresh_token_from_request(request):
-    auth_header = request.headers.get('Authorization', '')
-    token = auth_header.startswith('Bearer ') and auth_header.split(' ')[1]
-    return token
-
-
-def set_login_activity(request, user, is_sign_up: bool = False, client_info: dict = None, native_app: bool = False):
+def set_login_activity(request, user, is_sign_up: bool = False, client_info: dict = None, native_app: bool = False,
+                       refresh_token: str = None):
     session = Session.objects.filter(session_key=request.session.session_key).first()
 
-    if not session:
-        return
+    refresh_token_model = None
+    if refresh_token:
+        refresh_token_model, _ = RefreshToken.objects.get_or_create(token=refresh_token)
+
+    if not (session or refresh_token):
+        raise ValueError
 
     if client_info:
         user_agent_data = get_login_user_agent_data_from_client_info(client_info)
@@ -147,11 +146,6 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
 
     ip = get_client_ip(request)
     ip_data = get_ip_data(ip)
-
-    refresh_token = get_refresh_token_from_request(request)
-    refresh_token_model = None
-    if refresh_token:
-        refresh_token_model = RefreshToken.objects.get_or_create(token=refresh_token)
 
     LoginActivity.objects.get_or_create(
         session=session,

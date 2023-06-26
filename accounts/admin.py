@@ -167,7 +167,7 @@ class UserReferredFilter(SimpleListFilter):
 
         owner_id = request.GET.get('owner_id')
         if owner_id is not None:
-            return queryset.filter(account__referred_by__owner__user__id=owner_id)
+            return queryset.filter(account__referred_by__owner__user_id=owner_id)
         else:
             return queryset
 
