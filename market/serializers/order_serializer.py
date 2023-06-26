@@ -70,6 +70,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         wallet = self.post_validate(symbol, validated_data)
 
+        matched_trades = None
         try:
             with WalletPipeline() as pipeline:
                 created_order = super(OrderSerializer, self).create(
@@ -92,6 +93,13 @@ class OrderSerializer(serializers.ModelSerializer):
             if settings.DEBUG_OR_TESTING_OR_STAGING:
                 raise e
             raise APIException(_('Could not place order'))
+        finally:
+            if matched_trades and matched_trades.to_cancel_stoploss:
+                from market.models import StopLoss
+                StopLoss.objects.filter(id__in=map(lambda s: s.id, matched_trades.to_cancel_stoploss)).update(
+                    canceled_at=timezone.now()
+                )
+
         logger.info(log_prefix + f' finished creating... {created_order.id} {timezone.now()}')
         return created_order
 
