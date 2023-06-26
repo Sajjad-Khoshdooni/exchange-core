@@ -32,6 +32,7 @@ class PaymentIdRequest(models.Model):
     status = get_status_field()
 
     amount = models.PositiveIntegerField()
+    fee = models.PositiveIntegerField()
 
     bank_ref = models.CharField(max_length=64, blank=True)
     external_ref = models.CharField(max_length=64, blank=True, unique=True)

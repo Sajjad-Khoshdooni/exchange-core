@@ -33,10 +33,12 @@ class ZibalGateway(Gateway):
             raise GatewayFailed
 
         authority = resp.json()['trackId']
+        fee = self.get_ipg_fee(amount)
 
         return PaymentRequest.objects.create(
             bank_card=bank_card,
-            amount=amount,
+            amount=amount - fee,
+            fee=fee,
             gateway=self,
             authority=authority,
             source=source,

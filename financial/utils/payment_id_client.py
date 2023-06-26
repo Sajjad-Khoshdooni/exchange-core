@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta
+from decimal import Decimal
 from json import JSONDecodeError
 
 import jdatetime
@@ -172,11 +173,15 @@ class JibitClient(BaseClient):
         else:
             status = PROCESS
 
+        amount = data['amount'] // 10
+        fee = amount * Decimal('0.0001')
+
         payment_request, created = PaymentIdRequest.objects.get_or_create(
             external_ref=data['externalReferenceNumber'],
             defaults={
                 'bank_ref': data['bankReferenceNumber'],
-                'amount': data['amount'] // 10,
+                'amount': amount - fee,
+                'fee': fee,
                 'status': status,
                 'payment_id': payment_id,
                 'source_iban': data['sourceIdentifier'],

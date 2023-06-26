@@ -23,7 +23,10 @@ class GatewaySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Gateway
-        fields = ('id', 'min_deposit_amount', 'max_deposit_amount', 'next_ach_time', 'pay_id_enable')
+        fields = (
+            'id', 'min_deposit_amount', 'max_deposit_amount', 'next_ach_time', 'pay_id_enable', 'ipg_fee_min',
+            'ipg_fee_max', 'ipg_fee_percent'
+        )
 
 
 class GatewayInfoView(RetrieveAPIView):

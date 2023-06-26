@@ -11,7 +11,7 @@ from accounts.models import User
 from financial.models import BankCard, Payment, PaymentRequest
 from financial.utils.encryption import decrypt
 from ledger.models import FastBuyToken
-from ledger.utils.fields import DONE
+from ledger.utils.fields import DONE, get_amount_field
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,10 @@ class Gateway(models.Model):
     wallet_id = models.PositiveIntegerField(null=True, blank=True)
 
     deposit_priority = models.SmallIntegerField(default=1)
+
+    ipg_fee_min = models.SmallIntegerField(default=120)
+    ipg_fee_max = models.SmallIntegerField(default=4000)
+    ipg_fee_percent = get_amount_field(default=Decimal('0.02'))
 
     def clean(self):
         if not self.active and not Gateway.objects.filter(active=True).exclude(id=self.id):
@@ -158,6 +162,9 @@ class Gateway(models.Model):
 
     def _verify(self, payment: Payment):
         raise NotImplementedError
+
+    def get_ipg_fee(self, amount: int) -> int:
+        return max(min(int(amount * self.ipg_fee_percent / 100), self.ipg_fee_max), self.ipg_fee_min)
 
     def __str__(self):
         return '%s (%s)' % (self.name, self.id)
