@@ -102,7 +102,7 @@ class LoginActivityViewSet(ModelViewSet):
 
         session_key = request.session and request.session.session_key
         if session_key:
-            to_delete_sessions.exclude(
+            to_delete_sessions = to_delete_sessions.exclude(
                 session__session_key=request.session.session_key
             )
 
