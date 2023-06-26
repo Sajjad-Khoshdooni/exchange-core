@@ -242,6 +242,9 @@ class Order(models.Model):
                     to_cancel_stop_loss.append(to_cancel)
             if to_cancel_stop_loss:
                 matched_trades.to_cancel_stoploss = to_cancel_stop_loss
+        else:
+            log_prefix = 'MM %s {%s}: ' % (self.symbol.name, self.id)
+            logger.info(log_prefix + 'null match trades to trigger stop loss')
         return matched_trades
 
     def acquire_lock(self, pipeline: WalletPipeline):
@@ -418,7 +421,7 @@ class Order(models.Model):
                 check_prize_achievements(account, Task.TRADE)
 
         logger.info(log_prefix + f'make match finished.  {timezone.now()}')
-        return MatchedTrades(trades, trade_pairs, filled_orders)
+        return MatchedTrades(trades=trades, trade_pairs=trade_pairs, filled_orders=filled_orders)
 
     @classmethod
     def get_formatted_orders(cls, open_orders, symbol: PairSymbol, order_type: str):
