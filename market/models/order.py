@@ -244,7 +244,7 @@ class Order(models.Model):
                 matched_trades.to_cancel_stoploss = to_cancel_stop_loss
         else:
             log_prefix = 'MM %s {%s}: ' % (self.symbol.name, self.id)
-            logger.info(log_prefix + 'null match trades to trigger stop loss')
+            logger.info(log_prefix + f'null match trades to trigger stop loss {matched_trades}')
         return matched_trades
 
     def acquire_lock(self, pipeline: WalletPipeline):
