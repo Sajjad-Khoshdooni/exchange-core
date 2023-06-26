@@ -149,8 +149,9 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
     ip_data = get_ip_data(ip)
 
     refresh_token = get_refresh_token_from_request(request)
+    refresh_token_model = None
     if refresh_token:
-        RefreshToken.objects.get_or_create(token=refresh_token)
+        refresh_token_model = RefreshToken.objects.get_or_create(token=refresh_token)
 
     LoginActivity.objects.get_or_create(
         session=session,
@@ -163,6 +164,7 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
             'ip_data': ip_data,
             'city': ip_data.get('city', ''),
             'country': ip_data.get('country', ''),
-            'native_app': native_app
+            'native_app': native_app,
+            'refresh_token': refresh_token_model
         }
     )
