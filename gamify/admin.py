@@ -33,6 +33,8 @@ class MissionTemplateAdmin(admin.ModelAdmin):
     list_editable = ('order', 'active')
     inlines = (TaskInline, AchievementInline)
     actions = ('clone_mission', )
+    list_filter = ('journey', )
+    ordering = ('-id', )
 
     @admin.display(description='tasks')
     def get_tasks(self, mission: models.MissionTemplate):
@@ -48,4 +50,10 @@ class MissionTemplateAdmin(admin.ModelAdmin):
 class UserMissionAdmin(admin.ModelAdmin):
     list_display = ('user', 'mission')
     readonly_fields = ('user', )
+    list_filter = ('mission', )
+
+
+@admin.register(models.Task)
+class TaskAdmin(admin.ModelAdmin):
+    list_display = ('mission', 'scope', 'title', 'type', 'max')
     list_filter = ('mission', )

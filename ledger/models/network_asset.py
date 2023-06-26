@@ -48,7 +48,7 @@ class NetworkAsset(models.Model):
         withdraw_min = info.withdraw_min
 
         if symbol_pair not in [('TRX', 'USDT'), ('TRX', 'TRX'), ('BSC', 'USDT'), ('BNB', 'USDT'), ('SOL', 'USDT')]:
-            withdraw_fee *= 2
+            withdraw_fee *= Decimal('1.5')
             withdraw_min = max(withdraw_min, 2 * withdraw_fee)
 
             price = get_external_price(self.asset.symbol, base_coin=Asset.USDT, side=BUY, allow_stale=True)

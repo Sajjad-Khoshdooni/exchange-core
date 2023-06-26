@@ -131,7 +131,7 @@ def get_external_usdt_prices(coins: list, side, allow_stale: bool = False, set_b
 
 
 def _get_price_tether_irt_nobitex():
-    resp = requests.get(url="https://api.nobitex.net/v2/orderbook/USDTIRT", timeout=10)
+    resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=10)
     data = resp.json()
     status = data['status']
 

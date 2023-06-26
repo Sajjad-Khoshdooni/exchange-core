@@ -35,7 +35,7 @@ class User(AbstractUser):
 
     INIT, PENDING, REJECTED, VERIFIED = 'init', 'pending', 'rejected', 'verified'
 
-    SHIB, VOUCHER = 'true', 'voucher'
+    PROMOTIONS = SHIB, VOUCHER, PEPE = 'true', 'voucher', 'pepe'
 
     USERNAME_FIELD = 'phone'
 
@@ -159,7 +159,7 @@ class User(AbstractUser):
         choices=((1, 1), (2, 2), (3, 3), (5, 5), (10, 10), (20, 20), (40, 40))
     )
 
-    promotion = models.CharField(max_length=256, blank=True, choices=((SHIB, SHIB), (VOUCHER, VOUCHER)))
+    promotion = models.CharField(max_length=256, blank=True, choices=[(p, p) for p in PROMOTIONS])
 
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
 
@@ -332,13 +332,13 @@ class User(AbstractUser):
     def has_feature_perm(self, feature: str):
         return self.userfeatureperm_set.filter(feature=feature).exists()
 
-    def get_feature_limit(self, feature: str) -> Union[Decimal, None]:
-        feature = self.userfeatureperm_set.filter(feature=feature).first()
+    def get_feature_limit(self, name: str) -> Union[Decimal, None]:
+        user_feature = self.userfeatureperm_set.filter(feature=name).first()
 
-        if feature:
-            return feature.limit
+        if user_feature:
+            return user_feature.limit
         else:
-            return UserFeaturePerm.DEFAULT_LIMITS.get(feature.feature)
+            return UserFeaturePerm.DEFAULT_LIMITS.get(name)
 
 
 @receiver(post_save, sender=User)
