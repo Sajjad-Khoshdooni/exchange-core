@@ -34,6 +34,7 @@ class MatchedTrades:
     trades: list = None
     trade_pairs: list = None
     filled_orders: list = None
+    to_cancel_stoploss: list = None
 
     def __post_init__(self):
         if self.trades is None:
@@ -42,6 +43,8 @@ class MatchedTrades:
             self.trade_pairs = []
         if self.filled_orders is None:
             self.filled_orders = []
+        if self.to_cancel_stoploss is None:
+            self.to_cancel_stoploss = []
 
     def __bool__(self):
         return bool(self.trades and self.trade_pairs and self.filled_orders)
@@ -218,6 +221,7 @@ class Order(models.Model):
             overriding_fill_amount = self.acquire_lock(pipeline)
 
         matched_trades = self.make_match(pipeline, overriding_fill_amount)
+        to_cancel_stop_loss = []
         if matched_trades:
             # trigger stop loss
             min_price = min(map(lambda t: t.price, matched_trades.trades))
@@ -226,14 +230,18 @@ class Order(models.Model):
             to_trigger_stop_loss_qs = StopLoss.not_triggered_objects.filter(
                 Q(side=BUY, trigger_price__lte=max_price) | Q(side=SELL, trigger_price__gte=min_price),
                 symbol=self.symbol,
-            )
+            ).exclude(self.stop_loss_id)
             log_prefix = 'MM %s {%s}: ' % (self.symbol.name, self.id)
             logger.info(log_prefix + f'to trigger stop loss: {list(to_trigger_stop_loss_qs.values_list("id", flat=True))} {timezone.now()}')
             for stop_loss in to_trigger_stop_loss_qs:
                 from market.utils.order_utils import trigger_stop_loss
                 triggered_price = min_price if stop_loss.side == SELL else max_price
                 logger.info(log_prefix + f'triggering stop loss on {self.symbol} ({stop_loss.id}, {stop_loss.side}) at {triggered_price}, {timezone.now()}')
-                trigger_stop_loss(pipeline, stop_loss, triggered_price)
+                to_cancel = trigger_stop_loss(pipeline, stop_loss, triggered_price)
+                if to_cancel:
+                    to_cancel_stop_loss.append(to_cancel)
+            if to_cancel_stop_loss:
+                matched_trades.to_cancel_stoploss = to_cancel_stop_loss
         return matched_trades
 
     def acquire_lock(self, pipeline: WalletPipeline):
