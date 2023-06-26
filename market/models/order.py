@@ -230,7 +230,7 @@ class Order(models.Model):
             to_trigger_stop_loss_qs = StopLoss.not_triggered_objects.filter(
                 Q(side=BUY, trigger_price__lte=max_price) | Q(side=SELL, trigger_price__gte=min_price),
                 symbol=self.symbol,
-            ).exclude(self.stop_loss_id)
+            ).exclude(id=self.stop_loss_id)
             log_prefix = 'MM %s {%s}: ' % (self.symbol.name, self.id)
             logger.info(log_prefix + f'to trigger stop loss: {list(to_trigger_stop_loss_qs.values_list("id", flat=True))} {timezone.now()}')
             for stop_loss in to_trigger_stop_loss_qs:
