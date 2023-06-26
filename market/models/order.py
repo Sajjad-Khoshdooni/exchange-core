@@ -47,7 +47,7 @@ class MatchedTrades:
             self.to_cancel_stoploss = []
 
     def __bool__(self):
-        return bool(self.trades and self.trade_pairs and self.filled_orders)
+        return bool(self.trades and self.trade_pairs)
 
 
 @dataclass
@@ -242,9 +242,6 @@ class Order(models.Model):
                     to_cancel_stop_loss.append(to_cancel)
             if to_cancel_stop_loss:
                 matched_trades.to_cancel_stoploss = to_cancel_stop_loss
-        else:
-            log_prefix = 'MM %s {%s}: ' % (self.symbol.name, self.id)
-            logger.info(log_prefix + f'null match trades to trigger stop loss {matched_trades}')
         return matched_trades
 
     def acquire_lock(self, pipeline: WalletPipeline):
