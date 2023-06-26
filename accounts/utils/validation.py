@@ -9,6 +9,7 @@ import requests
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 
+from accounts.models.refresh_token import RefreshToken
 from accounts.models.login_activity import LoginActivity
 from accounts.utils.ip import get_client_ip
 
@@ -127,11 +128,16 @@ def get_login_user_agent_data_from_client_info(client_info: dict) -> dict:
     }
 
 
-def set_login_activity(request, user, is_sign_up: bool = False, client_info: dict = None, native_app: bool = False):
+def set_login_activity(request, user, is_sign_up: bool = False, client_info: dict = None, native_app: bool = False,
+                       refresh_token: str = None):
     session = Session.objects.filter(session_key=request.session.session_key).first()
 
-    if not session:
-        return
+    refresh_token_model = None
+    if refresh_token:
+        refresh_token_model, _ = RefreshToken.objects.get_or_create(token=refresh_token)
+
+    if not (session or refresh_token):
+        raise ValueError
 
     if client_info:
         user_agent_data = get_login_user_agent_data_from_client_info(client_info)
@@ -152,6 +158,7 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
             'ip_data': ip_data,
             'city': ip_data.get('city', ''),
             'country': ip_data.get('country', ''),
-            'native_app': native_app
+            'native_app': native_app,
+            'refresh_token': refresh_token_model
         }
     )

@@ -1,5 +1,6 @@
 from django.contrib.sessions.models import Session
-from django.db import models
+from django.db import models, transaction
+from django.utils import timezone
 
 
 class LoginActivity(models.Model):
@@ -8,6 +9,7 @@ class LoginActivity(models.Model):
 
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
+    logout_at = models.DateTimeField(null=True, blank=True)
     ip = models.GenericIPAddressField()
 
     is_sign_up = models.BooleanField(default=False)
@@ -19,11 +21,31 @@ class LoginActivity(models.Model):
     os = models.CharField(blank=True, max_length=200)
     browser = models.CharField(blank=True, max_length=200)
     session = models.OneToOneField(Session, null=True, blank=True, on_delete=models.SET_NULL)
+    refresh_token = models.OneToOneField('accounts.RefreshToken', null=True, blank=True, on_delete=models.SET_NULL)
     city = models.CharField(blank=True, max_length=256)
     country = models.CharField(blank=True, max_length=256)
     ip_data = models.JSONField(null=True, blank=True)
 
     native_app = models.BooleanField(default=False)
+
+    @transaction.atomic
+    def destroy(self):
+        destroyed = False
+
+        if self.session:
+            self.session = None
+            destroyed = True
+
+        if self.refresh_token:
+            self.refresh_token.log_out()
+            self.refresh_token = None
+            destroyed = True
+
+        if not destroyed:
+            return
+
+        self.logout_at = timezone.now()
+        self.save()
 
     class Meta:
         verbose_name_plural = verbose_name = "تاریخچه ورود به حساب"

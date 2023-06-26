@@ -15,7 +15,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from accounts.authentication import CustomTokenAuthentication
-from accounts.models import Account
+from accounts.models import Account, LoginActivity
 from accounts.utils.validation import set_login_activity
 
 logger = logging.getLogger(__name__)
@@ -151,7 +151,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             if client_info_serializer.is_valid():
                 client_info = client_info_serializer.validated_data
 
-            set_login_activity(request, user=serializer.user, client_info=client_info, native_app=True)
+            set_login_activity(
+                request,
+                user=serializer.user,
+                client_info=client_info,
+                native_app=True,
+                refresh_token=serializer.validated_data['refresh']
+            )
 
         except TokenError as e:
             raise InvalidToken(e.args[0])
@@ -178,9 +184,19 @@ class TokenLogoutView(APIView):
     def post(self, request):
         try:
             refresh_token = request.data["refresh"]
-            token = RefreshToken(refresh_token)
-            token.blacklist()
+            login_activity = LoginActivity.objects.filter(refresh_token__token=refresh_token).first()
+
+            if login_activity:
+                login_activity.destroy()
+            else:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
 
             return Response(status=status.HTTP_205_RESET_CONTENT)
+        except TokenError as e:
+            if str(e) == 'Token is blacklisted':
+                return Response(status=status.HTTP_205_RESET_CONTENT)
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response(status=status.HTTP_400_BAD_REQUEST)
