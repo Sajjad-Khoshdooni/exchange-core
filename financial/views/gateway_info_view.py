@@ -6,11 +6,13 @@ from accounts.models.user_feature_perm import UserFeaturePerm
 from financial.models import Gateway, Payment
 from financial.utils.ach import next_ach_clear_time
 from ledger.utils.fields import DONE
+from ledger.utils.precision import get_presentation_amount
 
 
 class GatewaySerializer(serializers.ModelSerializer):
     next_ach_time = serializers.SerializerMethodField()
     pay_id_enable = serializers.SerializerMethodField()
+    ipg_fee_percent = serializers.SerializerMethodField()
 
     def get_next_ach_time(self, gateway):
         return next_ach_clear_time()
@@ -20,6 +22,9 @@ class GatewaySerializer(serializers.ModelSerializer):
 
         gateway = Gateway.get_active_pay_id_deposit()
         return bool(gateway) and user.has_feature_perm(UserFeaturePerm.PAY_ID)
+
+    def get_ipg_fee_percent(self, gateway: Gateway):
+        return get_presentation_amount(gateway.ipg_fee_percent)
 
     class Meta:
         model = Gateway
