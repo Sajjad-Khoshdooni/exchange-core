@@ -33,12 +33,12 @@ class LoginActivity(models.Model):
         destroyed = False
 
         if self.session:
-            self.session = None
+            self.session.delete()
             destroyed = True
 
         if self.refresh_token:
             self.refresh_token.log_out()
-            self.refresh_token = None
+            self.refresh_token.delete()
             destroyed = True
 
         if not destroyed:
