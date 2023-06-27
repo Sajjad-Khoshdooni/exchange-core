@@ -37,11 +37,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
             raise ValidationError('امکان برداشت وجود ندارد.')
 
         account = user.get_account()
-        api = self.context.get('api')
+        from_panel = self.context.get('from_panel')
 
-        if attrs['address_book_id'] and (not api):
+        if attrs['address_book_id'] and from_panel:
             address_book = get_object_or_404(AddressBook, id=attrs['address_book_id'], account=account)
-
             address = address_book.address
             network = address_book.network
 
@@ -60,8 +59,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
             if 'address' not in attrs:
                 raise ValidationError('آدرس وارد نشده است.')
 
-            if not api and 'code' not in attrs:
+            if from_panel and 'code' not in attrs:
                 raise ValidationError('کد وارد نشده است.')
+
             asset = get_object_or_404(Asset, symbol=attrs['coin'])
             network = get_object_or_404(Network, symbol=attrs['network'])
             address = attrs['address']
@@ -74,7 +74,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         memo = attrs.get('memo') or ''
 
-        if not api:
+        if from_panel:
             code = attrs['code']
             otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CRYPTO_WITHDRAW)
 
@@ -89,7 +89,6 @@ class WithdrawSerializer(serializers.ModelSerializer):
             raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
 
         network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
-
         amount = attrs['amount']
 
         if not network_asset.can_withdraw_enabled():
@@ -130,7 +129,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             if user_reached_crypto_withdraw_limit(user, irt_value):
                 raise ValidationError({'amount': 'شما به سقف برداشت رمزارزی خود رسیده اید.'})
 
-        if not api:
+        if from_panel:
             otp_code.set_code_used()
 
         return {
@@ -169,6 +168,5 @@ class WithdrawView(CreateAPIView):
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-        if self.request.auth:
-            ctx['api'] = 1
+        ctx['from_panel'] = not self.request.auth
         return ctx
