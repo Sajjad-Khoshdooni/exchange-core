@@ -34,18 +34,20 @@ class LoginActivity(models.Model):
 
         if self.session:
             self.session.delete()
+            self.session = None
             destroyed = True
 
         if self.refresh_token:
             self.refresh_token.log_out()
             self.refresh_token.delete()
+            self.refresh_token = None
             destroyed = True
 
         if not destroyed:
             return
 
         self.logout_at = timezone.now()
-        self.save()
+        self.save(update_fields=['logout_at', 'session', 'refresh_token'])
 
     class Meta:
         verbose_name_plural = verbose_name = "تاریخچه ورود به حساب"

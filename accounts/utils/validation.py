@@ -133,7 +133,7 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
     session = Session.objects.filter(session_key=request.session.session_key).first()
 
     refresh_token_model = None
-    if refresh_token:
+    if refresh_token and not session:
         refresh_token_model, _ = RefreshToken.objects.get_or_create(token=refresh_token)
 
     if not (session or refresh_token):
@@ -149,7 +149,7 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
 
     LoginActivity.objects.get_or_create(
         session=session,
-
+        refresh_token=refresh_token_model,
         defaults={
             **user_agent_data,
             'user': user,
@@ -159,6 +159,5 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
             'city': ip_data.get('city', ''),
             'country': ip_data.get('country', ''),
             'native_app': native_app,
-            'refresh_token': refresh_token_model
         }
     )
