@@ -47,7 +47,7 @@ class FastBuyToken(models.Model):
                 account=self.user.get_account(),
                 from_asset=Asset.get('IRT'),
                 to_asset=self.asset,
-                from_amount=Decimal(self.amount),
+                from_amount=Decimal(payment.amount),
                 market=Wallet.SPOT,
             )
             self.otc_request = otc_request
