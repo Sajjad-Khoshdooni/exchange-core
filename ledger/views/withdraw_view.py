@@ -25,7 +25,7 @@ from ledger.utils.withdraw_verify import can_withdraw
 class WithdrawSerializer(serializers.ModelSerializer):
     address_book_id = serializers.CharField(write_only=True, required=False, default=None)
     coin = CoinField(source='asset', required=False)
-    network = NetworkField(source='network', required=False)
+    network = NetworkField(required=False)
     code = serializers.CharField(write_only=True, required=False)
     address = serializers.CharField(required=False)
     memo = serializers.CharField(required=False, allow_blank=True)
@@ -40,6 +40,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         account = user.get_account()
         from_panel = self.context.get('from_panel')
+        asset = attrs.get('asset')
 
         if attrs['address_book_id'] and from_panel:
             address_book = get_object_or_404(AddressBook, id=attrs['address_book_id'], account=account)
@@ -49,12 +50,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
             if address_book.asset:
                 asset = address_book.asset
             else:
-                if 'coin' not in attrs:
+                if not asset:
                     raise ValidationError('رمزارزی انتخاب نشده است.')
-
-                asset = get_object_or_404(Asset, symbol=attrs['coin'])
         else:
-            if 'coin' not in attrs:
+            if not asset:
                 raise ValidationError('رمزارزی انتخاب نشده است.')
             if 'network' not in attrs:
                 raise ValidationError('شبکه‌ای انتخاب نشده است.')
@@ -64,7 +63,6 @@ class WithdrawSerializer(serializers.ModelSerializer):
             if from_panel and 'code' not in attrs:
                 raise ValidationError('کد وارد نشده است.')
 
-            asset = get_object_or_404(Asset, symbol=attrs['coin'])
             network = get_object_or_404(Network, symbol=attrs['network'])
             address = attrs['address']
 
