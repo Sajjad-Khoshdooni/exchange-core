@@ -14,6 +14,8 @@ from accounts.verifiers.legal import is_48h_rule_passed
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Network, Transfer, NetworkAsset, AddressBook, DepositAddress
+from ledger.models.asset import CoinField
+from ledger.models.network import NetworkField
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
@@ -22,11 +24,11 @@ from ledger.utils.withdraw_verify import can_withdraw
 
 class WithdrawSerializer(serializers.ModelSerializer):
     address_book_id = serializers.CharField(write_only=True, required=False, default=None)
-    coin = serializers.CharField(write_only=True, required=False)
-    network = serializers.CharField(write_only=True, required=False)
+    coin = CoinField(source='asset', required=False)
+    network = NetworkField(source='network', required=False)
     code = serializers.CharField(write_only=True, required=False)
-    address = serializers.CharField(write_only=True, required=False)
-    memo = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    address = serializers.CharField(required=False)
+    memo = serializers.CharField(required=False, allow_blank=True)
     code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     def validate(self, attrs):
