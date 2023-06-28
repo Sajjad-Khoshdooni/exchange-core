@@ -203,15 +203,19 @@ class PaymentUserFilter(SimpleListFilter):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('created', 'get_payment_amount', 'status', 'ref_id', 'ref_status', 'get_user',)
+    list_display = ('created', 'get_amount', 'get_fee', 'status', 'ref_id', 'ref_status', 'get_user',)
     readonly_fields = ('payment_request', )
     list_filter = (PaymentUserFilter, 'status', )
     search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'payment_request__amount',
                      'payment_request__authority')
 
     @admin.display(description='مقدار')
-    def get_payment_amount(self, payment: Payment):
+    def get_amount(self, payment: Payment):
         return humanize_number(payment.amount)
+
+    @admin.display(description='کارمزد')
+    def get_fee(self, payment: Payment):
+        return humanize_number(payment.fee)
 
     @admin.display(description='کاربر')
     def get_user(self, payment: Payment):

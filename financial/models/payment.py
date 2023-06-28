@@ -81,6 +81,13 @@ class Payment(models.Model):
         else:
             return self.payment_id_request.amount
 
+    @property
+    def fee(self):
+        if self.payment_request:
+            return self.payment_request.fee
+        else:
+            return self.payment_id_request.fee
+
     def alert_payment(self):
         user = self.user
         user_email = user.email
