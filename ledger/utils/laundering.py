@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.db.models import Q
+from django.db.models.functions import Coalesce
 
 from accounts.models import User
 from financial.models import Payment, FiatWithdrawRequest
@@ -14,7 +15,9 @@ def get_user_irt_net_deposit(user: User) -> int:
     irt_deposits = Payment.objects.filter(
         Q(payment_request__bank_card__user=user) | Q(payment_id_request__payment_id__user=user),
         status=DONE
-    ).order_by('created').values_list('created', 'payment_request__amount')
+    ).annotate(
+        amount=Coalesce('payment_request__amount', 0) + Coalesce('payment_id_request__amount', 0)
+    ).order_by('created').values_list('created', 'amount')
 
     irt_withdraws = FiatWithdrawRequest.objects.filter(
         bank_account__user=user,
@@ -22,7 +25,6 @@ def get_user_irt_net_deposit(user: User) -> int:
     ).order_by('created').values_list('created', 'amount', 'fee_amount')
 
     net_irt_transfers = list(irt_deposits) + [(created, -amount - fee) for (created, amount, fee) in irt_withdraws]
-
     net_irt_transfers.sort(key=lambda x: x[0])
 
     irt_values = list(map(lambda x: x[1], net_irt_transfers))
