@@ -41,8 +41,6 @@ class TradeRevenue(models.Model):
     gap_revenue = get_amount_field(validators=(), null=True)
     hedge_key = models.CharField(max_length=16, db_index=True, blank=True)
 
-    fiat_hedge_usdt = get_amount_field(validators=(), default=0)
-    fiat_hedge_base = get_amount_field(validators=(), default=0)
     base_usdt_price = get_amount_field(decimal_places=20)
 
     @classmethod
@@ -97,17 +95,6 @@ class TradeRevenue(models.Model):
             base_spread=base_spread,
             base_usdt_price=user_trade.base_usdt_price,
         )
-
-        if source not in (TradeRevenue.OTC_MARKET, TradeRevenue.USER) \
-                and user_trade.symbol.base_asset.symbol == Asset.IRT:
-
-            revenue.fiat_hedge_base = trade_volume
-            revenue.fiat_hedge_usdt = revenue.coin_price * revenue.amount
-
-            if revenue.side == BUY:
-                revenue.fiat_hedge_usdt *= -1
-            else:
-                revenue.fiat_hedge_base *= -1
 
         return revenue
 

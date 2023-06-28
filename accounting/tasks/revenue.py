@@ -7,8 +7,9 @@ from django.db.models import Sum, F
 
 from accounting.models import TradeRevenue
 from ledger.models import Asset
-from ledger.utils.external_price import SELL
+from ledger.utils.market_maker import get_market_maker_requester
 from ledger.utils.provider import get_provider_requester
+from ledger.utils.trader import get_trader_requester
 from market.models import Trade, PairSymbol
 
 logger = logging.getLogger(__name__)
@@ -47,20 +48,7 @@ def fill_revenue_filled_prices():
                 revenue.coin_price = revenue.coin_filled_price
                 revenue.gap_revenue = revenue.get_gap_revenue()
 
-            user_quote = revenue.price * revenue.amount
-            earning_quote = user_quote - info['quote_cum']
-
-            if revenue.side == SELL:
-                earning_quote = -earning_quote
-
-            if revenue.symbol.base_asset.symbol == Asset.IRT:
-                revenue.fiat_hedge_base = earning_quote
-            else:
-                revenue.fiat_hedge_usdt = earning_quote
-
-            revenue.save(update_fields=[
-                'filled_amount', 'coin_filled_price', 'gap_revenue', 'fiat_hedge_base', 'fiat_hedge_usdt', 'coin_price'
-            ])
+            revenue.save(update_fields=['filled_amount', 'coin_filled_price', 'gap_revenue', 'coin_price'])
 
         elif revenue.symbol == usdt_irt_symbol:
             revenue.coin_filled_price = 1
@@ -71,7 +59,21 @@ def fill_revenue_filled_prices():
         else:
             coin = revenue.symbol.asset.symbol
 
-            if revenue.hedge_key:
+            if revenue.hedge_key and revenue.hedge_key.startswith('mm-'):
+                info = get_market_maker_requester().get_trade_hedge_info(revenue.hedge_key.replace('mm-', ''))
+                if info['real_revenue']:
+                    revenue.gap_revenue = info['real_revenue']
+                    revenue.filled_amount = info['amount']
+                    revenue.coin_filled_price = info['hedge_price']
+                    revenue.save(update_fields=['coin_filled_price', 'filled_amount', 'gap_revenue'])
+            if revenue.hedge_key and revenue.hedge_key.startswith('tr-'):
+                info = get_trader_requester().get_trade_hedge_info(revenue.hedge_key.replace('tr-', ''))
+                if info['revenue']:
+                    revenue.gap_revenue = info['revenue']
+                    revenue.filled_amount = info['amount']
+                    revenue.coin_filled_price = info['hedge_price']
+                    revenue.save(update_fields=['coin_filled_price', 'filled_amount', 'gap_revenue'])
+            elif revenue.hedge_key:
                 revenues = [*delegated_hedges[coin], revenue]
                 delegated_hedges[coin] = []
 
