@@ -79,6 +79,8 @@ class Transfer(models.Model):
 
     risks = models.JSONField(null=True, blank=True)
 
+    address_book = models.ForeignKey('ledger.AddressBook', on_delete=models.PROTECT, null=True, blank=True)
+
     def in_freeze_time(self):
         return timezone.now() <= self.created + timedelta(seconds=self.FREEZE_SECONDS)
 

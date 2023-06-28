@@ -46,6 +46,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
         network = attrs.get('network')
         address = attrs.get('out_address')
 
+        address_book = None
+
         if attrs['address_book_id'] and from_panel:
             address_book = get_object_or_404(AddressBook, id=attrs['address_book_id'], account=account)
             address = address_book.address
@@ -140,18 +142,24 @@ class WithdrawSerializer(serializers.ModelSerializer):
             'amount': amount,
             'out_address': address,
             'account': account,
-            'memo': memo
+            'memo': memo,
+            'address_book': address_book,
         }
 
     def create(self, validated_data):
         try:
-            return Transfer.new_withdraw(
+            transfer = Transfer.new_withdraw(
                 wallet=validated_data['wallet'],
                 network=validated_data['network'],
                 amount=validated_data['amount'],
                 address=validated_data['out_address'],
                 memo=validated_data['memo'],
             )
+
+            transfer.address_book = validated_data['address_book']
+            transfer.save(update_fields=['address_book'])
+
+            return transfer
         except InsufficientBalance:
             raise ValidationError('موجودی کافی نیست.')
 
