@@ -13,13 +13,14 @@ from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Asset, Network, Transfer, NetworkAsset, AddressBook, DepositAddress
+from ledger.models import Asset, Transfer, NetworkAsset, AddressBook, DepositAddress
 from ledger.models.asset import CoinField
 from ledger.models.network import NetworkField
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
 from ledger.utils.withdraw_verify import can_withdraw
+from ledger.views.address_book_view import AddressBookSerializer
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
@@ -27,9 +28,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
     coin = CoinField(source='asset', required=False)
     network = NetworkField(required=False)
     code = serializers.CharField(write_only=True, required=False)
-    address = serializers.CharField(required=False)
+    address = serializers.CharField(source='out_address', required=False)
     memo = serializers.CharField(required=False, allow_blank=True)
     code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    address_book = AddressBookSerializer()
 
     def validate(self, attrs):
         request = self.context['request']
@@ -41,6 +43,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
         account = user.get_account()
         from_panel = self.context.get('from_panel')
         asset = attrs.get('asset')
+        network = attrs.get('network')
+        address = attrs.get('out_address')
 
         if attrs['address_book_id'] and from_panel:
             address_book = get_object_or_404(AddressBook, id=attrs['address_book_id'], account=account)
@@ -55,16 +59,13 @@ class WithdrawSerializer(serializers.ModelSerializer):
         else:
             if not asset:
                 raise ValidationError('رمزارزی انتخاب نشده است.')
-            if 'network' not in attrs:
+            if not network:
                 raise ValidationError('شبکه‌ای انتخاب نشده است.')
-            if 'address' not in attrs:
+            if not address:
                 raise ValidationError('آدرس وارد نشده است.')
 
             if from_panel and 'code' not in attrs:
                 raise ValidationError('کد وارد نشده است.')
-
-            network = get_object_or_404(Network, symbol=attrs['network'])
-            address = attrs['address']
 
         if not re.match(network.address_regex, address):
             raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
@@ -156,7 +157,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transfer
-        fields = ('id', 'amount', 'address', 'coin', 'network', 'code', 'address_book_id', 'memo', 'code_2fa')
+        fields = ('id', 'amount', 'address', 'coin', 'network', 'code', 'address_book_id', 'address_book', 'memo',
+                  'code_2fa')
         ref_name = 'Withdraw Serializer'
 
 
