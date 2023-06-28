@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 def check_prize_achievements(account: Account, task_scope: str):
-
     scopes = [task_scope]
 
     if task_scope == Task.TRADE:
