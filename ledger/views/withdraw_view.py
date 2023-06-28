@@ -31,7 +31,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
     address = serializers.CharField(source='out_address', required=False)
     memo = serializers.CharField(required=False, allow_blank=True)
     code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    address_book = AddressBookSerializer(read_only=True)
+    address_book = serializers.SerializerMethodField()
 
     def validate(self, attrs):
         request = self.context['request']
@@ -162,6 +162,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
             return transfer
         except InsufficientBalance:
             raise ValidationError('موجودی کافی نیست.')
+
+    def get_address_book(self, transfer: Transfer):
+        if transfer.address_book:
+            return AddressBookSerializer(transfer.address_book).data
 
     class Meta:
         model = Transfer
