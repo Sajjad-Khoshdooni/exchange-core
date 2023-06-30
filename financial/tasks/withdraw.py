@@ -1,7 +1,7 @@
 from celery import shared_task
 from django.db import transaction
 
-from financial.models import FiatWithdrawRequest
+from financial.models import FiatWithdrawRequest, Gateway
 
 
 @shared_task(queue='finance')
@@ -17,5 +17,11 @@ def process_withdraw(withdraw_request_id: int):
 
 @shared_task(queue='finance')
 def update_withdraw_status():
-    for withdraw in FiatWithdrawRequest.objects.filter(status=FiatWithdrawRequest.PENDING):
+    to_update = FiatWithdrawRequest.objects.filter(
+        status=FiatWithdrawRequest.PENDING
+    ).exclude(
+        gateway__type=Gateway.MANUAL
+    )
+
+    for withdraw in to_update:
         withdraw.update_status()
