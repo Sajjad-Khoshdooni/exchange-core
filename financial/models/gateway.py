@@ -23,15 +23,12 @@ class GatewayFailed(Exception):
 class Gateway(models.Model):
     BASE_URL = None
 
-    ZARINPAL = 'zarinpal'
-    PAYIR = 'payir'
-    ZIBAL = 'zibal'
-    JIBIT = 'jibit'
+    TYPES = MANUAL, ZARINPAL, PAYIR, ZIBAL, JIBIT, JIBIMO = 'manual', 'zarinpal', 'payir', 'zibal', 'jibit', 'jibimo'
 
     name = models.CharField(max_length=128)
     type = models.CharField(
         max_length=8,
-        choices=((ZARINPAL, ZARINPAL), (PAYIR, PAYIR), (ZIBAL, ZIBAL), (JIBIT, JIBIT))
+        choices=[(t, t) for t in TYPES]
     )
     merchant_id = models.CharField(max_length=128, blank=True)
 
