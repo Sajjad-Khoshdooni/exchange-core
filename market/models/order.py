@@ -423,6 +423,16 @@ class Order(models.Model):
                         source=maker_trade.trade_source,
                         hedge_key=hedge_key
                     ))
+                elif maker_trade.trade_source == Trade.MARKET:
+                    for t in (maker_trade, taker_trade):
+                        trade_revenues.append(
+                            TradeRevenue.new(
+                                user_trade=t,
+                                group_id=t.group_id,
+                                source=TradeRevenue.USER,
+                                hedge_key=''
+                            )
+                        )
             if trade_revenues:
                 TradeRevenue.objects.bulk_create(trade_revenues)
 
