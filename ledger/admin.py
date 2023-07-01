@@ -1,4 +1,5 @@
 from datetime import timedelta
+from uuid import uuid4
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
@@ -19,7 +20,7 @@ from financial.models import Payment
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock
 from ledger.utils.external_price import get_external_price, BUY
-from ledger.utils.fields import DONE
+from ledger.utils.fields import DONE, PROCESS
 from ledger.utils.precision import get_presentation_amount, humanize_presentation
 from ledger.utils.precision import humanize_number
 from ledger.utils.provider import get_provider_requester
@@ -610,6 +611,15 @@ class ManualTransactionAdmin(admin.ModelAdmin):
     list_filter = ('type', 'status')
     ordering = ('-created', )
     readonly_fields = ('group_id', )
+    actions = ('clone_transaction', )
+
+    @admin.action(description='Clone')
+    def clone_transaction(self, request, queryset):
+        for trx in queryset:
+            trx.id = None
+            trx.status = PROCESS
+            trx.group_id = uuid4()
+            trx.save()
 
 
 @admin.register(BalanceLock)

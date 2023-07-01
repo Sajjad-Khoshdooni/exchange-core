@@ -40,7 +40,7 @@ class MissionTemplateAdmin(admin.ModelAdmin):
     def get_tasks(self, mission: models.MissionTemplate):
         return ','.join(mission.task_set.values_list('scope', flat=True))
 
-    @admin.action(description='clone', permissions=['change'])
+    @admin.action(description='Clone', permissions=['change'])
     def clone_mission(self, request, queryset):
         for mission in queryset:
             clone_mission_template(mission)
