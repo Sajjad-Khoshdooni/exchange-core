@@ -14,6 +14,7 @@ from django.db import models, transaction
 from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum, UniqueConstraint
 from django.utils import timezone
 
+from accounting.models import TradeRevenue
 from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
@@ -332,7 +333,12 @@ class Order(models.Model):
                 (False, False): Trade.MARKET,
             }
 
-            trade_source = source_map[maker_is_system, taker_is_system]
+            if settings.ZERO_USDT_HEDGE and symbol.name == 'USDTIRT':
+                maker_is_trader = maker_order.account.id == settings.TRADER_ACCOUNT_ID
+                taker_is_trader = self.account.id == settings.TRADER_ACCOUNT_ID
+                trade_source = source_map[maker_is_trader, taker_is_trader]
+            else:
+                trade_source = source_map[maker_is_system, taker_is_system]
 
             trades_pair = TradesPair.init_pair(
                 taker_order=self,
@@ -405,6 +411,30 @@ class Order(models.Model):
             symbol.last_trade_price = trades[-1].price
             symbol.save(update_fields=['last_trade_time', 'last_trade_price'])
             set_last_trade_price(symbol)
+            trade_revenues = []
+            for maker_trade, taker_trade in trade_pairs:
+                if maker_trade.trade_source in (Trade.SYSTEM_MAKER, Trade.SYSTEM_TAKER):
+                    hedge_key = f'tr-{taker_trade.id}' \
+                        if settings.ZERO_USDT_HEDGE and symbol.name == 'USDTIRT' else \
+                        f'mm-{taker_trade.id}'
+                    trade_revenues.append(TradeRevenue.new(
+                        user_trade=taker_trade if maker_trade.trade_source == Trade.SYSTEM_MAKER else maker_trade,
+                        group_id=taker_trade.group_id,
+                        source=maker_trade.trade_source,
+                        hedge_key=hedge_key
+                    ))
+                elif maker_trade.trade_source == Trade.MARKET:
+                    for t in (maker_trade, taker_trade):
+                        trade_revenues.append(
+                            TradeRevenue.new(
+                                user_trade=t,
+                                group_id=t.group_id,
+                                source=TradeRevenue.USER,
+                                hedge_key=''
+                            )
+                        )
+            if trade_revenues:
+                TradeRevenue.objects.bulk_create(trade_revenues)
 
         # updating trade_volume_irt of accounts
         for trade in trades:
@@ -492,6 +522,14 @@ class Order(models.Model):
                 top_prices[depth['side']] = (depth['max_price'] if depth['side'] == BUY else depth['min_price']) \
                                             or Decimal()
         return top_prices
+
+    @classmethod
+    def get_top_price(cls, symbol_id, side):
+        agg_func = Max if side == BUY else Min
+        top_price = cls.open_objects.filter(
+            symbol_id=symbol_id, side=side
+        ).aggregate(top_price=agg_func('price'))['top_price']
+        return top_price
 
     @classmethod
     def get_top_price_amount(cls, symbol_id, side):

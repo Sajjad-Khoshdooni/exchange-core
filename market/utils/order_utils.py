@@ -107,6 +107,7 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
         StopLoss.objects.filter(id__in=map(lambda s: s.id, matched_trades.to_cancel_stoploss)).update(
             canceled_at=timezone.now()
         )
+    order.trades = [p[0] for p in matched_trades.trade_pairs]
     return order
 
 
