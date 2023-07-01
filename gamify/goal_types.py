@@ -1,13 +1,14 @@
 from datetime import timedelta
 
-from django.db.models import Sum
+from django.db.models import Sum, F
 
 from accounting.models import TradeRevenue
 from accounts.models import Account, User
 from financial.models import PaymentRequest
 from gamify.models import Task, UserMission
-from ledger.models import Transfer
+from ledger.models import Transfer, OTCTrade
 from ledger.utils.fields import DONE
+from market.models import Trade
 
 
 class BaseGoalType:
@@ -62,10 +63,22 @@ class WeeklyTradeGoal(BaseGoalType):
         expiration = self.task.mission.expiration
         user_mission = UserMission.objects.get(mission=self.task.mission, user=account.user)
 
-        return TradeRevenue.objects.filter(
-            account=account,
+        otc_val = OTCTrade.objects.filter(
+            otc_request__account=account,
+            status=OTCTrade.DONE,
             created__range=(user_mission.created, expiration)
-        ).aggregate(val=Sum('value_irt'))['val'] or 0
+        ).aggregate(
+            val=Sum(F('otc_request__amount') * F('otc_request__price') * F('otc_request__base_irt_price'))
+        )['val'] or 0
+
+        trade_val = Trade.objects.filter(
+            account=account,
+            created__range=(user_mission.created, expiration),
+        ).aggregate(
+            val=Sum(F('amount') * F('price') * F('base_irt_price'))
+        )['val'] or 0
+
+        return otc_val + trade_val
 
 
 class ReferralGoal(BaseGoalType):

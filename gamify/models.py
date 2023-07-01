@@ -1,7 +1,6 @@
 import logging
 import random
 from datetime import timedelta
-from decimal import Decimal
 
 from django.db import models
 from django.utils import timezone
@@ -229,7 +228,9 @@ class Task(models.Model):
             return max(min(int(_progress / self.max * 100), 100), 0)
 
     def finished(self, account: Account):
-        return self.get_progress_percent(account) == 100
+        progress = self.get_progress_percent(account)
+        logger.info('checking task progress for %s on %s is %s' % (account, self, progress))
+        return progress == 100
 
     class Meta:
         ordering = ('order', )

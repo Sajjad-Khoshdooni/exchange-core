@@ -2,6 +2,7 @@ import dataclasses
 from decimal import Decimal
 
 from django.db.models import Sum, Q
+from django.db.models.functions import Coalesce
 
 from financial.models import FiatWithdrawRequest, Payment, Gateway
 from ledger.utils.fields import CANCELED
@@ -24,7 +25,9 @@ def get_fiat_withdraw_risks(withdraw: FiatWithdrawRequest) -> list:
 
     total_deposits = Payment.objects.filter(
         Q(payment_request__bank_card__user=user) | Q(payment_id_request__payment_id__user=user)
-    ).exclude(status=CANCELED).aggregate(amount=Sum('payment_request__amount'))['amount'] or 0
+    ).exclude(status=CANCELED).aggregate(
+        amount=Sum(Coalesce('payment_request__amount', 0) + Coalesce('payment_id_request__amount', 0))
+    )['amount'] or 0
 
     total_withdraws = FiatWithdrawRequest.objects.filter(
         bank_account__user=user

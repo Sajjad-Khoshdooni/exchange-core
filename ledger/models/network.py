@@ -33,3 +33,15 @@ class NetworkSerializer(serializers.ModelSerializer):
     class Meta:
         model = Network
         fields = ('symbol', 'name', )
+
+
+class NetworkField(serializers.CharField):
+    def to_representation(self, value: Network):
+        if value:
+            return value.symbol
+
+    def to_internal_value(self, data: str):
+        if not data:
+            return
+        else:
+            return Network.objects.get(symbol=data)

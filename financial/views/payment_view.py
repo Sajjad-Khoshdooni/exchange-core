@@ -84,7 +84,7 @@ class PaymentHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Payment
-        fields = ('created', 'status', 'ref_id', 'amount', 'bank_card', 'payment_id')
+        fields = ('id', 'created', 'status', 'ref_id', 'amount', 'bank_card', 'payment_id')
 
 
 class PaymentHistoryView(ListAPIView):
@@ -92,7 +92,7 @@ class PaymentHistoryView(ListAPIView):
     pagination_class = LimitOffsetPagination
 
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['status']
+    filterset_fields = ['id', 'status', 'payment_request_id']
 
     def get_queryset(self):
         user = self.request.user

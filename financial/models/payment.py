@@ -52,7 +52,7 @@ class PaymentRequest(models.Model):
 class Payment(models.Model):
     SUCCESS_URL = '/checkout/success'
     FAIL_URL = '/checkout/fail'
-    SUCCESS_PAYMENT_FAIL_FAST_bUY = '/checkout/fail_trade'
+    SUCCESS_PAYMENT_FAIL_FAST_BUY = '/checkout/fail_trade'
 
     created = models.DateTimeField(auto_now_add=True, db_index=True)
     modified = models.DateTimeField(auto_now=True)
@@ -146,10 +146,12 @@ class Payment(models.Model):
         desktop = PaymentRequest.DESKTOP
         fast_by_token = FastBuyToken.objects.filter(payment_request=self.payment_request).last()
 
+        redirect_param = '?payment_request_id=%s'
+
         if source == desktop:
             if self.status == DONE:
                 if fast_by_token and fast_by_token.status != FastBuyToken.DONE:
-                    return settings.PANEL_URL + self.SUCCESS_PAYMENT_FAIL_FAST_bUY
+                    return settings.PANEL_URL + self.SUCCESS_PAYMENT_FAIL_FAST_BUY
                 else:
                     return settings.PANEL_URL + self.SUCCESS_URL
             else:
