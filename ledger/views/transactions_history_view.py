@@ -36,7 +36,9 @@ class TransferSerializer(serializers.ModelSerializer):
         return transfer.source == Transfer.INTERNAL
 
     def get_cancelable(self, transfer: Transfer):
-        return transfer.in_freeze_time() or transfer.status == Transfer.INIT
+        return \
+            transfer.status == Transfer.INIT or \
+            (transfer.status == Transfer.PROCESSING and transfer.in_freeze_time())
 
     class Meta:
         model = Transfer
