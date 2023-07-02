@@ -357,7 +357,7 @@ class TransferAdmin(AdvancedAdmin):
 
     list_display = (
         'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
-        'usdt_value', 'get_remaining_time_to_pass_72h', 'get_jalali_created', 'get_jalali_finished'
+        'usdt_value', 'get_remaining_time_to_pass_48h', 'get_jalali_created', 'get_jalali_finished'
     )
     search_fields = ('trx_hash', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
@@ -401,8 +401,8 @@ class TransferAdmin(AdvancedAdmin):
             link = url_to_edit_object(user)
             return anchor_tag(user.phone, link)
 
-    @admin.display(description='Remaining 72h')
-    def get_remaining_time_to_pass_72h(self, transfer: models.Transfer):
+    @admin.display(description='Remaining 48h')
+    def get_remaining_time_to_pass_48h(self, transfer: models.Transfer):
         if transfer.deposit:
             return
 
