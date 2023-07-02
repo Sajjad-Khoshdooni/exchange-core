@@ -61,14 +61,14 @@ def fill_revenue_filled_prices():
 
             if revenue.hedge_key and revenue.hedge_key.startswith('mm-'):
                 info = get_market_maker_requester().get_trade_hedge_info(revenue.hedge_key.replace('mm-', ''))
-                if info and info['real_revenue']:
+                if info and info.get('real_revenue'):
                     revenue.gap_revenue = info['real_revenue']
                     revenue.filled_amount = info['amount']
                     revenue.coin_filled_price = info['hedge_price']
                     revenue.save(update_fields=['coin_filled_price', 'filled_amount', 'gap_revenue'])
             if revenue.hedge_key and revenue.hedge_key.startswith('tr-'):
                 info = get_trader_requester().get_trade_hedge_info(revenue.hedge_key.replace('tr-', ''))
-                if info and info['revenue']:
+                if info and info.get('revenue'):
                     revenue.gap_revenue = info['revenue']
                     revenue.filled_amount = info['amount']
                     revenue.coin_filled_price = info['hedge_price']
@@ -79,7 +79,7 @@ def fill_revenue_filled_prices():
 
                 info = get_provider_requester().get_order(request_id=revenue.hedge_key)
 
-                if info and info['filled_amount']:
+                if info and info.get('filled_amount'):
                     executed_amount = Decimal(info['filled_amount'])
                     executed_price = Decimal(info['filled_price'])
 
