@@ -417,7 +417,7 @@ class TransferAdmin(AdvancedAdmin):
 
         if last_payment:
             passed = timezone.now() - last_payment.created
-            rem = timedelta(days=3) - passed
+            rem = timedelta(days=2) - passed
             return '%s روز %s ساعت %s دقیقه' % (rem.days, rem.seconds // 3600, rem.seconds % 3600 // 60)
 
     @admin.display(description='risks')
