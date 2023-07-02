@@ -73,6 +73,7 @@ class ReferralTestCase(TestCase):
 
     def test_referral_btc_usdt(self):
         set_price(self.usdt, 1)
+        set_price(self.btc, 25000)
         account_1, account_2, account_3, account_1_referral = self.init_accounts()
         with WalletPipeline() as pipeline:
             order_3 = new_order(pipeline, self.btcusdt, account_2, SELL, 2, 200000)
