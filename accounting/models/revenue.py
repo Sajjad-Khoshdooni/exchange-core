@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 from ledger.models import Asset
@@ -30,6 +31,7 @@ class TradeRevenue(models.Model):
     fee_revenue = get_amount_field()
     value = get_amount_field()
     value_irt = get_amount_field(default=0)
+    value_is_fake = models.BooleanField(default=False)
 
     coin_price = get_amount_field()
     coin_spread = get_amount_field()
@@ -74,6 +76,10 @@ class TradeRevenue(models.Model):
         else:
             base_spread = 0
 
+        value_is_fake = bool(user_trade.account_id in (
+            settings.OTC_ACCOUNT_ID, settings.MARKET_MAKER_ACCOUNT_ID, settings.TRADER_ACCOUNT_ID
+        ))
+
         revenue = TradeRevenue(
             created=user_trade.created,
             account=user_trade.account,
@@ -84,6 +90,7 @@ class TradeRevenue(models.Model):
             group_id=group_id,
             value=trade_value,
             value_irt=trade_volume * user_trade.base_irt_price,
+            value_is_fake=value_is_fake,
             fee_revenue=user_trade.fee_revenue,
 
             source=source,
