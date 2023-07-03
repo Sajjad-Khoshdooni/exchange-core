@@ -606,8 +606,9 @@ class FastBuyTokenAdmin(admin.ModelAdmin):
 
 
 class ManualTransactionForm(forms.ModelForm):
-    asset = forms.ChoiceField(required=True, choices=Asset.objects.values_list('id', 'name'))
+    asset = forms.ChoiceField(required=True, choices=Asset.objects.filter(enable=True).values_list('id', 'name'))
     account = forms.ChoiceField(required=True, choices=Account.objects.values_list('id', 'user__phone'))
+    wallet = forms.IntegerField(required=False)
 
     def __init__(self, *args, **kwargs):
         super(ManualTransactionForm, self).__init__(*args, **kwargs)
