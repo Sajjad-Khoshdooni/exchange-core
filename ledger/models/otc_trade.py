@@ -241,7 +241,7 @@ class OTCTrade(models.Model):
                         fill_type=Order.MARKET,
                         raise_exception=False
                     )
-                    if order.trades:
+                    if order and order.trades:
                         filled_amount = sum(map(lambda t: t.amount, order.trades))
                         if filled_amount:
                             filled_value = sum(map(lambda t: t.amount * t.price, order.trades))
