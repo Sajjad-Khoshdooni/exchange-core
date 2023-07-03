@@ -212,7 +212,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         (_('Permissions'), {
             'fields': (
                 'is_active', 'is_staff', 'is_superuser',
-                'groups', 'user_permissions', 'show_margin', 'show_strategy_bot', 'show_community', 'show_staking',
+                'groups', 'user_permissions', 'show_margin', 'show_strategy_bot', 'show_community',
                 'withdraw_before_48h_option', 'can_trade', 'can_withdraw', 'can_withdraw_crypto',
                 'withdraw_limit_whitelist', 'withdraw_risk_level_multiplier', 'custom_crypto_withdraw_ceil'
             ),

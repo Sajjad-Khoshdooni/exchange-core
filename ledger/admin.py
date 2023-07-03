@@ -1,4 +1,5 @@
 from datetime import timedelta
+from uuid import uuid4
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
@@ -19,7 +20,7 @@ from financial.models import Payment
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock
 from ledger.utils.external_price import get_external_price, BUY
-from ledger.utils.fields import DONE
+from ledger.utils.fields import DONE, PROCESS
 from ledger.utils.precision import get_presentation_amount, humanize_presentation
 from ledger.utils.precision import humanize_number
 from ledger.utils.provider import get_provider_requester
@@ -356,7 +357,7 @@ class TransferAdmin(AdvancedAdmin):
 
     list_display = (
         'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
-        'usdt_value', 'get_remaining_time_to_pass_72h', 'get_jalali_created', 'get_jalali_finished'
+        'usdt_value', 'get_remaining_time_to_pass_48h', 'get_jalali_created', 'get_jalali_finished'
     )
     search_fields = ('trx_hash', 'out_address', 'wallet__asset__symbol')
     list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
@@ -400,8 +401,8 @@ class TransferAdmin(AdvancedAdmin):
             link = url_to_edit_object(user)
             return anchor_tag(user.phone, link)
 
-    @admin.display(description='Remaining 72h')
-    def get_remaining_time_to_pass_72h(self, transfer: models.Transfer):
+    @admin.display(description='Remaining 48h')
+    def get_remaining_time_to_pass_48h(self, transfer: models.Transfer):
         if transfer.deposit:
             return
 
@@ -416,7 +417,7 @@ class TransferAdmin(AdvancedAdmin):
 
         if last_payment:
             passed = timezone.now() - last_payment.created
-            rem = timedelta(days=3) - passed
+            rem = timedelta(days=2) - passed
             return '%s روز %s ساعت %s دقیقه' % (rem.days, rem.seconds // 3600, rem.seconds % 3600 // 60)
 
     @admin.display(description='risks')
@@ -610,6 +611,15 @@ class ManualTransactionAdmin(admin.ModelAdmin):
     list_filter = ('type', 'status')
     ordering = ('-created', )
     readonly_fields = ('group_id', )
+    actions = ('clone_transaction', )
+
+    @admin.action(description='Clone')
+    def clone_transaction(self, request, queryset):
+        for trx in queryset:
+            trx.id = None
+            trx.status = PROCESS
+            trx.group_id = uuid4()
+            trx.save()
 
 
 @admin.register(BalanceLock)

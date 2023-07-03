@@ -79,7 +79,7 @@ class AssetPriceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 @admin.register(TradeRevenue)
 class TradeRevenueAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     list_display = (
-        'created', 'symbol', 'source', 'side', 'amount', 'price', 'gap_revenue', 'fee_revenue', 'coin_price',
+        'created', 'symbol', 'source', 'side', 'amount', 'price', 'value', 'gap_revenue', 'fee_revenue', 'coin_price',
         'coin_filled_price', 'hedge_key')
 
     search_fields = ('group_id', 'hedge_key', 'symbol__name', )

@@ -7,9 +7,6 @@ from stake.models import StakeRequest
 
 
 def close_staking(user: User):
-    if not user.show_staking:
-        return
-
     account = user.get_account()
 
     stake_requests = StakeRequest.objects.filter(
@@ -42,9 +39,6 @@ def close_staking(user: User):
                 title='لغو استیکینگ',
                 message='مقدار %s %s به حساب نقدی‌تان اضافه شد.' % (get_presentation_amount(amount), stake.stake_option.asset.name_fa)
             )
-
-    user.show_staking = False
-    user.save(update_fields=['show_staking'])
 
     if has_stake_request:
         send_message_by_kavenegar(
