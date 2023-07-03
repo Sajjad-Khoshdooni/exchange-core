@@ -360,7 +360,7 @@ class TransferAdmin(AdvancedAdmin):
         'usdt_value', 'get_remaining_time_to_pass_48h', 'get_jalali_created', 'get_jalali_finished'
     )
     search_fields = ('trx_hash', 'out_address', 'wallet__asset__symbol')
-    list_filter = ('deposit', 'status', 'source', 'status', TransferUserFilter,)
+    list_filter = ('deposit', 'status', 'source', TransferUserFilter,)
     readonly_fields = (
         'deposit_address', 'network', 'wallet', 'created', 'accepted_datetime', 'finished_datetime', 'get_risks',
         'out_address', 'memo', 'amount', 'irt_value', 'usdt_value', 'deposit', 'group_id'
