@@ -7,6 +7,7 @@ from django.contrib.admin import SimpleListFilter
 from django.db.models import F, Sum, Q
 from django.utils import timezone
 from django.utils.safestring import mark_safe
+from django.utils.translation import gettext_lazy as _
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -14,7 +15,7 @@ from accounting.models import ReservedAsset
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.admin_guard.html_tags import anchor_tag
-from accounts.models import Account
+from accounts.models import Account, User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
@@ -606,18 +607,18 @@ class FastBuyTokenAdmin(admin.ModelAdmin):
 
 
 class ManualTransactionForm(forms.ModelForm):
-    asset = forms.ChoiceField(required=True, choices=Asset.objects.filter(enable=True).values_list('id', 'name'))
-    account = forms.ChoiceField(required=True, choices=Account.objects.values_list('id', 'user__phone'))
-    wallet = forms.IntegerField(required=False)
-
-    def __init__(self, *args, **kwargs):
-        super(ManualTransactionForm, self).__init__(*args, **kwargs)
-        self.fields['wallet'].required = False
+    user = forms.IntegerField(required=True)
+    asset = forms.ChoiceField(required=True, choices=Asset.objects.filter(enable=True).values_list('id', 'symbol'))
+    market = forms.ChoiceField(choices=Wallet.MARKET_CHOICES, initial=Wallet.SPOT)
+    wallet = forms.IntegerField(required=False, disabled=True)
 
     def clean(self):
-        account = Account.objects.get(id=self.cleaned_data['account'])
+        account = Account.objects.filter(user_id=self.cleaned_data['user']).first()
+        if not account:
+            self.add_error('user', _("Please specify valid user id"))
+            return
         asset = Asset.objects.get(id=self.cleaned_data['asset'])
-        self.cleaned_data['wallet'] = asset.get_wallet(account)
+        self.cleaned_data['wallet'] = asset.get_wallet(account, market=self.cleaned_data['market'])
         return super(ManualTransactionForm, self).clean()
 
     class Meta:
