@@ -1,6 +1,7 @@
 from datetime import timedelta
 from uuid import uuid4
 
+from django import forms
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import F, Sum, Q
@@ -18,7 +19,7 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock
+from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE, PROCESS
 from ledger.utils.precision import get_presentation_amount, humanize_presentation
@@ -604,10 +605,29 @@ class FastBuyTokenAdmin(admin.ModelAdmin):
     get_amount.short_description = 'مقدار'
 
 
+class ManualTransactionForm(forms.ModelForm):
+    asset = forms.ChoiceField(required=True, choices=Asset.objects.values_list('id', 'name'))
+    account = forms.ChoiceField(required=True, choices=Account.objects.values_list('id', 'user__phone'))
+
+    def __init__(self, *args, **kwargs):
+        super(ManualTransactionForm, self).__init__(*args, **kwargs)
+        self.fields['wallet'].required = False
+
+    def clean(self):
+        account = Account.objects.get(id=self.cleaned_data['account'])
+        asset = Asset.objects.get(id=self.cleaned_data['asset'])
+        self.cleaned_data['wallet'] = asset.get_wallet(account)
+        return super(ManualTransactionForm, self).clean()
+
+    class Meta:
+        model = ManualTransaction
+        fields = '__all__'
+
+
 @admin.register(ManualTransaction)
 class ManualTransactionAdmin(admin.ModelAdmin):
+    form = ManualTransactionForm
     list_display = ('created', 'wallet', 'type', 'status', 'amount')
-    raw_id_fields = ('wallet', )
     list_filter = ('type', 'status')
     ordering = ('-created', )
     readonly_fields = ('group_id', )
