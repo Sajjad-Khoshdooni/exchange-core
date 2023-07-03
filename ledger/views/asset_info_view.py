@@ -272,7 +272,10 @@ class AssetOverviewAPIView(APIView):
     def get(self, request):
         limit = int(self.request.query_params.get('limit', default=3))
 
-        coins = list(Asset.live_objects.exclude(symbol=Asset.IRT).values_list('symbol', flat=True))
+        coins = list(Asset.live_objects.filter(
+            otc_status=Asset.ACTIVE
+        ).exclude(symbol=Asset.IRT).values_list('symbol', flat=True))
+
         caps = get_provider_requester().get_coins_info(coins).values()
         caps_dict = {c.coin: c for c in caps}
 
