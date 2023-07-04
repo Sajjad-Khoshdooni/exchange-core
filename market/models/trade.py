@@ -121,10 +121,19 @@ class Trade(BaseTrade):
         return market_top_prices
 
     @staticmethod
-    def get_account_orders_filled_price(account_id):
+    def get_account_orders_filled_price(account_id, order_filter=None):
+        extra_filter = {}
+        if order_filter:
+            from market.models import Order
+            order_ids = list(Order.objects.filter(account_id=account_id, **order_filter).values_list('id', flat=True))
+            if not order_ids:
+                return {}
+            extra_filter = {
+                'order_id__in': order_ids
+            }
         return {
             trade['order_id']: (trade['sum_amount'], trade['sum_value']) for trade in
-            Trade.objects.filter(account=account_id).annotate(
+            Trade.objects.filter(account=account_id, **extra_filter).annotate(
                 value=F('amount') * F('price')
             ).values('order_id').annotate(sum_amount=Sum('amount'), sum_value=Sum('value')).values(
                 'order_id', 'sum_amount', 'sum_value'
