@@ -46,7 +46,7 @@ class TradeRevenue(models.Model):
     base_usdt_price = get_amount_field(decimal_places=20)
 
     @classmethod
-    def new(cls, user_trade: BaseTrade, group_id, source: str, hedge_key: str = None):
+    def new(cls, user_trade: BaseTrade, group_id, source: str, hedge_key: str = None, ignore_trade_value=False):
         trade_volume = user_trade.amount * user_trade.price
         trade_value = trade_volume * user_trade.base_usdt_price
 
@@ -76,7 +76,7 @@ class TradeRevenue(models.Model):
         else:
             base_spread = 0
 
-        value_is_fake = bool(user_trade.account_id in (
+        value_is_fake = ignore_trade_value or bool(user_trade.account_id in (
             settings.OTC_ACCOUNT_ID, settings.MARKET_MAKER_ACCOUNT_ID, settings.TRADER_ACCOUNT_ID
         ))
 
