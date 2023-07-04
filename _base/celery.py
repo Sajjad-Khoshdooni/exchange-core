@@ -103,42 +103,6 @@ app.conf.beat_schedule = {
         },
     },
 
-    # 'lock_monitor': {
-    #     'task': 'ledger.tasks.lock_monitor.lock_monitor',
-    #     'schedule': crontab(minute=0),
-    #     'options': {
-    #         'queue': 'celery',
-    #         'expires': 3600
-    #     },
-    # },
-
-    # 'check_margin_level': {
-    #     'task': 'ledger.tasks.margin.check_margin_level',
-    #     'schedule': 5 * TASK_MULTIPLIER,
-    #     'options': {
-    #         'queue': 'margin',
-    #         'expires': 5 * TASK_MULTIPLIER
-    #     },
-    # },
-
-    # 'retention_leads_to_signup': {
-    #     'task': 'accounts.tasks.retention.retention_leads_to_signup',
-    #     'schedule': 3600,
-    #     'options': {
-    #         'queue': 'retention',
-    #         'expires': 3600
-    #     },
-    # },
-
-    # 'retention_actions': {
-    #     'task': 'accounts.tasks.retention.retention_actions',
-    #     'schedule': 3600,
-    #     'options': {
-    #         'queue': 'retention',
-    #         'expires': 3600
-    #     },
-    # },
-
     'update_withdraw_status': {
         'task': 'financial.tasks.withdraw.update_withdraw_status',
         'schedule': 300 * TASK_MULTIPLIER,
@@ -271,15 +235,6 @@ app.conf.beat_schedule = {
         'options': {
             'queue': 'notif-manager',
             'expires': 10 * TASK_MULTIPLIER
-        },
-    },
-
-    'send_signup_not_verified_push': {
-        'task': 'retention.tasks.send_signup_not_verified_push',
-        'schedule': 60,
-        'options': {
-            'queue': 'celery',
-            'expires': 60
         },
     },
 
