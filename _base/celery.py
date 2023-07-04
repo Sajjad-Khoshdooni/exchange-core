@@ -30,7 +30,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute="*/30"),
         'options': {
             'queue': 'celery',
-            'expire': 30 * 60
+            'expires': 30 * 60
         },
     },
     'auto_clear_debts': {
@@ -38,7 +38,7 @@ app.conf.beat_schedule = {
         'schedule': 60 * TASK_MULTIPLIER,
         'options': {
             'queue': 'celery',
-            'expire': 60 * TASK_MULTIPLIER
+            'expires': 60 * TASK_MULTIPLIER
         },
     },
     'update_provider_withdraw': {
@@ -46,7 +46,7 @@ app.conf.beat_schedule = {
         'schedule': 10 * TASK_MULTIPLIER,
         'options': {
             'queue': 'transfer',
-            'expire': 10 * TASK_MULTIPLIER
+            'expires': 10 * TASK_MULTIPLIER
         },
     },
 
@@ -55,7 +55,7 @@ app.conf.beat_schedule = {
         'schedule': 10 * TASK_MULTIPLIER,
         'options': {
             'queue': 'transfer',
-            'expire': 10 * TASK_MULTIPLIER
+            'expires': 10 * TASK_MULTIPLIER
         },
     },
 
@@ -64,7 +64,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=22, minute=0),
         'options': {
             'queue': 'celery',
-            'expire': 36000
+            'expires': 36000
         },
     },
     'complete_stake_requests': {
@@ -72,7 +72,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=21, minute=0),
         'options': {
             'queue': 'celery',
-            'expire': 36000
+            'expires': 36000
         },
     },
 
@@ -81,7 +81,7 @@ app.conf.beat_schedule = {
         'schedule': 15,
         'options': {
             'queue': 'celery',
-            'expire': 15
+            'expires': 15
         },
     },
 
@@ -90,7 +90,7 @@ app.conf.beat_schedule = {
         'schedule': 30,
         'options': {
             'queue': 'celery',
-            'expire': 30
+            'expires': 30
         },
     },
 
@@ -99,7 +99,7 @@ app.conf.beat_schedule = {
         'schedule': 30 * TASK_MULTIPLIER,
         'options': {
             'queue': 'celery',
-            'expire': 30 * TASK_MULTIPLIER
+            'expires': 30 * TASK_MULTIPLIER
         },
     },
 
@@ -108,7 +108,7 @@ app.conf.beat_schedule = {
     #     'schedule': crontab(minute=0),
     #     'options': {
     #         'queue': 'celery',
-    #         'expire': 3600
+    #         'expires': 3600
     #     },
     # },
 
@@ -117,7 +117,7 @@ app.conf.beat_schedule = {
     #     'schedule': 5 * TASK_MULTIPLIER,
     #     'options': {
     #         'queue': 'margin',
-    #         'expire': 5 * TASK_MULTIPLIER
+    #         'expires': 5 * TASK_MULTIPLIER
     #     },
     # },
 
@@ -126,7 +126,7 @@ app.conf.beat_schedule = {
     #     'schedule': 3600,
     #     'options': {
     #         'queue': 'retention',
-    #         'expire': 3600
+    #         'expires': 3600
     #     },
     # },
 
@@ -135,7 +135,7 @@ app.conf.beat_schedule = {
     #     'schedule': 3600,
     #     'options': {
     #         'queue': 'retention',
-    #         'expire': 3600
+    #         'expires': 3600
     #     },
     # },
 
@@ -144,7 +144,7 @@ app.conf.beat_schedule = {
         'schedule': 300 * TASK_MULTIPLIER,
         'options': {
             'queue': 'finance',
-            'expire': 300 * TASK_MULTIPLIER
+            'expires': 300 * TASK_MULTIPLIER
         },
     },
 
@@ -153,7 +153,7 @@ app.conf.beat_schedule = {
         'schedule': 60 * TASK_MULTIPLIER,
         'options': {
             'queue': 'finance',
-            'expire': 60 * TASK_MULTIPLIER
+            'expires': 60 * TASK_MULTIPLIER
         },
     },
 
@@ -162,7 +162,7 @@ app.conf.beat_schedule = {
         'schedule': 600 * TASK_MULTIPLIER,
         'options': {
             'queue': 'finance',
-            'expire': 600 * TASK_MULTIPLIER
+            'expires': 600 * TASK_MULTIPLIER
         },
     },
 
@@ -187,7 +187,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='1-59/5'),
         'options': {
             'queue': 'history',
-            'expire': 200
+            'expires': 200
         }
     },
     'provider_income': {
@@ -195,7 +195,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=30),
         'options': {
             'queue': 'history',
-            'expire': 3600,
+            'expires': 3600,
         },
     },
     'blocklink_incomes': {
@@ -203,7 +203,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=30),
         'options': {
             'queue': 'history',
-            'expire': 3600,
+            'expires': 3600,
         },
     },
 
@@ -212,7 +212,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/5'),
         'options': {
             'queue': 'vault',
-            'expire': 200
+            'expires': 200
         }
     },
 
@@ -221,7 +221,7 @@ app.conf.beat_schedule = {
         'schedule': 10,
         'options': {
             'queue': 'notif-manager',
-            'expire': 12
+            'expires': 12
         }
     },
     # 'create_accounting_report': {
@@ -229,7 +229,7 @@ app.conf.beat_schedule = {
     #     'schedule': crontab(hour=19, minute=30, day_of_week=6),
     #     'options': {
     #         'queue': 'celery',
-    #         'expire': 36000
+    #         'expires': 36000
     #     },
     # },
     'trigger_variant_action': {
@@ -237,7 +237,7 @@ app.conf.beat_schedule = {
         'schedule': 300 * TASK_MULTIPLIER,
         'options': {
             'queue': 'celery',
-            'expire': 300 * TASK_MULTIPLIER
+            'expires': 300 * TASK_MULTIPLIER
         },
     },
 
@@ -246,7 +246,7 @@ app.conf.beat_schedule = {
         'schedule': 5 * TASK_MULTIPLIER,
         'options': {
             'queue': 'notif-manager',
-            'expire': 5 * TASK_MULTIPLIER
+            'expires': 5 * TASK_MULTIPLIER
         },
     },
     'process_bulk_notifications': {
@@ -254,7 +254,7 @@ app.conf.beat_schedule = {
         'schedule': 60 * TASK_MULTIPLIER,
         'options': {
             'queue': 'notif-manager',
-            'expire': 60 * TASK_MULTIPLIER
+            'expires': 60 * TASK_MULTIPLIER
         },
     },
     'send_sms_notifications': {
@@ -262,7 +262,7 @@ app.conf.beat_schedule = {
         'schedule': 10 * TASK_MULTIPLIER,
         'options': {
             'queue': 'notif-manager',
-            'expire': 10 * TASK_MULTIPLIER
+            'expires': 10 * TASK_MULTIPLIER
         },
     },
     'send_email_notifications': {
@@ -270,7 +270,7 @@ app.conf.beat_schedule = {
         'schedule': 10 * TASK_MULTIPLIER,
         'options': {
             'queue': 'notif-manager',
-            'expire': 10 * TASK_MULTIPLIER
+            'expires': 10 * TASK_MULTIPLIER
         },
     },
 
@@ -279,7 +279,7 @@ app.conf.beat_schedule = {
         'schedule': 60,
         'options': {
             'queue': 'celery',
-            'expire': 60
+            'expires': 60
         },
     },
 
@@ -288,7 +288,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=20, minute=30),
         'options': {
             'queue': 'celery',
-            'expire': 3600
+            'expires': 3600
         },
     },
 }

@@ -88,7 +88,14 @@ class OrderViewSet(mixins.CreateModelMixin,
         if self.request.query_params.get('only_id') == '1' or self.request.method != 'GET':
             return context
         else:
-            context['trades'] = Trade.get_account_orders_filled_price(account)
+            order_filter = {}
+            client_order_id = self.request.query_params.get('client_order_id')
+            order_id = self.request.query_params.get('id')
+            if client_order_id:
+                order_filter = {'client_order_id': client_order_id}
+            elif order_id:
+                order_filter = {'id': order_id}
+            context['trades'] = Trade.get_account_orders_filled_price(account, order_filter)
             return context
 
 
@@ -99,9 +106,6 @@ class OpenOrderListAPIView(APIView):
     def get(self, request, *args, **kwargs):
         account = self.request.user.get_account()
 
-        context = {
-            'trades': Trade.get_account_orders_filled_price(account),
-        }
         filters = {}
         symbol_filter = self.request.query_params.get('symbol')
         side_filter = self.request.query_params.get('side')
@@ -121,6 +125,14 @@ class OpenOrderListAPIView(APIView):
         open_stop_losses = StopLoss.open_objects.filter(
             wallet__account=account, **filters
         ).select_related('symbol', 'wallet')
+
+        order_filter = {
+            'id__in': list(open_orders.values_list('id', flat=True)) + list(
+                open_stop_losses.exclude(order__isnull=True).values_list('order', flat=True))
+        }
+        context = {
+            'trades': Trade.get_account_orders_filled_price(account, order_filter=order_filter),
+        }
 
         serialized_orders = OrderStopLossSerializer(open_orders, many=True, context=context)
         serialized_stop_losses = OrderStopLossSerializer(open_stop_losses, many=True, context=context)
