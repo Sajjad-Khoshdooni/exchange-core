@@ -33,7 +33,7 @@ class CategorySpread(models.Model):
 
     spread = get_amount_field(
         default=DEFAULT_SPREAD,
-        validators=(MinValueValidator(-5), MaxValueValidator(5))
+        validators=(MinValueValidator(-10), MaxValueValidator(10))
     )
 
     def __str__(self):

@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import FirebaseToken, ExternalNotification, Attribution, AppStatus, Auth2Fa, VerificationCode, \
+from accounts.models import FirebaseToken, Attribution, AppStatus, Auth2Fa, VerificationCode, \
     UserFeedback, BulkNotification, EmailNotification
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
@@ -130,19 +130,6 @@ class UserFeatureInLine(admin.TabularInline):
     extra = 1
 
 
-class ExternalNotificationInLine(admin.TabularInline):
-    model = ExternalNotification
-    extra = 0
-    fields = ('created', 'scope', )
-    readonly_fields = ('created', 'scope', )
-    can_delete = False
-    max_num = 10
-    ordering = ('-created', )
-
-    def has_add_permission(self, request, obj):
-        return False
-
-
 class NotificationInLine(admin.TabularInline):
     model = Notification
     extra = 0
@@ -230,7 +217,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                 'get_open_order_address', 'get_deposit_address', 'get_bank_card_link',
                 'get_bank_account_link', 'get_finotech_request_link', 'get_staking_link',
                 'get_user_with_same_national_code', 'get_referred_user', 'get_login_activity_link',
-                'get_notifications_link', 'get_external_notifications_link', 'get_prizes_link',
+                'get_notifications_link', 'get_prizes_link',
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
@@ -267,7 +254,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
-        'get_external_notifications_link', 'get_notifications_link', 'get_staking_link', 'get_prizes_link'
+        'get_notifications_link', 'get_staking_link', 'get_prizes_link'
     )
     preserve_filters = ('archived', )
 
@@ -605,11 +592,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         link = url_to_admin_list(Notification) + '?recipient_id={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
 
-    @admin.display(description='اعلانات بیرون پنل')
-    def get_external_notifications_link(self, user: User):
-        link = url_to_admin_list(Notification) + '?user_id={}'.format(user.id)
-        return mark_safe("<a href='%s'>دیدن</a>" % link)
-
     @admin.display(description='جوایز')
     def get_prizes_link(self, user: User):
         link = url_to_admin_list(Prize) + '?user={}'.format(user.id)
@@ -742,11 +724,6 @@ class FirebaseTokenAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     readonly_fields = ('created', 'user')
     list_filter = ('native_app', )
     search_fields = ('user__phone', 'token')
-
-
-@admin.register(ExternalNotification)
-class ExternalNotificationAdmin(admin.ModelAdmin):
-    list_display = ['created', 'user', 'phone', 'scope']
 
 
 @admin.register(Attribution)

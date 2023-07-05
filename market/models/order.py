@@ -122,7 +122,7 @@ class Order(models.Model):
     )
 
     def __str__(self):
-        return f'({self.id}) {self.symbol}-{self.side} [p:{self.price:.2f}] (a:{self.unfilled_amount:.5f}/{self.amount:.5f})'
+        return f'({self.id}) {self.symbol}-{self.side} [p:{self.price:.2f}] (u:{self.unfilled_amount:.5f}/{self.amount:.5f})'
 
     class Meta:
         indexes = [
@@ -417,11 +417,16 @@ class Order(models.Model):
                     hedge_key = f'tr-{taker_trade.id}' \
                         if settings.ZERO_USDT_HEDGE and symbol.name == 'USDTIRT' else \
                         f'mm-{taker_trade.id}'
+
+                    ignore_trade_value = taker_trade.trade_source == Trade.SYSTEM_TAKER and \
+                                         taker_trade.account_id == settings.OTC_ACCOUNT_ID
+
                     trade_revenues.append(TradeRevenue.new(
                         user_trade=taker_trade if maker_trade.trade_source == Trade.SYSTEM_MAKER else maker_trade,
                         group_id=taker_trade.group_id,
                         source=TradeRevenue.MAKER if maker_trade.trade_source == Trade.SYSTEM_TAKER else TradeRevenue.TAKER,
-                        hedge_key=hedge_key
+                        hedge_key=hedge_key,
+                        ignore_trade_value=ignore_trade_value
                     ))
                 elif maker_trade.trade_source == Trade.MARKET:
                     for t in (maker_trade, taker_trade):
