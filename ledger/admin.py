@@ -301,7 +301,8 @@ class WalletUserFilter(SimpleListFilter):
 
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt')
+    list_display = ('created', 'account', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt',
+                    'credit')
     list_filter = [
         ('asset', RelatedDropdownFilter),
         WalletUserFilter
