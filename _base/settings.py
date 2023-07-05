@@ -64,7 +64,6 @@ INSTALLED_APPS = [
     'jalali_date',
     'stake',
     'gamify',
-    'experiment',
 
     'tinymce',
 ]
