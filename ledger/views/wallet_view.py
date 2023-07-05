@@ -340,7 +340,7 @@ class WalletBalanceView(APIView, DelegatedAccountMixin):
         account, variant = self.get_account_variant(self.request)
         wallet = asset.get_wallet(account, market=market, variant=variant)
 
-        free = wallet.get_free()
+        free = wallet.get_free() + wallet.credit
 
         if market == Wallet.SPOT:
             debt_wallet = Wallet.objects.filter(
