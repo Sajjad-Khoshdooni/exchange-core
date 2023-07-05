@@ -3,6 +3,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 from celery import shared_task
+from django.conf import settings
 from django.db.models import Sum, F
 
 from accounting.models import TradeRevenue
@@ -17,6 +18,9 @@ logger = logging.getLogger(__name__)
 
 @shared_task()
 def fill_revenue_filled_prices():
+    if settings.DEBUG_OR_TESTING_OR_STAGING:
+        return
+
     trade_revenues = TradeRevenue.objects.filter(
         coin_filled_price__isnull=True
     ).exclude(source=TradeRevenue.MANUAL).order_by('id').prefetch_related('symbol__asset', 'symbol__base_asset')
