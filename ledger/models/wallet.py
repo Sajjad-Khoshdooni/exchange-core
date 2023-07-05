@@ -34,9 +34,7 @@ class Wallet(models.Model):
     locked = get_amount_field(default=Decimal(0))
 
     variant = models.UUIDField(editable=False, null=True, blank=True)
-
     expiration = models.DateTimeField(null=True, blank=True)
-
     credit = get_amount_field(default=0)
 
     def __str__(self):
