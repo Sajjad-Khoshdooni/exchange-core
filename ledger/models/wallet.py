@@ -76,7 +76,7 @@ class Wallet(models.Model):
         if not check_system_wallets and not self.check_balance:
             can = True
         else:
-            can = self.get_free() >= amount
+            can = self.get_free() - amount >= self.credit
 
         if raise_exception and not can:
             raise InsufficientBalance()
