@@ -41,6 +41,8 @@ class StakeRequest(models.Model):
     cancel_pending_at = models.DateTimeField(null=True, blank=True)
     end_at = models.DateTimeField(null=True, blank=True)
 
+    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
+
     def __str__(self):
         return str(self.stake_option) + ' ' + str(self.account_id)
 

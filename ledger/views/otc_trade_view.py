@@ -8,7 +8,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.models import Account
+from accounts.models import Account, LoginActivity
 from accounts.permissions import can_trade
 from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease, HedgeError, LargeAmountTrade
 from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
@@ -55,12 +55,15 @@ class OTCInfoView(APIView):
             else:
                 to_amount = Decimal(1)
 
+        login_activity = LoginActivity.from_request(request=request)
+
         otc = OTCRequest.get_otc_request(
             account=Account.get_for(self.request.user),
             from_asset=from_asset,
             to_asset=to_asset,
             from_amount=from_amount,
             to_amount=to_amount,
+            login_activity=login_activity
         )
 
         return Response({
@@ -132,6 +135,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         from_amount = validated_data.get('from_amount')
 
         try:
+            login_activity = LoginActivity.from_request(request=request)
             return OTCRequest.new_trade(
                 account=account,
                 from_asset=from_asset,
@@ -139,6 +143,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
                 from_amount=from_amount,
                 to_amount=to_amount,
                 market=Wallet.SPOT,
+                login_activity=login_activity
             )
         except InvalidAmount as e:
             raise ValidationError(str(e))

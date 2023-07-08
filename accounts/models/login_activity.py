@@ -1,6 +1,9 @@
+from typing import Union
+
 from django.contrib.sessions.models import Session
 from django.db import models, transaction
 from django.utils import timezone
+from rest_framework_simplejwt.tokens import AccessToken
 
 
 class LoginActivity(models.Model):
@@ -48,6 +51,22 @@ class LoginActivity(models.Model):
 
         self.logout_at = timezone.now()
         self.save(update_fields=['logout_at', 'session', 'refresh_token'])
+
+    @classmethod
+    def from_request(cls,  request) -> Union['LoginActivity', None]:
+        session = Session.objects.filter(session_key=request.session.session_key).first()
+
+        if session:
+            return cls.objects.filter(session=session).first()
+
+        try:
+            access_token = request.META.get('HTTP_AUTHORIZATION', " ").split(' ')[1]
+            token = AccessToken(access_token)
+            return LoginActivity.objects.filter(refresh_token_id=token.payload['refresh_id']).first()
+        except Exception:
+            pass
+
+        return None
 
     class Meta:
         verbose_name_plural = verbose_name = "تاریخچه ورود به حساب"

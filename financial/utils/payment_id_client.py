@@ -28,7 +28,7 @@ class BaseClient:
     def create_payment_id(self, user: User) -> PaymentId:
         raise NotImplementedError
 
-    def create_payment_request(self, external_ref: str) -> PaymentIdRequest:
+    def create_payment_request(self, external_ref: str, login_activity=None) -> PaymentIdRequest:
         raise NotImplementedError
 
     def verify_payment_request(self, payment_request: PaymentIdRequest):
@@ -203,7 +203,7 @@ class JibitClient(BaseClient):
 
         return payment_request
 
-    def create_payment_request(self, external_ref: str) -> PaymentIdRequest:
+    def create_payment_request(self, external_ref: str, login_activity=None) -> PaymentIdRequest:
         resp = self._collect_api(f'/v1/paymentIds/{external_ref}')
         return self._create_and_verify_payment_data(resp.data)
 

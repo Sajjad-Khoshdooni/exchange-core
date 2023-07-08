@@ -7,7 +7,7 @@ from rest_framework.generics import get_object_or_404, CreateAPIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.authentication import CustomTokenAuthentication
-from accounts.models import VerificationCode
+from accounts.models import VerificationCode, LoginActivity
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
 from accounts.verifiers.legal import is_48h_rule_passed
@@ -147,6 +147,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
+        login_activity = LoginActivity.from_request(request=self.context['request'])
         try:
             transfer = Transfer.new_withdraw(
                 wallet=validated_data['wallet'],
@@ -154,6 +155,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
                 amount=validated_data['amount'],
                 address=validated_data['out_address'],
                 memo=validated_data['memo'],
+                login_activity=login_activity
             )
 
             transfer.address_book = validated_data['address_book']

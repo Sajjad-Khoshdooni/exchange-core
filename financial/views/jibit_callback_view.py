@@ -6,6 +6,7 @@ from django.views.generic import TemplateView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.models import LoginActivity
 from financial.models import PaymentRequest, Payment, Gateway
 from financial.utils.payment_id_client import get_payment_id_client
 from ledger.utils.fields import CANCELED, PENDING
@@ -59,6 +60,8 @@ class JibitPaymentIdCallbackView(APIView):
         gateway = Gateway.get_active_pay_id_deposit()
         client = get_payment_id_client(gateway)
 
-        client.create_payment_request(external_ref)
+        login_activity = LoginActivity.from_request(request)
+
+        client.create_payment_request(external_ref, login_activity=login_activity)
 
         return Response(201)

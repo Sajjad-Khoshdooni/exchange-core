@@ -5,6 +5,7 @@ from rest_framework.generics import CreateAPIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.authentication import CustomTokenAuthentication
+from accounts.models import LoginActivity
 from financial.models import BankCard
 from financial.views.payment_view import PaymentRequestSerializer
 from ledger.models.asset import CoinField, Asset
@@ -44,6 +45,7 @@ class FastBuyTokenSerializer(serializers.ModelSerializer):
             base_coin=Asset.USDT,
             side=SELL
         ) or 0
+        validated_data['login_activity'] = LoginActivity.from_request(request=request)
 
         return super().create(validated_data)
 
