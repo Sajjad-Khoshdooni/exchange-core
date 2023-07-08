@@ -609,7 +609,7 @@ class FastBuyTokenAdmin(admin.ModelAdmin):
 
 class ManualTransactionForm(forms.ModelForm):
     user = forms.IntegerField(required=True)
-    asset = forms.ChoiceField(required=True, choices=Asset.objects.filter(enable=True).values_list('id', 'symbol'))
+    asset = forms.ModelChoiceField(required=True, queryset=Asset.objects.filter(enable=True))
     market = forms.ChoiceField(choices=Wallet.MARKET_CHOICES, initial=Wallet.SPOT)
     wallet = forms.IntegerField(required=False, disabled=True)
 
