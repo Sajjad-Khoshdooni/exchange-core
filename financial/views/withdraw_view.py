@@ -12,7 +12,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from accounts.models import VerificationCode
+from accounts.models import VerificationCode, LoginActivity
 from accounts.permissions import IsBasicVerified
 from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
 from accounts.verifiers.legal import is_48h_rule_passed
@@ -104,6 +104,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         gateway = Gateway.get_active_withdraw()
 
+        login_activity = LoginActivity.from_request(request=request)
+
         try:
             with WalletPipeline() as pipeline:  # type: WalletPipeline
                 withdraw_request = FiatWithdrawRequest.objects.create(
@@ -112,6 +114,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
                     fee_amount=fee_amount,
                     bank_account=bank_account,
                     gateway=gateway,
+                    login_activity=login_activity
                 )
 
                 pipeline.new_lock(

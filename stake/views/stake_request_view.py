@@ -5,6 +5,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
+from accounts.models import LoginActivity
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet, Trx
@@ -69,11 +70,14 @@ class StakeRequestSerializer(serializers.ModelSerializer):
         spot_wallet = asset.get_wallet(account)
         stake_wallet = asset.get_wallet(account=account, market=Wallet.STAKE)
 
+        login_activity = LoginActivity.from_request(self.context['request'])
+
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             stake_object = StakeRequest.objects.create(
                 stake_option=stake_option,
                 amount=amount,
-                account=user.get_account()
+                account=user.get_account(),
+                login_activity=login_activity
             )
             pipeline.new_trx(
                 group_id=stake_object.group_id,

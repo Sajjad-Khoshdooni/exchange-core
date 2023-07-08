@@ -35,7 +35,7 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
               price: Decimal = None, fill_type: str = Order.LIMIT, raise_exception: bool = True,
               market: str = Wallet.SPOT, order_type: str = Order.ORDINARY,
               parent_lock_group_id: Union[UUID, None] = None, stop_loss_id: Union[int, None] = None,
-              time_in_force: str = Order.GTC, pass_min_notional: bool = False) -> Union[Order, None]:
+              time_in_force: str = Order.GTC, pass_min_notional: bool = False, login_activity=None) -> Union[Order, None]:
 
     assert price or fill_type == Order.MARKET
 
@@ -95,6 +95,7 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
         fill_type=fill_type,
         type=order_type,
         time_in_force=time_in_force,
+        login_activity=login_activity,
         **additional_params
     )
 

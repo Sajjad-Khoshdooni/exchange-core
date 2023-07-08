@@ -80,6 +80,7 @@ class Transfer(models.Model):
     risks = models.JSONField(null=True, blank=True)
 
     address_book = models.ForeignKey('ledger.AddressBook', on_delete=models.PROTECT, null=True, blank=True)
+    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
 
     def in_freeze_time(self):
         return timezone.now() <= self.created + timedelta(seconds=self.FREEZE_SECONDS)
@@ -136,7 +137,7 @@ class Transfer(models.Model):
             check_prize_achievements(receiver.account, Task.DEPOSIT)
 
     @classmethod
-    def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str) \
+    def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str, login_activity=None) \
             -> Union['Transfer', None]:
 
         if not DepositAddress.objects.filter(address=address).exists():
@@ -190,6 +191,7 @@ class Transfer(models.Model):
                 source=Transfer.INTERNAL,
                 usdt_value=amount * price_usdt,
                 irt_value=amount * price_irt,
+                login_activity=login_activity
             )
 
             receiver_transfer = Transfer.objects.create(
@@ -216,12 +218,18 @@ class Transfer(models.Model):
         return sender_transfer
 
     @classmethod
-    def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str, memo: str = ''):
+    def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str, memo: str = '', login_activity=None):
         assert wallet.asset.symbol != Asset.IRT
         assert wallet.account.is_ordinary_user()
         wallet.has_balance(amount, raise_exception=True, check_system_wallets=True)
 
-        fast_forward = cls.check_fast_forward(sender_wallet=wallet, network=network, amount=amount, address=address)
+        fast_forward = cls.check_fast_forward(
+            sender_wallet=wallet,
+            network=network,
+            amount=amount,
+            address=address,
+            login_activity=login_activity
+        )
 
         if fast_forward:
             return fast_forward
@@ -257,6 +265,7 @@ class Transfer(models.Model):
                 memo=memo,
                 usdt_value=amount * price_usdt,
                 irt_value=amount * price_irt,
+                login_activity=login_activity
             )
 
             pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)

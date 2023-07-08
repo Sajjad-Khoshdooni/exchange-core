@@ -41,6 +41,7 @@ class TradeRevenue(models.Model):
     hedge_key = models.CharField(max_length=16, db_index=True, blank=True)
 
     base_usdt_price = get_amount_field(decimal_places=20)
+    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
 
     @classmethod
     def new(cls, user_trade: BaseTrade, group_id, source: str, hedge_key: str = None, ignore_trade_value=False):
@@ -72,6 +73,8 @@ class TradeRevenue(models.Model):
             coin_price=coin_price,
 
             base_usdt_price=user_trade.base_usdt_price,
+
+            login_activity=login_activity
         )
 
         return revenue

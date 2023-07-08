@@ -53,6 +53,8 @@ class StopLoss(models.Model):
 
     group_id = models.UUIDField(default=uuid4)
 
+    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
+
     @property
     def unfilled_amount(self):
         amount = self.amount - self.filled_amount

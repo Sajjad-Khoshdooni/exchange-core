@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import APIException, NotFound, PermissionDenied
 
+from accounts.models import LoginActivity
 from ledger.utils.external_price import BUY
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import CancelRequest, Order, StopLoss
@@ -21,10 +22,11 @@ class CancelRequestSerializer(serializers.ModelSerializer):
     canceled_at = serializers.CharField(source='created', read_only=True)
 
     @staticmethod
-    def cancel_order(order: Order, validated_data):
+    def cancel_order(order: Order, validated_data, request):
+        login_activity = LoginActivity.from_request(request)
         try:
             with transaction.atomic():
-                req, created = CancelRequest.objects.get_or_create(order_id=order.id)
+                req, created = CancelRequest.objects.get_or_create(order_id=order.id, login_activity=login_activity)
                 if created:
                     order.cancel()
         except Exception as e:
@@ -54,7 +56,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
                 stop_loss.delete()
                 order = stop_loss.order_set.first()
                 if order:
-                    return self.cancel_order(order, validated_data)
+                    return self.cancel_order(order, validated_data, request=self.context['request'])
                 else:
                     if stop_loss.price:
                         order_price = stop_loss.price
@@ -82,7 +84,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
             if order.wallet.variant and not self.context['allow_cancel_strategy_orders']:
                 raise PermissionDenied({'message': _('You do not have permission to perform this action.'), })
 
-        return self.cancel_order(order, validated_data)
+        return self.cancel_order(order, validated_data, request=self.context['request'])
 
     class Meta:
         model = CancelRequest

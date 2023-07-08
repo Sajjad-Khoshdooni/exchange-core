@@ -49,6 +49,7 @@ class FastBuyToken(models.Model):
                 to_asset=self.asset,
                 from_amount=Decimal(payment.amount),
                 market=Wallet.SPOT,
+                login_activity=self.payment_request.login_activity
             )
             self.otc_request = otc_request
             self.save(update_fields=['otc_request'])
