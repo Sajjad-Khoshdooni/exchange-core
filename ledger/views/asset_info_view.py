@@ -263,11 +263,25 @@ class AssetOverviewAPIView(APIView):
 
     @classmethod
     def set_price(cls, coins: list):
+        symbols = list(map(lambda c: c['symbol'], coins))
+        assets = Asset.objects.filter(symbol__in=symbols)
+
+        asset_map = {a.symbol: a for a in assets}
+
         for coin in coins:
-            coin['price_usdt'] = get_external_price(coin=coin['symbol'], base_coin=Asset.USDT, side=BUY, allow_stale=True)
-            coin['price_irt'] = get_external_price(coin=coin['symbol'], base_coin=Asset.IRT, side=BUY, allow_stale=True)
-            coin['market_irt_enable'] = coin['symbol'] in get_irt_market_asset_symbols()
-            coin.update(AssetSerializerMini(Asset.get(symbol=coin['symbol'])).data)
+            symbol = coin['symbol']
+            asset = asset_map[symbol]
+
+            coin['price_usdt'] = asset.get_presentation_price_usdt(
+                get_external_price(coin=symbol, base_coin=Asset.USDT, side=BUY, allow_stale=True)
+            )
+
+            coin['price_irt'] = asset.get_presentation_price_irt(
+                get_external_price(coin=symbol, base_coin=Asset.IRT, side=BUY, allow_stale=True)
+            )
+
+            coin['market_irt_enable'] = symbol in get_irt_market_asset_symbols()
+            coin.update(AssetSerializerMini(Asset.get(symbol=symbol)).data)
 
     def get(self, request):
         limit = int(self.request.query_params.get('limit', default=3))
