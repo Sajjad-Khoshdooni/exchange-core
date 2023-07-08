@@ -7,7 +7,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('accounting', '0026_remove_traderevenue_base_spread_and_more'),
-        ('accounting', '0026_traderevenue_login_activity'),
     ]
 
     operations = [
