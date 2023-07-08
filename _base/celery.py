@@ -188,22 +188,6 @@ app.conf.beat_schedule = {
             'expires': 12
         }
     },
-    # 'create_accounting_report': {
-    #     'task': 'accounting.tasks.weekly_fiat_transfer.create_weekly_accounting_report',
-    #     'schedule': crontab(hour=19, minute=30, day_of_week=6),
-    #     'options': {
-    #         'queue': 'celery',
-    #         'expires': 36000
-    #     },
-    # },
-    'trigger_variant_action': {
-        'task': 'experiment.tasks.action_trigger.trigger_variant_action',
-        'schedule': 300 * TASK_MULTIPLIER,
-        'options': {
-            'queue': 'celery',
-            'expires': 300 * TASK_MULTIPLIER
-        },
-    },
 
     'send_notifications_push': {
         'task': 'accounts.tasks.notification.send_notifications_push',

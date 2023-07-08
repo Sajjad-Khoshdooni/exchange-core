@@ -1,1 +1,0 @@
-from .action_trigger import trigger_variant_action

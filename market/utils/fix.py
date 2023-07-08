@@ -22,7 +22,6 @@ def create_symbols_for_asset(asset: Asset):
         coin=asset.symbol,
         base_coin=Asset.IRT,
         side=BUY,
-        allow_stale=True,
     )
 
     step_size = math.ceil(math.log10(price_irt / OTC_MIN_HARD_FIAT_VALUE))
@@ -52,7 +51,6 @@ def check_pair_symbol(p, up: bool = False):
         coin=asset.symbol,
         base_coin=Asset.IRT,
         side=BUY,
-        allow_stale=True,
     )
     if not price_irt:
         print('ignore %s due to null price' % p)

@@ -34,9 +34,7 @@ class Wallet(models.Model):
     locked = get_amount_field(default=Decimal(0))
 
     variant = models.UUIDField(editable=False, null=True, blank=True)
-
     expiration = models.DateTimeField(null=True, blank=True)
-
     credit = get_amount_field(default=0)
 
     def __str__(self):
@@ -58,7 +56,7 @@ class Wallet(models.Model):
             CheckConstraint(
                 name='valid_balance_constraint',
                 check=Q(check_balance=False) |
-                      (~Q(market__in=('loan', 'debt')) & Q(balance__gte=-F('credit')) & Q(balance__gte=F('locked'))) |
+                      (~Q(market__in=('loan', 'debt')) & Q(balance__gte=F('locked') - F('credit'))) |
                       (Q(market__in=('loan', 'debt')) & Q(balance__lte=0) & Q(locked=0)),
             ),
             CheckConstraint(
