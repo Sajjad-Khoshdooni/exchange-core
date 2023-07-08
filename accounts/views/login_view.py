@@ -12,7 +12,10 @@ from rest_framework.viewsets import ModelViewSet
 from accounts.models.login_activity import LoginActivity
 from accounts.utils.validation import set_login_activity
 from accounts.views.user_view import UserSerializer
-
+from accounts.models.email_notification import EmailNotification
+from accounts.models.user import User
+from _base import settings
+import datetime
 logger = logging.getLogger(__name__)
 
 
@@ -42,9 +45,28 @@ class LoginView(APIView):
         if user:
             login(request, user)
             set_login_activity(request, user)
+            login_status = LoginActivity.objects.filter(user=user).order_by('-created').first()
+            if LoginActivity.objects.filter(user=user, device=login_status.device,os=login_status.os,ip=login_status.ip).count() == 1:
+                content = \
+                f''' شما از دستگاه جدیدی به حساب کاربری خود وارد شده اید.
+                تاریخ:
+                 {login_status.created}
+                مکان:
+                {login_status.country} / {login_status.city}
+                آی پی:
+                {login_status.ip}
+                <a href="https://raastin.com/account/security">تغییر رمز عبور</a>
+                {settings.BRAND}'''
+                EmailNotification.objects.create(recipient=user,title="ورود موفق",content=content)
             return Response(UserSerializer(user).data)
-
         else:
+            user = User.objects.filter(phone=serializer.login).first()
+            if user:
+                content = f''' ورود ناموفق به حساب کاربری
+                زمان:
+                {datetime.datetime.now()}
+                <a href="https://raastin.com/account/security">تغییر رمز عبور</a>
+                {settings.BRAND}'''
             return Response({'msg': 'authentication failed', 'code': -1}, status=status.HTTP_401_UNAUTHORIZED)
 
 
