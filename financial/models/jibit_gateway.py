@@ -33,7 +33,7 @@ class JibitGateway(Gateway):
 
             return self._token
 
-    def create_payment_request(self, bank_card: BankCard, amount: int, source: str, login_activity=None) -> PaymentRequest:
+    def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
         token = self._get_token()
         base_url = config('PAYMENT_PROXY_HOST_URL', default='') or settings.HOST_URL
 
@@ -45,7 +45,6 @@ class JibitGateway(Gateway):
             fee=fee,
             gateway=self,
             source=source,
-            login_activity=login_activity
         )
         resp = requests.post(
             self.BASE_URL + '/v3/purchases',

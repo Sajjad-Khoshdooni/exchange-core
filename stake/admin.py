@@ -57,7 +57,7 @@ class StakeRequestAdmin(admin.ModelAdmin):
                'stake_request_cancel_processing', 'stake_request_cancel_done',)
     readonly_fields = ('get_stake_option_asset', 'account', 'status', 'stake_option', 'get_amount', 'amount',
                        'get_user', 'login_activity')
-    list_filter = ('status', StakeStatusFilter, )
+    list_filter = ('status', StakeStatusFilter)
     search_fields = ('account__user__phone', 'stake_option__asset__symbol')
 
     def get_stake_option_asset(self, stake_request: StakeRequest):

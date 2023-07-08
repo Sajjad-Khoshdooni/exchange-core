@@ -60,8 +60,6 @@ class JibitPaymentIdCallbackView(APIView):
         gateway = Gateway.get_active_pay_id_deposit()
         client = get_payment_id_client(gateway)
 
-        login_activity = LoginActivity.from_request(request)
-
-        client.create_payment_request(external_ref, login_activity=login_activity)
+        client.create_payment_request(external_ref)
 
         return Response(201)

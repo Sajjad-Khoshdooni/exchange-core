@@ -104,8 +104,6 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         gateway = Gateway.get_active_withdraw()
 
-        login_activity = LoginActivity.from_request(request=request)
-
         try:
             with WalletPipeline() as pipeline:  # type: WalletPipeline
                 withdraw_request = FiatWithdrawRequest.objects.create(
@@ -114,7 +112,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
                     fee_amount=fee_amount,
                     bank_account=bank_account,
                     gateway=gateway,
-                    login_activity=login_activity
+                    login_activity=LoginActivity.from_request(request=request)
                 )
 
                 pipeline.new_lock(

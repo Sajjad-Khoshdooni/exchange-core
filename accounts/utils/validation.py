@@ -158,6 +158,6 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
             'ip_data': ip_data,
             'city': ip_data.get('city', ''),
             'country': ip_data.get('country', ''),
-            'native_app': not refresh_token_model is None,
+            'native_app': not refresh_token_model,
         }
     )

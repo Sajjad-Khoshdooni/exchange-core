@@ -122,9 +122,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         account = Account.objects.get(user_id=user.pk)
         token['account_id'] = account.id
 
-        login_activity = LoginActivity.objects.filter(user=account.user, refresh_token__isnull=False).first()
-        refresh_id = login_activity and login_activity.refresh_token and login_activity.refresh_token.id
-        token['refresh_id'] = refresh_id
+        refresh_token_model, _ = RefreshToken.objects.get_or_create(token=token)
+
+        token['refresh_id'] = refresh_token_model.id
 
         return token
 

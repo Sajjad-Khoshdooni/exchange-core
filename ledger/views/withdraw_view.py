@@ -147,7 +147,6 @@ class WithdrawSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        login_activity = LoginActivity.from_request(request=self.context['request'])
         try:
             transfer = Transfer.new_withdraw(
                 wallet=validated_data['wallet'],
@@ -155,11 +154,11 @@ class WithdrawSerializer(serializers.ModelSerializer):
                 amount=validated_data['amount'],
                 address=validated_data['out_address'],
                 memo=validated_data['memo'],
-                login_activity=login_activity
             )
 
+            transfer.login_activity = LoginActivity.from_request(request=self.context['request'])
             transfer.address_book = validated_data['address_book']
-            transfer.save(update_fields=['address_book'])
+            transfer.save(update_fields=['address_book', 'login_activity'])
 
             return transfer
         except InsufficientBalance:

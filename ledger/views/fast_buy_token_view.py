@@ -45,7 +45,6 @@ class FastBuyTokenSerializer(serializers.ModelSerializer):
             base_coin=Asset.USDT,
             side=SELL
         ) or 0
-        validated_data['login_activity'] = LoginActivity.from_request(request=request)
 
         return super().create(validated_data)
 

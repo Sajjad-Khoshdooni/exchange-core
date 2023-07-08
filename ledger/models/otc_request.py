@@ -37,7 +37,7 @@ class OTCRequest(BaseTrade):
 
     @classmethod
     def new_trade(cls, account: Account, market: str, from_asset: Asset, to_asset: Asset, from_amount: Decimal = None,
-                  to_amount: Decimal = None, allow_dust: bool = False, check_enough_balance: bool = True, login_activity=None) -> 'OTCRequest':
+                  to_amount: Decimal = None, allow_dust: bool = False, check_enough_balance: bool = True) -> 'OTCRequest':
 
         assert from_amount or to_amount
         assert (from_amount or to_amount) > 0
@@ -49,7 +49,6 @@ class OTCRequest(BaseTrade):
             from_amount=from_amount,
             to_amount=to_amount,
             market=market,
-            login_activity=login_activity
         )
 
         if not allow_dust:
@@ -75,7 +74,7 @@ class OTCRequest(BaseTrade):
 
     @classmethod
     def get_otc_request(cls, account: Account, from_asset: Asset, to_asset: Asset, from_amount: Decimal = None,
-                        to_amount: Decimal = None, market: str = Wallet.SPOT, login_activity=None) -> 'OTCRequest':
+                        to_amount: Decimal = None, market: str = Wallet.SPOT) -> 'OTCRequest':
 
         assert (from_amount or to_amount) and (not from_amount or not to_amount), 'exactly one amount should present'
 
@@ -94,7 +93,6 @@ class OTCRequest(BaseTrade):
             to_amount=to_amount,
             symbol=symbol,
             side=pair.side,
-            login_activity=login_activity
         )
 
         other_side = get_other_side(pair.side)
