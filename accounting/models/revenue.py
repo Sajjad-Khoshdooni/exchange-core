@@ -34,9 +34,6 @@ class TradeRevenue(models.Model):
     value_is_fake = models.BooleanField(default=False)
 
     coin_price = get_amount_field()
-    coin_spread = get_amount_field()
-
-    base_spread = get_amount_field()
 
     coin_filled_price = get_amount_field(null=True)
     filled_amount = get_amount_field(null=True)
@@ -50,31 +47,7 @@ class TradeRevenue(models.Model):
         trade_volume = user_trade.amount * user_trade.price
         trade_value = trade_volume * user_trade.base_usdt_price
 
-        other_side = get_other_side(user_trade.side)
-        symbol = user_trade.symbol
-
-        coin_raw_price = get_external_price(
-            coin=symbol.asset.symbol,
-            base_coin=Asset.USDT,
-            side=other_side,
-            allow_stale=True,
-        )
-        coin_spread = get_asset_spread(
-            coin=symbol.asset.symbol,
-            side=other_side,
-            value=trade_value
-        )
-
-        coin_price = coin_raw_price * spread_to_multiplier(coin_spread, other_side)
-
-        if symbol.base_asset.symbol == Asset.IRT:
-            base_spread = get_market_spread(
-                base_coin=Asset.IRT,
-                side=other_side,
-                value=trade_value,
-            )
-        else:
-            base_spread = 0
+        coin_price = user_trade.price * user_trade.base_usdt_price
 
         value_is_fake = ignore_trade_value or bool(user_trade.account_id in (
             settings.OTC_ACCOUNT_ID, settings.MARKET_MAKER_ACCOUNT_ID, settings.TRADER_ACCOUNT_ID
@@ -96,10 +69,8 @@ class TradeRevenue(models.Model):
             source=source,
             hedge_key=hedge_key,
 
-            coin_spread=coin_spread,
             coin_price=coin_price,
 
-            base_spread=base_spread,
             base_usdt_price=user_trade.base_usdt_price,
         )
 
