@@ -135,7 +135,6 @@ class OTCRequestSerializer(serializers.ModelSerializer):
         from_amount = validated_data.get('from_amount')
 
         try:
-            login_activity = LoginActivity.from_request(request=request)
             return OTCRequest.new_trade(
                 account=account,
                 from_asset=from_asset,
@@ -143,7 +142,7 @@ class OTCRequestSerializer(serializers.ModelSerializer):
                 from_amount=from_amount,
                 to_amount=to_amount,
                 market=Wallet.SPOT,
-                login_activity=login_activity
+                login_activity=LoginActivity.from_request(request=request)
             )
         except InvalidAmount as e:
             raise ValidationError(str(e))

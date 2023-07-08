@@ -137,7 +137,7 @@ class Transfer(models.Model):
             check_prize_achievements(receiver.account, Task.DEPOSIT)
 
     @classmethod
-    def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str, login_activity=None) \
+    def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str) \
             -> Union['Transfer', None]:
 
         if not DepositAddress.objects.filter(address=address).exists():
@@ -191,7 +191,6 @@ class Transfer(models.Model):
                 source=Transfer.INTERNAL,
                 usdt_value=amount * price_usdt,
                 irt_value=amount * price_irt,
-                login_activity=login_activity
             )
 
             receiver_transfer = Transfer.objects.create(
@@ -218,7 +217,7 @@ class Transfer(models.Model):
         return sender_transfer
 
     @classmethod
-    def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str, memo: str = '', login_activity=None):
+    def new_withdraw(cls, wallet: Wallet, network: Network, amount: Decimal, address: str, memo: str = ''):
         assert wallet.asset.symbol != Asset.IRT
         assert wallet.account.is_ordinary_user()
         wallet.has_balance(amount, raise_exception=True, check_system_wallets=True)
@@ -227,8 +226,7 @@ class Transfer(models.Model):
             sender_wallet=wallet,
             network=network,
             amount=amount,
-            address=address,
-            login_activity=login_activity
+            address=address
         )
 
         if fast_forward:
@@ -265,7 +263,6 @@ class Transfer(models.Model):
                 memo=memo,
                 usdt_value=amount * price_usdt,
                 irt_value=amount * price_irt,
-                login_activity=login_activity
             )
 
             pipeline.new_lock(key=transfer.group_id, wallet=wallet, amount=amount, reason=WalletPipeline.WITHDRAW)
