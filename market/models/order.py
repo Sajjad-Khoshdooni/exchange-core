@@ -337,12 +337,7 @@ class Order(models.Model):
                 (False, False): Trade.MARKET,
             }
 
-            if settings.ZERO_USDT_HEDGE and symbol.name == 'USDTIRT':
-                maker_is_trader = maker_order.account.id == settings.TRADER_ACCOUNT_ID
-                taker_is_trader = self.account.id == settings.TRADER_ACCOUNT_ID
-                trade_source = source_map[maker_is_trader, taker_is_trader]
-            else:
-                trade_source = source_map[maker_is_system, taker_is_system]
+            trade_source = source_map[maker_is_system, taker_is_system]
 
             trades_pair = TradesPair.init_pair(
                 taker_order=self,
@@ -419,20 +414,15 @@ class Order(models.Model):
             for maker_trade, taker_trade in trade_pairs:
                 hedging_usdt = settings.ZERO_USDT_HEDGE and symbol.name == 'USDTIRT'
                 if maker_trade.trade_source in (Trade.SYSTEM_MAKER, Trade.SYSTEM_TAKER):
-                    if taker_trade.account_id == settings.OTC_ACCOUNT_ID or (
-                        hedging_usdt and taker_trade.account_id == settings.MARKET_MAKER_ACCOUNT_ID
-                    ):
-                        hedge_key = ''
-                    else:
-                        hedge_key = f'tr-{taker_trade.id}' if hedging_usdt else f'mm-{taker_trade.id}'
-
-                    ignore_trade_value = hedging_usdt and \
-                        (taker_trade.account_id in (settings.OTC_ACCOUNT_ID, settings.MARKET_MAKER_ACCOUNT_ID))
+                    hedge_key = Trade.get_hedge_key(maker_trade, taker_trade)
+                    account_ids = (maker_trade.account_id, taker_trade.account_id)
+                    ignore_trade_value = settings.OTC_ACCOUNT_ID in account_ids or (
+                            hedging_usdt and settings.MARKET_MAKER_ACCOUNT_ID in account_ids)
  
                     trade_revenues.append(TradeRevenue.new(
                         user_trade=taker_trade if maker_trade.trade_source == Trade.SYSTEM_MAKER else maker_trade, 
                         group_id=taker_trade.group_id,
-                        source=TradeRevenue.MAKER if maker_trade.trade_source == Trade.SYSTEM_TAKER else TradeRevenue.TAKER,
+                        source=maker_trade.trade_source,
                         hedge_key=hedge_key,
                         ignore_trade_value=ignore_trade_value
                     ))
@@ -443,15 +433,17 @@ class Order(models.Model):
                                 user_trade=t,
                                 group_id=t.group_id,
                                 source=TradeRevenue.USER,
-                                hedge_key=''
+                                hedge_key='',
+                                ignore_trade_value=(t == maker_trade)
                             )
                         )
-                elif taker_trade.account_id == settings.OTC_ACCOUNT_ID and maker_trade.account_id == settings.MARKET_MAKER_ACCOUNT_ID:
+                elif taker_trade.account_id != maker_trade.account_id:
+                    hedge_key = Trade.get_hedge_key(maker_trade, taker_trade)
                     trade_revenues.append(TradeRevenue.new(
-                        user_trade=taker_trade, 
+                        user_trade=taker_trade,
                         group_id=taker_trade.group_id,
-                        source=TradeRevenue.OTC_MARKET,
-                        hedge_key=f'mm-{taker_trade.id}',
+                        source=TradeRevenue.TAKER,
+                        hedge_key=hedge_key,
                         ignore_trade_value=True
                     ))
 
