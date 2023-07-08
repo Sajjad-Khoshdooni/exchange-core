@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class ZibalGateway(Gateway):
     BASE_URL = 'https://gateway.zibal.ir'
 
-    def create_payment_request(self, bank_card: BankCard, amount: int, source: str, login_activity=None) -> PaymentRequest:
+    def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
         resp = requests.post(
             self.BASE_URL + '/v1/request',
             json={
@@ -42,7 +42,6 @@ class ZibalGateway(Gateway):
             gateway=self,
             authority=authority,
             source=source,
-            login_activity=login_activity
         )
 
     @classmethod

@@ -44,7 +44,11 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
         login_activity = LoginActivity.from_request(self.context['request'])
 
         try:
-            return gateway.create_payment_request(bank_card=bank_card, amount=amount, source=source, login_activity=login_activity)
+            payment_request = gateway.create_payment_request(bank_card=bank_card, amount=amount, source=source)
+            payment_request.login_activity = login_activity
+            payment_request.save(update_fields=['login_activity'])
+
+            return payment_request
         except GatewayFailed:
             raise ValidationError('مشکلی در ارتباط با درگاه بانک به وجود آمد.')
 

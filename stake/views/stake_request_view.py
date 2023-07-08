@@ -70,14 +70,12 @@ class StakeRequestSerializer(serializers.ModelSerializer):
         spot_wallet = asset.get_wallet(account)
         stake_wallet = asset.get_wallet(account=account, market=Wallet.STAKE)
 
-        login_activity = LoginActivity.from_request(self.context['request'])
-
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             stake_object = StakeRequest.objects.create(
                 stake_option=stake_option,
                 amount=amount,
                 account=user.get_account(),
-                login_activity=login_activity
+                login_activity=LoginActivity.from_request(self.context['request'])
             )
             pipeline.new_trx(
                 group_id=stake_object.group_id,

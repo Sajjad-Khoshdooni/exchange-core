@@ -101,7 +101,6 @@ class TradeRevenue(models.Model):
 
             base_spread=base_spread,
             base_usdt_price=user_trade.base_usdt_price,
-
         )
 
         return revenue
