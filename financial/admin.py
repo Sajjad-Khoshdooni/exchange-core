@@ -74,7 +74,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
     ordering = ('-created', )
     readonly_fields = (
         'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount', 'get_risks',
-        'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user'
+        'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user', 'login_activity'
     )
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
@@ -182,7 +182,7 @@ class PaymentRequestUserFilter(SimpleListFilter):
 class PaymentRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'gateway', 'bank_card', 'amount', 'authority')
     search_fields = ('bank_card__card_pan', 'amount', 'authority')
-    readonly_fields = ('bank_card', )
+    readonly_fields = ('bank_card', 'login_activity' )
     list_filter = (PaymentRequestUserFilter,)
 
 
