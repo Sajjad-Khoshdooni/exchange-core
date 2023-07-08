@@ -422,7 +422,7 @@ class Order(models.Model):
                     trade_revenues.append(TradeRevenue.new(
                         user_trade=taker_trade if maker_trade.trade_source == Trade.SYSTEM_MAKER else maker_trade, 
                         group_id=taker_trade.group_id,
-                        source=maker_trade.trade_source,
+                        source=TradeRevenue.MAKER if maker_trade.trade_source == Trade.SYSTEM_TAKER else TradeRevenue.TAKER,
                         hedge_key=hedge_key,
                         ignore_trade_value=ignore_trade_value
                     ))
