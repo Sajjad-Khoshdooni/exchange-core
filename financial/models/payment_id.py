@@ -45,22 +45,26 @@ class PaymentIdRequest(models.Model):
 
     deposit_time = models.DateTimeField()
 
+    payment = models.OneToOneField('financial.Payment', null=True, blank=True, on_delete=models.CASCADE)
+
     def __str__(self):
         return '%s ref=%s' % (self.amount, self.bank_ref)
 
     def accept(self):
+        if not self.payment_id:
+            return
+
         with WalletPipeline() as pipeline:
             req = PaymentIdRequest.objects.select_for_update().get(id=self.id)
 
-            if req.status != PENDING:
+            if req.payment or req.status != PENDING:
                 return
 
-            payment = Payment.objects.create(
-                payment_id_request=req,
+            req.payment = Payment.objects.create(
                 status=DONE,
                 ref_id=req.bank_ref,
             )
-            payment.accept(pipeline)
+            req.payment.accept(pipeline)
 
             req.status = DONE
-            req.save(update_fields=['status'])
+            req.save(update_fields=['status', 'payment'])

@@ -161,7 +161,7 @@ def trigger_payment_event(threshold=1000):
     for payment in payment_list:
         event = TransferEvent(
             id=payment.id,
-            user_id=payment.user.id,
+            user_id=payment.user_id,
             amount=payment.amount,
             coin='IRT',
             network='IRT',
@@ -187,7 +187,7 @@ def trigger_trade_event(threshold=1000):
         if trade.account is None or \
                 trade.account.user is None or \
                 trade.account.type == Account.SYSTEM or \
-                trade.account.user.id in [93167, 382]:
+                trade.account.user_id in [93167, 382]:
             continue
 
         event = TradeEvent(

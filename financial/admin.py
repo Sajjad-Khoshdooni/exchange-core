@@ -196,7 +196,7 @@ class PaymentUserFilter(SimpleListFilter):
     def queryset(self, request, queryset):
         user = request.GET.get('user')
         if user is not None:
-            return queryset.filter(Q(payment_request__bank_card__user=user) | Q(payment_id_request__payment_id__user=user))
+            return queryset.filter(user=user)
         else:
             return queryset
 
@@ -206,7 +206,7 @@ class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_amount', 'get_fee', 'status', 'ref_id', 'ref_status', 'get_user',)
     readonly_fields = ('payment_request', )
     list_filter = (PaymentUserFilter, 'status', )
-    search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'payment_request__amount',
+    search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'amount',
                      'payment_request__authority')
 
     @admin.display(description='مقدار')
