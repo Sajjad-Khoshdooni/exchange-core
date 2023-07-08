@@ -618,7 +618,7 @@ class ManualTransactionForm(forms.ModelForm):
         if not account:
             self.add_error('user', _("Please specify valid user id"))
             return
-        asset = Asset.objects.get(id=self.cleaned_data['asset'])
+        asset = self.cleaned_data['asset']
         self.cleaned_data['wallet'] = asset.get_wallet(account, market=self.cleaned_data['market'])
         return super(ManualTransactionForm, self).clean()
 
