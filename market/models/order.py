@@ -306,8 +306,9 @@ class Order(models.Model):
         filled_orders = []
 
         if settings.ZERO_USDT_HEDGE:
+            opposite_side = Order.get_opposite_side(self.side)
             usdt_symbol_id = PairSymbol.objects.get(name='USDTIRT').id
-            tether_irt = Order.get_top_price(usdt_symbol_id, self.side)
+            tether_irt = Order.get_top_price(usdt_symbol_id, opposite_side)
         else:
             tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY)
 
