@@ -1,4 +1,3 @@
-
 import logging
 
 from celery import shared_task
@@ -27,27 +26,28 @@ def verify_user_national_code(user_id: int):
 def alert_user_verify_status(user: User):
     if user.verify_status == User.PENDING:
         return
-
+    title = 'احراز هویت'
     notif_message = ''
 
     if user.level >= User.LEVEL2 or user.verify_status == User.REJECTED:
         if user.verify_status == User.REJECTED:
             if user.reject_reason == User.NATIONAL_CODE_DUPLICATED:
-                title = 'کد ملی تکراری است. لطفا به حساب اصلی‌تان وارد شوید.'
-                notif_message = 'شما قبلا در {} با شماره موبایل دیگری ثبت‌نام کرده‌اید و احراز هویت‌تان انجام شده است. لطفا از آن حساب استفاده کنید.'.format(
+                notif_message = 'شما قبلا در {} با شماره موبایل دیگری ثبت‌نام کرده‌اید و احراز هویت‌تان انجام شده ' \
+                                'است. لطفا از آن حساب استفاده کنید.'.format(
                     config('BRAND'))
             else:
-                title = 'اطلاعات وارد شده نیاز به بازنگری دارد.'
-
+                notif_message = 'اطلاعات وارد شده نیاز به بازنگری دارد.'
             level = Notification.ERROR
             template = 'levelup-rejected'
             levelup = user.level + 1
         else:
-            title = 'احراز هویت سطح {} شما با موفقیت انجام شد.'.format(user.level)
+            if user.level == User.LEVEL2:
+                notif_message = 'احراز هویت شما با موفقیت انجام شد. هم اکنون میتوانید خرید و فروش تمامی رمزارز‌ها را انجام دهید.'
+            else:
+                notif_message = 'احراز هویت سطح {} شما با موفقیت انجام شد.'.format(user.level)
             level = Notification.SUCCESS
             template = 'levelup-accepted'
             levelup = user.level
-
         Notification.send(
             recipient=user,
             title=title,
