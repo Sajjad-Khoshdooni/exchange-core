@@ -40,14 +40,11 @@ class LoginView(APIView):
         serializer.is_valid(raise_exception=True)
 
         user = serializer.save()
-        def spam_check(target_user, title):
-            return (timezone.now() - EmailNotification.objects.filter(recipient=target_user, title=title).order_by('-created').first().created).total_seconds() > 300
         if user:
             login(request, user)
-            set_login_activity(request, user)
-            login_status = LoginActivity.objects.filter(user=user).order_by('-created').first()
+            login_status = set_login_activity(request, user)
             if LoginActivity.objects.filter(user=user, device=login_status.device,os=login_status.os,ip=login_status.ip).count() == 1:
-                body = \
+                content_html = \
                 f'''
                 <p>
      شما از دستگاه جدیدی به حساب کاربری خود وارد شده اید.           
@@ -60,22 +57,49 @@ class LoginView(APIView):
                 <a href="https://raastin.com/account/security">تغییر رمز عبور</a>
                 {settings.BRAND}
                 </p>'''
-                EmailNotification.objects.create(recipient=user, title="ورود موفق", content=body, content_html="")
+
+                content = \
+                f'''
+     شما از دستگاه جدیدی به حساب کاربری خود وارد شده اید.           
+                تاریخ:
+                 {login_status.created}
+                مکان:
+                {login_status.country} / {login_status.city}
+                آی پی:
+                {login_status.ip}
+                تغییر رمز عبور:
+                https://raastin.com/account/security
+                {settings.BRAND}
+                '''
+                EmailNotification.objects.create(recipient=user, title="ورود موفق", content=content, content_html=content_html)
             return Response(UserSerializer(user).data)
         else:
+            title = "ورود ناموفق"
             user = User.objects.filter(phone=serializer.data['login']).first()
-            if user and spam_check(user, "ورود ناموفق"):
-                body = f'''
-                <p>
-                 ورود ناموفق به حساب کاربری
-                زمان:
-                {timezone.now()}
-                <a href="https://raastin.com/account/security">
-                    تغییر رمز عبور
-                </a>
-                {settings.BRAND}
-                </p>'''
-                EmailNotification.objects.create(recipient=user, title="ورود ناموفق", content=body, content_html="")
+            if user:
+                spam = EmailNotification.objects.filter(recipient=user, title=title,created__gte=timezone.now() - timezone.timedelta(minutes=5)).exists()
+                if not spam:
+                    content_html = f'''
+                    <p>
+                     ورود ناموفق به حساب کاربری
+                    زمان:
+                    {timezone.now()}
+                    <a href="https://raastin.com/account/security">
+                        تغییر رمز عبور
+                    </a>
+                    {settings.BRAND}
+                    </p>'''
+
+                    content = f'''
+                     ورود ناموفق به حساب کاربری
+                    زمان:
+                    {timezone.now()}
+                تتغییر رمز عبور:     
+                     https://raastin.com/account/security
+                    {settings.BRAND}
+                    '''
+
+                    EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
             return Response({'msg': 'authentication failed', 'code': -1}, status=status.HTTP_401_UNAUTHORIZED)
 
 
