@@ -1,6 +1,6 @@
 import logging
 from typing import Union
-
+from _base.settings import BRAND
 from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.similarity import name_similarity
@@ -8,7 +8,7 @@ from accounts.utils.telegram import send_support_message
 from accounts.verifiers.finotech import ServerError
 from accounts.verifiers.jibit import JibitRequester
 from financial.models import BankCard, BankAccount
-
+from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
 logger = logging.getLogger(__name__)
 
 
@@ -41,10 +41,14 @@ def basic_verify(user: User):
 def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, None]:
     requester = JibitRequester(user)
     resp = requester.matching(phone_number=phone, national_code=national_code)
-
     if resp.success:
         return resp.data['matched']
     elif resp.data['code'] in ['mobileNumber.not_valid', 'nationalCode.not_valid']:
+        content = f'''
+        کاربر گرامی، شماره موبایل ثبت شده در حساب کاربری شما جهت ارتقا به سطح 3 رد شد.
+        {BRAND}
+        '''
+        send_kavenegar_exclusive_sms(phone=phone, content=content)
         return False
     else:
         logger.warning('JIBIT shahkar not succeeded', extra={
