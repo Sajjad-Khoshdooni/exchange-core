@@ -288,13 +288,13 @@ REST_FRAMEWORK = {
 
 if config('JWT_PRIVATE_KEY', None):
     SIMPLE_JWT = {
-        'ROTATE_REFRESH_TOKENS': True,
+        'ROTATE_REFRESH_TOKENS': False,
         'BLACKLIST_AFTER_ROTATION': False,
         'AUTH_HEADER_TYPES': ('Bearer', 'JWT'),
         'ALGORITHM': 'RS256',
         'SIGNING_KEY': config('JWT_PRIVATE_KEY', default=''),
         'VERIFYING_KEY': config('JWT_PUBLIC_KEY', default=''),
-        'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+        'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     }
 
 AUTH_USER_MODEL = 'accounts.User'
