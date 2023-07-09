@@ -1,6 +1,6 @@
 import logging
 from typing import Union
-from _base.settings import BRAND
+from _base import settings
 from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.similarity import name_similarity
@@ -46,9 +46,15 @@ def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, Non
     elif resp.data['code'] in ['mobileNumber.not_valid', 'nationalCode.not_valid']:
         content = f'''
         کاربر گرامی، شماره موبایل ثبت شده در حساب کاربری شما جهت ارتقا به سطح 3 رد شد.
-        {BRAND}
+        {settings.BRAND}
         '''
         send_kavenegar_exclusive_sms(phone=phone, content=content)
+        logger.info('mobile number and national code did not match', extra={
+            'user': user,
+            'resp': resp.data,
+            'phone': phone,
+            'national_code': national_code
+        })
         return False
     else:
         logger.warning('JIBIT shahkar not succeeded', extra={
