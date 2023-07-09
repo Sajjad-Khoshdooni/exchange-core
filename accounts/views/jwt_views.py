@@ -122,8 +122,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         account = Account.objects.get(user_id=user.pk)
         token['account_id'] = account.id
 
-        refresh_token = RefreshToken.for_user(user)
-        refresh_token_model, _ = RefreshTokenModel.objects.get_or_create(token=refresh_token)
+        refresh_token_model, _ = RefreshTokenModel.objects.get_or_create(token=token['refresh'])
 
         token['refresh_id'] = refresh_token_model.id
 
