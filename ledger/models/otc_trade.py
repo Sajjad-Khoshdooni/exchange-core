@@ -136,9 +136,7 @@ class OTCTrade(models.Model):
                 else:
                     opposite_side = Order.get_opposite_side(self.otc_request.side)
                     usdt_irt = PairSymbol.objects.get(name='USDTIRT')
-                    usdt_hedge_price = Order.get_top_price(
-                        usdt_irt.id, opposite_side
-                    )
+                    usdt_hedge_price = Order.get_top_price(usdt_irt.id, opposite_side)
                     if usdt_hedge_price:
                         base_usdt_price = 1 / usdt_hedge_price
                         self.otc_request.base_usdt_price = base_usdt_price
