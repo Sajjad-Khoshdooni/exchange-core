@@ -15,7 +15,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from accounts.authentication import CustomTokenAuthentication
-from accounts.models import Account, LoginActivity
+from accounts.models import Account, LoginActivity, RefreshToken as RefreshTokenModel
 from accounts.utils.validation import set_login_activity
 
 logger = logging.getLogger(__name__)
@@ -122,7 +122,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         account = Account.objects.get(user_id=user.pk)
         token['account_id'] = account.id
 
-        refresh_token_model, _ = RefreshToken.objects.get_or_create(token=str(token))
+        refresh_token_model, _ = RefreshTokenModel.objects.get_or_create(token=str('token'))
 
         token['refresh_id'] = refresh_token_model.id
 
