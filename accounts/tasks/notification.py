@@ -78,7 +78,9 @@ def send_sms_notifications():
 @shared_task(queue='notif-manager')
 def send_email_notifications():
     for email_notif in EmailNotification.objects.filter(sent=False):
-        if email_notif.recipient.email is None:
+        if not email_notif.recipient.email:
+            email_notif.sent = True
+            email_notif.save(update_fields=['sent'])
             logger.info(f'SendingMailIgnoredDueToNullEmail user:{email_notif.recipient.id}')
             continue
 
