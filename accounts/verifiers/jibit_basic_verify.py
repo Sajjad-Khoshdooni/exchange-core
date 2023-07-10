@@ -1,14 +1,17 @@
 import logging
 from typing import Union
-from _base import settings
+
+from django.conf import settings
+
 from accounts.models import User
+from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.similarity import name_similarity
 from accounts.utils.telegram import send_support_message
 from accounts.verifiers.finotech import ServerError
 from accounts.verifiers.jibit import JibitRequester
 from financial.models import BankCard, BankAccount
-from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
+
 logger = logging.getLogger(__name__)
 
 
