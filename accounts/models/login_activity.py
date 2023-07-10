@@ -64,7 +64,7 @@ class LoginActivity(models.Model):
             'brand': settings.BRAND,
         }
         content_html = loader.render_to_string(
-            'accounts/notif/email/login_successful_message/login_successful_message.html',
+            'accounts/notif/email/login_successful_message/../templates/accounts/notif/email/login_successful_message.html',
             context=context)
 
         file_path = "{}{}".format(settings.BASE_DIR, '/accounts/templates/accounts/notif/email'
@@ -86,7 +86,7 @@ class LoginActivity(models.Model):
                 'brand': settings.BRAND
             }
             content_html = loader.render_to_string(
-                'accounts/notif/email/login_unsuccessful_message/login_unsuccessful_message.html',
+                'accounts/notif/email/login_unsuccessful_message/../templates/accounts/notif/email/login_unsuccessful_message.html',
                 context=context)
 
             file_path = "{}{}".format(settings.BASE_DIR, '/accounts/templates/accounts/notif/email'
