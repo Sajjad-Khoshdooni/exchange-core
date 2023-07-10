@@ -147,7 +147,7 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
     ip = get_client_ip(request)
     ip_data = get_ip_data(ip)
 
-    return LoginActivity.objects.get_or_create(
+    login_activity, _ = LoginActivity.objects.get_or_create(
         session=session,
         refresh_token=refresh_token_model,
         defaults={
@@ -161,3 +161,4 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
             'native_app': native_app,
         }
     )
+    return login_activity
