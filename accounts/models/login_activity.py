@@ -1,6 +1,9 @@
+from django.conf import settings
 from django.contrib.sessions.models import Session
 from django.db import models, transaction
 from django.utils import timezone
+
+from accounts.models.email_notification import EmailNotification
 
 
 class LoginActivity(models.Model):
@@ -48,6 +51,66 @@ class LoginActivity(models.Model):
 
         self.logout_at = timezone.now()
         self.save(update_fields=['logout_at', 'session', 'refresh_token'])
+
+    @staticmethod
+    def send_success_login_message(user, login_activity):
+        title = "ورود موفق"
+        content_html = \
+            f'''
+                        <p>
+             شما از دستگاه جدیدی به حساب کاربری خود وارد شده اید.           
+                        تاریخ:
+                         {login_activity.created}
+                        مکان:
+                        {login_activity.country} / {login_activity.city}
+                        آی پی:
+                        {login_activity.ip}
+                        <a href="https://raastin.com/account/security">تغییر رمز عبور</a>
+                        {settings.BRAND}
+                        </p>'''
+
+        content = \
+            f'''
+             شما از دستگاه جدیدی به حساب کاربری خود وارد شده اید.           
+                        تاریخ:
+                         {login_activity.created}
+                        مکان:
+                        {login_activity.country} / {login_activity.city}
+                        آی پی:
+                        {login_activity.ip}
+                        تغییر رمز عبور:
+                        https://raastin.com/account/security
+                        {settings.BRAND}
+                        '''
+        EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
+
+    @staticmethod
+    def send_not_success_login_message(user):
+        title = "ورود ناموفق"
+        is_spam = EmailNotification.objects.filter(recipient=user, title=title,
+                                                   created__gte=timezone.now() - timezone.timedelta(minutes=5)).exists()
+        if not is_spam:
+            content_html = f'''
+                            <p>
+                             ورود ناموفق به حساب کاربری
+                            زمان:
+                            {timezone.now()}
+                            <a href="https://raastin.com/account/security">
+                                تغییر رمز عبور
+                            </a>
+                            {settings.BRAND}
+                            </p>'''
+
+            content = f'''
+                             ورود ناموفق به حساب کاربری
+                            زمان:
+                            {timezone.now()}
+                        تتغییر رمز عبور:     
+                             https://raastin.com/account/security
+                            {settings.BRAND}
+                            '''
+
+            EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
 
     class Meta:
         verbose_name_plural = verbose_name = "تاریخچه ورود به حساب"
