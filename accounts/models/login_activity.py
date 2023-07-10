@@ -51,3 +51,6 @@ class LoginActivity(models.Model):
 
     class Meta:
         verbose_name_plural = verbose_name = "تاریخچه ورود به حساب"
+        indexes = [
+            models.Index(fields=['user', 'ip', 'browser', 'os'], name="login_activity_idx"),
+        ]
