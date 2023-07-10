@@ -43,7 +43,7 @@ class LoginView(APIView):
         if user:
             login(request, user)
             login_activity = set_login_activity(request, user)
-            if LoginActivity.objects.filter(user=user, device=login_activity.device,os=login_activity.os,ip=login_activity.ip).count() == 1:
+            if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os, ip=login_activity.ip).count() == 1:
                 content_html = \
                 f'''
                 <p>
