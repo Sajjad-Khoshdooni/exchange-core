@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import Q
+from django.db.models import Q, F
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
@@ -12,10 +12,12 @@ from accounting.models import VaultItem, Vault
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import User
+from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
-    FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, GeneralBankAccount
+    FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, \
+    GeneralBankAccount, BankPayment, BankPaymentRequest
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.payment_id_client import get_payment_id_client
 from financial.utils.withdraw import FiatWithdraw
@@ -403,3 +405,34 @@ class PaymentIdAdmin(admin.ModelAdmin):
 @admin.register(GeneralBankAccount)
 class GeneralBankAccountAdmin(admin.ModelAdmin):
     list_display = ('created', 'name', 'iban', 'bank', 'deposit_address')
+
+
+@admin.register(BankPayment)
+class BankPaymentAdmin(admin.ModelAdmin):
+    list_display = ('payment_created', 'destination_type', 'destination_id', 'amount')
+
+
+@admin.register(BankPaymentRequest)
+class BankPaymentRequestAdmin(admin.ModelAdmin):
+    list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type', 'bank_payment')
+    readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview')
+    fields = ('destination_type', 'amount', 'receipt', 'ref_id','get_amount_preview', 'get_receipt_preview', 'user',
+              'bank_payment', 'group_id')
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "user":
+            kwargs["queryset"] = User.objects.filter(userfeatureperm__feature=UserFeaturePerm.BANK_PAYMENT)
+
+        if db_field.name == "bank_payment":
+            kwargs["queryset"] = BankPayment.objects.filter(bankpaymentrequest__isnull=True)
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    @admin.display(description='receipt preview')
+    def get_receipt_preview(self, req: BankPaymentRequest):
+        if req.receipt:
+            return mark_safe("<img src='%s' width='200' height='200' />" % req.receipt.url)
+
+    @admin.display(description='amount preview')
+    def get_amount_preview(self, req: BankPaymentRequest):
+        return req.amount and humanize_number(req.amount)

@@ -37,6 +37,8 @@ class ReferralTestCase(TestCase):
         self.btcusdt = PairSymbol.objects.get(name='BTCUSDT')
         self.usdtirt = PairSymbol.objects.get(name='USDTIRT')
 
+        set_price(self.btc, 30000)
+
     def test_referral_btc_irt(self):
         account_1, account_2, account_3, account_1_referral = self.init_accounts()
         with WalletPipeline() as pipeline:
