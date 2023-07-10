@@ -54,7 +54,7 @@ class LoginActivity(models.Model):
         self.save(update_fields=['logout_at', 'session', 'refresh_token'])
 
     @staticmethod
-    def send_success_login_message(login_activity):
+    def send_successful_login_message(login_activity):
         user = login_activity.user
         title = "ورود موفق"
         context = {
@@ -71,7 +71,7 @@ class LoginActivity(models.Model):
         location = ""
         if login_activity.country != "" and login_activity.city != "":
             location = "مکان:\n" \
-                       "{country} / city".format(country=login_activity.country, citry=login_activity.citry)
+                       "{country} / {city}".format(country=login_activity.country, city=login_activity.city)
         context = {
             'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
             'location': location,
