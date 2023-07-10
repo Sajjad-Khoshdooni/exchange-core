@@ -3,7 +3,7 @@ from django.contrib.sessions.models import Session
 from django.db import models, transaction
 from django.template import loader
 from django.utils import timezone
-
+from accounts.utils import validation
 from accounts.models.email_notification import EmailNotification
 
 
@@ -57,21 +57,25 @@ class LoginActivity(models.Model):
     def send_success_login_message(user, login_activity):
         title = "ورود موفق"
         context = {
-            'now': timezone.now(),
+            'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
             'country': login_activity.country,
             'city': login_activity.city,
             'ip': login_activity.ip,
             'brand': settings.BRAND,
         }
         content_html = loader.render_to_string(
-            'accounts/notif/email/login_successful_message/../templates/accounts/notif/email/login_successful_message.html',
+            'accounts/notif/email/login_successful_message.html',
             context=context)
 
         file_path = "{}{}".format(settings.BASE_DIR, '/accounts/templates/accounts/notif/email'
-                                                     '/login_successful_message/login_successful_message.txt')
+                                                     '/login_successful_message.txt')
         data_file = open(file_path, 'r')
         data = data_file.read()
-        content = data.format(now=timezone.now(), country=login_activity.country, city=login_activity.city,
+        location = ""
+        if login_activity.country != "" and login_activity.city != "":
+            location = "مکان:\n" \
+                   "{country} / city".format(country=login_activity.country, citry=login_activity.citry)
+        content = data.format(now=validation.gregorian_to_jalali_datetime_str(timezone.now()), location=location,
                               ip=login_activity.ip, brand=settings.BRAND)
         EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
 
@@ -82,18 +86,18 @@ class LoginActivity(models.Model):
                                                    created__gte=timezone.now() - timezone.timedelta(minutes=5)).exists()
         if not is_spam:
             context = {
-                'now': timezone.now(),
+                'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
                 'brand': settings.BRAND
             }
             content_html = loader.render_to_string(
-                'accounts/notif/email/login_unsuccessful_message/../templates/accounts/notif/email/login_unsuccessful_message.html',
+                'accounts/notif/email/login_unsuccessful_message.html',
                 context=context)
 
             file_path = "{}{}".format(settings.BASE_DIR, '/accounts/templates/accounts/notif/email'
-                                                         '/login_unsuccessful_message/login_unsuccessful_message.txt')
+                                                         '/login_unsuccessful_message.txt')
             data_file = open(file_path, 'r')
             data = data_file.read()
-            content = data.format(now=timezone.now(), brand=settings.BRAND)
+            content = data.format(now=validation.gregorian_to_jalali_datetime_str(timezone.now()), brand=settings.BRAND)
 
             EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
 

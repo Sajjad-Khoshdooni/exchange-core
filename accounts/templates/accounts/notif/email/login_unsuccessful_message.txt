@@ -1,6 +1,5 @@
 ورود ناموفق به حساب کاربری
-زمان:
-{now}
+تاریخ:{now}
 تغییر رمز عبور:
 https://raastin.com/account/security
     {brand}
