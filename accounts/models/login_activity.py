@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.sessions.models import Session
 from django.db import models, transaction
+from django.template import loader
 from django.utils import timezone
 
 from accounts.models.email_notification import EmailNotification
@@ -55,33 +56,23 @@ class LoginActivity(models.Model):
     @staticmethod
     def send_success_login_message(user, login_activity):
         title = "ورود موفق"
-        content_html = \
-            f'''
-                        <p>
-             شما از دستگاه جدیدی به حساب کاربری خود وارد شده اید.           
-                        تاریخ:
-                         {login_activity.created}
-                        مکان:
-                        {login_activity.country} / {login_activity.city}
-                        آی پی:
-                        {login_activity.ip}
-                        <a href="https://raastin.com/account/security">تغییر رمز عبور</a>
-                        {settings.BRAND}
-                        </p>'''
+        context = {
+            'now': timezone.now(),
+            'country': login_activity.country,
+            'city': login_activity.city,
+            'ip': login_activity.ip,
+            'brand': settings.BRAND,
+        }
+        content_html = loader.render_to_string(
+            'accounts/notif/email/login_successful_message/login_successful_message.html',
+            context=context)
 
-        content = \
-            f'''
-             شما از دستگاه جدیدی به حساب کاربری خود وارد شده اید.           
-                        تاریخ:
-                         {login_activity.created}
-                        مکان:
-                        {login_activity.country} / {login_activity.city}
-                        آی پی:
-                        {login_activity.ip}
-                        تغییر رمز عبور:
-                        https://raastin.com/account/security
-                        {settings.BRAND}
-                        '''
+        file_path = "{}{}".format(settings.BASE_DIR, '/accounts/templates/accounts/notif/email'
+                                                     '/login_successful_message/login_successful_message.txt')
+        data_file = open(file_path, 'r')
+        data = data_file.read()
+        content = data.format(now=timezone.now(), country=login_activity.country, city=login_activity.city,
+                              ip=login_activity.ip, brand=settings.BRAND)
         EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
 
     @staticmethod
@@ -90,25 +81,19 @@ class LoginActivity(models.Model):
         is_spam = EmailNotification.objects.filter(recipient=user, title=title,
                                                    created__gte=timezone.now() - timezone.timedelta(minutes=5)).exists()
         if not is_spam:
-            content_html = f'''
-                            <p>
-                             ورود ناموفق به حساب کاربری
-                            زمان:
-                            {timezone.now()}
-                            <a href="https://raastin.com/account/security">
-                                تغییر رمز عبور
-                            </a>
-                            {settings.BRAND}
-                            </p>'''
+            context = {
+                'now': timezone.now(),
+                'brand': settings.BRAND
+            }
+            content_html = loader.render_to_string(
+                'accounts/notif/email/login_unsuccessful_message/login_unsuccessful_message.html',
+                context=context)
 
-            content = f'''
-                             ورود ناموفق به حساب کاربری
-                            زمان:
-                            {timezone.now()}
-                        تتغییر رمز عبور:     
-                             https://raastin.com/account/security
-                            {settings.BRAND}
-                            '''
+            file_path = "{}{}".format(settings.BASE_DIR, '/accounts/templates/accounts/notif/email'
+                                                         '/login_unsuccessful_message/login_unsuccessful_message.txt')
+            data_file = open(file_path, 'r')
+            data = data_file.read()
+            content = data.format(now=timezone.now(), brand=settings.BRAND)
 
             EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
 
