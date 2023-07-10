@@ -39,6 +39,8 @@ class PaymentRequest(models.Model):
 
     authority = models.CharField(max_length=64, blank=True, db_index=True, null=True)
 
+    payment = models.OneToOneField('financial.Payment', null=True, blank=True, on_delete=models.CASCADE)
+
     def get_gateway(self):
         return self.gateway.get_concrete_gateway()
 
@@ -59,34 +61,15 @@ class Payment(models.Model):
 
     group_id = get_group_id_field()
 
-    payment_request = models.OneToOneField(PaymentRequest, on_delete=models.PROTECT, blank=True, null=True)
-    payment_id_request = models.OneToOneField('financial.PaymentIdRequest', on_delete=models.PROTECT, blank=True, null=True)
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
+
+    amount = models.PositiveIntegerField()
+    fee = models.PositiveIntegerField()
 
     status = get_status_field()
 
     ref_id = models.PositiveBigIntegerField(null=True, blank=True)
     ref_status = models.SmallIntegerField(null=True, blank=True)
-
-    @property
-    def user(self):
-        if self.payment_request:
-            return self.payment_request.bank_card.user
-        else:
-            return self.payment_id_request.payment_id.user
-
-    @property
-    def amount(self):
-        if self.payment_request:
-            return self.payment_request.amount
-        else:
-            return self.payment_id_request.amount
-
-    @property
-    def fee(self):
-        if self.payment_request:
-            return self.payment_request.fee
-        else:
-            return self.payment_id_request.fee
 
     def alert_payment(self):
         user = self.user
@@ -139,14 +122,9 @@ class Payment(models.Model):
     def get_redirect_url(self) -> str:
         from ledger.models import FastBuyToken
 
-        if not self.payment_request:
-            return
-
-        source = self.payment_request.source
+        source = self.paymentrequest.source
         desktop = PaymentRequest.DESKTOP
-        fast_by_token = FastBuyToken.objects.filter(payment_request=self.payment_request).last()
-
-        redirect_param = '?payment_request_id=%s'
+        fast_by_token = FastBuyToken.objects.filter(payment_request=self.paymentrequest).last()
 
         if source == desktop:
             if self.status == DONE:
@@ -177,11 +155,6 @@ class Payment(models.Model):
 
     class Meta:
         constraints = [
-            CheckConstraint(
-                check=Q(payment_request__isnull=False, payment_id_request__isnull=True) |
-                      Q(payment_request__isnull=True, payment_id_request__isnull=False),
-                name='check_financial_payment_requests',
-            )
         ]
 
 

@@ -49,7 +49,7 @@ class ZibalGateway(Gateway):
         return 'https://gateway.zibal.ir/start/{}'.format(authority)
 
     def _verify(self, payment: Payment):
-        payment_request = payment.payment_request
+        payment_request = payment.paymentrequest
 
         resp = requests.post(
             self.BASE_URL + '/v1/verify',

@@ -1,5 +1,6 @@
 import logging
 
+from django.db import transaction
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView
@@ -23,17 +24,21 @@ class ZibalCallbackView(TemplateView):
             return HttpResponseBadRequest('Invalid data')
 
         payment_request = get_object_or_404(PaymentRequest, authority=authority)
-        payment = getattr(payment_request, 'payment', None)
+        payment = payment_request.payment
 
         if not payment:
-            payment = Payment.objects.create(
-                payment_request=payment_request
-            )
+            with transaction.atomic():
+                payment_request.payment = Payment.objects.create(
+                    user=payment_request.bank_card.user,
+                    amount=payment_request.amount,
+                    fee=payment_request.fee
+                )
+                payment_request.save(update_fields=['payment'])
 
         if payment.status == PENDING:
             if status == '0':
                 payment.status = CANCELED
-                payment.save()
+                payment.save(update_fields='status')
             else:
                 payment_request.get_gateway().verify(payment)
 

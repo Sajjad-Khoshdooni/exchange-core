@@ -45,7 +45,7 @@ class ZarinpalGateway(Gateway):
         return 'https://www.zarinpal.com/pg/StartPay/{}'.format(authority)
 
     def _verify(self, payment: Payment):
-        payment_request = payment.payment_request
+        payment_request = payment.paymentrequest
 
         resp = requests.post(
             self.BASE_URL + '/pg/v4/payment/verify.json',

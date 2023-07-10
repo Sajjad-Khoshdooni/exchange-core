@@ -1,5 +1,6 @@
 import logging
 
+from django.db import transaction
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
@@ -27,9 +28,13 @@ class JibitCallbackView(TemplateView):
         payment = getattr(payment_request, 'payment', None)
 
         if not payment:
-            payment = Payment.objects.create(
-                payment_request=payment_request
-            )
+            with transaction.atomic():
+                payment_request.payment = Payment.objects.create(
+                    user=payment_request.bank_card.user,
+                    amount=payment_request.amount,
+                    fee=payment_request.fee
+                )
+                payment_request.save(update_fields=['payment'])
 
         if payment.status == PENDING:
             if status == 'FAILED':

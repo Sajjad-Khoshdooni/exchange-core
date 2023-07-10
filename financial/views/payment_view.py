@@ -1,4 +1,3 @@
-from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -66,13 +65,13 @@ class PaymentHistorySerializer(serializers.ModelSerializer):
         return payment.amount
 
     def get_bank_card(self, payment: Payment):
-        bank_card = payment.payment_request and payment.payment_request.bank_card
+        bank_card = getattr(payment, 'paymentrequest', None) and payment.paymentrequest.bank_card
 
         if bank_card:
             return BankCardSerializer(bank_card).data
 
     def get_payment_id(self, payment: Payment):
-        payment_id_request = payment.payment_id_request
+        payment_id_request = getattr(payment, 'paymentidrequest', None)
 
         if payment_id_request:
             bank = get_bank_from_iban(payment_id_request.source_iban)
@@ -98,6 +97,5 @@ class PaymentHistoryView(ListAPIView):
         user = self.request.user
 
         return Payment.objects.filter(
-            Q(payment_request__bank_card__user=user) |
-            Q(payment_id_request__payment_id__user=user)
+            user=user
         ).order_by('-created')
