@@ -42,18 +42,18 @@ class LoginView(APIView):
         user = serializer.save()
         if user:
             login(request, user)
-            login_status = set_login_activity(request, user)
-            if LoginActivity.objects.filter(user=user, device=login_status.device,os=login_status.os,ip=login_status.ip).count() == 1:
+            login_activity = set_login_activity(request, user)
+            if LoginActivity.objects.filter(user=user, device=login_activity.device,os=login_activity.os,ip=login_activity.ip).count() == 1:
                 content_html = \
                 f'''
                 <p>
      شما از دستگاه جدیدی به حساب کاربری خود وارد شده اید.           
                 تاریخ:
-                 {login_status.created}
+                 {login_activity.created}
                 مکان:
-                {login_status.country} / {login_status.city}
+                {login_activity.country} / {login_activity.city}
                 آی پی:
-                {login_status.ip}
+                {login_activity.ip}
                 <a href="https://raastin.com/account/security">تغییر رمز عبور</a>
                 {settings.BRAND}
                 </p>'''
@@ -62,11 +62,11 @@ class LoginView(APIView):
                 f'''
      شما از دستگاه جدیدی به حساب کاربری خود وارد شده اید.           
                 تاریخ:
-                 {login_status.created}
+                 {login_activity.created}
                 مکان:
-                {login_status.country} / {login_status.city}
+                {login_activity.country} / {login_activity.city}
                 آی پی:
-                {login_status.ip}
+                {login_activity.ip}
                 تغییر رمز عبور:
                 https://raastin.com/account/security
                 {settings.BRAND}
