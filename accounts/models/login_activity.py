@@ -56,7 +56,7 @@ class LoginActivity(models.Model):
     @staticmethod
     def send_successful_login_message(login_activity):
         user = login_activity.user
-        title = "ورود موفق"
+        title = "ورود با دستگاه و آی‌پی جدید"
         context = {
             'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
             'country': login_activity.country,

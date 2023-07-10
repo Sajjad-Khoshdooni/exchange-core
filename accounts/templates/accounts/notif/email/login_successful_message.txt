@@ -4,4 +4,4 @@
 {{location}}
 تغییر رمز عبور:
 https://raastin.com/account/security
-    {{brand}}
+{{brand}}
