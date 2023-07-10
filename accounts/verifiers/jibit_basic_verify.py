@@ -63,10 +63,10 @@ def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, Non
 
 
 def send_shahkar_rejection_message(user, resp):
-    content = f'''
-    کاربر گرامی، شماره موبایل ثبت شده در حساب کاربری شما جهت ارتقا به سطح 3 رد شد.
-    {settings.BRAND}
-    '''
+    file_path = "{}{}".format(settings.BASE_DIR, '/accounts/templates/accounts/notif/sms/shahkar_rejection_message')
+    data_file = open(file_path, 'r')
+    data = data_file.read()
+    content = data.format(brand=settings.BRAND)
     send_kavenegar_exclusive_sms(phone=user.phone, content=content)
     logger.info(f'user: {user.id} mobile number and national code did not match', extra={
         'user': user,
