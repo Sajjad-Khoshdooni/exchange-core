@@ -52,7 +52,7 @@ def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, Non
         {settings.BRAND}
         '''
         send_kavenegar_exclusive_sms(phone=phone, content=content)
-        logger.info('mobile number and national code did not match', extra={
+        logger.info(f'user: {user.id} mobile number and national code did not match', extra={
             'user': user,
             'resp': resp.data,
             'phone': phone,
