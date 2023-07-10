@@ -54,7 +54,8 @@ class LoginActivity(models.Model):
         self.save(update_fields=['logout_at', 'session', 'refresh_token'])
 
     @staticmethod
-    def send_success_login_message(user, login_activity):
+    def send_success_login_message(login_activity):
+        user = login_activity.user
         title = "ورود موفق"
         context = {
             'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
