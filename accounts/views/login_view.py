@@ -43,12 +43,12 @@ class LoginView(APIView):
             login_activity = set_login_activity(request, user)
             if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
                                             ip=login_activity.ip).count() == 1:
-                LoginActivity.send_success_login_message(login_activity)
+                LoginActivity.send_success_login_message(user, login_activity)
             return Response(UserSerializer(user).data)
         else:
             user = User.objects.filter(phone=serializer.data['login']).first()
             if user:
-                LoginActivity.send_unsuccessful_login_message()
+                LoginActivity.send_unsuccessful_login_message(user)
             return Response({'msg': 'authentication failed', 'code': -1}, status=status.HTTP_401_UNAUTHORIZED)
 
 class LogoutView(APIView):
