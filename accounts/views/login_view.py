@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from _base import settings
+from django.conf import settings
 from accounts.models.email_notification import EmailNotification
 from accounts.models.login_activity import LoginActivity
 from accounts.models.user import User
