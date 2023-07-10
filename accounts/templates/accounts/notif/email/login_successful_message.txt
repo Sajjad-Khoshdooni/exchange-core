@@ -1,0 +1,7 @@
+شما از دستگاه جدیدی به حساب کاربری خود وارد شده اید.
+تاریخ:{{now}}
+آی پی:{{ip}}
+{{location}}
+تغییر رمز عبور:
+https://raastin.com/account/security
+    {{brand}}

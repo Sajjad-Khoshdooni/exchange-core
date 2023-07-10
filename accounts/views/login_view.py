@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from accounts.models.login_activity import LoginActivity
+from accounts.models.user import User
 from accounts.utils.validation import set_login_activity
 from accounts.views.user_view import UserSerializer
 
@@ -30,7 +31,6 @@ class LoginView(APIView):
     permission_classes = []
 
     def post(self, request):
-
         if request.user.is_authenticated:
             return Response(UserSerializer(request.user).data)
 
@@ -38,15 +38,18 @@ class LoginView(APIView):
         serializer.is_valid(raise_exception=True)
 
         user = serializer.save()
-
         if user:
             login(request, user)
-            set_login_activity(request, user)
+            login_activity = set_login_activity(request, user)
+            if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
+                                            ip=login_activity.ip).count() == 1:
+                LoginActivity.send_successful_login_message(login_activity)
             return Response(UserSerializer(user).data)
-
         else:
+            user = User.objects.filter(phone=serializer.data['login']).first()
+            if user:
+                LoginActivity.send_unsuccessful_login_message(user)
             return Response({'msg': 'authentication failed', 'code': -1}, status=status.HTTP_401_UNAUTHORIZED)
-
 
 class LogoutView(APIView):
     def post(self, request):
@@ -72,7 +75,6 @@ class LoginActivitySerializer(serializers.ModelSerializer):
 
 
 class LoginActivityViewSet(ModelViewSet):
-
     pagination_class = LimitOffsetPagination
     serializer_class = LoginActivitySerializer
 
