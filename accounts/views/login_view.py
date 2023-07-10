@@ -77,8 +77,8 @@ class LoginView(APIView):
             title = "ورود ناموفق"
             user = User.objects.filter(phone=serializer.data['login']).first()
             if user:
-                spam = EmailNotification.objects.filter(recipient=user, title=title,created__gte=timezone.now() - timezone.timedelta(minutes=5)).exists()
-                if not spam:
+                is_spam = EmailNotification.objects.filter(recipient=user, title=title, created__gte=timezone.now() - timezone.timedelta(minutes=5)).exists()
+                if not is_spam:
                     content_html = f'''
                     <p>
                      ورود ناموفق به حساب کاربری
