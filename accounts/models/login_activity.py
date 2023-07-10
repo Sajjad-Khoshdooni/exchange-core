@@ -68,16 +68,19 @@ class LoginActivity(models.Model):
             'accounts/notif/email/login_successful_message.html',
             context=context)
 
-        file_path = "{}{}".format(settings.BASE_DIR, '/accounts/templates/accounts/notif/email'
-                                                     '/login_successful_message.txt')
-        data_file = open(file_path, 'r')
-        data = data_file.read()
         location = ""
         if login_activity.country != "" and login_activity.city != "":
             location = "مکان:\n" \
-                   "{country} / city".format(country=login_activity.country, citry=login_activity.citry)
-        content = data.format(now=validation.gregorian_to_jalali_datetime_str(timezone.now()), location=location,
-                              ip=login_activity.ip, brand=settings.BRAND)
+                       "{country} / city".format(country=login_activity.country, citry=login_activity.citry)
+        context = {
+            'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
+            'location': location,
+            'ip': login_activity.ip,
+            'brand': settings.BRAND,
+        }
+        content = loader.render_to_string(
+            'accounts/notif/email/login_successful_message.txt',
+            context=context)
         EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
 
     @staticmethod
@@ -94,11 +97,13 @@ class LoginActivity(models.Model):
                 'accounts/notif/email/login_unsuccessful_message.html',
                 context=context)
 
-            file_path = "{}{}".format(settings.BASE_DIR, '/accounts/templates/accounts/notif/email'
-                                                         '/login_unsuccessful_message.txt')
-            data_file = open(file_path, 'r')
-            data = data_file.read()
-            content = data.format(now=validation.gregorian_to_jalali_datetime_str(timezone.now()), brand=settings.BRAND)
+            context = {
+                'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
+                'brand': settings.BRAND
+            }
+            content = loader.render_to_string(
+                'accounts/notif/email/login_unsuccessful_message.txt',
+                context=context)
 
             EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
 

@@ -2,7 +2,7 @@ import logging
 from typing import Union
 
 from django.conf import settings
-
+from django.template import loader
 from accounts.models import User
 from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
 from accounts.utils.admin import url_to_edit_object
@@ -63,10 +63,12 @@ def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, Non
 
 
 def send_shahkar_rejection_message(user, resp):
-    file_path = "{}{}".format(settings.BASE_DIR, '/accounts/templates/accounts/notif/sms/shahkar_rejection_message')
-    data_file = open(file_path, 'r')
-    data = data_file.read()
-    content = data.format(brand=settings.BRAND)
+    context = {
+        'brand': settings.BRAND,
+    }
+    content = loader.render_to_string(
+        'accounts/notif/sms/shahkar_rejection_message.txt',
+        context=context)
     send_kavenegar_exclusive_sms(phone=user.phone, content=content)
     logger.info(f'user: {user.id} mobile number and national code did not match', extra={
         'user': user,
