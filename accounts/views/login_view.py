@@ -48,7 +48,7 @@ class LoginView(APIView):
         else:
             user = User.objects.filter(phone=serializer.data['login']).first()
             if user:
-                LoginActivity.send_not_success_login_message()
+                LoginActivity.send_unsuccessful_login_message()
             return Response({'msg': 'authentication failed', 'code': -1}, status=status.HTTP_401_UNAUTHORIZED)
 
 class LogoutView(APIView):

@@ -85,7 +85,7 @@ class LoginActivity(models.Model):
         EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
 
     @staticmethod
-    def send_not_success_login_message(user):
+    def send_unsuccessful_login_message(user):
         title = "ورود ناموفق"
         is_spam = EmailNotification.objects.filter(recipient=user, title=title,
                                                    created__gte=timezone.now() - timezone.timedelta(minutes=5)).exists()
