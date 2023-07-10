@@ -608,18 +608,26 @@ class FastBuyTokenAdmin(admin.ModelAdmin):
 
 
 class ManualTransactionForm(forms.ModelForm):
-    user = forms.IntegerField(required=True)
-    asset = forms.ChoiceField(required=True, choices=Asset.objects.filter(enable=True).values_list('id', 'symbol'))
+    user = forms.IntegerField(required=False)
+    asset = forms.ModelChoiceField(required=False, queryset=Asset.objects.filter(enable=True))
     market = forms.ChoiceField(choices=Wallet.MARKET_CHOICES, initial=Wallet.SPOT)
     wallet = forms.IntegerField(required=False, disabled=True)
 
     def clean(self):
-        account = Account.objects.filter(user_id=self.cleaned_data['user']).first()
-        if not account:
-            self.add_error('user', _("Please specify valid user id"))
-            return
-        asset = Asset.objects.get(id=self.cleaned_data['asset'])
-        self.cleaned_data['wallet'] = asset.get_wallet(account, market=self.cleaned_data['market'])
+        wallet_id = self.cleaned_data['wallet']
+        if not wallet_id:
+            account = Account.objects.filter(user_id=self.cleaned_data['user']).first()
+            if not account:
+                self.add_error('user', _("Please specify valid user id"))
+                return
+            asset = self.cleaned_data['asset']
+            if not asset:
+                self.add_error('asset', _("Please specify asset"))
+                return
+            self.cleaned_data['wallet'] = asset.get_wallet(account, market=self.cleaned_data['market'])
+        else:
+            self.cleaned_data['wallet'] = Wallet.objects.get(id=wallet_id)
+
         return super(ManualTransactionForm, self).clean()
 
     class Meta:
