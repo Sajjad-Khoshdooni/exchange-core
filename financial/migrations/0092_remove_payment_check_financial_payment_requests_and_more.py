@@ -103,22 +103,4 @@ class Migration(migrations.Migration):
             field=models.UUIDField(default=None),
         ),
 
-        migrations.RunPython(
-            code=populate_payment_fields,
-            reverse_code=migrations.RunPython.noop
-        ),
-        migrations.AlterField(
-            model_name='payment',
-            name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                    to=settings.AUTH_USER_MODEL),
-        ),
-        migrations.RemoveField(
-            model_name='payment',
-            name='payment_id_request',
-        ),
-        migrations.RemoveField(
-            model_name='payment',
-            name='payment_request',
-        ),
     ]
