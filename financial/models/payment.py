@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from decouple import config
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import HttpResponse
@@ -44,6 +44,22 @@ class PaymentRequest(models.Model):
     def get_gateway(self):
         return self.gateway.get_concrete_gateway()
 
+    def get_or_create_payment(self):
+        with transaction.atomic():
+            payment, created = Payment.objects.get_or_create(
+                group_id=self.group_id,
+                defaults={
+                    'user': self.bank_card.user,
+                    'amount': self.amount,
+                    'fee': self.fee
+                }
+            )
+            if created:
+                self.payment = payment
+                self.save(update_fields=['payment'])
+
+        return payment
+
     class Meta:
         unique_together = [('authority', 'gateway')]
 
@@ -59,7 +75,7 @@ class Payment(models.Model):
     created = models.DateTimeField(auto_now_add=True, db_index=True)
     modified = models.DateTimeField(auto_now=True)
 
-    group_id = get_group_id_field(default=None)
+    group_id = get_group_id_field(default=None, unique=True)
 
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
 

@@ -27,13 +27,7 @@ class PaydotirCallbackView(TemplateView):
 
         if not payment:
             with transaction.atomic():
-                payment = payment_request.payment = Payment.objects.create(
-                    group_id=payment_request.group_id,
-                    user=payment_request.bank_card.user,
-                    amount=payment_request.amount,
-                    fee=payment_request.fee,
-                )
-                payment_request.save(update_fields=['payment'])
+                payment = payment_request.get_or_create_payment()
 
         if payment.status == PENDING:
             if status == '0':
