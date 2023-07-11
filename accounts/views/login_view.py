@@ -9,7 +9,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
+from django.conf import settings
+from accounts.models.email_notification import EmailNotification
 from accounts.models.login_activity import LoginActivity
+from accounts.models.user import User
 from accounts.utils.validation import set_login_activity
 from accounts.views.user_view import UserSerializer
 
@@ -30,7 +33,6 @@ class LoginView(APIView):
     permission_classes = []
 
     def post(self, request):
-
         if request.user.is_authenticated:
             return Response(UserSerializer(request.user).data)
 
@@ -38,13 +40,66 @@ class LoginView(APIView):
         serializer.is_valid(raise_exception=True)
 
         user = serializer.save()
-
         if user:
             login(request, user)
-            set_login_activity(request, user)
-            return Response(UserSerializer(user).data)
+            login_activity = set_login_activity(request, user)
+            if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os, ip=login_activity.ip).count() == 1:
+                content_html = \
+                f'''
+                <p>
+     شما از دستگاه جدیدی به حساب کاربری خود وارد شده اید.           
+                تاریخ:
+                 {login_activity.created}
+                مکان:
+                {login_activity.country} / {login_activity.city}
+                آی پی:
+                {login_activity.ip}
+                <a href="https://raastin.com/account/security">تغییر رمز عبور</a>
+                {settings.BRAND}
+                </p>'''
 
+                content = \
+                f'''
+     شما از دستگاه جدیدی به حساب کاربری خود وارد شده اید.           
+                تاریخ:
+                 {login_activity.created}
+                مکان:
+                {login_activity.country} / {login_activity.city}
+                آی پی:
+                {login_activity.ip}
+                تغییر رمز عبور:
+                https://raastin.com/account/security
+                {settings.BRAND}
+                '''
+                EmailNotification.objects.create(recipient=user, title="ورود موفق", content=content, content_html=content_html)
+            return Response(UserSerializer(user).data)
         else:
+            title = "ورود ناموفق"
+            user = User.objects.filter(phone=serializer.data['login']).first()
+            if user:
+                is_spam = EmailNotification.objects.filter(recipient=user, title=title, created__gte=timezone.now() - timezone.timedelta(minutes=5)).exists()
+                if not is_spam:
+                    content_html = f'''
+                    <p>
+                     ورود ناموفق به حساب کاربری
+                    زمان:
+                    {timezone.now()}
+                    <a href="https://raastin.com/account/security">
+                        تغییر رمز عبور
+                    </a>
+                    {settings.BRAND}
+                    </p>'''
+
+                    content = f'''
+                     ورود ناموفق به حساب کاربری
+                    زمان:
+                    {timezone.now()}
+                تتغییر رمز عبور:     
+                     https://raastin.com/account/security
+                    {settings.BRAND}
+                    '''
+
+                    EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
             return Response({'msg': 'authentication failed', 'code': -1}, status=status.HTTP_401_UNAUTHORIZED)
 
 
