@@ -64,12 +64,9 @@ class ZarinpalGateway(Gateway):
 
         if data['code'] in (100, 101):
             with WalletPipeline() as pipeline:
-                payment.status = DONE
-                payment.ref_id = data.get('ref_id')
-                payment.ref_status = data['code']
-                payment.save()
+                ref_id = data.get('ref_id')
 
-                payment.accept(pipeline)
+                payment.accept(pipeline, ref_id)
 
         else:
             payment.status = CANCELED

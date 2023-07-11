@@ -76,12 +76,8 @@ class PaydotirGateway(Gateway):
 
         if data['status'] == 1:
             with WalletPipeline() as pipeline:
-                payment.status = DONE
-                payment.ref_id = data.get('transId')
-                payment.ref_status = data['status']
-                payment.save()
-
-                payment.accept(pipeline)
+                ref_id = data.get('transId')
+                payment.accept(pipeline, ref_id)
 
         else:
             payment.status = CANCELED

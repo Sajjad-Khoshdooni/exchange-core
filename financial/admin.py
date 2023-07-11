@@ -381,7 +381,7 @@ class PaymentIdRequestAdmin(admin.ModelAdmin):
 
     @admin.display(description='user')
     def get_user(self, payment_id_request: PaymentIdRequest):
-        user = payment_id_request.payment_id.user
+        user = payment_id_request.owner.user
         link = url_to_edit_object(user)
         return mark_safe("<a href='%s'>%s</a>" % (link, user.get_full_name()))
 

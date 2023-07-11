@@ -27,10 +27,11 @@ class ZarinpalCallbackView(TemplateView):
 
         if not payment:
             with transaction.atomic():
-                payment_request.payment = Payment.objects.create(
+                payment = payment_request.payment = Payment.objects.create(
+                    group_id=payment_request.group_id,
                     user=payment_request.bank_card.user,
                     amount=payment_request.amount,
-                    fee=payment_request.fee
+                    fee=payment_request.fee,
                 )
                 payment_request.save(update_fields=['payment'])
 

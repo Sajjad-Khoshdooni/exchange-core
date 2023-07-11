@@ -4,7 +4,6 @@ from decimal import Decimal
 from decouple import config
 from django.conf import settings
 from django.db import models
-from django.db.models import CheckConstraint, Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import HttpResponse
@@ -39,7 +38,8 @@ class PaymentRequest(models.Model):
 
     authority = models.CharField(max_length=64, blank=True, db_index=True, null=True)
 
-    payment = models.OneToOneField('financial.Payment', null=True, blank=True, on_delete=models.CASCADE)
+    group_id = get_group_id_field()
+    payment = models.OneToOneField('financial.Payment', null=True, blank=True, on_delete=models.SET_NULL)
 
     def get_gateway(self):
         return self.gateway.get_concrete_gateway()
@@ -59,7 +59,7 @@ class Payment(models.Model):
     created = models.DateTimeField(auto_now_add=True, db_index=True)
     modified = models.DateTimeField(auto_now=True)
 
-    group_id = get_group_id_field()
+    group_id = get_group_id_field(default=None)
 
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
 
@@ -97,7 +97,7 @@ class Payment(models.Model):
                 }
             )
 
-    def accept(self, pipeline: WalletPipeline):
+    def accept(self, pipeline: WalletPipeline, ref_id: int = None):
         asset = Asset.get(Asset.IRT)
         user = self.user
         account = user.get_account()
@@ -110,9 +110,13 @@ class Payment(models.Model):
             group_id=self.group_id,
         )
 
+        self.status = DONE
+        self.ref_id = ref_id
+        self.save(update_fields=['status', 'ref_id'])
+
         if not user.first_fiat_deposit_date:
             user.first_fiat_deposit_date = timezone.now()
-            user.save()
+            user.save(update_fields=['first_fiat_deposit_date'])
 
         from gamify.utils import check_prize_achievements, Task
         check_prize_achievements(account, Task.DEPOSIT)
