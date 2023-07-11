@@ -37,7 +37,7 @@ class NotificationViewSet(ModelViewSet):
         only_count = request.query_params.get('only_count', default=False)
         unread_count = Notification.objects.filter(recipient=self.request.user, read=False,
                                                    hidden=False).count()
-        if only_count:
+        if only_count == "True":
             return Response({
                 'unread_count': unread_count,
                 'feedback': feedback
