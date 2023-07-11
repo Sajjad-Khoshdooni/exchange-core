@@ -10,10 +10,6 @@ from django.db.models import F
 
 def populate_payment_fields(apps, schema_editor):
     Payment = apps.get_model('financial', 'Payment')
-    PaymentRequest = apps.get_model('financial', 'PaymentRequest')
-    PaymentIdRequest = apps.get_model('financial', 'PaymentIdRequest')
-
-    PaymentRequest.objects.update(payment=F('payment'))
 
     for payment in Payment.objects.filter(payment_request__isnull=False).select_related('paymentrequest__bank_card'):
         req = payment.payment_request
@@ -22,7 +18,9 @@ def populate_payment_fields(apps, schema_editor):
         payment.fee = req.fee
         payment.save(update_fields=['user', 'amount', 'fee'])
 
-    PaymentIdRequest.objects.update(payment=F('payment'))
+        payment.payment_request.payment = payment
+        payment.payment_request.group_id = payment.group_id
+        payment.payment_request.save(update_fields=['payment', 'group_id'])
 
     for payment in Payment.objects.filter(payment_id_request__isnull=False).select_related('paymentidrequest__owner'):
         req = payment.payment_id_request
@@ -30,6 +28,10 @@ def populate_payment_fields(apps, schema_editor):
         payment.amount = req.amount
         payment.fee = req.fee
         payment.save(update_fields=['user', 'amount', 'fee'])
+
+        payment.payment_request.payment = payment
+        payment.payment_id_request.group_id = payment.group_id
+        payment.payment_id_request.save(update_fields=['payment', 'group_id'])
 
 
 class Migration(migrations.Migration):
