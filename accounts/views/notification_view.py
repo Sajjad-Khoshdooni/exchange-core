@@ -12,7 +12,6 @@ from accounts.utils.validation import parse_positive_int
 class NotificationSerializer(serializers.ModelSerializer):
 
     def update(self, instance: Notification, validated_data):
-
         if 'read' in validated_data and instance.read and not validated_data['read']:
             raise ValidationError({
                 'read': 'نمی‌توانید نوتیف خوانده شده را برگردانید.'
@@ -33,23 +32,22 @@ class NotificationViewSet(ModelViewSet):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
 
-        feedback = False
         user = self.request.user
-
+        feedback = (user.account.trade_volume_irt and not UserFeedback.objects.filter(user=user).exists())
         is_count = request.query_params.get('is_count', default=False)
-        if user.account.trade_volume_irt and not UserFeedback.objects.filter(user=user).exists():
-            feedback = True
+        unread_count = Notification.objects.filter(recipient=self.request.user, read=False,
+                                                   hidden=False).count()
         if is_count:
             return Response({
-                'unread_count': Notification.objects.filter(recipient=self.request.user, read=False,
-                                                            hidden=False).count(),
+                'unread_count': unread_count,
                 'feedback': feedback
             })
-        return Response({
-            'notifications': serializer.data,
-            'unread_count': Notification.objects.filter(recipient=self.request.user, read=False, hidden=False).count(),
-            'feedback': feedback
-        })
+        else:
+            return Response({
+                'notifications': serializer.data,
+                'unread_count': unread_count,
+                'feedback': feedback
+            })
 
     def get_queryset(self):
         notifications = Notification.objects.filter(
