@@ -119,6 +119,8 @@ class OTCRequest(BaseTrade):
         coin_price = None
         if symbol.enable:
             symbol_price = Order.get_top_price(symbol.id, other_side)
+            if other_side == SELL:
+                symbol_price = Decimal(1) / symbol_price
             if pair.coin_amount is None:
                 coin_amount = floor_precision(pair.base_amount / symbol_price, symbol.step_size)
             else:
