@@ -17,3 +17,6 @@ class EmailNotification(models.Model):
     class Meta:
         ordering = ('-created', )
         unique_together = ('recipient', 'group_id')
+        indexes = [
+            models.Index(fields=['recipient', 'title', 'created'], name="email_notification_idx"),
+        ]

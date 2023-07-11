@@ -182,7 +182,7 @@ class PaymentRequestUserFilter(SimpleListFilter):
 
 @admin.register(PaymentRequest)
 class PaymentRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'gateway', 'bank_card', 'amount', 'authority')
+    list_display = ('created', 'gateway', 'bank_card', 'amount', 'authority', 'payment')
     search_fields = ('bank_card__card_pan', 'amount', 'authority')
     readonly_fields = ('bank_card', 'login_activity' )
     list_filter = (PaymentRequestUserFilter,)
