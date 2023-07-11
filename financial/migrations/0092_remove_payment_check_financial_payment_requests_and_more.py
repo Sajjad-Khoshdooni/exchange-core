@@ -22,9 +22,9 @@ def populate_payment_fields(apps, schema_editor):
         payment.payment_request.group_id = payment.group_id
         payment.payment_request.save(update_fields=['payment', 'group_id'])
 
-    for payment_request in PaymentRequest.objects.filter(payment__isnull=True):
-        payment_request.group_id = uuid.uuid4()
-        payment_request.save(update_fields=['group_id'])
+    # for payment_request in PaymentRequest.objects.filter(payment__isnull=True):
+    #     payment_request.group_id = uuid.uuid4()
+    #     payment_request.save(update_fields=['group_id'])
 
     for payment in Payment.objects.filter(payment_id_request__isnull=False).select_related('paymentidrequest__owner'):
         req = payment.payment_id_request
@@ -37,9 +37,9 @@ def populate_payment_fields(apps, schema_editor):
         payment.payment_id_request.group_id = payment.group_id
         payment.payment_id_request.save(update_fields=['payment', 'group_id'])
 
-    for payment_id_request in PaymentIdRequest.objects.filter(payment__isnull=True):
-        payment_id_request.group_id = uuid.uuid4()
-        payment_id_request.save(update_fields=['group_id'])
+    # for payment_id_request in PaymentIdRequest.objects.filter(payment__isnull=True):
+    #     payment_id_request.group_id = uuid.uuid4()
+    #     payment_id_request.save(update_fields=['group_id'])
 
 
 class Migration(migrations.Migration):
