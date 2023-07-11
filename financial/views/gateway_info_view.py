@@ -51,9 +51,9 @@ class GatewayInfoView(RetrieveAPIView):
         user = self.request.user
 
         total = Payment.objects.filter(
-            payment_request__bank_card__user=user,
+            user=user,
             status=DONE
-        ).aggregate(amount=Sum('payment_request__amount'))['amount'] or 0
+        ).aggregate(amount=Sum('amount'))['amount'] or 0
 
         if total < 10_000_000:
             return Gateway.get_active_deposit(user)

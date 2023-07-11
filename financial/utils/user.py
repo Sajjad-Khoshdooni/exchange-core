@@ -10,9 +10,9 @@ def get_today_fiat_deposits(user: User):
     today = timezone.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
 
     return Payment.objects.filter(
-        payment_request__bank_card__user=user,
+        user=user,
         created__gte=today,
         status=DONE
     ).aggregate(
-        total=Sum('payment_request__amount')
+        total=Sum('amount')
     )['total'] or 0

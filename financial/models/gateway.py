@@ -95,11 +95,12 @@ class Gateway(models.Model):
         today = timezone.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
 
         today_payments = dict(Payment.objects.filter(
-            payment_request__bank_card__user=user,
+            paymentrequest__isnull=False,
+            user=user,
             created__gte=today,
             status=DONE
         ).values('payment_request__gateway').annotate(
-            total=Sum('payment_request__amount')
+            total=Sum('amount')
         ).values_list('payment_request__gateway', 'total'))
 
         for g in gateways:
@@ -152,7 +153,7 @@ class Gateway(models.Model):
     def verify(self, payment: Payment):
         self._verify(payment=payment)
 
-        fast_buy_token = FastBuyToken.objects.filter(payment_request=payment.payment_request).last()
+        fast_buy_token = FastBuyToken.objects.filter(payment_request=payment.paymentrequest).last()
 
         if fast_buy_token:
             fast_buy_token.create_otc_for_fast_buy_token(payment)

@@ -13,10 +13,8 @@ from ledger.utils.fields import DONE
 def get_user_irt_net_deposit(user: User) -> int:
 
     irt_deposits = Payment.objects.filter(
-        Q(payment_request__bank_card__user=user) | Q(payment_id_request__payment_id__user=user),
+        user=user,
         status=DONE
-    ).annotate(
-        amount=Coalesce('payment_request__amount', 0) + Coalesce('payment_id_request__amount', 0)
     ).order_by('created').values_list('created', 'amount')
 
     irt_withdraws = FiatWithdrawRequest.objects.filter(

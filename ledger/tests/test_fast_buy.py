@@ -11,13 +11,8 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 def mocked__verify(payment):
-    payment.status = DONE
-    payment.save()
     with WalletPipeline() as pipeline:
-        payment.status = DONE
-        payment.save()
-
-        payment.accept(pipeline)
+        payment.accept(pipeline, 1)
 
 
 class FastBuyTestCase(TestCase):

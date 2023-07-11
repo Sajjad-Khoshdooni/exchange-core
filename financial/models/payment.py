@@ -4,7 +4,6 @@ from decimal import Decimal
 from decouple import config
 from django.conf import settings
 from django.db import models
-from django.db.models import CheckConstraint, Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import HttpResponse
@@ -40,6 +39,9 @@ class PaymentRequest(models.Model):
     authority = models.CharField(max_length=64, blank=True, db_index=True, null=True)
     login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
 
+    group_id = get_group_id_field()
+    payment = models.OneToOneField('financial.Payment', null=True, blank=True, on_delete=models.SET_NULL)
+
     def get_gateway(self):
         return self.gateway.get_concrete_gateway()
 
@@ -58,36 +60,17 @@ class Payment(models.Model):
     created = models.DateTimeField(auto_now_add=True, db_index=True)
     modified = models.DateTimeField(auto_now=True)
 
-    group_id = get_group_id_field()
+    group_id = get_group_id_field(default=None)
 
-    payment_request = models.OneToOneField(PaymentRequest, on_delete=models.PROTECT, blank=True, null=True)
-    payment_id_request = models.OneToOneField('financial.PaymentIdRequest', on_delete=models.PROTECT, blank=True, null=True)
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
+
+    amount = models.PositiveIntegerField()
+    fee = models.PositiveIntegerField()
 
     status = get_status_field()
 
     ref_id = models.PositiveBigIntegerField(null=True, blank=True)
     ref_status = models.SmallIntegerField(null=True, blank=True)
-
-    @property
-    def user(self):
-        if self.payment_request:
-            return self.payment_request.bank_card.user
-        else:
-            return self.payment_id_request.payment_id.user
-
-    @property
-    def amount(self):
-        if self.payment_request:
-            return self.payment_request.amount
-        else:
-            return self.payment_id_request.amount
-
-    @property
-    def fee(self):
-        if self.payment_request:
-            return self.payment_request.fee
-        else:
-            return self.payment_id_request.fee
 
     def alert_payment(self):
         user = self.user
@@ -115,7 +98,7 @@ class Payment(models.Model):
                 }
             )
 
-    def accept(self, pipeline: WalletPipeline):
+    def accept(self, pipeline: WalletPipeline, ref_id: int = None):
         asset = Asset.get(Asset.IRT)
         user = self.user
         account = user.get_account()
@@ -128,9 +111,13 @@ class Payment(models.Model):
             group_id=self.group_id,
         )
 
+        self.status = DONE
+        self.ref_id = ref_id
+        self.save(update_fields=['status', 'ref_id'])
+
         if not user.first_fiat_deposit_date:
             user.first_fiat_deposit_date = timezone.now()
-            user.save()
+            user.save(update_fields=['first_fiat_deposit_date'])
 
         from gamify.utils import check_prize_achievements, Task
         check_prize_achievements(account, Task.DEPOSIT)
@@ -140,14 +127,9 @@ class Payment(models.Model):
     def get_redirect_url(self) -> str:
         from ledger.models import FastBuyToken
 
-        if not self.payment_request:
-            return
-
-        source = self.payment_request.source
+        source = self.paymentrequest.source
         desktop = PaymentRequest.DESKTOP
-        fast_by_token = FastBuyToken.objects.filter(payment_request=self.payment_request).last()
-
-        redirect_param = '?payment_request_id=%s'
+        fast_by_token = FastBuyToken.objects.filter(payment_request=self.paymentrequest).last()
 
         if source == desktop:
             if self.status == DONE:
@@ -178,11 +160,6 @@ class Payment(models.Model):
 
     class Meta:
         constraints = [
-            CheckConstraint(
-                check=Q(payment_request__isnull=False, payment_id_request__isnull=True) |
-                      Q(payment_request__isnull=True, payment_id_request__isnull=False),
-                name='check_financial_payment_requests',
-            )
         ]
 
 

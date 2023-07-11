@@ -3,7 +3,7 @@ from django.db import models
 
 from financial.models import Payment
 from financial.validators import iban_validator
-from ledger.utils.fields import get_status_field, DONE, PENDING
+from ledger.utils.fields import get_status_field, DONE, PENDING, get_group_id_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
@@ -28,7 +28,7 @@ class PaymentId(models.Model):
 class PaymentIdRequest(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
-    payment_id = models.ForeignKey(PaymentId, on_delete=models.PROTECT)
+    owner = models.ForeignKey(PaymentId, on_delete=models.PROTECT)
     status = get_status_field()
 
     amount = models.PositiveIntegerField()
@@ -45,6 +45,9 @@ class PaymentIdRequest(models.Model):
 
     deposit_time = models.DateTimeField()
 
+    group_id = get_group_id_field()
+    payment = models.OneToOneField('financial.Payment', null=True, blank=True, on_delete=models.CASCADE)
+
     def __str__(self):
         return '%s ref=%s' % (self.amount, self.bank_ref)
 
@@ -52,15 +55,16 @@ class PaymentIdRequest(models.Model):
         with WalletPipeline() as pipeline:
             req = PaymentIdRequest.objects.select_for_update().get(id=self.id)
 
-            if req.status != PENDING:
+            if req.payment or req.status != PENDING:
                 return
 
-            payment = Payment.objects.create(
-                payment_id_request=req,
-                status=DONE,
-                ref_id=req.bank_ref,
+            req.payment = Payment.objects.create(
+                group_id=req.group_id,
+                user=req.owner.user,
+                amount=req.amount,
+                fee=req.fee,
             )
-            payment.accept(pipeline)
+            req.payment.accept(pipeline, req.bank_ref)
 
             req.status = DONE
-            req.save(update_fields=['status'])
+            req.save(update_fields=['status', 'payment'])
