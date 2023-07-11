@@ -94,16 +94,17 @@ def create_fiat_deposit(start: datetime.date, end: datetime.date, upload: bool =
 
     deposits_query = Payment.objects.filter(
         created__range=(start, end),
-        status=DONE
-    ).annotate(date=TruncDate('created', tzinfo=iran_tz)).values('date', 'payment_request__gateway__type').annotate(
+        status=DONE,
+        paymentrequest__isnull=False,
+    ).annotate(date=TruncDate('created', tzinfo=iran_tz)).values('date', 'paymentrequest__gateway__type').annotate(
         amount=Sum('payment_request__amount') * 10,
-    ).order_by('date', 'payment_request__gateway__type')
+    ).order_by('date', 'paymentrequest__gateway__type')
 
     deposits = []
 
     for d in deposits_query:
         deposits.append({
-            'gateway': d['payment_request__gateway__type'],
+            'gateway': d['paymentrequest__gateway__type'],
             'date': str(gregorian_to_jalali_date(d['date'])),
             'amount': d['amount']
         })
@@ -159,7 +160,7 @@ def create_fiat_deposit_details(start: datetime.date, end: datetime.date, upload
     payments = Payment.objects.filter(
         created__range=(start, end),
         status=DONE
-    ).order_by('id').prefetch_related('payment_request__gateway', 'payment_request__bank_card__user')
+    ).order_by('id').prefetch_related('paymentrequest__gateway', 'payment_request__bank_card__user')
 
     deposits = []
 

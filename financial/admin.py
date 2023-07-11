@@ -207,8 +207,8 @@ class PaymentUserFilter(SimpleListFilter):
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_amount', 'get_fee', 'status', 'ref_id', 'ref_status', 'get_user',)
     list_filter = (PaymentUserFilter, 'status', )
-    search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'amount',
-                     'payment_request__authority')
+    search_fields = ('ref_id', 'paymentrequest__bank_card__card_pan', 'amount',
+                     'paymentrequest__authority')
 
     @admin.display(description='مقدار')
     def get_amount(self, payment: Payment):
