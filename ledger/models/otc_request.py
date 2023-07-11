@@ -119,13 +119,11 @@ class OTCRequest(BaseTrade):
         coin_price = None
         if symbol.enable:
             symbol_price = Order.get_top_price(symbol.id, other_side)
-            if other_side == SELL:
-                symbol_price = Decimal(1) / symbol_price
             if pair.coin_amount is None:
                 coin_amount = floor_precision(pair.base_amount / symbol_price, symbol.step_size)
             else:
                 coin_amount = pair.coin_amount
-            for order in Order.open_objects.filter(side=other_side).annotate(
+            for order in Order.open_objects.filter(symbol=symbol, side=other_side).annotate(
                 remaining=F('amount') - F('filled_amount')
             ).annotate(
                 cumulative_sum=Window(
