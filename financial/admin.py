@@ -184,7 +184,7 @@ class PaymentRequestUserFilter(SimpleListFilter):
 class PaymentRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'gateway', 'bank_card', 'amount', 'authority', 'payment')
     search_fields = ('bank_card__card_pan', 'amount', 'authority')
-    readonly_fields = ('bank_card', )
+    readonly_fields = ('bank_card', 'group_id', 'payment')
     list_filter = (PaymentRequestUserFilter,)
 
 
@@ -209,6 +209,7 @@ class PaymentAdmin(admin.ModelAdmin):
     list_filter = (PaymentUserFilter, 'status', )
     search_fields = ('ref_id', 'paymentrequest__bank_card__card_pan', 'amount',
                      'paymentrequest__authority')
+    readonly_fields = ('user', 'group_id')
 
     @admin.display(description='مقدار')
     def get_amount(self, payment: Payment):
@@ -372,7 +373,7 @@ class PaymentIdRequestAdmin(admin.ModelAdmin):
     search_fields = ('owner__pay_id', 'owner__user__phone', 'external_ref', 'source_iban', 'bank_ref')
     list_filter = ('status',)
     actions = ('accept', )
-    readonly_fields = ('owner', 'get_user')
+    readonly_fields = ('owner', 'get_user', 'payment')
 
     @admin.action(description='accept deposit', permissions=['change'])
     def accept(self, request, queryset):
