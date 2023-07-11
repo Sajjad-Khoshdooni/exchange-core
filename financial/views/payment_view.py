@@ -91,7 +91,7 @@ class PaymentHistoryView(ListAPIView):
     pagination_class = LimitOffsetPagination
 
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['id', 'status', 'payment_request_id']
+    filterset_fields = ['id', 'status',]
 
     def get_queryset(self):
         user = self.request.user
