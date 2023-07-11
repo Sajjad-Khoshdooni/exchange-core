@@ -71,6 +71,9 @@ class Payment(models.Model):
     ref_id = models.PositiveBigIntegerField(null=True, blank=True)
     ref_status = models.SmallIntegerField(null=True, blank=True)
 
+    payment_request = models.OneToOneField(PaymentRequest, on_delete=models.PROTECT, blank=True, null=True)
+    payment_id_request = models.OneToOneField('financial.PaymentIdRequest', on_delete=models.PROTECT, blank=True, null=True)
+
     def alert_payment(self):
         user = self.user
         user_email = user.email
