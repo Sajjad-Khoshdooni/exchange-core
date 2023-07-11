@@ -46,6 +46,9 @@ class Notification(models.Model):
     class Meta:
         ordering = ('-created', )
         unique_together = ('recipient', 'group_id')
+        indexes = [
+            models.Index(fields=['recipient', 'read', 'hidden'], name="notification_idx")
+        ]
 
     @classmethod
     def send(cls, recipient, title: str, link: str = '', message: str = '', level: str = INFO, image: str = '',
