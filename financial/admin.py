@@ -17,7 +17,7 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
     FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, \
-    GeneralBankAccount, BankPayment, BankPaymentRequest
+    GeneralBankAccount, BankPaymentRequest
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.payment_id_client import get_payment_id_client
 from financial.utils.withdraw import FiatWithdraw
@@ -206,7 +206,6 @@ class PaymentUserFilter(SimpleListFilter):
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_amount', 'get_fee', 'status', 'ref_id', 'ref_status', 'get_user',)
-    readonly_fields = ('payment_request', )
     list_filter = (PaymentUserFilter, 'status', )
     search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'amount',
                      'payment_request__authority')
@@ -369,11 +368,11 @@ class ManualTransferAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentIdRequest)
 class PaymentIdRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'payment_id', 'status', 'amount', 'get_user', 'external_ref', 'source_iban', 'deposit_time')
-    search_fields = ('payment_id__pay_id', 'payment_id__user__phone', 'external_ref', 'source_iban', 'bank_ref')
+    list_display = ('created', 'owner', 'status', 'amount', 'get_user', 'external_ref', 'source_iban', 'deposit_time')
+    search_fields = ('owner__pay_id', 'owner__user__phone', 'external_ref', 'source_iban', 'bank_ref')
     list_filter = ('status',)
     actions = ('accept', )
-    readonly_fields = ('payment_id', 'get_user')
+    readonly_fields = ('owner', 'get_user')
 
     @admin.action(description='accept deposit', permissions=['change'])
     def accept(self, request, queryset):
@@ -407,24 +406,17 @@ class GeneralBankAccountAdmin(admin.ModelAdmin):
     list_display = ('created', 'name', 'iban', 'bank', 'deposit_address')
 
 
-@admin.register(BankPayment)
-class BankPaymentAdmin(admin.ModelAdmin):
-    list_display = ('payment_created', 'destination_type', 'destination_id', 'amount')
-
-
 @admin.register(BankPaymentRequest)
 class BankPaymentRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type', 'bank_payment')
+    list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type',)
     readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview')
-    fields = ('destination_type', 'amount', 'receipt', 'ref_id','get_amount_preview', 'get_receipt_preview', 'user',
-              'bank_payment', 'group_id')
+    fields = ('destination_type', 'amount', 'receipt', 'ref_id', 'get_amount_preview', 'get_receipt_preview', 'user',
+              'destination_id', 'group_id')
+    actions = ('accept_payment', )
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "user":
             kwargs["queryset"] = User.objects.filter(userfeatureperm__feature=UserFeaturePerm.BANK_PAYMENT)
-
-        if db_field.name == "bank_payment":
-            kwargs["queryset"] = BankPayment.objects.filter(bankpaymentrequest__isnull=True)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
@@ -436,3 +428,8 @@ class BankPaymentRequestAdmin(admin.ModelAdmin):
     @admin.display(description='amount preview')
     def get_amount_preview(self, req: BankPaymentRequest):
         return req.amount and humanize_number(req.amount)
+
+    @admin.action(description='Accept')
+    def accept_payment(self, request, queryset):
+        for q in queryset.filter(payment__isnull=True, user__isnull=False, destination_id__isnull=False).exclude(ref_id=''):
+            q.create_payment()

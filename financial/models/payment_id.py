@@ -61,8 +61,9 @@ class PaymentIdRequest(models.Model):
                 return
 
             req.payment = Payment.objects.create(
-                status=DONE,
-                ref_id=req.bank_ref,
+                user=req.owner.user,
+                amount=req.amount,
+                fee=req.fee
             )
             req.payment.accept(pipeline)
 

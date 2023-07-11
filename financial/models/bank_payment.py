@@ -1,31 +1,16 @@
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 from django.db import models
 
 from financial.models import Payment
 from ledger.utils.fields import get_group_id_field
-
-DESTINATION_TYPES = JIBIMO, = 'jibimo',
-
-
-class BankPayment(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
-
-    payment_created = models.DateTimeField()
-    destination_type = models.CharField(max_length=16, default=JIBIMO, choices=[(d, d) for d in DESTINATION_TYPES])
-    destination_id = models.PositiveIntegerField()
-
-    amount = models.PositiveIntegerField()
-    fee = models.PositiveIntegerField()
-    description = models.TextField(blank=True)
-
-    def __str__(self):
-        return '%s IRT (%s %s)' % (self.amount, self.destination_type, self.destination_id)
-
-    class Meta:
-        unique_together = ('destination_id', 'destination_type')
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class BankPaymentRequest(models.Model):
+    DESTINATION_TYPES = JIBIMO, = 'jibimo',
+
     created = models.DateTimeField(auto_now_add=True)
     group_id = get_group_id_field()
 
@@ -35,16 +20,43 @@ class BankPaymentRequest(models.Model):
     receipt = models.FileField()
 
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, null=True, blank=True)
-    bank_payment = models.OneToOneField(BankPayment, on_delete=models.SET_NULL, null=True, blank=True)
+    destination_id = models.PositiveIntegerField(null=True, blank=True)
+
+    description = models.TextField(blank=True)
+
     payment = models.OneToOneField(Payment, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return '%s %s' % (self.user, self.bank_payment)
+        return '%s %s IRT (%s %s)' % (self.user, self.amount, self.destination_type, self.destination_id)
+
+    class Meta:
+        unique_together = ('destination_id', 'destination_type')
 
     def clean(self):
-        if self.bank_payment and self.amount != self.bank_payment.amount:
-            raise ValidationError('amount mismatch with bank_payment')
+        if self.payment and not self.destination_id:
+            raise ValidationError('destination_id can\'t be null')
+
+        if self.payment and self.user != self.payment.user:
+            raise ValidationError('users mismatch')
+
+    def get_fee(self):
+        if self.destination_type == self.JIBIMO:
+            return int(self.amount * Decimal('0.000545'))
 
     def create_payment(self):
+        assert self.user and self.destination_id and self.ref_id
+
         if self.payment:
             return self.payment
+
+        fee = self.get_fee()
+
+        with WalletPipeline() as pipeline:
+            self.payment = Payment.objects.create(
+                user=self.user,
+                amount=self.amount - fee,
+                fee=fee
+            )
+
+            self.payment.accept(pipeline, self.ref_id)
+            self.save(update_fields=['payment'])
