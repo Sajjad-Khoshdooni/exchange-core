@@ -34,10 +34,10 @@ class NotificationViewSet(ModelViewSet):
 
         user = self.request.user
         feedback = (user.account.trade_volume_irt and not UserFeedback.objects.filter(user=user).exists())
-        is_count = request.query_params.get('is_count', default=False)
+        only_count = request.query_params.get('only_count', default=False)
         unread_count = Notification.objects.filter(recipient=self.request.user, read=False,
                                                    hidden=False).count()
-        if is_count:
+        if only_count:
             return Response({
                 'unread_count': unread_count,
                 'feedback': feedback
