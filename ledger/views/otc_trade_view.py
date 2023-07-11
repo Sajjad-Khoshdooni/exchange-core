@@ -62,8 +62,6 @@ class OTCInfoView(APIView):
             from_amount=from_amount,
             to_amount=to_amount
         )
-        otc.login_activity = LoginActivity.from_request(request=request)
-        otc.save(update_fields=['login_activity'])
 
         return Response({
             'base_asset': otc.symbol.base_asset.symbol,
