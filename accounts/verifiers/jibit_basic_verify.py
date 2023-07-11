@@ -1,7 +1,10 @@
 import logging
 from typing import Union
 
+from django.conf import settings
+from django.template import loader
 from accounts.models import User
+from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.similarity import name_similarity
 from accounts.utils.telegram import send_support_message
@@ -41,10 +44,13 @@ def basic_verify(user: User):
 def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, None]:
     requester = JibitRequester(user)
     resp = requester.matching(phone_number=phone, national_code=national_code)
-
     if resp.success:
-        return resp.data['matched']
+        is_matched = resp.data['matched']
+        if not is_matched:
+            send_shahkar_rejection_message(user, resp)
+        return is_matched
     elif resp.data['code'] in ['mobileNumber.not_valid', 'nationalCode.not_valid']:
+        send_shahkar_rejection_message(user, resp)
         return False
     else:
         logger.warning('JIBIT shahkar not succeeded', extra={
@@ -54,6 +60,22 @@ def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, Non
             'national_code': national_code
         })
         return
+
+
+def send_shahkar_rejection_message(user, resp):
+    context = {
+        'brand': settings.BRAND,
+    }
+    content = loader.render_to_string(
+        'accounts/notif/sms/shahkar_rejection_message.txt',
+        context=context)
+    send_kavenegar_exclusive_sms(phone=user.phone, content=content)
+    logger.info(f'user: {user.id} mobile number and national code did not match', extra={
+        'user': user,
+        'resp': resp.data,
+        'phone': user.phone,
+        'national_code': user.national_code
+    })
 
 
 def update_bank_card_info(bank_card: BankCard, data: dict):
@@ -247,9 +269,9 @@ def verify_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
                 bank_card.reject_reason = 'name.mismatch'
 
             bank_card.save()
-                
+
             return verified
-        
+
         elif resp.data['code'].startswith('card.') and resp.data['code'] != 'card.provider_is_not_active':
             bank_card.verified = False
             bank_card.reject_reason = resp.data['code']

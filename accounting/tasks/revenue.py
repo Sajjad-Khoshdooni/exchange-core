@@ -48,13 +48,9 @@ def fill_revenue_filled_prices():
             revenue.coin_filled_price = info['quote_cum_usdt'] / filled_amount
             revenue.gap_revenue = revenue.get_gap_revenue()
 
-            if revenue.gap_revenue < 0:
-                revenue.coin_price = revenue.coin_filled_price
-                revenue.gap_revenue = revenue.get_gap_revenue()
-
             revenue.save(update_fields=['filled_amount', 'coin_filled_price', 'gap_revenue', 'coin_price'])
 
-        elif revenue.symbol == usdt_irt_symbol:
+        elif not settings.ZERO_USDT_HEDGE and revenue.symbol == usdt_irt_symbol:
             revenue.coin_filled_price = 1
             revenue.filled_amount = revenue.amount
             revenue.gap_revenue = revenue.get_gap_revenue()

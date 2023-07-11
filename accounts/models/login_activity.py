@@ -1,6 +1,10 @@
+from django.conf import settings
 from django.contrib.sessions.models import Session
 from django.db import models, transaction
+from django.template import loader
 from django.utils import timezone
+from accounts.utils import validation
+from accounts.models.email_notification import EmailNotification
 
 
 class LoginActivity(models.Model):
@@ -49,5 +53,62 @@ class LoginActivity(models.Model):
         self.logout_at = timezone.now()
         self.save(update_fields=['logout_at', 'session', 'refresh_token'])
 
+    @staticmethod
+    def send_successful_login_message(login_activity):
+        user = login_activity.user
+        title = "ورود با دستگاه و آی‌پی جدید"
+        context = {
+            'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
+            'country': login_activity.country,
+            'city': login_activity.city,
+            'ip': login_activity.ip,
+            'brand': settings.BRAND,
+        }
+        content_html = loader.render_to_string(
+            'accounts/notif/email/login_successful_message.html',
+            context=context)
+
+        location = ""
+        if login_activity.country != "" and login_activity.city != "":
+            location = "مکان:\n" \
+                       "{country} / {city}".format(country=login_activity.country, city=login_activity.city)
+        context = {
+            'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
+            'location': location,
+            'ip': login_activity.ip,
+            'brand': settings.BRAND,
+        }
+        content = loader.render_to_string(
+            'accounts/notif/email/login_successful_message.txt',
+            context=context)
+        EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
+
+    @staticmethod
+    def send_unsuccessful_login_message(user):
+        title = "ورود ناموفق"
+        is_spam = EmailNotification.objects.filter(recipient=user, title=title,
+                                                   created__gte=timezone.now() - timezone.timedelta(minutes=5)).exists()
+        if not is_spam:
+            context = {
+                'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
+                'brand': settings.BRAND
+            }
+            content_html = loader.render_to_string(
+                'accounts/notif/email/login_unsuccessful_message.html',
+                context=context)
+
+            context = {
+                'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
+                'brand': settings.BRAND
+            }
+            content = loader.render_to_string(
+                'accounts/notif/email/login_unsuccessful_message.txt',
+                context=context)
+
+            EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
+
     class Meta:
         verbose_name_plural = verbose_name = "تاریخچه ورود به حساب"
+        indexes = [
+            models.Index(fields=['user', 'ip', 'browser', 'os'], name="login_activity_idx"),
+        ]
