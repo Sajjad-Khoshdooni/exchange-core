@@ -10,3 +10,4 @@ from .jibit_gateway import JibitGateway
 from .marketing_cost import MarketingSource, MarketingCost
 from .withdraw_request import FiatWithdrawRequest
 from .manual_transfer import ManualTransfer
+from .bank_payment import BankPaymentRequest

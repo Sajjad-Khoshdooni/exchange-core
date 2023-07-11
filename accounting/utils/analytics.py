@@ -12,7 +12,7 @@ from ledger.utils.fields import DONE
 def produce_users_analytics(user_ids: list, start: datetime = None, end: datetime = None):
     users = User.objects.filter(id__in=user_ids)
     payments = Payment.objects.filter(
-        Q(payment_request__bank_card__user_id__in=user_ids) | Q(payment_id_request__payment_id__user_id__in=user_ids),
+        user_id__in=user_ids,
         status=DONE
     )
 
@@ -29,11 +29,11 @@ def produce_users_analytics(user_ids: list, start: datetime = None, end: datetim
         transfers = transfers.filter(created__lte=end)
         trades = trades.filter(created__lte=end)
 
-    with_deposit_users = set(payments.values_list('payment_request__bank_card__user_id', flat=True))
+    with_deposit_users = set(payments.values_list('user_id', flat=True))
     with_deposit_users |= set(transfers.values_list('wallet__account__user_id', flat=True))
 
     crypto_deposit_volume = transfers.aggregate(value=Sum('irt_value'))['value'] or 0
-    fiat_deposit_volume = payments.aggregate(value=Sum('payment_request__amount'))['value'] or 0
+    fiat_deposit_volume = payments.aggregate(value=Sum('amount'))['value'] or 0
 
     data = {
         'users': len(user_ids),

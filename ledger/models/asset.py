@@ -67,6 +67,8 @@ class Asset(models.Model):
         choices=((ACTIVE, ACTIVE), (BUY, BUY), (SELL, SELL), (DISABLED, DISABLED)),
     )
 
+    price_page = models.BooleanField(default=False)
+
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
 

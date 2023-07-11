@@ -49,7 +49,7 @@ class ZibalGateway(Gateway):
         return 'https://gateway.zibal.ir/start/{}'.format(authority)
 
     def _verify(self, payment: Payment):
-        payment_request = payment.payment_request
+        payment_request = payment.paymentrequest
 
         resp = requests.post(
             self.BASE_URL + '/v1/verify',
@@ -66,12 +66,9 @@ class ZibalGateway(Gateway):
 
         if data['result'] in (100, 201):
             with WalletPipeline() as pipeline:
-                payment.status = DONE
-                payment.ref_id = data.get('refNumber', 0)
-                payment.ref_status = data.get('status', 0)
-                payment.save()
+                ref_id = data.get('refNumber', 0)
 
-                payment.accept(pipeline)
+                payment.accept(pipeline, ref_id)
 
         else:
             payment.status = CANCELED

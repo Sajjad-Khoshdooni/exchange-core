@@ -16,12 +16,12 @@ def handle_missing_payments():
 
     pending_payments = Payment.objects.filter(
         status=PENDING,
-        payment_request__isnull=False,
+        paymentrequest__isnull=False,
         created__lte=now - timedelta(minutes=2)
     )
 
     for payment in pending_payments:
-        payment.payment_request.get_gateway().verify(payment)
+        payment.paymentrequest.get_gateway().verify(payment)
 
     # update missing payments
     gateway = Gateway.get_active_deposit()

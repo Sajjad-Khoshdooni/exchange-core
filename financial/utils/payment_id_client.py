@@ -186,7 +186,7 @@ class JibitClient(BaseClient):
                 'amount': amount - fee,
                 'fee': fee,
                 'status': status,
-                'payment_id': payment_id,
+                'owner': payment_id,
                 'source_iban': data['sourceIdentifier'],
                 'deposit_time': deposit_time,
             }

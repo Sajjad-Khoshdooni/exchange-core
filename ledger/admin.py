@@ -412,7 +412,7 @@ class TransferAdmin(AdvancedAdmin):
         user = transfer.wallet.account.user
 
         last_payment = Payment.objects.filter(
-            Q(payment_request__bank_card__user=user) | Q(payment_id_request__payment_id__user=user),
+            user=user,
             created__gt=timezone.now() - timedelta(days=3),
             created__lt=transfer.created,
             status=DONE,
