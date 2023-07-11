@@ -90,7 +90,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='paymentrequest',
             name='group_id',
-            field=models.UUIDField(default=uuid.uuid4),
+            field=models.UUIDField(default=uuid.uuid4, null=True),
         ),
         migrations.AddField(
             model_name='paymentrequest',
