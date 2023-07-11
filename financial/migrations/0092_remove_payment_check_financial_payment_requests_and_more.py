@@ -15,7 +15,7 @@ def populate_payment_fields(apps, schema_editor):
 
     PaymentRequest.objects.update(payment=F('payment'))
 
-    for payment in Payment.objects.filter(paymentrequest__isnull=False).select_related('paymentrequest__bank_card'):
+    for payment in Payment.objects.filter(payment_request__isnull=False).select_related('paymentrequest__bank_card'):
         req = payment.payment_request
         payment.user = req.bank_card.user
         payment.amount = req.amount
@@ -24,7 +24,7 @@ def populate_payment_fields(apps, schema_editor):
 
     PaymentIdRequest.objects.update(payment=F('payment'))
 
-    for payment in Payment.objects.filter(paymentidrequest__isnull=False).select_related('paymentidrequest__owner'):
+    for payment in Payment.objects.filter(payment_id_request__isnull=False).select_related('paymentidrequest__owner'):
         req = payment.payment_id_request
         payment.user = req.owner.user
         payment.amount = req.amount
