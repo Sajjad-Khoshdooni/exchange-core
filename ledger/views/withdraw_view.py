@@ -30,7 +30,6 @@ class WithdrawSerializer(serializers.ModelSerializer):
     code = serializers.CharField(write_only=True, required=False)
     address = serializers.CharField(source='out_address', required=False)
     memo = serializers.CharField(required=False, allow_blank=True)
-    code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
     address_book = serializers.SerializerMethodField()
     totp = serializers.CharField(required=False)
 
