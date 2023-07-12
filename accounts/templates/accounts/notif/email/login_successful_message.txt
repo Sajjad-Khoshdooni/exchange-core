@@ -1,7 +1,9 @@
 از دستگاه و آی‌پی جدیدی به حساب کاربری‌تان وارد شدید.
 تاریخ: {{now}}
 آی‌پی: {{ip}}
-{{location}}
+{% if  country != "" and city != "" %}
+مکان: {{country}} / {{city}}
+{% endif %}
 تغییر رمز عبور:
-https://raastin.com/account/security
+{{site_url}}/account/security
 {{brand}}
