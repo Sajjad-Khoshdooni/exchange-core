@@ -415,7 +415,11 @@ class BankPaymentRequestAcceptFilter(SimpleListFilter):
         return [('No', False), ('Yes', True)]
 
     def queryset(self, request, queryset):
-        return queryset.filter(payment__isnull=not self.value())
+        val = self.value()
+        if val is not None:
+            queryset = queryset.filter(payment__isnull=not val)
+
+        return queryset
 
 
 @admin.register(BankPaymentRequest)
