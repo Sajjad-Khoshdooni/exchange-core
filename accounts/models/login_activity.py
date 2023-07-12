@@ -63,6 +63,7 @@ class LoginActivity(models.Model):
             'city': login_activity.city,
             'ip': login_activity.ip,
             'brand': settings.BRAND,
+            'site_url': settings.PANEL_URL
         }
         content_html = loader.render_to_string(
             'accounts/notif/email/login_successful_message.html',
@@ -80,7 +81,8 @@ class LoginActivity(models.Model):
         if not is_spam:
             context = {
                 'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
-                'brand': settings.BRAND
+                'brand': settings.BRAND,
+                'site_url': settings.PANEL_URL
             }
             content_html = loader.render_to_string(
                 'accounts/notif/email/login_unsuccessful_message.html',
