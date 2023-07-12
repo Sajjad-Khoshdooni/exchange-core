@@ -1,5 +1,6 @@
 import logging
 
+from django_otp.plugins.otp_totp.models import TOTPDevice
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Q
 from django.utils import timezone
@@ -39,7 +40,8 @@ class LoginView(APIView):
         serializer.is_valid(raise_exception=True)
 
         user = serializer.save()
-        if user:
+        device = TOTPDevice.objects.get(user=user)
+        if user and (device is None or not device.confirmed or device.verify_token(serializer.totp)):
             login(request, user)
             login_activity = set_login_activity(request, user)
             if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
@@ -51,6 +53,7 @@ class LoginView(APIView):
             if user:
                 LoginActivity.send_unsuccessful_login_message(user)
             return Response({'msg': 'authentication failed', 'code': -1}, status=status.HTTP_401_UNAUTHORIZED)
+
 
 class LogoutView(APIView):
     def post(self, request):
