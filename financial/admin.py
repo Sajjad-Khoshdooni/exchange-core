@@ -407,13 +407,23 @@ class GeneralBankAccountAdmin(admin.ModelAdmin):
     list_display = ('created', 'name', 'iban', 'bank', 'deposit_address')
 
 
+class BankPaymentRequestAcceptFilter(SimpleListFilter):
+    title = 'Accepted'
+    parameter_name = 'accepted'
+
+    def lookups(self, request, model_admin):
+        return [('No', False), ('Yes', True)]
+
+    def queryset(self, request, queryset):
+        return queryset.filter(payment__isnull=not self.value())
+
+
 @admin.register(BankPaymentRequest)
 class BankPaymentRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type',)
-    readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview')
-    fields = ('destination_type', 'amount', 'receipt', 'ref_id', 'get_amount_preview', 'get_receipt_preview', 'user',
-              'destination_id', 'group_id')
+    list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type', 'payment')
+    readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview', 'payment')
     actions = ('accept_payment', )
+    list_filter = (BankPaymentRequestAcceptFilter, )
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "user":
