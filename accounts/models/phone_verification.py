@@ -25,7 +25,8 @@ class VerificationCode(models.Model):
     SCOPE_TELEPHONE = 'tel'
     SCOPE_CHANGE_PASSWORD = 'change_pass'
     SCOPE_CHANGE_PHONE = 'change_phone'
-    SCOPE_2FA_ACTIVATE = '2fa_activate'
+    SCOPE_2FA_ACTIVATE = '2fa_activate',
+    SCOPE_2FA_DEACTIVATE = '2fa_deactivate'
 
     SCOPE_CHOICES = [
         (SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_PHONE, SCOPE_VERIFY_PHONE),
