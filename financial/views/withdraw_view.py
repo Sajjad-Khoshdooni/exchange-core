@@ -14,7 +14,6 @@ from rest_framework.viewsets import ModelViewSet
 
 from accounts.models import VerificationCode
 from accounts.permissions import IsBasicVerified
-from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest, Gateway
 from financial.models.bank_card import BankAccount, BankAccountSerializer
