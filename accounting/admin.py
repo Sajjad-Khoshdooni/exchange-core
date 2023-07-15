@@ -36,6 +36,7 @@ class AccountTransactionAdmin(admin.ModelAdmin):
 class VaultAdmin(admin.ModelAdmin):
     list_display = ('name', 'market', 'type', 'get_usdt', 'get_value', 'real_value')
     ordering = ('-real_value', )
+    list_filter = ('market', 'type')
 
     @admin.display(description='usdt')
     def get_usdt(self, vault: Vault):
