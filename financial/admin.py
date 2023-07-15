@@ -184,7 +184,7 @@ class PaymentRequestUserFilter(SimpleListFilter):
 class PaymentRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'gateway', 'bank_card', 'amount', 'authority', 'payment')
     search_fields = ('bank_card__card_pan', 'amount', 'authority')
-    readonly_fields = ('bank_card', 'login_activity' )
+    readonly_fields = ('bank_card', 'group_id', 'payment', 'login_activity')
     list_filter = (PaymentRequestUserFilter,)
 
 
@@ -207,8 +207,9 @@ class PaymentUserFilter(SimpleListFilter):
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_amount', 'get_fee', 'status', 'ref_id', 'ref_status', 'get_user',)
     list_filter = (PaymentUserFilter, 'status', )
-    search_fields = ('ref_id', 'payment_request__bank_card__card_pan', 'amount',
-                     'payment_request__authority')
+    search_fields = ('ref_id', 'paymentrequest__bank_card__card_pan', 'amount',
+                     'paymentrequest__authority')
+    readonly_fields = ('user', 'group_id')
 
     @admin.display(description='مقدار')
     def get_amount(self, payment: Payment):
@@ -372,7 +373,7 @@ class PaymentIdRequestAdmin(admin.ModelAdmin):
     search_fields = ('owner__pay_id', 'owner__user__phone', 'external_ref', 'source_iban', 'bank_ref')
     list_filter = ('status',)
     actions = ('accept', )
-    readonly_fields = ('owner', 'get_user')
+    readonly_fields = ('owner', 'get_user', 'payment')
 
     @admin.action(description='accept deposit', permissions=['change'])
     def accept(self, request, queryset):
@@ -406,13 +407,27 @@ class GeneralBankAccountAdmin(admin.ModelAdmin):
     list_display = ('created', 'name', 'iban', 'bank', 'deposit_address')
 
 
+class BankPaymentRequestAcceptFilter(SimpleListFilter):
+    title = 'Accepted'
+    parameter_name = 'accepted'
+
+    def lookups(self, request, model_admin):
+        return [('no', 'no'), ('yes', 'yes')]
+
+    def queryset(self, request, queryset):
+        val = self.value()
+        if val is not None:
+            queryset = queryset.filter(payment__isnull=val == 'no')
+
+        return queryset
+
+
 @admin.register(BankPaymentRequest)
 class BankPaymentRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type',)
-    readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview')
-    fields = ('destination_type', 'amount', 'receipt', 'ref_id', 'get_amount_preview', 'get_receipt_preview', 'user',
-              'destination_id', 'group_id')
+    list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type', 'payment')
+    readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview', 'payment')
     actions = ('accept_payment', )
+    list_filter = (BankPaymentRequestAcceptFilter, )
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "user":

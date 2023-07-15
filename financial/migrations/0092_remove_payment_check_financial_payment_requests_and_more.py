@@ -22,9 +22,9 @@ def populate_payment_fields(apps, schema_editor):
         payment.payment_request.group_id = payment.group_id
         payment.payment_request.save(update_fields=['payment', 'group_id'])
 
-    for payment_request in PaymentRequest.objects.filter(payment__isnull=True):
-        payment_request.group_id = uuid.uuid4()
-        payment_request.save(update_fields=['group_id'])
+    # for payment_request in PaymentRequest.objects.filter(payment__isnull=True):
+    #     payment_request.group_id = uuid.uuid4()
+    #     payment_request.save(update_fields=['group_id'])
 
     for payment in Payment.objects.filter(payment_id_request__isnull=False).select_related('paymentidrequest__owner'):
         req = payment.payment_id_request
@@ -37,9 +37,9 @@ def populate_payment_fields(apps, schema_editor):
         payment.payment_id_request.group_id = payment.group_id
         payment.payment_id_request.save(update_fields=['payment', 'group_id'])
 
-    for payment_id_request in PaymentIdRequest.objects.filter(payment__isnull=True):
-        payment_id_request.group_id = uuid.uuid4()
-        payment_id_request.save(update_fields=['group_id'])
+    # for payment_id_request in PaymentIdRequest.objects.filter(payment__isnull=True):
+    #     payment_id_request.group_id = uuid.uuid4()
+    #     payment_id_request.save(update_fields=['group_id'])
 
 
 class Migration(migrations.Migration):
@@ -90,7 +90,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='paymentrequest',
             name='group_id',
-            field=models.UUIDField(default=uuid.uuid4),
+            field=models.UUIDField(default=uuid.uuid4, null=True),
         ),
         migrations.AddField(
             model_name='paymentrequest',
@@ -103,22 +103,4 @@ class Migration(migrations.Migration):
             field=models.UUIDField(default=None),
         ),
 
-        migrations.RunPython(
-            code=populate_payment_fields,
-            reverse_code=migrations.RunPython.noop
-        ),
-        migrations.AlterField(
-            model_name='payment',
-            name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                    to=settings.AUTH_USER_MODEL),
-        ),
-        migrations.RemoveField(
-            model_name='payment',
-            name='payment_id_request',
-        ),
-        migrations.RemoveField(
-            model_name='payment',
-            name='payment_request',
-        ),
     ]

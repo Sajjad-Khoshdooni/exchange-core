@@ -99,9 +99,9 @@ class Gateway(models.Model):
             user=user,
             created__gte=today,
             status=DONE
-        ).values('payment_request__gateway').annotate(
+        ).values('paymentrequest__gateway').annotate(
             total=Sum('amount')
-        ).values_list('payment_request__gateway', 'total'))
+        ).values_list('paymentrequest__gateway', 'total'))
 
         for g in gateways:
             if amount + today_payments.get(g.id, 0) <= g.max_daily_deposit_amount:

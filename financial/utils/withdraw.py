@@ -404,10 +404,7 @@ class ZibalChannel(FiatWithdraw):
             authority = t['trackId']
 
             payment_request = PaymentRequest.objects.get(authority=authority)
-
-            payment, _ = Payment.objects.get_or_create(
-                payment_request=payment_request
-            )
+            payment = payment_request.get_or_create_payment()
 
             payment_request.get_gateway().verify(payment)
 
