@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from accounting.models import Vault
+from accounting.models import Vault, Account
 from accounting.models.vault import VaultData, AssetPrice, VaultItem, ReservedAsset
 from financial.models import Gateway
 from financial.utils.withdraw import FiatWithdraw
@@ -125,8 +125,6 @@ def update_hot_wallet_vault(now: datetime, usdt_irt: Decimal):
 def update_gateway_vaults(now: datetime, usdt_irt: Decimal):
     logger.info('updating gateway vaults')
 
-    vault_data = []
-
     for gateway in Gateway.objects.exclude(withdraw_api_secret_encrypted=''):
         vault, _ = Vault.objects.get_or_create(
             type=Vault.GATEWAY,
@@ -141,16 +139,14 @@ def update_gateway_vaults(now: datetime, usdt_irt: Decimal):
             handler = FiatWithdraw.get_withdraw_channel(gateway)
             amount = handler.get_total_wallet_irt_value()
 
-            vault_data.append(
+            vault.update_vault_all_items(now, [
                 VaultData(
                     coin=Asset.IRT,
                     balance=amount,
                     value_usdt=amount / usdt_irt,
                     value_irt=amount
                 )
-            )
-
-            vault.update_vault_all_items(now, vault_data)
+            ])
         except:
             pass
 
@@ -168,7 +164,31 @@ def update_cold_wallet_vaults(usdt_irt: Decimal):
         vault.update_real_value()
 
 
-def update_reserved_assets_value(usdt_irt):
+def update_bank_vaults(now: datetime, usdt_irt: Decimal):
+    for account in Account.objects.all():
+        vault, _ = Vault.objects.update_or_create(
+            type=Vault.BANK,
+            market=Vault.SPOT,
+            key=account.id,
+
+            defaults={
+                'name': account.name
+            }
+        )
+
+        amount = account.get_balance()
+
+        vault.update_vault_all_items(now, [
+            VaultData(
+                coin=Asset.IRT,
+                balance=amount,
+                value_usdt=amount / usdt_irt,
+                value_irt=amount
+            )
+        ])
+
+
+def update_reserved_assets_value(usdt_irt: Decimal):
     coins = list(ReservedAsset.objects.values_list('coin', flat=True))
     prices = get_external_usdt_prices(coins=coins, side=BUY, allow_stale=True)
 
