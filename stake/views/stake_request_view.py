@@ -20,6 +20,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
     stake_option = StakeOptionSerializer(read_only=True)
     total_revenue = serializers.SerializerMethodField()
     presentation_amount = serializers.SerializerMethodField()
+    is_bot = serializers.BooleanField(default=False, required=False)
 
     def get_presentation_amount(self, stake_request: StakeRequest):
         return get_presentation_amount(stake_request.amount)
@@ -56,6 +57,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
             'account': user.get_account(),
             'wallet': wallet,
             'user': user,
+            'is_bot': attrs.get('is_bot', False)
         }
 
     def create(self, validated_data):
@@ -73,7 +75,8 @@ class StakeRequestSerializer(serializers.ModelSerializer):
             stake_object = StakeRequest.objects.create(
                 stake_option=stake_option,
                 amount=amount,
-                account=user.get_account()
+                account=user.get_account(),
+                is_bot=validated_data.get('is_bot', False)
             )
             pipeline.new_trx(
                 group_id=stake_object.group_id,
@@ -99,7 +102,11 @@ class StakeRequestAPIView(ModelViewSet):
     serializer_class = StakeRequestSerializer
 
     def get_queryset(self):
-        return StakeRequest.objects.filter(account=self.request.user.get_account()).order_by('-created')
+        stat = self.request.GET.get('stat', '0')
+        if stat == 0:
+            return StakeRequest.objects.filter(account=self.request.user.get_account(), is_bot=False).order_by('-created')
+        else:
+            return StakeRequest.objects.filter(account=self.request.user.get_account(), is_bot=True).order_by('-created')
 
     def destroy(self, request, *args, **kwargs):
 

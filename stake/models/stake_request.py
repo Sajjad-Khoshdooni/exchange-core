@@ -40,6 +40,7 @@ class StakeRequest(models.Model):
     cancel_request_at = models.DateTimeField(null=True, blank=True)
     cancel_pending_at = models.DateTimeField(null=True, blank=True)
     end_at = models.DateTimeField(null=True, blank=True)
+    is_bot = models.BooleanField(default=False)
 
     def __str__(self):
         return str(self.stake_option) + ' ' + str(self.account_id)
