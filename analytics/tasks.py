@@ -9,9 +9,9 @@ from accounts.models import User, LoginActivity, TrafficSource, Account
 from analytics.event.producer import get_kafka_producer
 from analytics.models import ActiveTrader, EventTracker
 from analytics.utils.dto import LoginEvent, TransferEvent, TrafficSourceEvent, StakeRequestEvent, PrizeEvent, \
-    TradeEvent, UserEvent
+    TradeEvent, UserEvent, WalletEvent
 from financial.models import FiatWithdrawRequest, Payment
-from ledger.models import Transfer, Prize, OTCTrade, FastBuyToken
+from ledger.models import Transfer, Prize, OTCTrade, FastBuyToken, Wallet
 from ledger.utils.external_price import get_external_price
 from ledger.utils.fields import DONE
 from market.models import Trade
@@ -66,6 +66,8 @@ def trigger_kafka_event():
     trigger_stake_event()
 
     trigger_traffic_source()
+
+    trigger_wallet_event()
 
 
 def trigger_users_event(threshold=1000):
@@ -327,3 +329,24 @@ def trigger_traffic_source(threshold=1000):
             utm_term=traffic_source.utm_term,
         )
         get_kafka_producer().produce(event, instance=traffic_source)
+
+
+def trigger_wallet_event(threshold=1000):
+    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.WALLET)
+    wallet_list = Wallet.objects.filter(
+        id__gt=tracker.last_id
+    ).order_by('id')[:threshold]
+
+    for wallet in wallet_list:
+        event = WalletEvent(
+            created=wallet.created,
+            user_id=wallet.account.user.id,
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(wallet.id) + WalletEvent.type),
+            id=wallet.id,
+            balance=wallet.balance,
+            expiration=wallet.expiration,
+            credit=wallet.credit,
+            asset=wallet.asset.symbol,
+            market=wallet.market
+        )
+        get_kafka_producer().produce(event, instance=wallet)

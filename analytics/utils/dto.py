@@ -227,3 +227,29 @@ class PrizeEvent(BaseEvent):
             'value': float(self.value),
             'achievement_type': self.achievement_type
         }
+
+
+@dataclass
+class WalletEvent(BaseEvent):
+    type: ClassVar[str] = 'wallet'
+    id: int
+    asset: str
+    market: str
+    balance: Decimal
+    expiration: datetime
+    credit: datetime
+
+    def serialize(self):
+        return {
+            'user_id': self.user_id,
+            'created': self.created.isoformat(),
+            'v': self.v,
+            'event_id': str(self.event_id),
+            'type': self.type,
+            'id': self.id,
+            'asset': self.asset,
+            'market': self.market,
+            'balance': float(self.balance),
+            'expiration': self.expiration.isoformat(),
+            'credit': self.credit.isoformat(),
+        }
