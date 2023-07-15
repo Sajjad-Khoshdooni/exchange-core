@@ -6,6 +6,8 @@ from django.contrib.admin import SimpleListFilter
 from django.db.models import Q, F
 from django.utils import timezone
 from django.utils.safestring import mark_safe
+from import_export import resources
+from import_export.admin import ExportMixin
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import VaultItem, Vault
@@ -422,12 +424,19 @@ class BankPaymentRequestAcceptFilter(SimpleListFilter):
         return queryset
 
 
+class BankPaymentRequestResource(resources.ModelResource):
+    class Meta:
+        model = BankPaymentRequest
+        fields = ('created', 'amount', 'ref_id', 'description', 'user', )
+
+
 @admin.register(BankPaymentRequest)
-class BankPaymentRequestAdmin(admin.ModelAdmin):
+class BankPaymentRequestAdmin(ExportMixin, admin.ModelAdmin):
     list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type', 'payment')
     readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview', 'payment')
     actions = ('accept_payment', )
-    list_filter = (BankPaymentRequestAcceptFilter, )
+    list_filter = (BankPaymentRequestAcceptFilter, 'user')
+    resource_classes = [BankPaymentRequestResource]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "user":
