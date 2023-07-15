@@ -91,6 +91,9 @@ class Payment(models.Model):
 
     description = models.CharField(max_length=DESCRIPTION_SIZE, blank=True)
 
+    def __str__(self):
+        return f'{self.amount} IRT to {self.user}'
+
     def alert_payment(self):
         user = self.user
         user_email = user.email
