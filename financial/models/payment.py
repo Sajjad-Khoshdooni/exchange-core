@@ -72,6 +72,8 @@ class Payment(models.Model):
     FAIL_URL = '/checkout/fail'
     SUCCESS_PAYMENT_FAIL_FAST_BUY = '/checkout/fail_trade'
 
+    DESCRIPTION_SIZE = 256
+
     created = models.DateTimeField(auto_now_add=True, db_index=True)
     modified = models.DateTimeField(auto_now=True)
 
@@ -86,6 +88,8 @@ class Payment(models.Model):
 
     ref_id = models.PositiveBigIntegerField(null=True, blank=True)
     ref_status = models.SmallIntegerField(null=True, blank=True)
+
+    description = models.CharField(max_length=DESCRIPTION_SIZE, blank=True)
 
     def alert_payment(self):
         user = self.user

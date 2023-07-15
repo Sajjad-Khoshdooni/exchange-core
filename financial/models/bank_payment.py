@@ -56,7 +56,8 @@ class BankPaymentRequest(models.Model):
                 group_id=self.group_id,
                 user=self.user,
                 amount=self.amount - fee,
-                fee=fee
+                fee=fee,
+                description=self.description[:Payment.DESCRIPTION_SIZE]
             )
 
             self.payment.accept(pipeline, self.ref_id)

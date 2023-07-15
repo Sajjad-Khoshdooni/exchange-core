@@ -83,7 +83,7 @@ class PaymentHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Payment
-        fields = ('id', 'created', 'status', 'ref_id', 'amount', 'bank_card', 'payment_id')
+        fields = ('id', 'created', 'status', 'ref_id', 'amount', 'bank_card', 'payment_id', 'description')
 
 
 class PaymentHistoryView(ListAPIView):
