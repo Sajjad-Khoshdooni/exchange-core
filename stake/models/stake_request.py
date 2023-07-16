@@ -40,6 +40,7 @@ class StakeRequest(models.Model):
     cancel_request_at = models.DateTimeField(null=True, blank=True)
     cancel_pending_at = models.DateTimeField(null=True, blank=True)
     end_at = models.DateTimeField(null=True, blank=True)
+    is_bot = models.BooleanField(default=False)
 
     login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
 
