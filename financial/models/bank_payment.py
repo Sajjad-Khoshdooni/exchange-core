@@ -16,7 +16,7 @@ class BankPaymentRequest(models.Model):
 
     destination_type = models.CharField(max_length=16, default=JIBIMO, choices=[(d, d) for d in DESTINATION_TYPES])
     amount = models.PositiveIntegerField()
-    ref_id = models.PositiveIntegerField(blank=True, max_length=256)
+    ref_id = models.CharField(blank=True, max_length=256)
     receipt = models.FileField()
 
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, null=True, blank=True)
