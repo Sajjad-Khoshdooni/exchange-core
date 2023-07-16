@@ -97,7 +97,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = StakeRequest
         fields = ('id', 'created', 'status', 'stake_option', 'amount', 'presentation_amount',
-                  'stake_option_id', 'total_revenue')
+                  'stake_option_id', 'total_revenue', 'is_bot')
 
 
 class StakeRequestAPIView(ModelViewSet):
