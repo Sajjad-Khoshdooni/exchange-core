@@ -237,7 +237,7 @@ class WalletEvent(BaseEvent):
     market: str
     balance: Decimal
     expiration: datetime
-    credit: datetime
+    credit: Decimal
 
     def serialize(self):
         return {
@@ -250,6 +250,6 @@ class WalletEvent(BaseEvent):
             'asset': self.asset,
             'market': self.market,
             'balance': float(self.balance),
-            'expiration': self.expiration.isoformat(),
-            'credit': self.credit.isoformat(),
+            'expiration': self.expiration.isoformat() if self.expiration else None,
+            'credit': float(self.credit),
         }
