@@ -103,10 +103,10 @@ class StakeRequestAPIView(ModelViewSet):
 
     def get_queryset(self):
         stat = self.request.GET.get('stat', '0')
-        if stat == 0:
-            return StakeRequest.objects.filter(account=self.request.user.get_account(), is_bot=False).order_by('-created')
-        else:
+        if stat == '1':
             return StakeRequest.objects.filter(account=self.request.user.get_account(), is_bot=True).order_by('-created')
+        else:
+            return StakeRequest.objects.filter(account=self.request.user.get_account(), is_bot=False).order_by('-created')
 
     def destroy(self, request, *args, **kwargs):
 
