@@ -224,7 +224,7 @@ class OTCRequestUserFilter(SimpleListFilter):
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount', 'fee_revenue')
-    readonly_fields = ('account', )
+    readonly_fields = ('account', 'login_activity')
     search_fields = ('token', )
     list_filter = (OTCRequestUserFilter, )
 
@@ -366,7 +366,7 @@ class TransferAdmin(AdvancedAdmin):
     list_filter = ('deposit', 'status', 'source', TransferUserFilter,)
     readonly_fields = (
         'deposit_address', 'network', 'wallet', 'created', 'accepted_datetime', 'finished_datetime', 'get_risks',
-        'out_address', 'memo', 'amount', 'irt_value', 'usdt_value', 'deposit', 'group_id', 'address_book',
+        'out_address', 'memo', 'amount', 'irt_value', 'usdt_value', 'deposit', 'group_id', 'address_book', 'login_activity'
     )
     exclude = ('risks', )
 

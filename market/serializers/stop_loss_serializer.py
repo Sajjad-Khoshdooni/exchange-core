@@ -6,6 +6,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 
+from accounts.models import LoginActivity
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet
 from ledger.utils.external_price import BUY
@@ -56,8 +57,10 @@ class StopLossSerializer(OrderSerializer):
                 base_wallet = symbol.base_asset.get_wallet(wallet.account, wallet.market)
                 lock_wallet = Order.get_to_lock_wallet(wallet, base_wallet, validated_data['side'])
                 if lock_wallet.has_balance(lock_amount, raise_exception=True):
+                    login_activity = LoginActivity.from_request(request=self.context['request'])
+
                     instance = super(OrderSerializer, self).create(
-                        {**validated_data, 'wallet': wallet, 'symbol': symbol}
+                        {**validated_data, 'wallet': wallet, 'symbol': symbol, 'login_activity': login_activity}
                     )
                     instance.acquire_lock(lock_wallet, lock_amount, pipeline)
                     return instance

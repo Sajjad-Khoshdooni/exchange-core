@@ -4,6 +4,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 
+from accounts.models import LoginActivity
 from accounts.permissions import IsBasicVerified
 from financial.models import BankCard, PaymentRequest, Payment
 from financial.models.bank_card import BankCardSerializer
@@ -39,8 +40,14 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
         if amount > gateway.max_deposit_amount:
             raise ValidationError('حداکثر میزان واریز {} تومان است.'.format(humanize_number(gateway.max_deposit_amount)))
 
+        login_activity = LoginActivity.from_request(self.context['request'])
+
         try:
-            return gateway.create_payment_request(bank_card=bank_card, amount=amount, source=source)
+            payment_request = gateway.create_payment_request(bank_card=bank_card, amount=amount, source=source)
+            payment_request.login_activity = login_activity
+            payment_request.save(update_fields=['login_activity'])
+
+            return payment_request
         except GatewayFailed:
             raise ValidationError('مشکلی در ارتباط با درگاه بانک به وجود آمد.')
 
@@ -91,7 +98,7 @@ class PaymentHistoryView(ListAPIView):
     pagination_class = LimitOffsetPagination
 
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['id', 'status',]
+    filterset_fields = ['id', 'status']
 
     def get_queryset(self):
         user = self.request.user

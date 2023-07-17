@@ -72,6 +72,7 @@ class TradeRevenue(models.Model):
             coin_price=coin_price,
 
             base_usdt_price=user_trade.base_usdt_price,
+
         )
 
         return revenue
