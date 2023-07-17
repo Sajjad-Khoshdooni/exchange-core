@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.db import models
@@ -40,6 +41,11 @@ class StakeRequest(models.Model):
     cancel_request_at = models.DateTimeField(null=True, blank=True)
     cancel_pending_at = models.DateTimeField(null=True, blank=True)
     end_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def remaining_date(self):
+        if self.status in (StakeRequest.PROCESS, StakeRequest.PENDING, StakeRequest.DONE):
+            return (self.created + timedelta(days=90)) - timezone.now()
 
     def __str__(self):
         return str(self.stake_option) + ' ' + str(self.account_id)
