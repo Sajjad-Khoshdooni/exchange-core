@@ -28,7 +28,14 @@ class WithdrawViewSet(ModelViewSet):
         transfer.reject()
 
     def get_queryset(self):
-        return Transfer.objects.filter(
+        query_params = self.request.query_params
+
+        queryset = Transfer.objects.filter(
             deposit=False,
             wallet__account=self.request.user.get_account(),
         ).order_by('-created')
+
+        if 'coin' in query_params:
+            queryset = queryset.filter(wallet__asset__symbol=query_params['coin'])
+
+        return queryset
