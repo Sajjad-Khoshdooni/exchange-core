@@ -87,10 +87,13 @@ class Payment(models.Model):
 
     status = get_status_field()
 
-    ref_id = models.PositiveBigIntegerField(null=True, blank=True)
+    ref_id = models.CharField(null=True, blank=True, max_length=256)
     ref_status = models.SmallIntegerField(null=True, blank=True)
 
     description = models.CharField(max_length=DESCRIPTION_SIZE, blank=True)
+
+    def __str__(self):
+        return f'{self.amount} IRT to {self.user}'
 
     def alert_payment(self):
         user = self.user

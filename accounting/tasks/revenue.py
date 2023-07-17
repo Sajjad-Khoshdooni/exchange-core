@@ -66,7 +66,7 @@ def fill_revenue_filled_prices():
                     revenue.filled_amount = info['amount']
                     revenue.coin_filled_price = info['hedge_price']
                     revenue.save(update_fields=['coin_filled_price', 'filled_amount', 'gap_revenue'])
-            if revenue.hedge_key and revenue.hedge_key.startswith('tr-'):
+            elif revenue.hedge_key and revenue.hedge_key.startswith('tr-'):
                 info = get_trader_requester().get_trade_hedge_info(revenue.hedge_key.replace('tr-', ''))
                 if info and info.get('revenue'):
                     revenue.gap_revenue = info['revenue']
