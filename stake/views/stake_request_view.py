@@ -19,7 +19,14 @@ class StakeRequestSerializer(serializers.ModelSerializer):
     stake_option_id = serializers.CharField(write_only=True)
     stake_option = StakeOptionSerializer(read_only=True)
     total_revenue = serializers.SerializerMethodField()
+    remaining_date = serializers.SerializerMethodField()
     presentation_amount = serializers.SerializerMethodField()
+
+    def get_remaining_date(self, stake_request: StakeRequest):
+        if stake_request.remaining_date:
+            remaining_seconds = stake_request.remaining_date.total_seconds()
+            round_to = 86400  # total seconds in a day
+            return str(int((remaining_seconds + round_to / 2) // round_to))
 
     def get_presentation_amount(self, stake_request: StakeRequest):
         return get_presentation_amount(stake_request.amount)
@@ -92,7 +99,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = StakeRequest
         fields = ('id', 'created', 'status', 'stake_option', 'amount', 'presentation_amount',
-                  'stake_option_id', 'total_revenue')
+                  'stake_option_id', 'total_revenue', 'remaining_date')
 
 
 class StakeRequestAPIView(ModelViewSet):
