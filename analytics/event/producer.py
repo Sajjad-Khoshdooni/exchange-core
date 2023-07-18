@@ -107,6 +107,10 @@ def handle_event_tracker(data, instance):
         event_type = EventTracker.STAKING
     elif _type == 'prize':
         event_type = EventTracker.PRIZE
+    elif _type == 'wallet':
+        event_type = EventTracker.WALLET
+    elif _type == 'transaction':
+        event_type = EventTracker.TRANSACTION
     else:
         raise NotImplementedError
 
