@@ -13,6 +13,7 @@ class AccountAdmin(admin.ModelAdmin):
     list_display = ('name', 'iban', 'get_balance', 'create_vault')
     readonly_fields = ('get_balance', )
     list_filter = ('create_vault', )
+    ordering = ('-create_vault', )
 
     @admin.display(description='موجودی')
     def get_balance(self, account: Account):
