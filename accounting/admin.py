@@ -35,7 +35,7 @@ class AccountTransactionAdmin(admin.ModelAdmin):
 
     @admin.display(description='مقدار', ordering='amount')
     def get_amount(self, trx: AccountTransaction):
-        return humanize_number(trx.amount)
+        return trx.amount and humanize_number(trx.amount)
 
 
 @admin.register(Vault)
