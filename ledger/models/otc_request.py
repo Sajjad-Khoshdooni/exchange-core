@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.db import models
-from django.db.models import Avg, F, Window, Sum, RowRange, CheckConstraint, Q, Min, Max
+from django.db.models import Avg, F, Sum, CheckConstraint, Q, Min
 
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
