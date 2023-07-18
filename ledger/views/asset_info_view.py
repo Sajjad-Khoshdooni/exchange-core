@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import Min, F, Max
+from django.db.models import Min, F
 from django.http import Http404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -13,7 +13,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
-from ledger.utils.external_price import BUY, get_external_usdt_prices, get_external_price
+from ledger.utils.external_price import BUY, get_external_usdt_prices, get_external_price, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.provider import CoinInfo, get_provider_requester
 from multimedia.models import CoinPriceContent
@@ -199,11 +199,11 @@ class AssetsViewSet(ModelViewSet):
             from market.models import Order
             for base_asset in ('IRT', 'USDT'):
                 ctx['market_prices'][base_asset] = {
-                    o['symbol__name'].replace(base_asset, ''): o['best_bid'] for o in Order.open_objects.filter(
-                        side=BUY,
+                    o['symbol__name'].replace(base_asset, ''): o['best_ask'] for o in Order.open_objects.filter(
+                        side=SELL,
                         symbol__enable=True,
                         symbol__name__in=map(lambda s: f'{s}{base_asset}', symbols)
-                    ).values('symbol__name').annotate(best_bid=Max('price'))
+                    ).values('symbol__name').annotate(best_ask=Min('price'))
                 }
             ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
 
