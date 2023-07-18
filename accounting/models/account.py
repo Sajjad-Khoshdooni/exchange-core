@@ -9,6 +9,7 @@ class Account(models.Model):
     name = models.CharField(max_length=64, verbose_name='نام')
     iban = models.CharField(max_length=26, verbose_name='شماره شبا', validators=[iban_validator],)
     description = models.TextField(verbose_name='توضیحات', blank=True)
+    create_vault = models.BooleanField(default=True)
 
     def __str__(self):
         return f'{self.name} [{humanize_number(self.get_balance())}]'

@@ -10,8 +10,9 @@ from ledger.utils.precision import humanize_number
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('name', 'iban', 'get_balance')
+    list_display = ('name', 'iban', 'get_balance', 'create_vault')
     readonly_fields = ('get_balance', )
+    list_filter = ('create_vault', )
 
     @admin.display(description='موجودی')
     def get_balance(self, account: Account):
