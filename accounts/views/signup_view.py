@@ -168,5 +168,4 @@ class SignupView(CreateAPIView):
             request=self.request,
             user=user,
             is_sign_up=True,
-            native_app=serializer.validated_data.get('source') == 'app'
         )

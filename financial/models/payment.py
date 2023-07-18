@@ -37,6 +37,7 @@ class PaymentRequest(models.Model):
     source = models.CharField(max_length=16, choices=((APP, APP), (DESKTOP, DESKTOP)), default=DESKTOP)
 
     authority = models.CharField(max_length=64, blank=True, db_index=True, null=True)
+    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
 
     group_id = get_group_id_field()
     payment = models.OneToOneField('financial.Payment', null=True, blank=True, on_delete=models.SET_NULL)

@@ -80,6 +80,7 @@ class Transfer(models.Model):
     risks = models.JSONField(null=True, blank=True)
 
     address_book = models.ForeignKey('ledger.AddressBook', on_delete=models.PROTECT, null=True, blank=True)
+    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
 
     def in_freeze_time(self):
         return timezone.now() <= self.created + timedelta(seconds=self.FREEZE_SECONDS)
@@ -221,7 +222,12 @@ class Transfer(models.Model):
         assert wallet.account.is_ordinary_user()
         wallet.has_balance(amount, raise_exception=True, check_system_wallets=True)
 
-        fast_forward = cls.check_fast_forward(sender_wallet=wallet, network=network, amount=amount, address=address)
+        fast_forward = cls.check_fast_forward(
+            sender_wallet=wallet,
+            network=network,
+            amount=amount,
+            address=address
+        )
 
         if fast_forward:
             return fast_forward

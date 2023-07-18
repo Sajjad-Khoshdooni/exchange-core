@@ -10,15 +10,30 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer, \
+    TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenViewBase
 
 from accounts.authentication import CustomTokenAuthentication
-from accounts.models import Account, LoginActivity
+from accounts.models import Account, LoginActivity, RefreshToken as RefreshTokenModel
 from accounts.utils.validation import set_login_activity
 
 logger = logging.getLogger(__name__)
+
+
+class JWTTokenRefreshSerializer(TokenRefreshSerializer):
+    def validate(self, attrs):
+        refresh = RefreshToken(attrs['refresh'])
+
+        return {
+            'access': str(refresh.access_token),
+            'refresh': str(refresh)
+        }
+
+
+class JWTTokenRefreshView(TokenViewBase):
+    serializer_class = JWTTokenRefreshSerializer
 
 
 def user_has_delegate_permission(user):
@@ -122,6 +137,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         account = Account.objects.get(user_id=user.pk)
         token['account_id'] = account.id
 
+        refresh_token_model, _ = RefreshTokenModel.objects.get_or_create(token=str(token))
+
+        token['refresh_id'] = refresh_token_model.id
+
+        refresh_token_model.token = str(token)
+        refresh_token_model.save(update_fields=['token'])
+
         return token
 
 
@@ -155,7 +177,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 request,
                 user=serializer.user,
                 client_info=client_info,
-                native_app=True,
                 refresh_token=serializer.validated_data['refresh']
             )
 

@@ -9,6 +9,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.generics import get_object_or_404
 
+from accounts.models import LoginActivity
 from accounts.permissions import can_trade
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet, Asset, CloseRequest
@@ -71,10 +72,11 @@ class OrderSerializer(serializers.ModelSerializer):
         wallet = self.post_validate(symbol, validated_data)
 
         matched_trades = None
+        login_activity = LoginActivity.from_request(self.context['request'])
         try:
             with WalletPipeline() as pipeline:
                 created_order = super(OrderSerializer, self).create(
-                    {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol}
+                    {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol, 'login_activity': login_activity}
                 )
                 matched_trades = created_order.submit(pipeline)
 

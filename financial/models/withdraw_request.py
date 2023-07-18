@@ -63,6 +63,7 @@ class FiatWithdrawRequest(models.Model):
     gateway = models.ForeignKey('Gateway', on_delete=models.PROTECT)
 
     risks = models.JSONField(null=True, blank=True)
+    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
 
     @property
     def total_amount(self):

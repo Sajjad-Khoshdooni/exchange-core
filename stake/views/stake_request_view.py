@@ -5,6 +5,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
+from accounts.models import LoginActivity
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet, Trx
@@ -83,7 +84,8 @@ class StakeRequestSerializer(serializers.ModelSerializer):
                 stake_option=stake_option,
                 amount=amount,
                 account=user.get_account(),
-                is_bot=validated_data.get('is_bot', False)
+                is_bot=validated_data.get('is_bot', False),
+                login_activity=LoginActivity.from_request(self.context['request']),
             )
             pipeline.new_trx(
                 group_id=stake_object.group_id,

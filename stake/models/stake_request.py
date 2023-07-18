@@ -48,6 +48,8 @@ class StakeRequest(models.Model):
         if self.status in (StakeRequest.PROCESS, StakeRequest.PENDING, StakeRequest.DONE):
             return (self.created + timedelta(days=90)) - timezone.now()
 
+    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
+
     def __str__(self):
         return str(self.stake_option) + ' ' + str(self.account_id)
 

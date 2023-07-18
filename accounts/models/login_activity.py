@@ -1,10 +1,14 @@
+from typing import Union
+
 from django.conf import settings
 from django.contrib.sessions.models import Session
 from django.db import models, transaction
 from django.template import loader
 from django.utils import timezone
-from accounts.utils import validation
+from rest_framework_simplejwt.tokens import AccessToken
+
 from accounts.models.email_notification import EmailNotification
+from accounts.utils import validation
 
 
 class LoginActivity(models.Model):
@@ -52,6 +56,22 @@ class LoginActivity(models.Model):
 
         self.logout_at = timezone.now()
         self.save(update_fields=['logout_at', 'session', 'refresh_token'])
+
+    @classmethod
+    def from_request(cls,  request) -> Union['LoginActivity', None]:
+        session = Session.objects.filter(session_key=request.session.session_key).first()
+
+        if session:
+            return cls.objects.filter(session=session).first()
+
+        try:
+            access_token = request.META.get('HTTP_AUTHORIZATION', " ").split(' ')[1]
+            token = AccessToken(access_token)
+            return LoginActivity.objects.filter(refresh_token_id=token.payload['refresh_id']).first()
+        except Exception:
+            pass
+
+        return None
 
     @staticmethod
     def send_successful_login_message(login_activity):

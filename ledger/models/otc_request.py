@@ -91,7 +91,6 @@ class OTCRequest(BaseTrade):
             market=market,
             from_amount=from_amount,
             to_amount=to_amount,
-
             symbol=symbol,
             side=pair.side,
         )
