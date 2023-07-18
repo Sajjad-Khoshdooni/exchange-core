@@ -177,7 +177,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 request,
                 user=serializer.user,
                 client_info=client_info,
-                native_app=True,
                 refresh_token=serializer.validated_data['refresh']
             )
 
