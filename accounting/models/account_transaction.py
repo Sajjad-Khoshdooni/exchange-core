@@ -7,6 +7,7 @@ class AccountTransaction(models.Model):
     DEPOSIT, WITHDRAW = 'd', 'w'
 
     created = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ')
+    updated = models.DateTimeField(auto_now=True)
     account = models.ForeignKey(Account, on_delete=models.CASCADE, verbose_name='حساب')
     amount = models.PositiveIntegerField(verbose_name='مقدار')
     reason = models.CharField(max_length=128, verbose_name='علت')

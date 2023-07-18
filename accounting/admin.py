@@ -27,9 +27,15 @@ class TransactionAttachmentTabularInline(admin.TabularInline):
 
 @admin.register(AccountTransaction)
 class AccountTransactionAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'amount', 'reason')
-    readonly_fields = ('created', )
+    fields = ('account', 'amount', 'get_amount', 'reason', 'type')
+    list_display = ('created', 'account', 'get_amount', 'type', 'reason')
+    readonly_fields = ('created', 'get_amount')
     inlines = (TransactionAttachmentTabularInline, )
+    list_filter = ('account__name', 'type')
+
+    @admin.display(description='مقدار', ordering='amount')
+    def get_amount(self, trx: AccountTransaction):
+        return humanize_number(trx.amount)
 
 
 @admin.register(Vault)
