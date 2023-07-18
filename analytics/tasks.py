@@ -340,18 +340,19 @@ def trigger_wallet_event(threshold=1000):
     ).order_by('id')[:threshold]
 
     for wallet in wallet_list:
-        event = WalletEvent(
-            created=wallet.created,
-            user_id=wallet.account.user.id,
-            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(wallet.id) + WalletEvent.type),
-            id=wallet.id,
-            balance=wallet.balance,
-            expiration=wallet.expiration,
-            credit=wallet.credit,
-            coin=wallet.asset.symbol,
-            market=wallet.market
-        )
-        get_kafka_producer().produce(event, instance=wallet)
+        if wallet.account.user:
+            event = WalletEvent(
+                created=wallet.created,
+                user_id=wallet.account.user_id,
+                event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(wallet.id) + WalletEvent.type),
+                id=wallet.id,
+                balance=wallet.balance,
+                expiration=wallet.expiration,
+                credit=wallet.credit,
+                coin=wallet.asset.symbol,
+                market=wallet.market
+            )
+            get_kafka_producer().produce(event, instance=wallet)
 
 
 def trigger_transaction_event(threshold=1000):
