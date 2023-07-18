@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import Min, F
+from django.db.models import Min, F, Max
 from django.http import Http404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -59,16 +59,20 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return self.context['cap_info'].get(asset.symbol, CoinInfo())
 
     def get_price_usdt(self, asset: Asset):
-        prices = self.context['prices']
-        price = prices.get(asset.symbol)
+        price = self.context.get('market_prices', {'USDT': {}})['USDT'].get(asset.symbol, 0)
+        if not price:
+            price = self.context.get('prices', {}).get(asset.symbol, 0)
         if not price:
             return
 
         return asset.get_presentation_price_usdt(price)
 
     def get_price_irt(self, asset: Asset):
-        prices = self.context['prices']
-        price = prices.get(asset.symbol)
+        price = self.context.get('market_prices', {'IRT': {}})['IRT'].get(asset.symbol, 0)
+        if price:
+            return asset.get_presentation_price_irt(price)
+        else:
+            price = self.context.get('prices', {}).get(asset.symbol, 0)
         if not price:
             return
 
@@ -191,6 +195,16 @@ class AssetsViewSet(ModelViewSet):
                 allow_stale=True,
                 apply_otc_spread=True
             )
+            ctx['market_prices'] = {}
+            from market.models import Order
+            for base_asset in ('IRT', 'USDT'):
+                ctx['market_prices'][base_asset] = {
+                    o['symbol__name'].replace(base_asset, ''): o['best_bid'] for o in Order.open_objects.filter(
+                        side=BUY,
+                        symbol__enable=True,
+                        symbol__name__in=map(lambda s: f'{s}{base_asset}', symbols)
+                    ).values('symbol__name').annotate(best_bid=Max('price'))
+                }
             ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
 
         return ctx

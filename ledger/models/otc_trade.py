@@ -97,6 +97,11 @@ class OTCTrade(models.Model):
             fok_success = otc_trade.try_fok_fill(pipeline)
 
             if not fok_success:
+                if otc_trade.otc_request.symbol.enable:
+                    logger.warning('Hedge otc from market failed', extra={
+                        'otc_request_id': otc_request.id
+                    })
+                    raise HedgeError
                 otc_trade.execution_type = OTCTrade.PROVIDER
                 otc_trade.save(update_fields=['execution_type'])
                 pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount,
@@ -136,9 +141,7 @@ class OTCTrade(models.Model):
                 else:
                     opposite_side = Order.get_opposite_side(self.otc_request.side)
                     usdt_irt = PairSymbol.objects.get(name='USDTIRT')
-                    usdt_hedge_price = Order.get_top_price(
-                        usdt_irt.id, opposite_side
-                    )
+                    usdt_hedge_price = Order.get_top_price(usdt_irt.id, opposite_side)
                     if usdt_hedge_price:
                         base_usdt_price = 1 / usdt_hedge_price
                         self.otc_request.base_usdt_price = base_usdt_price

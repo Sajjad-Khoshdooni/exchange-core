@@ -84,8 +84,8 @@ class StakeRequestSerializer(serializers.ModelSerializer):
                 stake_option=stake_option,
                 amount=amount,
                 account=user.get_account(),
-                is_bot=validated_data.get('is_bot', False),
                 login_activity=LoginActivity.from_request(self.context['request']),
+                is_bot=validated_data.get('is_bot', False)
             )
             pipeline.new_trx(
                 group_id=stake_object.group_id,
@@ -104,7 +104,7 @@ class StakeRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = StakeRequest
         fields = ('id', 'created', 'status', 'stake_option', 'amount', 'presentation_amount',
-                  'stake_option_id', 'total_revenue', 'remaining_date', 'is_bot')
+                  'stake_option_id', 'total_revenue', 'is_bot', 'remaining_date', 'is_bot')
 
 
 class StakeRequestAPIView(ModelViewSet):

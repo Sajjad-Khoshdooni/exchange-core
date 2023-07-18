@@ -366,7 +366,8 @@ class TransferAdmin(AdvancedAdmin):
     list_filter = ('deposit', 'status', 'source', TransferUserFilter,)
     readonly_fields = (
         'deposit_address', 'network', 'wallet', 'created', 'accepted_datetime', 'finished_datetime', 'get_risks',
-        'out_address', 'memo', 'amount', 'irt_value', 'usdt_value', 'deposit', 'group_id', 'address_book', 'login_activity',
+        'out_address', 'memo', 'amount', 'irt_value', 'usdt_value', 'deposit', 'group_id', 'login_activity',
+        'address_book'
     )
     exclude = ('risks', )
 
