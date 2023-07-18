@@ -98,6 +98,9 @@ class OTCTrade(models.Model):
 
             if not fok_success:
                 if otc_trade.otc_request.symbol.enable:
+                    logger.warning('Hedge otc from market failed', extra={
+                        'otc_request_id': otc_request.id
+                    })
                     raise HedgeError
                 otc_trade.execution_type = OTCTrade.PROVIDER
                 otc_trade.save(update_fields=['execution_type'])
