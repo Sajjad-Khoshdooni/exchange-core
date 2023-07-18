@@ -336,22 +336,22 @@ def trigger_traffic_source(threshold=1000):
 def trigger_wallet_event(threshold=1000):
     tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.WALLET)
     wallet_list = Wallet.objects.filter(
-        id__gt=tracker.last_id
+        id__gt=tracker.last_id,
+        account__user__isnull=False
     ).order_by('id')[:threshold]
 
     for wallet in wallet_list:
-        if wallet.account.user:
-            event = WalletEvent(
-                created=wallet.created,
-                user_id=wallet.account.user_id,
-                event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(wallet.id) + WalletEvent.type),
-                id=wallet.id,
-                balance=wallet.balance,
-                expiration=wallet.expiration,
-                credit=wallet.credit,
-                coin=wallet.asset.symbol,
-                market=wallet.market
-            )
+        event = WalletEvent(
+            created=wallet.created,
+            user_id=wallet.account.user_id,
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(wallet.id) + WalletEvent.type),
+            id=wallet.id,
+            balance=wallet.balance,
+            expiration=wallet.expiration,
+            credit=wallet.credit,
+            coin=wallet.asset.symbol,
+            market=wallet.market
+        )
             get_kafka_producer().produce(event, instance=wallet)
 
 
