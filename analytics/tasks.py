@@ -9,9 +9,9 @@ from accounts.models import User, LoginActivity, TrafficSource, Account
 from analytics.event.producer import get_kafka_producer
 from analytics.models import ActiveTrader, EventTracker
 from analytics.utils.dto import LoginEvent, TransferEvent, TrafficSourceEvent, StakeRequestEvent, PrizeEvent, \
-    TradeEvent, UserEvent, WalletEvent
+    TradeEvent, UserEvent, WalletEvent, TransactionEvent
 from financial.models import FiatWithdrawRequest, Payment
-from ledger.models import Transfer, Prize, OTCTrade, FastBuyToken, Wallet
+from ledger.models import Transfer, Prize, OTCTrade, FastBuyToken, Wallet, Trx
 from ledger.utils.external_price import get_external_price
 from ledger.utils.fields import DONE
 from market.models import Trade
@@ -68,6 +68,8 @@ def trigger_kafka_event():
     trigger_traffic_source()
 
     trigger_wallet_event()
+
+    trigger_transaction_event()
 
 
 def trigger_users_event(threshold=1000):
@@ -346,7 +348,28 @@ def trigger_wallet_event(threshold=1000):
             balance=wallet.balance,
             expiration=wallet.expiration,
             credit=wallet.credit,
-            asset=wallet.asset.symbol,
+            coin=wallet.asset.symbol,
             market=wallet.market
         )
         get_kafka_producer().produce(event, instance=wallet)
+
+
+def trigger_transaction_event(threshold=1000):
+    tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.TRANSACTION)
+    trx_list = Trx.objects.filter(
+        id__gt=tracker.last_id
+    ).order_by('id')[:threshold]
+
+    for trx in trx_list:
+        event = TransactionEvent(
+            created=trx.created,
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(trx.id) + TransactionEvent.type),
+            id=trx.id,
+            amount=trx.amount,
+            sender_wallet_id=trx.sender.id,
+            receiver_wallet_id=trx.receiver.id,
+            group_id=trx.group_id,
+            scope=trx.scope,
+            user_id=None
+        )
+        get_kafka_producer().produce(event, instance=trx)

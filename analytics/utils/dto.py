@@ -9,7 +9,7 @@ from typing import Union, ClassVar
 class BaseEvent:
     v: ClassVar[str] = '1'
     created: datetime
-    user_id: int
+    user_id: [int, None]
     event_id: uuid
 
     def serialize(self):
@@ -233,7 +233,7 @@ class PrizeEvent(BaseEvent):
 class WalletEvent(BaseEvent):
     type: ClassVar[str] = 'wallet'
     id: int
-    asset: str
+    coin: str
     market: str
     balance: Decimal
     expiration: datetime
@@ -247,9 +247,34 @@ class WalletEvent(BaseEvent):
             'event_id': str(self.event_id),
             'type': self.type,
             'id': self.id,
-            'asset': self.asset,
+            'coin': self.coin,
             'market': self.market,
             'balance': float(self.balance),
             'expiration': self.expiration.isoformat() if self.expiration else None,
             'credit': float(self.credit),
+        }
+
+
+@dataclass
+class TransactionEvent(BaseEvent):
+    type: ClassVar[str] = 'transaction'
+    id: int
+    sender_wallet_id: int
+    receiver_wallet_id: int
+    amount: Decimal
+    group_id: uuid
+    scope: str
+
+    def serialize(self):
+        return {
+            'created': self.created.isoformat(),
+            'v': self.v,
+            'event_id': str(self.event_id),
+            'type': self.type,
+            'id': self.id,
+            'amount': float(self.amount),
+            'sender_wallet_id': self.sender_wallet_id,
+            'receiver_wallet_id': self.receiver_wallet_id,
+            'group_id': str(self.group_id),
+            'scope': self.scope
         }

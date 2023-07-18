@@ -1,16 +1,11 @@
-import uuid
 from decimal import Decimal
 from uuid import uuid4
 
 from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint, Q, F, UniqueConstraint
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 
 from accounts.models import Account
-from analytics.event.producer import get_kafka_producer
-from analytics.utils.dto import WalletEvent
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
 from ledger.utils.fields import get_amount_field
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -163,31 +158,6 @@ class Wallet(models.Model):
                     request_id=request_id,
                 )
                 return group_id
-
-
-@receiver(post_save, sender=Wallet)
-def handle_wallet_save(sender, wallet, created, **kwargs):
-    if settings.DEBUG_OR_TESTING_OR_STAGING:
-        return
-
-    producer = get_kafka_producer()
-    account = wallet.account
-
-    if account.type != Account.ORDINARY:
-        return
-
-    event = WalletEvent(
-        created=wallet.created,
-        user_id=wallet.account.user.id,
-        event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(wallet.id) + WalletEvent.type),
-        id=wallet.id,
-        balance=wallet.balance,
-        expiration=wallet.expiration,
-        credit=wallet.credit,
-        asset=wallet.asset.symbol,
-        market=wallet.market
-    )
-    producer.produce(event)
 
 
 class ReserveWallet(models.Model):
