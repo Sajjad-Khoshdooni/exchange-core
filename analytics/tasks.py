@@ -352,7 +352,7 @@ def trigger_wallet_event(threshold=1000):
             coin=wallet.asset.symbol,
             market=wallet.market
         )
-            get_kafka_producer().produce(event, instance=wallet)
+        get_kafka_producer().produce(event, instance=wallet)
 
 
 def trigger_transaction_event(threshold=1000):
