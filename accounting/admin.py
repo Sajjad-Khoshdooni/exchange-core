@@ -10,8 +10,10 @@ from ledger.utils.precision import humanize_number
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('name', 'iban', 'get_balance')
+    list_display = ('name', 'iban', 'get_balance', 'create_vault')
     readonly_fields = ('get_balance', )
+    list_filter = ('create_vault', )
+    ordering = ('-create_vault', )
 
     @admin.display(description='موجودی')
     def get_balance(self, account: Account):
@@ -27,9 +29,15 @@ class TransactionAttachmentTabularInline(admin.TabularInline):
 
 @admin.register(AccountTransaction)
 class AccountTransactionAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'amount', 'reason')
-    readonly_fields = ('created', )
+    fields = ('account', 'amount', 'get_amount', 'reason', 'type')
+    list_display = ('created', 'account', 'get_amount', 'type', 'reason')
+    readonly_fields = ('created', 'get_amount')
     inlines = (TransactionAttachmentTabularInline, )
+    list_filter = ('account__name', 'type')
+
+    @admin.display(description='مقدار', ordering='amount')
+    def get_amount(self, trx: AccountTransaction):
+        return trx.amount and humanize_number(trx.amount)
 
 
 @admin.register(Vault)

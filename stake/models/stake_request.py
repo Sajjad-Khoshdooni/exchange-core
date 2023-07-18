@@ -43,12 +43,12 @@ class StakeRequest(models.Model):
     end_at = models.DateTimeField(null=True, blank=True)
     is_bot = models.BooleanField(default=False)
 
-    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
-
     @property
     def remaining_date(self):
         if self.status in (StakeRequest.PROCESS, StakeRequest.PENDING, StakeRequest.DONE):
             return (self.created + timedelta(days=90)) - timezone.now()
+
+    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return str(self.stake_option) + ' ' + str(self.account_id)

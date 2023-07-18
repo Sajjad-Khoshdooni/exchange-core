@@ -165,7 +165,7 @@ def update_cold_wallet_vaults(usdt_irt: Decimal):
 
 
 def update_bank_vaults(now: datetime, usdt_irt: Decimal):
-    for account in Account.objects.all():
+    for account in Account.objects.filter(create_vault=True):
         vault, _ = Vault.objects.update_or_create(
             type=Vault.BANK,
             market=Vault.SPOT,
