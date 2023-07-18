@@ -122,16 +122,13 @@ class OTCRequest(BaseTrade):
                 coin_amount = floor_precision(pair.base_amount / symbol_price, symbol.step_size)
             else:
                 coin_amount = pair.coin_amount
+
+            cumulative_sum = Decimal(0)
             for order in Order.open_objects.filter(symbol=symbol, side=other_side).annotate(
                 remaining=F('amount') - F('filled_amount')
-            ).annotate(
-                cumulative_sum=Window(
-                    expression=Sum('remaining'),
-                    frame=RowRange(start=None, end=0),
-                    order_by=F('price').asc() if other_side == SELL else F('price').desc()
-                )
             ).order_by('price' if other_side == SELL else '-price'):
-                if order.cumulative_sum >= coin_amount:
+                cumulative_sum += order.remaining
+                if cumulative_sum >= coin_amount:
                     coin_price = order.price
                     otc_request.price = ceil_precision(coin_price, symbol.tick_size)
                     break

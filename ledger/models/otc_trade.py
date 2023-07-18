@@ -97,6 +97,8 @@ class OTCTrade(models.Model):
             fok_success = otc_trade.try_fok_fill(pipeline)
 
             if not fok_success:
+                if otc_trade.otc_request.symbol.enable:
+                    raise HedgeError
                 otc_trade.execution_type = OTCTrade.PROVIDER
                 otc_trade.save(update_fields=['execution_type'])
                 pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount,
