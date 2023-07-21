@@ -203,11 +203,17 @@ class Order(models.Model):
         return {'price__lte': price} if side == BUY else {'price__gte': price}
 
     @classmethod
-    def get_to_lock_wallet(cls, wallet, base_wallet, side) -> Wallet:
+    def get_to_lock_wallet(cls, wallet, base_wallet, side, lock_amount) -> Wallet:
+        if wallet.market == Wallet.MARGIN:
+            if base_wallet.has_balance(lock_amount, raise_exception=False):
+                return base_wallet
+            return base_wallet.asset.get_wallet(base_wallet.account, market=base_wallet.market, variant=None)
         return base_wallet if side == BUY else wallet
 
     @classmethod
-    def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
+    def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str, market: str) -> Decimal:
+        if market == Wallet.MARGIN:
+            return amount * price
         return amount * price if side == BUY else amount
 
     def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False) -> MatchedTrades:
@@ -247,8 +253,8 @@ class Order(models.Model):
         return matched_trades
 
     def acquire_lock(self, pipeline: WalletPipeline):
-        to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
-        lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side)
+        lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side, self.wallet.market)
+        to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side, lock_amount)
 
         if self.side == BUY and self.fill_type == Order.MARKET:
             free_amount = to_lock_wallet.get_free()
