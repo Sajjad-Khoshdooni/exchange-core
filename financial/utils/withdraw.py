@@ -609,4 +609,4 @@ class JibimoChannel(FiatWithdraw):
 
     def get_total_wallet_irt_value(self) -> int:
         resp = self.collect_api('/v2/business/refresh')
-        return resp.data['user']['balance']
+        return int(resp.data['user']['balance'])
