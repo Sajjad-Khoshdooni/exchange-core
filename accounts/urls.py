@@ -102,8 +102,8 @@ urlpatterns = [
 
     path('attribution/', views.AttributionAPIView.as_view()),
 
-    path('2fa/create/', views.auht2fa_view.TOTPActivationView.as_view()),
-    path('2fa/delete/', views.auht2fa_view.TOTPDeActivationView.as_view()),
+    path('2fa/activate/', views.auht2fa_view.TOTPActivationView.as_view()),
+    path('2fa/deactivate/', views.auht2fa_view.TOTPDeActivationView.as_view()),
 
     path('users/<int:pk>/', views.UserDigestView.as_view()),
 
