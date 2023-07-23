@@ -33,7 +33,7 @@ MAX_WITHDRAW = 100_000_000
 class WithdrawRequestSerializer(serializers.ModelSerializer):
     iban = serializers.CharField(write_only=True)
     code = serializers.CharField(write_only=True)
-    totp = serializers.CharField(required=False)
+    totp = serializers.CharField(required=False, allow_blank=True)
 
     def create(self, validated_data):
         request = self.context['request']
