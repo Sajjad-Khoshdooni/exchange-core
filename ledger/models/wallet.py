@@ -132,7 +132,7 @@ class Wallet(models.Model):
         if request_id:
             existing_reserve = ReserveWallet.objects.filter(request_id=request_id).first()
             if existing_reserve:
-                return existing_reserve.request_id
+                return existing_reserve.group_id
 
         if self.has_balance(amount, raise_exception=True):
             group_id = uuid4()
