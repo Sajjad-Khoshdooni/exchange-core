@@ -40,7 +40,7 @@ class LoginView(APIView):
         serializer.is_valid(raise_exception=True)
 
         user = serializer.save()
-        device = TOTPDevice.objects.get(user=user)
+        device = TOTPDevice.objects.filter(user=user).first()
         if user and (device is None or not device.confirmed or device.verify_token(serializer.totp)):
             login(request, user)
             login_activity = set_login_activity(request, user)

@@ -80,7 +80,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if from_panel:
             code = attrs['code']
             otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CRYPTO_WITHDRAW)
-            device = TOTPDevice.objects.get(user=user)
+            device = TOTPDevice.objects.filter(user=user).first()
             if not otp_code:
                 raise ValidationError({'code': 'کد نامعتبر است.'})
             if not (device is None or not device.confirmed or device.verify_token(totp)):

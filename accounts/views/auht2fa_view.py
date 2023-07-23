@@ -1,9 +1,10 @@
-from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
-from rest_framework import views
-from rest_framework import serializers
-from accounts.models.phone_verification import VerificationCode
 from django.core.exceptions import ValidationError
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from rest_framework import serializers
+from rest_framework import views
 from rest_framework.response import Response
+
+from accounts.models.phone_verification import VerificationCode
 
 
 class TOTPActivationSerializer(serializers.Serializer):

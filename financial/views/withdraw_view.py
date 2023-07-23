@@ -66,7 +66,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است'})
-        device = TOTPDevice.objects.get(user=user)
+        device = TOTPDevice.objects.filter(user=user).first()
         if not (device is None or not device.confirmed or device.verify_token(totp)):
             raise ValidationError({'otp': ' رمز موقت نامعتبر است.'})
 
