@@ -3,7 +3,7 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework import serializers
 from rest_framework import views
 from rest_framework.response import Response
-
+from accounts.utils import notif
 from accounts.models.phone_verification import VerificationCode
 
 
@@ -70,6 +70,7 @@ class TOTPDeActivationView(views.APIView):
         device = TOTPDevice.objects.filter(user=user).first()
         device.confirmed = False
         device.save()
+        notif.send_2fa_deactivation_message(user=user)
         return Response({'msg': '2FA has been deactivated successfully'})
 
 
@@ -96,4 +97,5 @@ class TOTPActivationView(views.APIView):
         device = TOTPDevice.objects.filter(user=user).first()
         device.confirmed = True
         device.save()
+        notif.send_2fa_activation_message(user=user)
         return Response({'msg': '2FA has been activated successfully'})
