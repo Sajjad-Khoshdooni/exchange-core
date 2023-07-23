@@ -82,8 +82,10 @@ class TradesPair:
 def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade: bool = False):
 
     if not fake_trade:
+        _register_borrow_transaction(pipeline, pair=pair)
         _register_trade_transaction(pipeline, pair=pair)
         _register_trade_base_transaction(pipeline, pair=pair)
+        _register_repay_transaction(pipeline, pair=pair)
 
     taker_fee = register_fee_transactions(
         pipeline=pipeline,
@@ -124,6 +126,36 @@ def _register_trade_transaction(pipeline: WalletPipeline, pair: TradesPair):
         group_id=pair.maker_trade.group_id,
         scope=Trx.TRADE
     )
+
+
+def _register_borrow_transaction(pipeline: WalletPipeline, pair: TradesPair):
+
+    trade_amount = pair.maker_trade.amount
+    for order in (pair.maker_order, pair.taker_order):
+        if order.side == SELL and order.wallet.market == Wallet.MARGIN:
+            from ledger.models import MarginLoan
+            MarginLoan.new_loan(
+                account=order.account,
+                asset=order.symbol.asset,
+                amount=trade_amount,
+                loan_type=MarginLoan.BORROW,
+                pipeline=pipeline
+            )
+
+
+def _register_repay_transaction(pipeline: WalletPipeline, pair: TradesPair):
+
+    trade_amount = pair.maker_trade.amount
+    for order in (pair.maker_order, pair.taker_order):
+        if order.side == BUY and order.wallet.market == Wallet.MARGIN:
+            from ledger.models import MarginLoan
+            MarginLoan.new_loan(
+                account=order.account,
+                asset=order.symbol.asset,
+                amount=trade_amount,
+                loan_type=MarginLoan.REPAY,
+                pipeline=pipeline
+            )
 
 
 def _register_trade_base_transaction(pipeline: WalletPipeline, pair: TradesPair):

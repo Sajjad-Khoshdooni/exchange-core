@@ -119,7 +119,9 @@ class OrderSerializer(serializers.ModelSerializer):
             position = symbol.asset.get_margin_position(self.context['account'])
 
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
-        wallet = symbol.asset.get_wallet(self.context['account'], market=market, variant=position.variant or self.context['variant'])
+        wallet = symbol.asset.get_wallet(
+            self.context['account'], market=market, variant=position.variant or self.context['variant']
+        )
         min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
         self.validate_order_size(
             validated_data['amount'], validated_data['price'], min_order_size, symbol.base_asset.symbol

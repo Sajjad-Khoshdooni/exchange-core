@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from accounting.models import TradeRevenue
 from accounts.models import Notification
-from ledger.models import Wallet
+from ledger.models import Wallet, Trx
 from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
 from ledger.utils.external_price import get_external_price, BUY, SELL, SIDE_VERBOSE
@@ -203,11 +203,21 @@ class Order(models.Model):
         return {'price__lte': price} if side == BUY else {'price__gte': price}
 
     @classmethod
-    def get_to_lock_wallet(cls, wallet, base_wallet, side, lock_amount) -> Wallet:
+    def get_to_lock_wallet(cls, wallet, base_wallet, side, lock_amount, pipeline: WalletPipeline) -> Wallet:
         if wallet.market == Wallet.MARGIN:
-            if base_wallet.has_balance(lock_amount, raise_exception=False):
-                return base_wallet
-            return base_wallet.asset.get_wallet(base_wallet.account, market=base_wallet.market, variant=None)
+            position = wallet.get_margin_position()
+            if not position.has_enough_margin(lock_amount):
+                margin_cross_wallet = base_wallet.asset.get_wallet(
+                    base_wallet.account, market=base_wallet.market, variant=None
+                )
+                pipeline.new_trx(
+                    group_id=uuid4(),
+                    sender=margin_cross_wallet,
+                    receiver=base_wallet,
+                    amount=lock_amount,
+                    scope=Trx.MARGIN_TRANSFER
+                )
+            return base_wallet
         return base_wallet if side == BUY else wallet
 
     @classmethod
@@ -254,7 +264,7 @@ class Order(models.Model):
 
     def acquire_lock(self, pipeline: WalletPipeline):
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side, self.wallet.market)
-        to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side, lock_amount)
+        to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side, lock_amount, pipeline)
 
         if self.side == BUY and self.fill_type == Order.MARKET:
             free_amount = to_lock_wallet.get_free()
@@ -269,7 +279,7 @@ class Order(models.Model):
             return floor_precision(lock_amount / self.price, self.symbol.step_size)
 
     def release_lock(self, pipeline: WalletPipeline, release_amount: Decimal):
-        release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side)
+        release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side, self.wallet.market)
         pipeline.release_lock(key=self.group_id, amount=release_amount)
 
     def make_match(self, pipeline: WalletPipeline, overriding_fill_amount: Union[Decimal, None]) -> MatchedTrades:

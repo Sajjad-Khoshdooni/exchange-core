@@ -88,42 +88,41 @@ class MarginLoan(models.Model):
         return self.asset.get_wallet(self.account, Wallet.LOAN)
 
     @classmethod
-    def new_loan(cls, account: Account, asset: Asset, amount: Decimal, loan_type: str):
+    def new_loan(cls, account: Account, asset: Asset, amount: Decimal, loan_type: str, pipeline: WalletPipeline):
         assert amount > 0
         assert asset.symbol != Asset.IRT
         assert loan_type in (cls.BORROW, cls.REPAY)
 
-        with WalletPipeline() as pipeline:  # type: WalletPipeline
-            loan = MarginLoan(
-                account=account,
-                asset=asset,
-                amount=amount,
-                type=loan_type,
-                status=DONE
-            )
+        loan = MarginLoan(
+            account=account,
+            asset=asset,
+            amount=amount,
+            type=loan_type,
+            status=DONE
+        )
 
-            if loan_type == cls.REPAY:
-                loan.loan_wallet.has_debt(-amount, raise_exception=True)
-                loan.margin_wallet.has_balance(amount, raise_exception=True)
-            else:
-                margin_info = MarginInfo.get(account)
-                price = get_external_price(asset.symbol, base_coin=Asset.USDT, side=SELL)
+        if loan_type == cls.REPAY:
+            loan.loan_wallet.has_debt(-amount, raise_exception=True)
+            loan.margin_wallet.has_balance(amount, raise_exception=True)
+        else:
+            margin_info = MarginInfo.get(account)
+            price = get_external_price(asset.symbol, base_coin=Asset.USDT, side=SELL)
 
-                max_borrowable = margin_info.get_max_borrowable() / price
+            # max_borrowable = margin_info.get_max_borrowable() / price
 
-                if amount > max_borrowable:
-                    raise MaxBorrowableExceeds()
+            # if amount > max_borrowable:
+            #     raise MaxBorrowableExceeds()
 
-            if loan_type == cls.BORROW:
-                sender, receiver = loan.loan_wallet, loan.margin_wallet
-            else:
-                sender, receiver = loan.margin_wallet, loan.loan_wallet
+        if loan_type == cls.BORROW:
+            sender, receiver = loan.loan_wallet, loan.margin_wallet
+        else:
+            sender, receiver = loan.margin_wallet, loan.loan_wallet
 
-            pipeline.new_trx(sender, receiver, amount, Trx.MARGIN_BORROW, loan.group_id)
+        pipeline.new_trx(sender, receiver, amount, Trx.MARGIN_BORROW, loan.group_id)
 
-            loan.save()
+        loan.save()
 
-            return loan
+        return loan
 
 
 class CloseRequest(models.Model):

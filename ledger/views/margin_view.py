@@ -17,6 +17,7 @@ from ledger.models.asset import CoinField, AssetSerializerMini
 from ledger.utils.external_price import get_external_price, SELL
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class MarginInfoView(APIView):
@@ -124,9 +125,11 @@ class MarginLoanSerializer(serializers.ModelSerializer):
             raise ValidationError('مقداری بزرگتر از صفر انتخاب کنید.')
 
         try:
-            return MarginLoan.new_loan(
-                **validated_data
-            )
+            with WalletPipeline() as pipeline:
+                return MarginLoan.new_loan(
+                    **validated_data,
+                    pipeline=pipeline
+                )
         except InsufficientDebt:
             raise ValidationError('میزان بدهی کمتر از مقدار بازپرداخت است.')
         except MaxBorrowableExceeds:
