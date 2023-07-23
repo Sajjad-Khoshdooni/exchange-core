@@ -6,18 +6,7 @@ from django.core.exceptions import ValidationError
 from rest_framework.response import Response
 
 
-class TOTPCreateView(views.APIView):
-
-    def post(self, request):
-        user = request.user
-        device = TOTPDevice.objects.get(user=user)
-        if device is None:
-            device = TOTPDevice.objects.create(user=user, confirmed=False)
-        VerificationCode.send_otp_code(user.phone, VerificationCode.SCOPE_2FA_ACTIVATE)
-        return device.config_url()
-
-
-class TOTPVerifySerializer(serializers.Serializer):
+class TOTPSerializer(serializers.Serializer):
     token = serializers.CharField(write_only=True, required=True)
     sms_code = serializers.CharField(write_only=True, required=True)
 
@@ -36,23 +25,6 @@ class TOTPVerifySerializer(serializers.Serializer):
         return data
 
 
-class TOTPVerifyView(views.APIView):
-    def patch(self, request):
-        user = request.user
-        totp_verify_serializer = TOTPVerifySerializer(
-            instance=user,
-            data=request.data,
-            partial=True,
-            context={
-                'request': request
-            }
-        )
-        totp_verify_serializer.is_valid(raise_exception=True)
-        TOTPDevice.objects.get(user).confirmed = True
-
-        return Response({'msg': '2FA has been activated successfully'})
-
-
 class TOTPDeleteView(views.APIView):
     def post(self, request):
         user = request.user
@@ -63,7 +35,7 @@ class TOTPDeleteView(views.APIView):
 
     def delete(self, request):
         user = request.user
-        totp_verify_serializer = TOTPVerifySerializer(
+        totp_verify_serializer = TOTPSerializer(
             instance=user,
             data=request.data,
             partial=True,
@@ -76,3 +48,27 @@ class TOTPDeleteView(views.APIView):
         device = TOTPDevice.objects.get(user)
         device.confirmed = False
         device.key = default_key()
+
+
+class TOTPActivationView(views.APIView):
+    def post(self, request):
+        user = request.user
+        device = TOTPDevice.objects.get(user=user)
+        if device is None:
+            device = TOTPDevice.objects.create(user=user, confirmed=False)
+        VerificationCode.send_otp_code(user.phone, VerificationCode.SCOPE_2FA_ACTIVATE)
+        return device.config_url()
+
+    def patch(self, request):
+        user = request.user
+        totp_verify_serializer = TOTPSerializer(
+            instance=user,
+            data=request.data,
+            partial=True,
+            context={
+                'request': request
+            }
+        )
+        totp_verify_serializer.is_valid(raise_exception=True)
+        TOTPDevice.objects.get(user).confirmed = True
+        return Response({'msg': '2FA has been activated successfully'})
