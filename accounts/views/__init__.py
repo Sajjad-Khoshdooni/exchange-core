@@ -25,7 +25,7 @@ from .app_status_view import AppStatusView
 from .shahkar_view import ShahkarCheckView, ShahkarStatusView
 from .attribution_view import AttributionAPIView
 
-from .auht2fa_view import Create2FaQrCodeAPIView, Verify2FaVerificationAPIView
+from .auht2fa_view import TOTPActivationView, TOTPDeActivationView
 from .health_view import HealthView
 from .user_digest_view import UserDigestView
 from .feedback_view import UserFeedbackView

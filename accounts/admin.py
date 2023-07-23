@@ -7,8 +7,9 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from accounts.models import FirebaseToken, Attribution, AppStatus, Auth2Fa, VerificationCode, \
+from accounts.models import FirebaseToken, Attribution, AppStatus, VerificationCode, \
     UserFeedback, BulkNotification, EmailNotification
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
@@ -736,12 +737,12 @@ class AppStatusAdmin(admin.ModelAdmin):
     list_display = ['latest_version', 'force_update_version', 'active']
 
 
-@admin.register(Auth2Fa)
-class Auth2FaAdmin(admin.ModelAdmin):
-    list_display = ['user', 'created', 'verified']
-    readonly_fields = ('created', )
-    fields = ('user', 'created', 'verified')
-    search_fields = ('user__phone',)
+# @admin.register(TOTPDevice)
+# class Auth2FaAdmin(admin.ModelAdmin):
+#     list_display = ['user', 'created', 'verified']
+#     readonly_fields = ('created', )
+#     fields = ('user', 'created', 'verified')
+#     search_fields = ('user__phone',)
 
 
 @admin.register(VerificationCode)
