@@ -101,8 +101,8 @@ urlpatterns = [
     path('shahkar/status/', staff_member_required(views.ShahkarStatusView.as_view())),
 
     path('attribution/', views.AttributionAPIView.as_view()),
-    path('2fa/create/', views.auht2fa_view.TOTPCreateView.as_view()),
-    path('2fa/verify/', views.auht2fa_view.TOTPVerifyView.as_view()),
+
+    path('2fa/create/', views.auht2fa_view.TOTPActivationView.as_view()),
     path('2fa/delete/', views.auht2fa_view.TOTPDeleteView.as_view()),
 
     path('users/<int:pk>/', views.UserDigestView.as_view()),
