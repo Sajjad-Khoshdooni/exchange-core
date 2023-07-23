@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class LoginSerializer(serializers.Serializer):
     login = serializers.CharField(required=True)
     password = serializers.CharField(required=True)
-    totp = serializers.CharField(required=False)
+    totp = serializers.CharField(allow_blank=True, required=False)
 
     def save(self, **kwargs):
         login = self.validated_data['login'].lower()
@@ -38,10 +38,9 @@ class LoginView(APIView):
 
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         user = serializer.save()
         device = TOTPDevice.objects.filter(user=user).first()
-        if user and (device is None or not device.confirmed or device.verify_token(serializer.totp)):
+        if user and (device is None or not device.confirmed or device.verify_token(serializer.data['totp'])):
             login(request, user)
             login_activity = set_login_activity(request, user)
             if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,

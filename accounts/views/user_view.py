@@ -14,7 +14,6 @@ from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 class UserSerializer(serializers.ModelSerializer):
     possible_time_for_withdraw = serializers.SerializerMethodField()
     chat_uuid = serializers.CharField()
-    auth2fa = serializers.SerializerMethodField()
     show_staking = serializers.SerializerMethodField()
 
     def get_chat_uuid(self, user: User):
@@ -33,7 +32,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw', 'chat_uuid', 'auth2fa'
+            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw', 'chat_uuid',
         )
         ref_name = "User"
 
