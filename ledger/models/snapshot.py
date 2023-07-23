@@ -39,4 +39,4 @@ class SystemSnapshot(models.Model):
     margin_insurance = get_amount_field()
     prize = get_amount_field()
 
-    verified = models.BooleanField(default=True)
+    verified = models.BooleanField(default=False)
