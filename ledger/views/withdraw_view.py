@@ -169,7 +169,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transfer
         fields = ('id', 'amount', 'address', 'coin', 'network', 'code', 'address_book_id', 'address_book', 'memo',
-                  'code_2fa')
+                  'totp')
         ref_name = 'Withdraw Serializer'
 
 

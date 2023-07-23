@@ -134,7 +134,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FiatWithdrawRequest
-        fields = ('iban', 'amount', 'code', 'code_2fa')
+        fields = ('iban', 'amount', 'code', 'totp')
 
 
 class WithdrawRequestView(ModelViewSet):
