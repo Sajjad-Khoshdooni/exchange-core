@@ -75,20 +75,21 @@ class MarginLoan(models.Model):
 
     status = get_status_field()
     group_id = get_group_id_field()
+    variant = get_group_id_field(null=True)
 
     class Meta:
         constraints = [CheckConstraint(check=Q(amount__gte=0), name='check_ledger_margin_loan_amount', ), ]
 
     @property
     def margin_wallet(self) -> 'Wallet':
-        return self.asset.get_wallet(self.account, Wallet.MARGIN)
+        return self.asset.get_wallet(self.account, Wallet.MARGIN, self.variant)
 
     @property
     def loan_wallet(self) -> 'Wallet':
-        return self.asset.get_wallet(self.account, Wallet.LOAN)
+        return self.asset.get_wallet(self.account, Wallet.LOAN, self.variant)
 
     @classmethod
-    def new_loan(cls, account: Account, asset: Asset, amount: Decimal, loan_type: str, pipeline: WalletPipeline):
+    def new_loan(cls, account: Account, asset: Asset, amount: Decimal, loan_type: str, pipeline: WalletPipeline, variant=None):
         assert amount > 0
         assert asset.symbol != Asset.IRT
         assert loan_type in (cls.BORROW, cls.REPAY)
@@ -96,6 +97,7 @@ class MarginLoan(models.Model):
         loan = MarginLoan(
             account=account,
             asset=asset,
+            variant=variant,
             amount=amount,
             type=loan_type,
             status=DONE

@@ -56,7 +56,7 @@ class StopLossSerializer(OrderSerializer):
                 )
                 base_wallet = symbol.base_asset.get_wallet(wallet.account, wallet.market)
                 lock_wallet = Order.get_to_lock_wallet(
-                    wallet, base_wallet, validated_data['side'], lock_amount, pipeline
+                    symbol, wallet, base_wallet, validated_data['side'], lock_amount, pipeline
                 )
                 if lock_wallet.has_balance(lock_amount, raise_exception=True):
                     login_activity = LoginActivity.from_request(request=self.context['request'])

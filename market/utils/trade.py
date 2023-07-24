@@ -139,7 +139,8 @@ def _register_borrow_transaction(pipeline: WalletPipeline, pair: TradesPair):
                 asset=order.symbol.asset,
                 amount=trade_amount,
                 loan_type=MarginLoan.BORROW,
-                pipeline=pipeline
+                pipeline=pipeline,
+                variant=order.wallet.variant
             )
 
 
@@ -154,7 +155,8 @@ def _register_repay_transaction(pipeline: WalletPipeline, pair: TradesPair):
                 asset=order.symbol.asset,
                 amount=trade_amount,
                 loan_type=MarginLoan.REPAY,
-                pipeline=pipeline
+                pipeline=pipeline,
+                variant=order.wallet.variant
             )
 
 

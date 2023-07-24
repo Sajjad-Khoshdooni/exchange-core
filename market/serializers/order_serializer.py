@@ -116,7 +116,7 @@ class OrderSerializer(serializers.ModelSerializer):
         market = validated_data.pop('wallet')['market']
         if market == Wallet.MARGIN:
             check_margin_view_permission(self.context['account'], symbol.asset)
-            position = symbol.asset.get_margin_position(self.context['account'])
+            position = symbol.get_margin_position(self.context['account'])
 
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
         wallet = symbol.asset.get_wallet(

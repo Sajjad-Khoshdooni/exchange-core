@@ -158,9 +158,6 @@ class Wallet(models.Model):
                     request_id=request_id,
                 )
                 return group_id
-            
-    def get_margin_position(self):
-        return self.asset.get_margin_position(self.account)
 
 
 class ReserveWallet(models.Model):

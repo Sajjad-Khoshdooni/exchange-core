@@ -7,7 +7,7 @@ from django.utils import timezone
 from accounts.models import Account
 from ledger.models import Asset, Trx, Wallet
 from ledger.utils.external_price import SELL, BUY
-from ledger.utils.test import new_account
+from ledger.utils.test import new_account, set_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol, Trade, Order
 from market.utils.order_utils import new_order
@@ -31,6 +31,8 @@ class CreateOrderTestCase(TestCase):
         self.irt = Asset.get(Asset.IRT)
         self.usdt = Asset.get(Asset.USDT)
         self.btc = Asset.get('BTC')
+        set_price(self.usdt, 30000)
+        set_price(self.btc, 30000)
 
         self.btcirt = PairSymbol.objects.get(name='BTCIRT')
         self.btcusdt = PairSymbol.objects.get(name='BTCUSDT')
@@ -344,12 +346,12 @@ class CreateOrderTestCase(TestCase):
         self.client.force_login(self.account.user)
         # wallets = self.irt.get_wallet(self.account)
         with WalletPipeline() as pipeline:
-            order = new_order(pipeline, self.btcusdt, Account.system(), SELL, 2, 20000)
+            order = new_order(pipeline, self.btcusdt, Account.system(), BUY, 2, 20000)
         resp = self.client.post('/api/v1/market/orders/', {
             'symbol': 'BTCUSDT',
             'amount': '1.5',
             'price': '20000',
-            'side': 'buy',
+            'side': 'sell',
             'fill_type': 'limit',
             'market': 'margin'
         })

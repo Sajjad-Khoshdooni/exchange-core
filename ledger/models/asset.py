@@ -151,10 +151,6 @@ class Asset(models.Model):
         else:
             return self.symbol
 
-    def get_margin_position(self, account: Account):
-        from ledger.margin.position import MarginPosition
-        return MarginPosition.get_by(self, account)
-
 
 class AssetSerializer(serializers.ModelSerializer):
     class Meta:
