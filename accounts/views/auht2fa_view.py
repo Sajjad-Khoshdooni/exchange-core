@@ -1,8 +1,9 @@
 from django.core.exceptions import ValidationError
-from django_otp.plugins.otp_totp.models import TOTPDevice
+from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
 from rest_framework import serializers
 from rest_framework import views
 from rest_framework.response import Response
+
 from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
 from accounts.models.phone_verification import VerificationCode
 
@@ -15,9 +16,9 @@ class TOTPSerializer(serializers.Serializer):
         user = self.context['request'].user
         token = data.get('token')
         sms_code = data.get('sms_code')
-        sms_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_2FA, user)
+        sms_code_verified = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_2FA, user)
         device = TOTPDevice.objects.filter(user=user).first()
-        if not sms_code:
+        if not sms_code_verified:
             raise ValidationError({'sms_code': 'کد ارسال شده برای فعال سازی ورود دومرحله‌ای نامعتبر است.'})
         if device is None:
             raise ValidationError({'device': 'ابتدا بارکد را دریافت کنید.'})
@@ -34,6 +35,7 @@ class TOTPView(views.APIView):
         if device is None:
             device = TOTPDevice.objects.create(user=user, confirmed=False)
         if device.confirmed is False:
+            device.key = default_key()
             return Response(device.config_url)
         else:
             return Response({'msg': 'پیامک با موفقیت ارسال شد.'})
