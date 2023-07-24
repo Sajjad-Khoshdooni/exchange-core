@@ -7,88 +7,40 @@ from accounts.utils import notif
 from accounts.models.phone_verification import VerificationCode
 
 
-class TOTPActivationSerializer(serializers.Serializer):
+class TOTPSerializer(serializers.Serializer):
     token = serializers.CharField(write_only=True, required=True)
     sms_code = serializers.CharField(write_only=True, required=True)
 
     def validate(self, data):
-        user = self.instance
+        user = self.context['request'].user
         token = data.get('token')
         sms_code = data.get('sms_code')
-
-        sms_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_2FA_ACTIVATE, user)
+        sms_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_2FA, user)
         device = TOTPDevice.objects.filter(user=user).first()
         if not sms_code:
             raise ValidationError({'sms_code': 'کد ارسال شده برای فعال سازی ورود دومرحله‌ای نامعتبر است.'})
         if device is None:
             raise ValidationError({'device': 'ابتدا بارکد را دریافت کنید.'})
         if not device.verify_token(token):
-            raise ValidationError({'token': 'رمز موقت بدرستی وارد نشده است'})
+            raise ValidationError({'token': 'رمز موقت صحیح نمی‌باشد.'})
         return data
 
 
-class TOTPDeActivationSerializer(serializers.Serializer):
-    token = serializers.CharField(write_only=True, required=True)
-    sms_code = serializers.CharField(write_only=True, required=True)
-
-    def validate(self, data):
-        user = self.instance
-        token = data.get('token')
-        sms_code = data.get('sms_code')
-
-        sms_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_2FA_DEACTIVATE, user)
-        device = TOTPDevice.objects.filter(user=user).first()
-        if not sms_code:
-            raise ValidationError({'sms_code': 'کد ارسال شده برای غیرفعال سازی ورود دومرحله‌ای نامعتبر است.'})
-        if device is None:
-            raise ValidationError({'device': 'ابتدا ورود دومرحله‌ای را فعال کنید.'})
-        if not device.verify_token(token):
-            raise ValidationError({'token': 'رمز موقت بدرستی وارد نشده است'})
-        return data
-
-
-class TOTPDeActivationView(views.APIView):
+class TOTPView(views.APIView):
     def post(self, request):
         user = request.user
         device = TOTPDevice.objects.filter(user=user)
-        if device is None:
-            return Response({'msg': 'Your 2fa is not activated'})
-        VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_2FA_DEACTIVATE, user=user)
-        return Response({'msg': 'sms code has been sent'})
-
-    def patch(self, request):
-        user = request.user
-        totp_de_active_serializer = TOTPDeActivationSerializer(
-            instance=user,
-            data=request.data,
-            partial=True,
-            context={
-                'request': request
-            }
-        )
-        totp_de_active_serializer.is_valid(raise_exception=True)
-        device = TOTPDevice.objects.filter(user=user).first()
-        device.confirmed = False
-        device.save()
-        notif.send_2fa_deactivation_message(user=user)
-        return Response({'msg': '2FA has been deactivated successfully'})
-
-
-class TOTPActivationView(views.APIView):
-    def post(self, request):
-        user = request.user
-        device = TOTPDevice.objects.filter(user=user).first()
+        VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_2FA, user=user)
         if device is None:
             device = TOTPDevice.objects.create(user=user, confirmed=False)
-        VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_2FA_ACTIVATE, user=user)
-        return Response(device.config_url)
+            return Response(device.config_url)
+        else:
+            return Response({'msg': 'پیامک تایید با موفقیت ارسال شد.'})
 
-    def patch(self, request):
+    def put(self, request):
         user = request.user
-        totp_verify_serializer = TOTPActivationSerializer(
-            instance=user,
+        totp_verify_serializer = TOTPSerializer(
             data=request.data,
-            partial=True,
             context={
                 'request': request
             }
@@ -98,4 +50,19 @@ class TOTPActivationView(views.APIView):
         device.confirmed = True
         device.save()
         notif.send_2fa_activation_message(user=user)
-        return Response({'msg': '2FA has been activated successfully'})
+        return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری فعال شد.'})
+
+    def delete(self, request):
+        user = request.user
+        totp_de_active_serializer = TOTPSerializer(
+            data=request.data,
+            context={
+                'request': request
+            }
+        )
+        totp_de_active_serializer.is_valid(raise_exception=True)
+        device = TOTPDevice.objects.filter(user=user).first()
+        device.confirmed = False
+        device.save()
+        notif.send_2fa_deactivation_message(user=user)
+        return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری غیرفعال شد.'})
