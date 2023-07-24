@@ -736,15 +736,6 @@ class AttributionAdmin(admin.ModelAdmin):
 class AppStatusAdmin(admin.ModelAdmin):
     list_display = ['latest_version', 'force_update_version', 'active']
 
-
-# @admin.register(TOTPDevice)
-# class Auth2FaAdmin(admin.ModelAdmin):
-#     list_display = ['user', 'created', 'verified']
-#     readonly_fields = ('created', )
-#     fields = ('user', 'created', 'verified')
-#     search_fields = ('user__phone',)
-
-
 @admin.register(VerificationCode)
 class VerificationCodeAdmin(admin.ModelAdmin):
     list_display = ['phone', 'user', 'scope']
