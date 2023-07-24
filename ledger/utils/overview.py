@@ -132,28 +132,5 @@ class AssetOverview:
     def get_exchange_assets_usdt(self):
         return self.get_all_real_assets_value() - self.get_all_users_asset_value()
 
-    def get_exchange_potential_usdt(self):
-        value = Decimal(0)
-
-        non_deposited = self.get_non_deposited_accounts_per_asset_balance()
-
-        for coin, balance in non_deposited.items():
-            price = get_external_price(coin=coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
-            value += balance * price
-
-        return self.get_exchange_assets_usdt() + value
-
-    @classmethod
-    def get_non_deposited_accounts_per_asset_balance(cls) -> dict:
-        non_deposited_wallets = Wallet.objects.filter(
-            account__type=Account.ORDINARY,
-            account__user__first_fiat_deposit_date__isnull=True,
-            account__user__first_crypto_deposit_date__isnull=True,
-        ).exclude(
-            market=Wallet.VOUCHER
-        ).values('asset__symbol').annotate(amount=Sum('balance'))
-
-        return {w['asset__symbol']: w['amount'] for w in non_deposited_wallets}
-
     def get_margin_insurance_balance(self):
         return Asset.get(Asset.USDT).get_wallet(MARGIN_INSURANCE_ACCOUNT).balance

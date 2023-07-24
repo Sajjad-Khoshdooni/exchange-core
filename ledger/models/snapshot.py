@@ -33,7 +33,6 @@ class SystemSnapshot(models.Model):
     total = get_amount_field()
     users = get_amount_field()
     exchange = get_amount_field(validators=())
-    exchange_potential = get_amount_field(validators=())
     reserved = get_amount_field(validators=())
 
     margin_insurance = get_amount_field(validators=())

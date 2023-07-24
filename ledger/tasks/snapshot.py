@@ -21,7 +21,6 @@ def create_snapshot():
         total=overview.get_all_real_assets_value(),
         users=overview.get_all_users_asset_value(),
         exchange=overview.get_exchange_assets_usdt(),
-        exchange_potential=overview.get_exchange_potential_usdt(),
         reserved=overview.get_total_reserved_assets_value(),
 
         margin_insurance=overview.get_margin_insurance_balance(),
