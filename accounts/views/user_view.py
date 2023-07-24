@@ -16,7 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
     possible_time_for_withdraw = serializers.SerializerMethodField()
     chat_uuid = serializers.CharField()
     show_staking = serializers.SerializerMethodField()
-    auth2fa_is_active = serializers.SerializerMethodField()
+    is_auth2fa_active = serializers.SerializerMethodField()
 
     def get_chat_uuid(self, user: User):
         request = self.context['request']
@@ -26,7 +26,7 @@ class UserSerializer(serializers.ModelSerializer):
         else:
             return user.chat_uuid
 
-    def get_auth2fa_is_active(self, user: User):
+    def get_is_auth2fa_active(self, user: User):
         device = TOTPDevice.objects.filter(user=user).first()
         is_active = device is not None and device.confirmed
         return is_active
@@ -37,7 +37,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw', 'chat_uuid',
+            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw', 'chat_uuid', 'is_auth2fa_active',
         )
         ref_name = "User"
 
