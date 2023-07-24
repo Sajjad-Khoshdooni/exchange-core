@@ -4,6 +4,7 @@ from rest_framework.generics import RetrieveAPIView, get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from accounts.models import User, CustomToken
 from accounts.utils.hijack import get_hijacker_id
@@ -15,6 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
     possible_time_for_withdraw = serializers.SerializerMethodField()
     chat_uuid = serializers.CharField()
     show_staking = serializers.SerializerMethodField()
+    auth2fa_is_active = serializers.SerializerMethodField()
 
     def get_chat_uuid(self, user: User):
         request = self.context['request']
@@ -24,7 +26,10 @@ class UserSerializer(serializers.ModelSerializer):
         else:
             return user.chat_uuid
 
-
+    def get_auth2fa_is_active(self, user: User):
+        device = TOTPDevice.objects.filter(user=user).first()
+        is_active = device is not None and device.confirmed
+        return is_active
     def get_show_staking(self, user: User):
         return True
 
