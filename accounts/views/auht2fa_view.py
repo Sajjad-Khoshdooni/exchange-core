@@ -29,13 +29,11 @@ class TOTPSerializer(serializers.Serializer):
 class TOTPView(views.APIView):
     def post(self, request):
         user = request.user
-        device = TOTPDevice.objects.filter(user=user)
+        device = TOTPDevice.objects.filter(user=user).first()
         VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_2FA, user=user)
         if device is None:
             device = TOTPDevice.objects.create(user=user, confirmed=False)
-            return Response(device.config_url)
-        else:
-            return Response({'msg': 'پیامک تایید با موفقیت ارسال شد.'})
+        return Response(device.config_url)
 
     def put(self, request):
         user = request.user
