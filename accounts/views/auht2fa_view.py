@@ -36,6 +36,7 @@ class TOTPView(views.APIView):
             device = TOTPDevice.objects.create(user=user, confirmed=False)
         if device.confirmed is False:
             device.key = default_key()
+            device.save(update_fields=['key'])
             return Response(device.config_url)
         else:
             return Response({'msg': 'پیامک با موفقیت ارسال شد.'})
@@ -55,7 +56,7 @@ class TOTPView(views.APIView):
         send_2fa_activation_message(user=user)
         return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری فعال شد.'})
 
-    def delete(self, request):
+    def patch(self, request):
         user = request.user
         totp_de_active_serializer = TOTPSerializer(
             data=request.data,
