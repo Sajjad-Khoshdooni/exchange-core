@@ -12,7 +12,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django_otp.plugins.otp_totp.models import TOTPDevice
-from accounts.models import VerificationCode
+from accounts.models import VerificationCode, LoginActivity
 from accounts.permissions import IsBasicVerified
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest, Gateway
