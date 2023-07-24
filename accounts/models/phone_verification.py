@@ -66,7 +66,8 @@ class VerificationCode(models.Model):
 
     scope = models.CharField(
         max_length=32,
-        choices=SCOPE_CHOICES
+        choices=SCOPE_CHOICES,
+        db_index=True
     )
 
     user = models.ForeignKey(

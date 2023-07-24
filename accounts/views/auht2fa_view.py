@@ -3,7 +3,7 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework import serializers
 from rest_framework import views
 from rest_framework.response import Response
-from accounts.utils import notif
+from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
 from accounts.models.phone_verification import VerificationCode
 
 
@@ -48,8 +48,8 @@ class TOTPView(views.APIView):
         totp_verify_serializer.is_valid(raise_exception=True)
         device = TOTPDevice.objects.filter(user=user).first()
         device.confirmed = True
-        device.save()
-        notif.send_2fa_activation_message(user=user)
+        device.save(update_fields=['confirmed'])
+        send_2fa_activation_message(user=user)
         return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری فعال شد.'})
 
     def delete(self, request):
@@ -63,6 +63,6 @@ class TOTPView(views.APIView):
         totp_de_active_serializer.is_valid(raise_exception=True)
         device = TOTPDevice.objects.filter(user=user).first()
         device.confirmed = False
-        device.save()
-        notif.send_2fa_deactivation_message(user=user)
+        device.save(update_fields=['confirmed'])
+        send_2fa_deactivation_message(user=user)
         return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری غیرفعال شد.'})

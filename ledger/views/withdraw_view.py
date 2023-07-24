@@ -31,7 +31,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
     address = serializers.CharField(source='out_address', required=False)
     memo = serializers.CharField(required=False, allow_blank=True)
     address_book = serializers.SerializerMethodField()
-    totp = serializers.CharField(required=False, allow_blank=True)
+    totp = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     def validate(self, attrs):
         request = self.context['request']
@@ -46,7 +46,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         network = attrs.get('network')
         address = attrs.get('out_address')
         address_book = None
-        totp = attrs.get('totp')
+        totp = attrs.get('totp', None)
 
         if attrs['address_book_id'] and from_panel:
             address_book = get_object_or_404(AddressBook, id=attrs['address_book_id'], account=account)
