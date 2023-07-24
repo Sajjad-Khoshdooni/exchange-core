@@ -10,7 +10,7 @@ from accounts.models import User
 from accounts.models.phone_verification import VerificationCode
 from accounts.validators import password_validator
 from django.contrib.auth.password_validation import validate_password
-
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
 class InitiateForgotPasswordSerializer(serializers.Serializer):
     login = serializers.CharField(required=True)
@@ -47,16 +47,20 @@ class InitiateForgetPasswordView(APIView):
 class ForgotPasswordSerializer(serializers.Serializer):
     token = serializers.UUIDField(write_only=True, required=True)
     password = serializers.CharField(required=True, write_only=True, validators=[password_validator])
+    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
 
     def create(self, validated_data):
         token = validated_data.pop('token')
         password = validated_data.pop('password')
+        totp = validated_data.pop('totp')
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_FORGET_PASSWORD)
 
+        user = User.objects.get(phone=otp_code.phone)
         if not otp_code:
             raise ValidationError({'token': 'توکن نامعتبر است.'})
-
-        user = User.objects.get(phone=otp_code.phone)
+        device = TOTPDevice.objects.filter(user=user).first()
+        if not (device is None or not device.confirmed or device.verify_token(totp)):
+            raise ValidationError({'otp': ' رمز موقت نامعتبر است.'})
 
         validate_password(password=password, user=user)
         user.set_password(password)
