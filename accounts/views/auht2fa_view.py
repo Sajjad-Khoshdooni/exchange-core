@@ -33,7 +33,10 @@ class TOTPView(views.APIView):
         VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_2FA, user=user)
         if device is None:
             device = TOTPDevice.objects.create(user=user, confirmed=False)
-        return Response(device.config_url)
+        if device.confirmed is False:
+            return Response(device.config_url)
+        else:
+            return Response({'msg': 'پیامک با موفقیت ارسال شد.'})
 
     def put(self, request):
         user = request.user
