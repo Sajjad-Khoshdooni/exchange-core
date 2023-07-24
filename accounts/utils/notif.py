@@ -20,11 +20,6 @@ def send_2fa_activation_message(user):
     content_html = loader.render_to_string(
         'accounts/notif/email/2fa_activation_message.html',
         context=context)
-
-    context = {
-        'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
-        'name': f'{user.first_name} {user.last_name}'
-    }
     content = loader.render_to_string(
         'accounts/notif/email/2fa_activation_message.txt',
         context=context)
@@ -41,11 +36,6 @@ def send_2fa_deactivation_message(user):
     content_html = loader.render_to_string(
         'accounts/notif/email/2fa_deactivation_message.html',
         context=context)
-
-    context = {
-        'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
-        'name': f'{user.first_name} {user.last_name}'
-    }
     content = loader.render_to_string(
         'accounts/notif/email/2fa_deactivation_message.txt',
         context=context)
