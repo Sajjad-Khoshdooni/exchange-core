@@ -25,7 +25,7 @@ def get_internal_asset_deposits() -> dict:
 
 
 class AssetOverview:
-    def __init__(self, prices: dict, usdt_irt: Decimal):
+    def __init__(self, prices: dict):
         self._coin_total_orders = None
         self.provider = get_provider_requester()
 
@@ -44,7 +44,6 @@ class AssetOverview:
         ).values('asset__symbol').annotate(amount=Sum('balance'))
         self.users_balances = {w['asset__symbol']: w['amount'] for w in wallets}
 
-        self.usdt_irt = usdt_irt
         self.prices = prices
 
         self.assets_map = {a.symbol: a for a in Asset.objects.all()}
@@ -110,7 +109,7 @@ class AssetOverview:
             status=FiatWithdrawRequest.PENDING
         ).aggregate(amount=Sum('amount'))['amount'] or 0
 
-        return value - pending_withdraws / self.usdt_irt
+        return value - pending_withdraws * self.prices['IRT']
 
     def get_all_prize_value(self) -> Decimal:
         return Prize.objects.filter(

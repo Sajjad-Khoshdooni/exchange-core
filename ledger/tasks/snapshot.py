@@ -8,12 +8,12 @@ from ledger.utils.overview import AssetOverview
 
 
 @shared_task(queue='history')
-def create_snapshot(now: datetime, prices: dict, usdt_irt: Decimal):
-    overview = AssetOverview(prices, usdt_irt)
+def create_snapshot(now: datetime, prices: dict):
+    overview = AssetOverview(prices)
 
     system_snapshot = SystemSnapshot(
         created=now,
-        usdt_price=overview.usdt_irt,
+        usdt_price=1 / prices['IRT'],
         hedge=overview.get_total_hedge_value(),
         cum_hedge=overview.get_total_cumulative_hedge_value(),
 
