@@ -27,7 +27,7 @@ def update_vaults():
     )
     prices['IRT'] = irt_usdt
 
-    now = timezone.now()
+    now = timezone.now().replace(second=0, microsecond=0)
 
     update_provider_vaults(now, prices)
     update_hot_wallet_vault(now, prices)
