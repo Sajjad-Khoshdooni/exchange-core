@@ -90,6 +90,9 @@ class AddressBookView(ModelViewSet):
         return address_books
 
     def destroy(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
         instance = self.get_object()
         instance.deleted = True
         instance.save()
