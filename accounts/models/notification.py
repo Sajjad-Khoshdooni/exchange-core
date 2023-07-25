@@ -1,6 +1,7 @@
 import logging
 
 from django.db import models
+from django.db.models import UniqueConstraint, Q, Sum
 from django.utils import timezone
 
 from ledger.utils.fields import get_group_id_field, get_status_field
@@ -8,11 +9,25 @@ from ledger.utils.fields import get_group_id_field, get_status_field
 logger = logging.getLogger(__name__)
 
 
+class LiveNotification(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(read=False)
+
+
 class Notification(models.Model):
     INFO, SUCCESS, WARNING, ERROR = 'info', 'success', 'warning', 'error'
     LEVEL_CHOICES = ((INFO, INFO), (SUCCESS, SUCCESS), (WARNING, WARNING), (ERROR, ERROR))
 
     PUSH_WAITING, PUSH_SENT = 'w', 's'
+
+    RAASTIN, NINJA = 'raastin', 'ninja'
+    SOURCE_CHOICE = ((RAASTIN, RAASTIN), (NINJA, NINJA))
+
+    LIKE, COMMENT, FOLLOW, SYSTEM = 'like', 'comment', 'follow', 'system'
+    TARGET_SOURCE = ((LIKE, LIKE), (COMMENT, COMMENT), (FOLLOW, FOLLOW), (SYSTEM, SYSTEM))
+
+    ORDINARY, REPLACEABLE, DIFF = 'ord', 'rep', 'dif'
+    TYPE_CHOICE = ((ORDINARY, ORDINARY), (REPLACEABLE, REPLACEABLE), (DIFF, DIFF))
 
     created = models.DateTimeField(auto_now_add=True)
     read_date = models.DateTimeField(null=True, blank=True)
@@ -43,6 +58,27 @@ class Notification(models.Model):
 
     group_id = get_group_id_field(null=True, db_index=True, default=None)
 
+    source = models.CharField(
+        max_length=8,
+        choices=SOURCE_CHOICE,
+        default=RAASTIN
+    )
+    type = models.CharField(
+        max_length=3,
+        choices=TYPE_CHOICE,
+        default=ORDINARY
+    )
+    target = models.CharField(
+        max_length=8,
+        choices=TARGET_SOURCE,
+        default=SYSTEM
+    )
+    count = models.IntegerField(default=0, null=True, blank=True)
+    template = models.ForeignKey('accounts.Template', on_delete=models.CASCADE)
+
+    objects = models.Manager()
+    live_objects = LiveNotification()
+
     class Meta:
         ordering = ('-created', )
         unique_together = ('recipient', 'group_id')
@@ -50,23 +86,103 @@ class Notification(models.Model):
             models.Index(fields=['recipient', 'read', 'hidden'], name="notification_idx")
         ]
 
+        constraints = [
+            UniqueConstraint(
+                name='unique_unread_group_id',
+                fields=["group_id", "target"],
+                condition=Q(read=False) & Q(source='ninja')
+            )
+        ]
+
     @classmethod
     def send(cls, recipient, title: str, link: str = '', message: str = '', level: str = INFO, image: str = '',
-             send_push: bool = True):
+             send_push: bool = True, group_id=None, type: str = ORDINARY, target: str = SYSTEM, source: str = RAASTIN,
+             count: int = 1):
+        from accounts.models import Template
 
         if not recipient:
             logger.info('failed to send notif')
             return
 
-        return Notification.objects.create(
-            recipient=recipient,
-            title=title,
-            link=link,
-            message=message,
-            level=level,
-            image=image,
-            push_status=Notification.PUSH_WAITING if send_push else ''
-        )
+        template = Template.objects.get(target=target)
+
+        if type == cls.ORDINARY:
+            if Notification.live_objects.filter(group_id=group_id, source=cls.NINJA).exists():
+                return
+
+            notification = Notification.objects.get_or_create(
+                recipient=recipient,
+                group_id=group_id,
+                defaults={
+                    'title': title,
+                    'link': link,
+                    'message': message,
+                    'level': level,
+                    'source': source,
+                    'target': target,
+                    'image': image,
+                    'type': type,
+                    'template': template,
+                    'count': count,
+                    'push_status': Notification.PUSH_WAITING if send_push else ''
+                }
+            )
+        elif not group_id:
+            logger.info('failed to send notif, uuid error')
+            return
+
+        elif type == cls.REPLACEABLE:
+            notification, _ = Notification.objects.update_or_create(
+                group_id=group_id,
+                recipient=recipient,
+                defaults={
+                    'title': title,
+                    'link': link,
+                    'message': message,
+                    'image': image,
+                    'count': count,
+                    'source': source,
+                    'type': type,
+                    'target': target,
+                    'template': template,
+                    'level': level,
+                }
+            )
+        elif type == cls.DIFF:
+            read_count = Notification.objects.filter(group_id=group_id, read=True).aggregate(Sum('count'))[
+                'count__sum']
+            if read_count:
+                count = count - read_count
+
+            if count <= 0:
+                logger.info('failed to send notif, count error')
+                return
+
+            notification, _ = Notification.objects.update_or_create(
+                group_id=group_id,
+                recipient=recipient,
+                defaults={
+                    'title': title,
+                    'link': link,
+                    'message': message,
+                    'image': image,
+                    'count': count,
+                    'source': source,
+                    'type': type,
+                    'target': target,
+                    'template': template,
+                    'level': level,
+                }
+            )
+        else:
+            logger.info('failed to send notif')
+            return
+
+        return notification
+
+    @property
+    def content(self):
+        return str(self.template.content).format(last=self.message, count=self.count)
 
     def make_read(self):
         if not self.read:
