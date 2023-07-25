@@ -570,7 +570,7 @@ class CategorySpreadAdmin(admin.ModelAdmin):
 
 @admin.register(models.SystemSnapshot)
 class SystemSnapshotAdmin(admin.ModelAdmin):
-    list_display = ('created', 'total', 'users', 'exchange', 'hedge', 'prize', 'verified')
+    list_display = ('created', 'total', 'users', 'exchange', 'hedge', 'reserved', 'prize', 'verified')
     ordering = ('-created', )
     actions = ('reject_histories', 'verify_histories')
     readonly_fields = ('created', )
