@@ -115,10 +115,9 @@ class Notification(models.Model):
                 return
 
             notification = Notification.objects.get_or_create(
-                recipient=recipient,
                 group_id=group_id,
-                target=target,
                 defaults={
+                    'target': target,
                     'title': title,
                     'link': link,
                     'message': message,
@@ -172,6 +171,7 @@ class Notification(models.Model):
                     'type': type,
                     'template': template,
                     'level': level,
+                    'recipient': recipient
                 }
             )
         else:
