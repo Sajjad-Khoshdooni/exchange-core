@@ -5,7 +5,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django_otp.plugins.otp_totp.models import TOTPDevice
+from django.core.exceptions import ValidationError
 
+from accounts.models import VerificationCode
 from accounts.models import User, CustomToken
 from accounts.utils.hijack import get_hijacker_id
 from accounts.verifiers.legal import possible_time_for_withdraw
@@ -30,6 +32,7 @@ class UserSerializer(serializers.ModelSerializer):
         device = TOTPDevice.objects.filter(user=user).first()
         is_active = device is not None and device.confirmed
         return is_active
+
     def get_show_staking(self, user: User):
         return True
 
@@ -37,7 +40,8 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw', 'chat_uuid', 'is_auth2fa_active',
+            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw',
+            'chat_uuid', 'is_auth2fa_active',
         )
         ref_name = "User"
 
@@ -84,10 +88,24 @@ class UserDetailView(RetrieveAPIView):
 
 class AuthTokenSerializer(serializers.ModelSerializer):
     ip_list = serializers.CharField()
+    sms_code = serializers.CharField(write_only=True, required=True)
+    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
 
     class Meta:
         model = CustomToken
         fields = ('ip_list',)
+
+    def validate(self, data):
+        user = data.get('user')
+        totp = data.get('totp')
+        sms_code = data.get('sms_code')
+        sms_code_verified = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.API_TOKEN, user)
+        device = TOTPDevice.objects.filter(user=user).first()
+        if not sms_code_verified:
+            raise ValidationError({'sms_code': 'کد ارسال شده برای فعال سازی ورود دومرحله‌ای نامعتبر است.'})
+        if not (device is None or not device.confirmed or device.verify_token(totp)):
+            raise ValidationError({'token': 'رمز موقت صحیح نمی‌باشد.'})
+        return data
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
