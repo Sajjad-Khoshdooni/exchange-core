@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django_filters.rest_framework import DjangoFilterBackend
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
@@ -74,11 +75,16 @@ class MarginTransferSerializer(serializers.ModelSerializer):
     coin = CoinField(source='asset')
     asset = AssetSerializerMini(read_only=True)
 
+    @staticmethod
+    def validate_coin(coin):
+        if coin.symbol not in (Asset.USDT, Asset.IRT):
+            raise ValidationError(_('Invalid coin to transfer'))
+        return coin
+
     def create(self, validated_data):
         user = self.context['request'].user
 
         asset = validated_data['asset']
-
         check_margin_view_permission(user.get_account(), asset)
 
         return super(MarginTransferSerializer, self).create(validated_data)
