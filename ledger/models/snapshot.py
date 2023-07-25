@@ -24,7 +24,7 @@ class AssetSnapshot(models.Model):
 
 
 class SystemSnapshot(models.Model):
-    created = models.DateTimeField(auto_now_add=True, unique=True, db_index=True)
+    created = models.DateTimeField(unique=True, db_index=True)
     usdt_price = get_amount_field()
     hedge = get_amount_field()
     cum_hedge = get_amount_field()
