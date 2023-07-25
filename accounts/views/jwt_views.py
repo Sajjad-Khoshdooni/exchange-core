@@ -14,6 +14,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Toke
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django_otp.plugins.otp_totp.models import TOTPDevice
+from rest_framework.exceptions import AuthenticationFailed
+
 
 from accounts.authentication import CustomTokenAuthentication
 from accounts.models import Account, LoginActivity
@@ -140,7 +142,6 @@ class SessionTokenObtainPairSerializer(CustomTokenObtainPairSerializer):
 
     def get_fields(self):
         fields = super().get_fields()
-
         exclude_fields = ['totp']
         for field in exclude_fields:
             fields.pop(field, default=None)
@@ -160,11 +161,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
             if client_info_serializer.is_valid():
                 client_info = client_info_serializer.validated_data
-            user = User.objects.filter(phone=serializer.user).first()
-            print(user.phone)
+            user = User.objects.filter(phone=serializer.initial_data['phone']).first()
             device = TOTPDevice.objects.filter(user=user).first()
 
-            if user and (
+            if user and not (
                     device is None or not device.confirmed or device.verify_token(serializer.initial_data['totp'])):
                 login_activity = set_login_activity(
                     request,
@@ -177,14 +177,16 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                                                 ip=login_activity.ip).count() == 1:
                     LoginActivity.send_successful_login_message(login_activity)
             else:
-                raise InvalidToken
+                raise InvalidToken("2fa did not match")
 
-        except TokenError as e:
-            user = User.objects.filter(phone=serializer.user).first()
-            if user:
-                LoginActivity.send_unsuccessful_login_message(user)
-            raise InvalidToken(e.args[0])
-
+        except AuthenticationFailed as e:
+            recipient = User.objects.filter(phone=serializer.initial_data['phone']).first()
+            if recipient:
+                LoginActivity.send_unsuccessful_login_message(recipient)
+                if e is TokenError:
+                    raise InvalidToken(e.args[0])
+                else:
+                    raise e
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 
