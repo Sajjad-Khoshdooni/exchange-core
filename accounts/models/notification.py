@@ -128,7 +128,8 @@ class Notification(models.Model):
                     'type': type,
                     'template': template,
                     'count': count,
-                    'push_status': Notification.PUSH_WAITING if send_push else ''
+                    'push_status': Notification.PUSH_WAITING if send_push else '',
+                    'recipient': recipient
                 }
             )
         elif not group_id:
@@ -149,6 +150,7 @@ class Notification(models.Model):
                     'type': type,
                     'template': template,
                     'level': level,
+                    'recipient': recipient
                 }
             )
         elif type == cls.DIFF:
