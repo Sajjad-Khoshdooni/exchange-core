@@ -32,11 +32,11 @@ class SystemSnapshot(models.Model):
 
     total = get_amount_field()
     users = get_amount_field()
-    exchange = get_amount_field()
-    exchange_potential = get_amount_field()
-    reserved = get_amount_field()
+    exchange = get_amount_field(validators=())
+    exchange_potential = get_amount_field(validators=())
+    reserved = get_amount_field(validators=())
 
-    margin_insurance = get_amount_field()
+    margin_insurance = get_amount_field(validators=())
     prize = get_amount_field()
 
-    verified = models.BooleanField(default=True)
+    verified = models.BooleanField(default=False)
