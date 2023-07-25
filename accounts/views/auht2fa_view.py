@@ -56,7 +56,7 @@ class TOTPView(views.APIView):
         send_2fa_activation_message(user=user)
         return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری فعال شد.'})
 
-    def patch(self, request):
+    def delete(self, request):
         user = request.user
         totp_de_active_serializer = TOTPSerializer(
             data=request.data,
