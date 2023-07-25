@@ -113,13 +113,13 @@ class Notification(models.Model):
             notification = Notification.objects.get_or_create(
                 recipient=recipient,
                 group_id=group_id,
+                target=target,
                 defaults={
                     'title': title,
                     'link': link,
                     'message': message,
                     'level': level,
                     'source': source,
-                    'target': target,
                     'image': image,
                     'type': type,
                     'template': template,
@@ -135,6 +135,7 @@ class Notification(models.Model):
             notification, _ = Notification.objects.update_or_create(
                 group_id=group_id,
                 recipient=recipient,
+                target=target,
                 defaults={
                     'title': title,
                     'link': link,
@@ -143,7 +144,6 @@ class Notification(models.Model):
                     'count': count,
                     'source': source,
                     'type': type,
-                    'target': target,
                     'template': template,
                     'level': level,
                 }
