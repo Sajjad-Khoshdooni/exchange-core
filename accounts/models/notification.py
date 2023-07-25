@@ -114,22 +114,21 @@ class Notification(models.Model):
             if Notification.live_objects.filter(group_id=group_id, source=cls.NINJA).exists():
                 return
 
-            notification = Notification.objects.get_or_create(
+            notification = Notification.objects.create(
                 recipient=recipient,
-                defaults={
-                    'target': target,
-                    'title': title,
-                    'link': link,
-                    'message': message,
-                    'level': level,
-                    'source': source,
-                    'image': image,
-                    'type': type,
-                    'template': template,
-                    'count': count,
-                    'push_status': Notification.PUSH_WAITING if send_push else '',
-                    'group_id': group_id
-                }
+                target=target,
+                title=title,
+                link=link,
+                message=message,
+                level=level,
+                source=source,
+                image=image,
+                type=type,
+                template=template,
+                count=count,
+                push_status=Notification.PUSH_WAITING if send_push else '',
+                group_id=group_id
+
             )
         elif not group_id:
             logger.info('failed to send notif, uuid error')
