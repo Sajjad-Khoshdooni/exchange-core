@@ -115,7 +115,7 @@ class Notification(models.Model):
                 return
 
             notification = Notification.objects.get_or_create(
-                group_id=group_id,
+                recipient=recipient,
                 defaults={
                     'target': target,
                     'title': title,
@@ -128,7 +128,7 @@ class Notification(models.Model):
                     'template': template,
                     'count': count,
                     'push_status': Notification.PUSH_WAITING if send_push else '',
-                    'recipient': recipient
+                    'group_id': group_id
                 }
             )
         elif not group_id:
@@ -139,6 +139,7 @@ class Notification(models.Model):
             notification, _ = Notification.objects.update_or_create(
                 group_id=group_id,
                 target=target,
+                read=False,
                 defaults={
                     'title': title,
                     'link': link,
@@ -161,6 +162,7 @@ class Notification(models.Model):
             notification, _ = Notification.objects.update_or_create(
                 group_id=group_id,
                 target=target,
+                read=False,
                 defaults={
                     'title': title,
                     'link': link,
