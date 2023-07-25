@@ -6,10 +6,12 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from ledger.models import AddressBook, Asset, Network, NetworkAsset
 from ledger.models.asset import AssetSerializerMini
 from ledger.views.wallet_view import NetworkAssetSerializer
+from accounts.models.phone_verification import VerificationCode
 
 
 class AddressBookSerializer(serializers.ModelSerializer):
@@ -19,6 +21,8 @@ class AddressBookSerializer(serializers.ModelSerializer):
     coin = serializers.CharField(write_only=True, required=False, default=None)
     deleted = serializers.BooleanField(read_only=True)
     network_info = serializers.SerializerMethodField()
+    sms_code = serializers.CharField(write_only=True, required=True)
+    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
 
     def validate(self, attrs):
         user = self.context['request'].user
@@ -26,6 +30,8 @@ class AddressBookSerializer(serializers.ModelSerializer):
         name = attrs['name']
         address = attrs['address']
         network = get_object_or_404(Network, symbol=attrs['network'])
+        sms_code = attrs['sms_code']
+        totp = attrs['totp']
 
         if attrs['coin']:
             asset = get_object_or_404(Asset, symbol=attrs['coin'])
@@ -34,7 +40,12 @@ class AddressBookSerializer(serializers.ModelSerializer):
 
         if not re.match(network.address_regex, address):
             raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
-
+        sms_code_verified = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_2FA, user)
+        if not sms_code_verified:
+            raise ValidationError({'code': 'کد نامعتبر است.'})
+        device = TOTPDevice.objects.filter(user=user).first()
+        if not (device is None or not device.confirmed or device.verify_token(totp)):
+            raise ValidationError({'token': 'رمز موقت صحیح نمی‌باشد.'})
         return {
             'account': account,
             'network': network,
