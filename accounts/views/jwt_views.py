@@ -138,6 +138,14 @@ class SessionTokenObtainPairSerializer(CustomTokenObtainPairSerializer):
         data = {'access': str(refresh.access_token)}
         return data
 
+    def get_fields(self):
+        fields = super().get_fields()
+
+        exclude_fields = ['totp']
+        for field in exclude_fields:
+            fields.pop(field, default=None)
+        return fields
+
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -156,7 +164,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             print(user.phone)
             device = TOTPDevice.objects.filter(user=user).first()
 
-            if user and (device is None or not device.confirmed or device.verify_token(serializer.initial_data['totp'])):
+            if user and (
+                    device is None or not device.confirmed or device.verify_token(serializer.initial_data['totp'])):
                 login_activity = set_login_activity(
                     request,
                     user=serializer.user,
