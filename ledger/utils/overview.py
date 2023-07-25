@@ -9,7 +9,6 @@ from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Wallet, Prize, Asset
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
 from ledger.utils.cache import cache_for
-from ledger.utils.external_price import get_external_price, SELL, BUY
 from ledger.utils.provider import get_provider_requester, BINANCE, CoinOrders
 
 
@@ -26,14 +25,13 @@ def get_internal_asset_deposits() -> dict:
 
 
 class AssetOverview:
-    def __init__(self, calculated_hedge: bool = False):
+    def __init__(self, prices: dict, usdt_irt: Decimal):
         self._coin_total_orders = None
         self.provider = get_provider_requester()
 
-        if calculated_hedge:
-            self._coin_total_orders = {
-                coin_order.coin: coin_order for coin_order in self.provider.get_total_orders_amount_sum()
-            }
+        self._coin_total_orders = {
+            coin_order.coin: coin_order for coin_order in self.provider.get_total_orders_amount_sum()
+        }
 
         self._binance_futures = self.provider.get_futures_info(BINANCE)
 
@@ -46,7 +44,8 @@ class AssetOverview:
         ).values('asset__symbol').annotate(amount=Sum('balance'))
         self.users_balances = {w['asset__symbol']: w['amount'] for w in wallets}
 
-        self.usdt_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=True)
+        self.usdt_irt = usdt_irt
+        self.prices = prices
 
         self.assets_map = {a.symbol: a for a in Asset.objects.all()}
 
@@ -86,7 +85,7 @@ class AssetOverview:
         if not amount:
             return Decimal(0)
 
-        price = get_external_price(coin=coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
+        price = self.prices.get(coin, 0)
         return amount * price
 
     def get_users_asset_amount(self, coin: str) -> Decimal:
@@ -98,8 +97,7 @@ class AssetOverview:
         if not balance:
             return Decimal(0)
 
-        price = get_external_price(coin=coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
-        
+        price = self.prices.get(coin, 0)
         return balance * price
 
     def get_all_users_asset_value(self) -> Decimal:

@@ -7,7 +7,7 @@ from ledger.utils.fields import get_amount_field
 class AssetSnapshot(models.Model):
     history = HistoricalRecords()
 
-    updated = models.DateTimeField(db_index=True, auto_now=True)
+    updated = models.DateTimeField(db_index=True)
     asset = models.OneToOneField('ledger.Asset', on_delete=models.CASCADE)
 
     price = get_amount_field()
