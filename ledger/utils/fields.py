@@ -88,4 +88,3 @@ def get_irt_market_asset_symbols():
         enable=True,
         base_asset__symbol=Asset.IRT
     ).values_list('asset__symbol', flat=True))
-

@@ -117,6 +117,7 @@ class Notification(models.Model):
     def send(cls, recipient, title: str, link: str = '', message: str = '', level: str = INFO, image: str = '',
              send_push: bool = True, group_id=None, type: str = ORDINARY, template: str = PLAIN, source: str = CORE,
              count: int = 1):
+        count -= 1
 
         if not recipient:
             logger.info('failed to send notif')
@@ -157,26 +158,7 @@ class Notification(models.Model):
             logger.info('failed to send notif, uuid error')
             return
 
-        elif type == cls.REPLACEABLE:
-            notification, _ = Notification.objects.update_or_create(
-                group_id=group_id,
-                template=template,
-                read=False,
-                defaults={
-                    'title': title,
-                    'link': link,
-                    'message': message,
-                    'image': image,
-                    'count': count,
-                    'source': source,
-                    'type': type,
-                    'level': level,
-                    'recipient': recipient,
-                    'push_status': Notification.PUSH_WAITING if send_push else '',
-                }
-            )
-        elif type == cls.DIFF:
-
+        elif type in [cls.REPLACEABLE, cls.DIFF]:
             notification, _ = Notification.objects.update_or_create(
                 group_id=group_id,
                 template=template,

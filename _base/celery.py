@@ -146,14 +146,6 @@ app.conf.beat_schedule = {
         }
     },
 
-    'create_snapshot': {
-        'task': 'ledger.tasks.snapshot.create_snapshot',
-        'schedule': crontab(minute='1-59/5'),
-        'options': {
-            'queue': 'history',
-            'expires': 200
-        }
-    },
     'provider_income': {
         'task': 'accounting.tasks.provider.fill_provider_incomes',
         'schedule': crontab(minute=30),

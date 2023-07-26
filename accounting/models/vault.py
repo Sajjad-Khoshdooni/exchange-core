@@ -76,7 +76,7 @@ class Vault(models.Model):
 class VaultItem(models.Model):
     history = HistoricalRecords()
 
-    updated = models.DateTimeField(auto_now=True)
+    updated = models.DateTimeField(db_index=True)
 
     vault = models.ForeignKey(Vault, on_delete=models.CASCADE)
     coin = models.CharField(max_length=32, db_index=True)
@@ -94,7 +94,7 @@ class VaultItem(models.Model):
 class ReservedAsset(models.Model):
     history = HistoricalRecords()
 
-    updated = models.DateTimeField(auto_now=True)
+    updated = models.DateTimeField()
 
     coin = models.CharField(max_length=32, unique=True)
     amount = get_amount_field(validators=())
@@ -109,7 +109,7 @@ class ReservedAsset(models.Model):
 class AssetPrice(models.Model):
     history = HistoricalRecords()
 
-    updated = models.DateTimeField(auto_now=True)
+    updated = models.DateTimeField()
 
     coin = models.CharField(max_length=32, unique=True)
     price = get_amount_field(decimal_places=12)
