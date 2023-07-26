@@ -121,7 +121,7 @@ class MarginLoan(models.Model):
             sender, receiver = loan.margin_wallet, loan.loan_wallet
 
         pipeline.new_trx(sender, receiver, amount, Trx.MARGIN_BORROW, loan.group_id)
-
+        print(sender, receiver, amount)
         loan.save()
 
         return loan

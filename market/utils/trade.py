@@ -34,7 +34,6 @@ class TradesPair:
     @classmethod
     def init_pair(cls, maker_order: Order, taker_order: Order, amount: Decimal, price: Decimal, trade_source: str,
                   base_irt_price: Decimal, base_usdt_price: Decimal, group_id: UUID):
-
         assert maker_order.symbol == taker_order.symbol
 
         maker_trade = Trade(
@@ -79,13 +78,35 @@ class TradesPair:
         )
 
 
-def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade: bool = False):
+def _update_trading_positions(trading_positions, pipeline):
+    from ledger.models import MarginLoan
+    from ledger.models import MarginPosition
+    to_update_positions = {}
+    for trade_info in trading_positions:
+        position = to_update_positions.get(trade_info.position.id, trade_info.position)
+        short_amount = trade_info.trade_amount if trade_info.loan_type == MarginLoan.BORROW else -trade_info.trade_amount
+        previous_amount, previous_price = position.amount, position.average_price
+        position.amount += short_amount
+        if short_amount > 0:
+            position.average_price = (previous_amount * previous_price +
+                                      short_amount * trade_info.trade_price) / position.amount
+        position.update_liquidation_price(pipeline)
+        to_update_positions[position.id] = position
+        if position.amount == 0:
+            position.status = MarginPosition.CLOSED
 
+    MarginPosition.objects.bulk_update(
+        to_update_positions.values(), ['amount', 'average_price', 'liquidation_price', 'status']
+    )
+
+
+def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade: bool = False):
     if not fake_trade:
-        _register_borrow_transaction(pipeline, pair=pair)
+        trading_positions = _register_borrow_transaction(pipeline, pair=pair)
         _register_trade_transaction(pipeline, pair=pair)
         _register_trade_base_transaction(pipeline, pair=pair)
-        _register_repay_transaction(pipeline, pair=pair)
+        trading_positions.extend(_register_repay_transaction(pipeline, pair=pair))
+        _update_trading_positions(trading_positions, pipeline)
 
     taker_fee = register_fee_transactions(
         pipeline=pipeline,
@@ -113,7 +134,6 @@ def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade
 
 
 def _register_trade_transaction(pipeline: WalletPipeline, pair: TradesPair):
-
     if pair.maker_order.side == BUY:
         sender, receiver = pair.taker_order.wallet, pair.maker_order.wallet
     else:
@@ -128,36 +148,48 @@ def _register_trade_transaction(pipeline: WalletPipeline, pair: TradesPair):
     )
 
 
-def _register_borrow_transaction(pipeline: WalletPipeline, pair: TradesPair):
+def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loan_type: str):
+    from ledger.models import MarginLoan
+    if loan_type == MarginLoan.BORROW:
+        order_side = SELL
+    elif loan_type == MarginLoan.REPAY:
+        order_side = BUY
+    else:
+        raise ValueError
 
     trade_amount = pair.maker_trade.amount
+    trade_price = pair.maker_trade.price
+    trading_positions = []
     for order in (pair.maker_order, pair.taker_order):
-        if order.side == SELL and order.wallet.market == Wallet.MARGIN:
+        if order.side == order_side and order.wallet.market == Wallet.MARGIN:
             from ledger.models import MarginLoan
             MarginLoan.new_loan(
                 account=order.account,
                 asset=order.symbol.asset,
                 amount=trade_amount,
-                loan_type=MarginLoan.BORROW,
+                loan_type=loan_type,
                 pipeline=pipeline,
                 variant=order.wallet.variant
             )
+            position = order.symbol.get_margin_position(order.account)
+            from ledger.models.position import MarginPositionTradeInfo
+            trading_positions.append(MarginPositionTradeInfo(
+                loan_type=loan_type,
+                position=position,
+                trade_amount=trade_amount,
+                trade_price=trade_price
+            ))
+    return trading_positions
+
+
+def _register_borrow_transaction(pipeline: WalletPipeline, pair: TradesPair):
+    from ledger.models import MarginLoan
+    return _register_margin_transaction(pipeline, pair, MarginLoan.BORROW)
 
 
 def _register_repay_transaction(pipeline: WalletPipeline, pair: TradesPair):
-
-    trade_amount = pair.maker_trade.amount
-    for order in (pair.maker_order, pair.taker_order):
-        if order.side == BUY and order.wallet.market == Wallet.MARGIN:
-            from ledger.models import MarginLoan
-            MarginLoan.new_loan(
-                account=order.account,
-                asset=order.symbol.asset,
-                amount=trade_amount,
-                loan_type=MarginLoan.REPAY,
-                pipeline=pipeline,
-                variant=order.wallet.variant
-            )
+    from ledger.models import MarginLoan
+    return _register_margin_transaction(pipeline, pair, MarginLoan.REPAY)
 
 
 def _register_trade_base_transaction(pipeline: WalletPipeline, pair: TradesPair):
@@ -207,7 +239,6 @@ def get_fee_info(trade: BaseTrade) -> FeeInfo:
 
 def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet: Wallet, base_wallet: Wallet,
                               group_id: UUID) -> FeeInfo:
-
     account = trade.account
     referrer = account.referred_by
     fee_info = get_fee_info(trade)

@@ -366,6 +366,12 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(other_order.wallet.market, Wallet.MARGIN)
         self.assertEqual(other_order.base_wallet.market, Wallet.MARGIN)
 
+        position = self.btcusdt.get_margin_position(self.account)
+        self.assertEqual(position.status, position.OPEN)
+        self.assertEqual(position.amount, Decimal('1.5'))
+        self.assertGreater(position.liquidation_price, Decimal('20000'))
+        self.assertEqual(position.wallet.market, Wallet.MARGIN)
+
     def test_not_enough_for_sell_margin(self):
         self.client.force_login(self.account_2.user)
         # wallet = self.btc.get_wallet(self.account_2)

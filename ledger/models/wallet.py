@@ -39,7 +39,7 @@ class Wallet(models.Model):
 
     def __str__(self):
         market_verbose = dict(self.MARKET_CHOICES)[self.market]
-        return '%s Wallet %s [%s]' % (market_verbose, self.asset, self.account)
+        return '%s Wallet %s %s [%s] %s' % (market_verbose, self.asset, self.variant, self.account, self.balance)
 
     class Meta:
         constraints = [
