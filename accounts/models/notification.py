@@ -33,6 +33,7 @@ class Notification(models.Model):
 
     LIKE, COMMENT, FOLLOW, PLAIN = 'like', 'comment', 'follow', 'plain'
     TEMPLATE_CHOICES = ((LIKE, LIKE), (COMMENT, COMMENT), (FOLLOW, FOLLOW), (PLAIN, PLAIN))
+    TEMPLATE_LIST = [LIKE, COMMENT, FOLLOW, PLAIN]
 
     ORDINARY, REPLACEABLE, DIFF = 'ord', 'rep', 'dif'
     TYPE_CHOICE = ((ORDINARY, ORDINARY), (REPLACEABLE, REPLACEABLE), (DIFF, DIFF))
@@ -113,7 +114,7 @@ class Notification(models.Model):
         if not recipient:
             logger.info('failed to send notif')
             return
-        if not template in Notification.TEMPLATE_CHOICES:
+        if not template in Notification.TEMPLATE_LIST:
             raise NotImplementedError
 
         message = NOTIFICATION_TEMPLATES.get(template, '').format(last=message, count=count)
