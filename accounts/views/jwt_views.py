@@ -2,28 +2,24 @@ import logging
 
 from decouple import config
 from django.utils.translation import activate
+from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer, \
-    TokenRefreshSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenViewBase
-
 from rest_framework_simplejwt.views import TokenObtainPairView
-from django_otp.plugins.otp_totp.models import TOTPDevice
-from rest_framework.exceptions import AuthenticationFailed
 
 from accounts.authentication import CustomTokenAuthentication
-from accounts.models import Account, LoginActivity, RefreshToken as RefreshTokenModel
-
-from accounts.utils.validation import set_login_activity
+from accounts.models import Account, LoginActivity
 from accounts.models import User
+from accounts.utils.validation import set_login_activity
 
 logger = logging.getLogger(__name__)
 
