@@ -33,7 +33,7 @@ class ZibalCallbackView(TemplateView):
         if payment.status == PENDING:
             if status == '0':
                 payment.status = CANCELED
-                payment.save(update_fields='status')
+                payment.save(update_fields=['status'])
             else:
                 payment_request.get_gateway().verify(payment)
 
