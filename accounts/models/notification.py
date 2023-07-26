@@ -129,10 +129,10 @@ class Notification(models.Model):
                 'count__sum']
             if read_count:
                 count = count - read_count
-            if count == 0:
-                message = NOTIFICATION_0_TEMPLATES.get(template, '').format(last=message, count=count),
+            if count <= 0:
+                message = NOTIFICATION_0_TEMPLATES.get(template, '').format(last=message)
             else:
-                message = NOTIFICATION_TEMPLATES.get(template, '').format(last=message),
+                message = NOTIFICATION_TEMPLATES.get(template, '').format(last=message, count=count)
 
         if type == cls.ORDINARY:
             if Notification.live_objects.filter(group_id=group_id, source=cls.NINJA).exists():
@@ -157,26 +157,7 @@ class Notification(models.Model):
             logger.info('failed to send notif, uuid error')
             return
 
-        elif type == cls.REPLACEABLE:
-            notification, _ = Notification.objects.update_or_create(
-                group_id=group_id,
-                template=template,
-                read=False,
-                defaults={
-                    'title': title,
-                    'link': link,
-                    'message': message,
-                    'image': image,
-                    'count': count,
-                    'source': source,
-                    'type': type,
-                    'level': level,
-                    'recipient': recipient,
-                    'push_status': Notification.PUSH_WAITING if send_push else '',
-                }
-            )
-        elif type == cls.DIFF:
-
+        elif type in [cls.REPLACEABLE, cls.DIFF]:
             notification, _ = Notification.objects.update_or_create(
                 group_id=group_id,
                 template=template,
