@@ -99,18 +99,19 @@ class AuthTokenSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         totp = data.get('totp')
         sms_code = data.get('sms_code')
-        sms_code_verified = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.API_TOKEN, user)
+        sms_code_verified = VerificationCode.get_by_code(code=sms_code, phone=user.phone, scope=VerificationCode.API_TOKEN, user=user)
         device = TOTPDevice.objects.filter(user=user).first()
         if not sms_code_verified:
             raise ValidationError({'code': 'کد نامعتبر است.'})
         if not (device is None or not device.confirmed or device.verify_token(totp)):
-            raise ValidationError({'token': 'رمز موقت صحیح نمی‌باشد.'})
+            raise ValidationError({'totp': 'رمز موقت صحیح نمی‌باشد.'})
         return data
 
     def create(self, validated_data):
+        validated_data.pop('totp', None)
+        validated_data.pop('sms_code', None)
         validated_data['user'] = self.context['request'].user
         customtoken = CustomToken.objects.create(**validated_data)
-
         return customtoken
 
     def update(self, instance, validated_data):
