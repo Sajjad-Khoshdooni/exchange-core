@@ -83,21 +83,11 @@ class LoginActivity(models.Model):
             'city': login_activity.city,
             'ip': login_activity.ip,
             'brand': settings.BRAND,
+            'site_url': settings.PANEL_URL
         }
         content_html = loader.render_to_string(
             'accounts/notif/email/login_successful_message.html',
             context=context)
-
-        location = ""
-        if login_activity.country != "" and login_activity.city != "":
-            location = "مکان:\n" \
-                       "{country} / {city}".format(country=login_activity.country, city=login_activity.city)
-        context = {
-            'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
-            'location': location,
-            'ip': login_activity.ip,
-            'brand': settings.BRAND,
-        }
         content = loader.render_to_string(
             'accounts/notif/email/login_successful_message.txt',
             context=context)
@@ -111,20 +101,15 @@ class LoginActivity(models.Model):
         if not is_spam:
             context = {
                 'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
-                'brand': settings.BRAND
+                'brand': settings.BRAND,
+                'site_url': settings.PANEL_URL
             }
             content_html = loader.render_to_string(
                 'accounts/notif/email/login_unsuccessful_message.html',
                 context=context)
-
-            context = {
-                'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
-                'brand': settings.BRAND
-            }
             content = loader.render_to_string(
                 'accounts/notif/email/login_unsuccessful_message.txt',
                 context=context)
-
             EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
 
     class Meta:

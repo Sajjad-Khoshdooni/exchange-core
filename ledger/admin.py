@@ -43,10 +43,10 @@ class AssetAdmin(AdvancedAdmin):
         'symbol', 'enable', 'get_hedge_value', 'get_hedge_value_abs', 'get_hedge_amount', 'get_calc_hedge_amount',
         'get_total_asset', 'get_users_balance', 'get_reserved_amount',
         'order', 'trend', 'trade_enable', 'hedge',
-        'margin_enable', 'publish_date', 'spread_category', 'otc_status'
+        'margin_enable', 'publish_date', 'spread_category', 'otc_status', 'price_page',
     )
     list_filter = ('enable', 'trend', 'margin_enable', 'spread_category')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'hedge')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'hedge', 'price_page')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('setup_asset', )
@@ -570,10 +570,11 @@ class CategorySpreadAdmin(admin.ModelAdmin):
 
 @admin.register(models.SystemSnapshot)
 class SystemSnapshotAdmin(admin.ModelAdmin):
-    list_display = ('created', 'total', 'users', 'exchange', 'exchange_potential', 'hedge', 'prize')
+    list_display = ('created', 'total', 'users', 'exchange', 'hedge', 'prize', 'verified')
     ordering = ('-created', )
     actions = ('reject_histories', 'verify_histories')
     readonly_fields = ('created', )
+    list_filter = ('verified', )
 
     @admin.action(description='رد', permissions=['change'])
     def reject_histories(self, request, queryset):

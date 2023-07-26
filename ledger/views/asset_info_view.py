@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import Min, F
+from django.db.models import Min, F, Q
 from django.http import Http404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -231,7 +231,11 @@ class AssetsViewSet(ModelViewSet):
         )
 
     def get_queryset(self):
-        queryset = Asset.live_objects.filter(trade_enable=True)
+
+        if self.get_options('extra_info'):
+            queryset = Asset.objects.filter(Q(enable=True) | Q(price_page=True))
+        else:
+            queryset = Asset.live_objects.all()
 
         if self.get_options('category'):
             category = get_object_or_404(CoinCategory, name=self.get_options('category'))

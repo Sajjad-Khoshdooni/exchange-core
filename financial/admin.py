@@ -21,6 +21,7 @@ from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAcc
     FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, \
     GeneralBankAccount, BankPaymentRequest
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
+from financial.utils.encryption import encrypt
 from financial.utils.payment_id_client import get_payment_id_client
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.fields import PENDING
@@ -47,6 +48,20 @@ class GatewayAdmin(admin.ModelAdmin):
     @admin.display(description='max deposit')
     def get_max_deposit_amount(self, gateway: Gateway):
         return humanize_number(Decimal(gateway.max_deposit_amount))
+
+    def save_model(self, request, gateway: Gateway, form, change):
+        encryption_fields = ['withdraw_api_secret_encrypted', 'withdraw_api_password_encrypted',
+                             'deposit_api_secret_encrypted', 'payment_id_secret_encrypted']
+
+        old_gateway = gateway.id and Gateway.objects.get(id=gateway.id)
+
+        for key in encryption_fields:
+            value = getattr(gateway, key)
+
+            if getattr(old_gateway, key, '') != value:
+                setattr(gateway, key, encrypt(value))
+
+        gateway.save()
 
 
 class UserRialWithdrawRequestFilter(SimpleListFilter):

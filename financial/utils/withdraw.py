@@ -6,11 +6,10 @@ from typing import Union
 
 import pytz
 import requests
-from django.core.cache import caches
 from django.utils import timezone
 
 from accounts.verifiers.jibit import Response
-from financial.models import BankAccount, FiatWithdrawRequest, Gateway, Payment, PaymentRequest
+from financial.models import BankAccount, FiatWithdrawRequest, Gateway, PaymentRequest
 from financial.utils.ach import next_ach_clear_time
 from financial.utils.withdraw_limit import is_holiday, time_in_range
 
@@ -55,7 +54,8 @@ class FiatWithdraw:
             Gateway.PAYIR: PayirChannel,
             Gateway.ZIBAL: ZibalChannel,
             Gateway.ZARINPAL: ZarinpalChannel,
-            Gateway.JIBIT: JibitChannel
+            Gateway.JIBIT: JibitChannel,
+            Gateway.JIBIMO: JibimoChannel,
         }
         return mapping[gateway.type](gateway, verbose)
 
@@ -421,9 +421,6 @@ class JibitChannel(FiatWithdraw):
                      'AYANDEH', 'SAMAN', 'TEJARAT', 'PARSIAN']
 
     def _get_token(self):
-        token_cache = caches['token']
-        token_cache_key = 'jibit_gateway_transfer_token'
-
         resp = requests.post(
             url=self.BASE_URL + '/v2/tokens/generate',
             json={
@@ -435,11 +432,7 @@ class JibitChannel(FiatWithdraw):
 
         if resp.ok:
             resp_data = resp.json()
-            token = resp_data['accessToken']
-            expire = 23 * 3600
-            token_cache.set(token_cache_key, token, expire)
-
-            return token
+            return resp_data['accessToken']
 
     def collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> Response:
         url = 'https://napi.jibit.ir/trf' + path
@@ -561,6 +554,60 @@ class JibitChannel(FiatWithdraw):
 
         return receive_time
 
-    def get_total_wallet_irt_value(self):
+    def get_total_wallet_irt_value(self) -> int:
         wallet = self.get_wallet_data()
         return wallet.balance
+
+
+class JibimoChannel(FiatWithdraw):
+
+    def _get_token(self):
+        resp = requests.post('https://api.jibimo.com/v2/auth/token', headers={
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }, json={
+            'username': self.gateway.withdraw_api_key,
+            'password': self.gateway.withdraw_api_password,
+            'secret_key': self.gateway.withdraw_api_secret,
+            'scopes': ['registered-user']
+        })
+
+        if resp.ok:
+            resp = resp.json()
+            return resp['token_type'] + ' ' + resp['access_token']
+
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> Response:
+        url = 'https://api.jibimo.com' + path
+
+        request_kwargs = {
+            'url': url,
+            'timeout': timeout,
+            'headers': {'Authorization': self._get_token()},
+        }
+
+        try:
+            if method == 'GET':
+                resp = requests.get(params=data, **request_kwargs)
+            else:
+                method_prop = getattr(requests, method.lower())
+                resp = method_prop(json=data, **request_kwargs)
+        except requests.exceptions.ConnectionError:
+            logger.error('jibimo connection error', extra={
+                'url': url,
+                'method': method,
+                'data': data,
+            })
+            raise TimeoutError
+
+        resp_data = resp.json()
+
+        if self.verbose or not resp.ok:
+            print('status', resp.status_code)
+            print('data', resp_data)
+
+        return Response(data=resp_data, success=resp.ok, status_code=resp.status_code)
+
+    def get_total_wallet_irt_value(self) -> int:
+        resp = self.collect_api('/v2/business/refresh')
+        user = resp.data['user']
+        return int(float(user['balance']) - float(user['reserved']))
