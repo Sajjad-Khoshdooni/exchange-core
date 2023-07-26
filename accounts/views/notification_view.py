@@ -13,10 +13,6 @@ from accounts.utils.validation import parse_positive_int
 
 
 class NotificationSerializer(serializers.ModelSerializer):
-    message = serializers.SerializerMethodField()
-
-    def get_message(self, instance):
-        return instance.content
 
     def update(self, instance: Notification, validated_data):
         if 'read' in validated_data and instance.read and not validated_data['read']:

@@ -9,6 +9,14 @@ from ledger.utils.fields import get_group_id_field, get_status_field
 logger = logging.getLogger(__name__)
 
 
+NOTIFICATION_TEMPLATES = {
+    'plain': '{last}',
+    'like': '{last} و {count} نفر دیگر پست شما را پسندیدند',
+    'comment': '{last} و {count} نفر دیگر برای پست شما نظر گزاشتند',
+    'follow': '{last} و {count} نفر دیگر شما را دنبال کردند'
+}
+
+
 class LiveNotification(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(read=False)
@@ -20,11 +28,11 @@ class Notification(models.Model):
 
     PUSH_WAITING, PUSH_SENT = 'w', 's'
 
-    RAASTIN, NINJA = 'raastin', 'ninja'
-    SOURCE_CHOICE = ((RAASTIN, RAASTIN), (NINJA, NINJA))
+    CORE, NINJA, CRM = 'core', 'ninja', 'crm'
+    SOURCES = ((CORE, CORE), (NINJA, NINJA), (CRM, CRM))
 
-    LIKE, COMMENT, FOLLOW, SYSTEM = 'like', 'comment', 'follow', 'system'
-    TARGET_SOURCE = ((LIKE, LIKE), (COMMENT, COMMENT), (FOLLOW, FOLLOW), (SYSTEM, SYSTEM))
+    LIKE, COMMENT, FOLLOW, PLAIN = 'like', 'comment', 'follow', 'plain'
+    TEMPLATE_CHOICES = ((LIKE, LIKE), (COMMENT, COMMENT), (FOLLOW, FOLLOW), (PLAIN, PLAIN))
 
     ORDINARY, REPLACEABLE, DIFF = 'ord', 'rep', 'dif'
     TYPE_CHOICE = ((ORDINARY, ORDINARY), (REPLACEABLE, REPLACEABLE), (DIFF, DIFF))
@@ -60,21 +68,20 @@ class Notification(models.Model):
 
     source = models.CharField(
         max_length=8,
-        choices=SOURCE_CHOICE,
-        default=RAASTIN
+        choices=SOURCES,
+        default=CORE
     )
     type = models.CharField(
         max_length=3,
         choices=TYPE_CHOICE,
         default=ORDINARY
     )
-    target = models.CharField(
+    template = models.CharField(
         max_length=8,
-        choices=TARGET_SOURCE,
-        default=SYSTEM
+        choices=TEMPLATE_CHOICES,
+        default=PLAIN
     )
     count = models.IntegerField(default=0, null=True, blank=True)
-    template = models.ForeignKey('accounts.Template', on_delete=models.CASCADE)
 
     objects = models.Manager()
     live_objects = LiveNotification()
@@ -88,27 +95,28 @@ class Notification(models.Model):
         constraints = [
             UniqueConstraint(
                 name='unique_unread_group_id',
-                fields=["group_id", "target"],
+                fields=["group_id", "template"],
                 condition=Q(read=False) & Q(source='ninja')
             ),
             UniqueConstraint(
                 name='unique_recipient_group_id',
                 fields=['recipient', 'group_id'],
-                condition=Q(target='system')
+                condition=Q(template='plain')
             )
         ]
 
     @classmethod
     def send(cls, recipient, title: str, link: str = '', message: str = '', level: str = INFO, image: str = '',
-             send_push: bool = True, group_id=None, type: str = ORDINARY, target: str = SYSTEM, source: str = RAASTIN,
+             send_push: bool = True, group_id=None, type: str = ORDINARY, template: str = PLAIN, source: str = CORE,
              count: int = 1):
-        from accounts.models import Template
 
         if not recipient:
             logger.info('failed to send notif')
             return
+        if not template in Notification.TEMPLATE_CHOICES:
+            raise NotImplementedError
 
-        template = Template.objects.get(target=target)
+        message = NOTIFICATION_TEMPLATES.get(template, '').format(last=message, count=count)
 
         if type == cls.ORDINARY:
             if Notification.live_objects.filter(group_id=group_id, source=cls.NINJA).exists():
@@ -116,7 +124,7 @@ class Notification(models.Model):
 
             notification = Notification.objects.create(
                 recipient=recipient,
-                target=target,
+                template=template,
                 title=title,
                 link=link,
                 message=message,
@@ -124,7 +132,6 @@ class Notification(models.Model):
                 source=source,
                 image=image,
                 type=type,
-                template=template,
                 count=count,
                 push_status=Notification.PUSH_WAITING if send_push else '',
                 group_id=group_id
@@ -137,7 +144,7 @@ class Notification(models.Model):
         elif type == cls.REPLACEABLE:
             notification, _ = Notification.objects.update_or_create(
                 group_id=group_id,
-                target=target,
+                template=template,
                 read=False,
                 defaults={
                     'title': title,
@@ -147,9 +154,9 @@ class Notification(models.Model):
                     'count': count,
                     'source': source,
                     'type': type,
-                    'template': template,
                     'level': level,
-                    'recipient': recipient
+                    'recipient': recipient,
+                    'push_status': Notification.PUSH_WAITING if send_push else '',
                 }
             )
         elif type == cls.DIFF:
@@ -160,7 +167,7 @@ class Notification(models.Model):
 
             notification, _ = Notification.objects.update_or_create(
                 group_id=group_id,
-                target=target,
+                template=template,
                 read=False,
                 defaults={
                     'title': title,
@@ -170,9 +177,9 @@ class Notification(models.Model):
                     'count': count,
                     'source': source,
                     'type': type,
-                    'template': template,
                     'level': level,
-                    'recipient': recipient
+                    'recipient': recipient,
+                    'push_status': Notification.PUSH_WAITING if send_push else '',
                 }
             )
         else:
@@ -180,10 +187,6 @@ class Notification(models.Model):
             return
 
         return notification
-
-    @property
-    def content(self):
-        return str(self.template.content).format(last=self.message, count=self.count)
 
     def make_read(self):
         if not self.read:
