@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.db.models import Sum
+from django.utils import timezone
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset, \
@@ -70,7 +71,7 @@ class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super(VaultItemAdmin, self).save_model(request, obj, form, change)
-        obj.vault.update_real_value()
+        obj.vault.update_real_value(timezone.now())
 
 
 @admin.register(ReservedAsset)

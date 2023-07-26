@@ -1,4 +1,5 @@
 import dataclasses
+from datetime import datetime
 from decimal import Decimal
 from typing import List
 
@@ -18,11 +19,13 @@ class VaultData:
 
 
 class Vault(models.Model):
-    history = HistoricalRecords()
-
     TYPES = PROVIDER, GATEWAY, HOT_WALLET, COLD_WALLET, BANK, MANUAL = \
         'provider', 'gateway', 'hw', 'cw', 'bank', 'manual'
     MARKETS = SPOT, FUTURES = 'spot', 'futures'
+
+    history = HistoricalRecords()
+
+    updated = models.DateTimeField(db_index=True)
 
     name = models.CharField(max_length=32)
 
@@ -62,15 +65,17 @@ class Vault(models.Model):
             updated=now,
         )
 
-        self.update_real_value(real_vault_value)
+        self.update_real_value(now, real_vault_value)
 
-    def update_real_value(self, real_vault_value: Decimal = None):
+    def update_real_value(self, now: datetime, real_vault_value: Decimal = None):
+        self.updated = now
+
         if real_vault_value is not None:
             self.real_value = real_vault_value
         else:
             self.real_value = VaultItem.objects.filter(vault=self).aggregate(value=Sum('value_usdt'))['value'] or 0
 
-        self.save(update_fields=['real_value'])
+        self.save(update_fields=['updated', 'real_value'])
 
 
 class VaultItem(models.Model):

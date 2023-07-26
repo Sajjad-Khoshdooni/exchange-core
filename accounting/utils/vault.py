@@ -146,7 +146,7 @@ def update_cold_wallet_vaults(now: datetime, prices: dict):
         vault_item.save(update_fields=['value_usdt', 'value_irt'])
 
     for vault in Vault.objects.filter(type__in=(Vault.COLD_WALLET, Vault.MANUAL)):
-        vault.update_real_value()
+        vault.update_real_value(now)
 
 
 def update_bank_vaults(now: datetime, prices: dict):
