@@ -73,6 +73,7 @@ class AssetMarginInfoView(APIView):
 class MarginTransferSerializer(serializers.ModelSerializer):
     amount = get_serializer_amount_field()
     coin = CoinField(source='asset')
+    position_symbol = serializers.CharField(source='position_symbol.name')
     asset = AssetSerializerMini(read_only=True)
 
     @staticmethod
@@ -91,7 +92,7 @@ class MarginTransferSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MarginTransfer
-        fields = ('created', 'amount', 'type', 'coin', 'asset')
+        fields = ('created', 'amount', 'type', 'coin', 'asset', 'position_symbol')
         read_only_fields = ('created', )
 
 

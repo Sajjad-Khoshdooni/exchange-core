@@ -94,6 +94,15 @@ def _update_trading_positions(trading_positions, pipeline):
         to_update_positions[position.id] = position
         if position.amount == 0:
             position.status = MarginPosition.CLOSED
+            margin_cross_wallet = position.margin_base_wallet.asset.get_wallet(
+                position.account, market=Wallet.MARGIN, variant=None)
+            remaining_balance = position.margin_base_wallet + pipeline.get_wallet_balance_diff(
+                position.margin_base_wallet.id)
+            if remaining_balance:
+                pipeline.new_trx(
+                    position.margin_base_wallet, margin_cross_wallet, remaining_balance, Trx.MARGIN_TRANSFER,
+                    trade_info.group_id
+                )
 
     MarginPosition.objects.bulk_update(
         to_update_positions.values(), ['amount', 'average_price', 'liquidation_price', 'status']
@@ -177,7 +186,8 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
                 loan_type=loan_type,
                 position=position,
                 trade_amount=trade_amount,
-                trade_price=trade_price
+                trade_price=trade_price,
+                group_id=order.group_id
             ))
     return trading_positions
 

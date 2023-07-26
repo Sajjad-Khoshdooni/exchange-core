@@ -1,5 +1,5 @@
 from decimal import Decimal
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from dataclasses import dataclass
 from django.db import models
@@ -151,3 +151,4 @@ class MarginPositionTradeInfo:
     position: MarginPosition
     trade_amount: Decimal = 0
     trade_price: Decimal = 0
+    group_id: UUID = 0

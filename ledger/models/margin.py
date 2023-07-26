@@ -6,17 +6,20 @@ from django.db import models
 from django.db.models import CheckConstraint, Q, UniqueConstraint
 
 from accounts.models import Account
-from ledger.exceptions import InsufficientBalance, MaxBorrowableExceeds
+from ledger.exceptions import InsufficientBalance
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import Asset, Wallet, Trx
 from ledger.utils.external_price import SELL, get_external_price
 from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field, DONE, PENDING
 from ledger.utils.wallet_pipeline import WalletPipeline
+from market.models import PairSymbol
 
 
 class MarginTransfer(models.Model):
     SPOT_TO_MARGIN = 'sm'
     MARGIN_TO_SPOT = 'ms'
+    MARGIN_TO_POSITION = 'mp'
+    POSITION_TO_MARGIN = 'pm'
 
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(to=Account, on_delete=models.CASCADE)
@@ -25,16 +28,28 @@ class MarginTransfer(models.Model):
 
     type = models.CharField(
         max_length=2,
-        choices=((SPOT_TO_MARGIN, 'spot to margin'), (MARGIN_TO_SPOT, 'margin to spot')),
+        choices=(
+            (SPOT_TO_MARGIN, 'spot to margin'), (MARGIN_TO_SPOT, 'margin to spot'),
+            (MARGIN_TO_POSITION, 'margin to position'), (POSITION_TO_MARGIN, 'position to margin')),
     )
 
     asset = models.ForeignKey(to=Asset, on_delete=models.PROTECT)
+    position_symbol = models.ForeignKey(to=PairSymbol, null=True, blank=True, on_delete=models.PROTECT)
 
     group_id = models.UUIDField(default=uuid4)
 
     def save(self, *args, **kwargs):
         spot_wallet = self.asset.get_wallet(self.account, Wallet.SPOT)
         margin_wallet = self.asset.get_wallet(self.account, Wallet.MARGIN)
+        position_wallet = position = None
+
+        if self.type in (self.MARGIN_TO_POSITION, self.POSITION_TO_MARGIN):
+            if not self.position_symbol:
+                raise ValueError('position_symbol is required')
+            position = self.position_symbol.get_margin_position(self.account)
+            if not position:
+                raise ValueError('No open position found for this symbol')
+            position_wallet = self.asset.get_wallet(self.account, Wallet.MARGIN, position.variant)
 
         if self.type == self.SPOT_TO_MARGIN:
             sender, receiver = spot_wallet, margin_wallet
@@ -42,11 +57,12 @@ class MarginTransfer(models.Model):
         elif self.type == self.MARGIN_TO_SPOT:
             sender, receiver = margin_wallet, spot_wallet
 
-            margin_info = MarginInfo.get(self.account)
+        elif self.type == self.MARGIN_TO_POSITION:
+            sender, receiver = margin_wallet, position_wallet
 
-            price = get_external_price(self.asset.symbol, base_coin=Asset.USDT, side=SELL)
-
-            if self.amount > margin_info.get_max_transferable() / price:
+        elif self.type == self.POSITION_TO_MARGIN:
+            sender, receiver = position_wallet, margin_wallet
+            if not position.has_enough_margin(self.amount):
                 raise InsufficientBalance
         else:
             raise NotImplementedError
@@ -89,7 +105,8 @@ class MarginLoan(models.Model):
         return self.asset.get_wallet(self.account, Wallet.LOAN, self.variant)
 
     @classmethod
-    def new_loan(cls, account: Account, asset: Asset, amount: Decimal, loan_type: str, pipeline: WalletPipeline, variant=None):
+    def new_loan(cls, account: Account, asset: Asset, amount: Decimal, loan_type: str, pipeline: WalletPipeline,
+                 variant=None):
         assert amount > 0
         assert asset.symbol != Asset.IRT
         assert loan_type in (cls.BORROW, cls.REPAY)
@@ -145,7 +162,8 @@ class CloseRequest(models.Model):
     class Meta:
         constraints = [
             CheckConstraint(check=Q(margin_level__gte=0), name='check_margin_level', ),
-            UniqueConstraint(fields=['account'], condition=Q(status='pending'), name='unique_margin_close_request_account'),
+            UniqueConstraint(fields=['account'], condition=Q(status='pending'),
+                             name='unique_margin_close_request_account'),
         ]
 
     @classmethod

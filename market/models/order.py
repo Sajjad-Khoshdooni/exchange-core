@@ -207,7 +207,6 @@ class Order(models.Model):
         if wallet.market == Wallet.MARGIN:
             position = symbol.get_margin_position(wallet.account)
             if not position.has_enough_margin(lock_amount):
-                print(base_wallet)
                 margin_cross_wallet = base_wallet.asset.get_wallet(
                     base_wallet.account, market=base_wallet.market, variant=None
                 )
@@ -219,7 +218,6 @@ class Order(models.Model):
                     amount=lock_amount,
                     scope=Trx.MARGIN_TRANSFER
                 )
-                print(base_wallet)
             return base_wallet
         return base_wallet if side == BUY else wallet
 
