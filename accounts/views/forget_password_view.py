@@ -4,6 +4,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
 from accounts import codes
 from accounts.models import User

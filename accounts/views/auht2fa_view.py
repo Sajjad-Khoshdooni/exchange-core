@@ -3,6 +3,8 @@ from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
 from rest_framework import serializers
 from rest_framework import views
 from rest_framework.response import Response
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
 from accounts.models.phone_verification import VerificationCode
@@ -28,6 +30,8 @@ class TOTPSerializer(serializers.Serializer):
 
 
 class TOTPView(views.APIView):
+
+    authentication_classes = (SessionAuthentication, JWTAuthentication)
     def post(self, request):
         user = request.user
         device = TOTPDevice.objects.filter(user=user).first()
