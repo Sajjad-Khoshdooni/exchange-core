@@ -72,6 +72,8 @@ class MarginTransfer(models.Model):
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             super(MarginTransfer, self).save(*args)
             pipeline.new_trx(sender, receiver, self.amount, Trx.MARGIN_TRANSFER, self.group_id)
+            if position:
+                position.update_liquidation_price(pipeline)
 
 
 class MarginLoan(models.Model):
