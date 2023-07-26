@@ -117,6 +117,7 @@ class Notification(models.Model):
     def send(cls, recipient, title: str, link: str = '', message: str = '', level: str = INFO, image: str = '',
              send_push: bool = True, group_id=None, type: str = ORDINARY, template: str = PLAIN, source: str = CORE,
              count: int = 1):
+        count -= 1
 
         if not recipient:
             logger.info('failed to send notif')
