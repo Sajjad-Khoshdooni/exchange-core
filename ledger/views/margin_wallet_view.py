@@ -127,7 +127,9 @@ class MarginAssetSerializer(AssetSerializerMini):
             price = Decimal(1)
         else:
             symbol_id = PairSymbol.get_by(f'{asset.symbol}{Asset.USDT}').id
-            price = Order.get_top_price(symbol_id, SELL)
+            #TODO: use bulk symbols prices
+            price = Order.get_top_price(symbol_id, SELL) or \
+                    get_external_price(coin=asset.symbol, base_coin=Asset.USDT, side=SELL, allow_stale=True)
         amount = wallet['balance'] * price
         return asset.get_presentation_price_usdt(amount)
 
@@ -166,7 +168,7 @@ class MarginAssetSerializer(AssetSerializerMini):
     class Meta:
         model = Asset
         fields = (*AssetSerializerMini.Meta.fields, 'free', 'balance', 'balance_usdt', 'borrowed', 'equity')
-        ref_name = 'margin wallets'
+        ref_name = 'margin assets'
 
 
 class MarginAssetViewSet(ModelViewSet):

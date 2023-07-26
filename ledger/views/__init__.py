@@ -11,6 +11,7 @@ from .address_book_view import AddressBookView, AddressBookViewV2
 from .balance_information import BalanceInfoView
 from .bookmark_asset import BookmarkAssetsAPIView
 from .margin_wallet_view import MarginWalletViewSet, MarginAssetViewSet
+from .margin_position_view import MarginPositionViewSet
 from .deposit_transfer_request_view import DepositTransferUpdateView
 from .withdraw_transfer_request_view import WithdrawTransferUpdateView
 from .pnl_views import PNLOverview
