@@ -25,6 +25,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         totp = data.get('totp')
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
+        otp_code.set_code_used()
         if not user.check_password(old_pass):
             raise ValidationError({'old_password': 'رمز عبور قبلی بدرستی وارد نشده است'})
         device = TOTPDevice.objects.filter(user=user).first()

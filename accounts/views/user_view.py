@@ -103,6 +103,7 @@ class AuthTokenSerializer(serializers.ModelSerializer):
         device = TOTPDevice.objects.filter(user=user).first()
         if not sms_code_verified:
             raise ValidationError({'code': 'کد نامعتبر است.'})
+        sms_code_verified.set_code_used()
         if not (device is None or not device.confirmed or device.verify_token(totp)):
             raise ValidationError({'totp': 'رمز موقت صحیح نمی‌باشد.'})
         return data
