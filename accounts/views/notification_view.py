@@ -1,9 +1,12 @@
+from django.contrib.auth.mixins import UserPassesTestMixin
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
+from accounts.authentication import CustomTokenAuthentication
 from accounts.models import UserFeedback
 from accounts.models.notification import Notification
 from accounts.utils.validation import parse_positive_int
@@ -76,3 +79,25 @@ class ReadAllNotificationView(APIView):
             Notification.objects.filter(recipient=request.user).update(read=True)
 
         return Response('ok')
+
+
+class NotificationViewSerializer(serializers.ModelSerializer):
+    def create(self, validated_data):
+        notification = Notification.send(
+            **validated_data
+        )
+        return notification
+
+    class Meta:
+        model = Notification
+        fields = ['source', 'title', 'link', 'message', 'image', 'level', 'count', 'type', 'group_id', 'recipient', 'template']
+        validators = []
+
+
+class NotificationView(CreateAPIView, UserPassesTestMixin):
+    authentication_classes = [CustomTokenAuthentication]
+    serializer_class = NotificationViewSerializer
+
+    def test_func(self):
+        permission_check = self.request.user.has_perm('accounts.can_generate_notification')
+        return permission_check

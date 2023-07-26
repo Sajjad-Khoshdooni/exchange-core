@@ -48,6 +48,7 @@ urlpatterns = [
     path('verify/email/otp/', views.EmailVerifyView.as_view()),
     path('verify/email/verify/', views.EmailOTPVerifyView.as_view()),
 
+    path('notifs/generate/', views.NotificationView.as_view()),
     path('notifs/', views.NotificationViewSet.as_view({
         'get': 'list',
     })),
