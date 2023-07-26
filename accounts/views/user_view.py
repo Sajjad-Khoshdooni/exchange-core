@@ -93,7 +93,7 @@ class AuthTokenSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomToken
-        fields = ('ip_list',)
+        fields = ('ip_list', 'sms_code', 'totp')
 
     def validate(self, data):
         user = data.get('user')
