@@ -12,8 +12,15 @@ logger = logging.getLogger(__name__)
 NOTIFICATION_TEMPLATES = {
     'plain': '{last}',
     'like': '{last} و {count} نفر دیگر پست شما را پسندیدند',
-    'comment': '{last} و {count} نفر دیگر برای پست شما نظر گزاشتند',
+    'comment': '{last} و {count} نفر دیگر برای پست شما نظر گذاشتند',
     'follow': '{last} و {count} نفر دیگر شما را دنبال کردند'
+}
+
+NOTIFICATION_0_TEMPLATES = {
+    'plain': '{last}',
+    'like': '{last} پست شما را پسندید',
+    'comment': '{last} برای پست شما نظر گذاشت',
+    'follow': '{last} شما را دنبال کرد'
 }
 
 
@@ -117,6 +124,16 @@ class Notification(models.Model):
         if not template in Notification.TEMPLATE_LIST:
             raise NotImplementedError
 
+        if type == cls.DIFF:
+            read_count = Notification.objects.filter(group_id=group_id, read=True).aggregate(Sum('count'))[
+                'count__sum']
+            if read_count:
+                count = count - read_count
+            if count == 0:
+                message = NOTIFICATION_0_TEMPLATES.get(template, '').format(last=message, count=count),
+            else:
+                message = NOTIFICATION_TEMPLATES.get(template, '').format(last=message),
+
         if type == cls.ORDINARY:
             if Notification.live_objects.filter(group_id=group_id, source=cls.NINJA).exists():
                 return
@@ -126,7 +143,7 @@ class Notification(models.Model):
                 template=template,
                 title=title,
                 link=link,
-                message=NOTIFICATION_TEMPLATES.get(template, '').format(last=message, count=count),
+                message=message,
                 level=level,
                 source=source,
                 image=image,
@@ -148,7 +165,7 @@ class Notification(models.Model):
                 defaults={
                     'title': title,
                     'link': link,
-                    'message': NOTIFICATION_TEMPLATES.get(template, '').format(last=message, count=count),
+                    'message': message,
                     'image': image,
                     'count': count,
                     'source': source,
@@ -159,10 +176,6 @@ class Notification(models.Model):
                 }
             )
         elif type == cls.DIFF:
-            read_count = Notification.objects.filter(group_id=group_id, read=True).aggregate(Sum('count'))[
-                'count__sum']
-            if read_count:
-                count = max(count - read_count, 1)
 
             notification, _ = Notification.objects.update_or_create(
                 group_id=group_id,
@@ -171,7 +184,7 @@ class Notification(models.Model):
                 defaults={
                     'title': title,
                     'link': link,
-                    'message': NOTIFICATION_TEMPLATES.get(template, '').format(last=message, count=count),
+                    'message': message,
                     'image': image,
                     'count': count,
                     'source': source,
