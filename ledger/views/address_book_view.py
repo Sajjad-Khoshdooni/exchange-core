@@ -41,9 +41,11 @@ class AddressBookSerializer(serializers.ModelSerializer):
 
         if not re.match(network.address_regex, address):
             raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
-        sms_code_verified = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_2FA, user)
+
+        sms_code_verified = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user)
         if not sms_code_verified:
             raise ValidationError({'code': 'کد نامعتبر است.'})
+        sms_code_verified.set_code_used()
         device = TOTPDevice.objects.filter(user=user).first()
         if not (device is None or not device.confirmed or device.verify_token(totp)):
             raise ValidationError({'token': 'رمز موقت صحیح نمی‌باشد.'})
@@ -65,7 +67,7 @@ class AddressBookSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AddressBook
-        fields = ('id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'network_info')
+        fields = ('id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'network_info', 'sms_code', 'totp')
 
 
 class AddressBookView(ModelViewSet):

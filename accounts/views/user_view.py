@@ -99,7 +99,7 @@ class AuthTokenSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         totp = data.get('totp')
         sms_code = data.get('sms_code')
-        sms_code_verified = VerificationCode.get_by_code(code=sms_code, phone=user.phone, scope=VerificationCode.API_TOKEN, user=user)
+        sms_code_verified = VerificationCode.get_by_code(code=sms_code, phone=user.phone, scope=VerificationCode.SCOPE_API_TOKEN, user=user)
         device = TOTPDevice.objects.filter(user=user).first()
         if not sms_code_verified:
             raise ValidationError({'code': 'کد نامعتبر است.'})
