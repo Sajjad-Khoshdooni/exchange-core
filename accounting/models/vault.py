@@ -76,7 +76,7 @@ class Vault(models.Model):
 class VaultItem(models.Model):
     history = HistoricalRecords()
 
-    updated = models.DateTimeField()
+    updated = models.DateTimeField(db_index=True)
 
     vault = models.ForeignKey(Vault, on_delete=models.CASCADE)
     coin = models.CharField(max_length=32, db_index=True)
