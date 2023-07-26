@@ -117,8 +117,6 @@ class Notification(models.Model):
         if not template in Notification.TEMPLATE_LIST:
             raise NotImplementedError
 
-        message = NOTIFICATION_TEMPLATES.get(template, '').format(last=message, count=count)
-
         if type == cls.ORDINARY:
             if Notification.live_objects.filter(group_id=group_id, source=cls.NINJA).exists():
                 return
@@ -128,7 +126,7 @@ class Notification(models.Model):
                 template=template,
                 title=title,
                 link=link,
-                message=message,
+                message=NOTIFICATION_TEMPLATES.get(template, '').format(last=message, count=count),
                 level=level,
                 source=source,
                 image=image,
@@ -150,7 +148,7 @@ class Notification(models.Model):
                 defaults={
                     'title': title,
                     'link': link,
-                    'message': message,
+                    'message': NOTIFICATION_TEMPLATES.get(template, '').format(last=message, count=count),
                     'image': image,
                     'count': count,
                     'source': source,
@@ -173,7 +171,7 @@ class Notification(models.Model):
                 defaults={
                     'title': title,
                     'link': link,
-                    'message': message,
+                    'message': NOTIFICATION_TEMPLATES.get(template, '').format(last=message, count=count),
                     'image': image,
                     'count': count,
                     'source': source,
