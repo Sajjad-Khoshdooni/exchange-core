@@ -29,7 +29,7 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise ValidationError({'old_password': 'رمز عبور قبلی بدرستی وارد نشده است'})
         device = TOTPDevice.objects.filter(user=user).first()
         if not (device is None or not device.confirmed or device.verify_token(totp)):
-            raise ValidationError({'otp': ' رمز موقت نامعتبر است.'})
+            raise ValidationError({'totp': ' رمز موقت نامعتبر است.'})
         validate_password(password=password, user=user)
 
         return data
@@ -45,11 +45,6 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 
 class ChangePasswordView(APIView):
-    def post(self, request):
-        user = request.user
-        VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_CHANGE_PASSWORD, user=user)
-        return Response({'msg': 'پیامک با موفقیت ارسال شد.'})
-
     def patch(self, request):
         user = self.request.user
 
