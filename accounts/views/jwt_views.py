@@ -18,7 +18,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework.exceptions import AuthenticationFailed
 
-
 from accounts.authentication import CustomTokenAuthentication
 from accounts.models import Account, LoginActivity
 from accounts.utils.validation import set_login_activity
