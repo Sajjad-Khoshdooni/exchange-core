@@ -96,7 +96,7 @@ class AuthTokenSerializer(serializers.ModelSerializer):
         fields = ('ip_list', 'sms_code', 'totp')
 
     def validate(self, data):
-        user = data.get('user')
+        user = self.context['request'].user
         totp = data.get('totp')
         sms_code = data.get('sms_code')
         sms_code_verified = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.API_TOKEN, user)
@@ -144,7 +144,8 @@ class CreateAuthToken(APIView):
         else:
             auth_token_serializer = AuthTokenSerializer(
                 data=request.data,
-                context={'request': self.request})
+                context={'request': self.request}
+            )
             auth_token_serializer.is_valid(raise_exception='data is invalid')
             auth_token_serializer.save()
             token = CustomToken.objects.get(user=request.user)

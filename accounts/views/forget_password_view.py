@@ -13,6 +13,7 @@ from accounts.validators import password_validator
 from django.contrib.auth.password_validation import validate_password
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
+
 class InitiateForgotPasswordSerializer(serializers.Serializer):
     login = serializers.CharField(required=True)
 
@@ -33,7 +34,6 @@ class InitiateForgetPasswordView(APIView):
     throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def post(self, request):
-
         if request.user.is_authenticated:
             return Response({'msg': 'already logged in', 'code': codes.USER_ALREADY_LOGGED_IN})
 
