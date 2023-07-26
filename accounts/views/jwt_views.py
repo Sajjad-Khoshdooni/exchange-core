@@ -16,16 +16,12 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Toke
     TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenViewBase
-
-#our changes
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework.exceptions import AuthenticationFailed
 
-#their changes
 from accounts.authentication import CustomTokenAuthentication
 from accounts.models import Account, LoginActivity, RefreshToken as RefreshTokenModel
-
 from accounts.models import User
 from accounts.utils.validation import set_login_activity
 
