@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from ledger.models import AddressBook, Asset, Network, NetworkAsset
+from ledger.models import AddressBook, Asset, Network, NetworkAsset, Transfer
 from ledger.models.asset import AssetSerializerMini
 from ledger.views.wallet_view import NetworkAssetSerializer
 from accounts.models.phone_verification import VerificationCode
@@ -23,6 +23,7 @@ class AddressBookSerializer(serializers.ModelSerializer):
     network_info = serializers.SerializerMethodField()
     sms_code = serializers.CharField(write_only=True, required=True)
     totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
+
 
     def validate(self, attrs):
         user = self.context['request'].user
