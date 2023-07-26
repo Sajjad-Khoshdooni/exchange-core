@@ -90,7 +90,7 @@ class NotificationViewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Notification
-        fields = ['source', 'title', 'link', 'message', 'image', 'level', 'count', 'type', 'group_id', 'recipient', 'target']
+        fields = ['source', 'title', 'link', 'message', 'image', 'level', 'count', 'type', 'group_id', 'recipient', 'template']
         validators = []
 
 
