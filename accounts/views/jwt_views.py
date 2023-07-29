@@ -158,10 +158,11 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
             if client_info_serializer.is_valid():
                 client_info = client_info_serializer.validated_data
-            user = User.objects.filter(phone=serializer.data['phone']).first()
+            print(serializer.user)
+            user = User.objects.filter(phone=serializer.user).first()
             device = TOTPDevice.objects.filter(user=user).first()
             if user and (
-                    device is None or not device.confirmed or device.verify_token(serializer.data['totp'])):
+                    device is None or not device.confirmed or device.verify_token(serializer.initial_data['totp'])):
                 login_activity = set_login_activity(
                     request,
                     user=serializer.user,
@@ -176,7 +177,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 raise InvalidToken("2fa did not match")
 
         except AuthenticationFailed as e:
-            recipient = User.objects.filter(phone=serializer.data['phone']).first()
+            recipient = User.objects.filter(phone=serializer.user).first()
             if recipient:
                 LoginActivity.send_unsuccessful_login_message(recipient)
                 if e is TokenError:

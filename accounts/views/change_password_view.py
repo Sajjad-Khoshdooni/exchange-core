@@ -16,7 +16,6 @@ class ChangePasswordSerializer(serializers.Serializer):
     totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
 
     def validate(self, data):
-        # todo : test
         user = self.context['request'].user
         code = data.get('otp_code')
         password = data.get('password')
