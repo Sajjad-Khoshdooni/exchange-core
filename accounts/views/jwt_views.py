@@ -148,7 +148,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
-        # todo : test .data instead of initial_data works
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
@@ -158,7 +157,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
             if client_info_serializer.is_valid():
                 client_info = client_info_serializer.validated_data
-            print(serializer.user)
             user = User.objects.filter(phone=serializer.user).first()
             device = TOTPDevice.objects.filter(user=user).first()
             if user and (
@@ -173,6 +171,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
                                                 ip=login_activity.ip).count() == 1:
                     LoginActivity.send_successful_login_message(login_activity)
+
+                return Response(serializer.validated_data, status=status.HTTP_200_OK)
             else:
                 raise InvalidToken("2fa did not match")
 
@@ -184,7 +184,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     raise InvalidToken(e.args[0])
                 else:
                     raise e
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
 
 
 class SessionTokenObtainPairView(TokenObtainPairView):
