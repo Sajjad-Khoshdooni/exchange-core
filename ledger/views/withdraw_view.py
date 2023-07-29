@@ -1,5 +1,6 @@
 import re
 
+from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
@@ -9,7 +10,6 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from accounts.authentication import CustomTokenAuthentication
 from accounts.models import VerificationCode, LoginActivity
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
-from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
@@ -30,8 +30,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
     code = serializers.CharField(write_only=True, required=False)
     address = serializers.CharField(source='out_address', required=False)
     memo = serializers.CharField(required=False, allow_blank=True)
-    code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
     address_book = serializers.SerializerMethodField()
+    totp = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     def validate(self, attrs):
         request = self.context['request']
@@ -45,8 +45,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
         asset = attrs.get('asset')
         network = attrs.get('network')
         address = attrs.get('out_address')
-
         address_book = None
+        totp = attrs.get('totp', None)
 
         if attrs['address_book_id'] and from_panel:
             address_book = get_object_or_404(AddressBook, id=attrs['address_book_id'], account=account)
@@ -80,13 +80,12 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if from_panel:
             code = attrs['code']
             otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CRYPTO_WITHDRAW)
-
+            device = TOTPDevice.objects.filter(user=user).first()
             if not otp_code:
                 raise ValidationError({'code': 'کد نامعتبر است.'})
+            if not (device is None or not device.confirmed or device.verify_token(totp)):
+                raise ValidationError({'otp' : ' رمز موقت نامعتبر است.'})
 
-            if is_2fa_active_for_user(user):
-                code_2fa = attrs.get('code_2fa') or ''
-                code_2fa_verifier(user_token=user.auth2fa.token, code_2fa=code_2fa)
 
         if not is_48h_rule_passed(user):
             raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
@@ -171,7 +170,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transfer
         fields = ('id', 'amount', 'address', 'coin', 'network', 'code', 'address_book_id', 'address_book', 'memo',
-                  'code_2fa')
+                  'totp')
         ref_name = 'Withdraw Serializer'
 
 
