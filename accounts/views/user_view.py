@@ -30,7 +30,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_is_auth2fa_active(self, user: User):
         device = TOTPDevice.objects.filter(user=user).first()
-        return device and device.confirmed
+        return device is not None and device.confirmed
 
     def get_show_staking(self, user: User):
         return True
