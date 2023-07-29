@@ -160,7 +160,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             user = User.objects.filter(phone=serializer.user).first()
             device = TOTPDevice.objects.filter(user=user).first()
             if user and (
-                    device is None or not device.confirmed or device.verify_token(serializer.initial_data['totp'])):
+                    device is None or not device.confirmed or device.verify_token(serializer.initial_data.get('totp'))):
                 login_activity = set_login_activity(
                     request,
                     user=serializer.user,
