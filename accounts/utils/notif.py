@@ -14,8 +14,7 @@ def send_one_time_notification(users, group_id: UUID):
 def send_2fa_activation_message(user):
     title = "فعال شدن تایید دو مرحله‌ای"
     context = {
-        'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
-        'name': f'{user.first_name} {user.last_name}'
+        'now': validation.gregorian_to_jalali_datetime_str(timezone.now())
     }
     content_html = loader.render_to_string(
         'accounts/notif/email/2fa_activation_message.html',
@@ -30,8 +29,7 @@ def send_2fa_activation_message(user):
 def send_2fa_deactivation_message(user):
     title = "غیرفعال شدن تایید دو مرحله‌ای"
     context = {
-        'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
-        'name': f'{user.first_name} {user.last_name}'
+        'now': validation.gregorian_to_jalali_datetime_str(timezone.now())
     }
     content_html = loader.render_to_string(
         'accounts/notif/email/2fa_deactivation_message.html',

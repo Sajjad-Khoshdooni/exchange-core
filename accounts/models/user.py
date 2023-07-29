@@ -165,7 +165,6 @@ class User(AbstractUser):
 
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
 
-    #is_2fa_active =
 
     def __str__(self):
         name = self.get_full_name()
