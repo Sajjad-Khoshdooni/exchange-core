@@ -33,6 +33,8 @@ class BaseTrade(models.Model):
 
     fee_revenue = get_amount_field()
 
+    login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
+
     @property
     def irt_value(self):
         return self.amount * self.price * self.base_irt_price

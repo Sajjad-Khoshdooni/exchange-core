@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.db.models import Sum
+from django.utils import timezone
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset, \
@@ -10,8 +11,10 @@ from ledger.utils.precision import humanize_number
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('name', 'iban', 'get_balance')
+    list_display = ('name', 'iban', 'get_balance', 'create_vault')
     readonly_fields = ('get_balance', )
+    list_filter = ('create_vault', )
+    ordering = ('-create_vault', )
 
     @admin.display(description='موجودی')
     def get_balance(self, account: Account):
@@ -27,15 +30,22 @@ class TransactionAttachmentTabularInline(admin.TabularInline):
 
 @admin.register(AccountTransaction)
 class AccountTransactionAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'amount', 'reason')
-    readonly_fields = ('created', )
+    fields = ('account', 'amount', 'get_amount', 'reason', 'type')
+    list_display = ('created', 'account', 'get_amount', 'type', 'reason')
+    readonly_fields = ('created', 'get_amount')
     inlines = (TransactionAttachmentTabularInline, )
+    list_filter = ('account__name', 'type')
+
+    @admin.display(description='مقدار', ordering='amount')
+    def get_amount(self, trx: AccountTransaction):
+        return trx.amount and humanize_number(trx.amount)
 
 
 @admin.register(Vault)
 class VaultAdmin(admin.ModelAdmin):
     list_display = ('name', 'market', 'type', 'get_usdt', 'get_value', 'real_value')
     ordering = ('-real_value', )
+    list_filter = ('market', 'type')
 
     @admin.display(description='usdt')
     def get_usdt(self, vault: Vault):
@@ -61,7 +71,7 @@ class VaultItemAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super(VaultItemAdmin, self).save_model(request, obj, form, change)
-        obj.vault.update_real_value()
+        obj.vault.update_real_value(timezone.now())
 
 
 @admin.register(ReservedAsset)

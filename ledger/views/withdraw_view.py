@@ -8,7 +8,7 @@ from rest_framework.generics import get_object_or_404, CreateAPIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.authentication import CustomTokenAuthentication
-from accounts.models import VerificationCode
+from accounts.models import VerificationCode, LoginActivity
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from accounts.verifiers.legal import is_48h_rule_passed
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
@@ -155,8 +155,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
                 memo=validated_data['memo'],
             )
 
+            transfer.login_activity = LoginActivity.from_request(request=self.context['request'])
             transfer.address_book = validated_data['address_book']
-            transfer.save(update_fields=['address_book'])
+            transfer.save(update_fields=['address_book', 'login_activity'])
 
             return transfer
         except InsufficientBalance:

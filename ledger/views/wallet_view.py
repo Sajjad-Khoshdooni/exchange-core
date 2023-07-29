@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Q, Min
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
@@ -89,7 +89,12 @@ class AssetListSerializer(serializers.ModelSerializer):
         return asset.get_presentation_price_irt(balance * price)
 
     def get_ext_price_irt(self, coin: str):
-        price = self.context.get('prices', {}).get(coin, 0)
+        price = self.context.get('market_prices', {'IRT': {}})['IRT'].get(coin, 0)
+        if price:
+            return price
+        else:
+            price = self.context.get('prices', {}).get(coin, 0)
+
         if not price:
             price = get_external_price(coin=coin, base_coin=Asset.IRT, side=SELL, allow_stale=True) or 0
         else:
@@ -98,7 +103,9 @@ class AssetListSerializer(serializers.ModelSerializer):
         return price
 
     def get_ext_price_usdt(self, coin: str):
-        price = self.context.get('prices', {}).get(coin, 0)
+        price = self.context.get('market_prices', {'USDT': {}})['USDT'].get(coin, 0)
+        if not price:
+            price = self.context.get('prices', {}).get(coin, 0)
         if not price:
             price = get_external_price(coin=coin, base_coin=Asset.USDT, side=SELL, allow_stale=True) or 0
 
@@ -261,7 +268,17 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
                 set_bulk_cache=True,
                 apply_otc_spread=True
             )
-            ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=True)
+            ctx['market_prices'] = {}
+            from market.models import Order
+            for base_asset in ('IRT', 'USDT'):
+                ctx['market_prices'][base_asset] = {
+                    o['symbol__name'].replace(base_asset, ''): o['best_ask'] for o in Order.open_objects.filter(
+                        side=SELL,
+                        symbol__enable=True,
+                        symbol__name__in=map(lambda s: f'{s}{base_asset}', coins)
+                    ).values('symbol__name').annotate(best_ask=Min('price'))
+                }
+            ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
 
         return ctx
 

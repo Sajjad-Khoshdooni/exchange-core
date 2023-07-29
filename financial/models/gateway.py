@@ -46,6 +46,7 @@ class Gateway(models.Model):
 
     withdraw_api_key = models.CharField(max_length=1024, blank=True)
     withdraw_api_secret_encrypted = models.CharField(max_length=4096, blank=True)
+    withdraw_api_password_encrypted = models.CharField(max_length=4096, blank=True)
 
     deposit_api_key = models.CharField(max_length=1024, blank=True)
     deposit_api_secret_encrypted = models.CharField(max_length=4096, blank=True)
@@ -68,6 +69,10 @@ class Gateway(models.Model):
     @property
     def withdraw_api_secret(self):
         return decrypt(self.withdraw_api_secret_encrypted)
+
+    @property
+    def withdraw_api_password(self):
+        return decrypt(self.withdraw_api_password_encrypted)
 
     @property
     def deposit_api_secret(self):
@@ -147,7 +152,7 @@ class Gateway(models.Model):
     def get_payment_url(cls, authority: str):
         raise NotImplementedError
 
-    def create_payment_request(self, bank_card: BankCard, amount: int, source : str) -> PaymentRequest:
+    def create_payment_request(self, bank_card: BankCard, amount: int, source: str) -> PaymentRequest:
         raise NotImplementedError
 
     def verify(self, payment: Payment):

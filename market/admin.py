@@ -85,7 +85,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount',
                     'wallet')
     list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
-    readonly_fields = ('wallet', 'symbol', 'account', 'stop_loss')
+    readonly_fields = ('wallet', 'symbol', 'account', 'stop_loss', 'login_activity')
 
     def created_at_millis(self, instance):
         created = instance.created.astimezone()
@@ -97,6 +97,7 @@ class OrderAdmin(admin.ModelAdmin):
 @admin.register(CancelRequest)
 class CancelRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'created_at_millis', 'order_id')
+    readonly_fields = ('login_activity', )
 
     def created_at_millis(self, instance):
         created = instance.created.astimezone()
@@ -137,4 +138,4 @@ class ReferralTrxAdmin(admin.ModelAdmin):
 @admin.register(StopLoss)
 class StopLossAdmin(admin.ModelAdmin):
     list_display = ('created', 'wallet', 'symbol', 'fill_type', 'amount', 'filled_amount', 'trigger_price', 'price', 'side')
-    readonly_fields = ('wallet', 'symbol', 'group_id')
+    readonly_fields = ('wallet', 'symbol', 'group_id', 'login_activity')

@@ -217,7 +217,7 @@ class ProviderRequester:
         if network:
             params['network'] = network
 
-        resp = self.collect_api('/api/v1/networks/', data=params, cache_timeout=300)
+        resp = self.collect_api('/api/v1/networks/', data=params)
         if resp.success:
             for data in resp.data:
                 info.append(NetworkInfo(**data))

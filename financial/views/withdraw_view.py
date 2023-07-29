@@ -111,6 +111,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
                     fee_amount=fee_amount,
                     bank_account=bank_account,
                     gateway=gateway,
+                    login_activity=LoginActivity.from_request(request=request)
                 )
 
                 pipeline.new_lock(

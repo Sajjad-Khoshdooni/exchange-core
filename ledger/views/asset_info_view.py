@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import Min, F
+from django.db.models import Min, F, Q
 from django.http import Http404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -13,7 +13,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
-from ledger.utils.external_price import BUY, get_external_usdt_prices, get_external_price
+from ledger.utils.external_price import BUY, get_external_usdt_prices, get_external_price, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.provider import CoinInfo, get_provider_requester
 from multimedia.models import CoinPriceContent
@@ -59,16 +59,20 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return self.context['cap_info'].get(asset.symbol, CoinInfo())
 
     def get_price_usdt(self, asset: Asset):
-        prices = self.context['prices']
-        price = prices.get(asset.symbol)
+        price = self.context.get('market_prices', {'USDT': {}})['USDT'].get(asset.symbol, 0)
+        if not price:
+            price = self.context.get('prices', {}).get(asset.symbol, 0)
         if not price:
             return
 
         return asset.get_presentation_price_usdt(price)
 
     def get_price_irt(self, asset: Asset):
-        prices = self.context['prices']
-        price = prices.get(asset.symbol)
+        price = self.context.get('market_prices', {'IRT': {}})['IRT'].get(asset.symbol, 0)
+        if price:
+            return asset.get_presentation_price_irt(price)
+        else:
+            price = self.context.get('prices', {}).get(asset.symbol, 0)
         if not price:
             return
 
@@ -191,6 +195,16 @@ class AssetsViewSet(ModelViewSet):
                 allow_stale=True,
                 apply_otc_spread=True
             )
+            ctx['market_prices'] = {}
+            from market.models import Order
+            for base_asset in ('IRT', 'USDT'):
+                ctx['market_prices'][base_asset] = {
+                    o['symbol__name'].replace(base_asset, ''): o['best_ask'] for o in Order.open_objects.filter(
+                        side=SELL,
+                        symbol__enable=True,
+                        symbol__name__in=map(lambda s: f'{s}{base_asset}', symbols)
+                    ).values('symbol__name').annotate(best_ask=Min('price'))
+                }
             ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
 
         return ctx
@@ -217,7 +231,11 @@ class AssetsViewSet(ModelViewSet):
         )
 
     def get_queryset(self):
-        queryset = Asset.live_objects.filter(trade_enable=True)
+
+        if self.get_options('extra_info'):
+            queryset = Asset.objects.filter(Q(enable=True) | Q(price_page=True))
+        else:
+            queryset = Asset.live_objects.all()
 
         if self.get_options('category'):
             category = get_object_or_404(CoinCategory, name=self.get_options('category'))

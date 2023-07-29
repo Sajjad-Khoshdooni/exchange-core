@@ -128,8 +128,7 @@ def get_login_user_agent_data_from_client_info(client_info: dict) -> dict:
     }
 
 
-def set_login_activity(request, user, is_sign_up: bool = False, client_info: dict = None, native_app: bool = False,
-                       refresh_token: str = None):
+def set_login_activity(request, user, is_sign_up: bool = False, client_info: dict = None, refresh_token: str = None):
     session = Session.objects.filter(session_key=request.session.session_key).first()
 
     refresh_token_model = None
@@ -158,7 +157,7 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
             'ip_data': ip_data,
             'city': ip_data.get('city', ''),
             'country': ip_data.get('country', ''),
-            'native_app': native_app,
+            'native_app': not refresh_token_model,
         }
     )
     return login_activity

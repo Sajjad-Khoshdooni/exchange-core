@@ -6,6 +6,8 @@ from django.contrib.admin import SimpleListFilter
 from django.db.models import Q, F
 from django.utils import timezone
 from django.utils.safestring import mark_safe
+from import_export import resources
+from import_export.admin import ExportMixin
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounting.models import VaultItem, Vault
@@ -19,6 +21,7 @@ from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAcc
     FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, \
     GeneralBankAccount, BankPaymentRequest
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
+from financial.utils.encryption import encrypt
 from financial.utils.payment_id_client import get_payment_id_client
 from financial.utils.withdraw import FiatWithdraw
 from ledger.utils.fields import PENDING
@@ -45,6 +48,20 @@ class GatewayAdmin(admin.ModelAdmin):
     @admin.display(description='max deposit')
     def get_max_deposit_amount(self, gateway: Gateway):
         return humanize_number(Decimal(gateway.max_deposit_amount))
+
+    def save_model(self, request, gateway: Gateway, form, change):
+        encryption_fields = ['withdraw_api_secret_encrypted', 'withdraw_api_password_encrypted',
+                             'deposit_api_secret_encrypted', 'payment_id_secret_encrypted']
+
+        old_gateway = gateway.id and Gateway.objects.get(id=gateway.id)
+
+        for key in encryption_fields:
+            value = getattr(gateway, key)
+
+            if getattr(old_gateway, key, '') != value:
+                setattr(gateway, key, encrypt(value))
+
+        gateway.save()
 
 
 class UserRialWithdrawRequestFilter(SimpleListFilter):
@@ -76,7 +93,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
     ordering = ('-created', )
     readonly_fields = (
         'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount', 'get_risks',
-        'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user'
+        'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user', 'login_activity'
     )
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
@@ -184,7 +201,7 @@ class PaymentRequestUserFilter(SimpleListFilter):
 class PaymentRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'gateway', 'bank_card', 'amount', 'authority', 'payment')
     search_fields = ('bank_card__card_pan', 'amount', 'authority')
-    readonly_fields = ('bank_card', 'group_id', 'payment')
+    readonly_fields = ('bank_card', 'group_id', 'payment', 'login_activity')
     list_filter = (PaymentRequestUserFilter,)
 
 
@@ -407,13 +424,34 @@ class GeneralBankAccountAdmin(admin.ModelAdmin):
     list_display = ('created', 'name', 'iban', 'bank', 'deposit_address')
 
 
+class BankPaymentRequestAcceptFilter(SimpleListFilter):
+    title = 'Accepted'
+    parameter_name = 'accepted'
+
+    def lookups(self, request, model_admin):
+        return [('no', 'no'), ('yes', 'yes')]
+
+    def queryset(self, request, queryset):
+        val = self.value()
+        if val is not None:
+            queryset = queryset.filter(payment__isnull=val == 'no')
+
+        return queryset
+
+
+class BankPaymentRequestResource(resources.ModelResource):
+    class Meta:
+        model = BankPaymentRequest
+        fields = ('created', 'amount', 'ref_id', 'description', 'user', )
+
+
 @admin.register(BankPaymentRequest)
-class BankPaymentRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type',)
-    readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview')
-    fields = ('destination_type', 'amount', 'receipt', 'ref_id', 'get_amount_preview', 'get_receipt_preview', 'user',
-              'destination_id', 'group_id')
+class BankPaymentRequestAdmin(ExportMixin, admin.ModelAdmin):
+    list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type', 'payment')
+    readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview', 'payment')
     actions = ('accept_payment', )
+    list_filter = (BankPaymentRequestAcceptFilter, 'user')
+    resource_classes = [BankPaymentRequestResource]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "user":

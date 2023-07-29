@@ -43,10 +43,10 @@ class AssetAdmin(AdvancedAdmin):
         'symbol', 'enable', 'get_hedge_value', 'get_hedge_value_abs', 'get_hedge_amount', 'get_calc_hedge_amount',
         'get_total_asset', 'get_users_balance', 'get_reserved_amount',
         'order', 'trend', 'trade_enable', 'hedge',
-        'margin_enable', 'publish_date', 'spread_category', 'otc_status'
+        'margin_enable', 'publish_date', 'spread_category', 'otc_status', 'price_page',
     )
     list_filter = ('enable', 'trend', 'margin_enable', 'spread_category')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'hedge')
+    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'hedge', 'price_page')
     search_fields = ('symbol', )
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('setup_asset', )
@@ -224,7 +224,7 @@ class OTCRequestUserFilter(SimpleListFilter):
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount', 'fee_revenue')
-    readonly_fields = ('account', )
+    readonly_fields = ('account', 'login_activity')
     search_fields = ('token', )
     list_filter = (OTCRequestUserFilter, )
 
@@ -366,7 +366,8 @@ class TransferAdmin(AdvancedAdmin):
     list_filter = ('deposit', 'status', 'source', TransferUserFilter,)
     readonly_fields = (
         'deposit_address', 'network', 'wallet', 'created', 'accepted_datetime', 'finished_datetime', 'get_risks',
-        'out_address', 'memo', 'amount', 'irt_value', 'usdt_value', 'deposit', 'group_id'
+        'out_address', 'memo', 'amount', 'irt_value', 'usdt_value', 'deposit', 'group_id', 'login_activity',
+        'address_book'
     )
     exclude = ('risks', )
 
@@ -569,10 +570,11 @@ class CategorySpreadAdmin(admin.ModelAdmin):
 
 @admin.register(models.SystemSnapshot)
 class SystemSnapshotAdmin(admin.ModelAdmin):
-    list_display = ('created', 'total', 'users', 'exchange', 'exchange_potential', 'hedge', 'prize')
+    list_display = ('created', 'total', 'users', 'exchange', 'hedge', 'reserved', 'prize', 'verified')
     ordering = ('-created', )
     actions = ('reject_histories', 'verify_histories')
     readonly_fields = ('created', )
+    list_filter = ('verified', )
 
     @admin.action(description='رد', permissions=['change'])
     def reject_histories(self, request, queryset):

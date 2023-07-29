@@ -70,6 +70,7 @@ class NotifyView(APIView):
                     'message': data.get('content', None),
                     'hidden': data.get('hidden', True),
                     'push_status': Notification.PUSH_WAITING,
+                    'source': 'crm'
                 }
             )
 
