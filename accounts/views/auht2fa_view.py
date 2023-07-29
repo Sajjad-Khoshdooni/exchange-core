@@ -9,17 +9,17 @@ from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activat
 
 
 class TOTPSerializer(serializers.Serializer):
-    token = serializers.CharField(write_only=True, required=True)
-    sms_code = serializers.CharField(write_only=True, required=True)
+    token = serializers.CharField(write_only=True)
+    sms_code = serializers.CharField(write_only=True)
 
     def validate(self, data):
         user = self.context['request'].user
         token = data.get('token')
         sms_code = data.get('sms_code')
-        sms_code_verified = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_2FA, user)
-        if not sms_code_verified:
+        sms_verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_2FA, user)
+        if not sms_verification_code:
             raise ValidationError({'sms_code': 'کد ارسال شده برای فعال سازی ورود دومرحله‌ای نامعتبر است.'})
-        sms_code_verified.set_code_used()
+        sms_verification_code.set_code_used()
         device = TOTPDevice.objects.filter(user=user).first()
         if device is None:
             raise ValidationError({'device': 'ابتدا بارکد را دریافت کنید.'})
