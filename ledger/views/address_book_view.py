@@ -21,7 +21,7 @@ class AddressBookSerializer(serializers.ModelSerializer):
     coin = serializers.CharField(write_only=True, required=False, default=None)
     deleted = serializers.BooleanField(read_only=True)
     network_info = serializers.SerializerMethodField()
-    sms_code = serializers.CharField(write_only=True, required=True)
+    sms_code = serializers.CharField(write_only=True)
     totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
 
 
