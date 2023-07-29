@@ -177,7 +177,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 raise InvalidToken("2fa did not match")
 
         except AuthenticationFailed as e:
-            recipient = User.objects.filter(phone=serializer.initial_data['phone']).first()
+            recipient = User.objects.filter(phone=serializer.initial_data.get('phone')).first()
             if recipient:
                 LoginActivity.send_unsuccessful_login_message(recipient)
                 if e is TokenError:
