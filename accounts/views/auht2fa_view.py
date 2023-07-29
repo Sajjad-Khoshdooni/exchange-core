@@ -1,13 +1,11 @@
 from django.core.exceptions import ValidationError
 from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
 from rest_framework import serializers
-from rest_framework import views
 from rest_framework.response import Response
-from rest_framework.authentication import SessionAuthentication
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.views import APIView
 
-from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
 from accounts.models.phone_verification import VerificationCode
+from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
 
 
 class TOTPSerializer(serializers.Serializer):
@@ -19,10 +17,10 @@ class TOTPSerializer(serializers.Serializer):
         token = data.get('token')
         sms_code = data.get('sms_code')
         sms_code_verified = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_2FA, user)
-        device = TOTPDevice.objects.filter(user=user).first()
         if not sms_code_verified:
             raise ValidationError({'sms_code': 'کد ارسال شده برای فعال سازی ورود دومرحله‌ای نامعتبر است.'})
         sms_code_verified.set_code_used()
+        device = TOTPDevice.objects.filter(user=user).first()
         if device is None:
             raise ValidationError({'device': 'ابتدا بارکد را دریافت کنید.'})
         if not device.verify_token(token):
@@ -30,9 +28,8 @@ class TOTPSerializer(serializers.Serializer):
         return data
 
 
-class TOTPView(views.APIView):
+class TOTPView(APIView):
 
-    authentication_classes = (SessionAuthentication, JWTAuthentication)
     def post(self, request):
         user = request.user
         device = TOTPDevice.objects.filter(user=user).first()
@@ -56,10 +53,13 @@ class TOTPView(views.APIView):
         )
         totp_verify_serializer.is_valid(raise_exception=True)
         device = TOTPDevice.objects.filter(user=user).first()
-        device.confirmed = True
-        device.save(update_fields=['confirmed'])
-        send_2fa_activation_message(user=user)
-        return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری فعال شد.'})
+        if not device.confirmed:
+            device.confirmed = True
+            device.save(update_fields=['confirmed'])
+            send_2fa_activation_message(user=user)
+            return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری فعال شد.'})
+        else:
+            return Response({'msg': 'ورود دو مرحله‌ای فعال می باشد.'})
 
     def delete(self, request):
         user = request.user
@@ -71,7 +71,10 @@ class TOTPView(views.APIView):
         )
         totp_de_active_serializer.is_valid(raise_exception=True)
         device = TOTPDevice.objects.filter(user=user).first()
-        device.confirmed = False
-        device.save(update_fields=['confirmed'])
-        send_2fa_deactivation_message(user=user)
-        return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری غیرفعال شد.'})
+        if device.confirmed:
+            device.confirmed = False
+            device.save(update_fields=['confirmed'])
+            send_2fa_deactivation_message(user=user)
+            return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری غیرفعال شد.'})
+        else:
+            return Response({'msg' : 'ورود دومرحله‌ای غیرفعال است.'})

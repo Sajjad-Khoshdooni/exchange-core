@@ -30,7 +30,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_is_auth2fa_active(self, user: User):
         device = TOTPDevice.objects.filter(user=user).first()
-        is_active = device is not None and device.confirmed
+        is_active = device and device.confirmed
         return is_active
 
     def get_show_staking(self, user: User):
@@ -100,10 +100,10 @@ class AuthTokenSerializer(serializers.ModelSerializer):
         totp = data.get('totp')
         sms_code = data.get('sms_code')
         sms_code_verified = VerificationCode.get_by_code(code=sms_code, phone=user.phone, scope=VerificationCode.SCOPE_API_TOKEN, user=user)
-        device = TOTPDevice.objects.filter(user=user).first()
         if not sms_code_verified:
             raise ValidationError({'code': 'کد نامعتبر است.'})
         sms_code_verified.set_code_used()
+        device = TOTPDevice.objects.filter(user=user).first()
         if not (device is None or not device.confirmed or device.verify_token(totp)):
             raise ValidationError({'totp': 'رمز موقت صحیح نمی‌باشد.'})
         return data

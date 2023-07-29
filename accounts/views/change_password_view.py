@@ -10,14 +10,14 @@ from accounts.models import VerificationCode
 
 
 class ChangePasswordSerializer(serializers.Serializer):
-    old_password = serializers.CharField(required=True, write_only=True)
-    password = serializers.CharField(required=True, write_only=True)
-    otp_code = serializers.CharField(required=True, write_only=True)
+    old_password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True)
+    otp_code = serializers.CharField(write_only=True)
     totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
 
     def validate(self, data):
-
-        user = self.instance
+        # todo : test
+        user = self.context['request'].user
         code = data.get('otp_code')
         password = data.get('password')
         old_pass = data.get('old_password')

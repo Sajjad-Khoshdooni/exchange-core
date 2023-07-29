@@ -50,7 +50,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         amount = validated_data['amount']
         iban = validated_data['iban']
         code = validated_data['code']
-        totp = validated_data['totp']
+        totp = validated_data.get('totp', None)
         bank_account = get_object_or_404(BankAccount, iban=iban, user=user, verified=True, deleted=False)
 
         assert account.is_ordinary_user()

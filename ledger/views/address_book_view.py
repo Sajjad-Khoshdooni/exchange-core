@@ -32,7 +32,7 @@ class AddressBookSerializer(serializers.ModelSerializer):
         address = attrs['address']
         network = get_object_or_404(Network, symbol=attrs['network'])
         sms_code = attrs['sms_code']
-        totp = attrs['totp']
+        totp = attrs.get('totp', None)
 
         if attrs['coin']:
             asset = get_object_or_404(Asset, symbol=attrs['coin'])
