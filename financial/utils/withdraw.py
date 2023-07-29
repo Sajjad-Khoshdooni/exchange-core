@@ -59,16 +59,10 @@ class FiatWithdraw:
         }
         return mapping[gateway.type](gateway, verbose)
 
-    def get_wallet_data(self, wallet_id: int):
-        raise NotImplementedError
-
     def create_withdraw(self, wallet_id: int, receiver: BankAccount, amount: int, request_id) -> Withdraw:
         raise NotImplementedError
 
     def get_withdraw_status(self, request_id: int, provider_id: str) -> Withdraw:
-        raise NotImplementedError
-
-    def get_estimated_receive_time(self, created: datetime):
         raise NotImplementedError
 
     def get_total_wallet_irt_value(self):
@@ -344,36 +338,6 @@ class ZibalChannel(FiatWithdraw):
             status=status
         )
 
-    def get_estimated_receive_time(self, created: datetime):
-        request_date = created.astimezone()
-        request_time = request_date.time()
-        receive_time = request_date.replace(microsecond=0, second=0, minute=0)
-
-        if is_holiday(request_date):
-            receive_time += timedelta(days=1)
-            receive_time.replace(hour=5, minute=0)
-        else:
-            if time_in_range('0:0', '3:25', request_time):
-                receive_time = receive_time.replace(hour=11, minute=30)
-            elif time_in_range('3:25', '10:25', request_time):
-                receive_time = receive_time.replace(hour=14, minute=30)
-            elif time_in_range('10:25', '13:25', request_time):
-                receive_time = receive_time.replace(hour=19, minute=30)
-            elif time_in_range('13:25', '18:25', request_time):
-                receive_time += timedelta(days=1)
-                receive_time = receive_time.replace(hour=5, minute=0)
-
-                if is_holiday(receive_time):
-                    receive_time += timedelta(days=1)
-            else:
-                receive_time += timedelta(days=1)
-                receive_time = receive_time.replace(hour=11, minute=30)
-
-                if is_holiday(receive_time):
-                    receive_time += timedelta(days=1)
-
-        return receive_time
-
     def get_total_wallet_irt_value(self):
         if not self.is_active():
             return 0
@@ -545,14 +509,6 @@ class JibitChannel(FiatWithdraw):
             tracking_id=tracking_id,
             status=mapping_status.get(channel_status, self.PENDING),
         )
-
-    def get_estimated_receive_time(self, created: datetime):
-        request_date = created.astimezone()
-        receive_time = request_date.replace(microsecond=0)
-
-        receive_time += timedelta(hours=3)
-
-        return receive_time
 
     def get_total_wallet_irt_value(self) -> int:
         wallet = self.get_wallet_data()
