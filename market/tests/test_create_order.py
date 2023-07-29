@@ -331,16 +331,72 @@ class CreateOrderTestCase(TestCase):
 
     def test_margin_create_order(self):
         self.client.force_login(self.account.user)
-        # wallets = self.irt.get_wallet(self.account)
         resp = self.client.post('/api/v1/market/orders/', {
             'symbol': 'BTCUSDT',
             'amount': '1.5',
             'price': '200000',
-            'side': 'buy',
+            'side': 'sell',
             'fill_type': 'limit',
             'market': 'margin'
         })
         self.assertEqual(resp.status_code, 201)
+        position = self.btcusdt.get_margin_position(self.account)
+        self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, position.variant).locked,
+                         Decimal('200000') * Decimal('1.5'))
+
+    def test_margin_create_multi_orders(self):
+        self.client.force_login(self.account.user)
+        resp = self.client.post('/api/v1/market/orders/', {
+            'symbol': 'BTCUSDT',
+            'amount': '1.5',
+            'price': '50000',
+            'side': 'sell',
+            'fill_type': 'limit',
+            'market': 'margin'
+        })
+        self.assertEqual(resp.status_code, 201)
+        resp = self.client.post('/api/v1/market/orders/', {
+            'symbol': 'BTCUSDT',
+            'amount': '0.5',
+            'price': '50000',
+            'side': 'sell',
+            'fill_type': 'limit',
+            'market': 'margin'
+        })
+        self.assertEqual(resp.status_code, 201)
+        position = self.btcusdt.get_margin_position(self.account)
+        self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, position.variant).locked,
+                         Decimal('50000') * Decimal('2'))
+
+    def test_margin_create_zero_sum_trades_auto_close_repay(self):
+        with WalletPipeline() as pipeline:
+            new_order(pipeline, self.btcusdt, Account.system(), BUY, 2, 20000)
+            new_order(pipeline, self.btcusdt, Account.system(), SELL, 2, 21000)
+        self.client.force_login(self.account.user)
+        resp = self.client.post('/api/v1/market/orders/', {
+            'symbol': 'BTCUSDT',
+            'amount': '0.5',
+            'price': '20000',
+            'side': 'sell',
+            'fill_type': 'limit',
+            'market': 'margin'
+        })
+        self.assertEqual(resp.status_code, 201)
+        position = self.btcusdt.get_margin_position(self.account)
+        print(position.amount)
+        resp = self.client.post('/api/v1/market/orders/', {
+            'symbol': 'BTCUSDT',
+            'amount': '0.501002',
+            'price': '21000',
+            'side': 'buy',
+            'fill_type': 'limit',
+            'market': 'margin'
+        })
+        position.refresh_from_db()
+        print(position.__dict__)
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, position.variant).locked, 0)
+
 
     def test_margin_match_order(self):
         self.client.force_login(self.account.user)

@@ -43,7 +43,7 @@ class MarginPosition(models.Model):
 
     @property
     def total_balance(self):
-        return self.margin_base_wallet.balance + self.margin_wallet.balance
+        return self.margin_base_wallet.get_free() + self.margin_wallet.get_free()
 
     @property
     def loan_wallet(self):

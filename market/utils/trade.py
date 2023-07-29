@@ -96,7 +96,7 @@ def _update_trading_positions(trading_positions, pipeline):
             position.status = MarginPosition.CLOSED
             margin_cross_wallet = position.margin_base_wallet.asset.get_wallet(
                 position.account, market=Wallet.MARGIN, variant=None)
-            remaining_balance = position.margin_base_wallet + pipeline.get_wallet_balance_diff(
+            remaining_balance = position.margin_base_wallet.balance + pipeline.get_wallet_balance_diff(
                 position.margin_base_wallet.id)
             if remaining_balance:
                 pipeline.new_trx(
@@ -110,12 +110,11 @@ def _update_trading_positions(trading_positions, pipeline):
 
 
 def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade: bool = False):
+    trading_positions = []
     if not fake_trade:
         trading_positions = _register_borrow_transaction(pipeline, pair=pair)
         _register_trade_transaction(pipeline, pair=pair)
         _register_trade_base_transaction(pipeline, pair=pair)
-        trading_positions.extend(_register_repay_transaction(pipeline, pair=pair))
-        _update_trading_positions(trading_positions, pipeline)
 
     taker_fee = register_fee_transactions(
         pipeline=pipeline,
@@ -140,6 +139,10 @@ def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade
     pair.maker_trade.fee_amount = maker_fee.trader_fee_amount
     pair.maker_trade.fee_usdt_value = maker_fee.trader_fee_amount
     pair.maker_trade.fee_revenue = maker_fee.fee_revenue
+
+    if not fake_trade:
+        trading_positions.extend(_register_repay_transaction(pipeline, pair=pair))
+        _update_trading_positions(trading_positions, pipeline)
 
 
 def _register_trade_transaction(pipeline: WalletPipeline, pair: TradesPair):
@@ -166,11 +169,11 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
     else:
         raise ValueError
 
-    trade_amount = pair.maker_trade.amount
     trade_price = pair.maker_trade.price
     trading_positions = []
-    for order in (pair.maker_order, pair.taker_order):
+    for order, trade in ((pair.maker_order, pair.maker_trade), (pair.taker_order, pair.taker_trade)):
         if order.side == order_side and order.wallet.market == Wallet.MARGIN:
+            trade_amount = trade.amount - trade.fee_amount if order_side == BUY else trade.amount
             from ledger.models import MarginLoan
             MarginLoan.new_loan(
                 account=order.account,
