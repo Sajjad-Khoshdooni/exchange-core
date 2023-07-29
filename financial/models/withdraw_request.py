@@ -108,18 +108,6 @@ class FiatWithdrawRequest(models.Model):
         wallet_id = self.gateway.wallet_id
         api_handler = FiatWithdraw.get_withdraw_channel(self.gateway)
 
-        wallet = api_handler.get_wallet_data(wallet_id)
-
-        if wallet.free < self.amount:
-            logger.info(f'Not enough wallet balance to full fill bank acc')
-
-            link = url_to_edit_object(self)
-            send_support_message(
-                message='موجودی هیچ یک از کیف پول‌ها برای انجام این تراکنش کافی نیست.',
-                link=link
-            )
-            return
-
         try:
             withdraw = api_handler.create_withdraw(
                 wallet_id,
