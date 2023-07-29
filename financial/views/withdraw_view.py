@@ -69,7 +69,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             raise ValidationError({'code': 'کد نامعتبر است'})
         device = TOTPDevice.objects.filter(user=user).first()
         if not (device is None or not device.confirmed or device.verify_token(totp)):
-            raise ValidationError({'otp': ' رمز موقت نامعتبر است.'})
+            raise ValidationError({'totp': ' رمز موقت نامعتبر است.'})
 
         if amount < MIN_WITHDRAW:
             logger.info('FiatRequest rejected due to small amount. user=%s' % user.id)
