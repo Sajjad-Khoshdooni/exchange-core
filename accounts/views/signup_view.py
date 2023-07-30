@@ -164,17 +164,12 @@ class SignupSerializer(serializers.Serializer):
             account = user.get_account()
             journey = MissionJourney.get_journey(account)
 
-            if is_app(self.context['request']):
-                missions = MissionTemplate.objects.filter(journey=journey, active=True)
-            else:
-                missions = MissionTemplate.objects.filter(Q(journey=journey) | Q(usermission__user=account.user), active=True)
+            missions = []
+            for mission_template in MissionTemplate.objects.filter(journey=journey, active=True):
+                missions.append(UserMission(user=user, mission=mission_template))
 
-            user_missions = []
-            for mission in missions:
-                user_missions.append(UserMission(user=user, mission=mission))
-
-            if user_missions:
-                UserMission.objects.bulk_create(user_missions)
+            if missions:
+                UserMission.objects.bulk_create(missions)
 
         except Exception as e:
             logger.warning(f'Failed to set missions to user={user.id} due to={str(e)}')

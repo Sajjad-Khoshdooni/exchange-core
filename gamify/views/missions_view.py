@@ -1,6 +1,4 @@
-import django_filters
 from django.db.models import QuerySet
-from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
@@ -96,17 +94,6 @@ class TaskSerializer(serializers.ModelSerializer):
         return task.finished(user.get_account())
 
 
-class UserMissionsFilter(django_filters.FilterSet):
-    active = django_filters.BooleanFilter(method='custom_active_filter')
-
-    def custom_active_filter(self, queryset, name, value):
-        return queryset.filter(mission__active=value)
-
-    class Meta:
-        model = UserMission
-        fields = ('active',)
-
-
 class UserMissionSerializer(serializers.ModelSerializer):
     achievements = serializers.SerializerMethodField()
     tasks = serializers.SerializerMethodField()
@@ -115,7 +102,7 @@ class UserMissionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserMission
-        fields = ('name', 'achievements', 'tasks', 'active', 'finished', 'expiration')
+        fields = ('name', 'achievements', 'tasks', 'finished', 'expiration')
 
     def get_achievements(self, user_mission: UserMission):
         user = self.context['request'].user
@@ -142,8 +129,6 @@ class UserMissionSerializer(serializers.ModelSerializer):
 
 class UserMissionsAPIView(ListAPIView):
     serializer_class = UserMissionSerializer
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = UserMissionsFilter
 
     def get_queryset(self):
         return UserMission.objects.filter(user=self.request.user)
