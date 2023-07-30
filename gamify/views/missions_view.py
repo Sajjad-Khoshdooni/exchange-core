@@ -127,22 +127,18 @@ class UserMissionSerializer(serializers.ModelSerializer):
         return user_mission.mission.expiration
 
 
-class UserMissionsAPIView(ListAPIView):
+class MissionsAPIView(ListAPIView):
     serializer_class = UserMissionSerializer
 
     def get_queryset(self):
         return UserMission.objects.filter(user=self.request.user)
 
 
-class ActiveUserMissionsAPIView(RetrieveAPIView):
+class ActiveMissionsAPIView(RetrieveAPIView):
     serializer_class = UserMissionSerializer
 
     def get_object(self):
-        account = self.request.user.get_account()
-        for user_mission in UserMission.objects.filter(user=account.user):
-            if user_mission.finished:
-                return user_mission
-        return QuerySet()
+        return UserMission.objects.filter(user=self.request.user, finished=False).order_by('id').first()
 
 
 class TotalVoucherAPIView(APIView):

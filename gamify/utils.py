@@ -1,10 +1,9 @@
 import logging
 
 from django.db import transaction
-from django.db.models import Q
 
 from accounts.models import Account
-from gamify.models import MissionJourney, Task, MissionTemplate, UserMission
+from gamify.models import Task, MissionTemplate, UserMission
 
 __all__ = ('Task', 'check_prize_achievements')
 
@@ -18,10 +17,8 @@ def check_prize_achievements(account: Account, task_scope: str):
         scopes.append(Task.WEEKLY_TRADE)
 
     try:
-        journey = MissionJourney.get_journey(account)
-
         user_missions = UserMission.objects.filter(
-            Q(mission__journey=journey) | Q(user=account.user),
+            user=account.user,
             mission__task__scope__in=scopes,
             mission__active=True,
             finished=False

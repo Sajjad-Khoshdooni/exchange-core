@@ -173,7 +173,6 @@ class SignupSerializer(serializers.Serializer):
 
         except Exception as e:
             logger.warning(f'Failed to set missions to user={user.id} due to={str(e)}')
-            pass
 
 
 class SignupView(CreateAPIView):
