@@ -71,6 +71,7 @@ class ChangePhoneView(APIView):
         serializer.is_valid(raise_exception=True)
         return Response({'msg': 'کد باموفقیت ارسال شد.'})
 
+    # todo : suspension
     def put(self, request):
         serializer = ChangePhonePutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
