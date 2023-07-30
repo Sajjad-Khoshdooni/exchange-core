@@ -1,24 +1,24 @@
 import logging
-import random
 
+from decouple import config
 from django.contrib.auth import login
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from decouple import config
 
+from accounts.authentication import is_app
 from accounts.models import User, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
 from accounts.utils.validation import set_login_activity
 from accounts.validators import mobile_number_validator, password_validator
-
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +108,8 @@ class SignupSerializer(serializers.Serializer):
 
         self.create_traffic_source(user, utm)
 
+        self.set_missions_to_user(user)
+
         return user
 
     def create_traffic_source(self, user, utm: dict):
@@ -154,6 +156,29 @@ class SignupSerializer(serializers.Serializer):
             ip=get_client_ip(self.context['request']),
             user_agent=self.context['request'].META['HTTP_USER_AGENT'][:256],
         )
+
+    def set_missions_to_user(self, user):
+        from gamify.models import MissionJourney, MissionTemplate, UserMission
+
+        try:
+            account = user.get_account()
+            journey = MissionJourney.get_journey(account)
+
+            if is_app(self.context['request']):
+                missions = MissionTemplate.objects.filter(journey=journey, active=True)
+            else:
+                missions = MissionTemplate.objects.filter(Q(journey=journey) | Q(usermission__user=account.user), active=True)
+
+            user_missions = []
+            for mission in missions:
+                user_missions.append(UserMission(user=user, mission=mission))
+
+            if user_missions:
+                UserMission.objects.bulk_create(user_missions)
+
+        except Exception as e:
+            logger.warning(f'Failed to set missions to user={user.id} due to={str(e)}')
+            pass
 
 
 class SignupView(CreateAPIView):

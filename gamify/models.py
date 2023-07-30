@@ -243,6 +243,18 @@ class UserMission(models.Model):
     created = get_created_field()
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
     mission = models.ForeignKey(MissionTemplate, on_delete=models.CASCADE)
+    is_done = models.BooleanField(default=False)
+
+    @property
+    def finished(self):
+        if not self.is_done:
+            self.is_done = self.mission.finished(self.user.get_account())
+            self.save(update_fields=['is_done'])
+        return self.is_done
+
+    @property
+    def active(self):
+        return self.mission.active
 
     def __str__(self):
         return '%s %s' % (self.user, self.mission)
