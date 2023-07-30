@@ -1,11 +1,10 @@
-from django.db.models import Q
+from django.db.models import QuerySet
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.authentication import is_app
-from gamify.models import MissionJourney, MissionTemplate, Task, Achievement, UserMission
+from gamify.models import Task, Achievement, UserMission
 from ledger.models import Prize
 from ledger.models.asset import AssetSerializerMini
 
@@ -95,19 +94,19 @@ class TaskSerializer(serializers.ModelSerializer):
         return task.finished(user.get_account())
 
 
-class MissionSerializer(serializers.ModelSerializer):
+class UserMissionSerializer(serializers.ModelSerializer):
     achievements = serializers.SerializerMethodField()
     tasks = serializers.SerializerMethodField()
-    finished = serializers.SerializerMethodField()
-    active = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+    expiration = serializers.SerializerMethodField()
 
     class Meta:
-        model = MissionTemplate
-        fields = ('name', 'achievements', 'tasks', 'active', 'finished', 'expiration')
+        model = UserMission
+        fields = ('name', 'achievements', 'tasks', 'finished', 'expiration')
 
-    def get_achievements(self, mission: MissionTemplate):
+    def get_achievements(self, user_mission: UserMission):
         user = self.context['request'].user
-        prize = Prize.objects.filter(account=user.get_account(), achievement=mission.achievement).first()
+        prize = Prize.objects.filter(account=user.get_account(), achievement=user_mission.mission.achievement).first()
 
         context = {
             **self.context,
@@ -115,78 +114,35 @@ class MissionSerializer(serializers.ModelSerializer):
         }
 
         return [
-            AchievementSerializer(mission.achievement, context=context).data,
+            AchievementSerializer(user_mission.mission.achievement, context=context).data,
         ]
 
-    def get_tasks(self, mission: MissionTemplate):
-        return TaskSerializer(mission.task_set.all(), many=True, context=self.context).data
+    def get_tasks(self, user_mission: UserMission):
+        return TaskSerializer(user_mission.mission.task_set.all(), many=True, context=self.context).data
 
-    def get_finished(self, mission: MissionTemplate):
-        user = self.context['request'].user
-        return mission.finished(user.get_account())
+    def get_name(self, user_mission: UserMission):
+        return user_mission.mission.name
 
-    def get_active(self, mission: MissionTemplate):
-        user = self.context['request'].user
-
-        active_mission = None
-
-        if not is_app(self.context['request']):
-            active_mission = UserMission.objects.filter(user=user, mission__active=True).first()
-
-            if active_mission and not mission.finished(user.get_account()):
-                active_mission = active_mission.mission
-
-        if not active_mission:
-            active_mission = mission.journey.get_active_mission(user.get_account())
-
-        return mission == active_mission
-
-    @property
-    def data(self):
-        if self.instance is None:
-            return {}
-        else:
-            return super(MissionSerializer, self).data
+    def get_expiration(self, user_mission: UserMission):
+        return user_mission.mission.expiration
 
 
-class MissionsAPIView(ListAPIView):
-    serializer_class = MissionSerializer
+class UserMissionsAPIView(ListAPIView):
+    serializer_class = UserMissionSerializer
 
     def get_queryset(self):
-        account = self.request.user.get_account()
-        journey = MissionJourney.get_journey(account)
-
-        if is_app(self.request):
-            return MissionTemplate.objects.filter(journey=journey, active=True)
-        else:
-            return MissionTemplate.objects.filter(Q(journey=journey) | Q(usermission__user=account.user), active=True)
-
-    def list(self, request, *args, **kwargs):
-        resp = super(MissionsAPIView, self).list(request, *args, **kwargs)
-        data = resp.data
-
-        data = list(filter(lambda d: d['active'], data)) + list(filter(lambda d: not d['active'], data))
-
-        return Response(data)
+        return UserMission.objects.filter(user=self.request.user)
 
 
-class ActiveMissionsAPIView(RetrieveAPIView):
-    serializer_class = MissionSerializer
+class ActiveUserMissionsAPIView(RetrieveAPIView):
+    serializer_class = UserMissionSerializer
 
     def get_object(self):
         account = self.request.user.get_account()
-
-        if not is_app(self.request):
-            user_mission = UserMission.objects.filter(user=account.user, mission__active=True).first()
-
-            if user_mission:
-                mission = user_mission.mission
-
-                if not mission.finished(account):
-                    return mission
-
-        journey = MissionJourney.get_journey(account)
-        return journey and journey.get_active_mission(account)
+        for user_mission in UserMission.objects.filter(user=account.user):
+            if user_mission.finished:
+                return user_mission
+        return QuerySet()
 
 
 class TotalVoucherAPIView(APIView):

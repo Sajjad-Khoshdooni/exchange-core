@@ -4,7 +4,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from accounts.models import Account
-from gamify.models import MissionJourney, Task, MissionTemplate
+from gamify.models import MissionJourney, Task, MissionTemplate, UserMission
 
 __all__ = ('Task', 'check_prize_achievements')
 
@@ -20,15 +20,19 @@ def check_prize_achievements(account: Account, task_scope: str):
     try:
         journey = MissionJourney.get_journey(account)
 
-        missions = MissionTemplate.objects.filter(
-            Q(journey=journey) | Q(usermission__user=account.user),
-            active=True,
-            task__scope__in=scopes
+        user_missions = UserMission.objects.filter(
+            Q(mission__journey=journey) | Q(user=account.user),
+            mission__task__scope__in=scopes,
+            mission__active=True,
+            finished=False
         )
 
-        for mission in missions:
-            if mission.achievable(account):
-                mission.achievement.achieve_prize(account)
+        for user_mission in user_missions:
+            if user_mission.mission.achievable(account):
+                with transaction.atomic():
+                    user_mission.mission.achievement.achieve_prize(account)
+                    user_mission.finished = True
+                    user_mission.save(update_fields=['finished'])
 
     except Exception as e:
         logger.exception('Failed to check prize achievements', extra={
