@@ -40,7 +40,8 @@ def update_provider_vaults(now: datetime, prices: dict):
                 key=profile_id,
 
                 defaults={
-                    'name': '%s-%s' % (exchange, profile['id'])
+                    'name': '%s-%s' % (exchange, profile['id']),
+                    'updated': now,
                 }
             )
 
@@ -86,7 +87,8 @@ def update_hot_wallet_vault(now: datetime, prices: dict):
         key='main',
 
         defaults={
-            'name': 'main'
+            'name': 'main',
+            'updated': now,
         }
     )
 
@@ -116,7 +118,8 @@ def update_gateway_vaults(now: datetime, prices: dict):
             market=Vault.SPOT,
             key=gateway.id,
             defaults={
-                'name': str(gateway)
+                'name': str(gateway),
+                'updated': now,
             }
         )
 
@@ -157,7 +160,8 @@ def update_bank_vaults(now: datetime, prices: dict):
             key=account.id,
 
             defaults={
-                'name': account.name
+                'name': account.name,
+                'updated': now,
             }
         )
 
