@@ -103,12 +103,12 @@ def create_withdraw(transfer_id: int):
     elif response.status_code == 400 and resp_data.get('type') == 'NotHandled':
         logger.info('withdraw switch %s %s' % (transfer.id, resp_data))
 
-        # if transfer.network_asset.allow_provider_withdraw:
-        #     transfer.source = Transfer.PROVIDER
-        #     transfer.save(update_fields=['source'])
-        #     create_provider_withdraw(transfer_id=transfer.id)
-        # else:
-        change_to_manual(transfer)
+        if transfer.network_asset.allow_provider_withdraw:
+            transfer.source = Transfer.PROVIDER
+            transfer.save(update_fields=['source'])
+            create_provider_withdraw(transfer_id=transfer.id)
+        else:
+            change_to_manual(transfer)
 
     else:
         logger.info('withdraw failed %s %s %s' % (transfer.id, response.status_code, resp_data))
