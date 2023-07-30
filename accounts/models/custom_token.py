@@ -4,8 +4,14 @@ from django.db import models
 
 
 class CustomToken(Token):
+    SCOPES = WITHDRAW, TRADE = \
+        'withdraw', 'trade'
+
     ip_list = ArrayField(
         models.GenericIPAddressField(default='127.0.0.1'), default=list, blank=True, null=True
+    )
+    access = ArrayField(
+        models.CharField(choices=(scope, scope) for scope in SCOPES), blank=True, null=True
     )
     throttle_exempted = models.BooleanField(default=False)
 
