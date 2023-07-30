@@ -87,7 +87,7 @@ def verify_national_code(user: User, retry: int = 5) -> bool:
             return verify_national_code(user, retry - 1)
 
     user.national_code_verified = verified
-    user.save()
+    user.save(update_fields=['national_code_verified'])
 
     if not verified:
         user.change_status(User.REJECTED)
@@ -127,7 +127,7 @@ def verify_user_primary_info(user: User, retry: int = 5) -> bool:
             return verify_user_primary_info(user, retry - 1)
 
     user.birth_date_verified = bool(data)
-    user.save()
+    user.save(update_fields=['birth_date_verified'])
 
     if not data:
         user.change_status(User.REJECTED)
@@ -137,7 +137,7 @@ def verify_user_primary_info(user: User, retry: int = 5) -> bool:
 
     user.first_name_verified = data['firstNameSimilarity'] >= 70 or similarity_sum >= 150 or None
     user.last_name_verified = data['lastNameSimilarity'] >= 70 or similarity_sum >= 150 or None
-    user.save()
+    user.save(update_fields=['first_name_verified', 'last_name_verified'])
 
     if not user.first_name_verified or not user.last_name_verified:
         # user.change_status(User.REJECTED)

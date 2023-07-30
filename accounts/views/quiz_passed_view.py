@@ -8,6 +8,6 @@ class QuizPassedView(APIView):
     def patch(self, request, *args, **kwargs):
         user = request.user
         user.margin_quiz_pass_date = timezone.now()
-        user.save()
+        user.save(update_fields=['margin_quiz_pass_date'])
 
         return Response('done!')

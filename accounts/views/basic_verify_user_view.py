@@ -88,23 +88,29 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             bank_card.verified = None
             bank_card.save()
 
+        to_update_user_fields = []
+
         if not user.national_code_verified:
             user.national_code = validated_data['national_code']
             user.national_code_verified = None
+            to_update_user_fields.extend(['national_code', 'national_code_verified'])
 
         if not user.first_name_verified:
             user.first_name = clean_persian_name(validated_data['first_name'])
             user.first_name_verified = None
+            to_update_user_fields.extend(['first_name', 'first_name_verified'])
 
         if not user.last_name_verified:
             user.last_name = clean_persian_name(validated_data['last_name'])
             user.last_name_verified = None
+            to_update_user_fields.extend(['last_name', 'last_name_verified'])
 
         if not user.birth_date_verified:
             user.birth_date = validated_data['birth_date']
             user.birth_date_verified = None
+            to_update_user_fields.extend(['birth_date', 'birth_date_verified'])
 
-        user.save()
+        user.save(update_fields=to_update_user_fields)
         user.change_status(User.PENDING)
 
         if User.objects.filter(level__gte=User.LEVEL2, national_code=user.national_code).exclude(id=user.id):

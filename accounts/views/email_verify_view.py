@@ -60,7 +60,7 @@ class EmailOTPVerifySerializer(serializers.ModelSerializer):
         sms_code.set_code_used()
 
         user.email = code.email.lower()
-        user.save()
+        user.save(update_fields=['email'])
 
         from gamify.utils import check_prize_achievements, Task
         check_prize_achievements(user.get_account(), Task.SET_EMAIL)
