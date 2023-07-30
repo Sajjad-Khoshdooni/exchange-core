@@ -65,7 +65,9 @@ urlpatterns = [
 
     path('user/onboarding/', views.OnBoardingFlowStatus.as_view()),
 
-    path('phone/change/', views.ChangePhoneView.as_view()),
+    path('phone/init/', views.InitiateChangePhone.as_view()),
+
+    path('phone/',   views.ChangePhoneView),
 
     path('api/token/', CreateAuthToken.as_view()),
 

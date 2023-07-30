@@ -56,14 +56,11 @@ class ForgotPasswordSerializer(serializers.Serializer):
         if not otp_code:
             raise ValidationError({'token': 'توکن نامعتبر است.'})
 
+        otp_code.set_token_used()
         user = User.objects.get(phone=otp_code.phone)
-
         validate_password(password=password, user=user)
         user.set_password(password)
         user.save()
-
-        # otp_code.set_token_used()
-
         return user
 
 
