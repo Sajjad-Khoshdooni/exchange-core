@@ -1,4 +1,4 @@
-from django.db.models import QuerySet
+from django.db.models import QuerySet, F
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
@@ -138,7 +138,7 @@ class ActiveMissionsAPIView(RetrieveAPIView):
     serializer_class = UserMissionSerializer
 
     def get_object(self):
-        return UserMission.objects.filter(user=self.request.user, finished=False).order_by('id').first()
+        return UserMission.objects.filter(user=self.request.user, finished=False, mission__active=True).order_by('id').first()
 
 
 class TotalVoucherAPIView(APIView):
