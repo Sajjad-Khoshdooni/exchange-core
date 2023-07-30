@@ -127,14 +127,14 @@ class UserMissionSerializer(serializers.ModelSerializer):
         return user_mission.mission.expiration
 
 
-class UserMissionsAPIView(ListAPIView):
+class MissionsAPIView(ListAPIView):
     serializer_class = UserMissionSerializer
 
     def get_queryset(self):
         return UserMission.objects.filter(user=self.request.user)
 
 
-class ActiveUserMissionsAPIView(RetrieveAPIView):
+class ActiveMissionsAPIView(RetrieveAPIView):
     serializer_class = UserMissionSerializer
 
     def get_object(self):
