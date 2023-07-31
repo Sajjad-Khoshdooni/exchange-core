@@ -42,6 +42,9 @@ class WalletPipeline(Atomic):
         finally:
             super(WalletPipeline, self).__exit__(exc_type, exc_val, exc_tb)
 
+    def get_wallet_balance_diff(self, wallet_id):
+        return self._wallet_balances[wallet_id]
+
     def new_lock(self, key: UUID, wallet, amount: Union[int, Decimal], reason: str):
         from ledger.models import BalanceLock
         from ledger.models import Wallet

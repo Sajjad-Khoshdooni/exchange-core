@@ -7,7 +7,7 @@ from django.utils import timezone
 from accounts.models import Account
 from ledger.models import Asset, Trx, Wallet
 from ledger.utils.external_price import SELL, BUY
-from ledger.utils.test import new_account
+from ledger.utils.test import new_account, set_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol, Trade, Order
 from market.utils.order_utils import new_order
@@ -31,6 +31,8 @@ class CreateOrderTestCase(TestCase):
         self.irt = Asset.get(Asset.IRT)
         self.usdt = Asset.get(Asset.USDT)
         self.btc = Asset.get('BTC')
+        set_price(self.usdt, 30000)
+        set_price(self.btc, 30000)
 
         self.btcirt = PairSymbol.objects.get(name='BTCIRT')
         self.btcusdt = PairSymbol.objects.get(name='BTCUSDT')
@@ -329,27 +331,83 @@ class CreateOrderTestCase(TestCase):
 
     def test_margin_create_order(self):
         self.client.force_login(self.account.user)
-        # wallets = self.irt.get_wallet(self.account)
         resp = self.client.post('/api/v1/market/orders/', {
             'symbol': 'BTCUSDT',
             'amount': '1.5',
             'price': '200000',
-            'side': 'buy',
+            'side': 'sell',
             'fill_type': 'limit',
             'market': 'margin'
         })
         self.assertEqual(resp.status_code, 201)
+        position = self.btcusdt.get_margin_position(self.account)
+        self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, position.variant).locked,
+                         Decimal('200000') * Decimal('1.5'))
+
+    def test_margin_create_multi_orders(self):
+        self.client.force_login(self.account.user)
+        resp = self.client.post('/api/v1/market/orders/', {
+            'symbol': 'BTCUSDT',
+            'amount': '1.5',
+            'price': '50000',
+            'side': 'sell',
+            'fill_type': 'limit',
+            'market': 'margin'
+        })
+        self.assertEqual(resp.status_code, 201)
+        resp = self.client.post('/api/v1/market/orders/', {
+            'symbol': 'BTCUSDT',
+            'amount': '0.5',
+            'price': '50000',
+            'side': 'sell',
+            'fill_type': 'limit',
+            'market': 'margin'
+        })
+        self.assertEqual(resp.status_code, 201)
+        position = self.btcusdt.get_margin_position(self.account)
+        self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, position.variant).locked,
+                         Decimal('50000') * Decimal('2'))
+
+    def test_margin_create_zero_sum_trades_auto_close_repay(self):
+        with WalletPipeline() as pipeline:
+            new_order(pipeline, self.btcusdt, Account.system(), BUY, 2, 20000)
+            new_order(pipeline, self.btcusdt, Account.system(), SELL, 2, 21000)
+        self.client.force_login(self.account.user)
+        resp = self.client.post('/api/v1/market/orders/', {
+            'symbol': 'BTCUSDT',
+            'amount': '0.5',
+            'price': '20000',
+            'side': 'sell',
+            'fill_type': 'limit',
+            'market': 'margin'
+        })
+        self.assertEqual(resp.status_code, 201)
+        position = self.btcusdt.get_margin_position(self.account)
+        print(position.amount)
+        resp = self.client.post('/api/v1/market/orders/', {
+            'symbol': 'BTCUSDT',
+            'amount': '0.501002',
+            'price': '21000',
+            'side': 'buy',
+            'fill_type': 'limit',
+            'market': 'margin'
+        })
+        position.refresh_from_db()
+        print(position.__dict__)
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, position.variant).locked, 0)
+
 
     def test_margin_match_order(self):
         self.client.force_login(self.account.user)
         # wallets = self.irt.get_wallet(self.account)
         with WalletPipeline() as pipeline:
-            order = new_order(pipeline, self.btcusdt, Account.system(), SELL, 2, 20000)
+            order = new_order(pipeline, self.btcusdt, Account.system(), BUY, 2, 20000)
         resp = self.client.post('/api/v1/market/orders/', {
             'symbol': 'BTCUSDT',
             'amount': '1.5',
             'price': '20000',
-            'side': 'buy',
+            'side': 'sell',
             'fill_type': 'limit',
             'market': 'margin'
         })
@@ -363,6 +421,12 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(trade.amount, Decimal('1.5'))
         self.assertEqual(other_order.wallet.market, Wallet.MARGIN)
         self.assertEqual(other_order.base_wallet.market, Wallet.MARGIN)
+
+        position = self.btcusdt.get_margin_position(self.account)
+        self.assertEqual(position.status, position.OPEN)
+        self.assertEqual(position.amount, Decimal('1.5'))
+        self.assertGreater(position.liquidation_price, Decimal('20000'))
+        self.assertEqual(position.wallet.market, Wallet.MARGIN)
 
     def test_not_enough_for_sell_margin(self):
         self.client.force_login(self.account_2.user)
