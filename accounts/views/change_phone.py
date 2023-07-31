@@ -9,6 +9,7 @@ from accounts.models import VerificationCode
 from accounts.validators import mobile_number_validator
 from accounts.utils.notif import send_successful_change_phone_email
 
+
 class InitiateChangePhoneSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
     otp = serializers.CharField(write_only=True)
@@ -20,12 +21,13 @@ class InitiateChangePhoneSerializer(serializers.Serializer):
         password = data.get('password')
         totp = data.get('totp')
         validate_password(password=password, user=user)
-        otp_verification = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_CHANGE_PHONE, user)
+        otp_verification = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_CHANGE_PHONE)
         if not otp_verification:
             raise ValidationError('کد ارسال شده نامعتبر است.')
         otp_verification.set_code_used()
         device = TOTPDevice.objects.filter(user=user).first()
-        if not (not device or not device.confimed or device.verify_token(totp)):
+        # todo: check functionality
+        if not (not device or not device.confirmed or device.verify_token(totp)):
             raise ValidationError('رمز موقت نامعتبر است.')
         data['token'] = otp_verification.token
         return data
@@ -33,7 +35,7 @@ class InitiateChangePhoneSerializer(serializers.Serializer):
 
 class InitiateChangePhone(APIView):
     def post(self, request):
-        serializer = InitiateChangePhoneSerializer(data=request.data)
+        serializer = InitiateChangePhoneSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data['token'])
 

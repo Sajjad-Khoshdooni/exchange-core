@@ -67,7 +67,7 @@ urlpatterns = [
 
     path('phone/init/', views.InitiateChangePhone.as_view()),
 
-    path('phone/',   views.ChangePhoneView),
+    path('phone/',   views.ChangePhoneView.as_view()),
 
     path('api/token/', CreateAuthToken.as_view()),
 
