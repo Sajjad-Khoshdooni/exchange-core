@@ -231,7 +231,6 @@ class AssetsViewSet(ModelViewSet):
         )
 
     def get_queryset(self):
-
         if self.get_options('extra_info'):
             queryset = Asset.objects.filter(Q(enable=True) | Q(price_page=True))
         else:
@@ -241,7 +240,7 @@ class AssetsViewSet(ModelViewSet):
             category_name = self.get_options('category')
 
             if category_name == 'new-coins':
-                queryset = queryset.order_by('-publish_date')[:10]
+                queryset = queryset.order_by(F('publish_date').desc(nulls_last=True))[:10]
             else:
                 category = get_object_or_404(CoinCategory, name=category_name)
                 queryset = queryset.filter(coincategory=category)
