@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 
 from accounts.models import VerificationCode
 from accounts.validators import mobile_number_validator
-
+from accounts.utils.notif import send_successful_change_phone_email
 
 class InitiateChangePhoneSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
@@ -80,4 +80,5 @@ class ChangePhoneView(APIView):
         user.username = user.phone
         user.level = max(user.level, user.LEVEL2)
         user.save()
+        send_successful_change_phone_email(user)
         return Response(serializer.validated_data['token'])
