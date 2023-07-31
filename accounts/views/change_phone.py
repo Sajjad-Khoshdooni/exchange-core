@@ -39,7 +39,7 @@ class InitiateChangePhone(APIView):
         return Response(serializer.validated_data['token'])
 
 
-class ChangePhonePostSerializer(serializers.Serializer):
+class UserVerifySerializer(serializers.Serializer):
     new_phone = serializers.CharField(write_only=True, validators=[mobile_number_validator], trim_whitespace=True)
     token = serializers.CharField(write_only=True)
 
@@ -54,7 +54,7 @@ class ChangePhonePostSerializer(serializers.Serializer):
         return data
 
 
-class ChangePhonePutSerializer(serializers.Serializer):
+class NewPhoneVerifySerializer(serializers.Serializer):
     token = serializers.CharField(write_only=True)
 
     def validate(self, data):
@@ -69,13 +69,13 @@ class ChangePhonePutSerializer(serializers.Serializer):
 
 class ChangePhoneView(APIView):
     def post(self, request):
-        serializer = ChangePhonePostSerializer(data=request.data)
+        serializer = UserVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response({'msg': 'کد باموفقیت ارسال شد.'})
 
     # todo : suspension
     def put(self, request):
-        serializer = ChangePhonePutSerializer(data=request.data)
+        serializer = NewPhoneVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = request.user
         user.phone = serializer.validated_data['new_phone']
