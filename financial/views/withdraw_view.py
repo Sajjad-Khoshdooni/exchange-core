@@ -11,7 +11,6 @@ from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
-from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from accounts.models import VerificationCode, LoginActivity
 from accounts.permissions import IsBasicVerified
@@ -67,8 +66,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است'})
-        device = TOTPDevice.objects.filter(user=user).first()
-        if not (device is None or not device.confirmed or device.verify_token(totp)):
+        if not user.is_2fa_valid(totp):
             raise ValidationError({'totp': ' رمز موقت نامعتبر است.'})
 
         if amount < MIN_WITHDRAW:

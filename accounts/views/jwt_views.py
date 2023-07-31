@@ -2,7 +2,6 @@ import logging
 
 from decouple import config
 from django.utils.translation import activate
-from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -181,20 +180,17 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             if client_info_serializer.is_valid():
                 client_info = client_info_serializer.validated_data
             user = User.objects.filter(phone=serializer.user).first()
-            device = TOTPDevice.objects.filter(user=user).first()
-            if user and (
-                    device is None or not device.confirmed or device.verify_token(serializer.initial_data.get('totp'))):
+            totp = serializer.initial_data.get('totp')
+            if user and user.is_2fa_valid(totp):
                 login_activity = set_login_activity(
                     request,
                     user=serializer.user,
                     client_info=client_info,
-                    native_app=True,
                     refresh_token=serializer.validated_data['refresh']
                 )
                 if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
                                                 ip=login_activity.ip).count() == 1:
                     LoginActivity.send_successful_login_message(login_activity)
-
                 return Response(serializer.validated_data, status=status.HTTP_200_OK)
             else:
                 raise InvalidToken("2fa did not match")
@@ -204,11 +200,9 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             if recipient:
                 LoginActivity.send_unsuccessful_login_message(recipient)
                 if e is TokenError:
-                    raise InvalidToken(e.args[0])
+                    return Response({'error': e.args[0]}, status=401)
                 else:
                     raise e
-
-
 
 class SessionTokenObtainPairView(TokenObtainPairView):
     authentication_classes = (SessionAuthentication,)

@@ -6,7 +6,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
-from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from ledger.models import AddressBook, Asset, Network, NetworkAsset, Transfer
 from ledger.models.asset import AssetSerializerMini
@@ -14,7 +13,7 @@ from ledger.views.wallet_view import NetworkAssetSerializer
 from accounts.models.phone_verification import VerificationCode
 
 
-class AddressBookSerializer(serializers.ModelSerializer):
+class AddressBookCreateSerializer(serializers.ModelSerializer):
     account = serializers.CharField(read_only=True)
     asset = AssetSerializerMini(read_only=True)
     network = serializers.CharField()
@@ -23,7 +22,6 @@ class AddressBookSerializer(serializers.ModelSerializer):
     network_info = serializers.SerializerMethodField()
     sms_code = serializers.CharField(write_only=True)
     totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
-
 
     def validate(self, attrs):
         user = self.context['request'].user
@@ -42,12 +40,11 @@ class AddressBookSerializer(serializers.ModelSerializer):
         if not re.match(network.address_regex, address):
             raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
 
-        sms_verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user)
+        sms_verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK)
         if not sms_verification_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
         sms_verification_code.set_code_used()
-        device = TOTPDevice.objects.filter(user=user).first()
-        if not (device is None or not device.confirmed or device.verify_token(totp)):
+        if not user.is_2fa_valid(totp):
             raise ValidationError({'token': 'رمز موقت صحیح نمی‌باشد.'})
         return {
             'account': account,
@@ -67,17 +64,36 @@ class AddressBookSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AddressBook
-        fields = ('id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'network_info', 'sms_code', 'totp')
+        fields = (
+        'id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'network_info', 'sms_code', 'totp')
+
+
+class AddressBookDestroySerializer(serializers.Serializer):
+    otp = serializers.CharField(required=True, write_only=True)
+    totp = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+
+    def validate(self, data):
+        user = self.context['request'].user
+        otp = data.get('otp')
+        otp_code = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user)
+        if not otp_code:
+            raise ValidationError({'code': 'کد نامعتبر است.'})
+        otp_code.set_code_used()
+        totp = data.get('totp')
+        if not user.is_2fa_valid(totp):
+            raise ValidationError({'totp': ' رمز موقت نامعتبر است.'})
+        return data
 
 
 class AddressBookView(ModelViewSet):
-    serializer_class = AddressBookSerializer
+    serializer_class = AddressBookCreateSerializer
 
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
         query_params = self.request.query_params
-        address_books = AddressBook.objects.filter(deleted=False, account=self.request.user.get_account()).order_by('-id')
+        address_books = AddressBook.objects.filter(deleted=False, account=self.request.user.get_account()).order_by(
+            '-id')
 
         if 'coin' in query_params:
             address_books = address_books.filter(asset__symbol=query_params['coin'])
@@ -93,9 +109,11 @@ class AddressBookView(ModelViewSet):
         return address_books
 
     def destroy(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = AddressBookDestroySerializer(
+            data=request.data,
+            context={'request': request}
+        )
         serializer.is_valid(raise_exception=True)
-
         instance = self.get_object()
         instance.deleted = True
         instance.save()

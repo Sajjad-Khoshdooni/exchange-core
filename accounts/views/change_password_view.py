@@ -4,7 +4,6 @@ from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from accounts.models import VerificationCode
 
@@ -27,8 +26,8 @@ class ChangePasswordSerializer(serializers.Serializer):
         otp_code.set_code_used()
         if not user.check_password(old_pass):
             raise ValidationError({'old_password': 'رمز عبور قبلی بدرستی وارد نشده است'})
-        device = TOTPDevice.objects.filter(user=user).first()
-        if not (device is None or not device.confirmed or device.verify_token(totp)):
+
+        if not user.is_2fa_valid(totp):
             raise ValidationError({'totp': ' رمز موقت نامعتبر است.'})
         validate_password(password=password, user=user)
 

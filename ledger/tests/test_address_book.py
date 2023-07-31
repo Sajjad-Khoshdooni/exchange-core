@@ -2,7 +2,7 @@ from django.test import Client
 from django.test import TestCase
 from ledger.models import Asset
 from ledger.utils.test import new_account, new_address_book, new_network, new_network_asset
-
+from accounts.models.phone_verification import VerificationCode
 
 class AddressBookTestCase(TestCase):
 
@@ -12,6 +12,7 @@ class AddressBookTestCase(TestCase):
         self.client = Client()
         self.client.force_login(self.user)
         self.network = new_network()
+        self.otp = VerificationCode.send_otp_code(self.account.user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user=self.account.user)
         self.address_book = new_address_book(account=self.account, network=self.network, asset='USDT')
         self.address_book_without_coin = new_address_book(account=self.account, network=self.network)
         self.usdt = Asset.get(Asset.USDT)
@@ -32,5 +33,9 @@ class AddressBookTestCase(TestCase):
         self.assertEqual(resp.status_code, 200)
 
     def test_delete_address_book(self):
-        resp = self.client.delete('/api/v1/addressbook/{}/'.format(self.address_book.pk))
+        resp = self.client.delete(
+            '/api/v1/addressbook/{}/'.format(self.address_book.pk),
+            data={'otp': f'{self.otp}'}
+        )
+        print(resp)
         self.assertEqual(resp.status_code, 204)
