@@ -26,8 +26,7 @@ class InitiateChangePhoneSerializer(serializers.Serializer):
             raise ValidationError('کد ارسال شده نامعتبر است.')
         otp_verification.set_code_used()
         device = TOTPDevice.objects.filter(user=user).first()
-        # todo: check functionality
-        if not (not device or not device.confirmed or device.verify_token(totp)):
+        if not (device is None or not device.confirmed or device.verify_token(totp)):
             raise ValidationError('رمز موقت نامعتبر است.')
         data['token'] = otp_verification.token
         return data
@@ -40,7 +39,7 @@ class InitiateChangePhone(APIView):
         return Response(serializer.validated_data['token'])
 
 
-class ChangePhonePostSerializer(serializers.ModelSerializer):
+class ChangePhonePostSerializer(serializers.Serializer):
     new_phone = serializers.CharField(write_only=True, validators=[mobile_number_validator], trim_whitespace=True)
     token = serializers.CharField(write_only=True)
 
@@ -52,9 +51,10 @@ class ChangePhonePostSerializer(serializers.ModelSerializer):
             raise ValidationError('توکن نامعتبر است.')
         token_verification.set_token_used()
         VerificationCode.send_otp_code(new_phone, VerificationCode.SCOPE_CHANGE_PHONE)
+        return data
 
 
-class ChangePhonePutSerializer(serializers.ModelSerializer):
+class ChangePhonePutSerializer(serializers.Serializer):
     token = serializers.CharField(write_only=True)
 
     def validate(self, data):
@@ -83,4 +83,4 @@ class ChangePhoneView(APIView):
         user.level = max(user.level, user.LEVEL2)
         user.save()
         send_successful_change_phone_email(user)
-        return Response(serializer.validated_data['token'])
+        return Response({'msg' : 'شماره تلفن همراه با‌موفقیت تغییر کرد.'})
