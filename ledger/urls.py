@@ -76,4 +76,5 @@ urlpatterns = [
 
     path('v1/fast_buy/', views.FastBuyTokenAPI.as_view()),
 
+    path('v1/coin-categories/', views.CoinCategoryListView.as_view()),
 ]

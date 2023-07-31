@@ -8,8 +8,13 @@ class CoinCategory(models.Model):
     coins = models.ManyToManyField(Asset)
     binance_name = models.CharField(max_length=32, blank=True)
 
+    title = models.CharField(max_length=32, blank=True)
+    description = models.TextField(blank=True)
+    order = models.SmallIntegerField(default=0, db_index=True)
+
     class Meta:
         verbose_name_plural = verbose_name = 'گروه‌بندی نمایش رمزارزها'
+        ordering = ('order', )
 
     def __str__(self):
         return self.name

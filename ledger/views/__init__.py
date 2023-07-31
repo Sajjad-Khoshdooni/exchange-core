@@ -18,3 +18,4 @@ from .reserve_view import ReserveWalletCreateAPIView, ReserveWalletRefundAPIView
 from .fast_buy_token_view import FastBuyTokenAPI
 from .otc_history_view import OTCHistoryView
 from .withdraw_viewset import WithdrawViewSet
+from .coin_category_list_view import CoinCategoryListView
