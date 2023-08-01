@@ -60,7 +60,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
         user = User.objects.get(phone=otp_code.phone)
         validate_password(password=password, user=user)
         user.set_password(password)
-        user.save()
+        user.save(update_fields=['password'])
         return user
 
 

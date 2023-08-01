@@ -267,7 +267,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         for user in to_verify_users:
             user.first_name_verified = True
             user.last_name_verified = True
-            user.save()
+            user.save(update_fields=['first_name_verified', 'last_name_verified'])
             basic_verify_user.delay(user.id)
 
     @admin.action(description='شروع احراز هویت پایه کاربر', permissions=['change'])

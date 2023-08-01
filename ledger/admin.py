@@ -525,7 +525,8 @@ class PrizeAdmin(admin.ModelAdmin):
 
 @admin.register(models.CoinCategory)
 class CoinCategoryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'get_coin_count']
+    list_display = ('name', 'title', 'get_coin_count', 'order')
+    list_editable = ('order', )
 
     def get_coin_count(self, coin_category: CoinCategory):
         return coin_category.coins.filter(enable=True).count()

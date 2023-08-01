@@ -48,7 +48,7 @@ class TelephoneOTPVerifySerializer(serializers.ModelSerializer):
 
         user.telephone_verified = True
         user.telephone = telephone
-        user.save()
+        user.save(update_fields=['telephone_verified', 'telephone'])
 
         return user
 

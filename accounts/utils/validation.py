@@ -122,7 +122,7 @@ def get_login_user_agent_data_from_client_info(client_info: dict) -> dict:
     return {
         'user_agent': json.dumps(client_info),
         'device_type': LoginActivity.MOBILE,
-        'device': client_info.get('device_name', ''),
+        'device': client_info.get('brand', '').capitalize() + ' ' + client_info.get('model', ''),
         'os': '%s %s' % (client_info.get('system_name', ''), client_info.get('system_version', '')),
         'browser': client_info.get('brand', ''),
     }
@@ -157,7 +157,7 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
             'ip_data': ip_data,
             'city': ip_data.get('city', ''),
             'country': ip_data.get('country', ''),
-            'native_app': not refresh_token_model,
+            'native_app': bool(refresh_token_model),
         }
     )
     return login_activity
