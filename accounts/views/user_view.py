@@ -6,7 +6,6 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.models import User, CustomToken
-from accounts.utils.auth2fa import is_2fa_active_for_user
 from accounts.utils.hijack import get_hijacker_id
 from accounts.verifiers.legal import possible_time_for_withdraw
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
@@ -15,7 +14,6 @@ from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 class UserSerializer(serializers.ModelSerializer):
     possible_time_for_withdraw = serializers.SerializerMethodField()
     chat_uuid = serializers.CharField()
-    auth2fa = serializers.SerializerMethodField()
     show_staking = serializers.SerializerMethodField()
 
     def get_chat_uuid(self, user: User):
@@ -26,8 +24,6 @@ class UserSerializer(serializers.ModelSerializer):
         else:
             return user.chat_uuid
 
-    def get_auth2fa(self, user: User):
-        return is_2fa_active_for_user(user)
 
     def get_show_staking(self, user: User):
         return True
@@ -36,7 +32,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw', 'chat_uuid', 'auth2fa'
+            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw', 'chat_uuid'
         )
         ref_name = "User"
 
@@ -82,16 +78,18 @@ class UserDetailView(RetrieveAPIView):
 
 
 class AuthTokenSerializer(serializers.ModelSerializer):
-    ip_list = serializers.CharField()
+    CHOICES = [(scope, scope) for scope in CustomToken.SCOPES]
+    ip_list = serializers.CharField(required=False)
+    scopes = serializers.MultipleChoiceField(choices=CHOICES, required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = CustomToken
-        fields = ('ip_list',)
+        fields = ('ip_list', 'scopes',)
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
-        customtoken = CustomToken.objects.create(**validated_data)
-
+        scopes = list(validated_data.pop('scopes'))
+        customtoken = CustomToken.objects.create(scopes=scopes, **validated_data)
         return customtoken
 
     def update(self, instance, validated_data):
@@ -110,6 +108,7 @@ class CreateAuthToken(APIView):
         return Response({
             'token': ('*' * (len(custom_token.key) - 4)) + custom_token.key[-4:],
             'user_id': request.user.pk,
+            'permissions': custom_token.scopes,
             'ip_white_list': custom_token.ip_list
         })
 
@@ -120,6 +119,7 @@ class CreateAuthToken(APIView):
             return Response({
                 'token': ('*' * (len(custom_token.key) - 4)) + custom_token.key[-4:],
                 'user_id': request.user.pk,
+                'permissions': custom_token.scopes,
                 'ip_white_list': custom_token.ip_list,
             })
         else:
@@ -132,6 +132,7 @@ class CreateAuthToken(APIView):
             return Response({
                 'token': token.key,
                 'user_id': request.user.pk,
+                'permissions': token.scopes,
                 'ip_white_list': token.ip_list,
             })
 
