@@ -80,7 +80,7 @@ class ChangePhoneView(APIView):
         user = request.user
         user.phone = serializer.validated_data['new_phone']
         user.username = user.phone
-        user.level = max(user.level, user.LEVEL2)
+        user.level = min(user.level, user.LEVEL2)
         user.save()
         send_successful_change_phone_email(user)
         return Response({'msg' : 'شماره تلفن همراه با‌موفقیت تغییر کرد.'})
