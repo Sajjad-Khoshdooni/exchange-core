@@ -1,5 +1,6 @@
+import uuid
 from decimal import Decimal
-from uuid import uuid4, UUID
+from uuid import uuid4, UUID, uuid5
 
 from dataclasses import dataclass
 from django.db import models
@@ -85,7 +86,9 @@ class MarginPosition(models.Model):
             symbol=symbol,
             status=cls.OPEN,
             defaults={
-                'wallet': symbol.asset.get_wallet(account, Wallet.MARGIN, uuid4()),
+                'wallet': symbol.asset.get_wallet(
+                    account, Wallet.MARGIN, uuid5(uuid.NAMESPACE_X500, f'{account.id}-{symbol.name}-{side}')
+                ),
                 'side': side
             }
         )

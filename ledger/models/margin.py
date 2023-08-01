@@ -123,7 +123,6 @@ class MarginLoan(models.Model):
         )
 
         if loan_type == cls.REPAY:
-            print('1111', loan.loan_wallet.__dict__, pipeline.get_wallet_balance_diff(loan.loan_wallet.id))
             loan.loan_wallet.has_debt(-amount, raise_exception=True)
             loan.margin_wallet.has_balance(
                 amount, raise_exception=True,
@@ -144,7 +143,6 @@ class MarginLoan(models.Model):
             sender, receiver = loan.margin_wallet, loan.loan_wallet
 
         pipeline.new_trx(sender, receiver, amount, Trx.MARGIN_BORROW, loan.group_id)
-        print(sender, receiver, amount)
         loan.save()
 
         return loan

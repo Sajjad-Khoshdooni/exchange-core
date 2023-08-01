@@ -206,7 +206,6 @@ class Order(models.Model):
     def get_to_lock_wallet(cls, symbol, wallet, base_wallet, side, lock_amount, pipeline: WalletPipeline) -> Wallet:
         if wallet.market == Wallet.MARGIN:
             position = symbol.get_margin_position(wallet.account)
-            print('2222', 'has enough margin', position.has_enough_margin(lock_amount))
             if not position.has_enough_margin(lock_amount):
                 margin_cross_wallet = base_wallet.asset.get_wallet(
                     base_wallet.account, market=base_wallet.market, variant=None
@@ -253,17 +252,13 @@ class Order(models.Model):
     def acquire_lock(self, pipeline: WalletPipeline):
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side, self.wallet.market)
         to_lock_wallet = self.get_to_lock_wallet(self.symbol, self.wallet, self.base_wallet, self.side, lock_amount, pipeline)
-        print('3333', lock_amount, to_lock_wallet.__dict__)
-        print('3333', 'acquire lock')
 
         if self.side == BUY and self.fill_type == Order.MARKET:
             free_amount = to_lock_wallet.get_free()
             if free_amount > Decimal('0.95') * lock_amount:
                 lock_amount = min(lock_amount, free_amount)
 
-        print('before has balance')
         to_lock_wallet.has_balance(lock_amount, raise_exception=True)
-        print('after has balance')
 
         pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 

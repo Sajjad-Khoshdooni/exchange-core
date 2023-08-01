@@ -7,6 +7,7 @@ from django.conf import settings
 from accounts.models import Referral
 from ledger.models import Wallet, Trx, Asset
 from ledger.utils.external_price import BUY, SELL
+from ledger.utils.precision import floor_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, Trade, BaseTrade
 from market.models import ReferralTrx
@@ -175,6 +176,9 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
         if order.side == order_side and order.wallet.market == Wallet.MARGIN:
             trade_amount = trade.amount - trade.fee_amount if order_side == BUY else trade.amount
             from ledger.models import MarginLoan
+            position = order.symbol.get_margin_position(order.account)
+            if loan_type == MarginLoan.REPAY:
+                trade_amount = min(position.amount, trade_amount)
             MarginLoan.new_loan(
                 account=order.account,
                 asset=order.symbol.asset,
@@ -183,7 +187,11 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
                 pipeline=pipeline,
                 variant=order.wallet.variant
             )
-            position = order.symbol.get_margin_position(order.account)
+            fee_amount = floor_precision(trade.fee_amount,
+                                         Trade.fee_amount.field.decimal_places) if trade.fee_amount else Decimal(0)
+            trade_amount = trade.amount - fee_amount if order_side == BUY else trade.amount
+            if loan_type == MarginLoan.REPAY:
+                trade_amount = min(position.amount, trade_amount)
             from ledger.models.position import MarginPositionTradeInfo
             trading_positions.append(MarginPositionTradeInfo(
                 loan_type=loan_type,
