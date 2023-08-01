@@ -21,7 +21,7 @@ class AddressBookCreateSerializer(serializers.ModelSerializer):
     deleted = serializers.BooleanField(read_only=True)
     network_info = serializers.SerializerMethodField()
     sms_code = serializers.CharField(write_only=True)
-    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
+    totp = serializers.CharField(write_only=True, allow_null=True, allow_blank=True, required=False)
 
     def validate(self, attrs):
         user = self.context['request'].user
