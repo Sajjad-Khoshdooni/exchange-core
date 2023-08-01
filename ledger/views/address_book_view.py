@@ -73,8 +73,8 @@ class AddressBookDestroySerializer(serializers.Serializer):
 
     def validate(self, data):
         user = self.context['request'].user
-        otp = data.get('sms_code')
-        verification_code = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user)
+        sms_code = data.get('sms_code')
+        verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user)
         if not verification_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
         verification_code.set_code_used()

@@ -39,7 +39,7 @@ class AddressBookTestCase(TestCase):
     def test_delete_address_book(self):
         url = '/api/v1/addressbook/{}/'.format(self.address_book.pk)
         data = {
-            'otp': str(self.otp.code)
+            'sms_code': str(self.otp.code)
         }
         response = self.client.delete(url, data=data, content_type='application/json')
         self.assertEqual(response.status_code, 204)
