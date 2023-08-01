@@ -88,7 +88,7 @@ class UserDetailView(RetrieveAPIView):
 class AuthTokenSerializer(serializers.ModelSerializer):
     ip_list = serializers.CharField()
     sms_code = serializers.CharField(write_only=True)
-    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
+    totp = serializers.CharField(write_only=True, allow_null=True, allow_blank=True, required=False)
 
     class Meta:
         model = CustomToken
