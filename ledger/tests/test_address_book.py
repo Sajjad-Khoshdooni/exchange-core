@@ -6,6 +6,7 @@ from accounts.models.phone_verification import VerificationCode
 from django.urls import reverse
 from ledger.models.address_book import AddressBook
 
+
 class AddressBookTestCase(TestCase):
 
     def setUp(self):
@@ -14,7 +15,8 @@ class AddressBookTestCase(TestCase):
         self.client = Client()
         self.client.force_login(self.user)
         self.network = new_network()
-        self.otp = VerificationCode.send_otp_code(self.account.user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user=self.account.user)
+        self.otp = VerificationCode.send_otp_code(self.account.user.phone, VerificationCode.SCOPE_ADDRESS_BOOK,
+                                                  user=self.account.user)
         self.address_book = new_address_book(account=self.account, network=self.network, asset='USDT')
         self.address_book_without_coin = new_address_book(account=self.account, network=self.network)
         self.usdt = Asset.get(Asset.USDT)
@@ -37,7 +39,7 @@ class AddressBookTestCase(TestCase):
     def test_delete_address_book(self):
         url = '/api/v1/addressbook/{}/'.format(self.address_book.pk)
         data = {
-            'otp': f'{self.otp.code}'
+            'otp': str(self.otp.code)
         }
         response = self.client.delete(url, data=data, content_type='application/json')
         self.assertEqual(response.status_code, 204)

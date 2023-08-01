@@ -68,16 +68,16 @@ class AddressBookCreateSerializer(serializers.ModelSerializer):
 
 
 class AddressBookDestroySerializer(serializers.Serializer):
-    otp = serializers.CharField(write_only=True)
+    sms_code = serializers.CharField(write_only=True)
     totp = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
 
     def validate(self, data):
         user = self.context['request'].user
-        otp = data.get('otp')
-        otp_code = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user)
-        if not otp_code:
+        otp = data.get('sms_code')
+        verification_code = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user)
+        if not verification_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
-        otp_code.set_code_used()
+        verification_code.set_code_used()
         totp = data.get('totp')
         if not user.is_2fa_valid(totp):
             raise ValidationError({'totp': ' رمز موقت نامعتبر است.'})
