@@ -1,6 +1,4 @@
 import re
-
-from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
@@ -20,7 +18,7 @@ from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
 from ledger.utils.withdraw_verify import can_withdraw
-from ledger.views.address_book_view import AddressBookSerializer
+from ledger.views.address_book_view import AddressBookCreateSerializer
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
@@ -31,7 +29,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
     address = serializers.CharField(source='out_address', required=False)
     memo = serializers.CharField(required=False, allow_blank=True)
     address_book = serializers.SerializerMethodField()
-    totp = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    totp = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
 
     def validate(self, attrs):
         request = self.context['request']
@@ -80,10 +78,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if from_panel:
             code = attrs['code']
             otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CRYPTO_WITHDRAW)
-            device = TOTPDevice.objects.filter(user=user).first()
             if not otp_code:
                 raise ValidationError({'code': 'کد نامعتبر است.'})
-            if not (device is None or not device.confirmed or device.verify_token(totp)):
+            if not user.is_2fa_valid(totp):
                 raise ValidationError({'otp' : ' رمز موقت نامعتبر است.'})
 
 
@@ -165,7 +162,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
     def get_address_book(self, transfer: Transfer):
         if transfer.address_book:
-            return AddressBookSerializer(transfer.address_book).data
+            return AddressBookCreateSerializer(transfer.address_book).data
 
     class Meta:
         model = Transfer

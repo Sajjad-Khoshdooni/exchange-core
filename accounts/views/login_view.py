@@ -1,6 +1,5 @@
 import logging
 
-from django_otp.plugins.otp_totp.models import TOTPDevice
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Q
 from django.utils import timezone
@@ -39,8 +38,8 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        device = TOTPDevice.objects.filter(user=user).first()
-        if user and (device is None or not device.confirmed or device.verify_token(serializer.data.get('totp'))):
+        totp = serializer.data.get('totp')
+        if user and user.is_2fa_valid(totp):
             login(request, user)
             login_activity = set_login_activity(request, user)
             if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,

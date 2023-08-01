@@ -88,7 +88,7 @@ class UserDetailView(RetrieveAPIView):
 class AuthTokenSerializer(serializers.ModelSerializer):
     ip_list = serializers.CharField()
     sms_code = serializers.CharField(write_only=True)
-    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
+    totp = serializers.CharField(write_only=True, allow_null=True, allow_blank=True, required=False)
 
     class Meta:
         model = CustomToken
@@ -98,12 +98,12 @@ class AuthTokenSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         totp = data.get('totp')
         sms_code = data.get('sms_code')
-        sms_verification_code = VerificationCode.get_by_code(code=sms_code, phone=user.phone, scope=VerificationCode.SCOPE_API_TOKEN, user=user)
+        sms_verification_code = VerificationCode.get_by_code(code=sms_code, phone=user.phone,
+                                                             scope=VerificationCode.SCOPE_API_TOKEN, user=user)
         if not sms_verification_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
         sms_verification_code.set_code_used()
-        device = TOTPDevice.objects.filter(user=user).first()
-        if not (device is None or not device.confirmed or device.verify_token(totp)):
+        if not user.is_2fa_valid(totp):
             raise ValidationError({'totp': 'رمز موقت صحیح نمی‌باشد.'})
         return data
 
@@ -119,6 +119,23 @@ class AuthTokenSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+
+class AuthTokenDestroySerializer(serializers.Serializer):
+    sms_code = serializers.CharField(write_only=True)
+    totp = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+
+    def validate(self, data):
+        user = self.context['request'].user
+        sms_code = data.get('sms_code')
+        verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_API_TOKEN, user)
+        if not verification_code:
+            raise ValidationError({'code': 'کد نامعتبر است.'})
+        verification_code.set_code_used()
+        totp = data.get('totp')
+        if not user.is_2fa_valid(totp):
+            raise ValidationError({'totp': ' رمز موقت نامعتبر است.'})
+        return data
 
 
 class CreateAuthToken(APIView):
@@ -157,6 +174,11 @@ class CreateAuthToken(APIView):
             })
 
     def delete(self, request, *args, **kwargs):
+        serializer = AuthTokenDestroySerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
         token = get_object_or_404(CustomToken, user=request.user)
         token.delete()
         return Response({'msg': 'Token deleted successfully'})
