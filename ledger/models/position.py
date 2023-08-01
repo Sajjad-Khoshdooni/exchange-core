@@ -1,5 +1,6 @@
+import uuid
 from decimal import Decimal
-from uuid import uuid4, UUID
+from uuid import uuid4, UUID, uuid5
 
 from dataclasses import dataclass
 from django.db import models
@@ -55,6 +56,10 @@ class MarginPosition(models.Model):
         return -self.loan_wallet.balance
 
     @property
+    def withdrawable_base_asset(self):
+        return self.total_balance - Decimal(2) * self.total_debt
+
+    @property
     def total_debt(self):
         from ledger.utils.external_price import get_external_price, BUY
         if self.side == SHORT:
@@ -85,7 +90,9 @@ class MarginPosition(models.Model):
             symbol=symbol,
             status=cls.OPEN,
             defaults={
-                'wallet': symbol.asset.get_wallet(account, Wallet.MARGIN, uuid4()),
+                'wallet': symbol.asset.get_wallet(
+                    account, Wallet.MARGIN, uuid5(uuid.NAMESPACE_X500, f'{account.id}-{symbol.name}-{side}')
+                ),
                 'side': side
             }
         )
@@ -93,7 +100,7 @@ class MarginPosition(models.Model):
 
     def has_enough_margin(self, extending_base_amount):
         if self.side == SHORT and self.leverage == 1:
-            return self.total_balance - Decimal(2) * self.total_debt >= extending_base_amount
+            return self.withdrawable_base_asset >= extending_base_amount
         raise NotImplementedError
 
     def liquidate(self, pipeline):

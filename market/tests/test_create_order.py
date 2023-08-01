@@ -5,7 +5,7 @@ from django.test import TestCase, Client
 from django.utils import timezone
 
 from accounts.models import Account
-from ledger.models import Asset, Trx, Wallet
+from ledger.models import Asset, Trx, Wallet, MarginPosition
 from ledger.utils.external_price import SELL, BUY
 from ledger.utils.test import new_account, set_price
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -38,6 +38,7 @@ class CreateOrderTestCase(TestCase):
         self.btcusdt = PairSymbol.objects.get(name='BTCUSDT')
 
         Asset.objects.filter(symbol='BTC').update(margin_enable=True)
+        Asset.objects.filter(symbol='USDT').update(enable=True, margin_enable=True)
 
         self.fill = Trade.objects.all()
 
@@ -368,7 +369,7 @@ class CreateOrderTestCase(TestCase):
         self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, position.variant).locked,
                          Decimal('50000') * Decimal('2'))
 
-    def test_margin_create_zero_sum_trades_auto_close_repay(self):
+    def test_margin_create_zero_sum_trades_auto_close_repay_taker_fee(self):
         with WalletPipeline() as pipeline:
             new_order(pipeline, self.btcusdt, Account.system(), BUY, 2, 20000)
             new_order(pipeline, self.btcusdt, Account.system(), SELL, 2, 21000)
@@ -383,7 +384,6 @@ class CreateOrderTestCase(TestCase):
         })
         self.assertEqual(resp.status_code, 201)
         position = self.btcusdt.get_margin_position(self.account)
-        print(position.amount)
         resp = self.client.post('/api/v1/market/orders/', {
             'symbol': 'BTCUSDT',
             'amount': '0.501002',
@@ -393,10 +393,46 @@ class CreateOrderTestCase(TestCase):
             'market': 'margin'
         })
         position.refresh_from_db()
-        print(position.__dict__)
         self.assertEqual(resp.status_code, 201)
+        self.assertEqual(position.amount, 0)
+        self.assertEqual(position.status, MarginPosition.CLOSED)
         self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, position.variant).locked, 0)
+        self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, position.variant).balance, 0)
+        self.assertEqual(self.btc.get_wallet(self.account, Wallet.MARGIN, position.variant).locked, 0)
+        self.assertEqual(self.btc.get_wallet(self.account, Wallet.MARGIN, position.variant).balance, 0)
 
+    def test_margin_create_zero_sum_trades_auto_close_repay_maker_fee(self):
+        with WalletPipeline() as pipeline:
+            new_order(pipeline, self.btcusdt, Account.system(), BUY, 2, 20000)
+        self.client.force_login(self.account.user)
+        resp = self.client.post('/api/v1/market/orders/', {
+            'symbol': 'BTCUSDT',
+            'amount': '0.5',
+            'price': '20000',
+            'side': 'sell',
+            'fill_type': 'limit',
+            'market': 'margin'
+        })
+        self.assertEqual(resp.status_code, 201)
+        position = self.btcusdt.get_margin_position(self.account)
+        resp = self.client.post('/api/v1/market/orders/', {
+            'symbol': 'BTCUSDT',
+            'amount': '0.501002',
+            'price': '21000',
+            'side': 'buy',
+            'fill_type': 'limit',
+            'market': 'margin'
+        })
+        with WalletPipeline() as pipeline:
+            new_order(pipeline, self.btcusdt, Account.system(), SELL, 2, 21000)
+        position.refresh_from_db()
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(position.amount, 0)
+        self.assertEqual(position.status, MarginPosition.CLOSED)
+        self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, position.variant).locked, 0)
+        self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, position.variant).balance, 0)
+        self.assertEqual(self.btc.get_wallet(self.account, Wallet.MARGIN, position.variant).locked, 0)
+        self.assertEqual(self.btc.get_wallet(self.account, Wallet.MARGIN, position.variant).balance, Decimal('0.00100200'))
 
     def test_margin_match_order(self):
         self.client.force_login(self.account.user)

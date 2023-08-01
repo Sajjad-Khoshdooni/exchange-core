@@ -78,7 +78,6 @@ class Wallet(models.Model):
             can = self.get_free() + pipeline_balance_diff - amount >= -self.credit
 
         if raise_exception and not can:
-            print('4444', self, self.__dict__, amount)
             raise InsufficientBalance()
 
         return can
