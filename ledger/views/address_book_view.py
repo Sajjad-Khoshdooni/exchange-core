@@ -40,7 +40,7 @@ class AddressBookCreateSerializer(serializers.ModelSerializer):
         if not re.match(network.address_regex, address):
             raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
 
-        sms_verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK)
+        sms_verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user)
         if not sms_verification_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
         sms_verification_code.set_code_used()
@@ -64,12 +64,11 @@ class AddressBookCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AddressBook
-        fields = (
-        'id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'network_info', 'sms_code', 'totp')
+        fields = ('id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'network_info', 'sms_code', 'totp')
 
 
 class AddressBookDestroySerializer(serializers.Serializer):
-    otp = serializers.CharField(required=True, write_only=True)
+    otp = serializers.CharField(write_only=True)
     totp = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
 
     def validate(self, data):
@@ -92,8 +91,7 @@ class AddressBookView(ModelViewSet):
 
     def get_queryset(self):
         query_params = self.request.query_params
-        address_books = AddressBook.objects.filter(deleted=False, account=self.request.user.get_account()).order_by(
-            '-id')
+        address_books = AddressBook.objects.filter(deleted=False, account=self.request.user.get_account()).order_by('-id')
 
         if 'coin' in query_params:
             address_books = address_books.filter(asset__symbol=query_params['coin'])
