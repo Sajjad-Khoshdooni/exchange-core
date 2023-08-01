@@ -29,7 +29,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
     address = serializers.CharField(source='out_address', required=False)
     memo = serializers.CharField(required=False, allow_blank=True)
     address_book = serializers.SerializerMethodField()
-    totp = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    totp = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
 
     def validate(self, attrs):
         request = self.context['request']
