@@ -12,6 +12,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from accounts.models.user_feature_perm import UserFeaturePerm
 from analytics.event.producer import get_kafka_producer
@@ -79,6 +80,7 @@ class User(AbstractUser):
 
     level_2_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تایید سطح ۲')
     level_3_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تایید سطح 3')
+
 
     level = models.PositiveSmallIntegerField(
         default=LEVEL1,
@@ -163,6 +165,7 @@ class User(AbstractUser):
 
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
 
+
     def __str__(self):
         name = self.get_full_name()
         super_name = super(User, self).__str__()
@@ -171,6 +174,9 @@ class User(AbstractUser):
             return '%s %s' % (super_name, name)
         else:
             return super_name
+    def is_2fa_valid(self, totp):
+        device = TOTPDevice.objects.filter(user=self).first()
+        return self.is_staff or device is None or not device.confirmed or device.verify_token(totp)
 
     def get_account(self) -> Account:
         if not self.id or self.is_anonymous:

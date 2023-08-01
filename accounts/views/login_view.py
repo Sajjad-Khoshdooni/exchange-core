@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 class LoginSerializer(serializers.Serializer):
     login = serializers.CharField(required=True)
     password = serializers.CharField(required=True)
+    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
 
     def save(self, **kwargs):
         login = self.validated_data['login'].lower()
@@ -36,9 +37,9 @@ class LoginView(APIView):
 
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         user = serializer.save()
-        if user:
+        totp = serializer.data.get('totp')
+        if user and user.is_2fa_valid(totp):
             login(request, user)
             login_activity = set_login_activity(request, user)
             if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
@@ -50,6 +51,7 @@ class LoginView(APIView):
             if user:
                 LoginActivity.send_unsuccessful_login_message(user)
             return Response({'msg': 'authentication failed', 'code': -1}, status=status.HTTP_401_UNAUTHORIZED)
+
 
 class LogoutView(APIView):
     def post(self, request):

@@ -4,6 +4,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
 from accounts import codes
 from accounts.models import User
@@ -32,7 +33,6 @@ class InitiateForgetPasswordView(APIView):
     throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def post(self, request):
-
         if request.user.is_authenticated:
             return Response({'msg': 'already logged in', 'code': codes.USER_ALREADY_LOGGED_IN})
 
@@ -47,10 +47,12 @@ class InitiateForgetPasswordView(APIView):
 class ForgotPasswordSerializer(serializers.Serializer):
     token = serializers.UUIDField(write_only=True, required=True)
     password = serializers.CharField(required=True, write_only=True, validators=[password_validator])
+    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
 
     def create(self, validated_data):
         token = validated_data.pop('token')
         password = validated_data.pop('password')
+        totp = validated_data.pop('totp')
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_FORGET_PASSWORD)
 
         if not otp_code:
@@ -58,6 +60,9 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
         otp_code.set_token_used()
         user = User.objects.get(phone=otp_code.phone)
+        if not user.is_2fa_valid(totp):
+            raise ValidationError({'otp': ' رمز موقت نامعتبر است.'})
+
         validate_password(password=password, user=user)
         user.set_password(password)
         user.save(update_fields=['password'])

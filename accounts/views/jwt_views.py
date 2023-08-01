@@ -5,6 +5,7 @@ from django.utils.translation import activate
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -14,8 +15,14 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Toke
     TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenViewBase
+from rest_framework_simplejwt.views import TokenObtainPairView
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenViewBase
 
 from accounts.authentication import CustomTokenAuthentication
+from accounts.models import Account, LoginActivity, RefreshToken as RefreshTokenModel
+from accounts.models import User
 from accounts.models import Account, LoginActivity, RefreshToken as RefreshTokenModel
 from accounts.utils.validation import set_login_activity
 
@@ -130,6 +137,8 @@ class ClientInfoSerializer(serializers.Serializer):
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    totp = serializers.CharField(write_only=True, allow_null=True, allow_blank=True, required=False)
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
@@ -162,28 +171,38 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-
         try:
             serializer.is_valid(raise_exception=True)
-
             client_info_serializer = ClientInfoSerializer(data=request.data.get('client_info'))
 
             client_info = None
 
             if client_info_serializer.is_valid():
                 client_info = client_info_serializer.validated_data
+            user = User.objects.filter(phone=serializer.user).first()
+            totp = serializer.initial_data.get('totp')
+            if user and user.is_2fa_valid(totp):
+                login_activity = set_login_activity(
+                    request,
+                    user=serializer.user,
+                    client_info=client_info,
+                    refresh_token=serializer.validated_data['refresh']
+                )
+                if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
+                                                ip=login_activity.ip).count() == 1:
+                    LoginActivity.send_successful_login_message(login_activity)
+                return Response(serializer.validated_data, status=status.HTTP_200_OK)
+            else:
+                raise InvalidToken("2fa did not match")
 
-            set_login_activity(
-                request,
-                user=serializer.user,
-                client_info=client_info,
-                refresh_token=serializer.validated_data['refresh']
-            )
-
-        except TokenError as e:
-            raise InvalidToken(e.args[0])
-
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        except AuthenticationFailed as e:
+            recipient = User.objects.filter(phone=serializer.initial_data.get('phone')).first()
+            if recipient:
+                LoginActivity.send_unsuccessful_login_message(recipient)
+            if e is TokenError:
+                return Response({'error': e.args[0]}, status=401)
+            else:
+                raise e
 
 
 class SessionTokenObtainPairView(TokenObtainPairView):
