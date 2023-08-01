@@ -231,15 +231,19 @@ class AssetsViewSet(ModelViewSet):
         )
 
     def get_queryset(self):
-
         if self.get_options('extra_info'):
             queryset = Asset.objects.filter(Q(enable=True) | Q(price_page=True))
         else:
             queryset = Asset.live_objects.all()
 
         if self.get_options('category'):
-            category = get_object_or_404(CoinCategory, name=self.get_options('category'))
-            queryset = queryset.filter(coincategory=category)
+            category_name = self.get_options('category')
+
+            if category_name == 'new-coins':
+                queryset = queryset.order_by(F('publish_date').desc(nulls_last=True))[:25]
+            else:
+                category = get_object_or_404(CoinCategory, name=category_name)
+                queryset = queryset.filter(coincategory=category)
 
         if self.get_options('trend'):
             queryset = queryset.filter(trend=True)

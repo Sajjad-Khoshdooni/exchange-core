@@ -109,7 +109,7 @@ def verify_national_code_with_phone(user: User, retry: int = 2) -> Union[bool, N
             return verify_national_code_with_phone(user, retry - 1)
 
     user.national_code_phone_verified = verified
-    user.save()
+    user.save(update_fields=['national_code_phone_verified'])
 
     return verified
 
