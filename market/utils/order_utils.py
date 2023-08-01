@@ -35,11 +35,12 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
               price: Decimal = None, fill_type: str = Order.LIMIT, raise_exception: bool = True,
               market: str = Wallet.SPOT, order_type: str = Order.ORDINARY,
               parent_lock_group_id: Union[UUID, None] = None, stop_loss_id: Union[int, None] = None,
-              time_in_force: str = Order.GTC, pass_min_notional: bool = False) -> Union[Order, None]:
+              time_in_force: str = Order.GTC, pass_min_notional: bool = False,
+              variant: Union[str, None] = None) -> Union[Order, None]:
 
     assert price or fill_type == Order.MARKET
 
-    wallet = symbol.asset.get_wallet(account, market=market)
+    wallet = symbol.asset.get_wallet(account, market=market, variant=variant)
     if fill_type == Order.MARKET:
         price = Order.get_market_price(symbol, Order.get_opposite_side(side))
         if not price:

@@ -1,5 +1,6 @@
 import logging
 from decimal import Decimal
+import types
 
 from django.conf import settings
 from django.db import transaction
@@ -111,15 +112,16 @@ class OrderSerializer(serializers.ModelSerializer):
         if not symbol.enable and self.context['account'].id != settings.MARKET_MAKER_ACCOUNT_ID:
             raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
 
+        position = types.SimpleNamespace(variant=None)
         market = validated_data.pop('wallet')['market']
         if market == Wallet.MARGIN:
             check_margin_view_permission(self.context['account'], symbol.asset)
-
-            if symbol.base_asset.symbol == Asset.IRT:
-                raise ValidationError(_('{symbol} is not enable in margin trading').format(symbol=symbol))
+            position = symbol.get_margin_position(self.context['account'])
 
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
-        wallet = symbol.asset.get_wallet(self.context['account'], market=market, variant=self.context['variant'])
+        wallet = symbol.asset.get_wallet(
+            self.context['account'], market=market, variant=position.variant or self.context['variant']
+        )
         min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
         self.validate_order_size(
             validated_data['amount'], validated_data['price'], min_order_size, symbol.base_asset.symbol
