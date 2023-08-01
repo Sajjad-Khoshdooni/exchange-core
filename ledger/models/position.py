@@ -56,6 +56,10 @@ class MarginPosition(models.Model):
         return -self.loan_wallet.balance
 
     @property
+    def withdrawable_base_asset(self):
+        return self.total_balance - Decimal(2) * self.total_debt
+
+    @property
     def total_debt(self):
         from ledger.utils.external_price import get_external_price, BUY
         if self.side == SHORT:
@@ -96,7 +100,7 @@ class MarginPosition(models.Model):
 
     def has_enough_margin(self, extending_base_amount):
         if self.side == SHORT and self.leverage == 1:
-            return self.total_balance - Decimal(2) * self.total_debt >= extending_base_amount
+            return self.withdrawable_base_asset >= extending_base_amount
         raise NotImplementedError
 
     def liquidate(self, pipeline):
