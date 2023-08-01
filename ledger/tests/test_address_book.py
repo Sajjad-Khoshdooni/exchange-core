@@ -3,6 +3,8 @@ from django.test import TestCase
 from ledger.models import Asset
 from ledger.utils.test import new_account, new_address_book, new_network, new_network_asset
 from accounts.models.phone_verification import VerificationCode
+from django.urls import reverse
+from ledger.models.address_book import AddressBook
 
 class AddressBookTestCase(TestCase):
 
@@ -33,9 +35,9 @@ class AddressBookTestCase(TestCase):
         self.assertEqual(resp.status_code, 200)
 
     def test_delete_address_book(self):
-        resp = self.client.delete(
-            '/api/v1/addressbook/{}/'.format(self.address_book.pk),
-            data={'otp': f'{self.otp}'}
-        )
-        print(resp)
-        self.assertEqual(resp.status_code, 204)
+        url = '/api/v1/addressbook/{}/'.format(self.address_book.pk)
+        data = {
+            'otp': f'{self.otp.code}'
+        }
+        response = self.client.delete(url, data=data, content_type='application/json')
+        self.assertEqual(response.status_code, 204)
