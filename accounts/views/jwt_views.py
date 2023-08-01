@@ -137,7 +137,7 @@ class ClientInfoSerializer(serializers.Serializer):
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
+    totp = serializers.CharField(write_only=True, allow_null=True, allow_blank=True, required=False)
 
     @classmethod
     def get_token(cls, user):
@@ -199,10 +199,11 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             recipient = User.objects.filter(phone=serializer.initial_data.get('phone')).first()
             if recipient:
                 LoginActivity.send_unsuccessful_login_message(recipient)
-                if e is TokenError:
-                    return Response({'error': e.args[0]}, status=401)
-                else:
-                    raise e
+            if e is TokenError:
+                return Response({'error': e.args[0]}, status=401)
+            else:
+                raise e
+
 
 class SessionTokenObtainPairView(TokenObtainPairView):
     authentication_classes = (SessionAuthentication,)
