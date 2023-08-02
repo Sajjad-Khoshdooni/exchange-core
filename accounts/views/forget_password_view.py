@@ -67,6 +67,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
         user.save(update_fields=['password'])
 
         otp_code.set_token_used()
+
         return user
 
 
