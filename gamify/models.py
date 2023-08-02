@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.db import models
 from django.utils import timezone
 
-from accounts.models import Notification, Account, TrafficSource, User
+from accounts.models import Notification, Account, User
 from ledger.models import Prize, Asset
 from ledger.utils.external_price import BUY, get_external_price
 from ledger.utils.fields import get_amount_field, get_created_field
@@ -243,6 +243,7 @@ class UserMission(models.Model):
     created = get_created_field()
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
     mission = models.ForeignKey(MissionTemplate, on_delete=models.CASCADE)
+    finished = models.BooleanField(default=False)
 
     def __str__(self):
         return '%s %s' % (self.user, self.mission)
