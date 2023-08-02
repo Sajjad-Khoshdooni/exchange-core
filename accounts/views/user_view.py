@@ -28,7 +28,6 @@ class UserSerializer(serializers.ModelSerializer):
         else:
             return user.chat_uuid
 
-
     def get_is_auth2fa_active(self, user: User):
         device = TOTPDevice.objects.filter(user=user).first()
         return device is not None and device.confirmed
@@ -40,7 +39,8 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw', 'chat_uuid', 'is_auth2fa_active',
+            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw',
+            'chat_uuid', 'is_auth2fa_active',
         )
         ref_name = "User"
 
@@ -87,16 +87,14 @@ class UserDetailView(RetrieveAPIView):
 
 class AuthTokenSerializer(serializers.ModelSerializer):
     CHOICES = [(scope, scope) for scope in CustomToken.SCOPES]
-    ip_list = serializers.CharField(required=False)
-    scopes = serializers.MultipleChoiceField(choices=CHOICES, required=False, allow_null=True, allow_blank=True)
     ip_list = serializers.CharField()
+    scopes = serializers.MultipleChoiceField(choices=CHOICES, required=False, allow_null=True, allow_blank=True)
     sms_code = serializers.CharField(write_only=True)
     totp = serializers.CharField(write_only=True, allow_null=True, allow_blank=True, required=False)
 
     class Meta:
         model = CustomToken
-        fields = ('ip_list', 'scopes',)
-        fields = ('ip_list', 'sms_code', 'totp')
+        fields = ('ip_list', 'scopes', 'sms_code', 'totp')
 
     def validate(self, data):
         user = self.context['request'].user
