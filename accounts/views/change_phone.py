@@ -32,8 +32,6 @@ class InitiateChangePhoneSerializer(serializers.Serializer):
 
 class InitiateChangePhone(APIView):
     def post(self, request):
-        dt = request.data
-        print(dt)
         serializer = InitiateChangePhoneSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data['token'])
@@ -73,7 +71,6 @@ class ChangePhoneView(APIView):
         serializer.is_valid(raise_exception=True)
         return Response({'msg': 'کد باموفقیت ارسال شد.'})
 
-    # todo : suspension
     def put(self, request):
         serializer = NewPhoneVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -81,6 +78,7 @@ class ChangePhoneView(APIView):
         user.phone = serializer.validated_data['new_phone']
         user.username = user.phone
         user.level = min(user.level, user.LEVEL2)
-        user.save()
+        user.national_code_phone_verified = False
+        user.save(update_fields=['level', 'national_code_phone_verified'])
         send_successful_change_phone_email(user)
         return Response({'msg': 'شماره تلفن همراه با‌موفقیت تغییر کرد.'})
