@@ -227,12 +227,12 @@ class MarginBalanceAPIView(APIView):
         })
 
 
-class MarginCollateralAPIView(APIView):
+class MarginTransferBalanceAPIView(APIView):
 
     def get(self, request: Request):
         transfer_type = request.query_params.get('transfer_type')
         from ledger.models import MarginTransfer
-        if transfer_type == MarginTransfer.MARGIN_TO_POSITION:
+        if transfer_type in (MarginTransfer.MARGIN_TO_POSITION, MarginTransfer.MARGIN_TO_SPOT):
             base_asset = Asset.get(request.query_params.get('base_asset'))
             margin_cross_wallet = base_asset.get_wallet(request.user.account, market=Wallet.MARGIN, variant=None)
             return Response({
