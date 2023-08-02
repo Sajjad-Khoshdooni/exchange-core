@@ -1,5 +1,5 @@
-from django.db.models import QuerySet, F
-from rest_framework import serializers
+from django.utils import timezone
+from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -99,10 +99,11 @@ class UserMissionSerializer(serializers.ModelSerializer):
     tasks = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
     expiration = serializers.SerializerMethodField()
+    expired = serializers.SerializerMethodField()
 
     class Meta:
         model = UserMission
-        fields = ('name', 'achievements', 'tasks', 'finished', 'expiration')
+        fields = ('id', 'name', 'achievements', 'tasks', 'finished', 'expiration', 'expired')
 
     def get_achievements(self, user_mission: UserMission):
         user = self.context['request'].user
@@ -126,6 +127,11 @@ class UserMissionSerializer(serializers.ModelSerializer):
     def get_expiration(self, user_mission: UserMission):
         return user_mission.mission.expiration
 
+    def get_expired(self, user_mission: UserMission):
+        if user_mission.mission.expiration:
+            return timezone.now() > user_mission.mission.expiration
+        return False
+
 
 class MissionsAPIView(ListAPIView):
     serializer_class = UserMissionSerializer
@@ -139,6 +145,15 @@ class ActiveMissionsAPIView(RetrieveAPIView):
 
     def get_object(self):
         return UserMission.objects.filter(user=self.request.user, finished=False, mission__active=True).order_by('id').first()
+
+    def retrieve(self, request, *args, **kwargs):
+        user_mission = self.get_object()
+        resp = {}
+
+        if user_mission:
+            resp = UserMissionSerializer(user_mission, context={'request': request}).data
+
+        return Response(resp, status=status.HTTP_200_OK)
 
 
 class TotalVoucherAPIView(APIView):
