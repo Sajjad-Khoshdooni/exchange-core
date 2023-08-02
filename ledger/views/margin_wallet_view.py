@@ -213,17 +213,17 @@ class MarginBalanceAPIView(APIView):
             margin_cross_wallet = symbol.base_asset.get_wallet(request.user.account, market=Wallet.MARGIN, variant=None)
             return Response({
                 'asset': symbol.base_asset.symbol,
-                'free': get_presentation_amount(margin_cross_wallet.get_free() / Decimal(2))
+                'balance': get_presentation_amount(margin_cross_wallet.get_free() / Decimal(2))
             })
 
         position = MarginPosition.objects.filter(
             account=request.user.account, symbol=symbol, status=MarginPosition.OPEN).first()
         if not position or not position.amount:
-            return Response({'asset': symbol.asset.symbol, 'free': get_presentation_amount(Decimal(0))})
+            return Response({'asset': symbol.asset.symbol, 'balance': get_presentation_amount(Decimal(0))})
 
         return Response({
             'asset': symbol.asset.symbol,
-            'free': get_presentation_amount(position.amount / (Decimal(1) - symbol.taker_fee), symbol.step_size)
+            'balance': get_presentation_amount(position.amount / (Decimal(1) - symbol.taker_fee), symbol.step_size)
         })
 
 
@@ -237,7 +237,7 @@ class MarginCollateralAPIView(APIView):
             margin_cross_wallet = base_asset.get_wallet(request.user.account, market=Wallet.MARGIN, variant=None)
             return Response({
                 'asset': base_asset.symbol,
-                'free': get_presentation_amount(margin_cross_wallet.get_free())
+                'balance': get_presentation_amount(margin_cross_wallet.get_free())
             })
         elif transfer_type == MarginTransfer.POSITION_TO_MARGIN:
             symbol_name = request.query_params.get('symbol')
@@ -247,9 +247,9 @@ class MarginCollateralAPIView(APIView):
             position = MarginPosition.objects.filter(
                 account=request.user.account, symbol=symbol, status=MarginPosition.OPEN).first()
             if not position:
-                return Response({'asset': symbol.asset.symbol, 'free': get_presentation_amount(Decimal(0))})
+                return Response({'asset': symbol.asset.symbol, 'balance': get_presentation_amount(Decimal(0))})
 
             return Response({
                 'asset': symbol.base_asset.symbol,
-                'free': get_presentation_amount(position.withdrawable_base_asset)
+                'balance': get_presentation_amount(position.withdrawable_base_asset)
             })
