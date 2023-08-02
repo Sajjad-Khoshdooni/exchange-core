@@ -55,11 +55,9 @@ class ForgotPasswordSerializer(serializers.Serializer):
         totp = validated_data.pop('totp')
         otp_code = VerificationCode.get_by_token(token, VerificationCode.SCOPE_FORGET_PASSWORD)
 
-        user = User.objects.get(phone=otp_code.phone)
         if not otp_code:
             raise ValidationError({'token': 'توکن نامعتبر است.'})
-        otp_code.set_code_used()
-
+        user = User.objects.get(phone=otp_code.phone)
         if not user.is_2fa_valid(totp):
             raise ValidationError({'otp': ' رمز موقت نامعتبر است.'})
 
