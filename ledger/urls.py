@@ -4,6 +4,7 @@ from ledger import views
 
 urlpatterns = [
     path('v1/assets/', views.AssetsViewSet.as_view({'get': 'list'})),
+    path('v1/assets/categories/', views.CoinCategoryListView.as_view()),
     path('v1/networkassets/', views.NetworkAssetView.as_view()),
 
     path('v1/asset/overview/', views.AssetOverviewAPIView.as_view()),
@@ -75,5 +76,4 @@ urlpatterns = [
     path('v1/pnl/overview/', views.PNLOverview.as_view()),
 
     path('v1/fast_buy/', views.FastBuyTokenAPI.as_view()),
-
 ]

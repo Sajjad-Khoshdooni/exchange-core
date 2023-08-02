@@ -25,14 +25,16 @@ class VerificationCode(models.Model):
     SCOPE_TELEPHONE = 'tel'
     SCOPE_CHANGE_PASSWORD = 'change_pass'
     SCOPE_CHANGE_PHONE = 'change_phone'
-    SCOPE_2FA_ACTIVATE = '2fa_activate'
+    SCOPE_2FA = '2fa'
+    SCOPE_API_TOKEN = 'api_token'
+    SCOPE_ADDRESS_BOOK = 'address_book'
 
     SCOPE_CHOICES = [
         (SCOPE_FORGET_PASSWORD, SCOPE_FORGET_PASSWORD), (SCOPE_VERIFY_PHONE, SCOPE_VERIFY_PHONE),
         (SCOPE_CRYPTO_WITHDRAW, SCOPE_CRYPTO_WITHDRAW), (SCOPE_TELEPHONE, SCOPE_TELEPHONE),
         (SCOPE_CHANGE_PASSWORD, SCOPE_CHANGE_PASSWORD), (SCOPE_CHANGE_PHONE, SCOPE_CHANGE_PHONE),
         (SCOPE_VERIFY_EMAIL, SCOPE_VERIFY_EMAIL), (SCOPE_FIAT_WITHDRAW, SCOPE_FIAT_WITHDRAW),
-        (SCOPE_2FA_ACTIVATE, SCOPE_2FA_ACTIVATE),
+        (SCOPE_2FA, SCOPE_2FA), (SCOPE_API_TOKEN, SCOPE_API_TOKEN), (SCOPE_ADDRESS_BOOK, SCOPE_ADDRESS_BOOK)
     ]
 
     created = models.DateTimeField(auto_now_add=True)
@@ -66,7 +68,8 @@ class VerificationCode(models.Model):
 
     scope = models.CharField(
         max_length=32,
-        choices=SCOPE_CHOICES
+        choices=SCOPE_CHOICES,
+        db_index=True
     )
 
     user = models.ForeignKey(

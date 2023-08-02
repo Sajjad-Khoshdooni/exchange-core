@@ -7,18 +7,21 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.models import AddressBook, Asset, Network, NetworkAsset
+from ledger.models import AddressBook, Asset, Network, NetworkAsset, Transfer
 from ledger.models.asset import AssetSerializerMini
 from ledger.views.wallet_view import NetworkAssetSerializer
+from accounts.models.phone_verification import VerificationCode
 
 
-class AddressBookSerializer(serializers.ModelSerializer):
+class AddressBookCreateSerializer(serializers.ModelSerializer):
     account = serializers.CharField(read_only=True)
     asset = AssetSerializerMini(read_only=True)
     network = serializers.CharField()
     coin = serializers.CharField(write_only=True, required=False, default=None)
     deleted = serializers.BooleanField(read_only=True)
     network_info = serializers.SerializerMethodField()
+    sms_code = serializers.CharField(write_only=True)
+    totp = serializers.CharField(write_only=True, allow_null=True, allow_blank=True, required=False)
 
     def validate(self, attrs):
         user = self.context['request'].user
@@ -26,6 +29,8 @@ class AddressBookSerializer(serializers.ModelSerializer):
         name = attrs['name']
         address = attrs['address']
         network = get_object_or_404(Network, symbol=attrs['network'])
+        sms_code = attrs['sms_code']
+        totp = attrs.get('totp', None)
 
         if attrs['coin']:
             asset = get_object_or_404(Asset, symbol=attrs['coin'])
@@ -35,6 +40,12 @@ class AddressBookSerializer(serializers.ModelSerializer):
         if not re.match(network.address_regex, address):
             raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
 
+        sms_verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user)
+        if not sms_verification_code:
+            raise ValidationError({'code': 'کد نامعتبر است.'})
+        sms_verification_code.set_code_used()
+        if not user.is_2fa_valid(totp):
+            raise ValidationError({'token': 'رمز موقت صحیح نمی‌باشد.'})
         return {
             'account': account,
             'network': network,
@@ -53,11 +64,28 @@ class AddressBookSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AddressBook
-        fields = ('id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'network_info')
+        fields = ('id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'network_info', 'sms_code', 'totp')
+
+
+class AddressBookDestroySerializer(serializers.Serializer):
+    sms_code = serializers.CharField(write_only=True)
+    totp = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+
+    def validate(self, data):
+        user = self.context['request'].user
+        sms_code = data.get('sms_code')
+        verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user)
+        if not verification_code:
+            raise ValidationError({'code': 'کد نامعتبر است.'})
+        verification_code.set_code_used()
+        totp = data.get('totp')
+        if not user.is_2fa_valid(totp):
+            raise ValidationError({'totp': ' رمز موقت نامعتبر است.'})
+        return data
 
 
 class AddressBookView(ModelViewSet):
-    serializer_class = AddressBookSerializer
+    serializer_class = AddressBookCreateSerializer
 
     pagination_class = LimitOffsetPagination
 
@@ -79,6 +107,11 @@ class AddressBookView(ModelViewSet):
         return address_books
 
     def destroy(self, request, *args, **kwargs):
+        serializer = AddressBookDestroySerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
         instance = self.get_object()
         instance.deleted = True
         instance.save()

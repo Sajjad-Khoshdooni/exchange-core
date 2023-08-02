@@ -12,6 +12,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from accounts.models.user_feature_perm import UserFeaturePerm
 from analytics.event.producer import get_kafka_producer
@@ -61,8 +62,8 @@ class User(AbstractUser):
         }
     )
 
-    first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام',)
-    last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی',)
+    first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام', )
+    last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی', )
 
     national_code = models.CharField(
         max_length=10,
@@ -71,11 +72,12 @@ class User(AbstractUser):
         db_index=True,
         validators=[national_card_code_validator],
     )
-    national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی',)
-    national_code_phone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی و موبایل (شاهکار)',)
+    national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی', )
+    national_code_phone_verified = models.BooleanField(null=True, blank=True,
+                                                       verbose_name='تاییدیه کد ملی و موبایل (شاهکار)', )
 
-    birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد',)
-    birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد',)
+    birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد', )
+    birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد', )
 
     level_2_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تایید سطح ۲')
     level_3_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تایید سطح 3')
@@ -99,7 +101,7 @@ class User(AbstractUser):
     reject_reason = models.CharField(
         max_length=32,
         blank=True,
-        choices=((NATIONAL_CODE_DUPLICATED, NATIONAL_CODE_DUPLICATED), )
+        choices=((NATIONAL_CODE_DUPLICATED, NATIONAL_CODE_DUPLICATED),)
     )
 
     first_fiat_deposit_date = models.DateTimeField(blank=True, null=True, verbose_name='زمان اولین واریز ریالی')
@@ -172,6 +174,10 @@ class User(AbstractUser):
         else:
             return super_name
 
+    def is_2fa_valid(self, totp):
+        device = TOTPDevice.objects.filter(user=self).first()
+        return self.is_staff or device is None or not device.confirmed or device.verify_token(totp)
+
     def get_account(self) -> Account:
         if not self.id or self.is_anonymous:
             return Account(user=self)
@@ -227,7 +233,8 @@ class User(AbstractUser):
                     self.level_3_verify_datetime = timezone.now()
 
                 self.archived = False
-                self.save(update_fields=['verify_status', 'level', 'level_2_verify_datetime', 'level_3_verify_datetime', 'archived'])
+                self.save(update_fields=['verify_status', 'level', 'level_2_verify_datetime', 'level_3_verify_datetime',
+                                         'archived'])
 
             if self.level == User.LEVEL2:
                 from gamify.utils import check_prize_achievements, Task
@@ -257,7 +264,7 @@ class User(AbstractUser):
     @property
     def primary_data_verified(self) -> bool:
         return self.first_name and self.first_name_verified and self.last_name and self.last_name_verified \
-               and self.birth_date and self.birth_date_verified
+            and self.birth_date and self.birth_date_verified
 
     def get_level2_verify_fields(self):
         from financial.models import BankCard
