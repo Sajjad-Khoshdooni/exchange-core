@@ -39,4 +39,3 @@ class Referral(models.Model):
 
     def __str__(self):
         return f'{self.owner} ({self.owner_share_percent})'
-
