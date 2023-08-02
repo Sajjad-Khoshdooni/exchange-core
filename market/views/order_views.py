@@ -13,7 +13,7 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
-from accounts.authentication import TradeAuthentication
+from accounts.authentication import TradeAuthentication, CustomTokenAuthentication
 from accounts.views.jwt_views import DelegatedAccountMixin, user_has_delegate_permission
 from ledger.models.wallet import ReserveWallet
 from market.models import Order, CancelRequest, PairSymbol
@@ -100,7 +100,7 @@ class OrderViewSet(mixins.CreateModelMixin,
 
 
 class OpenOrderListAPIView(APIView):
-    authentication_classes = (SessionAuthentication, TradeAuthentication, JWTAuthentication)
+    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
 
     def get(self, request, *args, **kwargs):
