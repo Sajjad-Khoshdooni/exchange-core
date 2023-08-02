@@ -1,13 +1,12 @@
 from django.contrib.auth.password_validation import validate_password
-from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import VerificationCode
-from accounts.validators import mobile_number_validator
 from accounts.utils.notif import send_successful_change_phone_email
+from accounts.validators import mobile_number_validator
 
 
 class InitiateChangePhoneSerializer(serializers.Serializer):
@@ -21,12 +20,11 @@ class InitiateChangePhoneSerializer(serializers.Serializer):
         password = data.get('password')
         totp = data.get('totp')
         validate_password(password=password, user=user)
-        otp_verification = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_CHANGE_PHONE)
+        otp_verification = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_CHANGE_PHONE, user=user)
         if not otp_verification:
             raise ValidationError('کد ارسال شده نامعتبر است.')
         otp_verification.set_code_used()
-        device = TOTPDevice.objects.filter(user=user).first()
-        if not (device is None or not device.confirmed or device.verify_token(totp)):
+        if not user.is_2fa_valid(totp):
             raise ValidationError('رمز موقت نامعتبر است.')
         data['token'] = otp_verification.token
         return data
@@ -34,6 +32,8 @@ class InitiateChangePhoneSerializer(serializers.Serializer):
 
 class InitiateChangePhone(APIView):
     def post(self, request):
+        dt = request.data
+        print(dt)
         serializer = InitiateChangePhoneSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data['token'])
@@ -83,4 +83,4 @@ class ChangePhoneView(APIView):
         user.level = min(user.level, user.LEVEL2)
         user.save()
         send_successful_change_phone_email(user)
-        return Response({'msg' : 'شماره تلفن همراه با‌موفقیت تغییر کرد.'})
+        return Response({'msg': 'شماره تلفن همراه با‌موفقیت تغییر کرد.'})
