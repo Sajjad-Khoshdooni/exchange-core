@@ -1,4 +1,7 @@
 from django.contrib import admin
+from django.contrib.admin import SimpleListFilter
+from django.db.models import Q
+from django.utils import timezone
 
 from gamify import models
 from gamify.utils import clone_mission_template
@@ -46,11 +49,36 @@ class MissionTemplateAdmin(admin.ModelAdmin):
             clone_mission_template(mission)
 
 
+class UserMissionExpiredFilter(SimpleListFilter):
+    title = 'منقضی شده'
+    parameter_name = 'expired'
+
+    def lookups(self, request, model_admin):
+        return [('yes', 'بله'), ('no', 'خیر')]
+
+    def queryset(self, request, queryset):
+        action = self.value()
+
+        if action is None:
+            return queryset
+
+        q = Q(mission__expiration__isnull=False, mission__expiration__lt=timezone.now())
+
+        if action == 'no':
+            q = ~q
+
+        return queryset.filter(q)
+
+
 @admin.register(models.UserMission)
 class UserMissionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'mission')
+    list_display = ('user', 'mission', 'finished', 'expired', 'get_expiration')
     readonly_fields = ('user', )
-    list_filter = ('mission', )
+    list_filter = ('mission', 'finished', UserMissionExpiredFilter)
+
+    @admin.display(description='expiration', ordering='mission__expiration')
+    def get_expiration(self, mission: models.UserMission):
+        return mission.mission.expiration
 
 
 @admin.register(models.Task)

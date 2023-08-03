@@ -5,7 +5,7 @@ from django.db import transaction
 from accounts.models import Account
 from gamify.models import Task, MissionTemplate, UserMission
 
-__all__ = ('Task', 'check_prize_achievements')
+__all__ = ('Task', 'check_prize_achievements', 'clone_mission_template')
 
 logger = logging.getLogger(__name__)
 
