@@ -189,9 +189,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     client_info=client_info,
                     refresh_token=serializer.validated_data['refresh']
                 )
+                if LoginActivity.objects.filter(user=user, device=login_activity.device).count() == 1:
+                    user.suspended(timezone.timedelta(hours=1))
                 if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
                                                 ip=login_activity.ip).count() == 1:
-                    user.suspended(timezone.timedelta(hours=1))
                     LoginActivity.send_successful_login_message(login_activity)
                 return Response(serializer.validated_data, status=status.HTTP_200_OK)
             else:
