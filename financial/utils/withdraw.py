@@ -537,22 +537,25 @@ class JibimoChannel(FiatWithdraw):
         gateway = self.gateway
         if not gateway.batch_id:
             resp = self.collect_api('/v2/batch-pay/create', method='POST', data={
-                    "title": "raastin_withdraw",
-                    "matching": True,
-                    "conversion": True,
-                    "validation": "active_account",
-                    "pay_after_validation": True
-                }
-            )
+                "title": "raastin_withdraw",
+                "matching": True,
+                "conversion": True,
+                "validation": "active_account",
+                "pay_after_validation": True
+            })
+
             if resp.success:
                 gateway.batch_id = resp.data['batch_id']
                 gateway.save(update_fields=['batch_id'])
+
         return gateway.batch_id
 
     def create_withdraw(self, transfer: BaseTransfer) -> Withdraw:
         batch = self.get_batch_id()
         assert (batch, 'Unsuccessful batch creation attempt')
+
         resp = self.collect_api(f'/v2/batch-pay/{batch}/items/create', method='POST', data={
+            "data": {
                 "uuid": str(transfer.group_id),
                 "row": transfer.bank_account.id,
                 "name": transfer.bank_account.user.first_name,
@@ -562,7 +565,8 @@ class JibimoChannel(FiatWithdraw):
                 "account": transfer.bank_account.deposit_address,
                 "national_code": transfer.bank_account.user.national_code
             }
-        )
+        })
+
         assert (resp.success, 'Unsuccessful payment request')
         return Withdraw(
             tracking_id=resp.data['id'],
