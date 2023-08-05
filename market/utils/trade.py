@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from decimal import Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from django.conf import settings
 
@@ -179,6 +179,19 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
             position = order.symbol.get_margin_position(order.account)
             if loan_type == MarginLoan.REPAY:
                 trade_amount = min(position.amount, trade_amount)
+            trade_value = trade_price * trade.amount
+            if not position.has_enough_margin(trade_value):
+                margin_cross_wallet = order.base_wallet.asset.get_wallet(
+                    order.base_wallet.account, market=order.base_wallet.market, variant=None
+                )
+                margin_cross_wallet.has_balance(trade_value, raise_exception=True)
+                pipeline.new_trx(
+                    group_id=uuid4(),
+                    sender=margin_cross_wallet,
+                    receiver=order.base_wallet,
+                    amount=trade_value,
+                    scope=Trx.MARGIN_TRANSFER
+                )
             MarginLoan.new_loan(
                 account=order.account,
                 asset=order.symbol.asset,

@@ -203,22 +203,13 @@ class Order(models.Model):
         return {'price__lte': price} if side == BUY else {'price__gte': price}
 
     @classmethod
-    def get_to_lock_wallet(cls, symbol, wallet, base_wallet, side, lock_amount, pipeline: WalletPipeline) -> Wallet:
+    def get_to_lock_wallet(cls, wallet, base_wallet, side, lock_amount) -> Wallet:
         if wallet.market == Wallet.MARGIN:
-            position = symbol.get_margin_position(wallet.account)
-            if not position.has_enough_margin(lock_amount):
-                margin_cross_wallet = base_wallet.asset.get_wallet(
-                    base_wallet.account, market=base_wallet.market, variant=None
-                )
-                margin_cross_wallet.has_balance(lock_amount, raise_exception=True)
-                pipeline.new_trx(
-                    group_id=uuid4(),
-                    sender=margin_cross_wallet,
-                    receiver=base_wallet,
-                    amount=lock_amount,
-                    scope=Trx.MARGIN_TRANSFER
-                )
-            return base_wallet
+            margin_cross_wallet = base_wallet.asset.get_wallet(
+                base_wallet.account, market=base_wallet.market, variant=None
+            )
+            margin_cross_wallet.has_balance(lock_amount, raise_exception=True)
+            return margin_cross_wallet
         return base_wallet if side == BUY else wallet
 
     @classmethod
@@ -251,7 +242,7 @@ class Order(models.Model):
 
     def acquire_lock(self, pipeline: WalletPipeline):
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side, self.wallet.market)
-        to_lock_wallet = self.get_to_lock_wallet(self.symbol, self.wallet, self.base_wallet, self.side, lock_amount, pipeline)
+        to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side, lock_amount)
 
         if self.side == BUY and self.fill_type == Order.MARKET:
             free_amount = to_lock_wallet.get_free()
