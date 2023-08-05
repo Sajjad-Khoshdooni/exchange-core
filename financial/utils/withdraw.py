@@ -63,7 +63,7 @@ class FiatWithdraw:
     def create_withdraw(self, transfer: BaseTransfer) -> Withdraw:
         raise NotImplementedError
 
-    def get_withdraw_status(self, request_id: int) -> Withdraw:
+    def get_withdraw_status(self, withdraw_request: FiatWithdrawRequest) -> Withdraw:
         raise NotImplementedError
 
     def get_total_wallet_irt_value(self):
@@ -138,8 +138,8 @@ class PayirChannel(FiatWithdraw):
             receive_datetime=self.get_estimated_receive_time(timezone.now())
         )
 
-    def get_withdraw_status(self, request_id: int) -> Withdraw:
-        data = self.collect_api(f'/api/v2/cashouts/track/{request_id}')
+    def get_withdraw_status(self, withdraw_request: FiatWithdrawRequest) -> Withdraw:
+        data = self.collect_api(f'/api/v2/cashouts/track/{withdraw_request.ref_id}')
 
         mapping_status = {
             3: self.CANCELED,
@@ -310,10 +310,10 @@ class ZibalChannel(FiatWithdraw):
             receive_datetime=receive_datetime.replace(tzinfo=pytz.utc).astimezone()
         )
 
-    def get_withdraw_status(self, request_id: int) -> Withdraw:
+    def get_withdraw_status(self, withdraw_request: FiatWithdrawRequest) -> Withdraw:
         data = self.collect_api(f'/v1/report/checkout/inquire', method='POST', data={
             "walletId": self.gateway.wallet_id,
-            'uniqueCode': str(request_id)
+            'uniqueCode': str(withdraw_request.ref_id)
         })
 
         if 'details' in data:
@@ -489,8 +489,8 @@ class JibitChannel(FiatWithdraw):
             receive_datetime=next_ach_clear_time()
         )
 
-    def get_withdraw_status(self, request_id: int) -> Withdraw:
-        resp = self.collect_api('/v2/transfers?transferID={}'.format(request_id))
+    def get_withdraw_status(self, withdraw_request: FiatWithdrawRequest) -> Withdraw:
+        resp = self.collect_api('/v2/transfers?transferID={}'.format(withdraw_request.ref_id))
         data = resp.get_success_data()
 
         mapping_status = {
@@ -536,7 +536,6 @@ class JibimoChannel(FiatWithdraw):
     def check_batch(self):
         gateway = self.gateway
         if not gateway.batch_id:
-            # todo: check options
             resp = self.collect_api('/v2/batch-pay/create', method='POST', data={
                 "title": "batch_withdraw",
                 "matching": True,
@@ -552,33 +551,32 @@ class JibimoChannel(FiatWithdraw):
 
     def create_withdraw(self, transfer: BaseTransfer) -> Withdraw:
         batch = self.check_batch()
-
-        resp = self.collect_api('/v2/batch-pay/{batch}/items/create', method='POST', data={
-                "uuid": transfer.group_id,
-                "row": transfer.bank_account.id,
-                "name": transfer.bank_account.user.first_name,
-                "family": transfer.bank_account.user.last_name,
-                "amount": transfer.amount,
-                "iban": transfer.bank_account.iban,
-                "account": transfer.bank_account.deposit_address,
-                "bank_code": transfer.bank_account.bank,
-                "mobile": transfer.bank_account.user.phone,
-                "national_code": transfer.bank_account.user.national_code
-            }
-        )
-        if resp.success:
-            return Withdraw(
-                tracking_id=resp.data['id'],
-                status=FiatWithdrawRequest.PENDING,
-                receive_datetime=next_ach_clear_time()
+        if batch:
+            resp = self.collect_api(f'/v2/batch-pay/{batch}/items/create', method='POST', data={
+                    "uuid": transfer.group_id,
+                    "row": transfer.bank_account.id,
+                    "name": transfer.bank_account.user.first_name,
+                    "family": transfer.bank_account.user.last_name,
+                    "amount": transfer.amount,
+                    "iban": transfer.bank_account.iban,
+                    "account": transfer.bank_account.deposit_address,
+                    "bank_code": transfer.bank_account.bank,
+                    "mobile": transfer.bank_account.user.phone,
+                    "national_code": transfer.bank_account.user.national_code
+                }
             )
+            if resp.success:
+                return Withdraw(
+                    tracking_id=resp.data['id'],
+                    status=FiatWithdrawRequest.PENDING,
+                    receive_datetime=next_ach_clear_time()
+                )
 
-    def get_withdraw_status(self, request_id: int) -> Withdraw:
+    def get_withdraw_status(self, withdraw_request: FiatWithdrawRequest) -> Withdraw:
         resp = self.collect_api('/v2/batch-pay/item/report', method='GET', data={
-                "item_id": request_id,
+                "item_id": withdraw_request.group_id,
             }
         )
-        # todo : correction
         if resp.success:
             return Withdraw(
                 tracking_id=resp.data['id'],

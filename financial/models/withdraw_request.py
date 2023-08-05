@@ -130,7 +130,7 @@ class FiatWithdrawRequest(BaseTransfer):
         from financial.utils.withdraw import FiatWithdraw
 
         withdraw_handler = FiatWithdraw.get_withdraw_channel(self.gateway)
-        withdraw_data = withdraw_handler.get_withdraw_status(self.ref_id)
+        withdraw_data = withdraw_handler.get_withdraw_status(self)
         status = withdraw_data.status
 
         logger.info(f'FiatRequest {self.id} status: {status}')
