@@ -454,6 +454,9 @@ class ConvertDustView(APIView):
                     allow_stale=True,
                 )
 
+                if price is None:
+                    continue
+
                 free = wallet.get_free()
                 free_irt_value = free * price
 
