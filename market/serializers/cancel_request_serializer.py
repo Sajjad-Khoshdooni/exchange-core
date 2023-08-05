@@ -50,7 +50,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
             ).first()
             if not stop_loss:
                 raise NotFound(_('StopLoss not found'))
-            if stop_loss.wallet.variant and not self.context['allow_cancel_strategy_orders']:
+            if stop_loss.wallet.is_for_strategy and not self.context['allow_cancel_strategy_orders']:
                 raise PermissionDenied({'message': _('You do not have permission to perform this action.'), })
             with WalletPipeline() as pipeline:
                 stop_loss.delete()
@@ -81,7 +81,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
             ).first()
             if not order or order.stop_loss:
                 raise NotFound(_('Order not found'))
-            if order.wallet.variant and not self.context['allow_cancel_strategy_orders']:
+            if order.wallet.is_for_strategy and not self.context['allow_cancel_strategy_orders']:
                 raise PermissionDenied({'message': _('You do not have permission to perform this action.'), })
 
         return self.cancel_order(order, validated_data, request=self.context['request'])
