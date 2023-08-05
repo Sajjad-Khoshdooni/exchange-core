@@ -213,7 +213,7 @@ class MarginBalanceAPIView(APIView):
             margin_cross_wallet = symbol.base_asset.get_wallet(request.user.account, market=Wallet.MARGIN, variant=None)
             return Response({
                 'asset': symbol.base_asset.symbol,
-                'balance': get_presentation_amount(margin_cross_wallet.get_free() / Decimal(2))
+                'balance': get_presentation_amount(margin_cross_wallet.get_free())
             })
 
         position = MarginPosition.objects.filter(

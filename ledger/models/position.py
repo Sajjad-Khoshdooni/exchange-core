@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from django.db import models
 
 from accounts.models import Account
-from ledger.utils.external_price import SHORT, LONG, BUY, SELL
+from ledger.utils.external_price import SHORT, LONG, BUY, SELL, get_external_price
 from ledger.utils.fields import get_amount_field
 from market.models import PairSymbol
 
@@ -44,7 +44,7 @@ class MarginPosition(models.Model):
 
     @property
     def total_balance(self):
-        return self.margin_base_wallet.get_free() + self.margin_wallet.get_free()
+        return self.margin_base_wallet.get_free()
 
     @property
     def loan_wallet(self):
@@ -57,13 +57,14 @@ class MarginPosition(models.Model):
 
     @property
     def withdrawable_base_asset(self):
-        return self.total_balance - Decimal(2) * self.total_debt
+        return self.total_balance - self.total_debt
 
     @property
     def total_debt(self):
-        from ledger.utils.external_price import get_external_price, BUY
         if self.side == SHORT:
-            price = get_external_price(self.symbol.asset.symbol, base_coin=self.symbol.base_asset.symbol, side=BUY)
+            from market.models import Order
+            price = Order.get_top_price(self.symbol.id, SELL) or \
+                    get_external_price(self.symbol.asset.symbol, base_coin=self.symbol.base_asset.symbol, side=BUY)
         else:
             price = Decimal(1)
         return self.debt_amount * price
