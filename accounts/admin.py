@@ -258,7 +258,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     )
     preserve_filters = ('archived', )
 
-    search_fields = (*UserAdmin.search_fields, 'national_code')
+    search_fields = (*UserAdmin.search_fields, 'national_code', 'phone')
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
