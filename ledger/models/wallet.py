@@ -37,6 +37,12 @@ class Wallet(models.Model):
     expiration = models.DateTimeField(null=True, blank=True)
     credit = get_amount_field(default=0)
 
+    @property
+    def is_for_strategy(self):
+        if not self.variant:
+            return False
+        return ReserveWallet.objects.filter(group_id=self.variant).exists()
+
     def __str__(self):
         market_verbose = dict(self.MARKET_CHOICES)[self.market]
         return '%s Wallet %s %s [%s] %s' % (market_verbose, self.asset, self.variant, self.account, self.balance)

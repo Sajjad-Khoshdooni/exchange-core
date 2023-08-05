@@ -198,7 +198,7 @@ class OrderSerializer(serializers.ModelSerializer):
         return decimal_to_str(floor_precision(price, order.symbol.tick_size))
 
     def get_allow_cancel(self, instance: Order):
-        if instance.wallet.variant:
+        if instance.wallet.is_for_strategy:
             return False
         return True
 

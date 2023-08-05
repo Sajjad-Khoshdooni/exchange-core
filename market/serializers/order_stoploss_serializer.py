@@ -37,7 +37,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
         return str(instance.id)
 
     def get_allow_cancel(self, instance: Union[Order, StopLoss]):
-        if instance.wallet.variant:
+        if instance.wallet.is_for_strategy:
             return False
         return True
 
