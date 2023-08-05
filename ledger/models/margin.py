@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from django.db import models
 from django.db.models import CheckConstraint, Q, UniqueConstraint
+from rest_framework import serializers
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance
@@ -46,7 +47,12 @@ class MarginTransfer(models.Model):
         if self.type in (self.MARGIN_TO_POSITION, self.POSITION_TO_MARGIN):
             if not self.position_symbol:
                 raise ValueError('position_symbol is required')
-            position = self.position_symbol.get_margin_position(self.account)
+            from ledger.models import MarginPosition
+            position = MarginPosition.objects.filter(
+                account=self.account,
+                symbol=self.position_symbol,
+                status=MarginPosition.OPEN
+            ).first()
             if not position:
                 raise ValueError('No open position found for this symbol')
             position_wallet = self.asset.get_wallet(self.account, Wallet.MARGIN, position.variant)
@@ -196,3 +202,15 @@ class CloseRequest(models.Model):
         close_request.save()
 
         return close_request
+
+
+class SymbolField(serializers.CharField):
+    def to_representation(self, value: PairSymbol):
+        if value:
+            return value.name
+
+    def to_internal_value(self, data: str):
+        if not data:
+            return
+        else:
+            return PairSymbol.get_by(name=data)
