@@ -233,7 +233,7 @@ class MarginTransferBalanceAPIView(APIView):
         transfer_type = request.query_params.get('transfer_type')
         from ledger.models import MarginTransfer
         if transfer_type in (MarginTransfer.MARGIN_TO_POSITION, MarginTransfer.MARGIN_TO_SPOT):
-            base_asset = Asset.get(request.query_params.get('base_asset'))
+            base_asset = Asset.get(request.query_params.get('symbol'))
             margin_cross_wallet = base_asset.get_wallet(request.user.account, market=Wallet.MARGIN, variant=None)
             return Response({
                 'asset': base_asset.symbol,
