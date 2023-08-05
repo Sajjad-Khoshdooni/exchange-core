@@ -37,9 +37,8 @@ class ChangePasswordSerializer(serializers.Serializer):
 
     def update(self, user, validated_data):
         user.set_password(validated_data['password'])
-        user.suspended_until = max(user.suspended_until, timezone.now() + timezone.timedelta(days=1))
-        user.save(update_fields=['password', 'suspended_until'])
-
+        user.suspend(timezone.timedelta(days=1))
+        user.save(update_fields=['password'])
         request = self.context['request']
         login(request, user)
 

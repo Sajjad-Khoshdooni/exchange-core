@@ -187,11 +187,19 @@ class User(AbstractUser):
         account, _ = Account.objects.get_or_create(user=self)
         return account
 
+    def suspend(self, duration):
+        suspended_until = duration + timezone.now()
+        if not self.suspended_until:
+            self.suspended_until = suspended_until
+        else:
+            self.suspended_until = max(self.suspended_until, suspended_until)
+        self.save(update_fields=['suspended_until'])
+
     @property
     def is_suspended(self):
         if not self.suspended_until:
             return False
-        return timezone.now() > self.suspended_until
+        return timezone.now() <= self.suspended_until
 
     @property
     def kyc_bank_card(self):

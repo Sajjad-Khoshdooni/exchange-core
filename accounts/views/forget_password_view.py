@@ -64,8 +64,8 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
         validate_password(password=password, user=user)
         user.set_password(password)
-        user.suspended_until = max(user.suspended_until, timezone.now() + timezone.timedelta(days=1))
-        user.save(update_fields=['password', 'suspended_until'])
+        user.suspend(timezone.timedelta(days=1))
+        user.save(update_fields=['password'])
 
         otp_code.set_token_used()
         return user
