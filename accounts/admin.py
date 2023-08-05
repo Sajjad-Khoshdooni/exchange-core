@@ -421,9 +421,21 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
 
+    @admin.display(description='تاریخ آخرین معامله')
     def get_last_trade(self, user: User):
-        return gregorian_to_jalali_datetime_str(Trade.objects.filter(account=user.get_account()).last().created)
-    get_last_trade.short_description = 'تاریخ آخرین معامله'
+        account = user.get_account()
+
+        dates = []
+        last_trade = Trade.objects.filter(account=account).order_by('id').last()
+        if last_trade:
+            dates.append(last_trade.created)
+
+        last_otc_trade = OTCTrade.objects.filter(otcrequest__account=account).order_by('id').last()
+        if last_otc_trade:
+            dates.append(last_otc_trade.created)
+
+        if dates:
+            return gregorian_to_jalali_datetime_str(max(dates))
 
     def get_bank_card_link(self, user: User):
         link = url_to_admin_list(BankCard) + '?user={}'.format(user.id)
