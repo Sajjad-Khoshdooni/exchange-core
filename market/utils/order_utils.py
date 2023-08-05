@@ -101,7 +101,7 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
     is_stop_loss = parent_lock_group_id is not None
     matched_trades = order.submit(pipeline, is_stop_loss=is_stop_loss)
     extra = {} if matched_trades.trade_pairs else {'side': order.side}
-    MarketStreamCache().execute(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
+    pipeline.add_market_cache_data(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
     if matched_trades and matched_trades.to_cancel_stoploss:
         from market.models import StopLoss
         StopLoss.objects.filter(id__in=map(lambda s: s.id, matched_trades.to_cancel_stoploss)).update(
