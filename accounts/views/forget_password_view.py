@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AnonymousUser
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
@@ -63,10 +64,10 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
         validate_password(password=password, user=user)
         user.set_password(password)
-        user.save(update_fields=['password'])
+        user.suspended_until = max(user.suspended_until, timezone.now() + timezone.timedelta(days=1))
+        user.save(update_fields=['password', 'suspended_until'])
 
         otp_code.set_token_used()
-
         return user
 
 

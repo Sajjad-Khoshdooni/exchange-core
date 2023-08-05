@@ -165,6 +165,8 @@ class User(AbstractUser):
 
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
 
+    suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
+
     def __str__(self):
         name = self.get_full_name()
         super_name = super(User, self).__str__()
@@ -184,6 +186,12 @@ class User(AbstractUser):
 
         account, _ = Account.objects.get_or_create(user=self)
         return account
+
+    @property
+    def is_suspended(self):
+        if not self.suspended_until:
+            return False
+        return timezone.now() > self.suspended_until
 
     @property
     def kyc_bank_card(self):
