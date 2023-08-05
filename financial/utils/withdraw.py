@@ -555,7 +555,7 @@ class JibimoChannel(FiatWithdraw):
         assert (batch, 'Unsuccessful batch creation attempt')
 
         resp = self.collect_api(f'/v2/batch-pay/{batch}/items/create', method='POST', data={
-            "data": {
+            "data": [{
                 "uuid": str(transfer.group_id),
                 "row": transfer.bank_account.id,
                 "name": transfer.bank_account.user.first_name,
@@ -564,7 +564,7 @@ class JibimoChannel(FiatWithdraw):
                 "iban": transfer.bank_account.iban,
                 "account": transfer.bank_account.deposit_address,
                 "national_code": transfer.bank_account.user.national_code
-            }
+            }]
         })
 
         assert (resp.success, 'Unsuccessful payment request')
