@@ -35,6 +35,7 @@ class BaseTransfer(models.Model):
     gateway = models.ForeignKey('Gateway', on_delete=models.PROTECT)
     bank_account = models.ForeignKey(to=BankAccount, on_delete=models.PROTECT, verbose_name='حساب بانکی')
     group_id = get_group_id_field()
+    ref_id = models.CharField(max_length=128, null=True, blank=True, verbose_name='شماره پیگیری')
 
     class Meta:
         abstract = True
@@ -58,14 +59,10 @@ class FiatWithdrawRequest(BaseTransfer):
         ]
     )
 
-    ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
-
     comment = models.TextField(verbose_name='نظر', blank=True)
 
     withdraw_datetime = models.DateTimeField(null=True, blank=True)
     receive_datetime = models.DateTimeField(null=True, blank=True)
-
-    gateway = models.ForeignKey('Gateway', on_delete=models.PROTECT)
 
     risks = models.JSONField(null=True, blank=True)
     login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
