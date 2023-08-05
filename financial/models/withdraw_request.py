@@ -35,7 +35,7 @@ class BaseTransfer(models.Model):
     gateway = models.ForeignKey('Gateway', on_delete=models.PROTECT)
     bank_account = models.ForeignKey(to=BankAccount, on_delete=models.PROTECT, verbose_name='حساب بانکی')
     group_id = get_group_id_field()
-    ref_id = models.CharField(max_length=128, null=True, blank=True, verbose_name='شماره پیگیری')
+    ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
 
     class Meta:
         abstract = True
