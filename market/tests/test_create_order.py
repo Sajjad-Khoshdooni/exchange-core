@@ -342,7 +342,7 @@ class CreateOrderTestCase(TestCase):
         })
         self.assertEqual(resp.status_code, 201)
         position = self.btcusdt.get_margin_position(self.account)
-        self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, position.variant).locked,
+        self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, None).locked,
                          Decimal('200000') * Decimal('1.5'))
 
     def test_margin_create_multi_orders(self):
@@ -366,7 +366,7 @@ class CreateOrderTestCase(TestCase):
         })
         self.assertEqual(resp.status_code, 201)
         position = self.btcusdt.get_margin_position(self.account)
-        self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, position.variant).locked,
+        self.assertEqual(self.usdt.get_wallet(self.account, Wallet.MARGIN, None).locked,
                          Decimal('50000') * Decimal('2'))
 
     def test_margin_create_zero_sum_trades_auto_close_repay_taker_fee(self):
