@@ -44,9 +44,7 @@ class LoginView(APIView):
             login_activity = set_login_activity(request, user)
             if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
                                             ip=login_activity.ip).count() == 1:
-                user.suspended_until = user.suspended_until = max(user.suspended_until,
-                                                                  timezone.now() + timezone.timedelta(hours=1))
-                user.save(update_fields=['suspended_until'])
+                user.suspend(timezone.timedelta(hours=1))
                 LoginActivity.send_successful_login_message(login_activity)
             return Response(UserSerializer(user).data)
         else:
