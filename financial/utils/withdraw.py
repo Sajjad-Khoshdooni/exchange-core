@@ -553,7 +553,7 @@ class JibimoChannel(FiatWithdraw):
         batch = self.get_batch_id()
         assert (batch, 'Unsuccessful batch creation attempt')
         resp = self.collect_api(f'/v2/batch-pay/{batch}/items/create', method='POST', data={
-                "uuid": transfer.group_id,
+                "uuid": str(transfer.group_id),
                 "row": transfer.bank_account.id,
                 "name": transfer.bank_account.user.first_name,
                 "family": transfer.bank_account.user.last_name,
