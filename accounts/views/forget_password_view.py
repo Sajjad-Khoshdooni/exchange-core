@@ -48,7 +48,7 @@ class InitiateForgetPasswordView(APIView):
 class ForgotPasswordSerializer(serializers.Serializer):
     token = serializers.UUIDField(write_only=True, required=True)
     password = serializers.CharField(required=True, write_only=True, validators=[password_validator])
-    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
+    totp = serializers.CharField(write_only=True, allow_null=True, allow_blank=True, required=False)
 
     def create(self, validated_data):
         token = validated_data.pop('token')
