@@ -15,6 +15,7 @@ from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowab
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet, CloseRequest
 from ledger.models.asset import CoinField, AssetSerializerMini
+from ledger.models.margin import SymbolField
 from ledger.utils.external_price import get_external_price, SELL
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
@@ -73,7 +74,7 @@ class AssetMarginInfoView(APIView):
 class MarginTransferSerializer(serializers.ModelSerializer):
     amount = get_serializer_amount_field()
     coin = CoinField(source='asset')
-    position_symbol = serializers.CharField(source='position_symbol.name')
+    symbol = SymbolField(source='position_symbol')
     asset = AssetSerializerMini(read_only=True)
 
     @staticmethod
@@ -87,12 +88,13 @@ class MarginTransferSerializer(serializers.ModelSerializer):
 
         asset = validated_data['asset']
         check_margin_view_permission(user.get_account(), asset)
+        print(validated_data)
 
         return super(MarginTransferSerializer, self).create(validated_data)
 
     class Meta:
         model = MarginTransfer
-        fields = ('created', 'amount', 'type', 'coin', 'asset', 'position_symbol')
+        fields = ('created', 'amount', 'type', 'coin', 'asset', 'symbol')
         read_only_fields = ('created', )
 
 
