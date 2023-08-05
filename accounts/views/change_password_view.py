@@ -1,6 +1,8 @@
 from django.contrib.auth import login
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.utils import timezone
+
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -35,7 +37,8 @@ class ChangePasswordSerializer(serializers.Serializer):
 
     def update(self, user, validated_data):
         user.set_password(validated_data['password'])
-        user.save(update_fields=['password'])
+        user.suspended_until = max(user.suspended_until, timezone.now() + timezone.timedelta(days=1))
+        user.save(update_fields=['password', 'suspended_until'])
 
         request = self.context['request']
         login(request, user)
