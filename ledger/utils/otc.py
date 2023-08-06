@@ -58,7 +58,7 @@ def get_asset_spread(coin, side: str, value: Decimal = None) -> Decimal:
 
     spread = asset_spread.spread
 
-    if asset.distribution_factor >= 0.2:
+    if category is None and asset.distribution_factor >= 0.2:
         spread *= 2
 
     return spread / 100
