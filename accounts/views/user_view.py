@@ -28,7 +28,6 @@ class UserSerializer(serializers.ModelSerializer):
         else:
             return user.chat_uuid
 
-
     def get_is_auth2fa_active(self, user: User):
         device = TOTPDevice.objects.filter(user=user).first()
         return device is not None and device.confirmed
@@ -40,7 +39,8 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw', 'chat_uuid', 'is_auth2fa_active',
+            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw',
+            'chat_uuid', 'is_auth2fa_active',
         )
         ref_name = "User"
 
@@ -86,13 +86,15 @@ class UserDetailView(RetrieveAPIView):
 
 
 class AuthTokenSerializer(serializers.ModelSerializer):
+    CHOICES = [(scope, scope) for scope in CustomToken.SCOPES]
     ip_list = serializers.CharField()
+    scopes = serializers.MultipleChoiceField(choices=CHOICES, required=False, allow_null=True, allow_blank=True)
     sms_code = serializers.CharField(write_only=True)
     totp = serializers.CharField(write_only=True, allow_null=True, allow_blank=True, required=False)
 
     class Meta:
         model = CustomToken
-        fields = ('ip_list', 'sms_code', 'totp')
+        fields = ('ip_list', 'scopes', 'sms_code', 'totp')
 
     def validate(self, data):
         user = self.context['request'].user
@@ -111,7 +113,8 @@ class AuthTokenSerializer(serializers.ModelSerializer):
         validated_data.pop('totp', None)
         validated_data.pop('sms_code', None)
         validated_data['user'] = self.context['request'].user
-        customtoken = CustomToken.objects.create(**validated_data)
+        scopes = list(validated_data.pop('scopes'))
+        customtoken = CustomToken.objects.create(scopes=scopes, **validated_data)
         return customtoken
 
     def update(self, instance, validated_data):
@@ -147,6 +150,7 @@ class CreateAuthToken(APIView):
         return Response({
             'token': ('*' * (len(custom_token.key) - 4)) + custom_token.key[-4:],
             'user_id': request.user.pk,
+            'permissions': custom_token.scopes,
             'ip_white_list': custom_token.ip_list
         })
 
@@ -157,6 +161,7 @@ class CreateAuthToken(APIView):
             return Response({
                 'token': ('*' * (len(custom_token.key) - 4)) + custom_token.key[-4:],
                 'user_id': request.user.pk,
+                'permissions': custom_token.scopes,
                 'ip_white_list': custom_token.ip_list,
             })
         else:
@@ -170,6 +175,7 @@ class CreateAuthToken(APIView):
             return Response({
                 'token': token.key,
                 'user_id': request.user.pk,
+                'permissions': token.scopes,
                 'ip_white_list': token.ip_list,
             })
 
