@@ -430,7 +430,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         if last_trade:
             dates.append(last_trade.created)
 
-        last_otc_trade = OTCTrade.objects.filter(otcrequest__account=account).order_by('id').last()
+        last_otc_trade = OTCTrade.objects.filter(otc_request__account=account).order_by('id').last()
         if last_otc_trade:
             dates.append(last_otc_trade.created)
 
