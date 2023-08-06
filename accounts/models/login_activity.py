@@ -15,7 +15,7 @@ class LoginActivity(models.Model):
     TABLET, MOBILE, PC, UNKNOWN = 'tablet', 'mobile', 'pc', 'unknown'
     DEVICE_TYPE = ((TABLET, TABLET), (MOBILE, MOBILE), (PC, PC), (UNKNOWN, UNKNOWN))
 
-    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, db_index=True)
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
     logout_at = models.DateTimeField(null=True, blank=True)
     ip = models.GenericIPAddressField()
@@ -116,5 +116,5 @@ class LoginActivity(models.Model):
         verbose_name_plural = verbose_name = "تاریخچه ورود به حساب"
         indexes = [
             models.Index(fields=['user', 'ip', 'browser', 'os'], name="login_activity_idx"),
-            models.Index(fields=['user', 'device'], name='login_suspension_idx')
+            models.Index(fields=['user', 'device', 'ip'], name='login_suspension_idx')
         ]
