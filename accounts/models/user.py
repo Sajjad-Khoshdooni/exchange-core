@@ -4,7 +4,6 @@ from typing import Union
 from uuid import uuid4
 from datetime import timedelta
 
-from django.template import loader
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
@@ -202,6 +201,7 @@ class User(AbstractUser):
 
     def send_suspension_message(self, reason: str, duration: timezone.timedelta):
         from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
+        from django.template import loader
         context = {
             'reason': reason,
             'brand': settings.BRAND,
