@@ -15,7 +15,7 @@ class LoginActivity(models.Model):
     TABLET, MOBILE, PC, UNKNOWN = 'tablet', 'mobile', 'pc', 'unknown'
     DEVICE_TYPE = ((TABLET, TABLET), (MOBILE, MOBILE), (PC, PC), (UNKNOWN, UNKNOWN))
 
-    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, db_index=True)
     created = models.DateTimeField(auto_now_add=True)
     logout_at = models.DateTimeField(null=True, blank=True)
     ip = models.GenericIPAddressField()
