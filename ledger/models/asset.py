@@ -69,6 +69,8 @@ class Asset(models.Model):
 
     price_page = models.BooleanField(default=False)
 
+    distribution_factor = models.FloatField(default=0)
+
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
 

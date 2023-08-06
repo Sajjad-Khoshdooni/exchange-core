@@ -265,7 +265,6 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
             ctx['prices'] = get_external_usdt_prices(
                 coins=coins,
                 side=BUY,
-                set_bulk_cache=True,
                 apply_otc_spread=True
             )
             ctx['market_prices'] = {}
