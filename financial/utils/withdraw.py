@@ -139,7 +139,7 @@ class PayirChannel(FiatWithdraw):
         )
 
     def get_withdraw_status(self, transfer: BaseTransfer) -> Withdraw:
-        data = self.collect_api(f'/api/v2/cashouts/track/{transfer.ref_id}')
+        data = self.collect_api(f'/api/v2/cashouts/track/{transfer.id}')
 
         mapping_status = {
             3: self.CANCELED,
@@ -490,7 +490,7 @@ class JibitChannel(FiatWithdraw):
         )
 
     def get_withdraw_status(self, transfer: BaseTransfer) -> Withdraw:
-        resp = self.collect_api('/v2/transfers?transferID={}'.format(transfer.ref_id))
+        resp = self.collect_api('/v2/transfers?transferID={}'.format(transfer.id))
         data = resp.get_success_data()
 
         mapping_status = {
