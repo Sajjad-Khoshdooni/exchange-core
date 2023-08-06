@@ -50,10 +50,7 @@ def get_asset_spread(coin, side: str, value: Decimal = None) -> Decimal:
 
     category = asset.spread_category
 
-    asset_spread = CategorySpread.objects.filter(category=category, step=step, side=side).first()
-
-    if not asset_spread and step > 1:
-        asset_spread = CategorySpread.objects.filter(category=category, step=1, side=side).first()
+    asset_spread = CategorySpread.objects.filter(category=category, step__lte=step, side=side).order_by('-step').first()
 
     if not asset_spread:
         logger.warning("No category spread defined for %s step = %s, side = %s" % (category, step, side))

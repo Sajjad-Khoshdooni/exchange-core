@@ -57,7 +57,7 @@ class Asset(models.Model):
     hedge = models.BooleanField(default=True)
 
     margin_enable = models.BooleanField(default=False)
-    spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.PROTECT, null=True, blank=True)
+    spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.SET_NULL, null=True, blank=True)
 
     publish_date = models.DateTimeField(null=True, blank=True)
 
