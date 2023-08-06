@@ -7,6 +7,7 @@ from django.db.models import F
 from django.db.transaction import Atomic
 
 from ledger.utils.precision import is_zero_by_precision
+from market.utils.redis import MarketStreamCache
 
 
 def sorted_flatten_dict(data: dict) -> list:
@@ -33,6 +34,8 @@ class WalletPipeline(Atomic):
 
         self._locks = {}
         self._locks_amount = defaultdict(Decimal)
+
+        self._market_cache = MarketStreamCache()
 
         return self
 
@@ -164,6 +167,9 @@ class WalletPipeline(Atomic):
 
         return updates
 
+    def add_market_cache_data(self, symbol, updated_orders, trade_pairs=None, side=None, canceled=False):
+        self._market_cache.add_order_info(symbol, updated_orders, trade_pairs, side, canceled)
+
     def _execute(self):
         if self.verbose:
             print('wallet_update', self._build_wallet_updates())
@@ -184,3 +190,6 @@ class WalletPipeline(Atomic):
 
         if self._locks:
             BalanceLock.objects.bulk_create(list(self._locks.values()))
+
+        self._market_cache.execute()
+

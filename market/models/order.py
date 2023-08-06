@@ -170,7 +170,7 @@ class Order(models.Model):
             order.save(update_fields=['status'])
             pipeline.release_lock(key=order.group_id)
 
-        MarketStreamCache().execute(self.symbol, [order], side=order.side, canceled=True)
+            pipeline.add_market_cache_data(self.symbol, [order], side=order.side, canceled=True)
 
     @property
     def base_wallet(self):
