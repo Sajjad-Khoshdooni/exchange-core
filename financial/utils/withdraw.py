@@ -575,10 +575,7 @@ class JibimoChannel(FiatWithdraw):
         )
 
     def get_withdraw_status(self, transfer: BaseTransfer) -> Withdraw:
-        resp = self.collect_api('/v2/batch-pay/item/report', method='GET', data={
-                "item_uuid": str(transfer.group_id),
-            }
-        )
+        resp = self.collect_api(f'/v2/batch-pay/item/report?item_uuid={transfer.group_id}', method='GET')
         assert (resp.success, 'Unsuccessful withdraw status collection attempt')
         return Withdraw(
             tracking_id=resp.data['id'],
