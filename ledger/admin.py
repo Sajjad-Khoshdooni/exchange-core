@@ -104,6 +104,10 @@ class AssetAdmin(AdvancedAdmin):
 
         return humanize_presentation(calc_hedge_amount)
 
+    @admin.display(description='dist factor', ordering='distribution_factor')
+    def get_distribution_factor(self, asset: Asset):
+        return round(asset.distribution_factor, 3)
+
     @admin.display(description='reserved amount')
     def get_reserved_amount(self, asset: Asset):
         return ReservedAsset.objects.filter(coin=asset.symbol).aggregate(s=Sum('amount'))['s']
