@@ -38,7 +38,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
         if not can_withdraw(user.get_account(), request) or not user.can_withdraw_crypto:
             raise ValidationError('امکان برداشت وجود ندارد.')
         if user.is_suspended:
-            raise ValidationError('اکانت تعلیق شده است.')
+            raise ValidationError('به‌صورت موقت امکان‌برداشت وجود ندارد.')
         account = user.get_account()
         from_panel = self.context.get('from_panel')
         asset = attrs.get('asset')
