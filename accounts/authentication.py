@@ -61,16 +61,23 @@ class CustomTokenAuthentication(TokenAuthentication):
 
 class WithdrawTokenAuthentication(CustomTokenAuthentication):
     def authenticate(self, request):
-        user, token = super().authenticate(request)
+        auth_detail = super().authenticate(request)
+        if not auth_detail:
+            return None
+        user, token = auth_detail
         if not (token.scopes and CustomToken.WITHDRAW in token.scopes):
             msg = _('permission denied')
             raise exceptions.AuthenticationFailed(msg)
+        print(token.scopes, '\n' * 5)
         return user, token
 
 
 class TradeTokenAuthentication(CustomTokenAuthentication):
     def authenticate(self, request):
-        user, token = super().authenticate(request)
+        auth_detail = super().authenticate(request)
+        if not auth_detail:
+            return None
+        user, token = auth_detail
         if not (token.scopes and CustomToken.TRADE in token.scopes):
             msg = _('permission denied')
             raise exceptions.AuthenticationFailed(msg)
