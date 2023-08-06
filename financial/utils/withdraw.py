@@ -518,6 +518,15 @@ class JibitChannel(FiatWithdraw):
 
 class JibimoChannel(FiatWithdraw):
 
+    STATUS_MAP = {
+        'success': FiatWithdraw.DONE,
+        'wait': FiatWithdraw.PENDING,
+        'rejected': FiatWithdraw.CANCELED,
+        'reversed': FiatWithdraw.CANCELED,
+        'paying': FiatWithdraw.PENDING,
+        'not_sent': FiatWithdraw.PENDING,
+    }
+
     def _get_token(self):
         resp = requests.post('https://api.jibimo.com/v2/auth/token', headers={
             'Content-Type': 'application/json',
@@ -569,8 +578,8 @@ class JibimoChannel(FiatWithdraw):
 
         assert (resp.success, 'Unsuccessful payment request')
         return Withdraw(
-            tracking_id=resp.data['id'],
-            status=FiatWithdrawRequest.PENDING,
+            tracking_id=resp.data['tracking_number'],
+            status=self.STATUS_MAP[resp.data['pay_status']],
             receive_datetime=next_ach_clear_time()
         )
 
@@ -580,10 +589,10 @@ class JibimoChannel(FiatWithdraw):
             }
         )
         assert (resp.success, 'Unsuccessful withdraw status collection attempt')
+
         return Withdraw(
-            tracking_id=resp.data['id'],
-            status=resp.data['pay_status'],
-            receive_datetime=next_ach_clear_time()
+            tracking_id=resp.data['tracking_number'],
+            status=self.STATUS_MAP[resp.data['pay_status']],
         )
 
     def collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> Response:
