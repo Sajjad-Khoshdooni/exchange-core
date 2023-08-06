@@ -248,5 +248,12 @@ class UserMission(models.Model):
     def __str__(self):
         return '%s %s' % (self.user, self.mission)
 
+    @property
+    def expired(self):
+        if not self.mission.expiration:
+            return False
+
+        return self.mission.expiration < timezone.now()
+
     class Meta:
         unique_together = ('user', 'mission')

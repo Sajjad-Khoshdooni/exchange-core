@@ -59,20 +59,29 @@ app.conf.beat_schedule = {
         },
     },
 
+    'update_distribution_factors': {
+        'task': 'ledger.tasks.distribution.update_distribution_factors',
+        'schedule': crontab(hour=21, minute=0),
+        'options': {
+            'queue': 'celery',
+            'expires': 36000
+        },
+    },
+
     'create_stake_revenue': {
-        'task': 'stake.tasks.stake_revenue.create_stake_revenue',
+        'task': 'stake.tasks.revenue.create_stake_revenue',
         'schedule': crontab(hour=22, minute=0),
         'options': {
             'queue': 'celery',
             'expires': 36000
         },
     },
-    'complete_stake_requests': {
-        'task': 'stake.tasks.stake_finish.finish_stakes',
-        'schedule': crontab(hour=21, minute=0),
+    'handle_stake_requests_status': {
+        'task': 'stake.tasks.status.handle_stake_requests_status',
+        'schedule': crontab(minute=30),
         'options': {
             'queue': 'celery',
-            'expires': 36000
+            'expires': 3600
         },
     },
 

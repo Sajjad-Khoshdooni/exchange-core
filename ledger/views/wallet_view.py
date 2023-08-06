@@ -265,7 +265,6 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
             ctx['prices'] = get_external_usdt_prices(
                 coins=coins,
                 side=BUY,
-                set_bulk_cache=True,
                 apply_otc_spread=True
             )
             ctx['market_prices'] = {}
@@ -453,6 +452,9 @@ class ConvertDustView(APIView):
                     side=BUY,
                     allow_stale=True,
                 )
+
+                if price is None:
+                    continue
 
                 free = wallet.get_free()
                 free_irt_value = free * price

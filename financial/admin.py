@@ -373,12 +373,7 @@ class ManualTransferAdmin(admin.ModelAdmin):
         if obj.status == ManualTransfer.PROCESS:
             handler = FiatWithdraw.get_withdraw_channel(obj.gateway)
 
-            handler.create_withdraw(
-                wallet_id=handler.gateway.wallet_id,
-                receiver=obj.bank_account,
-                amount=obj.amount,
-                request_id='mt-%s' % obj.id
-            )
+            handler.create_withdraw(transfer=obj)
 
             obj.status = ManualTransfer.DONE
             obj.save(update_fields=['status'])

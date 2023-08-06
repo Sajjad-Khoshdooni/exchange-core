@@ -27,7 +27,7 @@ class CategorySpread(models.Model):
     side = models.CharField(max_length=8, choices=SIDE_CHOICES)
 
     step = models.PositiveIntegerField(
-        choices=[(1, '0$ - 3$'), (2, '3$ - 10$'), (3, '10$ - 1000$'), (4, '1000$ - 2000$'), (5, '> 2000$')],
+        choices=[(1, '> 0$'), (2, '>= 3$'), (3, '>= 10$'), (4, '>= 1000$'), (5, '> 2000$')],
         validators=[MinValueValidator(1), MaxValueValidator(5)],
     )
 
