@@ -15,7 +15,6 @@ from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
 from accounts.models.user_feature_perm import UserFeaturePerm
 from analytics.event.producer import get_kafka_producer
 from accounts.models import Notification, Account
@@ -201,6 +200,7 @@ class User(AbstractUser):
             self.send_suspension_message(reason, duration)
 
     def send_suspension_message(self, reason: str, duration: timezone.timedelta):
+        from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
         context = {
             'reason': reason,
             'brand': settings.BRAND,
