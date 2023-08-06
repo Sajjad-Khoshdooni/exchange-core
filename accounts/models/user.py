@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Union
 from uuid import uuid4
 
+from django.template import loader
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models, transaction
@@ -14,6 +15,7 @@ from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
+from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
 from accounts.models.user_feature_perm import UserFeaturePerm
 from analytics.event.producer import get_kafka_producer
 from accounts.models import Notification, Account
@@ -187,13 +189,25 @@ class User(AbstractUser):
         account, _ = Account.objects.get_or_create(user=self)
         return account
 
-    def suspend(self, duration):
+    def suspend(self, duration: timezone.timedelta, reason: str):
         suspended_until = duration + timezone.now()
+        past_suspension = self.suspended_until
         if not self.suspended_until:
             self.suspended_until = suspended_until
         else:
             self.suspended_until = max(self.suspended_until, suspended_until)
         self.save(update_fields=['suspended_until'])
+        if past_suspension != self.suspended_until:
+            self.send_suspension_message(reason, duration)
+
+    def send_suspension_message(self, reason: str, duration: timezone.timedelta):
+        context = {
+            'reason': reason,
+            'brand': settings.BRAND,
+            'duration': 'یک‌ روز' if duration is timezone.timedelta(days=1) else 'یک‌ ساعت'
+        }
+        content = loader.render_to_string('accounts/notif/sms/user_suspended_message.txt', context=context)
+        send_kavenegar_exclusive_sms(self.phone, content=content)
 
     @property
     def is_suspended(self):
