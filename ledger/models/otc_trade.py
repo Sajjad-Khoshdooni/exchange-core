@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 from uuid import uuid4
 
 from django.conf import settings
@@ -44,6 +45,8 @@ class OTCTrade(models.Model):
 
     gap_revenue = get_amount_field(default=0)
     order_id = models.PositiveIntegerField(null=True, blank=True)
+    to_buy_amount = get_amount_field(default=0, validators=())
+    hedged = models.BooleanField(default=False, db_index=True)
 
     def change_status(self, status: str):
         self.status = status
@@ -209,6 +212,14 @@ class OTCTrade(models.Model):
         from gamify.utils import check_prize_achievements, Task
         check_prize_achievements(account, Task.TRADE)
 
+    def get_pending_hedge_trades(self):
+        return self.objects.filter(otc_request__symbol__asset=self.otc_request.symbol.asset, hedged=False)
+
+    def get_pending_to_buy_amount(self, to_buy_amount):
+        return to_buy_amount + (
+                self.get_pending_hedge_trades().aggregate(to_buy=Sum('to_buy_amount'))['to_buy'] or Decimal(0)
+        )
+
     def hedge_with_provider(self, hedge: bool = True):
         assert self.execution_type == self.PROVIDER
 
@@ -218,6 +229,7 @@ class OTCTrade(models.Model):
 
             if hedge:
                 req = self.otc_request
+                to_buy_amount = req.amount if req.side == BUY else -req.amount
                 _key = 'otc:%s' % self.id
 
                 from ledger.utils.provider import TRADE, get_provider_requester
@@ -225,7 +237,7 @@ class OTCTrade(models.Model):
                     request_id=_key,
                     asset=req.symbol.asset,
                     side=req.side,
-                    amount=req.amount,
+                    buy_amount=self.get_pending_to_buy_amount(to_buy_amount),
                     scope=TRADE
                 )
 
@@ -253,6 +265,9 @@ class OTCTrade(models.Model):
 
                 if hedged:
                     hedge_key = _key
+                    self.to_buy_amount = to_buy_amount
+                    self.save(update_fields=['to_buy_amount'])
+                    self.get_pending_hedge_trades().update(hedged=True)
 
             from accounting.models.revenue import TradeRevenue
             TradeRevenue.new(

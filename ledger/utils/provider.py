@@ -224,9 +224,9 @@ class ProviderRequester:
 
         return info
 
-    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
-        assert amount >= 0
-        if amount > 0:
+    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, buy_amount: Decimal = 0, side: str = ''):
+        assert buy_amount >= 0
+        if buy_amount > 0:
             assert side
 
         if settings.DEBUG_OR_TESTING_OR_STAGING:
@@ -237,30 +237,27 @@ class ProviderRequester:
             logger.info('ignored due to no hedge method')
             return
 
-        to_buy = amount if side == BUY else -amount
-        hedge_amount = self.get_hedge_amount(asset) - to_buy
-
         market_info = self.get_market_info(asset)
 
         step_size = market_info.step_size
 
         # Hedge strategy: don't sell assets ASAP and hold them!
 
-        if hedge_amount < 0:
+        if buy_amount < 0:
             threshold = step_size / 2
         else:
             threshold = step_size * 2
 
-        if abs(hedge_amount) > threshold:
+        if abs(buy_amount) > threshold:
             side = SELL
 
-            if hedge_amount < 0:
-                hedge_amount = -hedge_amount
+            if buy_amount < 0:
+                buy_amount = -buy_amount
                 side = BUY
 
             round_digits = -int(log10(step_size))
 
-            order_amount = round(hedge_amount, round_digits)
+            order_amount = round(buy_amount, round_digits)
 
             price = get_external_price(
                 coin=asset.symbol,
