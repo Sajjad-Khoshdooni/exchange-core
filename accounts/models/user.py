@@ -2,6 +2,7 @@ import uuid
 from decimal import Decimal
 from typing import Union
 from uuid import uuid4
+from datetime import timedelta
 
 from django.template import loader
 from django.conf import settings
@@ -188,7 +189,7 @@ class User(AbstractUser):
         account, _ = Account.objects.get_or_create(user=self)
         return account
 
-    def suspend(self, duration: timezone.timedelta, reason: str):
+    def suspend(self, duration: timedelta, reason: str):
         suspended_until = duration + timezone.now()
         past_suspension = self.suspended_until
         if not past_suspension:

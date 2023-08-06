@@ -2,7 +2,7 @@ import logging
 
 from decouple import config
 from django.utils.translation import activate
-from django.utils import timezone
+from datetime import timedelta
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -191,7 +191,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 )
                 if (LoginActivity.objects.filter(user=user).count() != 1 and
                         LoginActivity.objects.filter(user=user, device=login_activity.device).count() == 1):
-                    user.suspended(timezone.timedelta(hours=1), 'ورود از دستگاه‌جدید')
+                    user.suspended(timedelta(hours=1), 'ورود از دستگاه‌جدید')
                 if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
                                                 ip=login_activity.ip).count() == 1:
                     LoginActivity.send_successful_login_message(login_activity)

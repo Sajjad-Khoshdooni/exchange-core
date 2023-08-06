@@ -1,5 +1,5 @@
 from django.contrib.auth.models import AnonymousUser
-from django.utils import timezone
+from datetime import timedelta
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
@@ -64,7 +64,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
         validate_password(password=password, user=user)
         user.set_password(password)
-        user.suspend(timezone.timedelta(days=1), 'فراموشی رمزعبور')
+        user.suspend(timedelta(days=1), 'فراموشی رمزعبور')
         user.save(update_fields=['password'])
 
         otp_code.set_token_used()

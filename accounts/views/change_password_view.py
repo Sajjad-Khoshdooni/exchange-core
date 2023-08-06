@@ -1,7 +1,8 @@
+from datetime import timedelta
+
 from django.contrib.auth import login
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.utils import timezone
 
 from rest_framework import serializers
 from rest_framework.response import Response
@@ -37,7 +38,7 @@ class ChangePasswordSerializer(serializers.Serializer):
 
     def update(self, user, validated_data):
         user.set_password(validated_data['password'])
-        user.suspend(timezone.timedelta(days=1), 'تغییر رمز عبور')
+        user.suspend(timedelta(days=1), 'تغییر رمز عبور')
         user.save(update_fields=['password'])
         request = self.context['request']
         login(request, user)
