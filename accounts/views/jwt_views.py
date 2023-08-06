@@ -190,8 +190,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     refresh_token=serializer.validated_data['refresh']
                 )
                 if (not login_activity.is_sign_up and
-                        LoginActivity.objects.filter(user=user, device=login_activity.device,
-                                                     ip=login_activity.ip).count() == 1):
+                        LoginActivity.objects.filter(user=user, device=login_activity.device).count() == 1):
                     user.suspended(timedelta(hours=1), 'ورود از دستگاه‌جدید')
                 if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
                                                 ip=login_activity.ip).count() == 1:
