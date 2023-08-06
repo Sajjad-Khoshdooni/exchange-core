@@ -577,9 +577,12 @@ class JibimoChannel(FiatWithdraw):
         })
 
         assert (resp.success, 'Unsuccessful payment request')
+
+        item_data = resp.data['items'][0]
+
         return Withdraw(
-            tracking_id='',
-            status=self.PENDING,
+            tracking_id=item_data['tracking_number'] or '',
+            status=self.STATUS_MAP[item_data.data['pay_status']],
             receive_datetime=next_ach_clear_time()
         )
 
