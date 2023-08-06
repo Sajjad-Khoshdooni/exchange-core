@@ -191,10 +191,10 @@ class User(AbstractUser):
     def suspend(self, duration: timezone.timedelta, reason: str):
         suspended_until = duration + timezone.now()
         past_suspension = self.suspended_until
-        if not self.suspended_until:
+        if not past_suspension:
             self.suspended_until = suspended_until
         else:
-            self.suspended_until = max(self.suspended_until, suspended_until)
+            self.suspended_until = max(past_suspension, suspended_until)
         self.save(update_fields=['suspended_until'])
         if past_suspension != self.suspended_until:
             self.send_suspension_message(reason, duration)
