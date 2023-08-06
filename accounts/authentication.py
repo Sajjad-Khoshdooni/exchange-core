@@ -68,7 +68,6 @@ class WithdrawTokenAuthentication(CustomTokenAuthentication):
         if not (token.scopes and CustomToken.WITHDRAW in token.scopes):
             msg = _('permission denied')
             raise exceptions.AuthenticationFailed(msg)
-        print(token.scopes, '\n' * 5)
         return user, token
 
 
