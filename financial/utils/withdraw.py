@@ -566,7 +566,7 @@ class JibimoChannel(FiatWithdraw):
         resp = self.collect_api(f'/v2/batch-pay/{batch}/items/create', method='POST', data={
             "data": [{
                 "uuid": str(transfer.group_id),
-                "row": transfer.bank_account.id,
+                "row": transfer.id,
                 "name": transfer.bank_account.user.first_name,
                 "family": transfer.bank_account.user.last_name,
                 "amount": transfer.amount * 10,
