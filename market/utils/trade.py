@@ -179,7 +179,9 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
             position = order.symbol.get_margin_position(order.account)
             if loan_type == MarginLoan.REPAY:
                 trade_amount = min(position.amount, trade_amount)
-            trade_value = trade_price * trade.amount
+            if not trade_amount:
+                continue
+            trade_value = trade_price * trade_amount
             if not position.has_enough_margin(trade_value):
                 margin_cross_wallet = order.base_wallet.asset.get_wallet(
                     order.base_wallet.account, market=order.base_wallet.market, variant=None
