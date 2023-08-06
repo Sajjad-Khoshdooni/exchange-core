@@ -4,3 +4,4 @@ from .order_book import OrderBookAPIView
 from .symbol_views import SymbolListAPIView, SymbolDetailedStatsAPIView, BookmarkSymbolAPIView
 from .trade_views import AccountTradeHistoryView, TradeHistoryView, TradePairsHistoryView
 from .tradingview_views import OHLCVAPIView
+from .symbol_spread_views import SymbolSpreadListView
