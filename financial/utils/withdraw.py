@@ -582,7 +582,7 @@ class JibimoChannel(FiatWithdraw):
 
         return Withdraw(
             tracking_id=item_data['tracking_number'] or '',
-            status=self.STATUS_MAP[item_data.data['pay_status']],
+            status=self.STATUS_MAP[item_data['pay_status']],
             receive_datetime=next_ach_clear_time()
         )
 
