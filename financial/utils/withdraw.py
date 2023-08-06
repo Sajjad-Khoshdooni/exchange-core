@@ -313,7 +313,7 @@ class ZibalChannel(FiatWithdraw):
     def get_withdraw_status(self, transfer: BaseTransfer) -> Withdraw:
         data = self.collect_api(f'/v1/report/checkout/inquire', method='POST', data={
             "walletId": self.gateway.wallet_id,
-            'uniqueCode': str(transfer.ref_id)
+            'uniqueCode': str(transfer.id)
         })
 
         if 'details' in data:
