@@ -37,7 +37,7 @@ class ChangePasswordSerializer(serializers.Serializer):
 
     def update(self, user, validated_data):
         user.set_password(validated_data['password'])
-        user.suspend(timezone.timedelta(days=1))
+        user.suspend(timezone.timedelta(days=1), 'تغییر رمز عبور')
         user.save(update_fields=['password'])
         request = self.context['request']
         login(request, user)
