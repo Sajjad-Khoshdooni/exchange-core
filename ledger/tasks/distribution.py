@@ -23,7 +23,7 @@ def update_distribution_factors():
     wallets = Wallet.objects.filter(
         account__type=Account.ORDINARY
     ).filter(
-        enable=True
+        asset__enable=True
     ).exclude(
         asset__symbol__in=(Asset.IRT, Asset.USDT)
     ).exclude(
@@ -39,10 +39,8 @@ def update_distribution_factors():
 
     assets = Asset.live_objects.all()
 
-    assets_map = {a.id: a for a in assets}
-
     prices = get_external_usdt_prices(
-        coins=list(assets.values_list('coin', flat=True)),
+        coins=list(assets.values_list('symbol', flat=True)),
         side=BUY,
         allow_stale=True,
     )
