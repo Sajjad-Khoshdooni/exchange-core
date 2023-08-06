@@ -560,7 +560,7 @@ class JibimoChannel(FiatWithdraw):
                 "row": transfer.bank_account.id,
                 "name": transfer.bank_account.user.first_name,
                 "family": transfer.bank_account.user.last_name,
-                "amount": transfer.amount,
+                "amount": transfer.amount * 10,
                 "iban": transfer.bank_account.iban,
                 "account": transfer.bank_account.deposit_address,
                 "national_code": transfer.bank_account.user.national_code
