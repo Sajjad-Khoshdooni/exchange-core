@@ -56,7 +56,12 @@ def get_asset_spread(coin, side: str, value: Decimal = None) -> Decimal:
         logger.warning("No category spread defined for %s step = %s, side = %s" % (category, step, side))
         asset_spread = CategorySpread()
 
-    return asset_spread.spread / 100
+    spread = asset_spread.spread
+
+    if asset.distribution_factor >= 0.2:
+        spread *= 2
+
+    return spread / 100
 
 
 def get_market_spread(base_coin: str, side: str, value: Decimal = None) -> Decimal:
