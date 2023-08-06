@@ -1,12 +1,15 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.authentication import CustomTokenAuthentication
 from ledger.utils.external_price import SELL, BUY
 from ledger.utils.otc import get_otc_spread
 from market.models import PairSymbol
 
 
 class SymbolSpreadListView(APIView):
+    authentication_classes = (CustomTokenAuthentication, )
+
     def get(self, request):
 
         spreads = []
