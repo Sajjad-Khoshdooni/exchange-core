@@ -106,12 +106,12 @@ PRICES_CACHE_TIMEOUT = 30
 def get_external_usdt_prices(coins: list, side, allow_stale: bool = False, set_bulk_cache: bool = False,
                              apply_otc_spread: bool = False) -> Dict[str, Decimal]:
 
-    cache_key = 'prices:ext:%s' % side
-
-    if allow_stale:
-        cached_result = cache.get(cache_key)
-        if cached_result is not None:
-            return cached_result
+    # cache_key = 'prices:ext:%s' % side
+    #
+    # if allow_stale:
+    #     cached_result = cache.get(cache_key)
+    #     if cached_result is not None:
+    #         return cached_result
 
     spreads = {}
     if apply_otc_spread:
@@ -124,8 +124,8 @@ def get_external_usdt_prices(coins: list, side, allow_stale: bool = False, set_b
     if 'USDT' in coins:
         result['USDT'] = 1
 
-    if set_bulk_cache:
-        cache.set(cache_key, result, PRICES_CACHE_TIMEOUT)
+    # if set_bulk_cache:
+    #     cache.set(cache_key, result, PRICES_CACHE_TIMEOUT)
 
     return result
 
