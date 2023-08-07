@@ -199,13 +199,13 @@ class User(AbstractUser):
         if past_suspension != self.suspended_until:
             self.send_suspension_message(reason, duration)
 
-    def send_suspension_message(self, reason: str, duration: timezone.timedelta):
+    def send_suspension_message(self, reason: str, duration: timedelta):
         from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
         from django.template import loader
         context = {
             'reason': reason,
             'brand': settings.BRAND,
-            'duration': 'یک‌ روز' if duration is timezone.timedelta(days=1) else 'یک‌ ساعت'
+            'duration': 'یک‌ روز' if duration == timedelta(days=1) else 'یک‌ ساعت'
         }
         content = loader.render_to_string('accounts/notif/sms/user_suspended_message.txt', context=context)
         send_kavenegar_exclusive_sms(self.phone, content=content)
