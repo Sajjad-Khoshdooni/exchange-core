@@ -31,30 +31,13 @@ from market.utils.fix import create_symbols_for_asset
 from .models import Asset, BalanceLock
 
 
-class BalanceLockInline(admin.TabularInline):
-    model = BalanceLock
-
-    verbose_name = "Balance Lock Reasons"
-    verbose_name_plural = "Balance Lock Reasons"
-    extra = 0
-
-
-    fields = ('reason',)
-    readonly_fields = ('reason',)
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.filter(wallet__asset=self.parent_model)
-
 @admin.register(models.Asset)
 class AssetAdmin(AdvancedAdmin):
     default_edit_condition = M.superuser
-    inlines = [BalanceLockInline]
     fields_edit_conditions = {
         'order': True,
         'trend': True,
     }
-
     list_display = (
         'symbol', 'enable', 'get_hedge_value', 'get_hedge_value_abs', 'get_hedge_amount', 'get_calc_hedge_amount',
         'get_total_asset', 'get_users_balance', 'get_reserved_amount',
@@ -183,7 +166,7 @@ class AssetAdmin(AdvancedAdmin):
 @admin.register(models.Network)
 class NetworkAdmin(admin.ModelAdmin):
     list_display = (
-    'symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'need_memo', 'address_regex')
+        'symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'need_memo', 'address_regex')
     list_editable = ('can_withdraw', 'can_deposit')
     search_fields = ('symbol',)
     list_filter = ('can_withdraw', 'can_deposit')
@@ -297,7 +280,7 @@ class OTCTradeAdmin(admin.ModelAdmin):
 class TrxAdmin(admin.ModelAdmin):
     list_display = ('created', 'sender', 'receiver', 'amount', 'scope', 'group_id')
     search_fields = (
-    'sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone', 'group_id')
+        'sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone', 'group_id')
     readonly_fields = ('sender', 'receiver',)
     list_filter = ('scope',)
 
@@ -317,10 +300,22 @@ class WalletUserFilter(SimpleListFilter):
             return queryset
 
 
+class BalanceLockInline(admin.TabularInline):
+    model = BalanceLock
+
+    verbose_name = "Balance Lock Reasons"
+    verbose_name_plural = "Balance Lock Reasons"
+    extra = 0
+
+    fields = ('reason',)
+    readonly_fields = ('reason',)
+
+
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt',
                     'credit')
+    inlines = [BalanceLockInline]
     list_filter = [
         ('asset', RelatedDropdownFilter),
         WalletUserFilter
