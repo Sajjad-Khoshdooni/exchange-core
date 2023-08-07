@@ -13,7 +13,7 @@ from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import get_external_price, get_external_usdt_prices, BUY, SELL
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.precision import get_presentation_amount, floor_precision
 from market.models import Order
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,10 @@ class WalletsOverviewAPIView(APIView):
 
             total_irt_value += wallet.balance * price_usdt
             total_usdt_value += wallet.balance * price_irt
-        return get_presentation_amount(total_irt_value), get_presentation_amount(total_usdt_value)
+        return {
+            'IRT': get_presentation_amount(floor_precision(total_irt_value)),
+            'USDT': get_presentation_amount(floor_precision(total_usdt_value))
+        }
 
     def get(self, request: Request):
         account = request.user.get_account()
