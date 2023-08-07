@@ -32,8 +32,8 @@ class WalletsOverviewAPIView(APIView):
             price_irt = market_prices['IRT'].get(wallet.asset.symbol, 0) or \
                         external_prices.get(wallet.asset.symbol, 0) * tether_irt
 
-            total_irt_value += wallet.balance * price_usdt
-            total_usdt_value += wallet.balance * price_irt
+            total_usdt_value += wallet.balance * price_usdt
+            total_irt_value += wallet.balance * price_irt
         return {
             'IRT': get_presentation_amount(floor_precision(total_irt_value)),
             'USDT': get_presentation_amount(floor_precision(total_usdt_value))
