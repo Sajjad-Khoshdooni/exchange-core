@@ -52,7 +52,11 @@ class MissionTemplate(models.Model):
             return self.finished(account)
 
     def finished(self, account: Account):
-        return all([task.finished(account) for task in self.task_set.all()])
+        tasks = self.task_set.all()
+        if not tasks:
+            return True
+
+        return all([task.finished(account) for task in tasks])
 
     def get_active_task(self, account: Account) -> 'Task':
         for task in self.task_set.all():
