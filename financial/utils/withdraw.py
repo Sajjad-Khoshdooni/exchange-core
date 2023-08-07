@@ -517,6 +517,15 @@ class JibitChannel(FiatWithdraw):
 
 class JibimoChannel(FiatWithdraw):
 
+    STATUS_MAP = {
+        'success': FiatWithdraw.DONE,
+        'wait': FiatWithdraw.PENDING,
+        'rejected': FiatWithdraw.CANCELED,
+        'reversed': FiatWithdraw.CANCELED,
+        'paying': FiatWithdraw.PENDING,
+        'not_sent': FiatWithdraw.PENDING,
+    }
+
     def _get_token(self):
         resp = requests.post('https://api.jibimo.com/v2/auth/token', headers={
             'Content-Type': 'application/json',
@@ -556,7 +565,7 @@ class JibimoChannel(FiatWithdraw):
         resp = self.collect_api(f'/v2/batch-pay/{batch}/items/create', method='POST', data={
             "data": [{
                 "uuid": str(transfer.group_id),
-                "row": transfer.bank_account.id,
+                "row": transfer.id,
                 "name": transfer.bank_account.user.first_name,
                 "family": transfer.bank_account.user.last_name,
                 "amount": transfer.amount * 10,
@@ -567,22 +576,22 @@ class JibimoChannel(FiatWithdraw):
         })
 
         assert (resp.success, 'Unsuccessful payment request')
+
+        item_data = resp.data['items'][0]
+
         return Withdraw(
-            tracking_id=resp.data['id'],
-            status=FiatWithdrawRequest.PENDING,
+            tracking_id=item_data['tracking_number'] or '',
+            status=self.STATUS_MAP[item_data['pay_status']],
             receive_datetime=next_ach_clear_time()
         )
 
     def get_withdraw_status(self, transfer: BaseTransfer) -> Withdraw:
-        resp = self.collect_api('/v2/batch-pay/item/report', method='GET', data={
-                "item_id": str(transfer.group_id),
-            }
-        )
+        resp = self.collect_api(f'/v2/batch-pay/item/report?item_uuid={transfer.group_id}', method='GET')
         assert (resp.success, 'Unsuccessful withdraw status collection attempt')
+
         return Withdraw(
-            tracking_id=resp.data['id'],
-            status=resp.data['pay_status'],
-            receive_datetime=next_ach_clear_time()
+            tracking_id=resp.data['tracking_number'],
+            status=self.STATUS_MAP[resp.data['pay_status']],
         )
 
     def collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 30) -> Response:
