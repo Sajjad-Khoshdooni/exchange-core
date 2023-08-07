@@ -261,3 +261,7 @@ class UserMission(models.Model):
 
     class Meta:
         unique_together = ('user', 'mission')
+
+    def check_achievements(self):
+        from gamify.utils import check_prize_achievements
+        check_prize_achievements(account=self.user.get_account())
