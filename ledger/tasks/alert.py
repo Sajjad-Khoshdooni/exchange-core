@@ -14,6 +14,7 @@ def send_price_notifications():
     past_cycle_prices = cache.get('coin_prices')
     if not past_cycle_prices:
         cache.set('coin_prices', current_cycle_prices)
+        return
     common_coins = past_cycle_prices.keys() & current_cycle_prices.keys()
     for coin in common_coins:
         if abs(current_cycle_prices[coin] / past_cycle_prices[coin] - 1.00) > 0.05:
