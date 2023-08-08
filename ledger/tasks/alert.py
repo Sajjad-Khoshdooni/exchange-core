@@ -25,7 +25,7 @@ def send_price_notifications():
         if abs(Decimal(symbols_price[coin] / past_cycle_prices[coin]) - Decimal(1.00)) < Decimal(0.05):
             del common_coins_prices[coin]
 
-    users = PriceTracking.objects.distinct('user').only('user', flat=True)
+    users = PriceTracking.objects.distinct('user').select_related('user').all()
     for user in users:
         tracking_coins = list(PriceTracking.objects.filter(user=user).values_list('asset__symbol', flat=True))
         notifying_coins = {coin for coin in tracking_coins if coin in common_coins_prices.keys()}
