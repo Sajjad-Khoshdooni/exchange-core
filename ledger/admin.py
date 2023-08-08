@@ -666,10 +666,10 @@ class ManualTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(PriceTracking)
 class PriceTrackingAdmin(admin.ModelAdmin):
-    list_display = ['created', 'user', 'asset']
+    title = 'price tracking'
+    list_display = ['user', 'asset']
     list_filter = ['user', 'asset']
     search_fields = ['user', 'asset']
-    readonly_fields = ['user', 'asset']
     raw_id_fields = ['user']
 
 @admin.register(BalanceLock)
