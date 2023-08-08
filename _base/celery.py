@@ -30,6 +30,7 @@ app.conf.beat_schedule = {
         'schedule': 60 * 5 * TASK_MULTIPLIER,
         'options': {
             'queue': 'price_alert',
+            'expires': 60 * 2 * TASK_MULTIPLIER
         }
     },
     'update_network_fee': {
