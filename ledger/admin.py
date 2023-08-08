@@ -174,7 +174,7 @@ class AssetAdmin(AdvancedAdmin):
 @admin.register(models.Network)
 class NetworkAdmin(admin.ModelAdmin):
     list_display = (
-    'symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'need_memo', 'address_regex')
+        'symbol', 'can_withdraw', 'can_deposit', 'min_confirm', 'unlock_confirm', 'need_memo', 'address_regex')
     list_editable = ('can_withdraw', 'can_deposit')
     search_fields = ('symbol',)
     list_filter = ('can_withdraw', 'can_deposit')
@@ -288,7 +288,7 @@ class OTCTradeAdmin(admin.ModelAdmin):
 class TrxAdmin(admin.ModelAdmin):
     list_display = ('created', 'sender', 'receiver', 'amount', 'scope', 'group_id')
     search_fields = (
-    'sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone', 'group_id')
+        'sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone', 'group_id')
     readonly_fields = ('sender', 'receiver',)
     list_filter = ('scope',)
 
@@ -664,6 +664,7 @@ class ManualTransactionAdmin(admin.ModelAdmin):
             trx.group_id = uuid4()
             trx.save()
 
+
 @admin.register(PriceTracking)
 class PriceTrackingAdmin(admin.ModelAdmin):
     title = 'price tracking'
@@ -671,6 +672,7 @@ class PriceTrackingAdmin(admin.ModelAdmin):
     list_filter = ['user', 'asset']
     search_fields = ['user', 'asset']
     raw_id_fields = ['user']
+
 
 @admin.register(BalanceLock)
 class BalanceLockAdmin(admin.ModelAdmin):
