@@ -1,11 +1,10 @@
 from celery import shared_task
 from django.core.cache import cache
 from decimal import Decimal
-
+from django.db.models F
 from accounts.models import Notification
 from ledger.models.price_alert import PriceTracking
 from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get_external_price, BUY
-
 
 def get_current_prices():
     symbols = list(PriceTracking.objects.distinct('asset').values_list('asset__symbol', flat=True))
@@ -14,17 +13,6 @@ def get_current_prices():
     if USDT in symbols_price.keys():
         symbols_price[USDT] *= get_external_price(coin=USDT, base_coin=IRT, side=BUY)
     return symbols_price
-
-
-def send_price_alert_to_user(user, altered_coins):
-    tracking_coins = list(PriceTracking.objects.filter(user=user).values_list('asset__symbol', flat=True))
-    notifying_coins = {coin for coin in tracking_coins if coin in altered_coins.keys()}
-    for coin in notifying_coins:
-        Notification.send(
-            recipient=user,
-            title='تغییر قیمت',
-            message=f'تغییر قیمت قابل توجه دارد.! {altered_coins[coin]}'
-        )
 
 
 @shared_task(queue='price_alert')
@@ -39,7 +27,11 @@ def send_price_notifications():
                      if
                      abs(Decimal(current_cycle_prices[coin] / past_cycle_prices[coin]) - Decimal(1.00)) > Decimal(0.05)
                      }
-    selections = PriceTracking.objects.distinct('user')
+    selections = PriceTracking.objects.filter(F(asset_symbol__in=altered_coins.keys()))
     for select in selections:
-        send_price_alert_to_user(select.user, altered_coins)
+            Notification.send(
+                recipient=select.user,
+                title='تغییر قیمت',
+                message=f'تغییر قیمت قابل توجه دارد.! {altered_coins[select.asset.symbol]}'
+            )
     cache.set('coin_prices', current_cycle_prices)
