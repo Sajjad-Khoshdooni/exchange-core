@@ -11,7 +11,7 @@ class AlertViewSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         asset = data['asset']
         if PriceTracking.objects.filter(user=user, asset=asset).exists():
-            raise ValidationError({'asseet' : 'بازار انتخاب شده تحت‌نظر می‌باشد.'})
+            raise ValidationError({'asset': 'بازار انتخاب شده تحت‌نظر می‌باشد.'})
         return data
 
     class Meta:
