@@ -7,12 +7,11 @@ from ledger.models.price_alert import PriceTracking
 
 
 class AlertViewSerializer(serializers.ModelSerializer):
-    def is_valid(self, raise_exception=True):
+    def validate(self, data):
         user = self.context['request'].user
-        data = self.data
         asset = data['asset']
         if PriceTracking.objects.filter(user=user, asset=asset).exists():
-            raise ValidationError('بازار انتخاب شده تحت‌نظر می‌باشد.')
+            raise ValidationError({'asseet' : 'بازار انتخاب شده تحت‌نظر می‌باشد.'})
         return data
 
     class Meta:
@@ -21,11 +20,20 @@ class AlertViewSerializer(serializers.ModelSerializer):
 
 
 class AlertView(viewsets.ModelViewSet):
-    serializers_class = AlertViewSerializer
+    serializer_class = AlertViewSerializer
+    queryset = PriceTracking.objects.filter()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
-        serializer.is_valid()
-        serializer.perform_create()
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_create(self, serializer):
+        serializer.save(
+            user=self.request.user
+        )
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)
