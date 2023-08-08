@@ -27,7 +27,7 @@ app.conf.beat_schedule = {
     # todo: check parameters
     'price_alert': {
         'task': 'ledger.tasks.alert.send_price_notifications',
-        'schedule': 60 * 5 * TASK_MULTIPLIER,
+        'schedule':  5,
         'options': {
             'queue': 'price_alert',
             'expires': 60 * 2 * TASK_MULTIPLIER

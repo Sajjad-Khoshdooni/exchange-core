@@ -7,3 +7,4 @@ from .locks import free_missing_locks
 from .debt import auto_clear_debts
 from .otc import accept_pending_otc_trades
 from .distribution import update_distribution_factors
+from .alert import send_price_notifications
