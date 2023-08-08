@@ -7,7 +7,7 @@ from django.db.models import CheckConstraint, Q, F, UniqueConstraint
 
 from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
-from ledger.utils.fields import get_amount_field
+from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
@@ -33,7 +33,7 @@ class Wallet(models.Model):
     balance = get_amount_field(default=Decimal(0), validators=())
     locked = get_amount_field(default=Decimal(0))
 
-    variant = models.UUIDField(editable=False, null=True, blank=True)
+    variant = get_group_id_field(null=True, default=None)
     expiration = models.DateTimeField(null=True, blank=True)
     credit = get_amount_field(default=0)
 
@@ -174,7 +174,7 @@ class ReserveWallet(models.Model):
     receiver = models.ForeignKey('ledger.Wallet', on_delete=models.PROTECT, related_name='reserved_wallet')
     amount = get_amount_field()
 
-    group_id = models.UUIDField(default=uuid4, db_index=True)
+    group_id = get_group_id_field(db_index=True)
 
     refund_completed = models.BooleanField(default=False)
 

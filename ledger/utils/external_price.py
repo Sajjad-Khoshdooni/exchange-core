@@ -56,14 +56,22 @@ SIDE_MAP = {
 }
 
 
-def _get_redis_price_key(coin: str):
+def _get_redis_price_key(coin: str, market: str = None):
+    prefix = 'price:'
+    if market:
+        prefix = prefix + 'f:'
+
     base = 'usdt'
-    return 'price:' + coin.lower() + base
+
+    return prefix + coin.lower() + base
+
+
+def check_price_dict_time_frame(data: dict, allow_stale: bool = False):
+    now = timezone.now().timestamp()
+    return allow_stale or not data.get('t') or now - 30 <= float(data.get('t')) <= now
 
 
 def _fetch_redis_prices(coins: list, side: str = None, allow_stale: bool = False) -> List[Price]:
-    now = timezone.now().timestamp()
-
     results = []
 
     if side:
@@ -73,27 +81,41 @@ def _fetch_redis_prices(coins: list, side: str = None, allow_stale: bool = False
 
     pipe = price_redis.pipeline(transaction=False)
     for c in coins:
-        name = _get_redis_price_key(c)
-        pipe.hgetall(name)
+        key = _get_redis_price_key(c)
+        pipe.hgetall(key)
+
+        key = _get_redis_price_key(c, market='futures')
+        pipe.hgetall(key)
 
     prices = pipe.execute()
 
     for i, c in enumerate(coins):
-        price_dict = prices[i] or {}
+        spot_price_dict = prices[2 * i] or {}
+        futures_price_dict = prices[2 * i + 1] or {}
 
-        if allow_stale and not price_dict:
+        if allow_stale and not spot_price_dict:
             name = _get_redis_price_key(c) + ':stale'
-            price_dict = price_redis.hgetall(name)
+            spot_price_dict = price_redis.hgetall(name)
 
             # logger.error('{} price fallback to stale'.format(c))
 
         for s in sides:
-            price = price_dict.get(SIDE_MAP[s])
+            price = spot_price_dict.get(SIDE_MAP[s])
 
             if price is not None:
                 price = Decimal(price)
 
-            if allow_stale or not price_dict.get('t') or now - 30 <= float(price_dict.get('t')) <= now:
+                futures_price = futures_price_dict.get(SIDE_MAP[s])
+
+                if futures_price is not None and check_price_dict_time_frame(futures_price_dict, allow_stale=allow_stale):
+                    futures_price = Decimal(futures_price)
+
+                    if s == BUY:
+                        price = min(price, futures_price)
+                    else:
+                        price = max(price, futures_price)
+
+            if check_price_dict_time_frame(spot_price_dict, allow_stale=allow_stale):
                 results.append(
                     Price(coin=c, price=price, side=s)
                 )

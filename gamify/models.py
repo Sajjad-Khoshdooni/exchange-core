@@ -95,7 +95,7 @@ class Achievement(models.Model):
                 symbol=self.asset.name_fa
             )
         else:
-            template = 'جایزه تخفیف کارمزد تا سقف {amount} {symbol} به شما تعلق گرفت. برای دریافت، کلیک کنید.'.format(
+            template = 'جایزه تخفیف کارمزد تا سقف {amount} {symbol} به شما تعلق گرفت.'.format(
                 amount=humanize_number(prize.asset.get_presentation_amount(prize.amount)),
                 symbol=self.asset.name_fa
             )
@@ -261,3 +261,7 @@ class UserMission(models.Model):
 
     class Meta:
         unique_together = ('user', 'mission')
+
+    def check_achievements(self):
+        from gamify.utils import check_prize_achievements
+        check_prize_achievements(account=self.user.get_account())

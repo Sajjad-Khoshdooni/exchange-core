@@ -21,6 +21,7 @@ from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet
+from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE, PROCESS
 from ledger.utils.precision import get_presentation_amount, humanize_presentation
@@ -312,7 +313,7 @@ class WalletAdmin(admin.ModelAdmin):
         ('asset', RelatedDropdownFilter),
         WalletUserFilter
     ]
-    readonly_fields = ('account', 'asset', 'market', 'balance', 'locked')
+    readonly_fields = ('account', 'asset', 'market', 'balance', 'locked', 'variant')
     search_fields = ('account__user__phone', 'asset__symbol')
 
     @admin.display(description='free')
@@ -667,3 +668,10 @@ class BalanceLockAdmin(admin.ModelAdmin):
     readonly_fields = ('wallet', 'key', 'original_amount', 'amount', 'reason')
     list_filter = ('reason', )
     search_fields = ('wallet__account__user__phone', 'key')
+
+
+@admin.register(ReserveWallet)
+class ReserveWalletAdmin(admin.ModelAdmin):
+    list_display = ('created', 'sender', 'receiver', 'amount', 'group_id', 'refund_completed', 'request_id')
+    readonly_fields = ('created', 'sender', 'receiver', 'group_id')
+    search_fields = ('group_id', 'request_id')
