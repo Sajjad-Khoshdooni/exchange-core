@@ -667,10 +667,8 @@ class ManualTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(PriceTracking)
 class PriceTrackingAdmin(admin.ModelAdmin):
-    title = 'price tracking'
     list_display = ['user', 'asset']
-    list_filter = ['user', 'asset']
-    search_fields = ['user', 'asset']
+    search_fields = ['user__username', 'asset__symbol']
     raw_id_fields = ['user']
 
 
