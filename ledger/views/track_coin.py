@@ -12,7 +12,9 @@ class AlertViewSerializer(serializers.ModelSerializer):
         asset = data['asset']
         if PriceTracking.objects.filter(user=user, asset=asset).exists():
             raise ValidationError({'asset': 'بازار انتخاب شده تحت‌نظر می‌باشد.'})
-        return data
+        if asset.is_cash():
+            raise ValidationError({'asset': 'بازار انتخاب شده ریالی می‌باشد.'})
+        return
 
     class Meta:
         model = PriceTracking
@@ -21,7 +23,7 @@ class AlertViewSerializer(serializers.ModelSerializer):
 
 class AlertView(viewsets.ModelViewSet):
     serializer_class = AlertViewSerializer
-    queryset = PriceTracking.objects.filter()
+    queryset = PriceTracking.objects.all()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
