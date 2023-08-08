@@ -10,7 +10,7 @@ from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get
 def get_current_prices():
     symbols = list(PriceTracking.objects.distinct('asset').values_list('asset__symbol', flat=True))
     symbols_price = {coin: value for coin, value in
-                     get_external_usdt_prices(coins=symbols, side=BUY).items() if value and value != 0}
+                     get_external_usdt_prices(coins=symbols, side=BUY).items() if value and value != Decimal(0.0)}
     if USDT in symbols_price.keys():
         symbols_price[USDT] *= get_external_price(coin=USDT, base_coin=IRT, side=BUY)
     return symbols_price
