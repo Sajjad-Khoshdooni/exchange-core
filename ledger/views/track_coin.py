@@ -14,7 +14,7 @@ class AlertViewSerializer(serializers.ModelSerializer):
             raise ValidationError({'asset': 'بازار انتخاب شده تحت‌نظر می‌باشد.'})
         if asset.is_cash():
             raise ValidationError({'asset': 'بازار انتخاب شده ریالی می‌باشد.'})
-        return
+        return data
 
     class Meta:
         model = PriceTracking
