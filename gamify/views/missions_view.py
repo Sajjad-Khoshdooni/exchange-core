@@ -154,7 +154,7 @@ class ActiveMissionsAPIView(RetrieveAPIView):
                 finished=False,
                 mission__active=True,
                 mission__achievement__asset__isnull=False
-            )
+            ).first()
 
         return UserMission.objects.filter(user=self.request.user, finished=False, mission__active=True).order_by('id').first()
 
