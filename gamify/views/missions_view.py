@@ -4,6 +4,7 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.authentication import is_app
 from gamify.models import Task, Achievement, UserMission
 from ledger.models import Prize
 from ledger.models.asset import AssetSerializerMini
@@ -137,6 +138,9 @@ class MissionsAPIView(ListAPIView):
     serializer_class = UserMissionSerializer
 
     def get_queryset(self):
+        if is_app(self.request):
+            return UserMission.objects.filter(user=self.request.user, mission__achievement__asset__isnull=False)
+
         return UserMission.objects.filter(user=self.request.user)
 
 
@@ -144,6 +148,14 @@ class ActiveMissionsAPIView(RetrieveAPIView):
     serializer_class = UserMissionSerializer
 
     def get_object(self):
+        if is_app(self.request):
+            return UserMission.objects.filter(
+                user=self.request.user,
+                finished=False,
+                mission__active=True,
+                mission__achievement__asset__isnull=False
+            )
+
         return UserMission.objects.filter(user=self.request.user, finished=False, mission__active=True).order_by('id').first()
 
     def retrieve(self, request, *args, **kwargs):
