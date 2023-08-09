@@ -1,3 +1,5 @@
+import math
+
 from celery import shared_task
 from django.core.cache import cache
 from decimal import Decimal
@@ -19,11 +21,10 @@ def get_current_prices():
 
 def send_notifications(selections, altered_coins):
     for select in selections:
-        base_coin = 'تتر' if altered_coins[select.asset.symbol] != select.asset.USDT else 'تومان'
-        coin = altered_coins[select.asset.symbol]
-        percent = abs(altered_coins[coin][0] / altered_coins[coin][1] - Decimal(1))
-        change_status = 'افزایش' if altered_coins[coin][0] > altered_coins[coin][1] else 'کاهش'
-        new_price = altered_coins[coin][0]
+        base_coin = 'تتر' if select.asset.symbol != select.asset.USDT else 'تومان'
+        new_price, old_price = altered_coins[select.asset.symbol]
+        percent = math.floor(abs(new_price / old_price) - Decimal(1))
+        change_status = 'افزایش' if new_price > old_price else 'کاهش'
         Notification.send(
             recipient=select.user,
             title='تغییر قیمت',
@@ -35,8 +36,8 @@ def get_altered_coins(past_cycle_prices, current_cycle):
     return {coin: [current_cycle[coin], past_cycle_prices[coin]] for coin in
             past_cycle_prices.keys() & current_cycle.keys()
             if
-            abs(Decimal(current_cycle[coin] / past_cycle_prices[coin]) - Decimal(
-                1.00)) > Decimal(0.05)
+            Decimal(abs(current_cycle[coin] / past_cycle_prices[coin]) - Decimal(
+                1.00)) > Decimal('0.05')
             }
 
 
@@ -49,11 +50,10 @@ def send_price_notifications():
         return
     initial_cycle = past_data['initial']
     past_cycle = past_data['past']
-    count = past_cycle['count']
-
+    count = past_data['count']
     altered_coins = get_altered_coins(past_cycle, current_cycle)
     if count % 12 == 0:
-        altered_coins = get_altered_coins(initial_cycle, current_cycle)
+        altered_coins = {**altered_coins, **get_altered_coins(initial_cycle, current_cycle)}
     selections = AssetAlert.objects.filter(Q(asset__symbol__in=altered_coins.keys()))
     send_notifications(selections, altered_coins)
     cache.set('coin_prices', {'initial': current_cycle if count % 12 == 0 else initial_cycle, 'past': current_cycle,
