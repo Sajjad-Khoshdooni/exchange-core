@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
-from ledger.models.price_alert import AssetAlert
+from ledger.models.asset_alert import AssetAlert
 
 
 class AssetAlertViewSerializer(serializers.ModelSerializer):

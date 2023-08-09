@@ -5,7 +5,7 @@ from django.core.cache import cache
 from decimal import Decimal
 from django.db.models import Q
 from accounts.models import Notification
-from ledger.models.price_alert import AssetAlert
+from ledger.models.asset_alert import AssetAlert
 from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get_external_price, BUY
 
 
@@ -41,7 +41,7 @@ def get_altered_coins(past_cycle_prices, current_cycle):
             }
 
 
-@shared_task(queue='price_alert')
+@shared_task(queue='asset_alert')
 def send_price_notifications():
     past_data = cache.get('coin_prices')
     current_cycle = get_current_prices()

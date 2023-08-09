@@ -19,7 +19,7 @@ from accounts.models import Account, User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
-from ledger.models.price_alert import AssetAlert
+from ledger.models.asset_alert import AssetAlert
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet
 from ledger.models.wallet import ReserveWallet

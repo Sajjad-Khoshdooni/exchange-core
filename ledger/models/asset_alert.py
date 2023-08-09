@@ -5,6 +5,7 @@ from ledger.models import Asset
 
 
 class AssetAlert(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
 
