@@ -10,18 +10,23 @@ __all__ = ('Task', 'check_prize_achievements', 'clone_mission_template')
 logger = logging.getLogger(__name__)
 
 
-def check_prize_achievements(account: Account, task_scope: str):
-    scopes = [task_scope]
+def check_prize_achievements(account: Account, task_scope: str = None):
+    extra = {}
 
-    if task_scope == Task.TRADE:
-        scopes.append(Task.WEEKLY_TRADE)
+    if task_scope:
+        scopes = [task_scope]
+
+        if task_scope == Task.TRADE:
+            scopes.append(Task.WEEKLY_TRADE)
+
+        extra = {'mission__task__scope__in': scopes}
 
     try:
         user_missions = UserMission.objects.filter(
             user=account.user,
-            mission__task__scope__in=scopes,
             mission__active=True,
-            finished=False
+            finished=False,
+            **extra,
         )
 
         for user_mission in user_missions:

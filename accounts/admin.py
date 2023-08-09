@@ -674,9 +674,10 @@ class FinotechRequestUserFilter(SimpleListFilter):
 @admin.register(FinotechRequest)
 class FinotechRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'url', 'data', 'status_code')
-    list_filter = (FinotechRequestUserFilter, )
+    list_filter = (FinotechRequestUserFilter, 'status_code')
     ordering = ('-created', )
     readonly_fields = ('user', )
+    search_fields = ('url', )
 
 
 @admin.register(Notification)
