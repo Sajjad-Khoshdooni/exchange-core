@@ -22,7 +22,6 @@ class StakeRequestSerializer(serializers.ModelSerializer):
     total_revenue = serializers.SerializerMethodField()
     remaining_date = serializers.SerializerMethodField()
     presentation_amount = serializers.SerializerMethodField()
-    is_bot = serializers.BooleanField(default=False, required=False)
 
     def get_remaining_date(self, stake_request: StakeRequest):
         if stake_request.remaining_date:
@@ -65,7 +64,6 @@ class StakeRequestSerializer(serializers.ModelSerializer):
             'account': user.get_account(),
             'wallet': wallet,
             'user': user,
-            'is_bot': attrs.get('is_bot', False)
         }
 
     def create(self, validated_data):
@@ -85,7 +83,6 @@ class StakeRequestSerializer(serializers.ModelSerializer):
                 amount=amount,
                 account=user.get_account(),
                 login_activity=LoginActivity.from_request(self.context['request']),
-                is_bot=validated_data.get('is_bot', False)
             )
             pipeline.new_trx(
                 group_id=stake_object.group_id,
@@ -104,18 +101,19 @@ class StakeRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = StakeRequest
         fields = ('id', 'created', 'status', 'stake_option', 'amount', 'presentation_amount',
-                  'stake_option_id', 'total_revenue', 'is_bot', 'remaining_date', 'is_bot')
+                  'stake_option_id', 'total_revenue', 'remaining_date')
 
 
 class StakeRequestAPIView(ModelViewSet):
     serializer_class = StakeRequestSerializer
 
     def get_queryset(self):
-        stat = self.request.GET.get('stat', '0')
-        if stat == '1':
-            return StakeRequest.objects.filter(account=self.request.user.get_account(), is_bot=True).order_by('-created')
-        else:
-            return StakeRequest.objects.filter(account=self.request.user.get_account(), is_bot=False).order_by('-created')
+        is_bot = self.request.query_params.get('bot', '0') == '1'
+
+        return StakeRequest.objects.filter(
+            account=self.request.user.get_account(),
+            stake_option__is_bot=is_bot
+        ).order_by('-created')
 
     def destroy(self, request, *args, **kwargs):
 
