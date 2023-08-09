@@ -221,7 +221,7 @@ class User(AbstractUser):
             if self.level == User.LEVEL1:
                 if User.objects.filter(level__gte=User.LEVEL2, national_code=self.national_code).exclude(id=self.id):
                     self.national_code_verified = False
-                    self.save(update_fields=['national_code_verified'])
+                    self.save(update_fields=['verify_status', 'national_code_verified'])
                     return self.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
 
             self.level += 1
