@@ -3,27 +3,27 @@ from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
-from ledger.models.price_alert import PriceTracking
+from ledger.models.price_alert import AssetAlert
 
 
-class AlertViewSerializer(serializers.ModelSerializer):
+class AssetAlertViewSerializer(serializers.ModelSerializer):
     def validate(self, data):
         user = self.context['request'].user
         asset = data['asset']
-        if PriceTracking.objects.filter(user=user, asset=asset).exists():
-            raise ValidationError({'asset': 'بازار انتخاب شده تحت‌نظر می‌باشد.'})
+        if AssetAlert.objects.filter(user=user, asset=asset).exists():
+            raise ValidationError({'asset': 'ارز دیجیتال انتخاب شده تحت‌نظر می‌باشد.'})
         if asset.is_cash():
-            raise ValidationError({'asset': 'بازار انتخاب شده ریالی می‌باشد.'})
+            raise ValidationError({'asset': 'ارزدیجیتال انتخاب شده نباید تومان باشد.'})
         return data
 
     class Meta:
-        model = PriceTracking
+        model = AssetAlert
         fields = ('asset',)
 
 
-class AlertView(viewsets.ModelViewSet):
-    serializer_class = AlertViewSerializer
-    queryset = PriceTracking.objects.all()
+class AssetAlertView(viewsets.ModelViewSet):
+    serializer_class = AssetAlertViewSerializer
+    queryset = AssetAlert.objects.all()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
