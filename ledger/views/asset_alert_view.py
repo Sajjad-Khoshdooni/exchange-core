@@ -3,10 +3,15 @@ from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
+
+from ledger.models.asset import AssetSerializerMini
 from ledger.models.asset_alert import AssetAlert
 
 
 class AssetAlertViewSerializer(serializers.ModelSerializer):
+    asset = AssetSerializerMini(read_only=['margin_enable', 'precision', 'step_size', 'name', 'name_fa',
+                                           'logo', 'original_symbol', 'original_name_fa'])
+
     def validate(self, data):
         user = self.context['request'].user
         asset = data['asset']
