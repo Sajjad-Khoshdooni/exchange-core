@@ -95,7 +95,8 @@ class OTCTrade(models.Model):
             otc_trade = OTCTrade.objects.create(
                 otc_request=otc_request,
                 execution_type=OTCTrade.MARKET,
-                to_buy_amount=otc_request.amount if otc_request.side == BUY else -otc_request.amount
+                to_buy_amount=otc_request.amount if otc_request.side == BUY else -otc_request.amount,
+                hedged=True
             )
 
             fok_success = otc_trade.try_fok_fill(pipeline)
@@ -107,7 +108,8 @@ class OTCTrade(models.Model):
                     })
                     raise HedgeError
                 otc_trade.execution_type = OTCTrade.PROVIDER
-                otc_trade.save(update_fields=['execution_type'])
+                otc_trade.hedged = False
+                otc_trade.save(update_fields=['execution_type', 'hedged'])
                 pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount,
                                   reason=WalletPipeline.TRADE)
 
