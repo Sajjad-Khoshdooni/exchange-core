@@ -36,8 +36,7 @@ def get_altered_coins(past_cycle_prices, current_cycle):
     return {coin: [current_cycle[coin], past_cycle_prices[coin]] for coin in
             past_cycle_prices.keys() & current_cycle.keys()
             if
-            Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(
-                1.00))) > Decimal('0.05')
+            Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1))) > Decimal('0.05')
             }
 
 
