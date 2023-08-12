@@ -310,6 +310,10 @@ class BalanceLockInline(admin.TabularInline):
     fields = ('reason',)
     readonly_fields = ('reason',)
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.filter(Q(amount__gte=0))
+
 
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
