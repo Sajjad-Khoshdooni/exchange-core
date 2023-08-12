@@ -23,7 +23,7 @@ def send_notifications(asset_alert_list, altered_coins):
     for asset_alert in asset_alert_list:
         base_coin = 'تتر' if asset_alert.asset.symbol != asset_alert.asset.USDT else 'تومان'
         new_price, old_price = altered_coins[asset_alert.asset.symbol]
-        percent = math.floor(abs(new_price / old_price - Decimal(1)))
+        percent = math.floor(abs(new_price / old_price - Decimal(1)) * 100)
         change_status = 'افزایش' if new_price > old_price else 'کاهش'
         Notification.send(
             recipient=asset_alert.user,
