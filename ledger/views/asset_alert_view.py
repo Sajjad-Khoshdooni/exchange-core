@@ -23,7 +23,7 @@ class AssetAlertViewSerializer(serializers.ModelSerializer):
         fields = ('asset',)
 
 
-class AssetAlertListSerializer(serializers.ModelSerializer):
+class AssetAlertObjectSerializer(serializers.ModelSerializer):
     asset = AssetSerializerMini()
 
     class Meta:
@@ -43,7 +43,12 @@ class AssetAlertView(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        serializer = AssetAlertListSerializer(queryset, many=True)
+        serializer = AssetAlertObjectSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = AssetAlertObjectSerializer(instance)
         return Response(serializer.data)
 
     def perform_create(self, serializer):
