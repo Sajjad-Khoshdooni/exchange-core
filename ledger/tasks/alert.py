@@ -19,16 +19,16 @@ def get_current_prices():
     return symbols_price
 
 
-def send_notifications(selections, altered_coins):
-    for select in selections:
-        base_coin = 'تتر' if select.asset.symbol != select.asset.USDT else 'تومان'
-        new_price, old_price = altered_coins[select.asset.symbol]
-        percent = math.floor(abs(new_price / old_price) - Decimal(1))
+def send_notifications(asset_alert_list, altered_coins):
+    for asset_alert in asset_alert_list:
+        base_coin = 'تتر' if asset_alert.asset.symbol != asset_alert.asset.USDT else 'تومان'
+        new_price, old_price = altered_coins[asset_alert.asset.symbol]
+        percent = math.floor(abs(new_price / old_price - Decimal(1)))
         change_status = 'افزایش' if new_price > old_price else 'کاهش'
         Notification.send(
-            recipient=select.user,
+            recipient=asset_alert.user,
             title='تغییر قیمت',
-            message=f'قیمت ارزدیجیتال {select.asset.name_fa} {percent} درصد {change_status} پیدا کرد و به {new_price} {base_coin} رسید.'
+            message=f'قیمت ارزدیجیتال {asset_alert.asset.name_fa} {percent} درصد {change_status} پیدا کرد و به {new_price} {base_coin} رسید.'
         )
 
 
@@ -54,7 +54,7 @@ def send_price_notifications():
     altered_coins = get_altered_coins(past_cycle, current_cycle)
     if count % 12 == 0:
         altered_coins = {**altered_coins, **get_altered_coins(initial_cycle, current_cycle)}
-    selections = AssetAlert.objects.filter(Q(asset__symbol__in=altered_coins.keys()))
-    send_notifications(selections, altered_coins)
+    asset_alert_list = AssetAlert.objects.filter(Q(asset__symbol__in=altered_coins.keys()))
+    send_notifications(asset_alert_list, altered_coins)
     cache.set('coin_prices', {'initial': current_cycle if count % 12 == 0 else initial_cycle, 'past': current_cycle,
                               'count': count + 1})
