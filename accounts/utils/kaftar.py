@@ -13,14 +13,17 @@ def send_message(profile: str, text: str):
         logger.info('No kaftar token set!')
         return
 
-    requests.post(
-        'https://kaftar.raastin.com/api/v1/messaging/send/',
-        headers={
-            'Authorization': token
-        },
-        data={
-            'profile': profile,
-            'text': text
-        },
-        timeout=30,
-    )
+    try:
+        requests.post(
+            'https://kaftar.raastin.com/api/v1/messaging/send/',
+            headers={
+                'Authorization': token
+            },
+            data={
+                'profile': profile,
+                'text': text
+            },
+            timeout=5,
+        )
+    except:
+        pass

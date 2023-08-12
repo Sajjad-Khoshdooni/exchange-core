@@ -62,6 +62,8 @@ class Gateway(models.Model):
     ipg_fee_max = models.SmallIntegerField(default=4000)
     ipg_fee_percent = get_amount_field(default=Decimal('0.02'))
 
+    batch_id = models.CharField(max_length=20, null=True, blank=True)
+
     def clean(self):
         if not self.active and not Gateway.objects.filter(active=True).exclude(id=self.id):
             raise ValidationError('At least one gateway should be active')

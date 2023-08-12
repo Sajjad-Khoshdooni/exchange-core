@@ -21,6 +21,7 @@ from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet
+from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE, PROCESS
 from ledger.utils.precision import get_presentation_amount, humanize_presentation
@@ -42,13 +43,14 @@ class AssetAdmin(AdvancedAdmin):
         'symbol', 'enable', 'get_hedge_value', 'get_hedge_value_abs', 'get_hedge_amount', 'get_calc_hedge_amount',
         'get_total_asset', 'get_users_balance', 'get_reserved_amount',
         'order', 'trend', 'trade_enable', 'hedge',
-        'margin_enable', 'publish_date', 'spread_category', 'otc_status', 'price_page',
+        'margin_enable', 'publish_date', 'spread_category', 'otc_status', 'price_page', 'get_distribution_factor'
     )
     list_filter = ('enable', 'trend', 'margin_enable', 'spread_category')
     list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'hedge', 'price_page')
     search_fields = ('symbol',)
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('setup_asset',)
+    readonly_fields = ('distribution_factor', )
 
     def save_model(self, request, obj, form, change):
         if Asset.objects.filter(order=obj.order).exclude(id=obj.id).exists():
@@ -57,8 +59,7 @@ class AssetAdmin(AdvancedAdmin):
         return super(AssetAdmin, self).save_model(request, obj, form, change)
 
     def get_queryset(self, request):
-        return super(AssetAdmin, self).get_queryset(request) \
-            .annotate(
+        return super(AssetAdmin, self).get_queryset(request).annotate(
             hedge_value=F('assetsnapshot__hedge_value'),
             hedge_value_abs=F('assetsnapshot__hedge_value_abs'),
             hedge_amount=F('assetsnapshot__hedge_amount'),
@@ -102,6 +103,10 @@ class AssetAdmin(AdvancedAdmin):
             return
 
         return humanize_presentation(calc_hedge_amount)
+
+    @admin.display(description='dist factor', ordering='distribution_factor')
+    def get_distribution_factor(self, asset: Asset):
+        return round(asset.distribution_factor, 3)
 
     @admin.display(description='reserved amount')
     def get_reserved_amount(self, asset: Asset):
@@ -246,8 +251,9 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request', 'status', 'get_value', 'get_value_irt', 'execution_type', 'gap_revenue')
-    list_filter = (OTCUserFilter, 'status')
+    list_display = ('created', 'otc_request', 'status', 'get_value', 'get_value_irt', 'execution_type', 'gap_revenue',
+                    'hedged')
+    list_filter = (OTCUserFilter, 'status', 'execution_type', 'hedged')
     search_fields = ('group_id', 'order_id', 'otc_request__symbol__asset__symbol', 'otc_request__account__user__phone')
     readonly_fields = ('otc_request',)
     actions = ('accept_trade', 'accept_trade_without_hedge', 'cancel_trade')
@@ -324,7 +330,7 @@ class WalletAdmin(admin.ModelAdmin):
         ('asset', RelatedDropdownFilter),
         WalletUserFilter
     ]
-    readonly_fields = ('account', 'asset', 'market', 'balance', 'locked')
+    readonly_fields = ('account', 'asset', 'market', 'balance', 'locked', 'variant')
     search_fields = ('account__user__phone', 'asset__symbol')
 
     @admin.display(description='free')
@@ -679,3 +685,10 @@ class BalanceLockAdmin(admin.ModelAdmin):
     readonly_fields = ('wallet', 'key', 'original_amount', 'amount', 'reason')
     list_filter = ('reason',)
     search_fields = ('wallet__account__user__phone', 'key')
+
+
+@admin.register(ReserveWallet)
+class ReserveWalletAdmin(admin.ModelAdmin):
+    list_display = ('created', 'sender', 'receiver', 'amount', 'group_id', 'refund_completed', 'request_id')
+    readonly_fields = ('created', 'sender', 'receiver', 'group_id')
+    search_fields = ('group_id', 'request_id')

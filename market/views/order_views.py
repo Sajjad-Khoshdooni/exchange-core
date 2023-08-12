@@ -74,6 +74,8 @@ class OrderViewSet(mixins.CreateModelMixin,
             ).first()
             if reserve_wallet:
                 filters = {'wallet__variant': reserve_wallet.group_id}
+            else:
+                return Order.objects.none()
 
         return Order.objects.filter(account=account, **filters).select_related(
             'symbol', 'wallet', 'stop_loss').order_by('-created')

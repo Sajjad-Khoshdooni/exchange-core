@@ -4,7 +4,8 @@ from django.db.models import Q
 from django.utils import timezone
 
 from gamify import models
-from gamify.utils import clone_mission_template
+from gamify.models import UserMission, Task
+from gamify.utils import clone_mission_template, check_prize_achievements
 
 
 @admin.register(models.MissionJourney)
@@ -70,18 +71,24 @@ class UserMissionExpiredFilter(SimpleListFilter):
         return queryset.filter(q)
 
 
-@admin.register(models.UserMission)
+@admin.register(UserMission)
 class UserMissionAdmin(admin.ModelAdmin):
     list_display = ('user', 'mission', 'finished', 'expired', 'get_expiration')
     readonly_fields = ('user', )
     list_filter = ('mission', 'finished', UserMissionExpiredFilter)
+    actions = ('check_achievement', )
 
     @admin.display(description='expiration', ordering='mission__expiration')
-    def get_expiration(self, mission: models.UserMission):
-        return mission.mission.expiration
+    def get_expiration(self, user_mission: UserMission):
+        return user_mission.mission.expiration
+
+    @admin.action(description='بررسی جایزه', permissions=['view'])
+    def check_achievement(self, request, queryset):
+        for user_mission in queryset:
+            user_mission.check_achievements()
 
 
-@admin.register(models.Task)
+@admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
     list_display = ('mission', 'scope', 'title', 'type', 'max')
     list_filter = ('mission', )

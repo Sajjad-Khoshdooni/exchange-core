@@ -258,7 +258,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     )
     preserve_filters = ('archived', )
 
-    search_fields = (*UserAdmin.search_fields, 'national_code')
+    search_fields = (*UserAdmin.search_fields, 'national_code', 'phone')
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
@@ -421,9 +421,21 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
 
+    @admin.display(description='تاریخ آخرین معامله')
     def get_last_trade(self, user: User):
-        return gregorian_to_jalali_datetime_str(Trade.objects.filter(account=user.get_account()).last().created)
-    get_last_trade.short_description = 'تاریخ آخرین معامله'
+        account = user.get_account()
+
+        dates = []
+        last_trade = Trade.objects.filter(account=account).order_by('id').last()
+        if last_trade:
+            dates.append(last_trade.created)
+
+        last_otc_trade = OTCTrade.objects.filter(otc_request__account=account).order_by('id').last()
+        if last_otc_trade:
+            dates.append(last_otc_trade.created)
+
+        if dates:
+            return gregorian_to_jalali_datetime_str(max(dates))
 
     def get_bank_card_link(self, user: User):
         link = url_to_admin_list(BankCard) + '?user={}'.format(user.id)
@@ -662,9 +674,10 @@ class FinotechRequestUserFilter(SimpleListFilter):
 @admin.register(FinotechRequest)
 class FinotechRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'url', 'data', 'status_code')
-    list_filter = (FinotechRequestUserFilter, )
+    list_filter = (FinotechRequestUserFilter, 'status_code')
     ordering = ('-created', )
     readonly_fields = ('user', )
+    search_fields = ('url', )
 
 
 @admin.register(Notification)

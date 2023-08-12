@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def send_support_message(message: str, link: str):
+    return
     text = message + '\n' + link
 
     send_message(
