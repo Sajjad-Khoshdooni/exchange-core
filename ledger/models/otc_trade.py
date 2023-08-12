@@ -95,6 +95,7 @@ class OTCTrade(models.Model):
             otc_trade = OTCTrade.objects.create(
                 otc_request=otc_request,
                 execution_type=OTCTrade.MARKET,
+                to_buy_amount=otc_request.amount if otc_request.side == BUY else -otc_request.amount
             )
 
             fok_success = otc_trade.try_fok_fill(pipeline)
@@ -215,10 +216,8 @@ class OTCTrade(models.Model):
     def get_pending_hedge_trades(self):
         return self.objects.filter(otc_request__symbol__asset=self.otc_request.symbol.asset, hedged=False)
 
-    def get_pending_to_buy_amount(self, to_buy_amount):
-        return to_buy_amount + (
-                self.get_pending_hedge_trades().aggregate(to_buy=Sum('to_buy_amount'))['to_buy'] or Decimal(0)
-        )
+    def get_pending_to_buy_amount(self):
+        return self.get_pending_hedge_trades().aggregate(to_buy=Sum('to_buy_amount'))['to_buy'] or Decimal(0)
 
     def hedge_with_provider(self, hedge: bool = True):
         assert self.execution_type == self.PROVIDER
@@ -229,7 +228,6 @@ class OTCTrade(models.Model):
 
             if hedge:
                 req = self.otc_request
-                to_buy_amount = req.amount if req.side == BUY else -req.amount
                 _key = 'otc:%s' % self.id
 
                 from ledger.utils.provider import TRADE, get_provider_requester
@@ -237,7 +235,7 @@ class OTCTrade(models.Model):
                     request_id=_key,
                     asset=req.symbol.asset,
                     side=req.side,
-                    buy_amount=self.get_pending_to_buy_amount(to_buy_amount),
+                    buy_amount=self.get_pending_to_buy_amount(),
                     scope=TRADE
                 )
 
@@ -265,8 +263,6 @@ class OTCTrade(models.Model):
 
                 if hedged:
                     hedge_key = _key
-                    self.to_buy_amount = to_buy_amount
-                    self.save(update_fields=['to_buy_amount'])
                     self.get_pending_hedge_trades().update(hedged=True)
 
             from accounting.models.revenue import TradeRevenue
