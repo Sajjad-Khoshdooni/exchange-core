@@ -236,7 +236,6 @@ class OTCTrade(models.Model):
                 hedged = get_provider_requester().try_hedge_new_order(
                     request_id=_key,
                     asset=req.symbol.asset,
-                    side=req.side,
                     buy_amount=self.get_pending_to_buy_amount(),
                     scope=TRADE
                 )

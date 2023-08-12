@@ -224,11 +224,7 @@ class ProviderRequester:
 
         return info
 
-    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, buy_amount: Decimal = 0, side: str = ''):
-        assert buy_amount >= 0
-        if buy_amount > 0:
-            assert side
-
+    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, buy_amount: Decimal = 0):
         if settings.DEBUG_OR_TESTING_OR_STAGING:
             logger.info('ignored due to debug')
             return
@@ -243,17 +239,17 @@ class ProviderRequester:
 
         # Hedge strategy: don't sell assets ASAP and hold them!
 
-        if buy_amount < 0:
+        if buy_amount > 0:
             threshold = step_size / 2
         else:
             threshold = step_size * 2
 
         if abs(buy_amount) > threshold:
-            side = SELL
+            side = BUY
 
             if buy_amount < 0:
                 buy_amount = -buy_amount
-                side = BUY
+                side = SELL
 
             round_digits = -int(log10(step_size))
 
