@@ -252,8 +252,9 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request', 'status', 'get_value', 'get_value_irt', 'execution_type', 'gap_revenue')
-    list_filter = (OTCUserFilter, 'status')
+    list_display = ('created', 'otc_request', 'status', 'get_value', 'get_value_irt', 'execution_type', 'gap_revenue',
+                    'hedged')
+    list_filter = (OTCUserFilter, 'status', 'execution_type', 'hedged')
     search_fields = ('group_id', 'order_id', 'otc_request__symbol__asset__symbol', 'otc_request__account__user__phone')
     readonly_fields = ('otc_request', )
     actions = ('accept_trade', 'accept_trade_without_hedge', 'cancel_trade')

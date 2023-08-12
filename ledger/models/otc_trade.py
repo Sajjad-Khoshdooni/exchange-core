@@ -216,7 +216,7 @@ class OTCTrade(models.Model):
         check_prize_achievements(account, Task.TRADE)
 
     def get_pending_hedge_trades(self):
-        return self.objects.filter(otc_request__symbol__asset=self.otc_request.symbol.asset, hedged=False)
+        return OTCTrade.objects.filter(otc_request__symbol__asset=self.otc_request.symbol.asset, hedged=False)
 
     def get_pending_to_buy_amount(self):
         return self.get_pending_hedge_trades().aggregate(to_buy=Sum('to_buy_amount'))['to_buy'] or Decimal(0)
