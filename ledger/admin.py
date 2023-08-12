@@ -318,7 +318,7 @@ class BalanceLockInline(admin.TabularInline):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.filter(Q(amount__gte=0))
+        return qs.filter(Q(amount__gt=0))
 
 
 @admin.register(models.Wallet)
