@@ -313,8 +313,8 @@ class BalanceLockInline(admin.TabularInline):
     verbose_name_plural = "Balance Lock Reasons"
     extra = 0
 
-    fields = ('reason',)
-    readonly_fields = ('reason',)
+    fields = ('reason', 'original_amount', 'amount', 'key')
+    readonly_fields = ('reason', 'original_amount', 'amount', 'key')
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
