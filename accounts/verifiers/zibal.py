@@ -18,9 +18,12 @@ class ZibalRequester:
 
     # todo: check force_renew
     def _get_cc_token(self, force_renew: bool = False):
-        return config('ZIBAL_API_TOKEN')
+        return '65173c72e07a4b718f4e7423cb2a3ac8'
+        # return config('ZIBAL_API_TOKEN')
 
-    def collect_api(self, path: str, method: str = 'GET', data: dict = {}, weight: int = 0) -> Response:
+    def collect_api(self, path: str, method: str = 'GET', data=None, weight: int = 0) -> Response:
+        if data is None:
+            data = {}
         token = self._get_cc_token()
         url = self.BASE_URL + path
         req_object = FinotechRequest(
@@ -101,6 +104,7 @@ class ZibalRequester:
         }
         return self.collect_api(
             path='/v1/facility/cardInquiry',
+            method='POST',
             data=params,
             weight=FinotechRequest.JIBIT_CARD_INFO_WEIGHT
         )
