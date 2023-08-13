@@ -3,7 +3,11 @@ from decimal import Decimal
 from uuid import UUID
 
 from django.conf import settings
+from django.db.models import F, Q, Sum
+from django.utils import timezone
+from django.utils.timezone import timedelta
 
+from ledger.utils.cache import cache_for
 from accounts.models import Referral
 from ledger.models import Wallet, Trx, Asset
 from ledger.utils.external_price import BUY, SELL
@@ -34,7 +38,6 @@ class TradesPair:
     @classmethod
     def init_pair(cls, maker_order: Order, taker_order: Order, amount: Decimal, price: Decimal, trade_source: str,
                   base_irt_price: Decimal, base_usdt_price: Decimal, group_id: UUID):
-
         assert maker_order.symbol == taker_order.symbol
 
         maker_trade = Trade(
@@ -80,7 +83,6 @@ class TradesPair:
 
 
 def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade: bool = False):
-
     if not fake_trade:
         _register_trade_transaction(pipeline, pair=pair)
         _register_trade_base_transaction(pipeline, pair=pair)
@@ -111,7 +113,6 @@ def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade
 
 
 def _register_trade_transaction(pipeline: WalletPipeline, pair: TradesPair):
-
     if pair.maker_order.side == BUY:
         sender, receiver = pair.taker_order.wallet, pair.maker_order.wallet
     else:
@@ -173,7 +174,6 @@ def get_fee_info(trade: BaseTrade) -> FeeInfo:
 
 def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet: Wallet, base_wallet: Wallet,
                               group_id: UUID) -> FeeInfo:
-
     account = trade.account
     referrer = account.referred_by
     fee_info = get_fee_info(trade)
@@ -205,3 +205,15 @@ def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet
     )
 
     return fee_info
+
+
+@cache_for(60 * 10)
+def get_market_size_ratio():
+    qs = Trade.objects.filter(
+        Q(status=Trade.DONE) & Q(created__gte=timezone.now() - timedelta(days=1)))
+    total_size = qs.aggregate(
+        total_size=Sum('usdt_value')
+    )['total_size']
+    return (
+        qs.values('market').annotate(market_ratio=Sum('usdt_value')).update(total_amount=F('market_ratio') / total_size)
+        .values('symbol__asset__symbol', 'market_ratio'))
