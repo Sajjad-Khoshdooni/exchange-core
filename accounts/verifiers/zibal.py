@@ -1,12 +1,10 @@
 from accounts.models import User, FinotechRequest
 from accounts.verifiers.finotech import ServerError
-
+from accounts.verifiers.jibit import Response
 from decouple import config
 from urllib3.exceptions import ReadTimeoutError
 import requests
 import logging
-
-from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +69,7 @@ class ZibalRequester:
             })
             raise ServerError
 
-        return Response(data=resp_data, status=resp.ok)
+        return Response(data=resp_data, status_code=resp.ok)
 
     def matching(self, phone_number: str = None, national_code: str = None) -> Response:
         params = {
