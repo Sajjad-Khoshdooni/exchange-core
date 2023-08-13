@@ -135,3 +135,30 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
     bank_account.save()
 
     return verified
+
+
+def verify_national_code_with_phone(user: User, retry: int = 2) -> Union[bool, None]:
+    if user.level != User.LEVEL2:
+        return False
+
+    if not user.national_code:
+        return False
+
+    try:
+        verified = shahkar_check(user, user.phone, user.national_code)
+
+        if verified is None:
+            return
+
+    except (TimeoutError, ServerError):
+        if retry == 0:
+            logger.error('Zibal timeout verify_national_code')
+            return
+        else:
+            logger.info('Retrying verify_national_code...')
+            return verify_national_code_with_phone(user, retry - 1)
+
+    user.national_code_phone_verified = verified
+    user.save(update_fields=['national_code_phone_verified'])
+
+    return verified
