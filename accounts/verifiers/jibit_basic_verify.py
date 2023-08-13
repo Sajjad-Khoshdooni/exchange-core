@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def basic_verify(user: User):
+    from accounts.verifiers.zibal_basic_verify import verify_name_by_bank_card
     if user.level != User.LEVEL1:
         logger.info('ignoring double verifying user_d = %d' % user.id)
         return

@@ -5,7 +5,8 @@ from decouple import config
 
 from accounts.models import Notification
 from accounts.models import User
-from accounts.verifiers.jibit_basic_verify import basic_verify, verify_national_code_with_phone
+from accounts.verifiers.jibit_basic_verify import basic_verify
+from accounts.verifiers.zibal_basic_verify import verify_national_code_with_phone
 from .send_sms import send_message_by_kavenegar
 
 logger = logging.getLogger(__name__)
