@@ -31,8 +31,8 @@ class StakeOverviewAPIView(APIView):
             price_irt = market_prices['IRT'].get(asset_revenue['symbol'], 0) or \
                         external_prices.get(asset_revenue['symbol'], 0) * tether_irt
 
-            total_usdt_value += asset_revenue['revenue'] * price_usdt
-            total_irt_value += asset_revenue['revenue'] * price_irt
+            total_usdt_value += asset_revenue['total_revenue'] * price_usdt
+            total_irt_value += asset_revenue['total_revenue'] * price_irt
         return {
             'IRT': get_presentation_amount(floor_precision(total_irt_value)),
             'USDT': get_presentation_amount(floor_precision(total_usdt_value))
