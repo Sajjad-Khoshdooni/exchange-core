@@ -6,17 +6,19 @@ from urllib3.exceptions import ReadTimeoutError
 import requests
 import logging
 
-
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
 
+
+# todo : refactor Jibit & Zibal requesters
 class ZibalRequester:
     BASE_URL = 'https://api.zibal.ir'
 
     def __init__(self, user: User):
-        self._user = User
+        self._user = user
 
+    # todo: check force_renew
     def _get_cc_token(self, force_renew: bool = False):
         return config('ZIBAL_API_TOKEN')
 
@@ -72,4 +74,35 @@ class ZibalRequester:
         return Response(data=resp_data, status=resp.ok)
 
     def matching(self, phone_number: str = None, national_code: str = None) -> Response:
-        ...
+        params = {
+            "mobile": phone_number,
+            "nationalCode": national_code
+        }
+        # todo: adjust weights
+        return self.collect_api(
+            data=params,
+            path='/v1/facility/shahkarInquiry',
+            method='POST',
+            weight=FinotechRequest.JIBIT_ADVANCED_MATCHING if national_code else FinotechRequest.JIBIT_SIMPLE_MATCHING
+        )
+
+    def get_iban_info(self, iban: str) -> Response:
+        params = {
+            "IBAN": iban,
+        }
+        return self.collect_api(
+            data=params,
+            path='/v1/facility/ibanInquiry',
+            method='POST',
+            weight=FinotechRequest.JIBIT_IBAN_INFO_WEIGHT,
+        )
+
+    def get_card_info(self, card_pan: str) -> Response:
+        params = {
+            "cardNumber": card_pan,
+        }
+        return self.collect_api(
+            path='/v1/facility/cardInquiry',
+            data=params,
+            weight=FinotechRequest.JIBIT_CARD_INFO_WEIGHT
+        )
