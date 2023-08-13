@@ -211,9 +211,9 @@ def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet
 def get_market_size_ratio():
     qs = Trade.objects.filter(
         Q(status=Trade.DONE) & Q(created__gte=timezone.now() - timedelta(days=1)))
-    total_size = qs.aggregate(
+    total_size = qs.annotate(usdt_value=F('amount') * F('price') * F('base_usdt_price')).aggregate(
         total_size=Sum('usdt_value')
     )['total_size']
-    return (
-        qs.values('market').annotate(market_ratio=Sum('usdt_value')).update(total_amount=F('market_ratio') / total_size)
-        .values('symbol__asset__symbol', 'market_ratio'))
+    annotated_qs = qs.values('market').annotate(market_ratio=F('amount') * F('price') * F('base_usdt_price') / total_size)
+    print(annotated_qs)
+    return annotated_qs.values('symbol__asset__symbol', 'market_ratio')
