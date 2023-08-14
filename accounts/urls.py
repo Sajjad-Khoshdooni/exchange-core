@@ -27,7 +27,7 @@ urlpatterns = [
     path('otp/verify/', views.VerifyOTPView.as_view()),
     path('otp/send/', views.SendOTPView.as_view()),
 
-    path('statistics/', views.UserStatisticsView.as_view()),
+    path('user/stats/', views.UserStatisticsView.as_view()),
     path('user/', views.UserDetailView.as_view()),
 
     path('forget/init/', views.InitiateForgetPasswordView.as_view()),
