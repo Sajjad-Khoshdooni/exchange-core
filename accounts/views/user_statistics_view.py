@@ -1,48 +1,37 @@
 from datetime import timedelta
 
-from django.db.models import Q
 from django.utils import timezone
+from django.db.models import Sum
 
-from rest_framework import serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from accounting.models import TradeRevenue
-from accounts.models import User
-from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, CRYPTO_WITHDRAW_LIMIT, MILLION
-
-
-class TradeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TradeRevenue
-        fields = ['symbol', 'side', 'amount', 'price', 'source', 'fee_revenue', 'value', 'coin_price',
-                  'base_usdt_price']
-
-
-class UserStatisticsSerializer(serializers.Serializer):
-    all_trades = TradeSerializer(many=True, read_only=True)
-    last_month_trades = TradeSerializer(many=True, read_only=True)
-    fiat_withdraw_limit = serializers.IntegerField(read_only=True)
-    crypto_withdraw_limit = serializers.IntegerField(read_only=True)
-    fiat_deposit_limit = serializers.IntegerField(read_only=True)
+from financial.utils.withdraw_limit import (FIAT_WITHDRAW_LIMIT, CRYPTO_WITHDRAW_LIMIT,
+                                            get_crypto_withdraw_irt_value, get_fiat_withdraw_irt_value)
 
 
 class UserStatisticsView(APIView):
     def get(self, request):
         user = request.user
-        all_trades = TradeRevenue.objects.filter(Q(account=user.get_account()))
-        last_month_trades = TradeRevenue.objects.filter(
-            Q(account=user.get_account()) & Q(created__gte=timezone.now() - timedelta(days=30)))
-        fiat_withdraw_limit = FIAT_WITHDRAW_LIMIT[user.level]
-        crypto_withdraw_limit = CRYPTO_WITHDRAW_LIMIT[user.level]
-        fiat_deposit_limit = 50 * MILLION if user.level > User.LEVEL1 else 0
-        serializer = UserStatisticsSerializer(
+        all_trades_irt = user.get_account().trade_volume_irt
+        last_30d_trades_irt = TradeRevenue.objects.filter(
+            account=user.get_account(),
+            created__gte=timezone.now() - timedelta(days=30)
+        ).aggregate(total=Sum('value_irt'))['total']
+
+        current_day_fiat_withdraw = get_fiat_withdraw_irt_value(user)
+        current_day_crypto_withdraw = get_crypto_withdraw_irt_value(user)
+
+        daily_fiat_withdraw_limit = FIAT_WITHDRAW_LIMIT[user.level]
+        daily_crypto_withdraw_limit = CRYPTO_WITHDRAW_LIMIT[user.level]
+        return Response(
             {
-                'all_trades': all_trades,
-                'last_month_trades': last_month_trades,
-                'fiat_withdraw_limit': fiat_withdraw_limit,
-                'crypto_withdraw_limit': crypto_withdraw_limit,
-                'fiat_deposit_limit': fiat_deposit_limit
+                'all_trades_irt': all_trades_irt,
+                'last_30d_trades_irt': last_30d_trades_irt,
+                'daily_fiat_withdraw_limit': daily_fiat_withdraw_limit,
+                'daily_crypto_withdraw_limit': daily_crypto_withdraw_limit,
+                'current_day_fiat_withdraw': current_day_fiat_withdraw,
+                'current_day_crypto_withdraw': current_day_crypto_withdraw
             }
         )
-        return Response(serializer.data)
