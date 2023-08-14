@@ -700,7 +700,7 @@ class ReserveWalletAdmin(admin.ModelAdmin):
 @admin.register(ManualTrade)
 class ManualTradeAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'side', 'amount', 'price', 'filled_price', 'status')
-    list_filter = ('account', 'side', 'status')
+    list_filter = ('side', 'status')
     ordering = ('-created',)
     readonly_fields = ('group_id', 'status')
     actions = ('accept_trade',)
