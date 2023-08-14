@@ -12,7 +12,7 @@ from accounts.models import User
 from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, CRYPTO_WITHDRAW_LIMIT, MILLION
 
 
-class TradeSerializer(serializers.Serializer):
+class TradeSerializer(serializers.ModelSerializer):
     class Meta:
         model = TradeRevenue
         fields = ['symbol', 'side', 'amount', 'price', 'source', 'fee_revenue', 'value', 'coin_price',
