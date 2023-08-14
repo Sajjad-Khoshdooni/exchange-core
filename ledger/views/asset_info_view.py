@@ -13,9 +13,10 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
+from ledger.utils.coins_info import get_coins_info
 from ledger.utils.external_price import BUY, get_external_usdt_prices, get_external_price, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.provider import CoinInfo, get_provider_requester
+from ledger.utils.provider import CoinInfo
 from multimedia.models import CoinPriceContent
 
 
@@ -188,7 +189,7 @@ class AssetsViewSet(ModelViewSet):
 
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
-            ctx['cap_info'] = get_provider_requester().get_coins_info(symbols)
+            ctx['cap_info'] = get_coins_info()
             ctx['prices'] = get_external_usdt_prices(
                 coins=symbols,
                 side=BUY,
@@ -312,7 +313,7 @@ class AssetOverviewAPIView(APIView):
             otc_status=Asset.ACTIVE
         ).exclude(symbol=Asset.IRT).values_list('symbol', flat=True))
 
-        caps = get_provider_requester().get_coins_info(coins).values()
+        caps = get_coins_info().values()
         caps_dict = {c.coin: c for c in caps}
 
         def coin_info_to_dict(info: CoinInfo):

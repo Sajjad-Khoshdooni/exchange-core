@@ -112,7 +112,7 @@ class ProviderRequester:
 
         return result
 
-    def _collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 5) -> Response:
+    def _collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 10) -> Response:
         if data is None:
             data = {}
 
@@ -139,34 +139,6 @@ class ProviderRequester:
             resp_json = None
 
         return Response(data=resp_json, success=resp.ok, status_code=resp.status_code)
-
-    def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:
-        if asset:
-            data = {'coin': asset.symbol}
-        else:
-            data = {}
-
-        resp = self.collect_api('/api/v1/orders/total/', data=data)
-        assert resp.success
-
-        coin_orders_data_map = defaultdict(dict)
-        for order_data in resp.data:
-            coin = order_data['coin']
-            side = order_data['side']
-            amount = Decimal(order_data['amount'])
-
-            coin_orders_data_map[coin][side] = amount
-
-        orders = []
-
-        for coin, orders_data in coin_orders_data_map.items():
-            orders.append(CoinOrders(
-                coin=coin,
-                buy=Decimal(orders_data.get('buy', 0)),
-                sell=Decimal(orders_data.get('sell', 0)),
-            ))
-
-        return orders
 
     def get_market_info(self, asset: Asset) -> MarketInfo:
         resp = self.collect_api('/api/v1/market/', data={'coin': asset.symbol}, cache_timeout=300)
@@ -327,8 +299,7 @@ class ProviderRequester:
             'request_id': request_id,
         }).data
 
-    # todo: add caching
-    def get_coins_info(self, coins: List[str]) -> Dict[str, CoinInfo]:
+    def get_coins_info(self, coins: List[str] = None) -> Dict[str, CoinInfo]:
         data = {}
         if coins:
             data['coins'] = ','.join(coins)
