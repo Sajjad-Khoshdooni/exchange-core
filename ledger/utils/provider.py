@@ -51,14 +51,6 @@ class MarketInfo:
 
 @validate_arguments
 @dataclass
-class CoinOrders:
-    coin: str
-    buy: Decimal
-    sell: Decimal
-
-
-@validate_arguments
-@dataclass
 class NetworkInfo:
     coin: str
     network: str
@@ -299,7 +291,7 @@ class ProviderRequester:
             'request_id': request_id,
         }).data
 
-    def get_coins_info(self, coins: List[str] = None) -> Dict[str, CoinInfo]:
+    def get_coins_info(self, coins: List[str] = None) -> List[dict]:
         data = {}
         if coins:
             data['coins'] = ','.join(coins)
@@ -307,15 +299,9 @@ class ProviderRequester:
         resp = self.collect_api('/api/v1/coins/info/', data=data, cache_timeout=300)
 
         if not resp.success:
-            return {}
+            return []
 
-        coins_info = {}
-
-        for info_data in resp.data:
-            info = CoinInfo(**info_data)
-            coins_info[info.coin] = info
-
-        return coins_info
+        return resp.data
 
     def get_price(self, symbol: str, side: str, delay: int = 300, when: datetime = None) -> Decimal:
         resp = self.collect_api('/api/v1/market/price/history/', data={
@@ -365,11 +351,6 @@ class ProviderRequester:
 
 
 class MockProviderRequester(ProviderRequester):
-    def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:
-        return []
-
-    def get_hedge_amount(self, asset: Asset, coin_orders: CoinOrders = None) -> Decimal:
-        return Decimal(0)
 
     def get_market_info(self, asset: Asset) -> MarketInfo:
         return MarketInfo(
