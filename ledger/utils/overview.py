@@ -26,13 +26,7 @@ def get_internal_asset_deposits() -> dict:
 
 class AssetOverview:
     def __init__(self, prices: dict):
-        self._coin_total_orders = None
         self.provider = get_provider_requester()
-
-        self._coin_total_orders = {
-            coin_order.coin: coin_order for coin_order in self.provider.get_total_orders_amount_sum()
-        }
-
         self._binance_futures = self.provider.get_futures_info(BINANCE)
 
         wallets = Wallet.objects.filter(
@@ -49,11 +43,6 @@ class AssetOverview:
         self.assets_map = {a.symbol: a for a in Asset.objects.all()}
 
         self.reserved_assets = dict(ReservedAsset.objects.values_list('coin', 'amount'))
-
-    def get_calculated_hedge(self, coin: str):
-        assert self._coin_total_orders is not None
-        coin_orders = self._coin_total_orders.get(coin, CoinOrders(coin=coin, buy=Decimal(), sell=Decimal()))
-        return self.provider.get_hedge_amount(self.assets_map[coin], coin_orders)
 
     def get_binance_margin_ratio(self):
         if not self._binance_futures:

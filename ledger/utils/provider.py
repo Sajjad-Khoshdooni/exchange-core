@@ -96,7 +96,8 @@ class CoinInfo:
 
 
 class ProviderRequester:
-    def collect_api(self, path: str, method: str = 'GET', data: dict = None, cache_timeout: int = None) -> Response:
+    def collect_api(self, path: str, method: str = 'GET', data: dict = None, cache_timeout: int = None,
+                    timeout: float = 10) -> Response:
         cache_key = None
         if cache_timeout:
             cache_key = 'provider:' + get_cache_func_key(self.__class__, path, method, data)
@@ -104,14 +105,14 @@ class ProviderRequester:
             if cached_result is not None:
                 return Response(data=cached_result)
 
-        result = self._collect_api(path, method, data)
+        result = self._collect_api(path, method, data, timeout=timeout)
 
         if cache_timeout and result.success:
             cache.set(cache_key, result.data, cache_timeout)
 
         return result
 
-    def _collect_api(self, path: str, method: str = 'GET', data: dict = None) -> Response:
+    def _collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 5) -> Response:
         if data is None:
             data = {}
 
@@ -119,7 +120,7 @@ class ProviderRequester:
 
         request_kwargs = {
             'url': url,
-            'timeout': 10,
+            'timeout': timeout,
             'headers': {'Authorization': config('PROVIDER_TOKEN')},
         }
 
@@ -166,35 +167,6 @@ class ProviderRequester:
             ))
 
         return orders
-
-    def get_hedge_amount(self, asset: Asset, coin_order: CoinOrders = None) -> Decimal:
-        """
-        how much assets we have more!
-
-        out = -internal - binance transfer deposit
-        hedge = all assets - users = (internal + binance manual deposit + binance withdraw + binance trades)
-                + system + out = system + binance trades + binance manual deposit
-
-        given binance manual deposit = 0 -> hedge = system + binance manual deposit + binance trades
-        """
-        from accounts.models import Account
-
-        system_balance = Wallet.objects.filter(
-            account__type=Account.SYSTEM,
-            asset=asset
-        ).aggregate(
-            sum=Sum('balance')
-        )['sum'] or 0
-
-        if not coin_order:
-            coin_order = next(iter(self.get_total_orders_amount_sum(asset)), None)
-
-        orders_diff = 0
-
-        if coin_order:
-            orders_diff = coin_order.buy - coin_order.sell
-
-        return system_balance + orders_diff
 
     def get_market_info(self, asset: Asset) -> MarketInfo:
         resp = self.collect_api('/api/v1/market/', data={'coin': asset.symbol}, cache_timeout=300)
