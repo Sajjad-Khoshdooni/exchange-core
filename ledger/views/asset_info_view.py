@@ -309,12 +309,12 @@ class AssetOverviewAPIView(APIView):
     def get(self, request):
         limit = int(self.request.query_params.get('limit', default=3))
 
-        coins = list(Asset.live_objects.filter(
+        coins = set(Asset.live_objects.filter(
             otc_status=Asset.ACTIVE
         ).exclude(symbol=Asset.IRT).values_list('symbol', flat=True))
 
-        caps = get_coins_info().values()
-        caps_dict = {c.coin: c for c in caps}
+        caps_dict = {c: cap for (c, cap) in get_coins_info().items() if c in coins}
+        caps = caps_dict.values()
 
         def coin_info_to_dict(info: CoinInfo):
             return {
