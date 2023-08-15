@@ -6,7 +6,7 @@ from django.template import loader
 from accounts.models import User
 from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.similarity import name_similarity
+from accounts.utils.similarity import name_similarity, split_names
 from accounts.utils.telegram import send_support_message
 from accounts.verifiers.finotech import ServerError
 from accounts.verifiers.jibit import JibitRequester
@@ -32,7 +32,7 @@ def basic_verify(user: User):
         if not verify_bank_card_by_national_code(bank_card):
             return
 
-    if bank_card.verified and (not user.first_name_verified or not user.last_name_verified):
+    if bank_card.verified and user.first_name and user.last_name and (not user.first_name_verified or not user.last_name_verified):
         logger.info('verifying name, bank_card for user_d = %d' % user.id)
 
         if not verify_name_by_bank_card(bank_card):
@@ -171,7 +171,19 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
 
     user.national_code_verified = identity_matched
     user.birth_date_verified = identity_matched
-    user.save(update_fields=['national_code_verified', 'birth_date_verified'])
+    to_update_user_fields = ['national_code_verified', 'birth_date_verified']
+
+    if identity_matched:
+        first_name, last_name = split_names(bank_card.owner_name)
+        user.first_name = first_name
+        user.last_name = last_name
+        to_update_user_fields.extend(['first_name', 'last_name'])
+
+        if first_name and last_name:
+            user.first_name_verified = user.last_name_verified = True
+            to_update_user_fields.extend(['first_name_verified', 'last_name_verified'])
+
+    user.save(update_fields=to_update_user_fields)
 
     bank_card.verified = card_matched
     bank_card.save(update_fields=['verified'])

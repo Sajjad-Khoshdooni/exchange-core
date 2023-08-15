@@ -81,9 +81,6 @@ class BasicInfoSerializer(serializers.ModelSerializer):
         card_pan = validated_data.pop('card_pan')
         bank_card = self.get_kyc_bank_card(user, card_pan)
 
-        # if bank_card.verified is False and bank_card.reject_reason == BankCard.DUPLICATED:
-        #     raise ValidationError('شماره کارت‌تان تکراری است. لطفا به پنل اصلی‌تان وارد شوید.')
-
         if not bank_card.verified:
             bank_card.verified = None
             bank_card.save()
@@ -95,12 +92,12 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             user.national_code_verified = None
             to_update_user_fields.extend(['national_code', 'national_code_verified'])
 
-        if not user.first_name_verified:
+        if not user.first_name_verified and validated_data.get('first_name'):
             user.first_name = clean_persian_name(validated_data['first_name'])
             user.first_name_verified = None
             to_update_user_fields.extend(['first_name', 'first_name_verified'])
 
-        if not user.last_name_verified:
+        if not user.last_name_verified and validated_data.get('last_name'):
             user.last_name = clean_persian_name(validated_data['last_name'])
             user.last_name_verified = None
             to_update_user_fields.extend(['last_name', 'last_name_verified'])
@@ -138,8 +135,8 @@ class BasicInfoSerializer(serializers.ModelSerializer):
             'first_name_verified', 'last_name_verified', 'birth_date_verified'
         )
         extra_kwargs = {
-            'first_name': {'required': True},
-            'last_name': {'required': True},
+            'first_name': {'required': False},
+            'last_name': {'required': False},
             'national_code': {'required': True},
             'birth_date': {'required': True},
         }
