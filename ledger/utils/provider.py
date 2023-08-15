@@ -411,7 +411,7 @@ class MockProviderRequester(ProviderRequester):
     def get_coins_info(self, coins: List[str] = None) -> Dict[str, CoinInfo]:
         self._collect_api('/')
         data = {}
-        for c in coins:
+        for c in Asset.objects.filter(enable=True):
             data[c] = CoinInfo(
                 coin=c,
                 weekly_trend_url='https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/825.svg?v=463140',
