@@ -352,7 +352,7 @@ class ProviderRequester:
 
 class MockProviderRequester(ProviderRequester):
     def _collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 10):
-        if config('IRAN_ACCESS_TIMEOUT_MODE'):
+        if config('IRAN_ACCESS_TIMEOUT_MODE', default=None):
             time.sleep(60)
             raise requests.exceptions.Timeout
 
