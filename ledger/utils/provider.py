@@ -414,7 +414,7 @@ class MockProviderRequester(ProviderRequester):
         for c in Asset.objects.filter(enable=True):
             data.append(
                 CoinInfo(
-                    coin=c,
+                    coin=c.symbol,
                     weekly_trend_url='https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/825.svg?v=463140',
                     volume_24h=5
                 ).__dict__
