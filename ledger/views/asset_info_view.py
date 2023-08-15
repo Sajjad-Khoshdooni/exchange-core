@@ -13,9 +13,10 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
+from ledger.utils.coins_info import get_coins_info
 from ledger.utils.external_price import BUY, get_external_usdt_prices, get_external_price, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.provider import CoinInfo, get_provider_requester
+from ledger.utils.provider import CoinInfo
 from multimedia.models import CoinPriceContent
 
 
@@ -188,7 +189,7 @@ class AssetsViewSet(ModelViewSet):
 
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
-            ctx['cap_info'] = get_provider_requester().get_coins_info(symbols)
+            ctx['cap_info'] = get_coins_info()
             ctx['prices'], ctx['market_prices'], ctx['tether_irt'] = Asset.get_current_prices(symbols)
 
         return ctx
@@ -296,12 +297,12 @@ class AssetOverviewAPIView(APIView):
     def get(self, request):
         limit = int(self.request.query_params.get('limit', default=3))
 
-        coins = list(Asset.live_objects.filter(
+        coins = set(Asset.live_objects.filter(
             otc_status=Asset.ACTIVE
         ).exclude(symbol=Asset.IRT).values_list('symbol', flat=True))
 
-        caps = get_provider_requester().get_coins_info(coins).values()
-        caps_dict = {c.coin: c for c in caps}
+        caps_dict = {c: cap for (c, cap) in get_coins_info().items() if c in coins}
+        caps = caps_dict.values()
 
         def coin_info_to_dict(info: CoinInfo):
             return {

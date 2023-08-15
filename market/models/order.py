@@ -307,7 +307,10 @@ class Order(models.Model):
         else:
             tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY)
 
-        taker_is_system = self.wallet.account.is_system()
+        hedging_usdt = settings.ZERO_USDT_HEDGE and symbol.name == 'USDTIRT'
+
+        taker_is_system = self.wallet.account.is_system() or (
+                hedging_usdt and self.account_id == settings.TRADER_ACCOUNT_ID)
 
         for maker_order in matching_orders:
             trade_price = maker_order.price
@@ -324,7 +327,8 @@ class Order(models.Model):
             else:
                 base_usdt_price = 1 / tether_irt
 
-            maker_is_system = maker_order.wallet.account.is_system()
+            maker_is_system = maker_order.wallet.account.is_system() or (
+                    hedging_usdt and maker_order.account_id == settings.TRADER_ACCOUNT_ID)
 
             source_map = {
                 (True, True): Trade.SYSTEM,
@@ -408,7 +412,6 @@ class Order(models.Model):
             set_last_trade_price(symbol)
             trade_revenues = []
             for maker_trade, taker_trade in trade_pairs:
-                hedging_usdt = settings.ZERO_USDT_HEDGE and symbol.name == 'USDTIRT'
                 if maker_trade.trade_source in (Trade.SYSTEM_MAKER, Trade.SYSTEM_TAKER):
                     hedge_key = Trade.get_hedge_key(maker_trade, taker_trade)
                     account_ids = (maker_trade.account_id, taker_trade.account_id)

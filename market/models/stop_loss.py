@@ -36,7 +36,7 @@ class StopLoss(models.Model):
     TRIGGERED = 'triggered'
     FILLED = 'filled'
     BUY, SELL = 'buy', 'sell'
-    ORDER_CHOICES = [(BUY, BUY), (SELL, SELL)]
+    SIDE_CHOICES = [(BUY, BUY), (SELL, SELL)]
     LIMIT, MARKET = 'limit', 'market'
     FILL_TYPE_CHOICES = [(LIMIT, LIMIT), (MARKET, MARKET)]
 
@@ -48,7 +48,7 @@ class StopLoss(models.Model):
     filled_amount = get_amount_field(default=Decimal(0))
     trigger_price = get_amount_field()
     price = get_amount_field(null=True)
-    side = models.CharField(max_length=8, choices=ORDER_CHOICES)
+    side = models.CharField(max_length=8, choices=SIDE_CHOICES)
 
     canceled_at = models.DateTimeField(blank=True, null=True)
 
