@@ -272,7 +272,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     @admin.action(description='شروع احراز هویت پایه کاربر', permissions=['change'])
     def reevaluate_basic_verify(self, request, queryset):
-        to_verify_users = queryset.filter(level=User.LEVEL1).exclude(first_name='').exclude(last_name='')
+        to_verify_users = queryset.filter(level=User.LEVEL1)
 
         for user in to_verify_users:
             basic_verify_user.delay(user.id)
