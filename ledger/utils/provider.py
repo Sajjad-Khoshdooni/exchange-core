@@ -408,14 +408,16 @@ class MockProviderRequester(ProviderRequester):
         self._collect_api('/')
         return WithdrawStatus(status=DONE, tx_id='tx')
 
-    def get_coins_info(self, coins: List[str] = None) -> Dict[str, CoinInfo]:
+    def get_coins_info(self, coins: List[str] = None) -> List[dict]:
         self._collect_api('/')
-        data = {}
+        data = []
         for c in Asset.objects.filter(enable=True):
-            data[c] = CoinInfo(
-                coin=c,
-                weekly_trend_url='https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/825.svg?v=463140',
-                volume_24h=5
+            data.append(
+                CoinInfo(
+                    coin=c,
+                    weekly_trend_url='https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/825.svg?v=463140',
+                    volume_24h=5
+                ).__dict__
             )
 
         return data
