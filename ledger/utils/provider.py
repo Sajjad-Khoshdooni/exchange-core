@@ -1,5 +1,6 @@
 import logging
 import math
+import time
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
@@ -429,13 +430,14 @@ class ProviderRequester:
 
 
 class MockProviderRequester(ProviderRequester):
-    def get_total_orders_amount_sum(self, asset: Asset = None) -> List[CoinOrders]:
-        return []
-
-    def get_hedge_amount(self, asset: Asset, coin_orders: CoinOrders = None) -> Decimal:
-        return Decimal(0)
+    def _collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 10):
+        if config('IRAN_ACCESS_TIMEOUT_MODE'):
+            time.sleep(60)
+            raise requests.exceptions.Timeout
 
     def get_market_info(self, asset: Asset) -> MarketInfo:
+        self._collect_api('/')
+
         return MarketInfo(
             coin=asset.symbol,
             base_coin=Asset.USDT,
@@ -448,12 +450,15 @@ class MockProviderRequester(ProviderRequester):
         )
 
     def get_spot_balance_map(self, exchange: str, market: str = 'trade') -> dict:
+        self._collect_api('/')
         return {}
 
     def get_futures_info(self, exchange: str) -> dict:
+        self._collect_api('/')
         return {}
 
     def get_network_info(self, asset: str, network: str = None) -> List[NetworkInfo]:
+        self._collect_api('/')
         return [
             NetworkInfo(
                 coin=asset,
@@ -468,18 +473,22 @@ class MockProviderRequester(ProviderRequester):
         ]
 
     def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
-        pass
+        self._collect_api('/')
 
     def new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal, side: str):
+        self._collect_api('/')
         return True
 
     def new_withdraw(self, transfer: Transfer):
+        self._collect_api('/')
         return True
 
     def get_transfer_status(self, transfer: Transfer) -> WithdrawStatus:
+        self._collect_api('/')
         return WithdrawStatus(status=DONE, tx_id='tx')
 
-    def get_coins_info(self, coins: List[str]) -> Dict[str, CoinInfo]:
+    def get_coins_info(self, coins: List[str] = None) -> Dict[str, CoinInfo]:
+        self._collect_api('/')
         data = {}
         for c in coins:
             data[c] = CoinInfo(
@@ -491,18 +500,22 @@ class MockProviderRequester(ProviderRequester):
         return data
 
     def get_price(self, symbol: str, side: str, delay: int = 300, when: datetime = None) -> Decimal:
+        self._collect_api('/')
         return Decimal(30000)
 
     def get_avg_trade_price(self, symbol: str, start: datetime, end: datetime) -> Decimal:
+        self._collect_api('/')
         return Decimal(30000)
 
     def get_order(self, request_id: str):
+        self._collect_api('/')
         return {
             'filled_price': Decimal(1),
             'filled_amount': Decimal(1),
         }
 
     def get_income_history(self, profile_id: int, start: datetime, end: datetime) -> list:
+        self._collect_api('/')
         return [
             {
                 "symbol": "BTCUSDT",
