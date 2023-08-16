@@ -10,7 +10,6 @@ from accounts.authentication import CustomTokenAuthentication
 from accounts.models import VerificationCode, LoginActivity
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
-from accounts.verifiers.legal import is_48h_rule_passed
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Transfer, NetworkAsset, AddressBook, DepositAddress
@@ -87,9 +86,6 @@ class WithdrawSerializer(serializers.ModelSerializer):
             if is_2fa_active_for_user(user):
                 code_2fa = attrs.get('code_2fa') or ''
                 code_2fa_verifier(user_token=user.auth2fa.token, code_2fa=code_2fa)
-
-        if not is_48h_rule_passed(user):
-            raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
 
         network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
         amount = attrs['amount']

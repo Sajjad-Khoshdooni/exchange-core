@@ -144,11 +144,6 @@ class User(AbstractUser):
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
 
-    withdraw_before_48h_option = models.BooleanField(
-        default=False,
-        verbose_name='امکان برداشت وجه پیش از سپری شدن ۴۸ ساعت از اولین واریز',
-    )
-
     can_withdraw = models.BooleanField(default=True)
     can_withdraw_crypto = models.BooleanField(default=True)
     can_trade = models.BooleanField(default=True)

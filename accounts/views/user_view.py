@@ -8,13 +8,10 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from accounts.models import User, CustomToken
 from accounts.utils.auth2fa import is_2fa_active_for_user
 from accounts.utils.hijack import get_hijacker_id
-from accounts.verifiers.legal import possible_time_for_withdraw
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 
 
 class UserSerializer(serializers.ModelSerializer):
-    possible_time_for_withdraw = serializers.SerializerMethodField()
-    chat_uuid = serializers.CharField()
     auth2fa = serializers.SerializerMethodField()
     show_staking = serializers.SerializerMethodField()
 
@@ -36,12 +33,10 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw', 'chat_uuid', 'auth2fa'
+            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking',
+            'chat_uuid', 'auth2fa', 'can_withdraw'
         )
         ref_name = "User"
-
-    def get_possible_time_for_withdraw(self, user: User):
-        return possible_time_for_withdraw(user)
 
 
 class ProfileSerializer(UserSerializer):
