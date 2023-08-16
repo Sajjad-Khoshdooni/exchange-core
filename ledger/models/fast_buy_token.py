@@ -29,7 +29,7 @@ class FastBuyToken(models.Model):
     otc_request = models.OneToOneField('OTCRequest', on_delete=models.CASCADE, null=True)
 
     class Meta:
-        verbose_name = verbose_name_plural = 'خرید سریع رمزارز'
+        verbose_name = verbose_name_plural = 'خرید آنی'
 
     def __str__(self):
         return '%s %s %s' % (self.payment_request.bank_card, self.asset, humanize_number(self.amount))

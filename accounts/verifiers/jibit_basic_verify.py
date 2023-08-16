@@ -6,7 +6,7 @@ from django.template import loader
 from accounts.models import User
 from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.similarity import name_similarity
+from accounts.utils.similarity import name_similarity, split_names
 from accounts.utils.telegram import send_support_message
 from accounts.verifiers.finotech import ServerError
 from accounts.verifiers.jibit import JibitRequester
@@ -201,13 +201,22 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
         if resp.success:
             update_bank_card_info(bank_card, resp.data)
 
-            verified = name_similarity(bank_card.user.get_full_name(), bank_card.owner_name)
+            to_update_user_fields = []
+
+            first_name, last_name = split_names(bank_card.owner_name)
+            user.first_name = first_name
+            user.last_name = last_name
+            to_update_user_fields.extend(['first_name', 'last_name'])
+
+            verified = first_name and last_name
 
             if verified:
-                user.first_name_verified = True
-                user.last_name_verified = True
-                user.save(update_fields=['first_name_verified', 'last_name_verified'])
+                user.first_name_verified = user.last_name_verified = True
+                to_update_user_fields.extend(['first_name_verified', 'last_name_verified'])
 
+            user.save(update_fields=to_update_user_fields)
+
+            if verified:
                 user.verify_level2_if_not()
                 return True
             else:
