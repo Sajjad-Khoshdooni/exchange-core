@@ -16,7 +16,8 @@ def blocklink_income_fetcher(start: datetime, end: datetime):
 
     for network, data in resp.items():
         coin = data['coin']
-        price = get_external_price(coin=coin, base_coin='USDT', side=BUY, allow_stale=True)
+        network_coin = 'BNB' if network == 'BSC' else network
+        price = get_external_price(coin=network_coin, base_coin='USDT', side=BUY, allow_stale=True)
 
         fee_income = Transfer.objects.filter(
             created__range=(start, end),
