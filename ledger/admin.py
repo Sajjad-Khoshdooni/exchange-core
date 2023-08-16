@@ -20,6 +20,7 @@ from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
+from ledger.models.asset_alert import AssetAlert
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet, \
     ManualTrade, Trx
@@ -53,7 +54,7 @@ class AssetAdmin(AdvancedAdmin):
     search_fields = ('symbol',)
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('setup_asset',)
-    readonly_fields = ('distribution_factor', )
+    readonly_fields = ('distribution_factor',)
 
     def save_model(self, request, obj, form, change):
         if Asset.objects.filter(order=obj.order).exclude(id=obj.id).exists():
@@ -62,7 +63,7 @@ class AssetAdmin(AdvancedAdmin):
         return super(AssetAdmin, self).save_model(request, obj, form, change)
 
     def get_queryset(self, request):
-        return super(AssetAdmin, self).get_queryset(request).annotate(
+        return super(AssetAdmin, self).get_queryset(request) .annotate(
             hedge_value=F('assetsnapshot__hedge_value'),
             hedge_value_abs=F('assetsnapshot__hedge_value_abs'),
             hedge_amount=F('assetsnapshot__hedge_amount'),
@@ -626,7 +627,7 @@ class AssetSnapshotAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
 @admin.register(models.FastBuyToken)
 class FastBuyTokenAdmin(admin.ModelAdmin):
-    list_display = ['created', 'asset', 'get_amount', 'status', ]
+    list_display = ('created', 'asset', 'get_amount', 'status', )
     readonly_fields = ('get_amount', 'payment_request', 'otc_request')
     list_filter = ('status',)
 
@@ -680,6 +681,13 @@ class ManualTransactionAdmin(admin.ModelAdmin):
             trx.status = PROCESS
             trx.group_id = uuid4()
             trx.save()
+
+
+@admin.register(AssetAlert)
+class AssetAlertAdmin(admin.ModelAdmin):
+    list_display = ('user', 'asset',)
+    search_fields = ['user__username', 'asset__symbol']
+    raw_id_fields = ['user']
 
 
 @admin.register(BalanceLock)

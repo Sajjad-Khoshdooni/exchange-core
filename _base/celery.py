@@ -24,7 +24,14 @@ if settings.DEBUG_OR_TESTING_OR_STAGING:
     TASK_MULTIPLIER = 5
 
 app.conf.beat_schedule = {
-
+    'price_alert': {
+        'task': 'ledger.tasks.alert.send_price_notifications',
+        'schedule':  60 * 5 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'asset_alert',
+            'expires': 60 * 2 * TASK_MULTIPLIER
+        }
+    },
     'update_network_fee': {
         'task': 'ledger.tasks.fee.update_network_fees',
         'schedule': crontab(minute="*/30"),
