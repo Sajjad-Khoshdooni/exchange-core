@@ -76,7 +76,7 @@ class StakeWalletsAPIView(ListAPIView):
         }
         ctx['stake_revenues'] = {
             revenue['stake_request__stake_option']: revenue['total_revenue'] for revenue in StakeRevenue.objects.filter(
-                stakerequest__account=account,
+                stake_request__account=account,
                 stake_request__stake_option__in=queryset
             ).values('stake_request__stake_option').annotate(total_revenue=Sum('revenue'))
         }
