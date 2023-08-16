@@ -69,7 +69,7 @@ class StakeWalletsAPIView(ListAPIView):
         active_requests = StakeRequest.objects.filter(
             account=self.request.user.get_account()
         ).exclude(
-            status=(StakeRequest.FINISHED, StakeRequest.CANCEL_COMPLETE)
+            status__in=(StakeRequest.FINISHED, StakeRequest.CANCEL_COMPLETE)
         ).values_list('id', flat=True)
         return active_requests
 
