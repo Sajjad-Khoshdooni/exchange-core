@@ -261,24 +261,7 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
 
         if self.action == 'list':
             coins = list(self.get_queryset().values_list('symbol', flat=True))
-
-            ctx['prices'] = get_external_usdt_prices(
-                coins=coins,
-                side=BUY,
-                apply_otc_spread=True
-            )
-            ctx['market_prices'] = {}
-            from market.models import Order
-            for base_asset in ('IRT', 'USDT'):
-                ctx['market_prices'][base_asset] = {
-                    o['symbol__name'].replace(base_asset, ''): o['best_ask'] for o in Order.open_objects.filter(
-                        side=SELL,
-                        symbol__enable=True,
-                        symbol__name__in=map(lambda s: f'{s}{base_asset}', coins)
-                    ).values('symbol__name').annotate(best_ask=Min('price'))
-                }
-            ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
-
+            ctx['prices'], ctx['market_prices'], ctx['tether_irt'] = Asset.get_current_prices(coins)
         return ctx
 
     def get_serializer_class(self):
