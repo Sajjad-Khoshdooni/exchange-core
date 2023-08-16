@@ -47,22 +47,7 @@ class WalletsOverviewAPIView(APIView):
         ).exclude(balance=0).values_list('asset_id', flat=True)
 
         coins = list(Asset.objects.filter(Q(enable=True) | Q(id__in=disabled_assets)).values_list('symbol', flat=True))
-
-        prices = get_external_usdt_prices(
-            coins=coins,
-            side=BUY,
-            apply_otc_spread=True
-        )
-        market_prices = {}
-        for base_asset in ('IRT', 'USDT'):
-            market_prices[base_asset] = {
-                o['symbol__name'].replace(base_asset, ''): o['best_ask'] for o in Order.open_objects.filter(
-                    side=SELL,
-                    symbol__enable=True,
-                    symbol__name__in=map(lambda s: f'{s}{base_asset}', coins)
-                ).values('symbol__name').annotate(best_ask=Min('price'))
-            }
-        tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
+        prices, market_prices, tether_irt = Asset.get_current_prices(coins)
 
         spot_wallets = Wallet.objects.filter(
             account=account, market=Wallet.SPOT, variant__isnull=True
