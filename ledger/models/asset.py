@@ -4,7 +4,7 @@ from typing import Union
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Min
+from django.db.models import Min, Max
 from rest_framework import serializers
 
 from _base.settings import SYSTEM_ACCOUNT_ID, OTC_ACCOUNT_ID
@@ -158,7 +158,7 @@ class Asset(models.Model):
     def get_current_prices(coins):
         prices = get_external_usdt_prices(
             coins=coins,
-            side=BUY,
+            side=SELL,
             apply_otc_spread=True
         )
         market_prices = {}
@@ -171,7 +171,14 @@ class Asset(models.Model):
                     symbol__name__in=map(lambda s: f'{s}{base_asset}', coins)
                 ).values('symbol__name').annotate(best_ask=Min('price'))
             }
-        tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
+        market_prices['USDT']['IRT'] = Decimal(1) / Order.open_objects.filter(
+            side=BUY,
+            symbol__enable=True,
+            symbol__name='USDTIRT'
+        ).aggregate(best_bid=Max('price'))['best_bid']
+        tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=True)
+        prices[Asset.IRT] = Decimal(1) / get_external_price(
+            coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
         return prices, market_prices, tether_irt
 
 

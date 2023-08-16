@@ -1,7 +1,7 @@
 import logging
 from decimal import Decimal
 
-from django.db.models import Min, Q
+from django.db.models import Q
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -12,9 +12,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.models.wallet import ReserveWallet
-from ledger.utils.external_price import get_external_price, get_external_usdt_prices, BUY, SELL
 from ledger.utils.precision import get_presentation_amount, floor_precision
-from market.models import Order
 
 logger = logging.getLogger(__name__)
 
