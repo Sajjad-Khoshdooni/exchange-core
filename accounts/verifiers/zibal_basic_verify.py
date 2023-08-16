@@ -5,13 +5,14 @@ from accounts.models import User
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.similarity import name_similarity
 from accounts.utils.telegram import send_support_message
-from accounts.verifiers.jibit_basic_verify import send_shahkar_rejection_message, update_bank_card_info, ServerError
+from accounts.verifiers.jibit_basic_verify import send_shahkar_rejection_message, ServerError
 from accounts.verifiers.zibal import ZibalRequester
 from financial.models import BankCard, BankAccount
 
 logger = logging.getLogger(__name__)
 
 
+# todo: handle result:6 -> wrong data format
 def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, None]:
     requester = ZibalRequester(user)
     resp = requester.matching(phone_number=phone, national_code=national_code)
@@ -33,6 +34,8 @@ def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, Non
 
 def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
     if not bank_card.kyc:
+        # todo: check with Sajjad
+        logger.warning('kyc is not known')
         return False
 
     requester = ZibalRequester(bank_card.user)
@@ -40,11 +43,12 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
     user = bank_card.user
 
     if user.first_name_verified and user.last_name_verified:
+        # todo: check with Sajjad
+        logger.warning('user\'s first name and last name is already verified')
         return True
 
     try:
         resp = requester.get_card_info(card_pan=bank_card.card_pan)
-
         if resp.success:
             update_bank_card_info(bank_card, resp.data)
             verified = name_similarity(bank_card.user.get_full_name(), bank_card.owner_name)
@@ -57,6 +61,8 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
                 user.verify_level2_if_not()
                 return True
             else:
+                # todo: check with Sajjad
+                logger.warning('Bank card holders name did not match users name')
                 link = url_to_edit_object(user)
                 send_support_message(
                     message='اطلاعات نام کاربر مورد تایید قرار نگرفت. لطفا دستی بررسی شود.',
@@ -66,7 +72,7 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
         else:
             bank_card.verified = False
             bank_card.reject_reason = resp.data['message']
-            bank_card.save()
+            bank_card.save(update_fields=['verified', 'reject_reason'])
 
             bank_card.user.change_status(User.REJECTED)
 
@@ -85,11 +91,17 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
             return verify_name_by_bank_card(bank_card, retry - 1)
 
 
+def update_bank_card_info(bank_card: BankCard, data: dict):
+    info = data['data']
+    bank_card.owner_name = info['name']
+    bank_card.save(update_fields=['owner_name'])
+
+
 def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool, None]:
     if BankAccount.live_objects.filter(iban=bank_account.iban, verified=True).exclude(id=bank_account.id).exists():
         logger.info('rejecting bank account because of duplication')
         bank_account.verified = False
-        bank_account.save()
+        bank_account.save(update_fields=['verified'])
         return False
 
     requester = ZibalRequester(bank_account.user)
@@ -107,7 +119,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
     if not iban_info.success:
         if iban_info.data['result'] == 21:
             bank_account.verified = False
-            bank_account.save()
+            bank_account.save(update_fields=['verified'])
             return False
 
         else:
