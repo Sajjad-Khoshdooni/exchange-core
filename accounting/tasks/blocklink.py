@@ -17,6 +17,7 @@ def blocklink_income_fetcher(start: datetime, end: datetime):
     for network, data_list in resp.items():
         network_coin = 'BNB' if network == 'BSC' else network
         price = get_external_price(coin=network_coin, base_coin='USDT', side=BUY, allow_stale=True)
+
         for data in data_list:
             coin = data['coin']
 
