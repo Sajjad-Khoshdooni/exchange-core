@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from django.conf import settings
-from django.db.models import F, Q, Sum
+from django.db.models import F, Q, Sum, ExpressionWrapper, fields
 from django.utils import timezone
 from datetime import timedelta
 
@@ -209,16 +209,17 @@ def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet
 
 @cache_for(60 * 10)
 def get_market_size_ratio():
-
     qs = Trade.objects.filter(
-        Q(status=Trade.DONE) & Q(created__gte=timezone.now() - timedelta(days=1)))
+        status=Trade.DONE, created__gte=timezone.now() - timedelta(days=1)
+    )
 
     total_size = qs.annotate(usdt_value=F('amount') * F('price') * F('base_usdt_price')).aggregate(
         total_size=Sum('usdt_value')
     )['total_size']
 
-    annotated_qs = qs.values('market').annotate(
-        market_ratio=F('amount') * F('price') * F('base_usdt_price') / total_size
-    )
-
-    return annotated_qs.values('symbol__asset__symbol', 'market_ratio')
+    return qs.values('market').annotate(
+        market_ratio=ExpressionWrapper(
+            F('amount') * F('price') * F('base_usdt_price') / total_size,
+            output_field=fields.DecimalField()
+        )
+    ).values('market_ratio')

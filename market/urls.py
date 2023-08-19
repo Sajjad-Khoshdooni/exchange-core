@@ -22,5 +22,5 @@ urlpatterns = [
     path('open-orders/', OpenOrderListAPIView.as_view()),
     path('', include(router.urls)),
     path('bookmark/', BookmarkSymbolAPIView.as_view()),
-    path('market_discover/', MarketDiscoverView.as_view())
+    path('discover/', MarketDiscoverView.as_view())
 ]
