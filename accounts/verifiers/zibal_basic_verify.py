@@ -41,7 +41,7 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
     user = bank_card.user
 
     if user.first_name_verified and user.last_name_verified:
-        logger.warning('users first name and last name is already verified')
+        logger.info('users first name and last name is already verified')
         return True
 
     try:
@@ -58,7 +58,7 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
                 user.verify_level2_if_not()
                 return True
             else:
-                logger.warning('Bank card holders name did not match users name')
+                logger.info('Bank card holders name did not match users name')
                 link = url_to_edit_object(user)
                 send_support_message(
                     message='اطلاعات نام کاربر مورد تایید قرار نگرفت. لطفا دستی بررسی شود.',
