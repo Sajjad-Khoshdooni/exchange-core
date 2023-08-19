@@ -140,7 +140,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
         verified = name_similarity(owner, user.get_full_name())
 
     bank_account.verified = verified
-    bank_account.save()
+    bank_account.save(update_fields=['verified'])
 
     return verified
 
