@@ -5,7 +5,7 @@ from uuid import UUID
 from django.conf import settings
 from django.db.models import F, Q, Sum
 from django.utils import timezone
-from django.utils.timezone import timedelta
+from datetime import timedelta
 
 from ledger.utils.cache import cache_for
 from accounts.models import Referral
@@ -209,11 +209,16 @@ def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet
 
 @cache_for(60 * 10)
 def get_market_size_ratio():
+
     qs = Trade.objects.filter(
         Q(status=Trade.DONE) & Q(created__gte=timezone.now() - timedelta(days=1)))
+
     total_size = qs.annotate(usdt_value=F('amount') * F('price') * F('base_usdt_price')).aggregate(
         total_size=Sum('usdt_value')
     )['total_size']
-    annotated_qs = qs.values('market').annotate(market_ratio=F('amount') * F('price') * F('base_usdt_price') / total_size)
-    print(annotated_qs)
+
+    annotated_qs = qs.values('market').annotate(
+        market_ratio=F('amount') * F('price') * F('base_usdt_price') / total_size
+    )
+
     return annotated_qs.values('symbol__asset__symbol', 'market_ratio')
