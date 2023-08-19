@@ -58,7 +58,6 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
                 user.verify_level2_if_not()
                 return True
             else:
-                # todo: check with Sajjad
                 logger.warning('Bank card holders name did not match users name')
                 link = url_to_edit_object(user)
                 send_support_message(

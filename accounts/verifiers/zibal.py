@@ -17,8 +17,7 @@ class ZibalRequester:
         self._user = user
 
     def _get_cc_token(self):
-        # return config('ZIBAL_API_TOKEN')
-        return '65173c72e07a4b718f4e7423cb2a3ac8'
+        return config('ZIBAL_API_TOKEN')
 
     def collect_api(self, path: str, method: str = 'GET', data=None, weight: int = 0) -> Response:
         if data is None:
