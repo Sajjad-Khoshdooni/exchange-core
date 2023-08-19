@@ -43,7 +43,7 @@ class Transfer(models.Model):
     SELF, INTERNAL, PROVIDER, MANUAL = 'self', 'internal', 'provider', 'manual'
     SOURCE_CHOICES = (SELF, SELF), (INTERNAL, INTERNAL), (PROVIDER, PROVIDER), (MANUAL, MANUAL)
 
-    created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(auto_now_add=True, db_index=True)
     accepted_datetime = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     finished_datetime = models.DateTimeField(null=True, blank=True, db_index=True)
 

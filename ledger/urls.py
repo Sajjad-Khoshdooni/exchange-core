@@ -80,4 +80,6 @@ urlpatterns = [
     path('v1/pnl/overview/', views.PNLOverview.as_view()),
 
     path('v1/fast_buy/', views.FastBuyTokenAPI.as_view()),
+
+    path('v1/transactions/recent/', views.RecentTransactionsView.as_view()),
 ]

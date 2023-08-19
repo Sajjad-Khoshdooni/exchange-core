@@ -5,7 +5,7 @@ from .otc_trade_view import OTCTradeRequestView, OTCTradeView, OTCInfoView
 from .margin_view import MarginInfoView, AssetMarginInfoView, MarginTransferViewSet, MarginLoanViewSet, \
     MarginClosePositionView
 from .withdraw_view import WithdrawView
-from .transactions_history_view import WithdrawHistoryView, DepositHistoryView
+from .transfer_history_view import WithdrawHistoryView, DepositHistoryView
 from .network_asset_info_view import NetworkAssetView
 from .address_book_view import AddressBookView, AddressBookViewV2
 from .balance_information import BalanceInfoView
@@ -21,3 +21,4 @@ from .withdraw_viewset import WithdrawViewSet
 from .coin_category_list_view import CoinCategoryListView
 from .wallets_overview import WalletsOverviewAPIView
 from .asset_alert_view import AssetAlertView
+from .transactions_view import RecentTransactionsView
