@@ -53,7 +53,7 @@ class ZibalRequester:
         except (requests.exceptions.ConnectionError, ReadTimeoutError, requests.exceptions.Timeout):
             req_object.response = 'timeout'
             req_object.status_code = 100
-            req_object.save(update_fields=['response', 'status_code'])
+            req_object.save()
 
             logger.error('zibal connection error', extra={
                 'path': path,
