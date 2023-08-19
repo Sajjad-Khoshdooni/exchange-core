@@ -23,8 +23,11 @@ class ZibalRequester:
     def collect_api(self, path: str, method: str = 'GET', data=None, weight: int = 0) -> Response:
         if data is None:
             data = {}
+
         token = self._get_cc_token()
+
         url = self.BASE_URL + path
+
         req_object = FinotechRequest(
             url=url,
             method=method,
@@ -33,6 +36,7 @@ class ZibalRequester:
             service=FinotechRequest.JIBIT,
             weight=weight,
         )
+
         request_kwargs = {
             'url': url,
             'timeout': 30,
@@ -45,6 +49,7 @@ class ZibalRequester:
             else:
                 method_prop = getattr(requests, method.lower())
                 resp = method_prop(json=data, **request_kwargs)
+
         except (requests.exceptions.ConnectionError, ReadTimeoutError, requests.exceptions.Timeout):
             req_object.response = 'timeout'
             req_object.status_code = 100
@@ -56,8 +61,6 @@ class ZibalRequester:
                 'data': data,
             })
             raise TimeoutError
-
-        print(resp.json(), '\n' * 10)
 
         resp_data = resp.json()
         req_object.response = resp_data
