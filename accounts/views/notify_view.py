@@ -35,6 +35,9 @@ class NotifyView(APIView):
             elif _type == PUSH:
                 if attrs.get('content', None) is None or attrs.get('tittle', None) is None:
                     return serializers.ValidationError('one of the content or (template, param) should has value')
+            elif _type == EMAIL:
+                if attrs.get('content_html', None) is None or attrs.get('content', None) is None:
+                    return serializers.ValidationError('content_html, content should has value')
             return attrs
 
     def post(self, request):
