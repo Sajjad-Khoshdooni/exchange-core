@@ -16,9 +16,8 @@ class ZibalRequester:
     def __init__(self, user: User):
         self._user = user
 
-    # todo: check force_renew
-    def _get_cc_token(self, force_renew: bool = False):
-        #return config('ZIBAL_API_TOKEN')
+    def _get_cc_token(self):
+        # return config('ZIBAL_API_TOKEN')
         return '65173c72e07a4b718f4e7423cb2a3ac8'
 
     def collect_api(self, path: str, method: str = 'GET', data=None, weight: int = 0) -> Response:
@@ -57,10 +56,13 @@ class ZibalRequester:
                 'data': data,
             })
             raise TimeoutError
+
+        print(resp.json(), '\n' * 10)
+
         resp_data = resp.json()
         req_object.response = resp_data
         req_object.status_code = resp.status_code
-        req_object.save(update_fields=['response', 'status_code'])
+        req_object.save()
 
         if resp.status_code >= 500:
             logger.error('failed to call zibal', extra={
@@ -79,14 +81,14 @@ class ZibalRequester:
             "mobile": phone_number,
             "nationalCode": national_code
         }
-        # todo: adjust weights
+
         return self.collect_api(
             data=params,
             path='/v1/facility/shahkarInquiry',
             method='POST',
             weight=FinotechRequest.JIBIT_ADVANCED_MATCHING if national_code else FinotechRequest.JIBIT_SIMPLE_MATCHING
         )
-    # todo: get permission
+
     def get_iban_info(self, iban: str) -> Response:
         params = {
             "IBAN": iban,

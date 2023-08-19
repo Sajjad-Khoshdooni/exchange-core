@@ -12,7 +12,6 @@ from financial.models import BankCard, BankAccount
 logger = logging.getLogger(__name__)
 
 
-# todo: handle result:6 -> wrong data format
 def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, None]:
     requester = ZibalRequester(user)
     resp = requester.matching(phone_number=phone, national_code=national_code)
@@ -34,7 +33,6 @@ def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, Non
 
 def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
     if not bank_card.kyc:
-        # todo: check with Sajjad
         logger.warning('kyc is not known')
         return False
 
@@ -43,8 +41,7 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
     user = bank_card.user
 
     if user.first_name_verified and user.last_name_verified:
-        # todo: check with Sajjad
-        logger.warning('user\'s first name and last name is already verified')
+        logger.warning('users first name and last name is already verified')
         return True
 
     try:
@@ -133,7 +130,6 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
     iban_info = iban_info.data['data']
 
     bank_account.bank = iban_info['bankName']
-    bank_account.card_pan = ''
     owners = bank_account.owners = iban_info['name']
     user = bank_account.user
 
