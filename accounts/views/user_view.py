@@ -36,7 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw',
+            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking',
             'chat_uuid', 'is_2fa_active', 'can_withdraw'
         )
         ref_name = "User"
