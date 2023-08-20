@@ -109,5 +109,5 @@ def get_symbols_tick_size() -> dict:
 
 
 def get_symbol_presentation_amount(symbol: str, amount, trunc_zero: bool = False):
-    precision = get_symbols_tick_size().get(symbol, 8)
+    precision = get_symbols_tick_size().get(symbol, 0)
     return get_presentation_amount(amount, precision, trunc_zero=trunc_zero)
