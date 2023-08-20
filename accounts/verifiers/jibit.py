@@ -9,7 +9,7 @@ from urllib3.exceptions import ReadTimeoutError
 
 from accounts.models import FinotechRequest
 from accounts.utils.validation import gregorian_to_jalali_date_str
-from accounts.verifiers.basic_verifier import Response, MatchingData
+from accounts.verifiers.zibal import Response, MatchingData, CardInfoData, IBANInfoData
 from accounts.verifiers.finotech import ServerError
 
 logger = logging.getLogger(__name__)
@@ -180,12 +180,21 @@ class JibitRequester:
 
         key = 'iban-%s' % iban
 
-        return self.collect_api(
+        resp = self.collect_api(
             path='/v1/ibans',
             data=params,
             search_key=key,
             weight=FinotechRequest.JIBIT_IBAN_INFO_WEIGHT,
         )
+        data = resp.data
+        resp.data = IBANInfoData(
+            bank_name=data['bank'],
+            deposit_number=data['depositNumber'],
+            deposit_status=data['status'],
+            owners=data['owners'],
+            code=data['code']
+        )
+        return resp
 
     def get_card_info(self, card_pan: str) -> Response:
         params = {
@@ -194,9 +203,18 @@ class JibitRequester:
 
         key = 'card-%s' % card_pan
 
-        return self.collect_api(
+        resp = self.collect_api(
             path='/v1/cards',
             data=params,
             search_key=key,
             weight=FinotechRequest.JIBIT_CARD_INFO_WEIGHT
         )
+        info = resp.data['cardInfo']
+        resp.data = CardInfoData(
+            owner_name=info['ownerName'],
+            bank_name=info['bank'],
+            card_type=info['type'],
+            deposit_number=info['depositNumber'],
+            code=resp.data['code'],
+        )
+        return resp

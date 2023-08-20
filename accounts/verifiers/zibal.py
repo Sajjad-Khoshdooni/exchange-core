@@ -1,7 +1,8 @@
 from accounts.models import User, FinotechRequest
 from accounts.verifiers.finotech import ServerError
-from accounts.verifiers.jibit import Response
-from accounts.verifiers.basic_verifier import MatchingData
+
+from typing import Union
+from dataclasses import dataclass
 
 from decouple import config
 from urllib3.exceptions import ReadTimeoutError
@@ -9,6 +10,45 @@ import requests
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class MatchingData:
+    is_matched: bool
+    code: str
+
+
+@dataclass
+class CardInfoData:
+    owner_name: str
+    code: str
+    bank_name: str = ''
+    card_type: str = ''
+    deposit_number: str = ''
+    card_pan: str = ''
+
+
+@dataclass
+class IBANInfoData:
+    bank_name: str
+    owners: list
+    code: str
+    deposit_number: str = ''
+    deposit_status: str = ''
+
+
+@dataclass
+class Response:
+    data: Union[dict, list, MatchingData, CardInfoData, IBANInfoData]
+    service: str
+    success: bool = True
+    status_code: int = 200
+
+    def get_success_data(self):
+        if not self.success:
+            raise ServerError
+
+        return self.data
 
 
 class ZibalRequester:
@@ -25,7 +65,7 @@ class ZibalRequester:
         8: 'INACTIVE_API_KEY',
         9: 'LOWER_THAN_MINIMUM_AMOUNT',
         21: 'INVALID_IBAN',
-        29: 'OUT_OF_STOCK',
+        29: 'INSUFFICIENT_FUNDING',
         44: 'IBAN_NOT_FOUND',
         45: 'SERVICE_UNAVAILABLE'
     }
@@ -102,28 +142,38 @@ class ZibalRequester:
             method='POST',
             weight=FinotechRequest.JIBIT_ADVANCED_MATCHING if national_code else FinotechRequest.JIBIT_SIMPLE_MATCHING
         )
-        data = resp.data
-        resp.data = MatchingData(is_matched=data['data']['matched'], code=ZibalRequester.RESULT_MAP[data['result']])
+        data = resp.data['data']
+        resp.data = MatchingData(is_matched=data['matched'], code=ZibalRequester.RESULT_MAP[resp.data['result']])
         return resp
 
     def get_iban_info(self, iban: str) -> Response:
         params = {
             "IBAN": iban,
         }
-        return self.collect_api(
+        resp = self.collect_api(
             data=params,
             path='/v1/facility/ibanInquiry',
             method='POST',
             weight=FinotechRequest.JIBIT_IBAN_INFO_WEIGHT,
         )
+        data = resp.data['data']
+        resp.data = IBANInfoData(
+            bank_name=data['bankName'],
+            owners=data['name'],
+            code=ZibalRequester.RESULT_MAP[resp.data['result']]
+        )
+        return resp
 
     def get_card_info(self, card_pan: str) -> Response:
         params = {
             "cardNumber": card_pan,
         }
-        return self.collect_api(
+        resp = self.collect_api(
             path='/v1/facility/cardInquiry',
             method='POST',
             data=params,
             weight=FinotechRequest.JIBIT_CARD_INFO_WEIGHT
         )
+        data = resp.data['data']
+        resp.data = CardInfoData(owner_name=data['name'], code=ZibalRequester.RESULT_MAP[data['result']])
+        return resp

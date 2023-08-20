@@ -1,5 +1,4 @@
 import logging
-from dataclasses import dataclass
 from typing import Union
 
 from django.conf import settings
@@ -8,7 +7,6 @@ from django.template import loader
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from accounts.utils.similarity import name_similarity
-from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
 from accounts.models import User
 from accounts.verifiers.zibal import ZibalRequester
 from accounts.verifiers.jibit import JibitRequester
@@ -18,46 +16,8 @@ from financial.models import BankCard, BankAccount
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class MatchingData:
-    is_matched: bool
-    code: str
-
-
-@dataclass
-class CardInfoData:
-    owner_name: str
-    bank_name: str
-    card_type: str
-    deposit_number: str
-    card_pan: str
-    code: str
-
-
-@dataclass
-class IBANInfoData:
-    bank_name: str
-    deposit_number: str
-    deposit_status: str
-    owners: list
-    code: str
-
-
-@dataclass
-class Response:
-    data: Union[dict, list, MatchingData, CardInfoData, IBANInfoData]
-    service: str
-    success: bool = True
-    status_code: int = 200
-
-    def get_success_data(self):
-        if not self.success:
-            raise ServerError
-
-        return self.data
-
-
 def send_shahkar_rejection_message(user, resp):
+    from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
     context = {
         'brand': settings.BRAND,
     }
@@ -121,7 +81,7 @@ def verify_national_code_with_phone(user: User, retry: int = 2) -> Union[bool, N
     return verified
 
 
-def update_bank_card_info(bank_card: BankCard, data: CardInfoData):
+def update_bank_card_info(bank_card: BankCard, data):
     bank_card.bank = data.bank_name
     bank_card.type = data.card_type
     bank_card.owner_name = data.owner_name
