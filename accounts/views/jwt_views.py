@@ -48,7 +48,7 @@ class DelegatedAccountMixin:
         if request.auth and request.user and user_has_delegate_permission(request.user) and \
                 getattr(request.auth, 'token_type', None) == 'access' and \
                 hasattr(request.auth, 'payload') and request.auth.payload.get('account_id'):
-            activate('en-US')
+            # activate('en-US')
 
             return Account.objects.get(id=request.auth.payload.get('account_id')), request.auth.payload.get('variant')
 

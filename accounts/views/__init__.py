@@ -30,3 +30,4 @@ from .user_digest_view import UserDigestView
 from .feedback_view import UserFeedbackView
 
 from .notify_view import NotifyView
+from .user_statistics_view import UserStatisticsView

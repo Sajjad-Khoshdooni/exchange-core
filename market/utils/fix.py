@@ -27,17 +27,19 @@ def create_symbols_for_asset(asset: Asset):
     step_size = math.ceil(math.log10(price_irt / OTC_MIN_HARD_FIAT_VALUE))
 
     for base_asset in base_assets:
-        price_usdt = get_external_price(
+        price = get_external_price(
             coin=asset.symbol,
-            base_coin=Asset.USDT,
+            base_coin=base_asset.symbol,
             side=BUY,
             allow_stale=True,
         )
 
-        PairSymbol.objects.get_or_create(
+        tick_size = max(math.ceil(-math.log10(price)) + 3, 0)
+
+        PairSymbol.objects.update_or_create(
             asset=asset, base_asset=base_asset, defaults={
                 'name': f'{asset.symbol}{base_asset.symbol}',
-                'tick_size': asset.price_precision_irt if base_asset.symbol == 'IRT' else asset.price_precision_usdt,
+                'tick_size': tick_size,
                 'step_size': step_size,
                 'min_trade_quantity': 1,
                 'max_trade_quantity': 1e8,

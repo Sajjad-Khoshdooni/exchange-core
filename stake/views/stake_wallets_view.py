@@ -6,7 +6,7 @@ from rest_framework.generics import ListAPIView
 
 from ledger.models import Wallet, Asset
 from ledger.utils.precision import get_presentation_amount
-from stake.models import StakeOption, StakeRevenue
+from stake.models import StakeOption, StakeRevenue, StakeRequest
 from stake.views.stake_option_view import StakeOptionSerializer
 
 
@@ -63,7 +63,15 @@ class StakeWalletsAPIView(ListAPIView):
     serializer_class = StakeWalletSerializer
 
     def get_queryset(self):
-        return StakeOption.objects.filter(stakerequest__account=self.request.user.get_account()).distinct()
+        return StakeOption.objects.filter(stakerequest__in=self.get_active_requests(),).distinct()
+
+    def get_active_requests(self):
+        active_requests = StakeRequest.objects.filter(
+            account=self.request.user.get_account()
+        ).exclude(
+            status__in=(StakeRequest.FINISHED, StakeRequest.CANCEL_COMPLETE)
+        ).values_list('id', flat=True)
+        return active_requests
 
     def get_serializer_context(self):
         account = self.request.user.get_account()
@@ -76,7 +84,7 @@ class StakeWalletsAPIView(ListAPIView):
         }
         ctx['stake_revenues'] = {
             revenue['stake_request__stake_option']: revenue['total_revenue'] for revenue in StakeRevenue.objects.filter(
-                stake_request__stake_option__in=queryset
+                stake_request__in=self.get_active_requests()
             ).values('stake_request__stake_option').annotate(total_revenue=Sum('revenue'))
         }
         return ctx

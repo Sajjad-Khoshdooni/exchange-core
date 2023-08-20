@@ -8,7 +8,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from accounts.authentication import CustomTokenAuthentication
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from ledger.models import Transfer
-from ledger.views.transactions_history_view import TransferSerializer
+from ledger.views.transfer_history_view import TransferSerializer
 
 
 class WithdrawViewSet(ModelViewSet):

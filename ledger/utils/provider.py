@@ -389,11 +389,11 @@ class MockProviderRequester(ProviderRequester):
                 withdraw_fee=Decimal(1),
                 withdraw_enable=True,
                 deposit_enable=True,
-                address_regex='\w+'
+                address_regex=r'\w+'
             )
         ]
 
-    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal = 0, side: str = ''):
+    def try_hedge_new_order(self, request_id: str, asset: Asset, scope: str, buy_amount: Decimal = 0):
         self._collect_api('/')
 
     def new_order(self, request_id: str, asset: Asset, scope: str, amount: Decimal, side: str):

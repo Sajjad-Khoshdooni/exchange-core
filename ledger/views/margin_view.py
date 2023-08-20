@@ -64,10 +64,10 @@ class AssetMarginInfoView(APIView):
         max_transfer = min(margin_wallet.get_free(), max(margin_info.get_max_transferable() / price, Decimal(0)))
 
         return Response({
-            'balance': asset.get_presentation_amount(margin_wallet.get_free()),
-            'debt': asset.get_presentation_amount(-loan_wallet.get_free()),
-            'max_borrow': asset.get_presentation_amount(max_borrow),
-            'max_transfer': asset.get_presentation_amount(max_transfer),
+            'balance': margin_wallet.get_free(),
+            'debt': -loan_wallet.get_free(),
+            'max_borrow': max_borrow,
+            'max_transfer': max_transfer,
         })
 
 
