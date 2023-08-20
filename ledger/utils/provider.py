@@ -380,6 +380,10 @@ class MockProviderRequester(ProviderRequester):
 
     def get_network_info(self, asset: str, network: str = None) -> List[NetworkInfo]:
         self._collect_api('/')
+
+        if not network:
+            network = 'TRX'
+
         return [
             NetworkInfo(
                 coin=asset,
