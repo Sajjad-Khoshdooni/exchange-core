@@ -174,7 +174,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         )
 
     def get_price_usdt(self, asset: Asset):
-        get_symbol_presentation_amount(
+        return get_symbol_presentation_amount(
             symbol=asset.symbol + 'USDT',
             amount=self.get_ext_price_usdt(asset.symbol),
         )
