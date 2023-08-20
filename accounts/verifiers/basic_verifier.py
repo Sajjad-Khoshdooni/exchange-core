@@ -37,10 +37,9 @@ def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, Non
     requester = ZibalRequester(user)
     resp = requester.matching(phone_number=phone, national_code=national_code)
     if resp.success:
-        is_matched = resp.data.is_matched
-        if not is_matched:
+        if not resp.data.is_matched:
             send_shahkar_rejection_message(user, resp)
-        return is_matched
+        return resp.data.is_matched
     elif resp.data.code in ['mobileNumber.not_valid', 'nationalCode.not_valid', 'INVALID_DATA']:
         send_shahkar_rejection_message(user, resp)
         return False
@@ -126,7 +125,7 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
 
         elif data.code.startswith('card.') and data.code not in ['card.provider_is_not_active', 'INVALID_DATA']:
             bank_card.verified = False
-            bank_card.reject_reason = resp.data['code']
+            bank_card.reject_reason = data.code
             bank_card.save(update_fields=['verified', 'reject_reason'])
 
             logger.info(f'{resp.service} card verification failed', extra={
@@ -161,7 +160,7 @@ def verify_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
         logger.info('rejecting bank card because of duplication')
         bank_card.reject_reason = BankCard.DUPLICATED
         bank_card.verified = False
-        bank_card.save()
+        bank_card.save(update_fields=['reject_reason', 'verified'])
         return False
 
     requester = JibitRequester(bank_card.user)
@@ -183,16 +182,16 @@ def verify_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
 
             return verified
 
-        elif resp.data['code'].startswith('card.') and resp.data['code'] != 'card.provider_is_not_active':
+        elif resp.data.code.startswith('card.') and resp.data.code != 'card.provider_is_not_active':
             bank_card.verified = False
             bank_card.reject_reason = resp.data['code']
-            bank_card.save()
+            bank_card.save(update_fields=['verified', 'reject_reason'])
 
             return False
         else:
             logger.warning('JIBIT card verification not succeeded', extra={
                 'bank_card': bank_card,
-                'resp': resp.data['code'],
+                'resp': resp.data.code,
             })
             return
     except (TimeoutError, ServerError):
@@ -279,7 +278,7 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
         logger.info('rejecting bank card because of duplication')
         bank_card.reject_reason = BankCard.DUPLICATED
         bank_card.verified = False
-        bank_card.save()
+        bank_card.save(update_fields=['reject_reason', 'verified'])
         user.change_status(User.REJECTED)
         return False
 
@@ -293,22 +292,22 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
         )
 
         if resp.success:
-            card_matched = resp.data['matched']
+            card_matched = resp.data.is_matched
             identity_matched = None
 
             if card_matched:
                 identity_matched = True
 
-        elif resp.data['code'].startswith('card.') and resp.data['code'] != 'card.provider_is_not_active':
+        elif resp.data.code.startswith('card.') and resp.data.code != 'card.provider_is_not_active':
             card_matched = False
             identity_matched = None
-        elif resp.data['code'] in ('identity_info.not_found', 'nationalCode.not_valid', 'matching.unknown'):
+        elif resp.data.code in ('identity_info.not_found', 'nationalCode.not_valid', 'matching.unknown'):
             identity_matched = False
             card_matched = None
         else:
             logger.warning('JIBIT card <-> national_code not succeeded', extra={
                 'user': user,
-                'resp': resp.data['code'],
+                'resp': resp.data.code,
                 'card': bank_card,
             })
             return

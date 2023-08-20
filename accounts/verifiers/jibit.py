@@ -187,11 +187,12 @@ class JibitRequester:
             weight=FinotechRequest.JIBIT_IBAN_INFO_WEIGHT,
         )
         data = resp.data
+        info = data['ibanInfo']
         resp.data = IBANInfoData(
-            bank_name=data['bank'],
-            deposit_number=data['depositNumber'],
-            deposit_status=data['status'],
-            owners=data['owners'],
+            bank_name=info['bank'],
+            deposit_number=info['depositNumber'],
+            deposit_status=info['status'],
+            owners=info['owners'],
             code=data['code']
         )
         return resp
@@ -209,12 +210,13 @@ class JibitRequester:
             search_key=key,
             weight=FinotechRequest.JIBIT_CARD_INFO_WEIGHT
         )
-        info = resp.data['cardInfo']
+        data = resp.data
+        info = data['cardInfo']
         resp.data = CardInfoData(
             owner_name=info['ownerName'],
             bank_name=info['bank'],
             card_type=info['type'],
             deposit_number=info['depositNumber'],
-            code=resp.data['code'],
+            code=data['code'],
         )
         return resp
