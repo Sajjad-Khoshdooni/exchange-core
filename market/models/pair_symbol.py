@@ -1,6 +1,7 @@
 from collections import namedtuple
 from decimal import Decimal
 
+from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import CheckConstraint, Q
 
@@ -22,8 +23,8 @@ class PairSymbol(models.Model):
     taker_fee = models.DecimalField(max_digits=9, decimal_places=8, default=DEFAULT_TAKER_FEE)
     maker_fee = models.DecimalField(max_digits=9, decimal_places=8, default=DEFAULT_MAKER_FEE)
 
-    tick_size = models.SmallIntegerField(default=2)
-    step_size = models.SmallIntegerField(default=4)
+    tick_size = models.PositiveSmallIntegerField(default=2, validators=[MaxValueValidator(8)])
+    step_size = models.PositiveSmallIntegerField(default=4, validators=[MaxValueValidator(8)])
     min_trade_quantity = get_amount_field(default=Decimal('0.0001'))
     max_trade_quantity = get_amount_field(default=Decimal('10000'))
 
