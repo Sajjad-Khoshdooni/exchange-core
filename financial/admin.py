@@ -440,12 +440,27 @@ class BankPaymentRequestResource(resources.ModelResource):
         fields = ('created', 'amount', 'ref_id', 'description', 'user', )
 
 
+class BankPaymentUserFilter(SimpleListFilter):
+    title = 'user'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        users = User.objects.filter(userfeatureperm__feature=UserFeaturePerm.BANK_PAYMENT).order_by('id')
+        return [(u.id, u.username) for u in users]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(user_id__exact=self.value())
+        else:
+            return queryset
+
+
 @admin.register(BankPaymentRequest)
 class BankPaymentRequestAdmin(ExportMixin, admin.ModelAdmin):
     list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type', 'payment')
     readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview', 'payment')
     actions = ('accept_payment', )
-    list_filter = (BankPaymentRequestAcceptFilter, 'user')
+    list_filter = (BankPaymentRequestAcceptFilter, BankPaymentUserFilter)
     resource_classes = [BankPaymentRequestResource]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
