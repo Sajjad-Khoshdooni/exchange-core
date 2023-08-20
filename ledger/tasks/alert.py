@@ -3,14 +3,14 @@ from decimal import Decimal
 
 from celery import shared_task
 from django.core.cache import cache
-from django.db.models import Q
+from django.utils import timezone
 
 from accounts.models import Notification
 from ledger.models.asset_alert import AssetAlert
 from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get_external_price, BUY
 
 
-def get_current_prices():
+def get_current_prices() -> dict:
     coins = list(AssetAlert.objects.distinct('asset').values_list('asset__symbol', flat=True))
 
     prices = get_external_usdt_prices(coins=coins, side=BUY, apply_otc_spread=True)
@@ -34,7 +34,10 @@ def send_notifications(asset_alert_list, altered_coins):
         )
 
 
-def get_altered_coins(past_cycle_prices, current_cycle):
+def get_altered_coins(past_cycle_prices, current_cycle) -> dict:
+    if not past_cycle_prices or current_cycle:
+        return {}
+
     return {coin: [current_cycle[coin], past_cycle_prices[coin]] for coin in
             past_cycle_prices.keys() & current_cycle.keys()
             if
@@ -44,32 +47,18 @@ def get_altered_coins(past_cycle_prices, current_cycle):
 
 @shared_task(queue='asset_alert')
 def send_price_notifications():
-    past_data = cache.get('coin_prices')
-    current_cycle = get_current_prices()
+    now = timezone.now()
+    current_count = math.floor(now.hour * 60 + now.minute / 5)
+    current_cycle_prices = get_current_prices()
+    cache.set(current_count, current_cycle_prices, 3600 * 25)
 
-    if not past_data:
-        cache.set('coin_prices', {
-            'initial': current_cycle,
-            'past': current_cycle,
-            'count': 0
-        }, 60 * 10)
+    past_five_minute_cycle = cache.get(current_count - 1)
+    past_hour_cycle = cache.get(current_count - 12)
 
-        return
+    altered_coins = {
+        **get_altered_coins(past_five_minute_cycle, current_cycle_prices),
+        **get_altered_coins(past_hour_cycle, current_cycle_prices),
+    }
 
-    initial_cycle = past_data['initial']
-    past_cycle = past_data['past']
-    count = past_data['count']
-    altered_coins = get_altered_coins(past_cycle, current_cycle)
-
-    if count % 12 == 0:
-        altered_coins = {**altered_coins, **get_altered_coins(initial_cycle, current_cycle)}
-
-    asset_alert_list = AssetAlert.objects.filter(Q(asset__symbol__in=altered_coins.keys()))
-
+    asset_alert_list = AssetAlert.objects.filter(asset__symbol__in=altered_coins.keys())
     send_notifications(asset_alert_list, altered_coins)
-
-    cache.set('coin_prices', {
-        'initial': current_cycle if count % 12 == 0 else initial_cycle,
-        'past': current_cycle,
-        'count': count + 1
-    })
