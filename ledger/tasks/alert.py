@@ -35,7 +35,7 @@ def send_notifications(asset_alert_list, altered_coins):
 
 
 def get_altered_coins(past_cycle_prices, current_cycle) -> dict:
-    if not past_cycle_prices or current_cycle:
+    if not past_cycle_prices:
         return {}
 
     return {coin: [current_cycle[coin], past_cycle_prices[coin]] for coin in
