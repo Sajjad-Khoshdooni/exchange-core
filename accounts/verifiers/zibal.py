@@ -1,6 +1,8 @@
 from accounts.models import User, FinotechRequest
 from accounts.verifiers.finotech import ServerError
 from accounts.verifiers.jibit import Response
+from accounts.verifiers.basic_verifier import MatchingData
+
 from decouple import config
 from urllib3.exceptions import ReadTimeoutError
 import requests
@@ -9,21 +11,31 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# todo : refactor Jibit & Zibal requesters
 class ZibalRequester:
     BASE_URL = 'https://api.zibal.ir'
+
+    RESULT_MAP = {
+        1: 'SUCCESSFUL',
+        2: 'INVALID_API_KEY',
+        3: 'WRONG_API_KEY',
+        4: 'PERMISSION_DENIED',
+        5: 'INVALID_CALL_BACK_URL',
+        6: 'INVALID_DATA',
+        7: 'INVALID_IP',
+        8: 'INACTIVE_API_KEY',
+        9: 'LOWER_THAN_MINIMUM_AMOUNT',
+        21: 'INVALID_IBAN',
+        29: 'OUT_OF_STOCK',
+        44: 'IBAN_NOT_FOUND',
+        45: 'SERVICE_UNAVAILABLE'
+    }
 
     def __init__(self, user: User):
         self._user = user
 
-    def _get_cc_token(self):
-        return config('ZIBAL_API_TOKEN')
-
     def collect_api(self, path: str, method: str = 'GET', data=None, weight: int = 0) -> Response:
         if data is None:
             data = {}
-
-        token = self._get_cc_token()
 
         url = self.BASE_URL + path
 
@@ -32,14 +44,14 @@ class ZibalRequester:
             method=method,
             data=data,
             user=self._user,
-            service=FinotechRequest.JIBIT,
+            service=FinotechRequest.ZIBAL,
             weight=weight,
         )
 
         request_kwargs = {
             'url': url,
             'timeout': 30,
-            'headers': {'Authorization': 'Bearer ' + token},
+            'headers': {'Authorization':  config('ZIBAL_KYC_API_TOKEN')},
         }
 
         try:
@@ -76,7 +88,7 @@ class ZibalRequester:
             })
             raise ServerError
 
-        return Response(data=resp_data, status_code=resp.ok)
+        return Response(data=resp_data, status_code=resp.ok, service='ZIBAL')
 
     def matching(self, phone_number: str = None, national_code: str = None) -> Response:
         params = {
@@ -84,12 +96,15 @@ class ZibalRequester:
             "nationalCode": national_code
         }
 
-        return self.collect_api(
+        resp = self.collect_api(
             data=params,
             path='/v1/facility/shahkarInquiry',
             method='POST',
             weight=FinotechRequest.JIBIT_ADVANCED_MATCHING if national_code else FinotechRequest.JIBIT_SIMPLE_MATCHING
         )
+        data = resp.data
+        resp.data = MatchingData(is_matched=data['data']['matched'], code=ZibalRequester.RESULT_MAP[data['result']])
+        return resp
 
     def get_iban_info(self, iban: str) -> Response:
         params = {

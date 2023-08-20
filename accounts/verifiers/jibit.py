@@ -1,7 +1,5 @@
 import datetime
 import logging
-from dataclasses import dataclass
-from typing import Union
 
 import requests
 from decouple import config
@@ -11,25 +9,13 @@ from urllib3.exceptions import ReadTimeoutError
 
 from accounts.models import FinotechRequest
 from accounts.utils.validation import gregorian_to_jalali_date_str
+from accounts.verifiers.basic_verifier import Response, MatchingData
 from accounts.verifiers.finotech import ServerError
 
 logger = logging.getLogger(__name__)
 token_cache = caches['token']
 
 JIBIT_TOKEN_KEY = 'jibit-token'
-
-
-@dataclass
-class Response:
-    data: Union[dict, list]
-    success: bool = True
-    status_code: int = 200
-
-    def get_success_data(self):
-        if not self.success:
-            raise ServerError
-
-        return self.data
 
 
 class JibitRequester:
@@ -83,7 +69,7 @@ class JibitRequester:
                 if request.status_code >= 500:
                     raise ServerError
 
-                return Response(data=request.response, success=request.status_code in (200, 201))
+                return Response(data=request.response, success=request.status_code in (200, 201), service='JIBIT')
 
         token = self._get_cc_token()
 
@@ -140,7 +126,6 @@ class JibitRequester:
 
         if resp.status_code not in (403, 401) and resp.status_code < 500 and \
                 resp_data.get('code') not in ['card.provider_is_not_active']:
-
             req_object.search_key = search_key
 
         req_object.save()
@@ -157,7 +142,7 @@ class JibitRequester:
 
             raise ServerError
 
-        return Response(data=resp_data, success=resp.ok)
+        return Response(data=resp_data, success=resp.ok, service='JIBIT')
 
     def matching(self, phone_number: str = None, national_code: str = None, full_name: str = None,
                  birth_date: datetime = None, card_pan: str = None, iban: str = None) -> Response:
@@ -178,12 +163,15 @@ class JibitRequester:
 
         params = {k: v for (k, v) in params.items() if v}
 
-        return self.collect_api(
+        resp = self.collect_api(
             path='/v1/services/matching',
             data=params,
             search_key=key,
             weight=FinotechRequest.JIBIT_ADVANCED_MATCHING if national_code else FinotechRequest.JIBIT_SIMPLE_MATCHING
         )
+        data = resp.data
+        resp.data = MatchingData(is_matched=data['matched'], code=data['code'])
+        return resp
 
     def get_iban_info(self, iban: str) -> Response:
         params = {
