@@ -24,7 +24,7 @@ def create_symbols_for_asset(asset: Asset):
         side=BUY,
     )
 
-    step_size = math.ceil(math.log10(price_irt / OTC_MIN_HARD_FIAT_VALUE))
+    step_size = min(max(math.ceil(math.log10(price_irt / OTC_MIN_HARD_FIAT_VALUE)), 0), 8)
 
     for base_asset in base_assets:
         price = get_external_price(
@@ -34,7 +34,7 @@ def create_symbols_for_asset(asset: Asset):
             allow_stale=True,
         )
 
-        tick_size = max(math.ceil(-math.log10(price)) + 3, 0)
+        tick_size = min(max(math.ceil(-math.log10(price)) + 3, 0), 8)
 
         PairSymbol.objects.update_or_create(
             asset=asset, base_asset=base_asset, defaults={
