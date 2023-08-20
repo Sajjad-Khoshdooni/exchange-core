@@ -27,7 +27,7 @@ from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, Man
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE, PROCESS, PENDING
-from ledger.utils.precision import get_presentation_amount, humanize_presentation
+from ledger.utils.precision import get_presentation_amount, humanize_presentation, get_symbol_presentation_amount
 from ledger.utils.precision import humanize_number
 from ledger.utils.provider import get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor
@@ -348,7 +348,7 @@ class WalletAdmin(admin.ModelAdmin):
             base_coin=Asset.IRT,
             side=BUY
         ) or 0
-        return wallet.asset.get_presentation_price_irt(wallet.balance * price)
+        return get_symbol_presentation_amount(wallet.asset.symbol + 'IRT', wallet.balance * price, trunc_zero=True)
 
     @admin.display(description='usdt value')
     def get_value_usdt(self, wallet: models.Wallet):
@@ -357,7 +357,7 @@ class WalletAdmin(admin.ModelAdmin):
             base_coin=Asset.USDT,
             side=BUY
         ) or 0
-        return wallet.asset.get_presentation_price_usdt(wallet.balance * price)
+        return get_symbol_presentation_amount(wallet.asset.symbol + 'USDT', wallet.balance * price, trunc_zero=True)
 
 
 class TransferUserFilter(SimpleListFilter):

@@ -4,6 +4,7 @@ from rest_framework.generics import ListAPIView
 
 from ledger.models.asset import Asset
 from ledger.utils.external_price import get_external_price, SELL, BUY
+from ledger.utils.precision import get_symbol_presentation_amount
 
 from market.models import Order
 
@@ -19,7 +20,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not price:
             price = get_external_price(asset.symbol, base_coin=Asset.IRT, side=SELL, allow_stale=True)
 
-        return asset.get_presentation_price_irt(price)
+        return get_symbol_presentation_amount(asset.symbol + 'IRT', price)
 
     def get_bid(self, asset: Asset):
         bids = self.context['bids']
@@ -28,7 +29,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not price:
             price = get_external_price(asset.symbol, base_coin=Asset.IRT, side=BUY, allow_stale=True)
 
-        return asset.get_presentation_price_irt(price)
+        return get_symbol_presentation_amount(asset.symbol + 'IRT', price)
 
     class Meta:
         model = Asset

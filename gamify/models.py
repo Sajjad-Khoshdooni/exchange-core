@@ -91,12 +91,12 @@ class Achievement(models.Model):
             template = 'جعبه شانس به شما تعلق گرفت. برای دریافت آن، کلیک کنید.'
         elif not self.voucher:
             template = 'جایزه {amount} {symbol} به شما تعلق گرفت. برای دریافت، کلیک کنید.'.format(
-                amount=humanize_number(prize.asset.get_presentation_amount(prize.amount)),
+                amount=humanize_number(prize.amount),
                 symbol=self.asset.name_fa
             )
         else:
             template = 'جایزه تخفیف کارمزد تا سقف {amount} {symbol} به شما تعلق گرفت.'.format(
-                amount=humanize_number(prize.asset.get_presentation_amount(prize.amount)),
+                amount=humanize_number(prize.amount),
                 symbol=self.asset.name_fa
             )
 

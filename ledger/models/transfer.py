@@ -287,15 +287,14 @@ class Transfer(models.Model):
         user = self.wallet.account.user
 
         if self.status == Transfer.DONE and user and user.is_active:
-            sent_amount = self.asset.get_presentation_amount(self.amount)
             user_email = self.wallet.account.user.email
             if self.deposit:
-                title = 'دریافت شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol)
+                title = 'دریافت شد: %s %s' % (humanize_number(self.amount), self.wallet.asset.symbol)
                 message = 'از ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
                 template = email.SCOPE_DEPOSIT_EMAIL
 
             else:
-                title = 'ارسال شد: %s %s' % (humanize_number(sent_amount), self.wallet.asset.symbol)
+                title = 'ارسال شد: %s %s' % (humanize_number(self.amount), self.wallet.asset.symbol)
                 message = 'به ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
                 template = email.SCOPE_WITHDRAW_EMAIL
 
@@ -312,7 +311,7 @@ class Transfer(models.Model):
                     recipient=user_email,
                     template=template,
                     context={
-                        'amount': humanize_number(sent_amount),
+                        'amount': humanize_number(self.amount),
                         'wallet_asset': self.wallet.asset.symbol,
                         'withdraw_address': self.out_address,
                         'trx_hash': self.trx_hash,

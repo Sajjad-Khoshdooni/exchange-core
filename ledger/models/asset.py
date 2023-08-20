@@ -45,9 +45,6 @@ class Asset(models.Model):
     symbol = models.CharField(max_length=16, unique=True, db_index=True)
     original_symbol = models.CharField(max_length=16, blank=True)
 
-    price_precision_usdt = models.SmallIntegerField(default=2)
-    price_precision_irt = models.SmallIntegerField(default=0)
-
     enable = models.BooleanField(default=False)
     order = models.SmallIntegerField(default=0, db_index=True)
 
@@ -124,15 +121,6 @@ class Asset(models.Model):
 
     def is_trade_base(self):
         return self.symbol in (self.IRT, self.USDT)
-
-    def get_presentation_amount(self, amount: Decimal) -> str:
-        return get_presentation_amount(amount, self.get_precision())
-
-    def get_presentation_price_irt(self, price: Decimal) -> str:
-        return get_presentation_amount(price, self.price_precision_irt)
-
-    def get_presentation_price_usdt(self, price: Decimal) -> str:
-        return get_presentation_amount(price, self.price_precision_usdt)
 
     def get_original_symbol(self):
         return self.original_symbol or self.symbol

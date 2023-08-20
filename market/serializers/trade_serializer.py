@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from ledger.models import Asset
 from ledger.utils.external_price import BUY
-from ledger.utils.precision import floor_precision, decimal_to_str
+from ledger.utils.precision import floor_precision, decimal_to_str, get_presentation_amount
 from market.models import Trade, BaseTrade
 
 
@@ -26,12 +26,8 @@ class AccountTradeSerializer(serializers.ModelSerializer):
         data['base_amount'] = decimal_to_str(floor_precision(Decimal(data['base_amount']), trade.symbol.tick_size))
 
         if 'fee_amount' in data:
-            if data['side'] == BUY:
-                data['fee_amount'] = trade.symbol.asset.get_presentation_amount(data['fee_amount'])
-            elif trade.symbol.base_asset.symbol == Asset.IRT:
-                data['fee_amount'] = trade.symbol.asset.get_presentation_price_irt(data['fee_amount'])
-            elif trade.symbol.base_asset.symbol == Asset.USDT:
-                data['fee_amount'] = trade.symbol.asset.get_presentation_price_usdt(data['fee_amount'])
+            data['fee_amount'] = get_presentation_amount(data['fee_amount'])
+
             data['fee_asset'] = data['asset'] if data['side'] == BUY else data['base_asset']
         return data
 
