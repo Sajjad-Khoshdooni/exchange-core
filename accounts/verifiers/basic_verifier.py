@@ -94,10 +94,10 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
         return False
 
     requester = ZibalRequester(bank_card.user)
-    logger.info('users first name and last name is already verified')
     user = bank_card.user
 
     if user.first_name_verified and user.last_name_verified:
+        logger.info('users first name and last name is already verified')
         return True
 
     try:

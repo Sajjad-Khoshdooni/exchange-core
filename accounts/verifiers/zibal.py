@@ -91,7 +91,7 @@ class ZibalRequester:
         request_kwargs = {
             'url': url,
             'timeout': 30,
-            'headers': {'Authorization':  config('ZIBAL_KYC_API_TOKEN')},
+            'headers': {'Authorization': config('ZIBAL_KYC_API_TOKEN')}
         }
 
         try:
@@ -142,8 +142,11 @@ class ZibalRequester:
             method='POST',
             weight=FinotechRequest.JIBIT_ADVANCED_MATCHING if national_code else FinotechRequest.JIBIT_SIMPLE_MATCHING
         )
-        data = resp.data['data']
-        resp.data = MatchingData(is_matched=data['matched'], code=ZibalRequester.RESULT_MAP[resp.data['result']])
+        data = resp.data.get('data', {})
+        resp.data = MatchingData(
+            is_matched=data.get('matched', ''),
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
+        )
         return resp
 
     def get_iban_info(self, iban: str) -> Response:
@@ -156,11 +159,11 @@ class ZibalRequester:
             method='POST',
             weight=FinotechRequest.JIBIT_IBAN_INFO_WEIGHT,
         )
-        data = resp.data['data']
+        data = resp.data.get('data', {})
         resp.data = IBANInfoData(
-            bank_name=data['bankName'],
-            owners=data['name'],
-            code=ZibalRequester.RESULT_MAP[resp.data['result']]
+            bank_name=data.get('bankName', ''),
+            owners=data.get('name', ''),
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
         )
         return resp
 
@@ -174,6 +177,9 @@ class ZibalRequester:
             data=params,
             weight=FinotechRequest.JIBIT_CARD_INFO_WEIGHT
         )
-        data = resp.data['data']
-        resp.data = CardInfoData(owner_name=data['name'], code=ZibalRequester.RESULT_MAP[data['result']])
+        data = resp.data.get('data', {})
+        resp.data = CardInfoData(
+            owner_name=data.get('name', ''),
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
+        )
         return resp
