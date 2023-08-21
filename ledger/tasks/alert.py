@@ -73,7 +73,7 @@ def get_altered_coins(past_cycle_prices, current_cycle, current_cycle_count, sco
     return changed_coins
 
 
-@shared_task(queue='asset_alert')
+@shared_task(queue='notif-manager')
 def send_price_notifications():
     total_cycles = 24 * 12
 

@@ -28,7 +28,7 @@ app.conf.beat_schedule = {
         'task': 'ledger.tasks.alert.send_price_notifications',
         'schedule':  60 * 5 * TASK_MULTIPLIER,
         'options': {
-            'queue': 'celery',
+            'queue': 'notif-manager',
             'expires': 60 * 2 * TASK_MULTIPLIER
         }
     },
