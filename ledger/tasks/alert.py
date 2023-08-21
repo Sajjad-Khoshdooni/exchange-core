@@ -10,6 +10,8 @@ from ledger.models.asset_alert import AssetAlert
 from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get_external_price, BUY
 
 CACHE_PREFIX = 'asset_alert'
+MINUTES = 'پنج‌ دقیقه'
+HOUR = '‌یک‌ ساعت'
 
 
 def get_current_prices() -> dict:
@@ -26,24 +28,24 @@ def get_current_prices() -> dict:
 def send_notifications(asset_alert_list, altered_coins):
     for asset_alert in asset_alert_list:
         base_coin = 'تتر' if asset_alert.asset.symbol != asset_alert.asset.USDT else 'تومان'
-        new_price, old_price = altered_coins[asset_alert.asset.symbol]
+        new_price, old_price, scope = altered_coins[asset_alert.asset.symbol]
         percent = math.floor(abs(new_price / old_price - Decimal(1)) * 100)
         change_status = 'افزایش' if new_price > old_price else 'کاهش'
         Notification.send(
             recipient=asset_alert.user,
-            title='تغییر قیمت',
+            title=f'تغییر قیمت در {scope} گذشته',
             message=f'قیمت ارزدیجیتال {asset_alert.asset.name_fa} {percent} درصد {change_status} پیدا کرد و به {new_price} {base_coin} رسید.'
         )
 
 
-def get_altered_coins(past_cycle_prices, current_cycle) -> dict:
+def get_altered_coins(past_cycle_prices, current_cycle, scope) -> dict:
     if not past_cycle_prices:
         return {}
 
-    return {coin: [current_cycle[coin], past_cycle_prices[coin]] for coin in
+    return {coin: [current_cycle[coin], past_cycle_prices[coin], scope] for coin in
             past_cycle_prices.keys() & current_cycle.keys()
             if
-            Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1))) > Decimal('0.05')
+            Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1))) > Decimal('0.02')
             }
 
 
@@ -64,8 +66,8 @@ def send_price_notifications():
     past_hour_cycle = cache.get(key)
 
     altered_coins = {
-        **get_altered_coins(past_five_minute_cycle, current_cycle_prices),
-        **get_altered_coins(past_hour_cycle, current_cycle_prices),
+        **get_altered_coins(past_five_minute_cycle, current_cycle_prices, scope=MINUTES),
+        **get_altered_coins(past_hour_cycle, current_cycle_prices, scope=HOUR),
     }
 
     asset_alert_list = AssetAlert.objects.filter(asset__symbol__in=altered_coins.keys())
