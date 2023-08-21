@@ -35,8 +35,8 @@ def send_notifications(asset_alert_list, altered_coins):
         new_price = get_presentation_amount(new_price)
         Notification.send(
             recipient=asset_alert.user,
-            title=f'تغییر قیمت در {scope} گذشته',
-            message=f'قیمت ارزدیجیتال {asset_alert.asset.name_fa} {percent} درصد {change_status} پیدا کرد و به {new_price} {base_coin} رسید.'
+            title=f'{change_status} قیمت ناگهانی',
+            message=f'قیمت ارزدیجیتال {asset_alert.asset.name_fa} در {scope} گذشته {percent} درصد {change_status} پیدا کرد و به {new_price} {base_coin} رسید.'
         )
 
 
