@@ -9,6 +9,8 @@ from accounts.models import Notification
 from ledger.models.asset_alert import AssetAlert
 from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get_external_price, BUY
 
+CACHE_PREFIX = 'asset_alert'
+
 
 def get_current_prices() -> dict:
     coins = list(AssetAlert.objects.distinct('asset').values_list('asset__symbol', flat=True))
@@ -47,13 +49,19 @@ def get_altered_coins(past_cycle_prices, current_cycle) -> dict:
 
 @shared_task(queue='asset_alert')
 def send_price_notifications():
-    now = timezone.now()
-    current_count = math.floor(now.hour * 60 + now.minute / 5)
-    current_cycle_prices = get_current_prices()
-    cache.set(current_count, current_cycle_prices, 3600 * 25)
+    total_cycles = 24 * 12
 
-    past_five_minute_cycle = cache.get(current_count - 1)
-    past_hour_cycle = cache.get(current_count - 12)
+    now = timezone.now()
+    current_count = (now.hour * 60 + now.minute) // 5
+    current_cycle_prices = get_current_prices()
+    key = CACHE_PREFIX + str(current_count)
+    cache.set(key, current_cycle_prices, 3600 * 25)
+
+    key = CACHE_PREFIX + str((current_count - 1) % total_cycles)
+    past_five_minute_cycle = cache.get(key)
+
+    key = CACHE_PREFIX + str((current_count - 12) % total_cycles)
+    past_hour_cycle = cache.get(key)
 
     altered_coins = {
         **get_altered_coins(past_five_minute_cycle, current_cycle_prices),
