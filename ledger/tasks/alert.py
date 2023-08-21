@@ -1,21 +1,20 @@
 import math
 from decimal import Decimal
+from datetime import timedelta
 
 from celery import shared_task
 from django.core.cache import cache
 from django.utils import timezone
 
 from accounts.models import Notification
-from ledger.models.asset_alert import AssetAlert, AlertTrigger
+from ledger.models.asset_alert import *
 from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get_external_price, BUY
 from ledger.utils.precision import get_presentation_amount
 
 CACHE_PREFIX = 'asset_alert'
-MINUTES = 'پنج‌ دقیقه'
-HOUR = '‌یک‌ ساعت'
 
 
-def get_current_prices(current_cycle_count) -> dict:
+def get_current_prices() -> dict:
     coins = list(AssetAlert.objects.distinct('asset').values_list('asset__symbol', flat=True))
 
     prices = get_external_usdt_prices(coins=coins, side=BUY, apply_otc_spread=True)
@@ -23,17 +22,6 @@ def get_current_prices(current_cycle_count) -> dict:
     if USDT in prices.keys():
         prices[USDT] = get_external_price(coin=USDT, base_coin=IRT, side=BUY)
 
-    for coin, price in prices:
-        AlertTrigger.objects.create(
-            coin=coin,
-            price=price,
-            cycle=current_cycle_count,
-            is_triggered=not AlertTrigger.objects.filter(
-                cycle__gt=current_cycle_count - 12,
-                coin=coin,
-                is_triggered=True
-            ).exists()
-        )
     return prices
 
 
@@ -51,17 +39,25 @@ def send_notifications(asset_alert_list, altered_coins):
         )
 
 
-def get_altered_coins(past_cycle_prices,  current_cycle, current_cycle_count, scope) -> dict:
+def get_altered_coins(past_cycle_prices, current_cycle, current_cycle_count, scope) -> dict:
     if not past_cycle_prices:
         return {}
-
-    return {coin: [current_cycle[coin], past_cycle_prices[coin], scope] for coin in
-            past_cycle_prices.keys() & current_cycle.keys()
-            if
-            (Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1))) > Decimal('0.02')
-            and
-            AlertTrigger.objects.get(cycle=current_cycle_count, coin=coin).is_triggered)
-            }
+    changed_coins = {}
+    for coin in past_cycle_prices.keys() & current_cycle.keys():
+        if Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1))) > Decimal('0.02'):
+            AlertTrigger.objects.create(
+                asset=coin,
+                price=current_cycle[coin],
+                cycle=current_cycle_count,
+                interval=scope,
+            )
+            if not AlertTrigger.objects.filter(
+                asset=coin,
+                created__gte=timezone.now() - timedelta(hours=1),
+                is_triggered=True
+            ).exists():
+                changed_coins[coin] = [current_cycle[coin], past_cycle_prices[coin], scope]
+    return changed_coins
 
 
 @shared_task(queue='asset_alert')
@@ -70,7 +66,7 @@ def send_price_notifications():
 
     now = timezone.now()
     current_cycle_count = (now.hour * 60 + now.minute) // 5
-    current_cycle_prices = get_current_prices(current_cycle_count)
+    current_cycle_prices = get_current_prices()
 
     key = CACHE_PREFIX + str(current_cycle_count)
     cache.set(key, current_cycle_prices, 3600 * 25)
