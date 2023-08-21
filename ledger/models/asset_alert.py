@@ -15,7 +15,7 @@ class AlertTrigger(models.Model):
     class Meta:
         unique_together = ('coin', 'cycle')
         indexes = [
-            models.Index(['asset', 'cycle', 'is_triggered'])
+            models.Index(fields=['coin', 'cycle', 'is_triggered'], name='alert_trigger_idx')
         ]
 
 
