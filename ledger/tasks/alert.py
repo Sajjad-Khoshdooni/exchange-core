@@ -10,8 +10,8 @@ from ledger.models.asset_alert import AssetAlert
 from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get_external_price, BUY
 
 CACHE_PREFIX = 'asset_alert'
-MINUTES = 'پنج‌دقیقه'
-HOUR = '‌یک‌ساعت'
+MINUTES = 'پنج‌ دقیقه'
+HOUR = '‌یک‌ ساعت'
 def get_current_prices() -> dict:
     coins = list(AssetAlert.objects.distinct('asset').values_list('asset__symbol', flat=True))
 
@@ -43,7 +43,7 @@ def get_altered_coins(past_cycle_prices, current_cycle, scope) -> dict:
     return {coin: [current_cycle[coin], past_cycle_prices[coin], scope] for coin in
             past_cycle_prices.keys() & current_cycle.keys()
             if
-            Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1))) > Decimal('0.05')
+            Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1))) > Decimal('0.02')
             }
 
 
