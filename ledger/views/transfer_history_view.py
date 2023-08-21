@@ -14,7 +14,6 @@ from ledger.models.asset import AssetSerializerMini
 class TransferSerializer(serializers.ModelSerializer):
     link = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
-    fee_amount = serializers.SerializerMethodField()
     network = serializers.SerializerMethodField()
     asset = AssetSerializerMini(source='wallet.asset', read_only=True)
     is_internal = serializers.SerializerMethodField()
@@ -24,10 +23,7 @@ class TransferSerializer(serializers.ModelSerializer):
         return transfer.get_explorer_link()
 
     def get_amount(self, transfer: Transfer):
-        return transfer.wallet.asset.get_presentation_amount(transfer.total_amount - transfer.fee_amount)
-
-    def get_fee_amount(self, transfer: Transfer):
-        return transfer.wallet.asset.get_presentation_amount(transfer.fee_amount)
+        return transfer.total_amount - transfer.fee_amount
 
     def get_network(self, transfer: Transfer):
         return transfer.network.symbol
