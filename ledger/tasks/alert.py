@@ -51,15 +51,15 @@ def get_altered_coins(past_cycle_prices, current_cycle, current_cycle_count, sco
     changed_coins = {}
 
     for coin in past_cycle_prices.keys() & current_cycle.keys():
-        if Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1))) > Decimal('0.02'):
-
+        change_percent = math.floor(Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1))) * 100)
+        if change_percent > 2:
             alert_trigger = AlertTrigger.objects.create(
                 asset=mapping_symbol[coin],
                 price=current_cycle[coin],
                 cycle=current_cycle_count,
-                interval=scope,
+                change_percent=change_percent,
+                interval=scope
             )
-
             if not AlertTrigger.objects.filter(
                 asset=mapping_symbol[coin],
                 created__gte=timezone.now() - timedelta(hours=1),

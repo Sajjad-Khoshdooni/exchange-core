@@ -16,6 +16,7 @@ class AlertTrigger(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     price = get_amount_field()
+    change_percent = models.IntegerField()
     cycle = models.PositiveIntegerField()
     interval = models.CharField(choices=INTERVAL_CHOICES, max_length=15)
     is_triggered = models.BooleanField(default=False)
