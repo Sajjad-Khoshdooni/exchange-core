@@ -15,7 +15,7 @@ MINUTES = 'پنج‌ دقیقه'
 HOUR = '‌یک‌ ساعت'
 
 
-def get_current_prices(cycle) -> dict:
+def get_current_prices(current_cycle_count) -> dict:
     coins = list(AssetAlert.objects.distinct('asset').values_list('asset__symbol', flat=True))
 
     prices = get_external_usdt_prices(coins=coins, side=BUY, apply_otc_spread=True)
@@ -27,8 +27,12 @@ def get_current_prices(cycle) -> dict:
         AlertTrigger.objects.create(
             coin=coin,
             price=price,
-            cycle=cycle,
-            is_triggered=not AlertTrigger.objects.filter(cycle__gt=cycle - 12, coin=coin, is_triggered=True).exists()
+            cycle=current_cycle_count,
+            is_triggered=not AlertTrigger.objects.filter(
+                cycle__gt=current_cycle_count - 12,
+                coin=coin,
+                is_triggered=True
+            ).exists()
         )
     return prices
 
