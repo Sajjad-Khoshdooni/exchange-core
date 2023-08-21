@@ -9,7 +9,7 @@ from urllib3.exceptions import ReadTimeoutError
 
 from accounts.models import FinotechRequest
 from accounts.utils.validation import gregorian_to_jalali_date_str
-from accounts.verifiers.zibal import Response, MatchingData, CardInfoData, IBANInfoData
+from accounts.verifiers.utils import *
 from accounts.verifiers.finotech import ServerError
 
 logger = logging.getLogger(__name__)
