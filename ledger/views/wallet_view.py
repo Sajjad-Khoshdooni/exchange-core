@@ -358,9 +358,12 @@ class WalletBalanceView(APIView, DelegatedAccountMixin):
             if debt_wallet:
                 free = max(Decimal(), free + debt_wallet.balance)
 
+        if asset.symbol == Asset.IRT:
+            free = int(free)
+
         return Response({
             'symbol': asset.symbol,
-            'balance': free,
+            'balance': str(free),
         })
 
 

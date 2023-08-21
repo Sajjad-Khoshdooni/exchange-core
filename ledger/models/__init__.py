@@ -20,3 +20,4 @@ from .fast_buy_token import FastBuyToken
 from .manual_transaction import ManualTransaction
 from .position import MarginPosition
 from .manual_trade import ManualTrade
+from .asset_alert import AssetAlert
