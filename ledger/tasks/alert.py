@@ -61,7 +61,7 @@ def get_altered_coins(past_cycle_prices, current_cycle, current_cycle_count, sco
             )
 
             if not AlertTrigger.objects.filter(
-                asset=coin,
+                asset=mapping_symbol[coin],
                 created__gte=timezone.now() - timedelta(hours=1),
                 is_triggered=True
             ).exists():
