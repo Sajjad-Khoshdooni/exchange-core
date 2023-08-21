@@ -1,3 +1,5 @@
+from django.utils.baseconv import base64
+
 from accounts.models import User, FinotechRequest
 from accounts.verifiers.finotech import ServerError
 
@@ -35,6 +37,97 @@ class IBANInfoData:
     code: str
     deposit_number: str = ''
     deposit_status: str = ''
+
+
+@dataclass
+class NationalIdentityData:
+    is_matched: bool
+    first_name: str
+    last_name: str
+    father_name: str
+    is_alive: bool
+    code: str
+
+
+@dataclass
+class CardToIBANData:
+    owner_name: str
+    IBAN: str
+    bank_name: str
+    code: str
+
+
+@dataclass
+class Address:
+    province: str
+    town: str
+    district: str
+    street: str
+    street2: str
+    number: int
+    floor: str
+    side_floor: str
+    building_name: str
+    description: str
+
+
+@dataclass
+class PostalToAddressData:
+    address: Address
+    code: str
+
+
+@dataclass
+class CardToAccountData:
+    owner_name: str
+    bank_name: str
+    bank_account: str
+    code: str
+
+
+@dataclass
+class Person:
+    first_name: str
+    last_name: str
+    national_code: str
+    nationality: str
+    person_type: str
+    position: str
+
+
+@dataclass
+class CompanyInformation:
+    national_id: str
+    title: str
+    registration_id: str
+    establishment_date: str
+    address: str
+    postal_code: str
+    type: str
+    status: str
+    description: str
+    related_people: list
+    code: str
+
+
+@dataclass
+class PersianNameToEnglishData:
+    english_name: str
+    code: str
+
+
+@dataclass
+class NationalCard:
+    first_name: str
+    last_name: str
+    father_name: str
+    national_code: str
+    birth_date: str
+    expiration_date: str
+    face_photo: base64
+    city: str
+    province: str
+    code: str
 
 
 @dataclass
@@ -76,7 +169,6 @@ class ZibalRequester:
     def collect_api(self, path: str, method: str = 'GET', data=None, weight: int = 0) -> Response:
         if data is None:
             data = {}
-
         url = self.BASE_URL + path
 
         req_object = FinotechRequest(
@@ -183,3 +275,236 @@ class ZibalRequester:
             code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
         )
         return resp
+
+    # todo: adjust weights & define data class for responses
+
+    def national_identity_matching(self, national_code: str, birth_date: str):
+        params = {
+            "nationalCode": national_code,
+            "birthDate": birth_date  # todo check format: "1374/11/23"
+        }
+        resp = self.collect_api(
+            path="/v1/facility/nationalIdentityInquiry",
+            method="POST",
+            data=params
+        )
+        data = resp.data.get('data', {})
+        resp.data = NationalIdentityData(
+            is_matched=data.get('matched', False),
+            first_name=data.get('firstName', ''),
+            last_name=data.get('lastName', ''),
+            father_name=data.get('fatherName', ''),
+            is_alive=data.get('alive', False),
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
+        )
+        return resp
+
+    def card_to_iban(self, card_pan: str):
+        params = {
+            "cardNumber": card_pan
+        }
+        resp = self.collect_api(
+            path="/v1/facility/cardToIban",
+            method='POST',
+            data=params
+        )
+        data = resp.data.get('data', {})
+        resp.data = CardToIBANData(
+            owner_name=data.get('name', ''),
+            IBAN=data.get('IBAN', ''),
+            bank_name=data.get('bankName', ''),
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
+        )
+        return resp
+
+    # todo: ask about the format
+    def postal_code_to_address(self, postal_code: str):
+        params = {
+            "postalCode": postal_code
+        }
+        resp = self.collect_api(
+            path="/v1/facility/postalCodeInquiry",
+            method="POST",
+            data=params
+        )
+        data = resp.data.get('data', {})
+        resp.data = PostalToAddressData(
+            Address(
+                province=data.get('province', ''),
+                town=data.get('town', ''),
+                district=data.get('district', ''),
+                street=data.get('street', ''),
+                street2=data.get('street2', ''),
+                number=data.get('number', 0),
+                floor=data.get('floor', ''),
+                side_floor=data.get('sideFloor', ''),
+                building_name=data.get('buildingName', ''),
+                description=data.get('description', '')
+            ),
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
+        )
+        return resp
+
+    def iban_owner_matching(self, iban: str, name: str):
+        params = {
+            "IBAN": iban,
+            "name": name
+        }
+        resp = self.collect_api(
+            path="/v1/facility/checkIBANWithName",
+            method="POST",
+            data=params
+        )
+        data = resp.data.get('data', {})
+        resp.data = MatchingData(
+            is_matched=data.get('matched', False),
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
+        )
+        return resp
+
+    def card_owner_matching(self, card_pan: str, name: str):
+        params = {
+            "cardNumber": card_pan,
+            "name": name
+        }
+        resp = self.collect_api(
+            path="/v1/facility/checkCardWithName",
+            method="POST",
+            data=params
+        )
+        data = resp.data.get('data', {})
+        resp.data = MatchingData(
+            is_matched=data.get('matched', False),
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
+        )
+        return resp
+
+    # todo: check account name on project
+    def card_to_account(self, card_number: str):
+        params = {
+            "cardNumber": card_number
+        }
+        resp = self.collect_api(
+            path="/v1/facility/cardToAccount",
+            method="POST",
+            data=params
+        )
+        data = resp.data.get('data', {})
+        resp.data = CardToAccountData(
+            owner_name=data.get('name', ''),
+            bank_name=data.get('bankName', ''),
+            bank_account=data.get('bankAccount', ''),
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
+        )
+        return resp
+
+    def national_code_card_matching(self, national_code: str, birth_date: str, card_number: str):
+        params = {
+            "nationalCode": national_code,
+            "birthDate": birth_date,
+            "cardNumber": card_number
+        }
+        resp = self.collect_api(
+            path="/v1/facility/checkCardWithNationalCode",
+            method="POST",
+            data=params
+        )
+        data = resp.data.get('data', {})
+        resp.data = MatchingData(
+            is_matched=data.get('matched', False),
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
+        )
+        return resp
+
+    def national_code_iban_matching(self, national_code: str, birth_date: str, iban: str):
+        params = {
+            "nationalCode": national_code,
+            "birthDate": birth_date,
+            "IBAN": iban
+        }
+        resp = self.collect_api(
+            path="/v1/facility/checkIbanWithNationalCode",
+            method="POST",
+            data=params
+        )
+        data = resp.data.get('data', {})
+        resp.data = MatchingData(
+            is_matched=data.get('matched', False),
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
+        )
+        return resp
+
+    def company_information(self, national_id: str):
+        params = {
+            "nationalId": national_id,
+        }
+        resp = self.collect_api(
+            path="/v1/facility/companyInquiry",
+            method="POST",
+            data=params
+        )
+        data = resp.data.get('data', {})
+        resp.data = CompanyInformation(
+            national_id=data.get('nationalId', ''),
+            title=data.get('companyTitle', ''),
+            registration_id=data.get('companyRegistrationId', ''),
+            establishment_date=data.get('establishmentDate', ''),
+            address=data.get('address', ''),
+            postal_code=data.get('postalCode', ''),
+            type=data.get('companyType', ''),
+            status=data.get('status', ''),
+            description=data.get('extraDescription', ''),
+            related_people=[
+                Person(
+                    first_name=person.get('firstName', ''),
+                    last_name=person.get('lastName', ''),
+                    national_code=person.get('nationalCode', ''),
+                    nationality=person.get('nationality', ''),
+                    person_type=person.get('personType', ''),
+                    position=person.get('officePosition', '')
+                )
+                for person in data.get('companyRelatedPeople', [])
+            ],
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
+        )
+        return resp
+
+    def persian_name_to_english(self, name: str):
+        params = {
+            "persianText": name
+        }
+        resp = self.collect_api(
+            path="/v1/facility/persianToFinglish",
+            method="POST",
+            data=params
+        )
+        data = resp.data.get('data', {})
+        resp.data = PersianNameToEnglishData(
+            english_name=data.get('finglishText', ''),
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
+        )
+        return resp
+
+    def national_card_ocr(self, card_back: str, card_front: str):
+        params = {
+            'nationalCardFront': card_front,
+            'nationalCardBack': card_back
+        }
+        resp = self.collect_api(
+            path="/v1/facility/nationalCardOcr",
+            method="POST",
+            data=params
+        )
+        data = resp.data.get('data', {})
+        resp.data = NationalCard(
+            first_name=data.get('firstName', ''),
+            last_name=data.get('lastName', ''),
+            father_name=data.get('fatherName', ''),
+            national_code=data.get('nationalCode', ''),
+            birth_date=data.get('birthDate', ''),
+            expiration_date=data.get('expirationDate', ''),
+            face_photo=data.get('facePhoto', None),
+            city=data.get('city', ''),
+            province=data.get('province', ''),
+            code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
+        )
