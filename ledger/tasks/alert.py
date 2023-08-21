@@ -8,6 +8,7 @@ from django.utils import timezone
 from accounts.models import Notification
 from ledger.models.asset_alert import AssetAlert
 from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get_external_price, BUY
+from ledger.utils.precision import get_presentation_amount
 
 CACHE_PREFIX = 'asset_alert'
 MINUTES = 'پنج‌ دقیقه'
@@ -31,6 +32,7 @@ def send_notifications(asset_alert_list, altered_coins):
         new_price, old_price, scope = altered_coins[asset_alert.asset.symbol]
         percent = math.floor(abs(new_price / old_price - Decimal(1)) * 100)
         change_status = 'افزایش' if new_price > old_price else 'کاهش'
+        new_price = get_presentation_amount(new_price)
         Notification.send(
             recipient=asset_alert.user,
             title=f'تغییر قیمت در {scope} گذشته',
