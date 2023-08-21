@@ -6,7 +6,7 @@ from ledger.utils.fields import get_amount_field
 
 
 class AlertTrigger(models.Model):
-    created = models.DateTimeField(auto_created=True)
+    created = models.DateTimeField(auto_now_add=True)
     coin = models.ForeignKey(Asset, on_delete=models.CASCADE, to_field='symbol')
     price = get_amount_field()
     cycle = models.PositiveIntegerField()
