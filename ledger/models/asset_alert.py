@@ -7,12 +7,13 @@ from ledger.utils.fields import get_amount_field
 
 class AlertTrigger(models.Model):
     created = models.DateTimeField(auto_created=True)
-    coin = models.CharField()
+    coin = models.ForeignKey(Asset, on_delete=models.CASCADE, to_field='symbol')
     price = get_amount_field()
     cycle = models.PositiveIntegerField()
     is_triggered = models.BooleanField()
 
     class Meta:
+        unique_together = ('coin', 'cycle')
         indexes = [
             models.Index(['asset', 'cycle', 'is_triggered'])
         ]
