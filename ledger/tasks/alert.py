@@ -12,6 +12,8 @@ from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get
 CACHE_PREFIX = 'asset_alert'
 MINUTES = 'پنج‌ دقیقه'
 HOUR = '‌یک‌ ساعت'
+
+
 def get_current_prices() -> dict:
     coins = list(AssetAlert.objects.distinct('asset').values_list('asset__symbol', flat=True))
 
