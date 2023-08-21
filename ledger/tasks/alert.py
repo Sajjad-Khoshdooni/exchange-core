@@ -42,23 +42,34 @@ def send_notifications(asset_alert_list, altered_coins):
 def get_altered_coins(past_cycle_prices, current_cycle, current_cycle_count, scope) -> dict:
     if not past_cycle_prices:
         return {}
+
+    mapping_symbol = {}
+
+    for asset in Asset.live_objects.exclude(symbol=Asset.IRT):
+        mapping_symbol[asset.symbol] = asset
+
     changed_coins = {}
+
     for coin in past_cycle_prices.keys() & current_cycle.keys():
         if Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1))) > Decimal('0.02'):
+
             alert_trigger = AlertTrigger.objects.create(
-                asset=coin,
+                asset=mapping_symbol[coin],
                 price=current_cycle[coin],
                 cycle=current_cycle_count,
                 interval=scope,
             )
+
             if not AlertTrigger.objects.filter(
                 asset=coin,
                 created__gte=timezone.now() - timedelta(hours=1),
                 is_triggered=True
             ).exists():
+
                 changed_coins[coin] = [current_cycle[coin], past_cycle_prices[coin], scope]
                 alert_trigger.is_triggered = True
                 alert_trigger.save(update_fields=['is_triggered'])
+
     return changed_coins
 
 

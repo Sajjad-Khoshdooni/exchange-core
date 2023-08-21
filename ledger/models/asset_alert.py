@@ -10,11 +10,11 @@ HOUR = '‌یک‌ ساعت'
 
 class AlertTrigger(models.Model):
     INTERVAL_CHOICES = [
-        (MINUTES, MINUTES),
-        (HOUR, HOUR)
+        ('5m', MINUTES),
+        ('1h', HOUR)
     ]
     created = models.DateTimeField(auto_now_add=True)
-    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, to_field='symbol')
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     price = get_amount_field()
     cycle = models.PositiveIntegerField()
     interval = models.CharField(choices=INTERVAL_CHOICES, max_length=15)
@@ -22,7 +22,7 @@ class AlertTrigger(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['asset', 'created', 'is_triggered'], name='alert_trigger_idx')
+            models.Index(fields=['is_triggered', 'asset', 'created'], name='alert_trigger_idx')
         ]
 
 
