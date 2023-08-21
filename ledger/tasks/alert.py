@@ -45,7 +45,7 @@ def get_altered_coins(past_cycle_prices, current_cycle, current_cycle_count, sco
     changed_coins = {}
     for coin in past_cycle_prices.keys() & current_cycle.keys():
         if Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1))) > Decimal('0.02'):
-            AlertTrigger.objects.create(
+            alert_trigger = AlertTrigger.objects.create(
                 asset=coin,
                 price=current_cycle[coin],
                 cycle=current_cycle_count,
@@ -57,6 +57,8 @@ def get_altered_coins(past_cycle_prices, current_cycle, current_cycle_count, sco
                 is_triggered=True
             ).exists():
                 changed_coins[coin] = [current_cycle[coin], past_cycle_prices[coin], scope]
+                alert_trigger.is_triggered = True
+                alert_trigger.save(update_fields=['is_triggered'])
     return changed_coins
 
 
