@@ -1,5 +1,4 @@
 import logging
-from typing import Union
 
 from django.conf import settings
 from django.template import loader
@@ -9,8 +8,8 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.similarity import name_similarity
 from accounts.utils.similarity import split_names
 from accounts.utils.telegram import send_support_message
-from accounts.verifiers.finotech import ServerError
-from accounts.verifiers.jibit import JibitRequester
+from accounts.utils.validation import gregorian_to_jalali_date_str
+from accounts.verifiers.utils import *
 from accounts.verifiers.zibal import ZibalRequester
 from financial.models import BankCard, BankAccount
 
@@ -81,7 +80,7 @@ def verify_national_code_with_phone(user: User, retry: int = 2) -> Union[bool, N
     return verified
 
 
-def update_bank_card_info(bank_card: BankCard, data):
+def update_bank_card_info(bank_card: BankCard, data: CardInfoData):
     bank_card.bank = data.bank_name
     bank_card.type = data.card_type
     bank_card.owner_name = data.owner_name
@@ -106,7 +105,6 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
 
         if resp.success:
             update_bank_card_info(bank_card, data)
-            update_bank_card_info(bank_card, resp.data)
 
             to_update_user_fields = []
 
@@ -260,7 +258,6 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
 
     bank_account.bank = iban_info.data.bank_name
     bank_account.deposit_address = iban_info.data.deposit_number
-    bank_account.card_pan = iban_info.data.card_pan
     bank_account.deposit_status = DEPOSIT_STATUS_MAP.get(iban_info.data.deposit_status, '')
     owners = bank_account.owners = iban_info.data.owners
     user = bank_account.user
@@ -269,7 +266,9 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
 
     if len(owners) >= 1:
         owner = owners[0]
-        verified = name_similarity(owner, user.get_full_name())
+        owner_full_name = owner['firstName'] + ' ' + owner['lastName']
+        print(iban_info, '\n', owner_full_name, user.get_full_name(), '\n')
+        verified = name_similarity(owner_full_name, user.get_full_name())
 
     bank_account.verified = verified
     bank_account.save(update_fields=['verified', 'bank', 'deposit_address', 'card_pan', 'deposit_status', 'owners'])
@@ -293,12 +292,15 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
         user.change_status(User.REJECTED)
         return False
 
-    requester = JibitRequester(user)
+    requester = ZibalRequester(user)
 
+    birth_date = user.birth_date
+    if birth_date:
+        birth_date = gregorian_to_jalali_date_str(birth_date).replace('/', '')
     try:
-        resp = requester.matching(
+        resp = requester.national_code_card_matching(
             national_code=user.national_code,
-            birth_date=user.birth_date,
+            birth_date=birth_date,
             card_pan=bank_card.card_pan
         )
 
