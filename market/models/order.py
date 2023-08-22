@@ -297,6 +297,10 @@ class Order(models.Model):
         logger.info(log_prefix + f'make match finished fetching matching orders {len(matching_orders)} {timezone.now()}')
 
         if not matching_orders:
+            if (self.fill_type == Order.MARKET or self.time_in_force == self.IOC) and self.status == Order.NEW:
+                self.status = Order.CANCELED
+                pipeline.release_lock(self.group_id)
+                self.save(update_fields=['status'])
             return MatchedTrades()
 
         trades = []
