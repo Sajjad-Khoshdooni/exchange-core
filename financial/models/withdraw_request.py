@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseTransfer(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(auto_now_add=True, db_index=True)
     amount = models.PositiveIntegerField(verbose_name='میزان برداشت')
     gateway = models.ForeignKey('Gateway', on_delete=models.PROTECT)
     bank_account = models.ForeignKey(to=BankAccount, on_delete=models.PROTECT, verbose_name='حساب بانکی')

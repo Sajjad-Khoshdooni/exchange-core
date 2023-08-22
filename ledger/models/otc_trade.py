@@ -142,21 +142,9 @@ class OTCTrade(models.Model):
                 trades_base_sum = Trade.objects.filter(order_id=fok_order.id).aggregate(
                     sum=Sum(F('amount') * F('price'))
                 )['sum'] or 0
-                if symbol.base_asset.symbol == Asset.USDT:
-                    base_usdt_price = 1
-                else:
-                    opposite_side = Order.get_opposite_side(self.otc_request.side)
-                    usdt_irt = PairSymbol.objects.get(name='USDTIRT')
-                    usdt_hedge_price = Order.get_top_price(usdt_irt.id, opposite_side)
-                    if usdt_hedge_price:
-                        base_usdt_price = 1 / usdt_hedge_price
-                        self.otc_request.base_usdt_price = base_usdt_price
-                        self.otc_request.save(update_fields=['base_usdt_price'])
-                    else:
-                        base_usdt_price = self.otc_request.base_usdt_price
 
                 otc_base_amount = self.otc_request.amount * self.otc_request.price
-                self.gap_revenue = (otc_base_amount - trades_base_sum) * base_usdt_price
+                self.gap_revenue = (otc_base_amount - trades_base_sum) * self.otc_request.base_usdt_price
                 if self.otc_request.side == SELL:
                     self.gap_revenue = -self.gap_revenue
 

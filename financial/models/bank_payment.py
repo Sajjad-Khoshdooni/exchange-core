@@ -15,7 +15,7 @@ class BankPaymentRequest(models.Model):
     group_id = get_group_id_field()
 
     destination_type = models.CharField(max_length=16, default=JIBIMO, choices=[(d, d) for d in DESTINATION_TYPES])
-    amount = models.PositiveIntegerField()
+    amount = models.PositiveBigIntegerField()
     ref_id = models.CharField(blank=True, max_length=256)
     receipt = models.FileField()
 

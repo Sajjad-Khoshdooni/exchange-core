@@ -18,3 +18,5 @@ from .pnl import PNLHistory
 from .snapshot import AssetSnapshot, SystemSnapshot
 from .fast_buy_token import FastBuyToken
 from .manual_transaction import ManualTransaction
+from .manual_trade import ManualTrade
+from .asset_alert import AssetAlert, AlertTrigger
