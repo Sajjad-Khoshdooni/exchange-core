@@ -756,7 +756,7 @@ class ManualTradeAdmin(admin.ModelAdmin):
 
 @admin.register(AlertTrigger)
 class AlertTriggerAdmin(admin.ModelAdmin):
-    list_display = ('created', 'asset', 'price', 'cycle', 'interval', 'is_triggered',)
-    readonly_fields = ('created', 'asset', 'price', 'cycle',)
+    list_display = ('created', 'asset', 'price', 'change_percent', 'cycle', 'interval', 'is_triggered',)
+    readonly_fields = ('created', 'asset', 'price', 'change_percent', 'cycle',)
     search_fields = ('cycle',)
 
