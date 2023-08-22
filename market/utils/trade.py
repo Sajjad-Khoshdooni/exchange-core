@@ -213,11 +213,12 @@ def get_market_size_ratio():
         status=Trade.DONE, created__gte=timezone.now() - timedelta(days=1)
     )
 
-    total_size = Decimal(qs.annotate(usdt_value=F('amount') * F('price')).aggregate(
+    total_size = qs.annotate(usdt_value=F('amount') * F('price')).aggregate(
         total_size=Sum('usdt_value')
-    ).get('total_size', 0))
-    if total_size == Decimal(0):
+    ).get('total_size', 0)
+    if not total_size or total_size == 0:
         return {}
+    total_size = Decimal(total_size)
     return qs.values('symbol').annotate(
         ratio=F('amount') * F('price') / total_size,
     ).values('market', 'ratio')
