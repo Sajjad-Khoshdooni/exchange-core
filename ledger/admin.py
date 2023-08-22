@@ -20,7 +20,7 @@ from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
-from ledger.models.asset_alert import AssetAlert
+from ledger.models.asset_alert import AssetAlert, AlertTrigger
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet, \
     ManualTrade, Trx
@@ -752,3 +752,11 @@ class ManualTradeAdmin(admin.ModelAdmin):
                 )
                 trade.status = DONE
                 trade.save(update_fields=['status'])
+
+
+@admin.register(AlertTrigger)
+class AlertTriggerAdmin(admin.ModelAdmin):
+    list_display = ('asset', 'price', 'cycle', 'interval', 'is_triggered',)
+    readonly_fields = ('asset', 'price', 'cycle',)
+    search_fields = ('cycle',)
+
