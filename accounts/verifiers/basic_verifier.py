@@ -268,7 +268,6 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
     if len(owners) >= 1:
         owner = owners[0]
         owner_full_name = owner['firstName'] + ' ' + owner['lastName']
-        print(iban_info, '\n', owner_full_name, user.get_full_name(), '\n')
         verified = name_similarity(owner_full_name, user.get_full_name())
 
     bank_account.verified = verified
