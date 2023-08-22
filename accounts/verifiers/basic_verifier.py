@@ -8,7 +8,6 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.similarity import name_similarity
 from accounts.utils.similarity import split_names
 from accounts.utils.telegram import send_support_message
-from accounts.utils.validation import gregorian_to_jalali_date_str
 from accounts.verifiers.utils import *
 from accounts.verifiers.zibal import ZibalRequester
 from accounts.verifiers.jibit import JibitRequester
@@ -271,7 +270,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
         verified = name_similarity(owner_full_name, user.get_full_name())
 
     bank_account.verified = verified
-    bank_account.save(update_fields=['verified', 'bank', 'deposit_address', 'card_pan', 'deposit_status', 'owners'])
+    bank_account.save(update_fields=['verified', 'bank', 'deposit_address', 'deposit_status', 'owners'])
     return verified
 
 
