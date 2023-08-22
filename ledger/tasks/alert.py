@@ -14,6 +14,10 @@ from ledger.utils.precision import get_presentation_amount
 CACHE_PREFIX = 'asset_alert'
 MINUTES = 'پنج‌ دقیقه'
 HOUR = '‌یک‌ ساعت'
+SCOPE_MAP = {
+    MINUTES: AlertTrigger.MINUTES,
+    HOUR: AlertTrigger.HOUR
+}
 
 
 def get_current_prices() -> dict:
@@ -60,7 +64,7 @@ def get_altered_coins(past_cycle_prices, current_cycle, current_cycle_count, sco
                 price=current_cycle[coin],
                 cycle=current_cycle_count,
                 change_percent=change_percent,
-                interval=scope
+                interval=SCOPE_MAP[scope]
             )
             if not AlertTrigger.objects.filter(
                     asset=mapping_symbol[coin],

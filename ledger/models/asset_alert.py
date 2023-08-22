@@ -6,9 +6,12 @@ from ledger.utils.fields import get_amount_field
 
 
 class AlertTrigger(models.Model):
+    MINUTES = '5m'
+    HOUR = '1h'
+
     INTERVAL_CHOICES = [
-        ('5m', 'پنج‌ دقیقه'),
-        ('1h', '‌یک‌ ساعت')
+        (MINUTES, MINUTES),
+        (HOUR, HOUR)
     ]
     created = models.DateTimeField(auto_now_add=True)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
