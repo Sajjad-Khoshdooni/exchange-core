@@ -77,7 +77,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        return wallet.balance + self.get_debt(asset)
+        return get_presentation_amount(wallet.balance + self.get_debt(asset))
 
     def get_balance_irt(self, asset: Asset):
         balance = Decimal(self.get_balance(asset))
@@ -127,7 +127,7 @@ class AssetListSerializer(serializers.ModelSerializer):
             return '0'
 
         free = max(Decimal(), wallet.get_free() + self.get_debt(asset))
-        return free
+        return get_presentation_amount(free)
 
     def get_free_irt(self, asset: Asset):
         free = Decimal(self.get_free(asset))
