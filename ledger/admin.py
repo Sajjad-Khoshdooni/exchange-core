@@ -16,20 +16,24 @@ from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.admin_guard.html_tags import anchor_tag
 from accounts.models import Account, User
+from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
+from ledger.models.asset_alert import AssetAlert, AlertTrigger
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet
+from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet, \
+    ManualTrade, Trx
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import get_external_price, BUY
-from ledger.utils.fields import DONE, PROCESS
-from ledger.utils.precision import get_presentation_amount, humanize_presentation
+from ledger.utils.fields import DONE, PROCESS, PENDING
+from ledger.utils.precision import get_presentation_amount, humanize_presentation, get_symbol_presentation_amount
 from ledger.utils.precision import humanize_number
 from ledger.utils.provider import get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor
 from market.utils.fix import create_symbols_for_asset
 from .models import Asset, BalanceLock
+from .utils.wallet_pipeline import WalletPipeline
 
 
 @admin.register(models.Asset)
@@ -50,7 +54,7 @@ class AssetAdmin(AdvancedAdmin):
     search_fields = ('symbol',)
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('setup_asset',)
-    readonly_fields = ('distribution_factor', )
+    readonly_fields = ('distribution_factor',)
 
     def save_model(self, request, obj, form, change):
         if Asset.objects.filter(order=obj.order).exclude(id=obj.id).exists():
@@ -59,7 +63,7 @@ class AssetAdmin(AdvancedAdmin):
         return super(AssetAdmin, self).save_model(request, obj, form, change)
 
     def get_queryset(self, request):
-        return super(AssetAdmin, self).get_queryset(request).annotate(
+        return super(AssetAdmin, self).get_queryset(request) .annotate(
             hedge_value=F('assetsnapshot__hedge_value'),
             hedge_value_abs=F('assetsnapshot__hedge_value_abs'),
             hedge_amount=F('assetsnapshot__hedge_amount'),
@@ -344,7 +348,7 @@ class WalletAdmin(admin.ModelAdmin):
             base_coin=Asset.IRT,
             side=BUY
         ) or 0
-        return wallet.asset.get_presentation_price_irt(wallet.balance * price)
+        return get_symbol_presentation_amount(wallet.asset.symbol + 'IRT', wallet.balance * price, trunc_zero=True)
 
     @admin.display(description='usdt value')
     def get_value_usdt(self, wallet: models.Wallet):
@@ -353,7 +357,7 @@ class WalletAdmin(admin.ModelAdmin):
             base_coin=Asset.USDT,
             side=BUY
         ) or 0
-        return wallet.asset.get_presentation_price_usdt(wallet.balance * price)
+        return get_symbol_presentation_amount(wallet.asset.symbol + 'USDT', wallet.balance * price, trunc_zero=True)
 
 
 class TransferUserFilter(SimpleListFilter):
@@ -623,7 +627,7 @@ class AssetSnapshotAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
 @admin.register(models.FastBuyToken)
 class FastBuyTokenAdmin(admin.ModelAdmin):
-    list_display = ['created', 'asset', 'get_amount', 'status', ]
+    list_display = ('created', 'asset', 'get_amount', 'status', )
     readonly_fields = ('get_amount', 'payment_request', 'otc_request')
     list_filter = ('status',)
 
@@ -679,6 +683,13 @@ class ManualTransactionAdmin(admin.ModelAdmin):
             trx.save()
 
 
+@admin.register(AssetAlert)
+class AssetAlertAdmin(admin.ModelAdmin):
+    list_display = ('user', 'asset',)
+    search_fields = ['user__username', 'asset__symbol']
+    raw_id_fields = ['user']
+
+
 @admin.register(BalanceLock)
 class BalanceLockAdmin(admin.ModelAdmin):
     list_display = ('created', 'key', 'wallet', 'original_amount', 'amount', 'reason')
@@ -692,3 +703,60 @@ class ReserveWalletAdmin(admin.ModelAdmin):
     list_display = ('created', 'sender', 'receiver', 'amount', 'group_id', 'refund_completed', 'request_id')
     readonly_fields = ('created', 'sender', 'receiver', 'group_id')
     search_fields = ('group_id', 'request_id')
+
+
+@admin.register(ManualTrade)
+class ManualTradeAdmin(admin.ModelAdmin):
+    list_display = ('created', 'account', 'side', 'amount', 'price', 'filled_price', 'status')
+    list_filter = ('side', 'status')
+    ordering = ('-created',)
+    readonly_fields = ('group_id', 'status')
+    actions = ('accept_trade',)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "account":
+            kwargs["queryset"] = Account.objects.filter(user__userfeatureperm__feature=UserFeaturePerm.BANK_PAYMENT)
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    @admin.action(description='Accept Trade')
+    def accept_trade(self, request, queryset):
+        system_base = Asset.get(Asset.IRT).get_wallet(Account.system())
+        system_coin = Asset.get(Asset.USDT).get_wallet(Account.system())
+
+        for trade in queryset.filter(status=PENDING):
+            with WalletPipeline() as pipeline:
+                account_base = Asset.get(Asset.IRT).get_wallet(trade.account)
+                account_coin = Asset.get(Asset.USDT).get_wallet(trade.account)
+
+                if trade.side == BUY:
+                    base_sender, base_receiver = account_base, system_base
+                    coin_sender, coin_receiver = system_coin, account_coin
+                else:
+                    base_sender, base_receiver = system_base, account_base
+                    coin_sender, coin_receiver = account_coin, system_coin
+
+                pipeline.new_trx(
+                    sender=base_sender,
+                    receiver=base_receiver,
+                    amount=trade.price * trade.amount,
+                    scope=Trx.TRADE,
+                    group_id=trade.group_id
+                )
+                pipeline.new_trx(
+                    sender=coin_sender,
+                    receiver=coin_receiver,
+                    amount=trade.amount,
+                    scope=Trx.TRADE,
+                    group_id=trade.group_id
+                )
+                trade.status = DONE
+                trade.save(update_fields=['status'])
+
+
+@admin.register(AlertTrigger)
+class AlertTriggerAdmin(admin.ModelAdmin):
+    list_display = ('asset', 'price', 'cycle', 'interval', 'is_triggered',)
+    readonly_fields = ('asset', 'price', 'cycle',)
+    search_fields = ('cycle',)
+

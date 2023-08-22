@@ -4,13 +4,14 @@ from typing import Union
 from django.conf import settings
 from django.template import loader
 
-from accounts.utils.admin import url_to_edit_object
-from accounts.utils.telegram import send_support_message
-from accounts.utils.similarity import name_similarity
 from accounts.models import User
-from accounts.verifiers.zibal import ZibalRequester
-from accounts.verifiers.jibit import JibitRequester
+from accounts.utils.admin import url_to_edit_object
+from accounts.utils.similarity import name_similarity
+from accounts.utils.similarity import split_names
+from accounts.utils.telegram import send_support_message
 from accounts.verifiers.finotech import ServerError
+from accounts.verifiers.jibit import JibitRequester
+from accounts.verifiers.zibal import ZibalRequester
 from financial.models import BankCard, BankAccount
 
 logger = logging.getLogger(__name__)
@@ -105,13 +106,24 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
 
         if resp.success:
             update_bank_card_info(bank_card, data)
-            verified = name_similarity(bank_card.user.get_full_name(), bank_card.owner_name)
+            update_bank_card_info(bank_card, resp.data)
+
+            to_update_user_fields = []
+
+            first_name, last_name = split_names(bank_card.owner_name)
+            user.first_name = first_name
+            user.last_name = last_name
+            to_update_user_fields.extend(['first_name', 'last_name'])
+
+            verified = first_name and last_name
 
             if verified:
-                user.first_name_verified = True
-                user.last_name_verified = True
-                user.save(update_fields=['first_name_verified', 'last_name_verified'])
+                user.first_name_verified = user.last_name_verified = True
+                to_update_user_fields.extend(['first_name_verified', 'last_name_verified'])
 
+            user.save(update_fields=to_update_user_fields)
+
+            if verified:
                 user.verify_level2_if_not()
                 return True
 
@@ -257,8 +269,6 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
 
     if len(owners) >= 1:
         owner = owners[0]
-        if iban_info.service == 'JIBIT':
-            owner = owner['firstName'] + ' ' + owner['lastName']
         verified = name_similarity(owner, user.get_full_name())
 
     bank_account.verified = verified
@@ -299,14 +309,11 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
             if card_matched:
                 identity_matched = True
 
-        elif resp.data.code.startswith('card.') and resp.data.code != 'card.provider_is_not_active':
-            card_matched = False
-            identity_matched = None
-        elif resp.data.code in ('identity_info.not_found', 'nationalCode.not_valid', 'matching.unknown'):
+        elif resp.data.code == 'INVALID_DATA':
             identity_matched = False
             card_matched = None
         else:
-            logger.warning('JIBIT card <-> national_code not succeeded', extra={
+            logger.warning(f'{resp.service} card <-> national_code not succeeded', extra={
                 'user': user,
                 'resp': resp.data.code,
                 'card': bank_card,

@@ -26,8 +26,8 @@ class Migration(migrations.Migration):
                 ('payment_request', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='financial.paymentrequest')),
             ],
             options={
-                'verbose_name': 'خرید سریع رمزارز',
-                'verbose_name_plural': 'خرید سریع رمزارز',
+                'verbose_name': 'خرید آنی',
+                'verbose_name_plural': 'خرید آنی',
             },
         ),
     ]

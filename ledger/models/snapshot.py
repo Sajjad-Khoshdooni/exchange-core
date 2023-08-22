@@ -26,8 +26,8 @@ class AssetSnapshot(models.Model):
 class SystemSnapshot(models.Model):
     created = models.DateTimeField(unique=True, db_index=True)
     usdt_price = get_amount_field()
-    hedge = get_amount_field()
-    cum_hedge = get_amount_field()
+    hedge = get_amount_field(validators=())
+    cum_hedge = get_amount_field(validators=())
     binance_margin_ratio = get_amount_field()
 
     total = get_amount_field()

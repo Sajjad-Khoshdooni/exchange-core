@@ -4,6 +4,7 @@ import requests
 from decouple import config
 from urllib3.exceptions import ReadTimeoutError
 
+from accounts.utils.similarity import split_names
 from accounts.models import User, FinotechRequest
 from accounts.verifiers.utils import *
 
@@ -118,9 +119,16 @@ class ZibalRequester:
             weight=FinotechRequest.JIBIT_IBAN_INFO_WEIGHT,
         )
         data = resp.data.get('data', {})
+        owners = [
+            {
+                'firstName': split_names(owner_name)[0],
+                'lastName': split_names(owner_name)[1]
+            }
+            for owner_name in data.get('name', [])
+        ]
         resp.data = IBANInfoData(
             bank_name=data.get('bankName', ''),
-            owners=data.get('name', ''),
+            owners=owners,
             code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
         )
         return resp

@@ -25,7 +25,9 @@ class JibitRequester:
         'mobileNumber.not_valid': 'INVALID_DATA',
         'nationalCode.not_valid': 'INVALID_DATA',
         'card.provider_is_not_active': 'PROVIDER_IS_NOT_ACTIVE',
-        'iban.not_valid': 'INVALID_IBAN'
+        'iban.not_valid': 'INVALID_IBAN',
+        'identity_info.not_found': 'INVALID_DATA',
+        'matching.unknown': 'INVALID_DATA'
     }
 
     def __init__(self, user):
@@ -179,7 +181,10 @@ class JibitRequester:
         data = resp.data
         resp.data = MatchingData(
             is_matched=data['matched'],
-            code=JibitRequester.RESULT_MAP.get(data['code'], data['code'])
+            code=JibitRequester.RESULT_MAP.get(
+                data['code'],
+                'INVALID_DATA' if data['code'].startswith('card.') else data['code']
+            )
         )
         return resp
 

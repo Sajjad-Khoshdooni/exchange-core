@@ -5,7 +5,6 @@ from django.db import models
 from django.db.models import CheckConstraint, Q
 
 from ledger.utils.fields import get_amount_field
-from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 

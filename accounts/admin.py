@@ -30,7 +30,6 @@ from .models.sms_notification import SmsNotification
 from .models.user_feature_perm import UserFeaturePerm
 from .tasks import basic_verify_user
 from .utils.validation import gregorian_to_jalali_datetime_str
-from .verifiers.legal import is_48h_rule_passed
 
 MANUAL_VERIFY_CONDITION = Q(
     Q(first_name_verified=None) | Q(last_name_verified=None),
@@ -176,7 +175,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'last_name_verified': M.superuser | M.is_none('last_name_verified'),
         'national_code_verified': M.superuser | ~M('national_code_verified'),
         'birth_date_verified': M.superuser | M.is_none('birth_date_verified'),
-        'withdraw_before_48h_option': True,
         'can_withdraw': True,
         'can_withdraw_crypto': True,
         'can_trade': True,
@@ -200,12 +198,12 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             'fields': (
                 'is_active', 'is_staff', 'is_superuser',
                 'groups', 'user_permissions', 'show_margin', 'show_strategy_bot', 'show_staking', 'show_community',
-                'withdraw_before_48h_option', 'can_trade', 'can_withdraw', 'can_withdraw_crypto',
+                'can_trade', 'can_withdraw', 'can_withdraw_crypto',
                 'withdraw_limit_whitelist', 'withdraw_risk_level_multiplier', 'custom_crypto_withdraw_ceil'
             ),
         }),
         (_('Important dates'), {'fields': (
-            'get_last_login_jalali', 'get_date_joined_jalali', 'get_first_fiat_deposit_date_jalali',
+            'get_last_login_jalali', 'get_date_joined_jalali',
             'get_first_crypto_deposit_date_jalali', 'get_level_2_verify_datetime_jalali',
             'get_level_3_verify_datetime_jalali', 'get_selfie_image_uploaded',
             'margin_quiz_pass_date',
@@ -246,7 +244,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet',
         'get_sum_of_value_buy_sell',
         'get_selfie_image', 'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
-        'get_first_fiat_deposit_date_jalali', 'get_first_crypto_deposit_date_jalali',
+        'get_first_crypto_deposit_date_jalali',
         'get_date_joined_jalali', 'get_last_login_jalali',
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit', 'get_deposit_address',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
@@ -272,7 +270,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     @admin.action(description='شروع احراز هویت پایه کاربر', permissions=['change'])
     def reevaluate_basic_verify(self, request, queryset):
-        to_verify_users = queryset.filter(level=User.LEVEL1).exclude(first_name='').exclude(last_name='')
+        to_verify_users = queryset.filter(level=User.LEVEL1)
 
         for user in to_verify_users:
             basic_verify_user.delay(user.id)
@@ -493,16 +491,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         return gregorian_to_jalali_datetime_str(user.level_3_verify_datetime)
 
     get_level_3_verify_datetime_jalali.short_description = 'تاریخ تایید سطح ۳'
-
-    @admin.display(description='تاریخ اولین واریز ریالی')
-    def get_first_fiat_deposit_date_jalali(self, user: User):
-        date = gregorian_to_jalali_datetime_str(user.first_fiat_deposit_date)
-        if is_48h_rule_passed(user):
-            color = 'green'
-        else:
-            color = 'red'
-
-        return mark_safe("<span style='color: %s'>%s</span>" % (color, date))
 
     @admin.display(description='تاریخ اولین واریز رمزارزی')
     def get_first_crypto_deposit_date_jalali(self, user: User):
