@@ -8,7 +8,7 @@ import pytz
 import requests
 from django.utils import timezone
 
-from accounts.verifiers.jibit import Response
+from accounts.verifiers.utils import Response
 from financial.models import FiatWithdrawRequest, Gateway, PaymentRequest
 from financial.models.withdraw_request import BaseTransfer
 from financial.utils.ach import next_ach_clear_time
