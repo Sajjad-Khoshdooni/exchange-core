@@ -124,7 +124,21 @@ class NationalCard:
 
 @dataclass
 class Response:
-    data: Union[dict, list, MatchingData, CardInfoData, IBANInfoData, NationalCard, PersianNameToEnglishData, CompanyInformation, Person]
+    data: Union[
+        dict, list,
+        MatchingData,
+        CardInfoData,
+        IBANInfoData,
+        NationalIdentityData,
+        CardToIBANData,
+        NationalCard,
+        Address,
+        CardToAccountData,
+        PostalToAddressData,
+        PersianNameToEnglishData,
+        CompanyInformation,
+        Person,
+    ]
     service: str
     success: bool = True
     status_code: int = 200
