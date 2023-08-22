@@ -51,8 +51,8 @@ def get_altered_coins(past_cycle_prices, current_cycle, current_cycle_count, sco
     changed_coins = {}
 
     for coin in past_cycle_prices.keys() & current_cycle.keys():
-        change_percent = math.floor(Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1))) * 100)
-        if change_percent > 2:
+        change_percent = math.floor(Decimal(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1)) * 100)
+        if abs(change_percent) > 2:
             alert_trigger = AlertTrigger.objects.create(
                 asset=mapping_symbol[coin],
                 price=current_cycle[coin],
