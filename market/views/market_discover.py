@@ -11,6 +11,7 @@ class MarketDiscoverView(APIView):
     permission_classes = []
 
     def get(self, request):
+
         prices = get_symbol_prices()
         recent_prices = prices['last']
         yesterday_prices = prices['yesterday']

@@ -207,7 +207,7 @@ def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet
     return fee_info
 
 
-@cache_for(60 * 10)
+@cache_for(60 * 5)
 def get_market_size_ratio():
     qs = Trade.objects.filter(
         status=Trade.DONE, created__gte=timezone.now() - timedelta(days=1)
