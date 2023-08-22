@@ -363,7 +363,7 @@ class WalletBalanceView(APIView, DelegatedAccountMixin):
 
         return Response({
             'symbol': asset.symbol,
-            'balance': str(free),
+            'balance': get_presentation_amount(free),
         })
 
 
