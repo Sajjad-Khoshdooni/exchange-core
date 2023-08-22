@@ -11,6 +11,7 @@ from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import gregorian_to_jalali_date_str
 from accounts.verifiers.utils import *
 from accounts.verifiers.zibal import ZibalRequester
+from accounts.verifiers.jibit import JibitRequester
 from financial.models import BankCard, BankAccount
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ def send_shahkar_rejection_message(user, resp):
 
 
 def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, None]:
-    requester = ZibalRequester(user)
+    requester = JibitRequester(user)
     resp = requester.matching(phone_number=phone, national_code=national_code)
     if resp.success:
         if not resp.data.is_matched:
@@ -92,7 +93,7 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
     if not bank_card.kyc:
         return False
 
-    requester = ZibalRequester(bank_card.user)
+    requester = JibitRequester(bank_card.user)
     user = bank_card.user
 
     if user.first_name_verified and user.last_name_verified:
@@ -173,7 +174,7 @@ def verify_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
         bank_card.save(update_fields=['reject_reason', 'verified'])
         return False
 
-    requester = ZibalRequester(bank_card.user)
+    requester = JibitRequester(bank_card.user)
 
     try:
         resp = requester.get_card_info(card_pan=bank_card.card_pan)
@@ -230,7 +231,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
         bank_account.save(update_fields=['verified'])
         return False
 
-    requester = ZibalRequester(bank_account.user)
+    requester = JibitRequester(bank_account.user)
 
     try:
         iban_info = requester.get_iban_info(bank_account.iban)
@@ -292,13 +293,13 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
         user.change_status(User.REJECTED)
         return False
 
-    requester = ZibalRequester(user)
+    requester = JibitRequester(user)
 
     birth_date = user.birth_date
     if birth_date:
         birth_date = gregorian_to_jalali_date_str(birth_date).replace('/', '')
     try:
-        resp = requester.national_code_card_matching(
+        resp = requester.matching(
             national_code=user.national_code,
             birth_date=birth_date,
             card_pan=bank_card.card_pan
