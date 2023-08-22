@@ -12,6 +12,8 @@ from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get
 from ledger.utils.precision import get_presentation_amount
 
 CACHE_PREFIX = 'asset_alert'
+MINUTES = 'پنج‌ دقیقه'
+HOUR = '‌یک‌ ساعت'
 
 
 def get_current_prices() -> dict:
@@ -61,11 +63,10 @@ def get_altered_coins(past_cycle_prices, current_cycle, current_cycle_count, sco
                 interval=scope
             )
             if not AlertTrigger.objects.filter(
-                asset=mapping_symbol[coin],
-                created__gte=timezone.now() - timedelta(hours=1),
-                is_triggered=True
+                    asset=mapping_symbol[coin],
+                    created__gte=timezone.now() - timedelta(hours=1),
+                    is_triggered=True
             ).exists():
-
                 changed_coins[coin] = [current_cycle[coin], past_cycle_prices[coin], scope]
                 alert_trigger.is_triggered = True
                 alert_trigger.save(update_fields=['is_triggered'])
