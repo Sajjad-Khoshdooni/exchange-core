@@ -180,10 +180,10 @@ class JibitRequester:
         )
         data = resp.data
         resp.data = MatchingData(
-            is_matched=data['matched'],
+            is_matched=data.get('matched', False),
             code=JibitRequester.RESULT_MAP.get(
-                data['code'],
-                'INVALID_DATA' if data['code'].startswith('card.') else data['code']
+                data.get('code', ''),
+                'INVALID_DATA' if data.get('code', '').startswith('card.') else data.get('code', '')
             )
         )
         return resp
@@ -202,13 +202,13 @@ class JibitRequester:
             weight=FinotechRequest.JIBIT_IBAN_INFO_WEIGHT,
         )
         data = resp.data
-        info = data['ibanInfo']
+        info = data.get('ibanInfo', {})
         resp.data = IBANInfoData(
-            bank_name=info['bank'],
-            deposit_number=info['depositNumber'],
-            deposit_status=info['status'],
-            owners=info['owners'],
-            code=data['code']
+            bank_name=info.get('bank', ''),
+            deposit_number=info.get('depositNumber', ''),
+            deposit_status=info.get('status', ''),
+            owners=info.get('owners', []),
+            code=data.get('code', '')
         )
         return resp
 
@@ -226,15 +226,15 @@ class JibitRequester:
             weight=FinotechRequest.JIBIT_CARD_INFO_WEIGHT
         )
         data = resp.data
-        info = data['cardInfo']
+        info = data.get('cardInfo', {})
         resp.data = CardInfoData(
-            owner_name=info['ownerName'],
-            bank_name=info['bank'],
-            card_type=info['type'],
-            deposit_number=info['depositNumber'],
+            owner_name=info.get('ownerName', ''),
+            bank_name=info.get('bank', ''),
+            card_type=info.get('type', ''),
+            deposit_number=info.get('depositNumber', ''),
             code=JibitRequester.RESULT_MAP.get(
-                data['code'],
-                'INVALID_DATA' if data['code'].startswith('card.') else data['code']
+                data.get('code', ''),
+                'INVALID_DATA' if data.get('code', '').startswith('card.') else data.get('code', '')
             )
         )
         return resp
