@@ -201,14 +201,14 @@ def verify_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
 
             return False
         else:
-            logger.warning('JIBIT card verification not succeeded', extra={
+            logger.warning('card verification not succeeded', extra={
                 'bank_card': bank_card,
                 'resp': data.code,
             })
             return
     except (TimeoutError, ServerError):
         if retry == 0:
-            logger.error('JIBIT timeout bank_card')
+            logger.error('timeout bank_card')
             return
         else:
             logger.info('Retrying verify_national_code...')
@@ -237,7 +237,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
         iban_info = requester.get_iban_info(bank_account.iban)
     except (TimeoutError, ServerError):
         if retry == 0:
-            logger.error('Zibal timeout bank_account')
+            logger.error('timeout bank_account')
             return
         else:
             logger.info('Retrying verify_national_code...')
@@ -325,7 +325,7 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
 
     except (TimeoutError, ServerError):
         if retry == 0:
-            logger.error('JIBIT timeout user_primary_info')
+            logger.error('timeout user_primary_info')
             return
         else:
             logger.info('Retrying verify_national_code...')
