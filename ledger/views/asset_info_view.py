@@ -62,10 +62,9 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
     def get_price_usdt(self, asset: Asset):
         price = self.context.get('market_prices', {'USDT': {}})['USDT'].get(asset.symbol, 0)
+
         if not price:
             price = self.context.get('prices', {}).get(asset.symbol, 0)
-        if not price:
-            return
 
         return get_symbol_presentation_amount(asset.symbol + 'USDT', price)
 
