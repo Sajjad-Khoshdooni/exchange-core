@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 import requests
@@ -265,7 +266,11 @@ class ZibalRequester:
         )
         return resp
 
-    def national_code_card_matching(self, national_code: str, birth_date: str, card_pan: str):
+    def national_code_card_matching(self, national_code: str, card_pan: str,  birth_date: datetime = None):
+        if birth_date:
+            from accounts.utils.validation import gregorian_to_jalali_date_str
+            birth_date = gregorian_to_jalali_date_str(birth_date).replace('/', '')
+
         params = {
             "nationalCode": national_code,
             "birthDate": birth_date,

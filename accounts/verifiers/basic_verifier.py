@@ -294,13 +294,10 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
 
     requester = JibitRequester(user)
 
-    birth_date = user.birth_date
-    if birth_date:
-        birth_date = gregorian_to_jalali_date_str(birth_date).replace('/', '')
     try:
         resp = requester.matching(
             national_code=user.national_code,
-            birth_date=birth_date,
+            birth_date=user.birth_date,
             card_pan=bank_card.card_pan
         )
 
