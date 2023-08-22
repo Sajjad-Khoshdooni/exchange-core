@@ -78,7 +78,7 @@ class JibitRequester:
                 if request.status_code >= 500:
                     raise ServerError
 
-                return Response(data=request.response, success=request.status_code in (200, 201), service='JIBIT')
+                return Response(data=request.response, success=request.status_code in (200, 201))
 
         token = self._get_cc_token()
 
@@ -151,7 +151,7 @@ class JibitRequester:
 
             raise ServerError
 
-        return Response(data=resp_data, success=resp.ok, service='JIBIT')
+        return Response(data=resp_data, success=resp.ok)
 
     def matching(self, phone_number: str = None, national_code: str = None, full_name: str = None,
                  birth_date: datetime = None, card_pan: str = None, iban: str = None) -> Response:

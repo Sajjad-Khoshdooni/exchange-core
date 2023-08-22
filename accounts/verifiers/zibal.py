@@ -87,7 +87,7 @@ class ZibalRequester:
                 'status': resp.status_code
             })
             raise ServerError
-        resp = Response(data=resp_data, status_code=resp.ok, service='ZIBAL')
+        resp = Response(data=resp_data, status_code=resp.ok)
         return resp
 
     def matching(self, phone_number: str = None, national_code: str = None) -> Response:
@@ -147,7 +147,7 @@ class ZibalRequester:
         )
         return resp
 
-    def national_identity_matching(self, national_code: str, birth_date: str):
+    def national_identity_matching(self, national_code: str, birth_date: str) -> Response:
         params = {
             "nationalCode": national_code,
             "birthDate": birth_date  # todo check format: "1374/11/23"
@@ -168,7 +168,7 @@ class ZibalRequester:
         )
         return resp
 
-    def card_to_iban(self, card_pan: str):
+    def card_to_iban(self, card_pan: str) -> Response:
         params = {
             "cardNumber": card_pan
         }
@@ -186,7 +186,7 @@ class ZibalRequester:
         )
         return resp
 
-    def postal_code_to_address(self, postal_code: str):
+    def postal_code_to_address(self, postal_code: str) -> Response:
         params = {
             "postalCode": postal_code
         }
@@ -213,7 +213,7 @@ class ZibalRequester:
         )
         return resp
 
-    def iban_owner_matching(self, iban: str, name: str):
+    def iban_owner_matching(self, iban: str, name: str) -> Response:
         params = {
             "IBAN": iban,
             "name": name
@@ -230,7 +230,7 @@ class ZibalRequester:
         )
         return resp
 
-    def card_owner_matching(self, card_pan: str, name: str):
+    def card_owner_matching(self, card_pan: str, name: str) -> Response:
         params = {
             "cardNumber": card_pan,
             "name": name
@@ -248,7 +248,7 @@ class ZibalRequester:
         return resp
 
     # todo: check account name on project
-    def card_to_account(self, card_number: str):
+    def card_to_account(self, card_number: str) -> Response:
         params = {
             "cardNumber": card_number
         }
@@ -266,7 +266,7 @@ class ZibalRequester:
         )
         return resp
 
-    def national_code_card_matching(self, national_code: str, card_pan: str,  birth_date: datetime = None):
+    def national_code_card_matching(self, national_code: str, card_pan: str,  birth_date: datetime = None) -> Response:
         if birth_date:
             from accounts.utils.validation import gregorian_to_jalali_date_str
             birth_date = gregorian_to_jalali_date_str(birth_date).replace('/', '')
@@ -288,7 +288,7 @@ class ZibalRequester:
         )
         return resp
 
-    def national_code_iban_matching(self, national_code: str, birth_date: str, iban: str):
+    def national_code_iban_matching(self, national_code: str, birth_date: str, iban: str) -> Response:
         params = {
             "nationalCode": national_code,
             "birthDate": birth_date,
@@ -306,7 +306,7 @@ class ZibalRequester:
         )
         return resp
 
-    def company_information(self, national_id: str):
+    def company_information(self, national_id: str) -> Response:
         params = {
             "nationalId": national_id,
         }
@@ -341,7 +341,7 @@ class ZibalRequester:
         )
         return resp
 
-    def persian_name_to_english(self, name: str):
+    def persian_name_to_english(self, name: str) -> Response:
         params = {
             "persianText": name
         }
@@ -357,7 +357,7 @@ class ZibalRequester:
         )
         return resp
 
-    def national_card_ocr(self, card_back: str, card_front: str):
+    def national_card_ocr(self, card_back: str, card_front: str) -> Response:
         params = {
             'nationalCardFront': card_front,
             'nationalCardBack': card_back
@@ -380,3 +380,4 @@ class ZibalRequester:
             province=data.get('province', ''),
             code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
         )
+        return resp

@@ -139,7 +139,6 @@ class Response:
         CompanyInformation,
         Person,
     ]
-    service: str
     success: bool = True
     status_code: int = 200
 

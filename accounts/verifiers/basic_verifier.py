@@ -44,7 +44,7 @@ def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, Non
         send_shahkar_rejection_message(user, resp)
         return False
     else:
-        logger.warning(f'{resp.service} shahkar not succeeded', extra={
+        logger.warning('shahkar not succeeded', extra={
             'user': user,
             'resp': resp.data,
             'phone': phone,
@@ -138,7 +138,7 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
             bank_card.reject_reason = data.code
             bank_card.save(update_fields=['verified', 'reject_reason'])
 
-            logger.info(f'{resp.service} card verification failed', extra={
+            logger.info('card verification failed', extra={
                 'bank_card': bank_card,
                 'code': resp.data.code,
             })
@@ -147,7 +147,7 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
             return False
 
         else:
-            logger.warning(f'{resp.service} card verification not succeeded', extra={
+            logger.warning('card verification not succeeded', extra={
                 'bank_card': bank_card,
                 'code': resp.data.code,
             })
@@ -311,7 +311,7 @@ def verify_bank_card_by_national_code(bank_card: BankCard, retry: int = 2) -> Un
             identity_matched = False
             card_matched = None
         else:
-            logger.warning(f'{resp.service} card <-> national_code not succeeded', extra={
+            logger.warning('card <-> national_code not succeeded', extra={
                 'user': user,
                 'resp': resp.data.code,
                 'card': bank_card,
