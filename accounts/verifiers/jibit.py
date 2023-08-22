@@ -21,6 +21,13 @@ JIBIT_TOKEN_KEY = 'jibit-token'
 class JibitRequester:
     BASE_URL = 'https://napi.jibit.cloud/ide'
 
+    RESULT_MAP = {
+        'mobileNumber.not_valid': 'INVALID_DATA',
+        'nationalCode.not_valid': 'INVALID_DATA',
+        'card.provider_is_not_active': 'PROVIDER_IS_NOT_ACTIVE',
+        'iban.not_valid': 'INVALID_IBAN'
+    }
+
     def __init__(self, user):
         self._user = user
 
@@ -170,7 +177,10 @@ class JibitRequester:
             weight=FinotechRequest.JIBIT_ADVANCED_MATCHING if national_code else FinotechRequest.JIBIT_SIMPLE_MATCHING
         )
         data = resp.data
-        resp.data = MatchingData(is_matched=data['matched'], code=data['code'])
+        resp.data = MatchingData(
+            is_matched=data['matched'],
+            code=JibitRequester.RESULT_MAP.get(data['code'], data['code'])
+        )
         return resp
 
     def get_iban_info(self, iban: str) -> Response:
@@ -217,6 +227,9 @@ class JibitRequester:
             bank_name=info['bank'],
             card_type=info['type'],
             deposit_number=info['depositNumber'],
-            code=data['code'],
+            code=JibitRequester.RESULT_MAP.get(
+                data['code'],
+                'INVALID_DATA' if data['code'].startswith('card.') else data['code']
+            )
         )
         return resp

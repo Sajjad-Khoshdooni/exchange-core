@@ -40,7 +40,7 @@ def shahkar_check(user: User, phone: str, national_code: str) -> Union[bool, Non
         if not resp.data.is_matched:
             send_shahkar_rejection_message(user, resp)
         return resp.data.is_matched
-    elif resp.data.code in ['mobileNumber.not_valid', 'nationalCode.not_valid', 'INVALID_DATA']:
+    elif resp.data.code == 'INVALID_DATA':
         send_shahkar_rejection_message(user, resp)
         return False
     else:
@@ -123,7 +123,7 @@ def verify_name_by_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool,
                 )
                 return
 
-        elif data.code.startswith('card.') and data.code not in ['card.provider_is_not_active', 'INVALID_DATA']:
+        elif data.code == 'INVALID_DATA':
             bank_card.verified = False
             bank_card.reject_reason = data.code
             bank_card.save(update_fields=['verified', 'reject_reason'])
@@ -163,13 +163,14 @@ def verify_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
         bank_card.save(update_fields=['reject_reason', 'verified'])
         return False
 
-    requester = JibitRequester(bank_card.user)
+    requester = ZibalRequester(bank_card.user)
 
     try:
         resp = requester.get_card_info(card_pan=bank_card.card_pan)
+        data = resp.data
 
         if resp.success:
-            update_bank_card_info(bank_card, resp.data)
+            update_bank_card_info(bank_card, data)
 
             verified = name_similarity(bank_card.user.get_full_name(), bank_card.owner_name)
 
@@ -178,20 +179,20 @@ def verify_bank_card(bank_card: BankCard, retry: int = 2) -> Union[bool, None]:
             if not verified:
                 bank_card.reject_reason = 'name.mismatch'
 
-            bank_card.save()
+            bank_card.save(update_fields=['verified'])
 
             return verified
 
-        elif resp.data.code.startswith('card.') and resp.data.code != 'card.provider_is_not_active':
+        elif data.code == 'INVALID_DATA':
             bank_card.verified = False
-            bank_card.reject_reason = resp.data['code']
+            bank_card.reject_reason = data.code
             bank_card.save(update_fields=['verified', 'reject_reason'])
 
             return False
         else:
             logger.warning('JIBIT card verification not succeeded', extra={
                 'bank_card': bank_card,
-                'resp': resp.data.code,
+                'resp': data.code,
             })
             return
     except (TimeoutError, ServerError):
@@ -232,7 +233,7 @@ def verify_bank_account(bank_account: BankAccount, retry: int = 2) -> Union[bool
             return verify_bank_account(bank_account, retry - 1)
 
     if not iban_info.success:
-        if iban_info.data.code in ['iban.not_valid', 'INVALID_IBAN']:
+        if iban_info.data.code == 'INVALID_IBAN':
             bank_account.verified = False
             bank_account.save(update_fields=['verified'])
             return False
