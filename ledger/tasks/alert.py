@@ -37,7 +37,7 @@ def send_notifications(asset_alert_list, altered_coins):
         new_price, old_price, scope = altered_coins[asset_alert.asset.symbol]
         percent = math.floor(abs(new_price / old_price - Decimal(1)) * 100)
         change_status = 'افزایش' if new_price > old_price else 'کاهش'
-        new_price = get_presentation_amount(new_price)
+        new_price = get_presentation_amount(new_price, 8)
         Notification.send(
             recipient=asset_alert.user,
             title=f'{change_status} قیمت ناگهانی',
