@@ -86,8 +86,8 @@ class ZibalRequester:
                 'status': resp.status_code
             })
             raise ServerError
-
-        return Response(data=resp_data, status_code=resp.ok, service='ZIBAL')
+        resp = Response(data=resp_data, status_code=resp.ok, service='ZIBAL')
+        return resp
 
     def matching(self, phone_number: str = None, national_code: str = None) -> Response:
         params = {
@@ -119,16 +119,12 @@ class ZibalRequester:
             weight=FinotechRequest.JIBIT_IBAN_INFO_WEIGHT,
         )
         data = resp.data.get('data', {})
-        owners = [
-            {
-                'firstName': split_names(owner_name)[0],
-                'lastName': split_names(owner_name)[1]
-            }
-            for owner_name in data.get('name', [])
-        ]
         resp.data = IBANInfoData(
             bank_name=data.get('bankName', ''),
-            owners=owners,
+            owners=[{
+                'firstName': split_names(data.get('name', ''))[0],
+                'lastName': split_names(data.get('name', ''))[1]
+            }],
             code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
         )
         return resp
@@ -149,8 +145,6 @@ class ZibalRequester:
             code=ZibalRequester.RESULT_MAP.get(resp.data.get('result', ''), '')
         )
         return resp
-
-    # todo: adjust weights & define data class for responses
 
     def national_identity_matching(self, national_code: str, birth_date: str):
         params = {
@@ -191,7 +185,6 @@ class ZibalRequester:
         )
         return resp
 
-    # todo: ask about the format
     def postal_code_to_address(self, postal_code: str):
         params = {
             "postalCode": postal_code
@@ -272,11 +265,11 @@ class ZibalRequester:
         )
         return resp
 
-    def national_code_card_matching(self, national_code: str, birth_date: str, card_number: str):
+    def national_code_card_matching(self, national_code: str, birth_date: str, card_pan: str):
         params = {
             "nationalCode": national_code,
             "birthDate": birth_date,
-            "cardNumber": card_number
+            "cardNumber": card_pan
         }
         resp = self.collect_api(
             path="/v1/facility/checkCardWithNationalCode",
