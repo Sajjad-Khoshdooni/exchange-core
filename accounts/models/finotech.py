@@ -4,7 +4,7 @@ from django.db import models
 
 
 class FinotechRequest(models.Model):
-    FINOTECH, JIBIT, ZIBAL = 'finotech', 'jibit', 'zibal'
+    FINOTECH, JIBIT = 'finotech', 'jibit'
 
     JIBIT_ADVANCED_MATCHING = 3
     JIBIT_SIMPLE_MATCHING = 1
@@ -21,7 +21,7 @@ class FinotechRequest(models.Model):
 
     search_key = models.CharField(max_length=128, db_index=True, null=True, blank=True)
 
-    service = models.CharField(max_length=8, choices=((FINOTECH, FINOTECH), (JIBIT, JIBIT), (ZIBAL, ZIBAL)))
+    service = models.CharField(max_length=8, choices=((FINOTECH, FINOTECH), (JIBIT, JIBIT)))
 
     url = models.CharField(max_length=256)
     data = models.JSONField(blank=True, null=True)
