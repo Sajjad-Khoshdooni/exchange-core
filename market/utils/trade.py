@@ -1,15 +1,15 @@
 from dataclasses import dataclass
+from datetime import timedelta
 from decimal import Decimal
 from uuid import UUID
 
 from django.conf import settings
-from django.db.models import F, Q, Sum, ExpressionWrapper, fields
+from django.db.models import F, Sum
 from django.utils import timezone
-from datetime import timedelta
 
-from ledger.utils.cache import cache_for
 from accounts.models import Referral
 from ledger.models import Wallet, Trx, Asset
+from ledger.utils.cache import cache_for
 from ledger.utils.external_price import BUY, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, Trade, BaseTrade
@@ -213,13 +213,11 @@ def get_market_size_ratio():
         status=Trade.DONE, created__gte=timezone.now() - timedelta(days=1)
     )
 
-    total_size = qs.annotate(usdt_value=F('amount') * F('price') * F('base_usdt_price')).aggregate(
+    total_size = Decimal(qs.annotate(usdt_value=F('amount') * F('price')).aggregate(
         total_size=Sum('usdt_value')
-    )['total_size']
-
-    return qs.values('market').annotate(
-        market_ratio=ExpressionWrapper(
-            F('amount') * F('price') * F('base_usdt_price') / total_size,
-            output_field=fields.DecimalField()
-        )
-    ).values('market_ratio')
+    ).get('total_size', 0))
+    if total_size == Decimal(0):
+        return {}
+    return qs.values('symbol').annotate(
+        ratio=F('amount') * F('price') / total_size,
+    ).values('market', 'ratio')
