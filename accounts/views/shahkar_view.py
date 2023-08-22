@@ -5,7 +5,7 @@ from django.urls import reverse_lazy
 from django.views.generic import FormView, TemplateView
 
 from accounts.models import User
-from accounts.verifiers.basic_verifier import shahkar_check
+from accounts.verifiers.jibit_basic_verify import shahkar_check
 
 
 class ShahkarForm(forms.Form):
