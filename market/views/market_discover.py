@@ -28,7 +28,7 @@ class MarketDiscoverView(APIView):
         market_details = {
             pair_symbol.name: [ratio, change_percents.get(pair_symbol.asset.symbol, 0)]
             for pair_symbol, ratio in market_ratios
-            if pair_symbol and ratio and change_percents.get('symbol')
+            if pair_symbol and ratio and change_percents.get(pair_symbol.asset.symbol)
         }
 
         return Response(market_details)
