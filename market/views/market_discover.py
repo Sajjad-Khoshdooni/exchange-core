@@ -11,8 +11,14 @@ class MarketDiscoverView(APIView):
     permission_classes = []
 
     def get(self, request):
+        base = request.query_params.get('base', 'USDT')
+
+        if base not in [Asset.IRT, Asset.USDT]:
+            return Response({'Error': 'Invalid market base'}, status=404)
+
         markets_info = {
-            'USDT': get_markets_info(Asset.USDT),
-            'IRT': get_markets_info(Asset.IRT)
+            'base': base,
+            'info': get_markets_info(base)
         }
+
         return Response(markets_info)

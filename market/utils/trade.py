@@ -4,7 +4,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from django.conf import settings
-from django.db.models import F, Sum
+from django.db.models import F
 from django.utils import timezone
 
 from accounts.models import Referral
@@ -213,38 +213,42 @@ def get_markets_change_percent(base: str):
     recent_prices = prices['last']
     yesterday_prices = prices['yesterday']
     change_percents = {}
+
+    symbol_id_map = {pair_symbol_id: [name, base_asset]
+                     for pair_symbol_id, name, base_asset in
+                     PairSymbol.objects.all().values_list('id', 'name', 'base_asset__symbol')
+                     }
+
     for pair_symbol_id in recent_prices.keys() & yesterday_prices.keys():
-        if recent_prices[pair_symbol_id] and yesterday_prices[pair_symbol_id] and PairSymbol.objects.get(
-                pair_symbol_id).base_asset.symbol == base:
+        if (recent_prices[pair_symbol_id] and yesterday_prices[pair_symbol_id]
+                and symbol_id_map[pair_symbol_id][1] == base):
 
             yesterday_price = yesterday_prices[pair_symbol_id]
             recent_price = recent_prices[pair_symbol_id]
             change_percent = 100 * (recent_price - yesterday_price) // yesterday_price
 
-            change_percents[PairSymbol.objects.get(pair_symbol_id).name] = change_percent
+            change_percents[symbol_id_map[pair_symbol_id][0]] = change_percent
 
     return change_percents
 
 
 def get_market_size_ratio(base: str):
-    qs = Trade.objects.filter(
-        status=Trade.DONE,
+    markets_info = list(Trade.objects.filter(
         created__gte=timezone.now() - timedelta(days=1),
         symbol__base_asset__symbol=base
-    )
+    ).values('symbol__name').annotate(value=F('amount') * F('price')).values_list('symbol__name', 'value'))
 
-    total_size = qs.annotate(value=F('amount') * F('price')).aggregate(
-        total_size=Sum('value')
-    ).get('total_size', 0)
+    total_size = 0
+    for market, value in markets_info:
+        total_size += value
 
-    if not total_size or total_size == 0:
+    if total_size == Decimal(0):
         return {}
 
-    total_size = Decimal(total_size)
+    for i in range(len(markets_info)):
+        markets_info[i] = (markets_info[i][0], markets_info[i][1] / total_size)
 
-    return qs.values('symbol__name').annotate(
-        ratio=F('amount') * F('price') / total_size,
-    ).values_list('symbol__name', 'ratio')
+    return markets_info
 
 
 @cache_for(60 * 5)
