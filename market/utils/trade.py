@@ -214,20 +214,22 @@ def get_markets_change_percent(base: str):
     yesterday_prices = prices['yesterday']
     change_percents = {}
 
-    symbol_id_map = {pair_symbol_id: [name, base_asset]
-                     for pair_symbol_id, name, base_asset in
-                     PairSymbol.objects.all().values_list('id', 'name', 'base_asset__symbol')
+    symbol_id_map = {pair_symbol_id: [base_asset, asset_name, asset_name_fa]
+                     for pair_symbol_id, base_asset, asset_name, asset_name_fa in
+                     PairSymbol.objects.all().values_list('id', 'base_asset__symbol', 'asset__symbol', 'asset__name_fa')
                      }
 
     for pair_symbol_id in recent_prices.keys() & yesterday_prices.keys():
         if (recent_prices[pair_symbol_id] and yesterday_prices[pair_symbol_id]
-                and symbol_id_map[pair_symbol_id][1] == base):
+                and symbol_id_map[pair_symbol_id][0] == base):
 
             yesterday_price = yesterday_prices[pair_symbol_id]
             recent_price = recent_prices[pair_symbol_id]
             change_percent = 100 * (recent_price - yesterday_price) // yesterday_price
+            asset_name = symbol_id_map[pair_symbol_id][1]
+            asset_name_fa = symbol_id_map[pair_symbol_id][2]
 
-            change_percents[symbol_id_map[pair_symbol_id][0]] = change_percent
+            change_percents[asset_name] = [asset_name_fa, recent_price, change_percent]
 
     return change_percents
 
@@ -236,10 +238,11 @@ def get_market_size_ratio(base: str):
     markets_info = list(Trade.objects.filter(
         created__gte=timezone.now() - timedelta(days=1),
         symbol__base_asset__symbol=base
-    ).values('symbol__name').annotate(value=F('amount') * F('price')).values_list('symbol__name', 'value'))
+    ).values('symbol__asset__symbol')
+                        .annotate(value=F('amount') * F('price')).values_list('symbol__asset__symbol', 'value'))
 
     total_size = 0
-    for market, value in markets_info:
+    for asset_name, value in markets_info:
         total_size += value
 
     if total_size == Decimal(0):
@@ -256,11 +259,14 @@ def get_markets_info(base: str):
     change_percents = get_markets_change_percent(base)
 
     market_ratios = get_market_size_ratio(base)
+    market_details = {}
 
-    market_details = {
-        market: [ratio, change_percents[market]]
-        for market, ratio in market_ratios
-        if market and ratio and change_percents.get(market)
-    }
+    for asset_name, ratio in market_ratios:
+        if asset_name and ratio and change_percents.get(asset_name):
+            asset_name_fa = change_percents[asset_name][0]
+            recent_price = change_percents[asset_name][1]
+            change_percent = change_percents[asset_name][2]
+
+            market_details[asset_name] = [recent_price, change_percent, ratio, asset_name_fa]
 
     return market_details
