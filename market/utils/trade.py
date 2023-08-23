@@ -4,7 +4,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from django.conf import settings
-from django.db.models import F
+from django.db.models import F, Sum
 from django.utils import timezone
 
 from accounts.models import Referral
@@ -239,7 +239,7 @@ def get_markets_size_ratio(base: str):
         created__gte=timezone.now() - timedelta(days=1),
         symbol__base_asset__symbol=base
     ).values('symbol__asset__symbol')
-                        .annotate(value=F('amount') * F('price')).values_list('symbol__asset__symbol', 'value'))
+                        .annotate(value=Sum(F('amount') * F('price'))).values_list('symbol__asset__symbol', 'value'))
 
     total_size = 0
     for coin, value in markets_info:
