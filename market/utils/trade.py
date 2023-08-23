@@ -216,9 +216,11 @@ def get_markets_change_percent(base: str):
     for pair_symbol_id in recent_prices.keys() & yesterday_prices.keys():
         if recent_prices[pair_symbol_id] and yesterday_prices[pair_symbol_id] and PairSymbol.objects.get(
                 pair_symbol_id).base_asset.symbol == base:
+
             yesterday_price = yesterday_prices[pair_symbol_id]
             recent_price = recent_prices[pair_symbol_id]
             change_percent = 100 * (recent_price - yesterday_price) // yesterday_price
+
             change_percents[PairSymbol.objects.get(pair_symbol_id).name] = change_percent
 
     return change_percents
