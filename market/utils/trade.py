@@ -249,7 +249,7 @@ def get_markets_size_ratio(base: str):
         return {}
 
     for i in range(len(markets_info)):
-        markets_info[i] = (markets_info[i][0], markets_info[i][1] / total_size)
+        markets_info[i] = (markets_info[i][0], round(100 * markets_info[i][1] / total_size, 2))
 
     return markets_info
 
