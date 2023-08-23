@@ -92,10 +92,8 @@ def send_price_notifications():
     key = CACHE_PREFIX + str((current_cycle_count - 1) % total_cycles)
     past_five_minute_cycle = cache.get(key)
 
-    past_hour_cycle = {}
-    if current_cycle_count % 12 == 0:
-        key = CACHE_PREFIX + str((current_cycle_count - 12) % total_cycles)
-        past_hour_cycle = cache.get(key)
+    key = CACHE_PREFIX + str((current_cycle_count - 12) % total_cycles)
+    past_hour_cycle = cache.get(key)
 
     altered_coins = {
         **get_altered_coins(past_five_minute_cycle, current_cycle_prices, current_cycle_count, scope=MINUTES),
