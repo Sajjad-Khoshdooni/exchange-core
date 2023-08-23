@@ -208,14 +208,14 @@ def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet
     return fee_info
 
 
-def get_markets_change_percent(base: str):
+def get_markets_price_info(base: str):
     prices = get_symbol_prices()
     recent_prices = prices['last']
     yesterday_prices = prices['yesterday']
     change_percents = {}
 
-    symbol_id_map = {pair_symbol_id: [base_asset, asset_name, asset_name_fa]
-                     for pair_symbol_id, base_asset, asset_name, asset_name_fa in
+    symbol_id_map = {pair_symbol_id: [base_asset_name, asset_name, asset_name_fa]
+                     for pair_symbol_id, base_asset_name, asset_name, asset_name_fa in
                      PairSymbol.objects.all().values_list('id', 'base_asset__symbol', 'asset__symbol', 'asset__name_fa')
                      }
 
@@ -234,7 +234,7 @@ def get_markets_change_percent(base: str):
     return change_percents
 
 
-def get_market_size_ratio(base: str):
+def get_markets_size_ratio(base: str):
     markets_info = list(Trade.objects.filter(
         created__gte=timezone.now() - timedelta(days=1),
         symbol__base_asset__symbol=base
@@ -256,16 +256,16 @@ def get_market_size_ratio(base: str):
 
 @cache_for(60 * 5)
 def get_markets_info(base: str):
-    change_percents = get_markets_change_percent(base)
+    markets_price_info = get_markets_price_info(base)
 
-    market_ratios = get_market_size_ratio(base)
+    market_ratios = get_markets_size_ratio(base)
     market_details = {}
 
     for asset_name, ratio in market_ratios:
-        if asset_name and ratio and change_percents.get(asset_name):
-            asset_name_fa = change_percents[asset_name][0]
-            recent_price = change_percents[asset_name][1]
-            change_percent = change_percents[asset_name][2]
+        if asset_name and ratio and markets_price_info.get(asset_name):
+            asset_name_fa = markets_price_info[asset_name][0]
+            recent_price = markets_price_info[asset_name][1]
+            change_percent = markets_price_info[asset_name][2]
 
             market_details[asset_name] = [recent_price, change_percent, ratio, asset_name_fa]
 
