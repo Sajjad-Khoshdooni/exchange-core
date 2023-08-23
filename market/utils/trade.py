@@ -11,6 +11,7 @@ from accounts.models import Referral
 from ledger.models import Wallet, Trx, Asset
 from ledger.utils.cache import cache_for
 from ledger.utils.external_price import BUY, SELL
+from ledger.utils.precision import get_symbol_presentation_amount
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, Trade, BaseTrade, PairSymbol
 from market.models import ReferralTrx
@@ -264,7 +265,7 @@ def get_markets_info(base: str):
     for coin, ratio in market_ratios:
         if coin and ratio and markets_price_info.get(coin):
             name_fa = markets_price_info[coin][0]
-            price = markets_price_info[coin][1]
+            price = get_symbol_presentation_amount(symbol=coin, amount=markets_price_info[coin][1])
             change_24h = markets_price_info[coin][2]
 
             market_details.append(
