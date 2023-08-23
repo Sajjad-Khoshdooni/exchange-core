@@ -5,4 +5,4 @@ from .symbol_views import SymbolListAPIView, SymbolDetailedStatsAPIView, Bookmar
 from .trade_views import AccountTradeHistoryView, TradeHistoryView, TradePairsHistoryView
 from .tradingview_views import OHLCVAPIView
 from .symbol_spread_views import SymbolSpreadListView
-from .market_discover import MarketDiscoverView
+from .market_discover import IRMarketDiscoverView, USMarketDiscoverView
