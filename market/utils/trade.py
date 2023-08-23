@@ -214,8 +214,8 @@ def get_markets_price_info(base: str):
     yesterday_prices = prices['yesterday']
     change_percents = {}
 
-    symbol_id_map = {pair_symbol_id: [base_asset_name, asset_name, asset_name_fa]
-                     for pair_symbol_id, base_asset_name, asset_name, asset_name_fa in
+    symbol_id_map = {pair_symbol_id: [base_asset_name, coin, coin_name_fa]
+                     for pair_symbol_id, base_asset_name, coin, coin_name_fa in
                      PairSymbol.objects.all().values_list('id', 'base_asset__symbol', 'asset__symbol', 'asset__name_fa')
                      }
 
@@ -225,11 +225,11 @@ def get_markets_price_info(base: str):
 
             yesterday_price = yesterday_prices[pair_symbol_id]
             recent_price = recent_prices[pair_symbol_id]
-            change_percent = 100 * (recent_price - yesterday_price) // yesterday_price
-            asset_name = symbol_id_map[pair_symbol_id][1]
-            asset_name_fa = symbol_id_map[pair_symbol_id][2]
+            change_24h = 100 * (recent_price - yesterday_price) // yesterday_price
+            coin = symbol_id_map[pair_symbol_id][1]
+            coin_name_fa = symbol_id_map[pair_symbol_id][2]
 
-            change_percents[asset_name] = [asset_name_fa, recent_price, change_percent]
+            change_percents[coin] = [coin_name_fa, recent_price, change_24h]
 
     return change_percents
 
@@ -242,7 +242,7 @@ def get_markets_size_ratio(base: str):
                         .annotate(value=F('amount') * F('price')).values_list('symbol__asset__symbol', 'value'))
 
     total_size = 0
-    for asset_name, value in markets_info:
+    for coin, value in markets_info:
         total_size += value
 
     if total_size == Decimal(0):
@@ -259,14 +259,22 @@ def get_markets_info(base: str):
     markets_price_info = get_markets_price_info(base)
 
     market_ratios = get_markets_size_ratio(base)
-    market_details = {}
+    market_details = []
 
-    for asset_name, ratio in market_ratios:
-        if asset_name and ratio and markets_price_info.get(asset_name):
-            asset_name_fa = markets_price_info[asset_name][0]
-            recent_price = markets_price_info[asset_name][1]
-            change_percent = markets_price_info[asset_name][2]
+    for coin, ratio in market_ratios:
+        if coin and ratio and markets_price_info.get(coin):
+            name_fa = markets_price_info[coin][0]
+            price = markets_price_info[coin][1]
+            change_24h = markets_price_info[coin][2]
 
-            market_details[asset_name] = [recent_price, change_percent, ratio, asset_name_fa]
+            market_details.append(
+                {
+                    'name': coin,
+                    'name_fa': name_fa,
+                    'price': price,
+                    'change_24h': change_24h,
+                    'ratio': ratio,
+                }
+            )
 
     return market_details
