@@ -12,8 +12,9 @@ from ledger.models import Wallet, Trx, Asset
 from ledger.utils.cache import cache_for
 from ledger.utils.external_price import BUY, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order, Trade, BaseTrade
+from market.models import Order, Trade, BaseTrade, PairSymbol
 from market.models import ReferralTrx
+from market.utils.price import get_symbol_prices
 
 
 @dataclass
@@ -207,12 +208,27 @@ def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet
     return fee_info
 
 
-@cache_for(60 * 5)
+def get_markets_change_percent(base: str):
+    prices = get_symbol_prices()
+    recent_prices = prices['last']
+    yesterday_prices = prices['yesterday']
+    change_percents = {}
+    for pair_symbol_id in recent_prices.keys() & yesterday_prices.keys():
+        if recent_prices[pair_symbol_id] and yesterday_prices[pair_symbol_id] and PairSymbol.objects.get(
+                pair_symbol_id).base_asset.symbol == base:
+            yesterday_price = yesterday_prices[pair_symbol_id]
+            recent_price = recent_prices[pair_symbol_id]
+            change_percent = 100 * (recent_price - yesterday_price) // yesterday_price
+            change_percents[PairSymbol.objects.get(pair_symbol_id).name] = change_percent
+
+    return change_percents
+
+
 def get_market_size_ratio(base: str):
     qs = Trade.objects.filter(
         status=Trade.DONE,
         created__gte=timezone.now() - timedelta(days=1),
-        symbol__base_asset=base
+        symbol__base_asset__symbol=base
     )
 
     total_size = qs.annotate(value=F('amount') * F('price')).aggregate(
@@ -227,3 +243,20 @@ def get_market_size_ratio(base: str):
     return qs.values('symbol__name').annotate(
         ratio=F('amount') * F('price') / total_size,
     ).values('symbol__name', 'ratio')
+
+
+@cache_for(60 * 5)
+def get_markets_info(base: str):
+    change_percents = get_markets_change_percent(base)
+
+    market_ratios = get_market_size_ratio(base)
+
+    print(market_ratios, '\n', change_percents)
+
+    market_details = {
+        market: [ratio, change_percents.get(market, 0)]
+        for market, ratio in market_ratios
+        if market and ratio and change_percents.get(market)
+    }
+
+    return market_details
