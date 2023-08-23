@@ -258,7 +258,7 @@ def get_markets_info(base: str):
     market_ratios = get_market_size_ratio(base)
 
     market_details = {
-        market: [ratio, change_percents.get(market, 0)]
+        market: [ratio, change_percents[market]]
         for market, ratio in market_ratios
         if market and ratio and change_percents.get(market)
     }
