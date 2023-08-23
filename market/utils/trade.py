@@ -242,7 +242,7 @@ def get_market_size_ratio(base: str):
 
     return qs.values('symbol__name').annotate(
         ratio=F('amount') * F('price') / total_size,
-    ).values('symbol__name', 'ratio')
+    ).values_list('symbol__name', 'ratio')
 
 
 @cache_for(60 * 5)
@@ -250,8 +250,6 @@ def get_markets_info(base: str):
     change_percents = get_markets_change_percent(base)
 
     market_ratios = get_market_size_ratio(base)
-
-    print(market_ratios, '\n', change_percents)
 
     market_details = {
         market: [ratio, change_percents.get(market, 0)]
