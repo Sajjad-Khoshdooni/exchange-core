@@ -1,15 +1,20 @@
 from dataclasses import dataclass
+from datetime import timedelta
 from decimal import Decimal
 from uuid import UUID
 
 from django.conf import settings
+from django.db.models import F
+from django.utils import timezone
 
 from accounts.models import Referral
 from ledger.models import Wallet, Trx, Asset
+from ledger.utils.cache import cache_for
 from ledger.utils.external_price import BUY, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
-from market.models import Order, Trade, BaseTrade
+from market.models import Order, Trade, BaseTrade, PairSymbol
 from market.models import ReferralTrx
+from market.utils.price import get_symbol_prices
 
 
 @dataclass
@@ -34,7 +39,6 @@ class TradesPair:
     @classmethod
     def init_pair(cls, maker_order: Order, taker_order: Order, amount: Decimal, price: Decimal, trade_source: str,
                   base_irt_price: Decimal, base_usdt_price: Decimal, group_id: UUID):
-
         assert maker_order.symbol == taker_order.symbol
 
         maker_trade = Trade(
@@ -80,7 +84,6 @@ class TradesPair:
 
 
 def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade: bool = False):
-
     if not fake_trade:
         _register_trade_transaction(pipeline, pair=pair)
         _register_trade_base_transaction(pipeline, pair=pair)
@@ -111,7 +114,6 @@ def register_transactions(pipeline: WalletPipeline, pair: TradesPair, fake_trade
 
 
 def _register_trade_transaction(pipeline: WalletPipeline, pair: TradesPair):
-
     if pair.maker_order.side == BUY:
         sender, receiver = pair.taker_order.wallet, pair.maker_order.wallet
     else:
@@ -173,7 +175,6 @@ def get_fee_info(trade: BaseTrade) -> FeeInfo:
 
 def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet: Wallet, base_wallet: Wallet,
                               group_id: UUID) -> FeeInfo:
-
     account = trade.account
     referrer = account.referred_by
     fee_info = get_fee_info(trade)
@@ -205,3 +206,75 @@ def register_fee_transactions(pipeline: WalletPipeline, trade: BaseTrade, wallet
     )
 
     return fee_info
+
+
+def get_markets_price_info(base: str):
+    prices = get_symbol_prices()
+    recent_prices = prices['last']
+    yesterday_prices = prices['yesterday']
+    change_percents = {}
+
+    symbol_id_map = {pair_symbol_id: [base_asset_name, coin, coin_name_fa]
+                     for pair_symbol_id, base_asset_name, coin, coin_name_fa in
+                     PairSymbol.objects.all().values_list('id', 'base_asset__symbol', 'asset__symbol', 'asset__name_fa')
+                     }
+
+    for pair_symbol_id in recent_prices.keys() & yesterday_prices.keys():
+        if (recent_prices[pair_symbol_id] and yesterday_prices[pair_symbol_id]
+                and symbol_id_map[pair_symbol_id][0] == base):
+
+            yesterday_price = yesterday_prices[pair_symbol_id]
+            recent_price = recent_prices[pair_symbol_id]
+            change_24h = 100 * (recent_price - yesterday_price) // yesterday_price
+            coin = symbol_id_map[pair_symbol_id][1]
+            coin_name_fa = symbol_id_map[pair_symbol_id][2]
+
+            change_percents[coin] = [coin_name_fa, recent_price, change_24h]
+
+    return change_percents
+
+
+def get_markets_size_ratio(base: str):
+    markets_info = list(Trade.objects.filter(
+        created__gte=timezone.now() - timedelta(days=1),
+        symbol__base_asset__symbol=base
+    ).values('symbol__asset__symbol')
+                        .annotate(value=F('amount') * F('price')).values_list('symbol__asset__symbol', 'value'))
+
+    total_size = 0
+    for coin, value in markets_info:
+        total_size += value
+
+    if total_size == Decimal(0):
+        return {}
+
+    for i in range(len(markets_info)):
+        markets_info[i] = (markets_info[i][0], round(100 * markets_info[i][1] / total_size, 2))
+
+    return markets_info
+
+
+@cache_for(60 * 5)
+def get_markets_info(base: str):
+    markets_price_info = get_markets_price_info(base)
+
+    market_ratios = get_markets_size_ratio(base)
+    market_details = []
+
+    for coin, ratio in market_ratios:
+        if coin and ratio and markets_price_info.get(coin):
+            name_fa = markets_price_info[coin][0]
+            price = markets_price_info[coin][1]
+            change_24h = markets_price_info[coin][2]
+
+            market_details.append(
+                {
+                    'coin': coin,
+                    'name_fa': name_fa,
+                    'price': price,
+                    'change_24h': change_24h,
+                    'ratio': ratio,
+                }
+            )
+
+    return market_details
