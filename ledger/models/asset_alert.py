@@ -4,18 +4,19 @@ from accounts.models import User
 from ledger.models import Asset
 from ledger.utils.fields import get_amount_field
 
-MINUTES = 'پنج‌ دقیقه'
-HOUR = '‌یک‌ ساعت'
-
 
 class AlertTrigger(models.Model):
+    MINUTES = '5m'
+    HOUR = '1h'
+
     INTERVAL_CHOICES = [
-        ('5m', MINUTES),
-        ('1h', HOUR)
+        (MINUTES, MINUTES),
+        (HOUR, HOUR)
     ]
     created = models.DateTimeField(auto_now_add=True)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     price = get_amount_field()
+    change_percent = models.IntegerField(default=0)
     cycle = models.PositiveIntegerField()
     interval = models.CharField(choices=INTERVAL_CHOICES, max_length=15)
     is_triggered = models.BooleanField(default=False)

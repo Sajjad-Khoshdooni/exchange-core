@@ -12,6 +12,12 @@ from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get
 from ledger.utils.precision import get_presentation_amount
 
 CACHE_PREFIX = 'asset_alert'
+MINUTES = 'پنج‌ دقیقه'
+HOUR = '‌یک‌ ساعت'
+SCOPE_MAP = {
+    MINUTES: AlertTrigger.MINUTES,
+    HOUR: AlertTrigger.HOUR
+}
 
 
 def get_current_prices() -> dict:
@@ -31,7 +37,7 @@ def send_notifications(asset_alert_list, altered_coins):
         new_price, old_price, scope = altered_coins[asset_alert.asset.symbol]
         percent = math.floor(abs(new_price / old_price - Decimal(1)) * 100)
         change_status = 'افزایش' if new_price > old_price else 'کاهش'
-        new_price = get_presentation_amount(new_price)
+        new_price = get_presentation_amount(new_price, precision=8)
         Notification.send(
             recipient=asset_alert.user,
             title=f'{change_status} قیمت ناگهانی',
@@ -51,21 +57,20 @@ def get_altered_coins(past_cycle_prices, current_cycle, current_cycle_count, sco
     changed_coins = {}
 
     for coin in past_cycle_prices.keys() & current_cycle.keys():
-        if Decimal(abs(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1))) > Decimal('0.02'):
-
+        change_percent = math.floor(Decimal(current_cycle[coin] / past_cycle_prices[coin] - Decimal(1)) * 100)
+        if abs(change_percent) > 5:
             alert_trigger = AlertTrigger.objects.create(
                 asset=mapping_symbol[coin],
                 price=current_cycle[coin],
                 cycle=current_cycle_count,
-                interval=scope,
+                change_percent=change_percent,
+                interval=SCOPE_MAP[scope]
             )
-
             if not AlertTrigger.objects.filter(
-                asset=mapping_symbol[coin],
-                created__gte=timezone.now() - timedelta(hours=1),
-                is_triggered=True
+                    asset=mapping_symbol[coin],
+                    created__gte=timezone.now() - timedelta(hours=1),
+                    is_triggered=True
             ).exists():
-
                 changed_coins[coin] = [current_cycle[coin], past_cycle_prices[coin], scope]
                 alert_trigger.is_triggered = True
                 alert_trigger.save(update_fields=['is_triggered'])
