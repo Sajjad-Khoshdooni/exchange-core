@@ -269,7 +269,7 @@ def get_markets_info(base: str):
 
             market_details.append(
                 {
-                    'name': coin,
+                    'coin': coin,
                     'name_fa': name_fa,
                     'price': price,
                     'change_24h': change_24h,
