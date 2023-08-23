@@ -16,7 +16,7 @@ class MarketDiscoverView(APIView):
         yesterday_prices = prices['yesterday']
 
         change_percents = {
-            PairSymbol.objects.get(pair_symbol_id).asset.symbol:
+            PairSymbol.objects.get(pair_symbol_id).name:
                 100 * (recent_prices[pair_symbol_id] - yesterday_prices[pair_symbol_id]) //
                 yesterday_prices[pair_symbol_id]
             for pair_symbol_id in recent_prices.keys() & yesterday_prices.keys()
@@ -26,9 +26,9 @@ class MarketDiscoverView(APIView):
         market_ratios = get_market_size_ratio()
 
         market_details = {
-            pair_symbol.name: [ratio, change_percents.get(pair_symbol.asset.symbol, 0)]
-            for pair_symbol, ratio in market_ratios
-            if pair_symbol and ratio and change_percents.get(pair_symbol.asset.symbol)
+            market: [ratio, change_percents.get(market, 0)]
+            for market, ratio in market_ratios
+            if market and ratio and change_percents.get(market)
         }
 
         return Response(market_details)

@@ -216,9 +216,12 @@ def get_market_size_ratio():
     total_size = qs.annotate(usdt_value=F('amount') * F('price')).aggregate(
         total_size=Sum('usdt_value')
     ).get('total_size', 0)
+
     if not total_size or total_size == 0:
         return {}
+
     total_size = Decimal(total_size)
-    return qs.values('symbol').annotate(
+
+    return qs.values('symbol__name').annotate(
         ratio=F('amount') * F('price') / total_size,
-    ).values('market', 'ratio')
+    ).values('symbol__name', 'ratio')
