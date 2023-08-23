@@ -747,7 +747,7 @@ class Auth2FaAdmin(admin.ModelAdmin):
 
 @admin.register(VerificationCode)
 class VerificationCodeAdmin(admin.ModelAdmin):
-    list_display = ['phone', 'user', 'scope']
+    list_display = ('created', 'phone', 'user', 'scope', 'expiration', 'code_used')
     search_fields = ('user__phone', 'phone', 'user__first_name', 'user__last_name')
     list_filter = ('scope', )
     readonly_fields = ('user', )

@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.conf import settings
-from django.db.models import Q, Min
+from django.db.models import Q
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
@@ -16,7 +16,7 @@ from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.views.jwt_views import DelegatedAccountMixin
 from ledger.models import Wallet, DepositAddress, NetworkAsset, Trx
 from ledger.models.asset import Asset
-from ledger.utils.external_price import get_external_price, get_external_usdt_prices, BUY, SELL
+from ledger.utils.external_price import get_external_price, BUY, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.otc import get_otc_spread, spread_to_multiplier
 from ledger.utils.precision import get_presentation_amount, get_symbol_presentation_amount
