@@ -15,7 +15,7 @@ from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet, Asset
 from ledger.utils.external_price import SELL, BUY
 from ledger.utils.fields import get_amount_field
-from ledger.utils.precision import floor_precision
+from ledger.utils.precision import floor_precision, get_symbol_presentation_amount
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.exceptions import NegativeGapRevenue
 from market.models import Trade, PairSymbol
@@ -208,9 +208,10 @@ class OTCTrade(models.Model):
         req = self.otc_request
 
         if not req.symbol.asset.hedge and req.symbol.asset.symbol != Asset.USDT:
+            amount_present = get_symbol_presentation_amount(req.symbol.name, req.amount, trunc_zero=True)
 
             send_system_message(
-                message=f"New unhedged trade: {req.side} {req.amount} {req.symbol.asset} ({round(req.usdt_value, 1)}$)",
+                message=f"New unhedged trade: {req.side} {amount_present} {req.symbol.asset} ({round(req.usdt_value, 1)}$)",
                 link=url_to_edit_object(self)
             )
 
