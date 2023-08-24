@@ -376,7 +376,7 @@ class TransferUserFilter(SimpleListFilter):
 
 
 @admin.register(models.Transfer)
-class TransferAdmin(AdvancedAdmin):
+class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     default_edit_condition = M.superuser
 
     fields_edit_conditions = {
