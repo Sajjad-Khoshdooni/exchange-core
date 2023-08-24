@@ -1,23 +1,17 @@
 import math
-from decimal import Decimal
 from datetime import timedelta
+from decimal import Decimal
 
 from celery import shared_task
 from django.core.cache import cache
 from django.utils import timezone
 
 from accounts.models import Notification
-from ledger.models.asset_alert import *
+from ledger.models import AssetAlert, AlertTrigger
 from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get_external_price, BUY
 from ledger.utils.precision import get_presentation_amount
 
 CACHE_PREFIX = 'asset_alert'
-MINUTES = 'پنج‌ دقیقه'
-HOUR = '‌یک‌ ساعت'
-SCOPE_MAP = {
-    MINUTES: AlertTrigger.MINUTES,
-    HOUR: AlertTrigger.HOUR
-}
 
 
 def get_current_prices() -> dict:
@@ -34,18 +28,28 @@ def get_current_prices() -> dict:
 def send_notifications(asset_alert_list, altered_coins):
     for asset_alert in asset_alert_list:
         base_coin = 'تتر' if asset_alert.asset.symbol != asset_alert.asset.USDT else 'تومان'
-        new_price, old_price, scope = altered_coins[asset_alert.asset.symbol]
+        new_price, old_price, interval = altered_coins[asset_alert.asset.symbol]
         percent = math.floor(abs(new_price / old_price - Decimal(1)) * 100)
         change_status = 'افزایش' if new_price > old_price else 'کاهش'
         new_price = get_presentation_amount(new_price, precision=8)
+
+        interval_verbose = AlertTrigger.INTERVAL_VERBOSE_MAP[interval]
+
+        if interval == AlertTrigger.FIVE_MIN:
+            title = f'{change_status} ناگهانی قیمت {asset_alert.asset.name_fa}'
+        else:
+            title = f'{change_status} قیمت {asset_alert.asset.name_fa}'
+
+        message = f'قیمت {asset_alert.asset.name_fa} در {interval_verbose} گذشته {percent} درصد {change_status} پیدا کرد و به {new_price} {base_coin} رسید.'
+
         Notification.send(
             recipient=asset_alert.user,
-            title=f'{change_status} قیمت ناگهانی',
-            message=f'قیمت ارزدیجیتال {asset_alert.asset.name_fa} در {scope} گذشته {percent} درصد {change_status} پیدا کرد و به {new_price} {base_coin} رسید.'
+            title=title,
+            message=message,
         )
 
 
-def get_altered_coins(past_cycle_prices, current_cycle, current_cycle_count, scope) -> dict:
+def get_altered_coins(past_cycle_prices: dict, current_cycle: dict, current_cycle_count: int, interval: str) -> dict:
     if not past_cycle_prices:
         return {}
 
@@ -64,14 +68,14 @@ def get_altered_coins(past_cycle_prices, current_cycle, current_cycle_count, sco
                 price=current_cycle[coin],
                 cycle=current_cycle_count,
                 change_percent=change_percent,
-                interval=SCOPE_MAP[scope]
+                interval=interval
             )
             if not AlertTrigger.objects.filter(
                     asset=mapping_symbol[coin],
                     created__gte=timezone.now() - timedelta(hours=1),
                     is_triggered=True
             ).exists():
-                changed_coins[coin] = [current_cycle[coin], past_cycle_prices[coin], scope]
+                changed_coins[coin] = [current_cycle[coin], past_cycle_prices[coin], interval]
                 alert_trigger.is_triggered = True
                 alert_trigger.save(update_fields=['is_triggered'])
 
@@ -98,8 +102,8 @@ def send_price_notifications():
         past_hour_cycle = cache.get(key)
 
     altered_coins = {
-        **get_altered_coins(past_five_minute_cycle, current_cycle_prices, current_cycle_count, scope=MINUTES),
-        **get_altered_coins(past_hour_cycle, current_cycle_prices, current_cycle_count, scope=HOUR),
+        **get_altered_coins(past_five_minute_cycle, current_cycle_prices, current_cycle_count, interval=AlertTrigger.FIVE_MIN),
+        **get_altered_coins(past_hour_cycle, current_cycle_prices, current_cycle_count, interval=AlertTrigger.HOUR),
     }
 
     asset_alert_list = AssetAlert.objects.filter(asset__symbol__in=altered_coins.keys())
