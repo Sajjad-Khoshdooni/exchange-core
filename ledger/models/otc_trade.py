@@ -9,6 +9,8 @@ from django.db.models import F, Sum
 from _base.settings import OTC_ACCOUNT_ID
 from accounting.models import TradeRevenue
 from accounts.models import Account
+from accounts.utils.admin import url_to_admin_list, url_to_edit_object
+from accounts.utils.telegram import send_system_message
 from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet, Asset
 from ledger.utils.external_price import SELL, BUY
@@ -202,6 +204,14 @@ class OTCTrade(models.Model):
 
         from gamify.utils import check_prize_achievements, Task
         check_prize_achievements(account, Task.TRADE)
+
+        if not self.otc_request.symbol.asset.hedge:
+            req = self.otc_request
+
+            send_system_message(
+                message=f"New unhedged trade: {req.side} {req.amount} {req.symbol.asset} ({req.usdt_value}$)",
+                link=url_to_edit_object(self)
+            )
 
     def get_pending_hedge_trades(self):
         return OTCTrade.objects.filter(
