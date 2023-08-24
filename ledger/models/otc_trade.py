@@ -205,11 +205,12 @@ class OTCTrade(models.Model):
         from gamify.utils import check_prize_achievements, Task
         check_prize_achievements(account, Task.TRADE)
 
-        if not self.otc_request.symbol.asset.hedge:
-            req = self.otc_request
+        req = self.otc_request
+
+        if not req.symbol.asset.hedge and req.symbol.asset.symbol != Asset.USDT:
 
             send_system_message(
-                message=f"New unhedged trade: {req.side} {req.amount} {req.symbol.asset} ({req.usdt_value}$)",
+                message=f"New unhedged trade: {req.side} {req.amount} {req.symbol.asset} ({round(req.usdt_value, 1)}$)",
                 link=url_to_edit_object(self)
             )
 
