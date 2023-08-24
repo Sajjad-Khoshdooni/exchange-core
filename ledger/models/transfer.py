@@ -47,6 +47,8 @@ class Transfer(models.Model):
     accepted_datetime = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     finished_datetime = models.DateTimeField(null=True, blank=True, db_index=True)
 
+    accepted_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True)
+
     group_id = models.UUIDField(default=uuid4, db_index=True)
     deposit_address = models.ForeignKey('ledger.DepositAddress', on_delete=models.CASCADE, null=True, blank=True)
     network = models.ForeignKey('ledger.Network', on_delete=models.CASCADE)
