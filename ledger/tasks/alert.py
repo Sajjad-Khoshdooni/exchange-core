@@ -7,7 +7,7 @@ from django.core.cache import cache
 from django.utils import timezone
 
 from accounts.models import Notification
-from ledger.models import AssetAlert, AlertTrigger
+from ledger.models import AssetAlert, AlertTrigger, Asset
 from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get_external_price, BUY
 from ledger.utils.precision import get_presentation_amount
 
