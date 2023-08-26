@@ -267,7 +267,7 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
 
         if self.action == 'list':
             coins = list(self.get_queryset().values_list('symbol', flat=True))
-            ctx['prices'], ctx['market_prices'], ctx['tether_irt'] = Asset.get_current_prices(coins)
+            ctx['prices'], ctx['market_prices'], ctx['tether_irt'] = Asset.get_current_prices(coins, allow_stale=True)
         return ctx
 
     def get_serializer_class(self):

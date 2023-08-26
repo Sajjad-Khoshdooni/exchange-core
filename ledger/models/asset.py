@@ -143,11 +143,12 @@ class Asset(models.Model):
             return self.symbol
 
     @staticmethod
-    def get_current_prices(coins):
+    def get_current_prices(coins, allow_stale: bool = False):
         prices = get_external_usdt_prices(
             coins=coins,
             side=SELL,
-            apply_otc_spread=True
+            apply_otc_spread=True,
+            allow_stale=allow_stale
         )
         market_prices = {}
         from market.models import Order
@@ -164,9 +165,12 @@ class Asset(models.Model):
             symbol__enable=True,
             symbol__name='USDTIRT'
         ).aggregate(best_bid=Max('price'))['best_bid']
-        tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=True)
+
+        tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=allow_stale)
+
         prices[Asset.IRT] = Decimal(1) / get_external_price(
-            coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
+            coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=allow_stale)
+
         return prices, market_prices, tether_irt
 
 
