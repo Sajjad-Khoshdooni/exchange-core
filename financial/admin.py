@@ -95,6 +95,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
         'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount', 'get_risks',
         'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user', 'login_activity'
     )
+    search_fields = ('bank_account__iban', 'bank_account__user__phone')
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
 
@@ -225,7 +226,7 @@ class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_amount', 'get_fee', 'status', 'ref_id', 'ref_status', 'get_user',)
     list_filter = (PaymentUserFilter, 'status', )
     search_fields = ('ref_id', 'paymentrequest__bank_card__card_pan', 'amount',
-                     'paymentrequest__authority')
+                     'paymentrequest__authority', 'paymentrequest__bank_card__user__phone')
     readonly_fields = ('user', 'group_id')
 
     @admin.display(description='مقدار')
