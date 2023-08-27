@@ -96,6 +96,7 @@ class Asset(models.Model):
         elif isinstance(account, Account):
             account_filter = {'account': account}
             account_type = account.type
+
         else:
             raise NotImplementedError
 
@@ -106,7 +107,7 @@ class Asset(models.Model):
             **account_filter,
             defaults={
                 'check_balance': account_type == Account.ORDINARY,
-                'expiration': expiration
+                'expiration': expiration,
             }
         )
 
