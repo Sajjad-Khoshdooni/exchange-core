@@ -206,7 +206,7 @@ class Order(models.Model):
     def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
         return amount * price if side == BUY else amount
 
-    def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False) -> MatchedTrades:
+    def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False, is_oco: bool = False) -> MatchedTrades:
         overriding_fill_amount = None
         if is_stop_loss:
             if self.side == BUY:
@@ -215,7 +215,7 @@ class Order(models.Model):
                     overriding_fill_amount = floor_precision(locked_amount / self.price, self.symbol.step_size)
                     if not overriding_fill_amount:
                         raise CancelOrder('Overriding fill amount is zero')
-        else:
+        elif not is_oco:
             overriding_fill_amount = self.acquire_lock(pipeline)
 
         matched_trades = self.make_match(pipeline, overriding_fill_amount)

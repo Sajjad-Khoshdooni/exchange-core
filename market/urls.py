@@ -7,6 +7,7 @@ from market.views import *
 router = routers.DefaultRouter()
 router.register(r'^orders', OrderViewSet, basename='order')
 router.register(r'^stop-loss-orders', StopLossViewSet, basename='stop_loss')
+router.register(r'^oco-orders', OCOViewSet, basename='oco')
 
 urlpatterns = [
     path('irt/info/', cache_page(60)(MarketInfoView.as_view())),
