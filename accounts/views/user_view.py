@@ -194,7 +194,7 @@ class CreateAuthToken(APIView):
         token_serializer = AuthTokenSerializer(
             instance=tokent,
             data=request.data,
-            partial=True
+            context={'request': request}
         )
         if token_serializer.is_valid():
             token_serializer.save()
