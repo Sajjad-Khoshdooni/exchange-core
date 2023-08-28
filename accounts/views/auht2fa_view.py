@@ -1,5 +1,7 @@
 from django.core.exceptions import ValidationError
 from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
+from django.conf import settings
+
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -37,6 +39,7 @@ class TOTPView(APIView):
         if device is None:
             device = TOTPDevice.objects.create(user=user, confirmed=False)
         if device.confirmed is False:
+            settings.OTP_TOTP_ISSUER = settings.BRAND_EN
             device.key = default_key()
             device.save(update_fields=['key'])
             return Response(device.config_url)
@@ -77,4 +80,4 @@ class TOTPView(APIView):
             send_2fa_deactivation_message(user=user)
             return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری غیرفعال شد.'})
         else:
-            return Response({'msg' : 'ورود دومرحله‌ای غیرفعال است.'})
+            return Response({'msg': 'ورود دومرحله‌ای غیرفعال است.'})
