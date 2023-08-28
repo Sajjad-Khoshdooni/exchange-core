@@ -77,6 +77,8 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
+        precision = None
+
         return get_presentation_amount(wallet.balance + self.get_debt(asset))
 
     def get_balance_irt(self, asset: Asset):
