@@ -186,10 +186,10 @@ class User(AbstractUser):
         return account
 
     @staticmethod
-    def mask_mobile_number(phone_number: str):
-        first = phone_number[:4]
-        last = phone_number[-4:]
-        masked = first + '*' * len(phone_number[4:-4]) + last
+    def mask(phone_number: str, length: int = 4):
+        first = phone_number[:length]
+        last = phone_number[-length:]
+        masked = first + '*' * len(phone_number[length:-length]) + last
         return masked
 
     def get_username(self):
@@ -197,7 +197,7 @@ class User(AbstractUser):
         if username.__contains__('@'):
             return username
         else:
-            return self.mask_mobile_number(username)
+            return self.mask(username)
 
     @property
     def kyc_bank_card(self):
