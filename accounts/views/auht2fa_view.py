@@ -39,7 +39,7 @@ class TOTPView(APIView):
         if device is None:
             device = TOTPDevice.objects.create(user=user, confirmed=False)
         if device.confirmed is False:
-            settings.OTP_TOTP_ISSUER = settings.PANEL_URL + f'({user.username})'
+            settings.OTP_TOTP_ISSUER = settings.BRAND_EN
             device.key = default_key()
             device.save(update_fields=['key'])
             return Response(device.config_url)
