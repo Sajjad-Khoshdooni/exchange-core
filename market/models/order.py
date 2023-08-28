@@ -110,6 +110,7 @@ class Order(models.Model):
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
     stop_loss = models.ForeignKey(to='market.StopLoss', on_delete=models.SET_NULL, null=True, blank=True)
+    oco = models.ForeignKey(to='market.OCO', on_delete=models.SET_NULL, null=True, blank=True)
 
     time_in_force = models.CharField(
         max_length=4,
@@ -151,6 +152,12 @@ class Order(models.Model):
     open_objects = OpenOrderManager()
 
     def cancel(self):
+        if self.oco:
+            stop_loss = getattr(self.oco, 'stoploss', None)
+            if stop_loss and not stop_loss.canceled_at:
+                stop_loss.canceled_at = timezone.now()
+                stop_loss.save(update_fields=['canceled_at'])
+
         # to increase performance
         if self.status != self.NEW:
             return
@@ -205,6 +212,19 @@ class Order(models.Model):
     @classmethod
     def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
         return amount * price if side == BUY else amount
+    
+    def handle_oco_updates(self, pipeline):
+        if hasattr(self.oco, 'stoploss'):
+            stop_loss = self.oco.stoploss
+            stop_loss.canceled_at = timezone.now()
+            stop_loss.save(update_fields=['canceled_at'])
+
+        if self.side == BUY and self.oco.releasable_lock:
+            oco = self.oco
+            pipeline.release_lock(key=self.group_id, amount=oco.releasable_lock)
+            oco.releasable_lock = Decimal(0)
+            oco.save(update_fields=['releasable_lock'])
+
 
     def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False, is_oco: bool = False) -> MatchedTrades:
         overriding_fill_amount = None
@@ -231,6 +251,11 @@ class Order(models.Model):
             ).exclude(id=self.stop_loss_id)
             log_prefix = 'MM %s {%s}: ' % (self.symbol.name, self.id)
             logger.info(log_prefix + f'to trigger stop loss: {list(to_trigger_stop_loss_qs.values_list("id", flat=True))} {timezone.now()}')
+
+            for stop_loss in to_trigger_stop_loss_qs:
+                if stop_loss.oco:
+                    stop_loss.handle_oco_updates()
+
             for stop_loss in to_trigger_stop_loss_qs:
                 from market.utils.order_utils import trigger_stop_loss
                 triggered_price = min_price if stop_loss.side == SELL else max_price
@@ -318,6 +343,7 @@ class Order(models.Model):
         taker_is_system = self.wallet.account.is_system() or (
                 hedging_usdt and self.account_id == settings.TRADER_ACCOUNT_ID)
 
+        oco_orders = [self] if self.oco else []
         for maker_order in matching_orders:
             trade_price = maker_order.price
 
@@ -394,6 +420,8 @@ class Order(models.Model):
                     maker_order.save(update_fields=['status'])
                     filled_orders.append(maker_order)
 
+            oco_orders.append(maker_order)
+
             if unfilled_amount == 0:
                 self.status = Order.FILLED
 
@@ -416,6 +444,10 @@ class Order(models.Model):
             symbol.last_trade_price = trades[-1].price
             symbol.save(update_fields=['last_trade_time', 'last_trade_price'])
             set_last_trade_price(symbol)
+
+            for oco_order in oco_orders:
+                oco_order.handle_oco_updates(pipeline)
+
             trade_revenues = []
             for maker_trade, taker_trade in trade_pairs:
                 if maker_trade.trade_source in (Trade.SYSTEM_MAKER, Trade.SYSTEM_TAKER):

@@ -9,6 +9,7 @@ from rest_framework.generics import get_object_or_404
 from accounts.models import LoginActivity
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Wallet
+from ledger.utils.external_price import BUY
 from ledger.utils.precision import floor_precision, decimal_to_str
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol, OCO, StopLoss
@@ -37,6 +38,8 @@ class OCOSerializer(OrderSerializer):
             data['price'] = decimal_to_str(floor_precision(Decimal(data['price']), oco.symbol.tick_size))
         data['stop_loss_price'] = decimal_to_str(
             floor_precision(Decimal(data['stop_loss_price']), oco.symbol.tick_size))
+        data['stop_loss_trigger_price'] = decimal_to_str(
+            floor_precision(Decimal(data['stop_loss_trigger_price']), oco.symbol.tick_size))
         data['symbol'] = oco.symbol.name
         return data
 
@@ -47,8 +50,7 @@ class OCOSerializer(OrderSerializer):
         validated_data['stop_loss_trigger_price'] = self.post_validate_price(
             symbol, validated_data['stop_loss_trigger_price'])
 
-        order_price = min(
-            validated_data['price'], validated_data['stop_loss_price'], validated_data['stop_loss_trigger_price'])
+        order_price = min(validated_data['price'], validated_data['stop_loss_price'])
         wallet = self.post_validate(symbol, {**validated_data, 'price': order_price})
         try:
             with WalletPipeline() as pipeline:
@@ -57,13 +59,17 @@ class OCOSerializer(OrderSerializer):
                     max(validated_data['price'], validated_data['stop_loss_price']),
                     validated_data['side']
                 )
+                releasable_lock = Decimal(0)
+                if validated_data['side'] == BUY:
+                    releasable_lock = (validated_data['stop_loss_price'] - validated_data['price']) * validated_data['amount']
                 base_wallet = symbol.base_asset.get_wallet(wallet.account, wallet.market)
                 lock_wallet = Order.get_to_lock_wallet(wallet, base_wallet, validated_data['side'])
                 if lock_wallet.has_balance(lock_amount, raise_exception=True):
                     login_activity = LoginActivity.from_request(request=self.context['request'])
 
                     instance = super(OrderSerializer, self).create(
-                        {**validated_data, 'wallet': wallet, 'symbol': symbol, 'login_activity': login_activity}
+                        {**validated_data,
+                         'wallet': wallet, 'symbol': symbol, 'releasable_lock': releasable_lock, 'login_activity': login_activity}
                     )
                     instance.acquire_lock(lock_wallet, lock_amount, pipeline)
                     order = new_order(
@@ -81,7 +87,6 @@ class OCOSerializer(OrderSerializer):
                     )
                     if not order.trades:
                         StopLoss.objects.create(
-                            account=instance.wallet.account,
                             wallet=instance.wallet,
                             symbol=instance.symbol,
                             amount=instance.amount,
@@ -89,7 +94,8 @@ class OCOSerializer(OrderSerializer):
                             trigger_price=instance.stop_loss_trigger_price,
                             side=instance.side,
                             fill_type=StopLoss.LIMIT,
-                            group_id=instance.group_id
+                            group_id=instance.group_id,
+                            oco_id=instance.id
                         )
                     return instance
         except InsufficientBalance:
@@ -100,7 +106,7 @@ class OCOSerializer(OrderSerializer):
 
     class Meta:
         model = OCO
-        fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'price', 'stop_loss_price', 'side',
+        fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'price', 'stop_loss_price', 'stop_loss_trigger_price', 'side',
                   'completed', 'market', 'canceled_at')
         read_only_fields = ('id', 'created', 'canceled_at')
         extra_kwargs = {

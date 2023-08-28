@@ -15,18 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 class OCOManager(models.Manager):
-    def __init__(self, *args, **kwargs):
-        self.open_only = kwargs.pop('open_only', False)
-        self.not_triggered_only = kwargs.pop('not_triggered_only', False)
-        super(OCOManager, self).__init__(*args, **kwargs)
 
     def get_queryset(self):
-        if self.open_only:
-            return super().get_queryset().filter(canceled_at__isnull=True, filled_amount__lt=F('amount'))
-        if self.not_triggered_only:
-            # TODO handle
-            return super().get_queryset().filter(canceled_at__isnull=True, filled_amount__lt=F('amount'))
-        return super().get_queryset()
+        return super().get_queryset().filter(canceled_at__isnull=True)
 
 
 class OCO(models.Model):
@@ -40,7 +31,7 @@ class OCO(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     symbol = models.ForeignKey('market.PairSymbol', on_delete=models.PROTECT)
     amount = get_amount_field()
-    filled_amount = get_amount_field(default=Decimal(0))
+    releasable_lock = get_amount_field()
     stop_loss_price = get_amount_field()
     stop_loss_trigger_price = get_amount_field()
     price = get_amount_field(null=True)
@@ -51,6 +42,16 @@ class OCO(models.Model):
     group_id = models.UUIDField(default=uuid4)
 
     login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
+
+    @property
+    def filled_amount(self):
+        order = self.order_set.first()
+        if order.filled_amount:
+            return order.filled_amount
+        if hasattr(self, 'stoploss'):
+            return self.stoploss.filled_amount
+        return Decimal(0)
+
 
     @property
     def unfilled_amount(self):
@@ -67,9 +68,7 @@ class OCO(models.Model):
         pipeline.new_lock(key=self.group_id, wallet=lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 
     objects = models.Manager()
-    live_objects = OCOManager()
-    open_objects = OCOManager(open_only=True)
-    not_triggered_objects = OCOManager(not_triggered_only=True)
+    open_objects = OCOManager()
 
     def delete(self, *args, **kwargs):
         self.canceled_at = timezone.now()
@@ -84,6 +83,5 @@ class OCO(models.Model):
             CheckConstraint(check=Q(
                 amount__gte=0,
                 price__gte=0,
-                filled_amount__gte=0
             ), name='check_market_OCO_amounts', ),
         ]
