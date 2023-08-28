@@ -38,7 +38,7 @@ class User(AbstractUser):
 
     PROMOTIONS = SHIB, VOUCHER, PEPE = 'true', 'voucher', 'pepe'
 
-    USERNAME_FIELD = 'username'
+    USERNAME_FIELD = 'phone'
 
     FIAT, CRYPTO = 'fiat', 'crypto'
 
