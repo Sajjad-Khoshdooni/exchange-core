@@ -122,7 +122,7 @@ class AnotherUserFilter(SimpleListFilter):
 class UserCommentInLine(admin.TabularInline):
     model = UserComment
     extra = 1
-    fields = ('comment', 'created', 'user')
+    fields = ('comment', 'created', )
     readonly_fields = ('user', 'created')
 
 
