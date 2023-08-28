@@ -38,7 +38,7 @@ class User(AbstractUser):
 
     PROMOTIONS = SHIB, VOUCHER, PEPE = 'true', 'voucher', 'pepe'
 
-    USERNAME_FIELD = 'phone'
+    USERNAME_FIELD = 'username'
 
     FIAT, CRYPTO = 'fiat', 'crypto'
 
@@ -184,6 +184,20 @@ class User(AbstractUser):
 
         account, _ = Account.objects.get_or_create(user=self)
         return account
+
+    @staticmethod
+    def mask_mobile_number(phone_number: str):
+        first = phone_number[:4]
+        last = phone_number[-4:]
+        masked = first + '*' * len(phone_number[4:-4]) + last
+        return masked
+
+    def get_username(self):
+        username = self.username
+        if username.__contains__('@'):
+            return username
+        else:
+            return self.mask_mobile_number(username)
 
     @property
     def kyc_bank_card(self):
