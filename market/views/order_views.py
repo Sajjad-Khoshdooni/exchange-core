@@ -16,9 +16,10 @@ from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from accounts.authentication import TradeTokenAuthentication, CustomTokenAuthentication
 from accounts.views.jwt_views import DelegatedAccountMixin, user_has_delegate_permission
 from ledger.models.wallet import ReserveWallet
-from market.models import Order, CancelRequest, PairSymbol
+from market.models import Order, CancelRequest, PairSymbol, OCO
 from market.models import StopLoss, Trade
 from market.serializers.cancel_request_serializer import CancelRequestSerializer
+from market.serializers.oco_serializer import OCOSerializer
 from market.serializers.order_serializer import OrderIDSerializer, OrderSerializer
 from market.serializers.order_stoploss_serializer import OrderStopLossSerializer
 from market.serializers.stop_loss_serializer import StopLossSerializer
@@ -180,6 +181,28 @@ class StopLossViewSet(ModelViewSet, DelegatedAccountMixin):
         account, variant = self.get_account_variant(self.request)
         return {
             **super(StopLossViewSet, self).get_serializer_context(),
+            'account': account,
+            'variant': variant,
+        }
+
+
+class OCOViewSet(ModelViewSet, DelegatedAccountMixin):
+    authentication_classes = (SessionAuthentication, JWTAuthentication)
+    permission_classes = (IsAuthenticated,)
+    pagination_class = LimitOffsetPagination
+
+    serializer_class = OCOSerializer
+
+    filter_backends = [DjangoFilterBackend]
+    # filter_class = StopLossFilter
+
+    def get_queryset(self):
+        return OCO.objects.filter(wallet__account=self.get_account_variant(self.request)[0]).order_by('-created')
+
+    def get_serializer_context(self):
+        account, variant = self.get_account_variant(self.request)
+        return {
+            **super(OCOViewSet, self).get_serializer_context(),
             'account': account,
             'variant': variant,
         }

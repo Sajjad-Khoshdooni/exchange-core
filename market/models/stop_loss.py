@@ -54,6 +54,8 @@ class StopLoss(models.Model):
 
     group_id = models.UUIDField(default=uuid4)
 
+    oco = models.OneToOneField(to='market.OCO', on_delete=models.SET_NULL, null=True, blank=True)
+
     login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
 
     @property
@@ -78,6 +80,8 @@ class StopLoss(models.Model):
     def delete(self, *args, **kwargs):
         self.canceled_at = timezone.now()
         self.save(update_fields=['canceled_at'])
+        if self.oco:
+            self.oco.cancel_another(self.oco.ORDER, delete_oco=True)
 
     def hard_delete(self):
         super(StopLoss, self).delete()
@@ -92,6 +96,11 @@ class StopLoss(models.Model):
         log_prefix = 'MM %s {%s}: ' % (order.symbol.name, order.id)
         logger.info(
             log_prefix + f'to trigger stop loss: {list(to_trigger_stop_loss_qs.values_list("id", flat=True))} {timezone.now()}')
+
+        for stop_loss in to_trigger_stop_loss_qs:
+            if stop_loss.oco:
+                stop_loss.oco.cancel_another(stop_loss.oco.ORDER)
+
         for stop_loss in to_trigger_stop_loss_qs:
             from market.utils.order_utils import trigger_stop_loss
             triggered_price = min_price if stop_loss.side == SELL else max_price
@@ -102,6 +111,9 @@ class StopLoss(models.Model):
                 to_cancel_stop_loss.append(to_cancel)
         if to_cancel_stop_loss:
             matched_trades.to_cancel_stoploss = to_cancel_stop_loss
+
+    def __str__(self):
+        return f'({self.id}) {self.symbol}-{self.side}'
 
     class Meta:
         # todo: add constraint filled_amount <= amount

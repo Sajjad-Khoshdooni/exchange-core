@@ -110,6 +110,7 @@ class Order(models.Model):
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
     stop_loss = models.ForeignKey(to='market.StopLoss', on_delete=models.SET_NULL, null=True, blank=True)
+    oco = models.ForeignKey(to='market.OCO', on_delete=models.SET_NULL, null=True, blank=True)
 
     time_in_force = models.CharField(
         max_length=4,
@@ -151,6 +152,9 @@ class Order(models.Model):
     open_objects = OpenOrderManager()
 
     def cancel(self):
+        if self.oco:
+            self.oco.cancel_another(self.oco.STOPLOSS, delete_oco=True)
+
         # to increase performance
         if self.status != self.NEW:
             return
@@ -214,7 +218,16 @@ class Order(models.Model):
             return amount * price
         return amount * price if side == BUY else amount
 
-    def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False) -> MatchedTrades:
+    def handle_oco_updates(self, pipeline):
+        self.oco.cancel_another(self.oco.STOPLOSS)
+
+        if self.side == BUY and self.oco.releasable_lock:
+            oco = self.oco
+            pipeline.release_lock(key=self.group_id, amount=oco.releasable_lock)
+            oco.releasable_lock = Decimal(0)
+            oco.save(update_fields=['releasable_lock'])
+
+    def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False, is_oco: bool = False) -> MatchedTrades:
         overriding_fill_amount = None
         if is_stop_loss:
             if self.side == BUY:
@@ -223,7 +236,7 @@ class Order(models.Model):
                     overriding_fill_amount = floor_precision(locked_amount / self.price, self.symbol.step_size)
                     if not overriding_fill_amount:
                         raise CancelOrder('Overriding fill amount is zero')
-        else:
+        elif not is_oco:
             overriding_fill_amount = self.acquire_lock(pipeline)
 
         matched_trades = self.make_match(pipeline, overriding_fill_amount)
@@ -312,6 +325,7 @@ class Order(models.Model):
         taker_is_system = self.wallet.account.is_system() or (
                 hedging_usdt and self.account_id == settings.TRADER_ACCOUNT_ID)
 
+        oco_orders = [self] if self.oco else []
         for maker_order in matching_orders:
             trade_price = maker_order.price
 
@@ -388,6 +402,8 @@ class Order(models.Model):
                     maker_order.save(update_fields=['status'])
                     filled_orders.append(maker_order)
 
+            oco_orders.append(maker_order)
+
             if unfilled_amount == 0:
                 self.status = Order.FILLED
 
@@ -410,6 +426,10 @@ class Order(models.Model):
             symbol.last_trade_price = trades[-1].price
             symbol.save(update_fields=['last_trade_time', 'last_trade_price'])
             set_last_trade_price(symbol)
+
+            for oco_order in oco_orders:
+                oco_order.handle_oco_updates(pipeline)
+
             trade_revenues = []
             for maker_trade, taker_trade in trade_pairs:
                 if maker_trade.trade_source in (Trade.SYSTEM_MAKER, Trade.SYSTEM_TAKER):
