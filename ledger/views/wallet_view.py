@@ -77,8 +77,6 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        precision = None
-
         return get_presentation_amount(wallet.balance + self.get_debt(asset))
 
     def get_balance_irt(self, asset: Asset):
@@ -87,8 +85,13 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not balance:
             return 0
 
-        price = self.get_ext_price_irt(asset.symbol)
-        return get_symbol_presentation_amount(asset.symbol + 'IRT', balance * price, trunc_zero=True)
+        if asset.symbol == Asset.IRT:
+            value = balance
+        else:
+            price = self.get_ext_price_irt(asset.symbol)
+            value = balance * price
+
+        return get_symbol_presentation_amount(asset.symbol + 'IRT', value, trunc_zero=True)
 
     def get_ext_price_irt(self, coin: str):
         price = self.context.get('market_prices', {'IRT': {}})['IRT'].get(coin, 0)
