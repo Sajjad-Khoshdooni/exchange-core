@@ -24,6 +24,7 @@ class OCO(models.Model):
     STOPLOSS = 'stoploss'
     ORDER = 'order'
     NEW = 'new'
+    CANCELED = 'canceled'
     TRIGGERED = 'triggered'
     FILLED = 'filled'
     BUY, SELL = 'buy', 'sell'
