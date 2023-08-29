@@ -1,7 +1,5 @@
 import re
-from datetime import timedelta
 
-from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
@@ -9,10 +7,10 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from ledger.models import AddressBook, Asset, Network, NetworkAsset, Transfer
+from accounts.models.phone_verification import VerificationCode
+from ledger.models import AddressBook, Asset, Network, NetworkAsset
 from ledger.models.asset import AssetSerializerMini
 from ledger.views.wallet_view import NetworkAssetSerializer
-from accounts.models.phone_verification import VerificationCode
 
 
 class AddressBookCreateSerializer(serializers.ModelSerializer):
@@ -42,13 +40,15 @@ class AddressBookCreateSerializer(serializers.ModelSerializer):
         if not re.match(network.address_regex, address):
             raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
 
-        sms_verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK,
-                                                             user)
-        if not sms_verification_code:
-            raise ValidationError({'code': 'کد نامعتبر است.'})
-        sms_verification_code.set_code_used()
-        if not user.is_2fa_valid(totp):
-            raise ValidationError({'token': 'رمز موقت صحیح نمی‌باشد.'})
+        if not AddressBook.is_address_used_in_24h(address):
+            sms_verification_code = VerificationCode.get_by_code(sms_code, user.phone,
+                                                                 VerificationCode.SCOPE_ADDRESS_BOOK,
+                                                                 user)
+            if not sms_verification_code:
+                raise ValidationError({'code': 'کد نامعتبر است.'})
+            sms_verification_code.set_code_used()
+            if not user.is_2fa_valid(totp):
+                raise ValidationError({'token': 'رمز موقت صحیح نمی‌باشد.'})
         return {
             'account': account,
             'network': network,
@@ -56,9 +56,6 @@ class AddressBookCreateSerializer(serializers.ModelSerializer):
             'name': name,
             'address': address,
         }
-
-    def is_address_used_in_24h(self, address: str) -> bool:
-        return Transfer.objects.filter(out_address=address, created__gte=timezone.now() - timedelta(days=1)).exists()
 
     def get_network_info(self, address_book: AddressBook):
         coin = self.context.get('coin')
@@ -71,7 +68,8 @@ class AddressBookCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = AddressBook
         fields = (
-        'id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'network_info', 'sms_code', 'totp')
+            'id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'network_info', 'sms_code',
+            'totp')
 
 
 class AddressBookDestroySerializer(serializers.Serializer):
