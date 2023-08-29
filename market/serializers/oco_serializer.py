@@ -57,7 +57,8 @@ class OCOSerializer(OrderSerializer):
                 lock_amount = Order.get_to_lock_amount(
                     validated_data['amount'],
                     max(validated_data['price'], validated_data['stop_loss_price']),
-                    validated_data['side']
+                    validated_data['side'],
+                    wallet.market
                 )
                 releasable_lock = Decimal(0)
                 if validated_data['side'] == BUY:
