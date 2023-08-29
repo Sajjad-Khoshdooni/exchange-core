@@ -228,6 +228,7 @@ class Order(models.Model):
             oco.save(update_fields=['releasable_lock'])
 
     def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False, is_oco: bool = False) -> MatchedTrades:
+        PairSymbol.objects.select_for_update().get(id=self.symbol_id)
         overriding_fill_amount = None
         if is_stop_loss:
             if self.side == BUY:
@@ -273,7 +274,7 @@ class Order(models.Model):
         from market.utils.trade import register_transactions, TradesPair
         from market.models import Trade
 
-        symbol = PairSymbol.objects.select_for_update().get(id=self.symbol_id)
+        symbol = self.symbol
 
         log_prefix = 'MM %s {%s}: ' % (symbol.name, self.id)
 
