@@ -1,5 +1,7 @@
 import re
+from datetime import timedelta
 
+from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
@@ -40,7 +42,8 @@ class AddressBookCreateSerializer(serializers.ModelSerializer):
         if not re.match(network.address_regex, address):
             raise ValidationError('آدرس به فرمت درستی وارد نشده است.')
 
-        sms_verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user)
+        sms_verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK,
+                                                             user)
         if not sms_verification_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
         sms_verification_code.set_code_used()
@@ -54,6 +57,9 @@ class AddressBookCreateSerializer(serializers.ModelSerializer):
             'address': address,
         }
 
+    def is_address_used_in_24h(self, address: str) -> bool:
+        return Transfer.objects.filter(out_address=address, created__gte=timezone.now() - timedelta(days=1)).exists()
+
     def get_network_info(self, address_book: AddressBook):
         coin = self.context.get('coin')
 
@@ -64,7 +70,8 @@ class AddressBookCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AddressBook
-        fields = ('id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'network_info', 'sms_code', 'totp')
+        fields = (
+        'id', 'name', 'account', 'network', 'asset', 'coin', 'address', 'deleted', 'network_info', 'sms_code', 'totp')
 
 
 class AddressBookDestroySerializer(serializers.Serializer):
@@ -74,7 +81,8 @@ class AddressBookDestroySerializer(serializers.Serializer):
     def validate(self, data):
         user = self.context['request'].user
         sms_code = data.get('sms_code')
-        verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK, user)
+        verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_ADDRESS_BOOK,
+                                                         user)
         if not verification_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
         verification_code.set_code_used()
@@ -91,7 +99,8 @@ class AddressBookView(ModelViewSet):
 
     def get_queryset(self):
         query_params = self.request.query_params
-        address_books = AddressBook.objects.filter(deleted=False, account=self.request.user.get_account()).order_by('-id')
+        address_books = AddressBook.objects.filter(deleted=False, account=self.request.user.get_account()).order_by(
+            '-id')
 
         if 'coin' in query_params:
             address_books = address_books.filter(asset__symbol=query_params['coin'])
