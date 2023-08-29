@@ -146,11 +146,6 @@ class User(AbstractUser):
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
 
-    withdraw_before_48h_option = models.BooleanField(
-        default=False,
-        verbose_name='امکان برداشت وجه پیش از سپری شدن ۴۸ ساعت از اولین واریز',
-    )
-
     can_withdraw = models.BooleanField(default=True)
     can_withdraw_crypto = models.BooleanField(default=True)
     can_trade = models.BooleanField(default=True)
@@ -235,7 +230,7 @@ class User(AbstractUser):
             if self.level == User.LEVEL1:
                 if User.objects.filter(level__gte=User.LEVEL2, national_code=self.national_code).exclude(id=self.id):
                     self.national_code_verified = False
-                    self.save(update_fields=['national_code_verified'])
+                    self.save(update_fields=['verify_status', 'national_code_verified'])
                     return self.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
 
             self.level += 1

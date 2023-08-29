@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 from uuid import uuid4
 
 from django.conf import settings
@@ -8,11 +9,13 @@ from django.db.models import F, Sum
 from _base.settings import OTC_ACCOUNT_ID
 from accounting.models import TradeRevenue
 from accounts.models import Account
+from accounts.utils.admin import url_to_admin_list, url_to_edit_object
+from accounts.utils.telegram import send_system_message
 from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet, Asset
 from ledger.utils.external_price import SELL, BUY
 from ledger.utils.fields import get_amount_field
-from ledger.utils.precision import floor_precision
+from ledger.utils.precision import floor_precision, get_symbol_presentation_amount
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.exceptions import NegativeGapRevenue
 from market.models import Trade, PairSymbol
@@ -44,6 +47,8 @@ class OTCTrade(models.Model):
 
     gap_revenue = get_amount_field(default=0)
     order_id = models.PositiveIntegerField(null=True, blank=True)
+    to_buy_amount = get_amount_field(default=0, validators=())
+    hedged = models.BooleanField(default=False, db_index=True)
 
     def change_status(self, status: str):
         self.status = status
@@ -92,6 +97,8 @@ class OTCTrade(models.Model):
             otc_trade = OTCTrade.objects.create(
                 otc_request=otc_request,
                 execution_type=OTCTrade.MARKET,
+                to_buy_amount=otc_request.amount if otc_request.side == BUY else -otc_request.amount,
+                hedged=True
             )
 
             fok_success = otc_trade.try_fok_fill(pipeline)
@@ -103,7 +110,8 @@ class OTCTrade(models.Model):
                     })
                     raise HedgeError
                 otc_trade.execution_type = OTCTrade.PROVIDER
-                otc_trade.save(update_fields=['execution_type'])
+                otc_trade.hedged = False
+                otc_trade.save(update_fields=['execution_type', 'hedged'])
                 pipeline.new_lock(key=otc_trade.group_id, wallet=from_wallet, amount=amount,
                                   reason=WalletPipeline.TRADE)
 
@@ -136,21 +144,9 @@ class OTCTrade(models.Model):
                 trades_base_sum = Trade.objects.filter(order_id=fok_order.id).aggregate(
                     sum=Sum(F('amount') * F('price'))
                 )['sum'] or 0
-                if symbol.base_asset.symbol == Asset.USDT:
-                    base_usdt_price = 1
-                else:
-                    opposite_side = Order.get_opposite_side(self.otc_request.side)
-                    usdt_irt = PairSymbol.objects.get(name='USDTIRT')
-                    usdt_hedge_price = Order.get_top_price(usdt_irt.id, opposite_side)
-                    if usdt_hedge_price:
-                        base_usdt_price = 1 / usdt_hedge_price
-                        self.otc_request.base_usdt_price = base_usdt_price
-                        self.otc_request.save(update_fields=['base_usdt_price'])
-                    else:
-                        base_usdt_price = self.otc_request.base_usdt_price
 
                 otc_base_amount = self.otc_request.amount * self.otc_request.price
-                self.gap_revenue = (otc_base_amount - trades_base_sum) * base_usdt_price
+                self.gap_revenue = (otc_base_amount - trades_base_sum) * self.otc_request.base_usdt_price
                 if self.otc_request.side == SELL:
                     self.gap_revenue = -self.gap_revenue
 
@@ -209,6 +205,28 @@ class OTCTrade(models.Model):
         from gamify.utils import check_prize_achievements, Task
         check_prize_achievements(account, Task.TRADE)
 
+        req = self.otc_request
+
+        if not req.symbol.asset.hedge and req.symbol.asset.symbol != Asset.USDT:
+            amount_present = get_symbol_presentation_amount(req.symbol.name, req.amount, trunc_zero=True)
+
+            send_system_message(
+                message=f"New unhedged trade: {req.side} {amount_present} {req.symbol.asset} ({round(req.usdt_value, 1)}$)",
+                link=url_to_edit_object(self)
+            )
+
+    def get_pending_hedge_trades(self):
+        return OTCTrade.objects.filter(
+            otc_request__symbol__asset=self.otc_request.symbol.asset,
+            hedged=False,
+            status=OTCTrade.DONE,
+        )
+
+    def get_pending_to_buy_amount(self):
+        return self.get_pending_hedge_trades().aggregate(
+            to_buy=Sum('to_buy_amount')
+        )['to_buy'] or Decimal(0)
+
     def hedge_with_provider(self, hedge: bool = True):
         assert self.execution_type == self.PROVIDER
 
@@ -224,8 +242,7 @@ class OTCTrade(models.Model):
                 hedged = get_provider_requester().try_hedge_new_order(
                     request_id=_key,
                     asset=req.symbol.asset,
-                    side=req.side,
-                    amount=req.amount,
+                    buy_amount=self.get_pending_to_buy_amount(),
                     scope=TRADE
                 )
 
@@ -253,6 +270,7 @@ class OTCTrade(models.Model):
 
                 if hedged:
                     hedge_key = _key
+                    self.get_pending_hedge_trades().update(hedged=True)
 
             from accounting.models.revenue import TradeRevenue
             TradeRevenue.new(

@@ -95,6 +95,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
         'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount', 'get_risks',
         'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user', 'login_activity'
     )
+    search_fields = ('bank_account__iban', 'bank_account__user__phone')
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
 
@@ -225,7 +226,7 @@ class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'get_amount', 'get_fee', 'status', 'ref_id', 'ref_status', 'get_user',)
     list_filter = (PaymentUserFilter, 'status', )
     search_fields = ('ref_id', 'paymentrequest__bank_card__card_pan', 'amount',
-                     'paymentrequest__authority')
+                     'paymentrequest__authority', 'paymentrequest__bank_card__user__phone')
     readonly_fields = ('user', 'group_id')
 
     @admin.display(description='مقدار')
@@ -365,7 +366,7 @@ class MarketingCostAdmin(admin.ModelAdmin):
 @admin.register(ManualTransfer)
 class ManualTransferAdmin(admin.ModelAdmin):
     list_display = ('created', 'amount', 'bank_account', 'status')
-    readonly_fields = ('status', )
+    readonly_fields = ('status', 'group_id', 'ref_id')
 
     def save_model(self, request, obj: ManualTransfer, form, change):
         obj.save()
@@ -373,12 +374,7 @@ class ManualTransferAdmin(admin.ModelAdmin):
         if obj.status == ManualTransfer.PROCESS:
             handler = FiatWithdraw.get_withdraw_channel(obj.gateway)
 
-            handler.create_withdraw(
-                wallet_id=handler.gateway.wallet_id,
-                receiver=obj.bank_account,
-                amount=obj.amount,
-                request_id='mt-%s' % obj.id
-            )
+            handler.create_withdraw(transfer=obj)
 
             obj.status = ManualTransfer.DONE
             obj.save(update_fields=['status'])
@@ -445,12 +441,27 @@ class BankPaymentRequestResource(resources.ModelResource):
         fields = ('created', 'amount', 'ref_id', 'description', 'user', )
 
 
+class BankPaymentUserFilter(SimpleListFilter):
+    title = 'user'
+    parameter_name = 'user'
+
+    def lookups(self, request, model_admin):
+        users = User.objects.filter(userfeatureperm__feature=UserFeaturePerm.BANK_PAYMENT).order_by('id')
+        return [(u.id, u.username) for u in users]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(user_id__exact=self.value())
+        else:
+            return queryset
+
+
 @admin.register(BankPaymentRequest)
 class BankPaymentRequestAdmin(ExportMixin, admin.ModelAdmin):
     list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type', 'payment')
     readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview', 'payment')
     actions = ('accept_payment', )
-    list_filter = (BankPaymentRequestAcceptFilter, 'user')
+    list_filter = (BankPaymentRequestAcceptFilter, BankPaymentUserFilter)
     resource_classes = [BankPaymentRequestResource]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):

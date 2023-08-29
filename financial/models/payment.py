@@ -82,7 +82,7 @@ class Payment(models.Model):
 
     user = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
 
-    amount = models.PositiveIntegerField()
+    amount = models.PositiveBigIntegerField()
     fee = models.PositiveIntegerField()
 
     status = get_status_field()

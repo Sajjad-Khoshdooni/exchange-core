@@ -4,6 +4,7 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.models import Wallet
 from ledger.models.asset import Asset, AssetSerializerMini
 from ledger.utils.external_price import get_external_price, BUY
+from ledger.utils.precision import get_symbol_presentation_amount
 
 
 class MarginAssetListSerializer(AssetSerializerMini):
@@ -25,7 +26,7 @@ class MarginAssetListSerializer(AssetSerializerMini):
         if not wallet:
             return '0'
 
-        return asset.get_presentation_amount(wallet.balance)
+        return wallet.balance
 
     def get_balance_usdt(self, asset: Asset):
         wallet = self.get_wallet(asset)
@@ -35,7 +36,8 @@ class MarginAssetListSerializer(AssetSerializerMini):
 
         price = get_external_price(coin=wallet.asset.symbol, base_coin=Asset.USDT, side=BUY, allow_stale=True)
         amount = wallet.balance * price
-        return asset.get_presentation_price_usdt(amount)
+
+        return get_symbol_presentation_amount(asset.symbol + 'USDT', amount)
 
     def get_free(self, asset: Asset):
         wallet = self.get_wallet(asset)
@@ -43,7 +45,7 @@ class MarginAssetListSerializer(AssetSerializerMini):
         if not wallet:
             return '0'
 
-        return asset.get_presentation_amount(wallet.get_free())
+        return wallet.get_free()
 
     def get_borrowed(self, asset: Asset):
         loan = self.get_loan_wallet(asset)
@@ -51,7 +53,7 @@ class MarginAssetListSerializer(AssetSerializerMini):
         if not loan:
             return '0'
 
-        return asset.get_presentation_amount(-loan.balance)
+        return -loan.balance
 
     def get_equity(self, asset: Asset):
         wallet = self.get_wallet(asset)
@@ -67,7 +69,7 @@ class MarginAssetListSerializer(AssetSerializerMini):
         else:
             loan_value = 0
 
-        return asset.get_presentation_amount(loan_value + wallet_value)
+        return loan_value + wallet_value
 
     class Meta:
         model = Asset

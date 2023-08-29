@@ -5,7 +5,6 @@ from django.utils.safestring import mark_safe
 
 from accounts.models import User
 from accounts.utils.admin import url_to_admin_list
-from ledger.models import Trx
 from ledger.utils.precision import get_presentation_amount
 from .models import StakeRequest, StakeRevenue, StakeOption
 

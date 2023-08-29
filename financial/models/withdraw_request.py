@@ -29,7 +29,19 @@ from ledger.utils.wallet_pipeline import WalletPipeline
 logger = logging.getLogger(__name__)
 
 
-class FiatWithdrawRequest(models.Model):
+class BaseTransfer(models.Model):
+    created = models.DateTimeField(auto_now_add=True, db_index=True)
+    amount = models.PositiveIntegerField(verbose_name='میزان برداشت')
+    gateway = models.ForeignKey('Gateway', on_delete=models.PROTECT)
+    bank_account = models.ForeignKey(to=BankAccount, on_delete=models.PROTECT, verbose_name='حساب بانکی')
+    group_id = get_group_id_field()
+    ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
+
+    class Meta:
+        abstract = True
+
+
+class FiatWithdrawRequest(BaseTransfer):
     history = HistoricalRecords()
 
     STATUSES = INIT, PROCESSING, PENDING, CANCELED, DONE, REFUND = \
@@ -37,12 +49,6 @@ class FiatWithdrawRequest(models.Model):
 
     FREEZE_TIME = 3 * 60
 
-    created = models.DateTimeField(auto_now_add=True)
-    group_id = get_group_id_field()
-
-    bank_account = models.ForeignKey(to=BankAccount, on_delete=models.PROTECT, verbose_name='حساب بانکی')
-
-    amount = models.PositiveIntegerField(verbose_name='میزان برداشت')
     fee_amount = models.PositiveIntegerField(verbose_name='کارمزد')
 
     status = models.CharField(
@@ -53,14 +59,10 @@ class FiatWithdrawRequest(models.Model):
         ]
     )
 
-    ref_id = models.CharField(max_length=128, blank=True, verbose_name='شماره پیگیری')
-
     comment = models.TextField(verbose_name='نظر', blank=True)
 
     withdraw_datetime = models.DateTimeField(null=True, blank=True)
     receive_datetime = models.DateTimeField(null=True, blank=True)
-
-    gateway = models.ForeignKey('Gateway', on_delete=models.PROTECT)
 
     risks = models.JSONField(null=True, blank=True)
     login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
@@ -105,28 +107,10 @@ class FiatWithdrawRequest(models.Model):
         from financial.utils.withdraw import ProviderError
         from financial.utils.withdraw import FiatWithdraw
 
-        wallet_id = self.gateway.wallet_id
         api_handler = FiatWithdraw.get_withdraw_channel(self.gateway)
 
-        wallet = api_handler.get_wallet_data(wallet_id)
-
-        if wallet.free < self.amount:
-            logger.info(f'Not enough wallet balance to full fill bank acc')
-
-            link = url_to_edit_object(self)
-            send_support_message(
-                message='موجودی هیچ یک از کیف پول‌ها برای انجام این تراکنش کافی نیست.',
-                link=link
-            )
-            return
-
         try:
-            withdraw = api_handler.create_withdraw(
-                wallet_id,
-                self.bank_account,
-                self.amount,
-                self.id
-            )
+            withdraw = api_handler.create_withdraw(transfer=self)
             self.ref_id = withdraw.tracking_id
             self.withdraw_datetime = timezone.now()
             self.receive_datetime = withdraw.receive_datetime
@@ -143,7 +127,7 @@ class FiatWithdrawRequest(models.Model):
         from financial.utils.withdraw import FiatWithdraw
 
         withdraw_handler = FiatWithdraw.get_withdraw_channel(self.gateway)
-        withdraw_data = withdraw_handler.get_withdraw_status(self.id, self.ref_id)
+        withdraw_data = withdraw_handler.get_withdraw_status(self)
         status = withdraw_data.status
 
         logger.info(f'FiatRequest {self.id} status: {status}')
@@ -253,7 +237,6 @@ class FiatWithdrawRequest(models.Model):
 
 @receiver(post_save, sender=FiatWithdrawRequest)
 def handle_withdraw_request_save(sender, instance, created, **kwargs):
-
     if instance.status != FiatWithdrawRequest.DONE or settings.DEBUG_OR_TESTING_OR_STAGING:
         return
 

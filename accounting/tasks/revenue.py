@@ -41,6 +41,8 @@ def fill_revenue_filled_prices():
                 quote_cum_usdt=Sum(F('amount') * F('price') * F('base_usdt_price')),
                 amount_sum=Sum('amount'),
             )
+            # TODO: gap_revenue will be a little negative because of base usdt price field in
+            #  Trade decimal places (8 != 20)
 
             filled_amount = info['amount_sum'] or 0
 

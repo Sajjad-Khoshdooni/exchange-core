@@ -4,12 +4,13 @@ from typing import Union
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Min, Max
 from rest_framework import serializers
 
 from _base.settings import SYSTEM_ACCOUNT_ID, OTC_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
-from ledger.utils.external_price import BUY, SELL
+from ledger.utils.external_price import BUY, SELL, get_external_usdt_prices, get_external_price
 from ledger.utils.precision import get_presentation_amount
 
 
@@ -44,9 +45,6 @@ class Asset(models.Model):
     symbol = models.CharField(max_length=16, unique=True, db_index=True)
     original_symbol = models.CharField(max_length=16, blank=True)
 
-    price_precision_usdt = models.SmallIntegerField(default=2)
-    price_precision_irt = models.SmallIntegerField(default=0)
-
     enable = models.BooleanField(default=False)
     order = models.SmallIntegerField(default=0, db_index=True)
 
@@ -57,7 +55,7 @@ class Asset(models.Model):
     hedge = models.BooleanField(default=True)
 
     margin_enable = models.BooleanField(default=False)
-    spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.PROTECT, null=True, blank=True)
+    spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.SET_NULL, null=True, blank=True)
 
     publish_date = models.DateTimeField(null=True, blank=True)
 
@@ -68,6 +66,8 @@ class Asset(models.Model):
     )
 
     price_page = models.BooleanField(default=False)
+
+    distribution_factor = models.FloatField(default=0)
 
     class Meta:
         ordering = ('-pin_to_top', '-trend', 'order', )
@@ -96,6 +96,7 @@ class Asset(models.Model):
         elif isinstance(account, Account):
             account_filter = {'account': account}
             account_type = account.type
+
         else:
             raise NotImplementedError
 
@@ -106,7 +107,7 @@ class Asset(models.Model):
             **account_filter,
             defaults={
                 'check_balance': account_type == Account.ORDINARY,
-                'expiration': expiration
+                'expiration': expiration,
             }
         )
 
@@ -121,15 +122,6 @@ class Asset(models.Model):
 
     def is_trade_base(self):
         return self.symbol in (self.IRT, self.USDT)
-
-    def get_presentation_amount(self, amount: Decimal) -> str:
-        return get_presentation_amount(amount, self.get_precision())
-
-    def get_presentation_price_irt(self, price: Decimal) -> str:
-        return get_presentation_amount(price, self.price_precision_irt)
-
-    def get_presentation_price_usdt(self, price: Decimal) -> str:
-        return get_presentation_amount(price, self.price_precision_usdt)
 
     def get_original_symbol(self):
         return self.original_symbol or self.symbol
@@ -150,6 +142,37 @@ class Asset(models.Model):
             return '1000SHIB'
         else:
             return self.symbol
+
+    @staticmethod
+    def get_current_prices(coins, allow_stale: bool = False):
+        prices = get_external_usdt_prices(
+            coins=coins,
+            side=SELL,
+            apply_otc_spread=True,
+            allow_stale=allow_stale
+        )
+        market_prices = {}
+        from market.models import Order
+        for base_asset in ('IRT', 'USDT'):
+            market_prices[base_asset] = {
+                o['symbol__name'].replace(base_asset, ''): o['best_ask'] for o in Order.open_objects.filter(
+                    side=SELL,
+                    symbol__enable=True,
+                    symbol__name__in=map(lambda s: f'{s}{base_asset}', coins)
+                ).values('symbol__name').annotate(best_ask=Min('price'))
+            }
+        market_prices['USDT']['IRT'] = Decimal(1) / Order.open_objects.filter(
+            side=BUY,
+            symbol__enable=True,
+            symbol__name='USDTIRT'
+        ).aggregate(best_bid=Max('price'))['best_bid']
+
+        tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=allow_stale)
+
+        prices[Asset.IRT] = Decimal(1) / get_external_price(
+            coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=allow_stale)
+
+        return prices, market_prices, tether_irt
 
 
 class AssetSerializer(serializers.ModelSerializer):

@@ -1,14 +1,12 @@
 import logging
 from collections import defaultdict
-from dataclasses import dataclass
 from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
-from random import randrange, random
-from time import time
 from typing import Union
 from uuid import uuid4
 
+from dataclasses import dataclass
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum, UniqueConstraint
@@ -21,8 +19,7 @@ from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
 from ledger.utils.external_price import get_external_price, BUY, SELL, SIDE_VERBOSE
 from ledger.utils.fields import get_amount_field, get_group_id_field
-from ledger.utils.otc import get_otc_spread, spread_to_multiplier
-from ledger.utils.precision import floor_precision, round_down_to_exponent, round_up_to_exponent, decimal_to_str
+from ledger.utils.precision import floor_precision, decimal_to_str
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol, BaseTrade
 from market.utils.price import set_last_trade_price
@@ -158,7 +155,6 @@ class Order(models.Model):
         if self.status != self.NEW:
             return
 
-        from market.utils.redis import MarketStreamCache
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             PairSymbol.objects.select_for_update().get(id=self.symbol_id)
             order = Order.objects.filter(status=Order.NEW, id=self.id).first()
@@ -170,7 +166,7 @@ class Order(models.Model):
             order.save(update_fields=['status'])
             pipeline.release_lock(key=order.group_id)
 
-        MarketStreamCache().execute(self.symbol, [order], side=order.side, canceled=True)
+            pipeline.add_market_cache_data(self.symbol, [order], side=order.side, canceled=True)
 
     @property
     def base_wallet(self):
@@ -211,6 +207,7 @@ class Order(models.Model):
         return amount * price if side == BUY else amount
 
     def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False) -> MatchedTrades:
+        PairSymbol.objects.select_for_update().get(id=self.symbol_id)
         overriding_fill_amount = None
         if is_stop_loss:
             if self.side == BUY:
@@ -270,7 +267,7 @@ class Order(models.Model):
         from market.utils.trade import register_transactions, TradesPair
         from market.models import Trade
 
-        symbol = PairSymbol.objects.select_for_update().get(id=self.symbol_id)
+        symbol = self.symbol
 
         log_prefix = 'MM %s {%s}: ' % (symbol.name, self.id)
 
@@ -301,19 +298,26 @@ class Order(models.Model):
         logger.info(log_prefix + f'make match finished fetching matching orders {len(matching_orders)} {timezone.now()}')
 
         if not matching_orders:
+            if (self.fill_type == Order.MARKET or self.time_in_force == self.IOC) and self.status == Order.NEW:
+                self.status = Order.CANCELED
+                pipeline.release_lock(self.group_id)
+                self.save(update_fields=['status'])
             return MatchedTrades()
 
         trades = []
         filled_orders = []
 
+        opposite_side = Order.get_opposite_side(self.side)
         if settings.ZERO_USDT_HEDGE:
-            opposite_side = Order.get_opposite_side(self.side)
             usdt_symbol_id = PairSymbol.objects.get(name='USDTIRT').id
             tether_irt = Order.get_top_price(usdt_symbol_id, opposite_side)
         else:
-            tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY)
+            tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=opposite_side)
 
-        taker_is_system = self.wallet.account.is_system()
+        hedging_usdt = settings.ZERO_USDT_HEDGE and symbol.name == 'USDTIRT'
+
+        taker_is_system = self.wallet.account.is_system() or (
+                hedging_usdt and self.account_id == settings.TRADER_ACCOUNT_ID)
 
         for maker_order in matching_orders:
             trade_price = maker_order.price
@@ -330,7 +334,8 @@ class Order(models.Model):
             else:
                 base_usdt_price = 1 / tether_irt
 
-            maker_is_system = maker_order.wallet.account.is_system()
+            maker_is_system = maker_order.wallet.account.is_system() or (
+                    hedging_usdt and maker_order.account_id == settings.TRADER_ACCOUNT_ID)
 
             source_map = {
                 (True, True): Trade.SYSTEM,
@@ -414,15 +419,14 @@ class Order(models.Model):
             set_last_trade_price(symbol)
             trade_revenues = []
             for maker_trade, taker_trade in trade_pairs:
-                hedging_usdt = settings.ZERO_USDT_HEDGE and symbol.name == 'USDTIRT'
                 if maker_trade.trade_source in (Trade.SYSTEM_MAKER, Trade.SYSTEM_TAKER):
                     hedge_key = Trade.get_hedge_key(maker_trade, taker_trade)
                     account_ids = (maker_trade.account_id, taker_trade.account_id)
                     ignore_trade_value = settings.OTC_ACCOUNT_ID in account_ids or (
                             hedging_usdt and settings.MARKET_MAKER_ACCOUNT_ID in account_ids)
- 
+
                     trade_revenues.append(TradeRevenue.new(
-                        user_trade=taker_trade if maker_trade.trade_source == Trade.SYSTEM_MAKER else maker_trade, 
+                        user_trade=taker_trade if maker_trade.trade_source == Trade.SYSTEM_MAKER else maker_trade,
                         group_id=taker_trade.group_id,
                         source=TradeRevenue.MAKER if maker_trade.trade_source == Trade.SYSTEM_TAKER else TradeRevenue.TAKER,
                         hedge_key=hedge_key,

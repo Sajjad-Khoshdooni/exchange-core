@@ -1,7 +1,11 @@
 from django.contrib import admin
+from django.contrib.admin import SimpleListFilter
+from django.db.models import Q
+from django.utils import timezone
 
 from gamify import models
-from gamify.utils import clone_mission_template
+from gamify.models import UserMission, Task
+from gamify.utils import clone_mission_template, check_prize_achievements
 
 
 @admin.register(models.MissionJourney)
@@ -46,14 +50,45 @@ class MissionTemplateAdmin(admin.ModelAdmin):
             clone_mission_template(mission)
 
 
-@admin.register(models.UserMission)
+class UserMissionExpiredFilter(SimpleListFilter):
+    title = 'منقضی شده'
+    parameter_name = 'expired'
+
+    def lookups(self, request, model_admin):
+        return [('yes', 'بله'), ('no', 'خیر')]
+
+    def queryset(self, request, queryset):
+        action = self.value()
+
+        if action is None:
+            return queryset
+
+        q = Q(mission__expiration__isnull=False, mission__expiration__lt=timezone.now())
+
+        if action == 'no':
+            q = ~q
+
+        return queryset.filter(q)
+
+
+@admin.register(UserMission)
 class UserMissionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'mission')
+    list_display = ('user', 'mission', 'finished', 'expired', 'get_expiration')
     readonly_fields = ('user', )
-    list_filter = ('mission', )
+    list_filter = ('mission', 'finished', UserMissionExpiredFilter)
+    actions = ('check_achievement', )
+
+    @admin.display(description='expiration', ordering='mission__expiration')
+    def get_expiration(self, user_mission: UserMission):
+        return user_mission.mission.expiration
+
+    @admin.action(description='بررسی جایزه', permissions=['view'])
+    def check_achievement(self, request, queryset):
+        for user_mission in queryset:
+            user_mission.check_achievements()
 
 
-@admin.register(models.Task)
+@admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
     list_display = ('mission', 'scope', 'title', 'type', 'max')
     list_filter = ('mission', )

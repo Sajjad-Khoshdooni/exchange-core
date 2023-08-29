@@ -49,7 +49,7 @@ class PrizeSerializer(serializers.ModelSerializer):
         achievement = prize.achievement
 
         if achievement.type == Achievement.NORMAL or prize.redeemed:
-            return prize.asset.get_presentation_amount(prize.amount)
+            return prize.amount
 
 
 class PrizeView(ModelViewSet):

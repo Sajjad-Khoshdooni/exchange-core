@@ -47,6 +47,10 @@ class RefundWalletSerializer(serializers.Serializer):
         reserve_wallet = ReserveWallet.objects.get(group_id=variant)
         if reserve_wallet.receiver.account != account:
             raise ValidationError(_('Account and Variant do not match together.'))
+        
+        if reserve_wallet.refund_completed:
+            return True
+
         try:
             from market.models import Order
             with transaction.atomic():

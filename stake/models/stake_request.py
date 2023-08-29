@@ -41,7 +41,6 @@ class StakeRequest(models.Model):
     cancel_request_at = models.DateTimeField(null=True, blank=True)
     cancel_pending_at = models.DateTimeField(null=True, blank=True)
     end_at = models.DateTimeField(null=True, blank=True)
-    is_bot = models.BooleanField(default=False)
 
     @property
     def remaining_date(self):

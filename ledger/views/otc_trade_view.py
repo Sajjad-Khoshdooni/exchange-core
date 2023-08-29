@@ -63,12 +63,19 @@ class OTCInfoView(APIView):
             to_amount=to_amount
         )
 
+        risky = False
+        category = otc.symbol.asset.spread_category
+
+        if category and category.name == 'high-risk':
+            risky = True
+
         return Response({
             'base_asset': otc.symbol.base_asset.symbol,
             'asset': otc.symbol.asset.symbol,
             'side': otc.side,
             'price': otc.price,
             'to_price': otc.price if otc.side == BUY else 1 / otc.price,
+            'risky': risky,
         })
 
 

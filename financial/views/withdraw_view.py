@@ -14,7 +14,6 @@ from rest_framework.viewsets import ModelViewSet
 
 from accounts.models import VerificationCode, LoginActivity
 from accounts.permissions import IsBasicVerified
-from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest, Gateway
 from financial.models.bank_card import BankAccount, BankAccountSerializer
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
@@ -53,10 +52,6 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         bank_account = get_object_or_404(BankAccount, iban=iban, user=user, verified=True, deleted=False)
 
         assert account.is_ordinary_user()
-
-        if not is_48h_rule_passed(user):
-            logger.info('FiatRequest rejected due to 48h rule. user=%s' % user.id)
-            raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
 
         if not bank_account.verified:
             logger.info('FiatRequest rejected due to unverified bank account. user=%s' % user.id)

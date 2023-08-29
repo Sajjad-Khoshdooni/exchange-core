@@ -112,7 +112,7 @@ class PeriodicFetcherAdmin(admin.ModelAdmin):
 
 @admin.register(BlocklinkIncome)
 class BlocklinkIncomeAdmin(admin.ModelAdmin):
-    list_display = ('start', 'network', 'real_fee_amount', 'fee_cost', 'fee_income',)
+    list_display = ('start', 'network', 'coin', 'real_fee_amount', 'fee_cost', 'fee_income',)
     list_filter = ('network', )
 
 

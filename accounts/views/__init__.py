@@ -16,7 +16,6 @@ from .on_boarding_flow import OnBoardingFlowStatus
 from .change_phone import InitiateChangePhone, ChangePhoneView
 
 from .referral_view import ReferralReportAPIView, ReferralViewSet, ReferralOverviewAPIView, TradingFeeView
-from .banner_view import BannerAlertAPIView
 from .prize_view import PrizeView
 
 from .firebase_token_view import FirebaseTokenView
@@ -31,3 +30,4 @@ from .user_digest_view import UserDigestView
 from .feedback_view import UserFeedbackView
 
 from .notify_view import NotifyView
+from .user_statistics_view import UserStatisticsView
