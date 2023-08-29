@@ -402,7 +402,8 @@ class Order(models.Model):
                     maker_order.save(update_fields=['status'])
                     filled_orders.append(maker_order)
 
-            oco_orders.append(maker_order)
+            if maker_order.oco:
+                oco_orders.append(maker_order)
 
             if unfilled_amount == 0:
                 self.status = Order.FILLED
