@@ -20,7 +20,7 @@ class AddressBookCreateSerializer(serializers.ModelSerializer):
     coin = serializers.CharField(write_only=True, required=False, default=None)
     deleted = serializers.BooleanField(read_only=True)
     network_info = serializers.SerializerMethodField()
-    sms_code = serializers.CharField(write_only=True)
+    sms_code = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     totp = serializers.CharField(write_only=True, allow_null=True, allow_blank=True, required=False)
 
     def validate(self, attrs):
@@ -29,8 +29,8 @@ class AddressBookCreateSerializer(serializers.ModelSerializer):
         name = attrs['name']
         address = attrs['address']
         network = get_object_or_404(Network, symbol=attrs['network'])
-        sms_code = attrs['sms_code']
-        totp = attrs.get('totp', None)
+        sms_code = attrs.get('sms_code', '')
+        totp = attrs.get('totp', '')
 
         if attrs['coin']:
             asset = get_object_or_404(Asset, symbol=attrs['coin'])
