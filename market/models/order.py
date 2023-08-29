@@ -153,10 +153,7 @@ class Order(models.Model):
 
     def cancel(self):
         if self.oco:
-            stop_loss = getattr(self.oco, 'stoploss', None)
-            if stop_loss and not stop_loss.canceled_at:
-                stop_loss.canceled_at = timezone.now()
-                stop_loss.save(update_fields=['canceled_at'])
+            self.oco.cancel_another(self.oco.STOPLOSS, delete_oco=True)
 
         # to increase performance
         if self.status != self.NEW:
@@ -214,17 +211,13 @@ class Order(models.Model):
         return amount * price if side == BUY else amount
     
     def handle_oco_updates(self, pipeline):
-        if hasattr(self.oco, 'stoploss'):
-            stop_loss = self.oco.stoploss
-            stop_loss.canceled_at = timezone.now()
-            stop_loss.save(update_fields=['canceled_at'])
+        self.oco.cancel_another(self.oco.STOPLOSS)
 
         if self.side == BUY and self.oco.releasable_lock:
             oco = self.oco
             pipeline.release_lock(key=self.group_id, amount=oco.releasable_lock)
             oco.releasable_lock = Decimal(0)
             oco.save(update_fields=['releasable_lock'])
-
 
     def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False, is_oco: bool = False) -> MatchedTrades:
         overriding_fill_amount = None
@@ -254,7 +247,7 @@ class Order(models.Model):
 
             for stop_loss in to_trigger_stop_loss_qs:
                 if stop_loss.oco:
-                    stop_loss.handle_oco_updates()
+                    stop_loss.oco.cancel_another(stop_loss.oco.ORDER)
 
             for stop_loss in to_trigger_stop_loss_qs:
                 from market.utils.order_utils import trigger_stop_loss

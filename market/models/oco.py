@@ -21,6 +21,8 @@ class OCOManager(models.Manager):
 
 
 class OCO(models.Model):
+    STOPLOSS = 'stoploss'
+    ORDER = 'order'
     NEW = 'new'
     TRIGGERED = 'triggered'
     FILLED = 'filled'
@@ -52,7 +54,6 @@ class OCO(models.Model):
             return self.stoploss.filled_amount
         return Decimal(0)
 
-
     @property
     def unfilled_amount(self):
         amount = self.amount - self.filled_amount
@@ -67,6 +68,21 @@ class OCO(models.Model):
     def acquire_lock(self, lock_wallet, lock_amount, pipeline: WalletPipeline):
         pipeline.new_lock(key=self.group_id, wallet=lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 
+    def cancel_another(self, order_type, delete_oco=False):
+        if order_type == self.STOPLOSS:
+            stop_loss = getattr(self, 'stoploss', None)
+            if stop_loss and not stop_loss.canceled_at:
+                stop_loss.canceled_at = timezone.now()
+                stop_loss.save(update_fields=['canceled_at'])
+        elif order_type == self.ORDER:
+            order = self.order_set.first()
+            if order.status == self.NEW:
+                order.status = self.CANCELED
+                order.save(update_fields=['status'])
+
+        if delete_oco:
+            self.delete()
+
     objects = models.Manager()
     open_objects = OCOManager()
 
@@ -76,6 +92,9 @@ class OCO(models.Model):
 
     def hard_delete(self):
         super(OCO, self).delete()
+
+    def __str__(self):
+        return f'({self.id}) {self.symbol}-{self.side}'
 
     class Meta:
         # todo: add constraint filled_amount <= amount

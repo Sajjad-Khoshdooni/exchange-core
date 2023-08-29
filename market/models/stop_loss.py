@@ -52,7 +52,7 @@ class StopLoss(models.Model):
     canceled_at = models.DateTimeField(blank=True, null=True)
 
     group_id = models.UUIDField(default=uuid4)
-    
+
     oco = models.OneToOneField(to='market.OCO', on_delete=models.SET_NULL, null=True, blank=True)
 
     login_activity = models.ForeignKey('accounts.LoginActivity', on_delete=models.SET_NULL, null=True, blank=True)
@@ -80,19 +80,13 @@ class StopLoss(models.Model):
         self.canceled_at = timezone.now()
         self.save(update_fields=['canceled_at'])
         if self.oco:
-            order = self.oco.order_set.first()
-            if order.status != self.NEW:
-                order.status = self.CANCELED
-                order.save(update_fields=['status'])
+            self.oco.cancel_another(self.oco.ORDER, delete_oco=True)
 
     def hard_delete(self):
         super(StopLoss, self).delete()
 
-    def handle_oco_updates(self):
-        order = self.oco.order_set.first()
-        if order:
-            order.canceled_at = timezone.now()
-            order.save(update_fields=['canceled_at'])
+    def __str__(self):
+        return f'({self.id}) {self.symbol}-{self.side}'
 
     class Meta:
         # todo: add constraint filled_amount <= amount
