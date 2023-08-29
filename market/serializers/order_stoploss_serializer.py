@@ -63,7 +63,12 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
         return f'آخرین قیمت {operator} {price}'
 
     def get_filled_price(self, instance: Union[Order, StopLoss]):
-        order = instance if isinstance(instance, Order) else instance.order_set.first()
+        order = None
+        if isinstance(instance, Order):
+            order = instance
+        elif instance.order_set.exists():
+            order = instance.order_set.all()[0]
+
         if not order:
             return None
         fills_amount, fills_value = self.context['trades'].get(order.id, (0, 0))
