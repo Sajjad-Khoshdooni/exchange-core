@@ -123,6 +123,8 @@ class AnotherUserFilter(SimpleListFilter):
 class UserCommentInLine(admin.TabularInline):
     model = UserComment
     extra = 1
+    fields = ('comment', 'created', )
+    readonly_fields = ('user', 'created')
 
 
 class UserFeatureInLine(admin.TabularInline):
@@ -713,10 +715,10 @@ class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
 @admin.register(LoginActivity)
 class LoginActivityAdmin(admin.ModelAdmin):
-    list_display = ('created', 'user', 'ip', 'device', 'os', 'browser', 'device_type', 'is_sign_up', 'native_app',
-                    'session')
+    list_display = ('created', 'user', 'ip', 'country', 'city', 'device', 'os', 'browser', 'device_type', 'is_sign_up',
+                    'native_app', 'session')
     search_fields = ('user__phone', 'ip', 'session__session_key')
-    readonly_fields = ('user', 'session', 'ip', )
+    readonly_fields = ('user', 'session', 'ip', 'refresh_token')
     list_filter = ('is_sign_up', 'native_app',)
 
 
@@ -739,7 +741,7 @@ class AppStatusAdmin(admin.ModelAdmin):
 
 @admin.register(VerificationCode)
 class VerificationCodeAdmin(admin.ModelAdmin):
-    list_display = ['phone', 'user', 'scope']
+    list_display = ('created', 'phone', 'user', 'scope', 'expiration', 'code_used')
     search_fields = ('user__phone', 'phone', 'user__first_name', 'user__last_name')
     list_filter = ('scope', )
     readonly_fields = ('user', )

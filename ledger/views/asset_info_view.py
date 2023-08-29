@@ -62,10 +62,9 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
     def get_price_usdt(self, asset: Asset):
         price = self.context.get('market_prices', {'USDT': {}})['USDT'].get(asset.symbol, 0)
+
         if not price:
             price = self.context.get('prices', {}).get(asset.symbol, 0)
-        if not price:
-            return
 
         return get_symbol_presentation_amount(asset.symbol + 'USDT', price)
 
@@ -188,7 +187,7 @@ class AssetsViewSet(ModelViewSet):
         if self.get_options('prices') or self.get_options('extra_info'):
             symbols = list(self.get_queryset().values_list('symbol', flat=True))
             ctx['cap_info'] = get_coins_info()
-            ctx['prices'], ctx['market_prices'], ctx['tether_irt'] = Asset.get_current_prices(symbols)
+            ctx['prices'], ctx['market_prices'], ctx['tether_irt'] = Asset.get_current_prices(symbols, allow_stale=True)
 
         return ctx
 

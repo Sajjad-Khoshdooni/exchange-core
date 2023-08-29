@@ -19,7 +19,7 @@ from accounts.models import Account, Notification
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.push_notif import send_push_notif_to_user
-from accounts.utils.telegram import send_support_message
+from accounts.utils.telegram import send_system_message
 from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
@@ -46,6 +46,8 @@ class Transfer(models.Model):
     created = models.DateTimeField(auto_now_add=True, db_index=True)
     accepted_datetime = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     finished_datetime = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    accepted_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True)
 
     group_id = models.UUIDField(default=uuid4, db_index=True)
     deposit_address = models.ForeignKey('ledger.DepositAddress', on_delete=models.CASCADE, null=True, blank=True)
@@ -275,11 +277,11 @@ class Transfer(models.Model):
         if auto_withdraw_verify(transfer):
             transfer.status = Transfer.PROCESSING
             transfer.save(update_fields=['status'])
-
-        send_support_message(
-            message='New withdraw %s' % transfer,
-            link=url_to_edit_object(transfer)
-        )
+        else:
+            send_system_message(
+                message='INIT withdraw %s' % transfer,
+                link=url_to_edit_object(transfer)
+            )
 
         return transfer
 

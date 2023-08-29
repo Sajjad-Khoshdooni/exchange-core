@@ -24,8 +24,7 @@ class StakeWalletSerializer(StakeOptionSerializer):
         return price
 
     def get_price_usdt(self, asset):
-        price = self.context['market_prices']['USDT'].get(asset, 0) or self.context['prices'].get(asset, 0)
-        return price
+        return self.context['market_prices']['USDT'].get(asset, 0) or self.context['prices'].get(asset, 0)
 
     def get_balance(self, stake_option: StakeOption):
         return get_presentation_amount(self.context['stake_wallets'].get(stake_option.asset.symbol) or Decimal(0))

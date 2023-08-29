@@ -20,7 +20,7 @@ from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
-from ledger.models.asset_alert import AssetAlert
+from ledger.models.asset_alert import AssetAlert, AlertTrigger
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet, \
     ManualTrade, Trx
@@ -376,7 +376,7 @@ class TransferUserFilter(SimpleListFilter):
 
 
 @admin.register(models.Transfer)
-class TransferAdmin(AdvancedAdmin):
+class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     default_edit_condition = M.superuser
 
     fields_edit_conditions = {
@@ -389,12 +389,12 @@ class TransferAdmin(AdvancedAdmin):
         'created', 'network', 'get_asset', 'amount', 'fee_amount', 'deposit', 'status', 'source', 'get_user',
         'usdt_value', 'get_remaining_time_to_pass_48h', 'get_jalali_created', 'get_jalali_finished'
     )
-    search_fields = ('trx_hash', 'out_address', 'wallet__asset__symbol')
+    search_fields = ('trx_hash', 'out_address', 'wallet__asset__symbol', 'wallet__account__user__phone')
     list_filter = ('deposit', 'status', 'source', TransferUserFilter,)
     readonly_fields = (
         'deposit_address', 'network', 'wallet', 'created', 'accepted_datetime', 'finished_datetime', 'get_risks',
         'out_address', 'memo', 'amount', 'irt_value', 'usdt_value', 'deposit', 'group_id', 'login_activity',
-        'address_book'
+        'address_book', 'accepted_by'
     )
     exclude = ('risks',)
 
@@ -471,6 +471,7 @@ class TransferAdmin(AdvancedAdmin):
         queryset.filter(status=models.Transfer.INIT).update(
             status=models.Transfer.PROCESSING,
             accepted_datetime=timezone.now(),
+            accepted_by=request.user
         )
 
     @admin.action(description='رد برداشت', permissions=['view'])
@@ -752,3 +753,11 @@ class ManualTradeAdmin(admin.ModelAdmin):
                 )
                 trade.status = DONE
                 trade.save(update_fields=['status'])
+
+
+@admin.register(AlertTrigger)
+class AlertTriggerAdmin(admin.ModelAdmin):
+    list_display = ('created', 'asset', 'price', 'change_percent', 'cycle', 'interval', 'is_triggered',)
+    readonly_fields = ('created', 'asset', 'price', 'change_percent', 'cycle',)
+    search_fields = ('cycle',)
+

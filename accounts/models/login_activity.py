@@ -28,13 +28,14 @@ class LoginActivity(models.Model):
     location = models.CharField(blank=True, max_length=200)
     os = models.CharField(blank=True, max_length=200)
     browser = models.CharField(blank=True, max_length=200)
-    session = models.OneToOneField(Session, null=True, blank=True, on_delete=models.SET_NULL)
-    refresh_token = models.OneToOneField('accounts.RefreshToken', null=True, blank=True, on_delete=models.SET_NULL)
     city = models.CharField(blank=True, max_length=256)
     country = models.CharField(blank=True, max_length=256)
     ip_data = models.JSONField(null=True, blank=True)
 
     native_app = models.BooleanField(default=False)
+
+    session = models.OneToOneField(Session, null=True, blank=True, on_delete=models.SET_NULL)
+    refresh_token = models.OneToOneField('accounts.RefreshToken', null=True, blank=True, on_delete=models.SET_NULL)
 
     @transaction.atomic
     def destroy(self):

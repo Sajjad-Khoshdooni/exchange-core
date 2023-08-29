@@ -8,7 +8,7 @@ import pytz
 import requests
 from django.utils import timezone
 
-from accounts.verifiers.jibit import Response
+from accounts.verifiers.utils import Response
 from financial.models import FiatWithdrawRequest, Gateway, PaymentRequest
 from financial.models.withdraw_request import BaseTransfer
 from financial.utils.ach import next_ach_clear_time
@@ -560,7 +560,7 @@ class JibimoChannel(FiatWithdraw):
 
     def create_withdraw(self, transfer: BaseTransfer) -> Withdraw:
         batch = self.get_batch_id()
-        assert (batch, 'Unsuccessful batch creation attempt')
+        assert batch, 'Unsuccessful batch creation attempt'
 
         resp = self.collect_api(f'/v2/batch-pay/{batch}/items/create', method='POST', data={
             "data": [{
@@ -575,7 +575,7 @@ class JibimoChannel(FiatWithdraw):
             }]
         })
 
-        assert (resp.success, 'Unsuccessful payment request')
+        assert resp.success, 'Unsuccessful payment request'
 
         item_data = resp.data['items'][0]
 
@@ -587,7 +587,7 @@ class JibimoChannel(FiatWithdraw):
 
     def get_withdraw_status(self, transfer: BaseTransfer) -> Withdraw:
         resp = self.collect_api(f'/v2/batch-pay/item/report?item_uuid={transfer.group_id}', method='GET')
-        assert (resp.success, 'Unsuccessful withdraw status collection attempt')
+        assert resp.success, 'Unsuccessful withdraw status collection attempt'
 
         return Withdraw(
             tracking_id=resp.data['tracking_number'],

@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.conf import settings
-from django.db.models import Q, Min
+from django.db.models import Q
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
@@ -16,7 +16,7 @@ from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.views.jwt_views import DelegatedAccountMixin
 from ledger.models import Wallet, DepositAddress, NetworkAsset, Trx
 from ledger.models.asset import Asset
-from ledger.utils.external_price import get_external_price, get_external_usdt_prices, BUY, SELL
+from ledger.utils.external_price import get_external_price, BUY, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.otc import get_otc_spread, spread_to_multiplier
 from ledger.utils.precision import get_presentation_amount, get_symbol_presentation_amount
@@ -77,7 +77,9 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        return wallet.balance + self.get_debt(asset)
+        precision = None
+
+        return get_presentation_amount(wallet.balance + self.get_debt(asset))
 
     def get_balance_irt(self, asset: Asset):
         balance = Decimal(self.get_balance(asset))
@@ -127,7 +129,7 @@ class AssetListSerializer(serializers.ModelSerializer):
             return '0'
 
         free = max(Decimal(), wallet.get_free() + self.get_debt(asset))
-        return free
+        return get_presentation_amount(free)
 
     def get_free_irt(self, asset: Asset):
         free = Decimal(self.get_free(asset))
@@ -267,7 +269,7 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
 
         if self.action == 'list':
             coins = list(self.get_queryset().values_list('symbol', flat=True))
-            ctx['prices'], ctx['market_prices'], ctx['tether_irt'] = Asset.get_current_prices(coins)
+            ctx['prices'], ctx['market_prices'], ctx['tether_irt'] = Asset.get_current_prices(coins, allow_stale=True)
         return ctx
 
     def get_serializer_class(self):
@@ -363,7 +365,7 @@ class WalletBalanceView(APIView, DelegatedAccountMixin):
 
         return Response({
             'symbol': asset.symbol,
-            'balance': str(free),
+            'balance': get_presentation_amount(free),
         })
 
 
