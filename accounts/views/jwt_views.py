@@ -10,13 +10,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer, \
     TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenViewBase
 from rest_framework_simplejwt.views import TokenObtainPairView
-from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenViewBase
 
@@ -179,21 +178,21 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
             if client_info_serializer.is_valid():
                 client_info = client_info_serializer.validated_data
-            user = User.objects.filter(phone=serializer.user).first()
+            user = serializer.user
             totp = serializer.initial_data.get('totp')
-            if user and user.is_2fa_valid(totp):
-                login_activity = set_login_activity(
-                    request,
-                    user=serializer.user,
-                    client_info=client_info,
-                    refresh_token=serializer.validated_data['refresh']
-                )
-                if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
-                                                ip=login_activity.ip).count() == 1:
-                    LoginActivity.send_successful_login_message(login_activity)
-                return Response(serializer.validated_data, status=status.HTTP_200_OK)
-            else:
-                raise InvalidToken("2fa did not match")
+            # todo: send unsuccessful login message
+            if not user.is_2fa_valid(totp):
+                return Response({'msg': 'totp required', 'code': -2}, status=status.HTTP_401_UNAUTHORIZED)
+            login_activity = set_login_activity(
+                request,
+                user=serializer.user,
+                client_info=client_info,
+                refresh_token=serializer.validated_data['refresh']
+            )
+            if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
+                                            ip=login_activity.ip).count() == 1:
+                LoginActivity.send_successful_login_message(login_activity)
+            return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
         except AuthenticationFailed as e:
             recipient = User.objects.filter(phone=serializer.initial_data.get('phone')).first()
