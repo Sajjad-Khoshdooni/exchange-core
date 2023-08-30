@@ -205,6 +205,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
     withdraw_commission = serializers.SerializerMethodField()
     min_withdraw = serializers.SerializerMethodField()
     min_confirm = serializers.IntegerField(source='network.min_confirm')
+    min_deposit = serializers.SerializerMethodField()
 
     withdraw_precision = serializers.SerializerMethodField()
 
@@ -223,6 +224,9 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
     def get_min_withdraw(self, network_asset: NetworkAsset):
         return get_presentation_amount(network_asset.withdraw_min)
 
+    def get_min_deposit(self, network_asset: NetworkAsset):
+        return get_presentation_amount(network_asset.get_min_deposit())
+
     def get_withdraw_commission(self, network_asset: NetworkAsset):
         return get_presentation_amount(network_asset.withdraw_fee)
 
@@ -231,7 +235,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('network', 'address', 'can_deposit', 'can_withdraw', 'withdraw_commission', 'min_withdraw',
-                  'network_name', 'address_regex', 'withdraw_precision', 'need_memo', 'min_confirm')
+                  'min_deposit', 'network_name', 'address_regex', 'withdraw_precision', 'need_memo', 'min_confirm')
         model = NetworkAsset
 
 

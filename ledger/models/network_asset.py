@@ -1,12 +1,16 @@
 import math
 from decimal import Decimal
 
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import CheckConstraint, Q
 
 from ledger.models import Asset
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import get_amount_field
+
+
+MIN_PRECISION_AMOUNT = Decimal('0.00000001')
 
 
 class NetworkAsset(models.Model):
@@ -27,11 +31,19 @@ class NetworkAsset(models.Model):
     allow_provider_withdraw = models.BooleanField(default=True)
     update_fee_with_provider = models.BooleanField(default=True)
 
+    deposit_min = get_amount_field(
+        default=MIN_PRECISION_AMOUNT,
+        validators=(MinValueValidator(MIN_PRECISION_AMOUNT),),
+    )
+
     def can_deposit_enabled(self) -> bool:
         return self.network.can_deposit and self.can_deposit and self.hedger_deposit_enable
 
     def can_withdraw_enabled(self) -> bool:
         return self.network.can_withdraw and self.can_withdraw and self.hedger_withdraw_enable
+
+    def get_min_deposit(self) -> Decimal:
+        return self.deposit_min
 
     def __str__(self):
         return '%s - %s' % (self.network, self.asset)
