@@ -54,8 +54,8 @@ class CancelRequestSerializer(serializers.ModelSerializer):
                 raise PermissionDenied({'message': _('You do not have permission to perform this action.'), })
             with WalletPipeline() as pipeline:
                 stop_loss.delete()
-                if stop_loss.order_set.exists():
-                    order = stop_loss.order_set.first()
+                order = stop_loss.order_set.first()
+                if order:
                     return self.cancel_order(order, validated_data, request=self.context['request'])
                 else:
                     if stop_loss.price:
