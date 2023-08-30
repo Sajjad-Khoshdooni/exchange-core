@@ -68,7 +68,6 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
             order = instance
         elif instance.order_set.exists():
             order = instance.order_set.all()[0]
-
         if not order:
             return None
         fills_amount, fills_value = self.context['trades'].get(order.id, (0, 0))
