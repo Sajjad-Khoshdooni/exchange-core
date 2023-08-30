@@ -8,12 +8,18 @@ from django.utils import timezone
 from accounts.models import Account, User
 from accounts.models.login_activity import LoginActivity
 from accounts.utils.hijack import get_hijacker_id
+from financial.models import Payment
 from ledger.models import Transfer, Wallet
+from ledger.utils.external_price import BUY
 
-WHITELIST_DAILY_WITHDRAW_VALUE = 50
-SAFE_DAILY_WITHDRAW_VALUE = 150
+FATA_SAFE_DEBT_IRT_VALUE = -3_000_000
+FATA_RISKY_DEBT_IRT_VALUE = -10_000_000
+
+SAFE_DAILY_WITHDRAW_VALUE = 1500
+SAFE_MONTHLY_WITHDRAW_VALUE = 40_000
+
 SAFE_CURRENT_DEPOSITS_VALUE = 500
-SAFE_CURRENT_TRANSFERS_COUNT = 6
+SAFE_CURRENT_TRANSFERS_COUNT = 12
 
 
 def auto_withdraw_verify(transfer: Transfer) -> bool:
@@ -22,43 +28,117 @@ def auto_withdraw_verify(transfer: Transfer) -> bool:
     if transfer.wallet.account.user.withdraw_limit_whitelist:
         return True
 
-    risks = get_withdraw_risks(transfer)
+    system_risks = get_withdraw_system_risks(transfer)
+    fata_risks = get_withdraw_fata_risks(transfer)
+
+    risks = [*system_risks, *fata_risks]
 
     if risks:
         transfer.risks = list(map(dataclasses.asdict, risks))
         transfer.save(update_fields=['risks'])
 
-        if risks[0].whitelist:
-            return True
+        if fata_risks and fata_risks[0].whitelist:
+            risks = system_risks
 
     return not bool(risks)
 
 
 @dataclasses.dataclass
 class RiskFactor:
+    FIAT_DEBT_RISK = 'fiat-debt-risk'
+    NEW_RECIPIENT_ADDRESS = 'new-recipient-address'
     MULTIPLE_DEVICES = 'multiple-devices'
+
     DAY_HIGH_WITHDRAW = 'day-high-withdraw-value'
-    FIRST_WITHDRAW = 'first-withdraw'
+    MONTH_HIGH_WITHDRAW = 'month-high-withdraw-value'
     WITHDRAW_VALUE_PEAK = 'withdraw-value-peak'
     HIGH_DEPOSITS_VALUE = 'high-deposits-value'
     HIGH_TRANSFERS_COUNT = 'high-transfers-count'
-    MISMATCH_OUTPUT_INPUT = 'mismatch-output-input'
     HIGH_WITHDRAW = 'high-withdraw'
     AUTO_WITHDRAW_CEIL = 'auto-withdraw-ceil'
-    INVALID_DESTINATION = 'invalid-destination'
+
+    TYPE_SYSTEM, TYPE_FATA = 'system', 'fata'
 
     reason: str
     value: float
     expected: float
     whitelist: bool = False
+    type: str = TYPE_SYSTEM
 
 
-def get_withdraw_risks(transfer: Transfer) -> list:
+def get_withdraw_fata_risks(transfer: Transfer) -> list:
     risks = []
-    user = transfer.wallet.account.user
+    account = transfer.wallet.account
+
+    last_48h_fiat_deposit = Payment.objects.filter(
+        user=account.user,
+        created__gte=timezone.now() - timedelta(days=2)
+    ).aggregate(val=Sum('amount'))['val'] or 0
+
+    potential_debt = account.get_total_balance_irt(side=BUY) - transfer.irt_value - last_48h_fiat_deposit
+    account_safety_multiplier = account.user.withdraw_risk_level_multiplier
+    safe_debt_irt_val = FATA_SAFE_DEBT_IRT_VALUE * account_safety_multiplier
+
+    if potential_debt >= safe_debt_irt_val:
+        return [
+            RiskFactor(
+                reason=RiskFactor.FIAT_DEBT_RISK,
+                value=float(potential_debt),
+                expected=float(safe_debt_irt_val),
+                whitelist=True,
+                type=RiskFactor.TYPE_FATA,
+            )
+        ]
+
+    risky_debt_irt_value = FATA_RISKY_DEBT_IRT_VALUE * account_safety_multiplier
+
+    if potential_debt <= risky_debt_irt_value:
+        risks.append(
+            RiskFactor(
+                reason=RiskFactor.FIAT_DEBT_RISK,
+                value=float(potential_debt),
+                expected=float(risky_debt_irt_value),
+                type=RiskFactor.TYPE_FATA,
+            )
+        )
+
+    devices = LoginActivity.objects.filter(user=account.user).values('device').distinct().count()
+    if devices > 1:
+        risks.append(
+            RiskFactor(
+                reason=RiskFactor.MULTIPLE_DEVICES,
+                value=devices,
+                expected=1,
+                type=RiskFactor.TYPE_FATA,
+            )
+        )
+
+    withdraws = Transfer.objects.filter(
+        wallet__account=account,
+        deposit=False,
+    ).exclude(
+        status=Transfer.CANCELED
+    )
+
+    if not withdraws.exclude(id=transfer.id).filter(out_address=transfer.out_address):
+        risks.append(
+            RiskFactor(
+                reason=RiskFactor.NEW_RECIPIENT_ADDRESS,
+                value=1,
+                expected=2,
+                type=RiskFactor.TYPE_FATA,
+            )
+        )
+
+    return risks
+
+
+def get_withdraw_system_risks(transfer: Transfer) -> list:
+    risks = []
+    account = transfer.wallet.account
 
     transfers = Transfer.objects.filter(
-        wallet__account=transfer.wallet.account
+        wallet__account=account,
     ).exclude(
         status=Transfer.CANCELED
     )
@@ -69,45 +149,25 @@ def get_withdraw_risks(transfer: Transfer) -> list:
         created__gte=timezone.now() - timedelta(days=1)
     ).aggregate(value=Sum('usdt_value'))['value'] or 0
 
-    account_safety_multiplier = transfer.wallet.account.user.withdraw_risk_level_multiplier
-
-    safe_daily_withdraw_value = SAFE_DAILY_WITHDRAW_VALUE * account_safety_multiplier
-    whitelist_daily_withdraw_value = WHITELIST_DAILY_WITHDRAW_VALUE * account_safety_multiplier
-
-    if current_day_withdraw_value > safe_daily_withdraw_value:
+    if current_day_withdraw_value > SAFE_DAILY_WITHDRAW_VALUE:
         risks.append(
             RiskFactor(
                 reason=RiskFactor.DAY_HIGH_WITHDRAW,
                 value=float(current_day_withdraw_value),
-                expected=float(safe_daily_withdraw_value),
-            )
-        )
-    elif current_day_withdraw_value <= whitelist_daily_withdraw_value:
-        return [
-            RiskFactor(
-                reason=RiskFactor.DAY_HIGH_WITHDRAW,
-                value=float(current_day_withdraw_value),
-                expected=float(whitelist_daily_withdraw_value),
-                whitelist=True
-            )
-        ]
-
-    devices = LoginActivity.objects.filter(user=user).values('device').distinct().count()
-    if devices > 1:
-        risks.append(
-            RiskFactor(
-                reason=RiskFactor.MULTIPLE_DEVICES,
-                value=devices,
-                expected=1,
+                expected=float(SAFE_DAILY_WITHDRAW_VALUE),
             )
         )
 
-    if withdraws.count() == 1:
+    last_30_days_withdraw_value = withdraws.filter(
+        created__gte=timezone.now() - timedelta(days=30)
+    ).aggregate(value=Sum('usdt_value'))['value'] or 0
+
+    if last_30_days_withdraw_value > SAFE_MONTHLY_WITHDRAW_VALUE:
         risks.append(
             RiskFactor(
-                reason=RiskFactor.FIRST_WITHDRAW,
-                value=1,
-                expected=0
+                reason=RiskFactor.MONTH_HIGH_WITHDRAW,
+                value=float(last_30_days_withdraw_value),
+                expected=float(SAFE_MONTHLY_WITHDRAW_VALUE),
             )
         )
 
@@ -117,9 +177,9 @@ def get_withdraw_risks(transfer: Transfer) -> list:
 
     if current_withdraws.count() > 2:
         max_withdraw_value = current_withdraws.aggregate(value=Max('usdt_value'))['value'] or 0
-        expected_withdraw_value = max_withdraw_value * 2
+        expected_withdraw_value = max_withdraw_value * 4
 
-        if transfer.usdt_value > max(expected_withdraw_value, 50):
+        if transfer.usdt_value > max(expected_withdraw_value, 1000):
             risks.append(
                 RiskFactor(
                     reason=RiskFactor.WITHDRAW_VALUE_PEAK,
