@@ -455,10 +455,10 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     def get_risks(self, transfer):
         if not transfer.risks:
             return
-        html = '<table dir="ltr"><tr><th>Factor</th><th>Value</th><th>Expected</th><th>Whitelist</th></tr>'
+        html = '<table dir="ltr"><tr><th>Factor</th><th>Value</th><th>Expected</th><th>Whitelist</th><th>Type</th></tr>'
 
         for risk in transfer.risks:
-            html += '<tr><td>{reason}</td><td>{value}</td><td>{expected}</td><td>{whitelist}</td></tr>'.format(
+            html += '<tr><td>{reason}</td><td>{value}</td><td>{expected}</td><td>{whitelist}</td><td>{type}</td></tr>'.format(
                 **RiskFactor(**risk).__dict__
             )
 
