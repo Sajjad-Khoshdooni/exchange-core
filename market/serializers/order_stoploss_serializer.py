@@ -67,7 +67,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
         if isinstance(instance, Order):
             order = instance
         elif instance.order_set.exists():
-            order = instance.order_set.all()[0]
+            order = instance.order_set.first()
 
         if not order:
             return None

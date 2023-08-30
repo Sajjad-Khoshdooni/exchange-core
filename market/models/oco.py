@@ -48,7 +48,7 @@ class OCO(models.Model):
 
     @property
     def filled_amount(self):
-        order = self.order_set.all()[0]
+        order = self.order_set.first()
         if order.filled_amount:
             return order.filled_amount
         if hasattr(self, 'stoploss'):
@@ -76,7 +76,7 @@ class OCO(models.Model):
                 stop_loss.canceled_at = timezone.now()
                 stop_loss.save(update_fields=['canceled_at'])
         elif order_type == self.ORDER:
-            order = self.order_set.all()[0]
+            order = self.order_set.first()
             if order.status == self.NEW:
                 order.status = self.CANCELED
                 order.save(update_fields=['status'])

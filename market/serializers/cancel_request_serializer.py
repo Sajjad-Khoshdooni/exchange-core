@@ -55,7 +55,7 @@ class CancelRequestSerializer(serializers.ModelSerializer):
             with WalletPipeline() as pipeline:
                 stop_loss.delete()
                 if stop_loss.order_set.exists():
-                    order = stop_loss.order_set.all()[0]
+                    order = stop_loss.order_set.first()
                     return self.cancel_order(order, validated_data, request=self.context['request'])
                 else:
                     if stop_loss.price:
