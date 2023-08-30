@@ -177,7 +177,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             totp = serializer.initial_data.get('totp')
             # todo: send unsuccessful login message
             if not user.is_2fa_valid(totp):
-                return Response({'msg': 'totp required', 'code': -2}, status=200)
+                return Response({'msg': 'totp required', 'code': -2}, status=status.HTTP_401_UNAUTHORIZED)
             login_activity = set_login_activity(
                 request,
                 user=serializer.user,
