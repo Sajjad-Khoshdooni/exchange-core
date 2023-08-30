@@ -39,6 +39,7 @@ class OrderSerializer(serializers.ModelSerializer):
     trigger_price = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
     allow_cancel = serializers.SerializerMethodField()
+    is_oco = serializers.SerializerMethodField()
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
@@ -76,7 +77,8 @@ class OrderSerializer(serializers.ModelSerializer):
         try:
             with WalletPipeline() as pipeline:
                 created_order = super(OrderSerializer, self).create(
-                    {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol, 'login_activity': login_activity}
+                    {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol,
+                     'login_activity': login_activity}
                 )
                 matched_trades = created_order.submit(pipeline)
 
@@ -203,10 +205,13 @@ class OrderSerializer(serializers.ModelSerializer):
             return False
         return True
 
+    def get_is_oco(self, instance: Order):
+        return bool(instance.oco)
+
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
-                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel',
+                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel', 'is_oco',
                   'time_in_force', 'client_order_id')
         read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {

@@ -20,6 +20,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
     filled_price = serializers.SerializerMethodField()
     trigger_price = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
+    is_oco = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
     allow_cancel = serializers.SerializerMethodField()
 
@@ -49,6 +50,9 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
                 return StopLoss.FILLED if instance.filled_amount == instance.amount else StopLoss.TRIGGERED
         return instance.status
 
+    def get_is_oco(self, instance: Union[Order, StopLoss]):
+        return bool(instance.oco)
+
     def get_filled_amount(self, instance: Union[Order, StopLoss]):
         return decimal_to_str(floor_precision(instance.filled_amount, instance.symbol.step_size))
 
@@ -77,5 +81,5 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
-                  'filled_price', 'trigger_price', 'side', 'fill_type', 'status', 'market', 'allow_cancel')
+                  'filled_price', 'trigger_price', 'side', 'fill_type', 'status', 'market', 'allow_cancel', 'is_oco')
 
