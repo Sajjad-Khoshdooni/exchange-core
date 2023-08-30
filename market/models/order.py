@@ -146,6 +146,10 @@ class Order(models.Model):
                 name='market_order_unique_stop_loss',
                 fields=('stop_loss', 'status'),
             ),
+            UniqueConstraint(
+                name='market_order_unique_oco',
+                fields=('oco', 'status'),
+            ),
         ]
 
     objects = models.Manager()
