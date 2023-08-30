@@ -114,11 +114,14 @@ class OpenOrderListAPIView(APIView):
         symbol_filter = self.request.query_params.get('symbol')
         side_filter = self.request.query_params.get('side')
         bot_filter = self.request.query_params.get('bot')
+        oco_filter = self.request.query_params.get('oco')
         if symbol_filter:
             symbol = get_object_or_404(PairSymbol, name=symbol_filter.upper())
             filters['symbol'] = symbol
         if side_filter:
             filters['side'] = side_filter
+        if oco_filter:
+            filters['oco__isnull'] = not (str(oco_filter) == '1')
         if bot_filter:
             reserved_variants = ReserveWallet.objects.filter(sender__account=account).values_list('group_id', flat=True)
             if str(bot_filter) == '1':
