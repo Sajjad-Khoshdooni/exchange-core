@@ -83,8 +83,8 @@ def get_withdraw_fata_risks(transfer: Transfer) -> list:
         return [
             RiskFactor(
                 reason=RiskFactor.FIAT_DEBT_RISK,
-                value=float(potential_debt),
-                expected=float(safe_debt_irt_val),
+                value=round(potential_debt),
+                expected=round(safe_debt_irt_val),
                 whitelist=True,
                 type=RiskFactor.TYPE_FATA,
             )
@@ -96,8 +96,8 @@ def get_withdraw_fata_risks(transfer: Transfer) -> list:
         risks.append(
             RiskFactor(
                 reason=RiskFactor.FIAT_DEBT_RISK,
-                value=float(potential_debt),
-                expected=float(risky_debt_irt_value),
+                value=round(potential_debt),
+                expected=round(risky_debt_irt_value),
                 type=RiskFactor.TYPE_FATA,
             )
         )
