@@ -186,7 +186,7 @@ class NetworkAdmin(admin.ModelAdmin):
 class NetworkAssetAdmin(admin.ModelAdmin):
     list_display = ('network', 'asset', 'get_withdraw_fee', 'get_withdraw_min', 'get_withdraw_max', 'get_deposit_min',
                     'can_deposit', 'can_withdraw', 'allow_provider_withdraw', 'hedger_withdraw_enable',
-                    'update_fee_with_provider')
+                    'update_fee_with_provider', 'last_provider_update')
     search_fields = ('asset__symbol',)
     list_editable = ('can_deposit', 'can_withdraw', 'allow_provider_withdraw', 'hedger_withdraw_enable',
                      'update_fee_with_provider')

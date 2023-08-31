@@ -1,7 +1,6 @@
 import logging
 import math
 import time
-from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from json import JSONDecodeError
@@ -12,13 +11,13 @@ import requests
 from decouple import config
 from django.conf import settings
 from django.core.cache import cache
-from pydantic.decorator import validate_arguments
 from urllib3.exceptions import ReadTimeoutError
 
 from accounts.verifiers.jibit import Response
 from ledger.exceptions import HedgeError
 from ledger.models import Asset, Transfer
 from ledger.utils.cache import get_cache_func_key
+from ledger.utils.dto import MarketInfo, NetworkInfo, WithdrawStatus, CoinInfo
 from ledger.utils.external_price import SELL, BUY, get_external_price
 from ledger.utils.fields import DONE
 from ledger.utils.precision import floor_precision
@@ -30,60 +29,6 @@ logger = logging.getLogger(__name__)
 
 SPOT, FUTURES = 'spot', 'futures'
 BINANCE, KUCOIN, MEXC = 'binance', 'kucoin', 'mexc'
-
-
-@validate_arguments
-@dataclass
-class MarketInfo:
-    coin: str
-    base_coin: str
-    exchange: str
-
-    type: str  # spot | futures
-
-    step_size: Decimal
-    min_quantity: Decimal
-    max_quantity: Decimal
-
-    min_notional: Decimal
-
-
-@validate_arguments
-@dataclass
-class NetworkInfo:
-    coin: str
-    network: str
-
-    withdraw_min: Decimal
-    withdraw_max: Decimal
-    withdraw_fee: Decimal
-    withdraw_enable: bool
-    deposit_enable: bool
-    address_regex: str
-
-
-@validate_arguments
-@dataclass
-class WithdrawStatus:
-    status: str
-    tx_id: str
-
-
-@validate_arguments
-@dataclass
-class CoinInfo:
-    coin: str = ''
-    price: float = 0
-    change_24h: float = 0
-    volume_24h: float = 0
-    change_7d: float = 0
-    high_24h: float = 0
-    low_24h: float = 0
-    change_1h: float = 0
-    cmc_rank: int = 0
-    market_cap: float = 0
-    circulating_supply: float = 0
-    weekly_trend_url: str = ''
 
 
 class ProviderRequester:
@@ -142,7 +87,7 @@ class ProviderRequester:
         return resp.data
 
     def get_futures_info(self, exchange: str) -> dict:
-        resp = self.collect_api('/api/v1/futures/', data={'exchange': exchange})
+        resp = self.collect_api('/api/v1/futures/', timeout=30, data={'exchange': exchange})
         return resp.data
 
     def get_network_info(self, coin: str, network: str = None) -> List[NetworkInfo]:
@@ -152,7 +97,7 @@ class ProviderRequester:
         if network:
             params['network'] = network
 
-        resp = self.collect_api('/api/v1/networks/', data=params)
+        resp = self.collect_api('/api/v1/networks/', timeout=30, data=params)
         if resp.success:
             for data in resp.data:
                 info.append(NetworkInfo(**data))
@@ -251,7 +196,7 @@ class ProviderRequester:
             'scope': scope,
             'amount': str(amount),
             'side': side
-        })
+        }, timeout=15)
         return resp.success
 
     def new_withdraw(self, transfer: Transfer) -> Response:
@@ -288,14 +233,14 @@ class ProviderRequester:
     def get_order(self, request_id: str):
         return self.collect_api('/api/v1/orders/details/', method='GET', data={
             'request_id': request_id,
-        }).data
+        }, timeout=30).data
 
     def get_coins_info(self, coins: List[str] = None) -> List[dict]:
         data = {}
         if coins:
             data['coins'] = ','.join(coins)
 
-        resp = self.collect_api('/api/v1/coins/info/', data=data, cache_timeout=300)
+        resp = self.collect_api('/api/v1/coins/info/', data=data, timeout=30, cache_timeout=300)
 
         if not resp.success:
             return []
