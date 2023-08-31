@@ -45,7 +45,7 @@ class WalletsOverviewAPIView(APIView):
         ).exclude(balance=0).values_list('asset_id', flat=True)
 
         coins = list(Asset.objects.filter(Q(enable=True) | Q(id__in=disabled_assets)).values_list('symbol', flat=True))
-        prices, market_prices, tether_irt = Asset.get_current_prices(coins)
+        prices, market_prices, tether_irt = Asset.get_current_prices(coins, allow_stale=True)
 
         spot_wallets = Wallet.objects.filter(
             account=account, market=Wallet.SPOT, variant__isnull=True
