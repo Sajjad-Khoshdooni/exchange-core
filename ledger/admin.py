@@ -141,6 +141,7 @@ class AssetAdmin(AdvancedAdmin):
     @admin.action(description='setup asset', permissions=['view'])
     def setup_asset(self, request, queryset):
         from ledger.models import NetworkAsset
+        now = timezone.now()
 
         for asset in queryset:
             networks_info = get_provider_requester().get_network_info(asset.symbol)
@@ -167,7 +168,7 @@ class AssetAdmin(AdvancedAdmin):
                     }
                 )
 
-                ns.update_with_provider(info)
+                ns.update_with_provider(info, now)
 
             create_symbols_for_asset(asset)
 
