@@ -187,13 +187,6 @@ class User(AbstractUser):
         masked = first + '*' * len(phone_number[length:-length]) + last
         return masked
 
-    def get_username(self):
-        username = self.username
-        if username.__contains__('@'):
-            return username
-        else:
-            return self.mask(username)
-
     @property
     def kyc_bank_card(self):
         return self.bankcard_set.filter(kyc=True).first()
