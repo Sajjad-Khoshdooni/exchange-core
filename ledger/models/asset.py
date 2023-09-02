@@ -67,6 +67,8 @@ class Asset(models.Model):
 
     price_page = models.BooleanField(default=False)
 
+    price_alert_chanel_sensitivity = models.DecimalField(null=True, blank=True)
+
     distribution_factor = models.FloatField(default=0)
 
     class Meta:
