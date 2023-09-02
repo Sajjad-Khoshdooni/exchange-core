@@ -1,22 +1,27 @@
 from decimal import Decimal
-from typing import List, Dict
+from typing import List, Dict, Union
 
 from django.db.models import Min, Max
 
 from ledger.models import Asset
 from ledger.utils.cache import cache_for
-from ledger.utils.external_price import fetch_external_redis_prices, get_other_side, BUY, SELL
+from ledger.utils.external_price import fetch_external_redis_prices, BUY, SELL
 from ledger.utils.otc import spread_to_multiplier, get_otc_spread
 from market.models import Order, PairSymbol
 
+USDT_IRT = 'USDT_IRT'
 
-def _get_external_prices(coins: list, side, base_coin: str, allow_stale: bool = False) -> Dict[str, Decimal]:
-    spreads = get_all_otc_spreads(side, base_coin=base_coin)
 
-    prices = fetch_external_redis_prices(coins, side, allow_stale=allow_stale)
-    result = {r.coin: r.price * spreads.get(r.coin, 1) for r in prices if r.price}
+def _get_external_last_prices(coins: Union[list, set], allow_stale: bool = False) -> Dict[str, Decimal]:
+    prices = fetch_external_redis_prices(coins, allow_stale=allow_stale)
 
-    return result
+    last_prices = {}
+
+    for i in range(len(prices) // 2):
+        last_price = (prices[2 * i].price + prices[2 * i + 1].price) / 2
+        last_prices[prices[2 * i].coin] = last_price
+
+    return last_prices
 
 
 def get_symbol_parts(symbol: str):
@@ -40,6 +45,9 @@ def get_all_otc_spreads(side):
 
 def get_prices(symbols: List[str], side: str, allow_stale: bool = False) -> Dict[str, Decimal]:
     assert side in (BUY, SELL)
+
+    if USDT_IRT not in symbols:
+        symbols.append(USDT_IRT)
 
     if side == BUY:
         annotate_func = Max
@@ -69,6 +77,9 @@ def get_prices(symbols: List[str], side: str, allow_stale: bool = False) -> Dict
             else:
                 ext_price = external_prices.get(coin)
 
+                if base == Asset.IRT:
+                    ext_price *= prices[USDT_IRT]
+
             if ext_price:
                 prices[symbol] = ext_price * otc_spreads.get(symbol, 1)
 
@@ -83,3 +94,34 @@ def get_coins_symbols(coins: List[str]) -> List[str]:
 
     return symbols
 
+
+def get_last_prices(symbols: List[str]):
+    if USDT_IRT not in symbols:
+        symbols.append(USDT_IRT)
+
+    last_prices = dict(PairSymbol.objects.filter(
+        name__in=symbols,
+        enable=True,
+    ).values_list('name', 'last_trade_price'))
+
+    if len(symbols) != len(last_prices):
+        remaining_symbols = set(symbols) - set(last_prices)
+
+        remaining_coins = set([get_symbol_parts(symbol)[0] for symbol in remaining_symbols])
+        external_prices = _get_external_last_prices(remaining_coins, allow_stale=True)
+
+        for symbol in remaining_symbols:
+            coin, base = get_symbol_parts(symbol)
+
+            if coin == base:
+                last_price = Decimal(1)
+            else:
+                last_price = external_prices.get(coin)
+
+                if base == Asset.IRT:
+                    last_price *= last_prices[USDT_IRT]
+
+            if last_price:
+                last_prices[symbol] = last_price
+
+    return last_prices

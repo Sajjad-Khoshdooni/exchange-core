@@ -20,7 +20,7 @@ from ledger.utils.external_price import get_external_price, BUY, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.otc import get_otc_spread, spread_to_multiplier
 from ledger.utils.precision import get_presentation_amount, get_symbol_presentation_amount
-from ledger.utils.price import get_prices, get_coins_symbols
+from ledger.utils.price import get_prices, get_coins_symbols, get_last_prices
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -89,7 +89,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if asset.symbol == Asset.IRT:
             value = balance
         else:
-            price = self._get_price_irt(asset.symbol)
+            price = self._get_last_price_irt(asset.symbol)
             value = balance * price
 
         return get_symbol_presentation_amount(asset.symbol + 'IRT', value, trunc_zero=True)
@@ -100,13 +100,19 @@ class AssetListSerializer(serializers.ModelSerializer):
     def _get_price_usdt(self, coin: str):
         return self.context['prices'].get(coin + Asset.USDT)
 
+    def _get_last_price_irt(self, coin: str):
+        return self.context['last_prices'].get(coin + Asset.IRT)
+
+    def _get_last_price_usdt(self, coin: str):
+        return self.context['last_prices'].get(coin + Asset.USDT)
+
     def get_balance_usdt(self, asset: Asset):
         balance = Decimal(self.get_balance(asset))
 
         if not balance:
             return 0
 
-        price = self._get_price_usdt(asset.symbol)
+        price = self._get_last_price_usdt(asset.symbol)
         return get_symbol_presentation_amount(asset.symbol + 'USDT', balance * price, trunc_zero=True)
 
     def get_free(self, asset: Asset):
@@ -124,7 +130,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not free:
             return 0
 
-        price = self._get_price_irt(asset.symbol)
+        price = self._get_last_price_irt(asset.symbol)
         return get_symbol_presentation_amount(asset.symbol + 'IRT', free * price, trunc_zero=True)
 
     def get_can_deposit(self, asset: Asset):
@@ -263,7 +269,9 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
         else:
             coins = [self.get_object().symbol]
 
-        ctx['prices'] = get_prices(get_coins_symbols(coins), side=SELL, allow_stale=True)
+        symbols = get_coins_symbols(coins)
+        ctx['prices'] = get_prices(symbols, side=SELL, allow_stale=True)
+        ctx['last_prices'] = get_last_prices(symbols)
 
         return ctx
 
