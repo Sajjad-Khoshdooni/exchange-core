@@ -19,7 +19,8 @@ from ledger.models.asset import Asset
 from ledger.utils.external_price import get_external_price, BUY, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.otc import get_otc_spread, spread_to_multiplier
-from ledger.utils.precision import get_presentation_amount, get_symbol_presentation_amount
+from ledger.utils.precision import get_presentation_amount, get_symbol_presentation_amount, \
+    get_coin_presentation_balance
 from ledger.utils.price import get_prices, get_coins_symbols, get_last_prices
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -78,7 +79,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        return get_presentation_amount(wallet.balance + self.get_debt(asset))
+        return get_coin_presentation_balance(asset.symbol, wallet.balance + self.get_debt(asset))
 
     def get_balance_irt(self, asset: Asset):
         balance = Decimal(self.get_balance(asset))
@@ -86,13 +87,11 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not balance:
             return 0
 
-        if asset.symbol == Asset.IRT:
-            value = balance
-        else:
-            price = self._get_last_price_irt(asset.symbol)
-            value = balance * price
+        price = self._get_last_price_irt(asset.symbol)
+        if not price:
+            return
 
-        return get_symbol_presentation_amount(asset.symbol + 'IRT', value, trunc_zero=True)
+        return get_symbol_presentation_amount(asset.symbol + 'IRT', balance * price, trunc_zero=True)
 
     def _get_price_irt(self, coin: str):
         return self.context['prices'].get(coin + Asset.IRT)
@@ -113,6 +112,9 @@ class AssetListSerializer(serializers.ModelSerializer):
             return 0
 
         price = self._get_last_price_usdt(asset.symbol)
+        if not price:
+            return
+
         return get_symbol_presentation_amount(asset.symbol + 'USDT', balance * price, trunc_zero=True)
 
     def get_free(self, asset: Asset):
@@ -122,7 +124,7 @@ class AssetListSerializer(serializers.ModelSerializer):
             return '0'
 
         free = max(Decimal(), wallet.get_free() + self.get_debt(asset))
-        return get_presentation_amount(free)
+        return get_coin_presentation_balance(asset.symbol, free)
 
     def get_free_irt(self, asset: Asset):
         free = Decimal(self.get_free(asset))
@@ -131,6 +133,9 @@ class AssetListSerializer(serializers.ModelSerializer):
             return 0
 
         price = self._get_last_price_irt(asset.symbol)
+        if not price:
+            return
+
         return get_symbol_presentation_amount(asset.symbol + 'IRT', free * price, trunc_zero=True)
 
     def get_can_deposit(self, asset: Asset):

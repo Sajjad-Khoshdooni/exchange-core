@@ -14,10 +14,10 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.coins_info import get_coins_info
-from ledger.utils.external_price import BUY, get_external_price, SELL
+from ledger.utils.external_price import SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.precision import get_symbol_presentation_amount
-from ledger.utils.price import get_prices, get_coins_symbols
+from ledger.utils.price import get_prices, get_coins_symbols, get_price
 from ledger.utils.provider import CoinInfo
 from multimedia.models import CoinPriceContent
 
@@ -257,28 +257,22 @@ class AssetOverviewAPIView(APIView):
     permission_classes = []
 
     @classmethod
-    def set_price(cls, coins: list):
-        symbols = list(map(lambda c: c['symbol'], coins))
-        assets = Asset.objects.filter(symbol__in=symbols)
+    def set_price(cls, assets_info: list):
+        for asset_info in assets_info:
+            coin = asset_info['symbol']
 
-        asset_map = {a.symbol: a for a in assets}
-
-        for coin in coins:
-            symbol = coin['symbol']
-            asset = asset_map[symbol]
-
-            coin['price_usdt'] = get_symbol_presentation_amount(
-                symbol=asset.symbol + 'USDT',
-                amount=get_external_price(coin=symbol, base_coin=Asset.USDT, side=BUY, allow_stale=True)
+            asset_info['price_usdt'] = get_symbol_presentation_amount(
+                symbol=coin + Asset.USDT,
+                amount=get_price(coin + Asset.USDT, side=SELL, allow_stale=True) or 0
             )
 
-            coin['price_irt'] = get_symbol_presentation_amount(
-                symbol=asset.symbol + 'IRT',
-                amount=get_external_price(coin=symbol, base_coin=Asset.IRT, side=BUY, allow_stale=True)
+            asset_info['price_irt'] = get_symbol_presentation_amount(
+                symbol=coin + Asset.IRT,
+                amount=get_price(coin + Asset.IRT, side=SELL, allow_stale=True) or 0
             )
 
-            coin['market_irt_enable'] = symbol in get_irt_market_asset_symbols()
-            coin.update(AssetSerializerMini(Asset.get(symbol=symbol)).data)
+            asset_info['market_irt_enable'] = coin in get_irt_market_asset_symbols()
+            asset_info.update(AssetSerializerMini(Asset.get(symbol=coin)).data)
 
     def get(self, request):
         limit = int(self.request.query_params.get('limit', default=3))
