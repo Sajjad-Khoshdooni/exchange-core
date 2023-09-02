@@ -31,7 +31,7 @@ INTERVAL_CHANGE_PERCENT_SENSITIVITY_MAP = {
 
 
 def get_current_prices() -> dict:
-    coins = list(AssetAlert.objects.distinct('asset').values_list('asset__symbol', flat=True))
+    coins = list(Asset.objects.values_list('asset__symbol', flat=True))
 
     prices = get_external_usdt_prices(coins=coins, side=BUY, apply_otc_spread=True)
 
@@ -174,4 +174,5 @@ def send_price_notifications():
     }
 
     asset_alert_list = AssetAlert.objects.filter(asset__symbol__in=altered_coins.keys())
+
     send_notifications(asset_alert_list, altered_coins)

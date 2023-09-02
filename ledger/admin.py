@@ -20,7 +20,7 @@ from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
-from ledger.models.asset_alert import AssetAlert, AlertTrigger
+from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet, \
     ManualTrade, Trx, NetworkAsset
@@ -715,6 +715,15 @@ class BalanceLockAdmin(admin.ModelAdmin):
     readonly_fields = ('wallet', 'key', 'original_amount', 'amount', 'reason')
     list_filter = ('reason',)
     search_fields = ('wallet__account__user__phone', 'key')
+
+
+@admin.register(BulkAssetAlert)
+class BulkAssetAlertAdmin(admin.ModelAdmin):
+    list_display = ('created', 'user', 'subscription_type', 'coin_category',)
+    readonly_fields = ('created', 'user',)
+    search_fields = ('user__name', 'subscription_type', 'coin_category',)
+    list_filter = ('subscription_type', 'coin_category',)
+    raw_id_fields = ('user',)
 
 
 @admin.register(ReserveWallet)

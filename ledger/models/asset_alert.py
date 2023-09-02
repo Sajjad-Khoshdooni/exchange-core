@@ -1,7 +1,7 @@
 from django.db import models
 
 from accounts.models import User
-from ledger.models import Asset
+from ledger.models import Asset, CoinCategory
 from ledger.utils.fields import get_amount_field
 
 
@@ -49,3 +49,23 @@ class AssetAlert(models.Model):
 
     class Meta:
         unique_together = [('user', 'asset')]
+
+
+class BulkAssetAlert(models.Model):
+    CATEGORY_MY_ASSETS = 'my_assets'
+    CATEGORY_ALL_COINS = 'all_coins'
+    CATEGORY_ASSET_CATEGORIES = 'asset_categories'
+
+    CATEGORIES = [
+        (CATEGORY_MY_ASSETS, CATEGORY_MY_ASSETS),
+        (CATEGORY_ALL_COINS, CATEGORY_ALL_COINS),
+        (CATEGORY_ASSET_CATEGORIES, CATEGORY_ASSET_CATEGORIES),
+    ]
+
+    created = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    subscription_type = models.CharField(choices=CATEGORIES, max_length=20)
+    coin_category = models.ForeignKey(CoinCategory, on_delete=models.CASCADE, null=True)
+
+    class Meta:
+        unique_together = [('user', 'subscription_type', 'coin_category')]
