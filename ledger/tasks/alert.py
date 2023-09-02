@@ -174,7 +174,7 @@ def get_asset_alert_list(altered_coins: dict) -> set:
                 balance__gt=0
             )
         else:
-            scope_coins = categories.get(asset_alert.coin_category)
+            scope_coins = categories.filter(name=asset_alert.coin_category.name)
         for asset in scope_coins:
             asset_alerts.add(AlertData(
                 user=asset_alert.user,
