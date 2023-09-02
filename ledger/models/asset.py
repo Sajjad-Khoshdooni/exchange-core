@@ -12,7 +12,7 @@ from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.external_price import BUY, SELL, get_external_usdt_prices, get_external_price
 from ledger.utils.precision import get_presentation_amount
-
+from ledger.utils.fields import get_amount_field
 
 class InvalidAmount(Exception):
     pass
@@ -67,7 +67,7 @@ class Asset(models.Model):
 
     price_page = models.BooleanField(default=False)
 
-    price_alert_chanel_sensitivity = models.DecimalField(null=True, blank=True)
+    price_alert_chanel_sensitivity = get_amount_field(null=True)
 
     distribution_factor = models.FloatField(default=0)
 
