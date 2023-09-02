@@ -5,9 +5,8 @@ from rest_framework import serializers
 from rest_framework.generics import ListAPIView
 
 from ledger.models import Wallet, Asset
-from ledger.utils.external_price import SELL
 from ledger.utils.precision import get_presentation_amount
-from ledger.utils.price import get_prices, get_coins_symbols
+from ledger.utils.price import get_coins_symbols, get_last_prices
 from stake.models import StakeOption, StakeRevenue, StakeRequest
 from stake.views.stake_option_view import StakeOptionSerializer
 
@@ -77,7 +76,7 @@ class StakeWalletsAPIView(ListAPIView):
         ctx = super(StakeWalletsAPIView, self).get_serializer_context()
         queryset = self.get_queryset()
         coins = queryset.values_list('asset__symbol', flat=True)
-        ctx['prices'] = get_prices(get_coins_symbols(coins), side=SELL, allow_stale=True)
+        ctx['prices'] = get_last_prices(get_coins_symbols(coins))
         ctx['stake_wallets'] = {
             coin: Asset.get(coin).get_wallet(account, Wallet.STAKE).balance for coin in coins
         }

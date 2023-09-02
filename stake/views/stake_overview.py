@@ -12,9 +12,8 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from ledger.models import Wallet
 from ledger.models.asset import Asset
-from ledger.utils.external_price import SELL
 from ledger.utils.precision import get_presentation_amount, floor_precision
-from ledger.utils.price import get_prices, get_coins_symbols
+from ledger.utils.price import get_coins_symbols, get_last_prices
 from stake.models import StakeRevenue
 
 logger = logging.getLogger(__name__)
@@ -44,7 +43,7 @@ class StakeOverviewAPIView(APIView):
 
         stake_wallets = Wallet.objects.filter(account=account, market=Wallet.STAKE).exclude(balance=0)
         coins = stake_wallets.values_list('asset__symbol', flat=True)
-        prices = get_prices(get_coins_symbols(coins), side=SELL, allow_stale=True)
+        prices = get_last_prices(get_coins_symbols(coins))
 
         assets_total_revenues = StakeRevenue.objects.filter(
             stake_request__account=account

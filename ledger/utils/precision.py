@@ -108,6 +108,19 @@ def get_symbols_tick_size() -> dict:
     return dict(PairSymbol.objects.values_list('name', 'tick_size'))
 
 
-def get_symbol_presentation_amount(symbol: str, amount, trunc_zero: bool = False):
-    precision = get_symbols_tick_size().get(symbol, 0)
+def get_symbol_presentation_amount(symbol: str, amount: Decimal, trunc_zero: bool = False):
+    if symbol == 'IRTUSDT':
+        precision = 8
+    else:
+        precision = get_symbols_tick_size().get(symbol, 0)
+
     return get_presentation_amount(amount, precision, trunc_zero=trunc_zero)
+
+
+def get_coin_presentation_balance(coin: str, balance: Decimal):
+    if coin == 'IRT':
+        precision = 0
+    else:
+        precision = None
+
+    return get_presentation_amount(balance, precision=precision)
