@@ -36,7 +36,9 @@ class AlertTrigger(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['is_triggered', 'asset', 'created'], name='alert_trigger_idx')
+            models.Index(fields=['is_triggered', 'asset', 'created'], name='alert_trigger_idx'),
+            models.Index(fields=['asset', 'is_chanel_changed', 'is_triggered'], name='chanel_change_alert_idx'),
+            models.Index(fields=['asset', 'is_triggered', 'interval', 'created'])
         ]
 
 
