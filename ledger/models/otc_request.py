@@ -3,8 +3,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Avg, F, Sum, CheckConstraint, Q, Min
-
+from django.db.models import F, CheckConstraint, Q
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 

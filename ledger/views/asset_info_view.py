@@ -14,9 +14,10 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
 from ledger.utils.coins_info import get_coins_info
-from ledger.utils.external_price import BUY, get_external_price
+from ledger.utils.external_price import BUY, get_external_price, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.precision import get_symbol_presentation_amount
+from ledger.utils.price import get_prices, get_coins_symbols
 from ledger.utils.provider import CoinInfo
 from multimedia.models import CoinPriceContent
 
@@ -61,22 +62,12 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return self.context['cap_info'].get(asset.symbol, CoinInfo())
 
     def get_price_usdt(self, asset: Asset):
-        price = self.context.get('market_prices', {'USDT': {}})['USDT'].get(asset.symbol, 0)
-
-        if not price:
-            price = self.context.get('prices', {}).get(asset.symbol, 0)
-
-        return get_symbol_presentation_amount(asset.symbol + 'USDT', price)
+        price = self.context['prices'].get(asset.symbol + Asset.USDT, 0)
+        return get_symbol_presentation_amount(asset.symbol + Asset.USDT, price)
 
     def get_price_irt(self, asset: Asset):
-        price = self.context.get('market_prices', {'IRT': {}})['IRT'].get(asset.symbol, 0)
-
-        if not price:
-            price = self.context.get('prices', {}).get(asset.symbol, 0)
-            tether_irt = self.context['tether_irt']
-            price = price * tether_irt
-
-        return get_symbol_presentation_amount(asset.symbol + 'IRT', price)
+        price = self.context['prices'].get(asset.symbol + Asset.IRT, 0)
+        return get_symbol_presentation_amount(asset.symbol + Asset.IRT, price)
 
     def get_min_withdraw_amount(self, asset: Asset):
         network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True, can_withdraw=True)
@@ -185,9 +176,9 @@ class AssetsViewSet(ModelViewSet):
         ctx['enable_irt_market_list'] = get_irt_market_asset_symbols()
 
         if self.get_options('prices') or self.get_options('extra_info'):
-            symbols = list(self.get_queryset().values_list('symbol', flat=True))
+            coins = list(self.get_queryset().values_list('symbol', flat=True))
             ctx['cap_info'] = get_coins_info()
-            ctx['prices'], ctx['market_prices'], ctx['tether_irt'] = Asset.get_current_prices(symbols, allow_stale=True)
+            ctx['prices'] = get_prices(get_coins_symbols(coins), side=SELL, allow_stale=True)
 
         return ctx
 
