@@ -20,6 +20,14 @@ INTERVAL_HOUR_TIME_MAP = {
     AlertTrigger.TWELVE_HOURS: 12,
     AlertTrigger.ONE_DAY: 24
 }
+INTERVAL_CHANGE_PERCENT_SENSITIVITY_MAP = {
+    AlertTrigger.FIVE_MIN: 5,
+    AlertTrigger.ONE_HOUR: 5,
+    AlertTrigger.THREE_HOURS: 10,
+    AlertTrigger.SIX_HOURS: 10,
+    AlertTrigger.TWELVE_HOURS: 20,
+    AlertTrigger.ONE_DAY: 20
+}
 
 
 def get_current_prices() -> dict:
@@ -84,7 +92,8 @@ def get_altered_coins_by_ratio(past_cycle_prices: dict, current_cycle: dict, cur
 
         change_percent = math.floor(Decimal(current_price / past_price - Decimal(1)) * 100)
 
-        if abs(change_percent) > 5 or (is_chanel_changed and interval == AlertTrigger.FIVE_MIN):
+        if (abs(change_percent) > INTERVAL_CHANGE_PERCENT_SENSITIVITY_MAP[interval]
+                or (is_chanel_changed and interval == AlertTrigger.FIVE_MIN)):
             alert_trigger = AlertTrigger.objects.create(
                 asset=asset,
                 price=current_price,
