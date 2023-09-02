@@ -92,8 +92,7 @@ def get_altered_coins_by_ratio(past_cycle_prices: dict, current_cycle: dict, cur
 
         change_percent = math.floor(Decimal(current_price / past_price - Decimal(1)) * 100)
 
-        if (abs(change_percent) > INTERVAL_CHANGE_PERCENT_SENSITIVITY_MAP[interval]
-                or (is_chanel_changed and interval == AlertTrigger.FIVE_MIN)):
+        if abs(change_percent) > INTERVAL_CHANGE_PERCENT_SENSITIVITY_MAP[interval] or is_chanel_changed:
             alert_trigger = AlertTrigger.objects.create(
                 asset=asset,
                 price=current_price,
