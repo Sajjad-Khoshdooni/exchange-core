@@ -1,4 +1,5 @@
 import math
+from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
 
@@ -6,8 +7,8 @@ from celery import shared_task
 from django.core.cache import cache
 from django.utils import timezone
 
-from accounts.models import Notification
-from ledger.models import AssetAlert, AlertTrigger, Asset
+from accounts.models import Notification, User
+from ledger.models import CoinCategory, AssetAlert, BulkAssetAlert, AlertTrigger, Asset, Wallet
 from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get_external_price, BUY
 from ledger.utils.precision import get_presentation_amount
 
@@ -30,6 +31,20 @@ INTERVAL_CHANGE_PERCENT_SENSITIVITY_MAP = {
 }
 
 
+@dataclass
+class AlertData:
+    user: User
+    asset: Asset
+
+    def __hash__(self):
+        return hash((self.user, self.asset))
+
+    def __eq__(self, other):
+        if not isinstance(other, AlertData):
+            return NotImplemented
+        return (self.user, self.asset) == (other.user, other.asset)
+
+
 def get_current_prices() -> dict:
     coins = list(Asset.objects.values_list('asset__symbol', flat=True))
 
@@ -41,10 +56,10 @@ def get_current_prices() -> dict:
     return prices
 
 
-def send_notifications(asset_alert_list, altered_coins):
-    for asset_alert in asset_alert_list:
-        base_coin = 'تتر' if asset_alert.asset.symbol != asset_alert.asset.USDT else 'تومان'
-        new_price, old_price, interval, is_chanel_changed = altered_coins[asset_alert.asset.symbol]
+def send_notifications(asset_alerts, altered_coins):
+    for alert in asset_alerts:
+        base_coin = 'تتر' if alert.asset.symbol != alert.asset.USDT else 'تومان'
+        new_price, old_price, interval, is_chanel_changed = altered_coins[alert.asset.symbol]
         percent = math.floor(abs(new_price / old_price - Decimal(1)) * 100)
         change_status = 'افزایش' if new_price > old_price else 'کاهش'
         new_price = get_presentation_amount(new_price, precision=8)
@@ -52,17 +67,17 @@ def send_notifications(asset_alert_list, altered_coins):
         interval_verbose = AlertTrigger.INTERVAL_VERBOSE_MAP[interval]
 
         if interval == AlertTrigger.FIVE_MIN:
-            title = f'{change_status} ناگهانی قیمت {asset_alert.asset.name_fa}'
+            title = f'{change_status} ناگهانی قیمت {alert.asset.name_fa}'
         else:
-            title = f'{change_status} قیمت {asset_alert.asset.name_fa}'
+            title = f'{change_status} قیمت {alert.asset.name_fa}'
 
         if not is_chanel_changed:
-            message = (f'قیمت {asset_alert.asset.name_fa} در {interval_verbose} گذشته {percent}'
+            message = (f'قیمت {alert.asset.name_fa} در {interval_verbose} گذشته {percent}'
                        f' درصد {change_status} پیدا کرد و به {new_price} {base_coin} رسید.')
         else:
-            message = f'قیمت {asset_alert.asset.name_fa} به {new_price} {base_coin} رسید.'
+            message = f'قیمت {alert.asset.name_fa} به {new_price} {base_coin} رسید.'
         Notification.send(
-            recipient=asset_alert.user,
+            recipient=alert.user,
             title=title,
             message=message,
         )
@@ -102,17 +117,17 @@ def get_altered_coins_by_ratio(past_cycle_prices: dict, current_cycle: dict, cur
                 interval=interval
             )
             is_sent_recently = AlertTrigger.objects.filter(
-                    asset=asset,
-                    created__gte=timezone.now() - timedelta(hours=1),
-                    is_triggered=True
+                asset=asset,
+                created__gte=timezone.now() - timedelta(hours=1),
+                is_triggered=True
             ).exists()
 
             if not is_sent_recently:
                 hours = INTERVAL_HOUR_TIME_MAP.get(interval, None)
                 is_chanel_new = is_chanel_changed and not AlertTrigger.objects.filter(
-                        asset=asset,
-                        is_chanel_changed=True,
-                        is_triggered=True
+                    asset=asset,
+                    is_chanel_changed=True,
+                    is_triggered=True
                 ).last().chanel != current_chanel
 
                 is_interval_price_sent_recently = is_chanel_new or hours and AlertTrigger.objects.filter(
@@ -133,6 +148,40 @@ def get_altered_coins_by_ratio(past_cycle_prices: dict, current_cycle: dict, cur
 def get_past_cycle_by_number(cycle_number: int):
     key = CACHE_PREFIX + str(cycle_number)
     return cache.get(key)
+
+
+def get_asset_alert_list(altered_coins: dict) -> set:
+    asset_alerts = set()
+    all_assets = Asset.objects.filter(symbol__in=altered_coins.keys())
+    categories = CoinCategory.objects.filter(coins__symbol__in=altered_coins.keys())
+
+    for asset_alert in AssetAlert.objects.filter(asset__symbol__in=altered_coins.keys()):
+        asset_alerts.add(
+            AlertData(
+                user=asset_alert.user,
+                asset=asset_alert.asset,
+            )
+        )
+
+    for asset_alert in BulkAssetAlert.objects.all():
+        subscription_type = asset_alert.subscription_type
+        if subscription_type == BulkAssetAlert.CATEGORY_ALL_COINS:
+            scope_coins = all_assets
+        elif subscription_type == BulkAssetAlert.CATEGORY_MY_ASSETS:
+            scope_coins = Wallet.objects.filter(
+                account=asset_alert.user.get_account(),
+                asset__symbol__in=altered_coins.keys(),
+                balance__gt=0
+            )
+        else:
+            scope_coins = categories.get(asset_alert.coin_category)
+        for asset in scope_coins:
+            asset_alerts.add(AlertData(
+                user=asset_alert.user,
+                asset=asset
+            ))
+
+    return asset_alerts
 
 
 @shared_task(queue='notif-manager')
@@ -173,6 +222,6 @@ def send_price_notifications():
                                      interval=AlertTrigger.ONE_DAY)
     }
 
-    asset_alert_list = AssetAlert.objects.filter(asset__symbol__in=altered_coins.keys())
+    asset_alert_list = get_asset_alert_list(altered_coins)
 
     send_notifications(asset_alert_list, altered_coins)
