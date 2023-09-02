@@ -93,28 +93,29 @@ def get_altered_coins_by_ratio(past_cycle_prices: dict, current_cycle: dict, cur
                 chanel=current_chanel,
                 interval=interval
             )
-            if not AlertTrigger.objects.filter(
+            is_sent_recently = AlertTrigger.objects.filter(
                     asset=asset,
                     created__gte=timezone.now() - timedelta(hours=1),
                     is_triggered=True
-            ).exists():
+            ).exists()
+
+            if not is_sent_recently:
                 hours = INTERVAL_HOUR_TIME_MAP.get(interval, None)
-                if is_chanel_changed and not AlertTrigger.objects.filter(
+                is_chanel_new = is_chanel_changed and not AlertTrigger.objects.filter(
                         asset=asset,
                         is_chanel_changed=True,
                         is_triggered=True
-                ).last().chanel != current_chanel:
-                    changed_coins[coin] = [current_price, past_price, interval, True]
-                    alert_trigger.is_triggered = True
-                    alert_trigger.save(update_fields=['is_triggered'])
-                elif hours and AlertTrigger.objects.filter(
-                        asset=asset,
-                        is_triggered=True,
-                        interval=interval,
-                        created__gte=timezone.now() - timedelta(hours=hours)
-                ).exists():
+                ).last().chanel != current_chanel
 
-                    changed_coins[coin] = [current_price, past_price, interval, False]
+                is_interval_price_sent_recently = is_chanel_new or hours and AlertTrigger.objects.filter(
+                    asset=asset,
+                    is_triggered=True,
+                    interval=interval,
+                    created__gte=timezone.now() - timedelta(hours=hours)
+                ).exists()
+
+                if is_chanel_new or is_interval_price_sent_recently:
+                    changed_coins[coin] = [current_price, past_price, interval, True]
                     alert_trigger.is_triggered = True
                     alert_trigger.save(update_fields=['is_triggered'])
 
