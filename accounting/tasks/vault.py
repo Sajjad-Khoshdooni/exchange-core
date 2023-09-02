@@ -23,7 +23,6 @@ def update_vaults():
         coins=list(assets.values_list('symbol', flat=True)),
         side=SELL,
         allow_stale=True,
-        set_bulk_cache=True
     )
     prices['IRT'] = irt_usdt
 

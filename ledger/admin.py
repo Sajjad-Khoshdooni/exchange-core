@@ -23,7 +23,7 @@ from financial.models import Payment
 from ledger.models.asset_alert import AssetAlert, AlertTrigger
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet, \
-    ManualTrade, Trx
+    ManualTrade, Trx, NetworkAsset
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE, PROCESS, PENDING
@@ -141,6 +141,7 @@ class AssetAdmin(AdvancedAdmin):
     @admin.action(description='setup asset', permissions=['view'])
     def setup_asset(self, request, queryset):
         from ledger.models import NetworkAsset
+        now = timezone.now()
 
         for asset in queryset:
             networks_info = get_provider_requester().get_network_info(asset.symbol)
@@ -167,7 +168,7 @@ class AssetAdmin(AdvancedAdmin):
                     }
                 )
 
-                ns.update_with_provider(info)
+                ns.update_with_provider(info, now)
 
             create_symbols_for_asset(asset)
 
@@ -182,14 +183,31 @@ class NetworkAdmin(admin.ModelAdmin):
     ordering = ('-can_withdraw', '-can_deposit')
 
 
-@admin.register(models.NetworkAsset)
+@admin.register(NetworkAsset)
 class NetworkAssetAdmin(admin.ModelAdmin):
-    list_display = ('network', 'asset', 'withdraw_fee', 'withdraw_min', 'withdraw_max', 'can_deposit', 'can_withdraw',
-                    'allow_provider_withdraw', 'hedger_withdraw_enable', 'update_fee_with_provider')
+    list_display = ('network', 'asset', 'get_withdraw_fee', 'get_withdraw_min', 'get_withdraw_max', 'get_deposit_min',
+                    'can_deposit', 'can_withdraw', 'allow_provider_withdraw', 'hedger_withdraw_enable',
+                    'update_fee_with_provider', 'last_provider_update')
     search_fields = ('asset__symbol',)
     list_editable = ('can_deposit', 'can_withdraw', 'allow_provider_withdraw', 'hedger_withdraw_enable',
                      'update_fee_with_provider')
     list_filter = ('network', 'allow_provider_withdraw', 'hedger_withdraw_enable', 'update_fee_with_provider')
+
+    @admin.display(description='withdraw_fee', ordering='withdraw_fee')
+    def get_withdraw_fee(self, network_asset: NetworkAsset):
+        return get_presentation_amount(network_asset.withdraw_fee)
+
+    @admin.display(description='withdraw_min', ordering='withdraw_min')
+    def get_withdraw_min(self, network_asset: NetworkAsset):
+        return get_presentation_amount(network_asset.withdraw_min)
+
+    @admin.display(description='withdraw_max', ordering='withdraw_max')
+    def get_withdraw_max(self, network_asset: NetworkAsset):
+        return get_presentation_amount(network_asset.withdraw_max)
+
+    @admin.display(description='deposit_min', ordering='deposit_min')
+    def get_deposit_min(self, network_asset: NetworkAsset):
+        return get_presentation_amount(network_asset.deposit_min)
 
 
 class DepositAddressUserFilter(admin.SimpleListFilter):
@@ -455,10 +473,10 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     def get_risks(self, transfer):
         if not transfer.risks:
             return
-        html = '<table dir="ltr"><tr><th>Factor</th><th>Value</th><th>Expected</th><th>Whitelist</th></tr>'
+        html = '<table dir="ltr"><tr><th>Factor</th><th>Value</th><th>Expected</th><th>Whitelist</th><th>Type</th></tr>'
 
         for risk in transfer.risks:
-            html += '<tr><td>{reason}</td><td>{value}</td><td>{expected}</td><td>{whitelist}</td></tr>'.format(
+            html += '<tr><td>{reason}</td><td>{value}</td><td>{expected}</td><td>{whitelist}</td><td>{type}</td></tr>'.format(
                 **RiskFactor(**risk).__dict__
             )
 
