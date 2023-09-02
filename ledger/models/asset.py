@@ -14,6 +14,7 @@ from ledger.utils.external_price import BUY, SELL, get_external_usdt_prices, get
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.fields import get_amount_field
 
+
 class InvalidAmount(Exception):
     pass
 
@@ -72,7 +73,7 @@ class Asset(models.Model):
     distribution_factor = models.FloatField(default=0)
 
     class Meta:
-        ordering = ('-pin_to_top', '-trend', 'order', )
+        ordering = ('-pin_to_top', '-trend', 'order',)
 
     def __str__(self):
         return self.symbol
@@ -180,7 +181,7 @@ class Asset(models.Model):
 class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
-        fields = ('symbol', )
+        fields = ('symbol',)
 
 
 class AssetSerializerMini(serializers.ModelSerializer):
