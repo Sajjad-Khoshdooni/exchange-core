@@ -720,7 +720,7 @@ class BalanceLockAdmin(admin.ModelAdmin):
 @admin.register(BulkAssetAlert)
 class BulkAssetAlertAdmin(admin.ModelAdmin):
     list_display = ('created', 'user', 'subscription_type', 'coin_category',)
-    readonly_fields = ('created', 'user',)
+    readonly_fields = ('created',)
     search_fields = ('user__name', 'subscription_type', 'coin_category',)
     list_filter = ('subscription_type', 'coin_category',)
     raw_id_fields = ('user',)
