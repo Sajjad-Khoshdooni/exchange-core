@@ -155,7 +155,10 @@ def get_past_cycle_by_number(cycle_number: int):
 def get_asset_alert_list(altered_coins: dict) -> set:
     asset_alerts = set()
     all_assets = Asset.objects.filter(symbol__in=altered_coins.keys())
-    categories = CoinCategory.objects.filter(coins__symbol__in=altered_coins.keys())
+    categories = CoinCategory.objects.all()
+    category_map = {}
+    for category in categories:
+        category_map[category] = category.coins.filter(symbol__in=altered_coins.keys())
 
     for asset_alert in AssetAlert.objects.filter(asset__symbol__in=altered_coins.keys()):
         asset_alerts.add(
@@ -176,7 +179,7 @@ def get_asset_alert_list(altered_coins: dict) -> set:
                 balance__gt=0
             )
         else:
-            scope_coins = categories.filter(name=asset_alert.coin_category.name)
+            scope_coins = category_map[asset_alert.coin_category]
         for asset in scope_coins:
             asset_alerts.add(AlertData(
                 user=asset_alert.user,
