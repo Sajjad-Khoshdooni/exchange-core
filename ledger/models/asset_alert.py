@@ -27,7 +27,7 @@ class AlertTrigger(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     price = get_amount_field()
-    chanel = models.IntegerField(default=None, null=True)
+    chanel = models.IntegerField(default=None, null=True, blank=True)
     is_chanel_changed = models.BooleanField(default=False)
     change_percent = models.IntegerField(default=0)
     cycle = models.PositiveIntegerField()
@@ -65,7 +65,7 @@ class BulkAssetAlert(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     subscription_type = models.CharField(choices=CATEGORIES, max_length=20)
-    coin_category = models.ForeignKey(CoinCategory, on_delete=models.CASCADE, null=True)
+    coin_category = models.ForeignKey(CoinCategory, on_delete=models.CASCADE, null=True, blank=True)
 
     class Meta:
         unique_together = [('user', 'subscription_type', 'coin_category')]

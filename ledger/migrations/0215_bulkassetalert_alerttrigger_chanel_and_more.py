@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='alerttrigger',
             name='chanel',
-            field=models.IntegerField(default=None, null=True),
+            field=models.IntegerField(default=None, null=True, blank=True),
         ),
         migrations.AddField(
             model_name='alerttrigger',
@@ -53,7 +53,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='bulkassetalert',
             name='coin_category',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='ledger.coincategory'),
+            field=models.ForeignKey(null=True, blank=True, on_delete=django.db.models.deletion.CASCADE, to='ledger.coincategory'),
         ),
         migrations.AddField(
             model_name='bulkassetalert',
