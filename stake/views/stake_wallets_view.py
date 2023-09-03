@@ -6,6 +6,7 @@ from rest_framework.generics import ListAPIView
 
 from ledger.models import Wallet, Asset
 from ledger.utils.precision import get_presentation_amount
+from ledger.utils.price import get_coins_symbols, get_last_prices
 from stake.models import StakeOption, StakeRevenue, StakeRequest
 from stake.views.stake_option_view import StakeOptionSerializer
 
@@ -19,12 +20,10 @@ class StakeWalletSerializer(StakeOptionSerializer):
     revenue_usdt = serializers.SerializerMethodField()
 
     def get_price_irt(self, asset):
-        price = self.context['market_prices']['IRT'].get(asset, 0) or (
-                self.context['prices'].get(asset, 0) * self.context['tether_irt'])
-        return price
+        return self.context['prices'].get(asset + Asset.IRT, 0)
 
     def get_price_usdt(self, asset):
-        return self.context['market_prices']['USDT'].get(asset, 0) or self.context['prices'].get(asset, 0)
+        return self.context['prices'].get(asset + Asset.USDT, 0)
 
     def get_balance(self, stake_option: StakeOption):
         return get_presentation_amount(self.context['stake_wallets'].get(stake_option.asset.symbol) or Decimal(0))
@@ -77,7 +76,7 @@ class StakeWalletsAPIView(ListAPIView):
         ctx = super(StakeWalletsAPIView, self).get_serializer_context()
         queryset = self.get_queryset()
         coins = queryset.values_list('asset__symbol', flat=True)
-        ctx['prices'], ctx['market_prices'], ctx['tether_irt'] = Asset.get_current_prices(coins)
+        ctx['prices'] = get_last_prices(get_coins_symbols(coins))
         ctx['stake_wallets'] = {
             coin: Asset.get(coin).get_wallet(account, Wallet.STAKE).balance for coin in coins
         }

@@ -49,7 +49,7 @@ class AlertData:
 def get_current_prices() -> dict:
     coins = list(Asset.objects.values_list('symbol', flat=True))
 
-    prices = get_external_usdt_prices(coins=coins, side=BUY, apply_otc_spread=True)
+    prices = get_external_usdt_prices(coins=coins, side=BUY)
 
     if USDT in prices.keys():
         prices[USDT] = get_external_price(coin=USDT, base_coin=IRT, side=BUY)

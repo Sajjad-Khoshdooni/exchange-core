@@ -10,7 +10,7 @@ from django.utils import timezone
 from redis import Redis
 
 from ledger.utils.external_price import BUY, SELL
-from ledger.utils.precision import floor_precision
+from ledger.utils.precision import floor_precision, get_presentation_amount
 
 prefix_top_price = 'market_top_price'
 prefix_top_depth_price = 'market_top_depth_price'
@@ -192,8 +192,8 @@ class MarketStreamCache:
         for pair in trade_pairs:
             maker_trade, taker_trade = pair
             is_buyer_maker = maker_trade.side == BUY
-            price = floor_precision(maker_trade.price, maker_trade.symbol.tick_size)
-            amount = floor_precision(maker_trade.amount, maker_trade.symbol.step_size)
+            price = get_presentation_amount(maker_trade.price, maker_trade.symbol.tick_size, trunc_zero=False)
+            amount = get_presentation_amount(maker_trade.amount, maker_trade.symbol.step_size)
             self.market_pipeline.publish(
                 f'market:trades:{maker_trade.symbol.name}',
                 f'{taker_trade.id}#{price}#{amount}#{maker_trade.client_order_id or maker_trade.order_id}#{taker_trade.client_order_id or taker_trade.order_id}#{is_buyer_maker}#{maker_trade.order_id}#{taker_trade.order_id}#{maker_trade.created}'
