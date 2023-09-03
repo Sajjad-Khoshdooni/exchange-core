@@ -261,28 +261,22 @@ class AssetOverviewAPIView(APIView):
     permission_classes = []
 
     @classmethod
-    def set_price(cls, coins: list):
-        symbols = list(map(lambda c: c['symbol'], coins))
-        assets = Asset.objects.filter(symbol__in=symbols)
+    def set_price(cls, assets_info: list):
+        for asset_info in assets_info:
+            coin = asset_info['symbol']
 
-        asset_map = {a.symbol: a for a in assets}
-
-        for coin in coins:
-            coin = coin['symbol']
-            asset = asset_map[coin]
-
-            coin['price_usdt'] = get_symbol_presentation_amount(
+            asset_info['price_usdt'] = get_symbol_presentation_amount(
                 symbol=coin + Asset.USDT,
                 amount=get_price(coin + Asset.USDT, side=SELL, allow_stale=True) or 0
             )
 
-            coin['price_irt'] = get_symbol_presentation_amount(
+            asset_info['price_irt'] = get_symbol_presentation_amount(
                 symbol=coin + Asset.IRT,
                 amount=get_price(coin + Asset.IRT, side=SELL, allow_stale=True) or 0
             )
 
-            coin['market_irt_enable'] = coin in get_irt_market_asset_symbols()
-            coin.update(AssetSerializerMini(Asset.get(symbol=coin)).data)
+            asset_info['market_irt_enable'] = coin in get_irt_market_asset_symbols()
+            asset_info.update(AssetSerializerMini(Asset.get(symbol=coin)).data)
 
     def get(self, request):
         limit = int(self.request.query_params.get('limit', default=3))
