@@ -21,6 +21,7 @@ INTERVAL_HOUR_TIME_MAP = {
     AlertTrigger.TWELVE_HOURS: 12,
     AlertTrigger.ONE_DAY: 24
 }
+
 INTERVAL_CHANGE_PERCENT_SENSITIVITY_MAP = {
     AlertTrigger.FIVE_MIN: 5,
     AlertTrigger.ONE_HOUR: 5,
@@ -46,7 +47,7 @@ class AlertData:
 
 
 def get_current_prices() -> dict:
-    coins = list(Asset.objects.values_list('asset__symbol', flat=True))
+    coins = list(Asset.objects.values_list('symbol', flat=True))
 
     prices = get_external_usdt_prices(coins=coins, side=BUY, apply_otc_spread=True)
 
@@ -114,6 +115,7 @@ def get_altered_coins_by_ratio(past_cycle_prices: dict, current_cycle: dict, cur
                 cycle=current_cycle_count,
                 change_percent=change_percent,
                 chanel=current_chanel,
+                is_chanel_changed=is_chanel_changed,
                 interval=interval
             )
             is_sent_recently = AlertTrigger.objects.filter(
@@ -130,15 +132,15 @@ def get_altered_coins_by_ratio(past_cycle_prices: dict, current_cycle: dict, cur
                     is_triggered=True
                 ).last().chanel != current_chanel
 
-                is_interval_price_sent_recently = is_chanel_new or hours and AlertTrigger.objects.filter(
+                is_interval_price_sent_recently = is_chanel_new or (hours and AlertTrigger.objects.filter(
                     asset=asset,
                     is_triggered=True,
                     interval=interval,
                     created__gte=timezone.now() - timedelta(hours=hours)
-                ).exists()
+                ).exists())
 
                 if is_chanel_new or is_interval_price_sent_recently:
-                    changed_coins[coin] = [current_price, past_price, interval, True]
+                    changed_coins[coin] = [current_price, past_price, interval, is_chanel_new]
                     alert_trigger.is_triggered = True
                     alert_trigger.save(update_fields=['is_triggered'])
 
@@ -213,7 +215,7 @@ def send_price_notifications():
         **get_altered_coins_by_ratio(past_hour_cycle, current_cycle_prices, current_cycle_count,
                                      interval=AlertTrigger.ONE_HOUR),
         **get_altered_coins_by_ratio(past_three_hours_cycle, current_cycle_prices, current_cycle_count,
-                                     interval=AlertTrigger.SIX_HOURS),
+                                     interval=AlertTrigger.THREE_HOURS),
         **get_altered_coins_by_ratio(past_six_hours_cycle, current_cycle_prices, current_cycle_count,
                                      interval=AlertTrigger.SIX_HOURS),
         **get_altered_coins_by_ratio(past_twelve_hours_cycle, current_cycle_prices, current_cycle_count,

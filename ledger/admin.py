@@ -63,7 +63,7 @@ class AssetAdmin(AdvancedAdmin):
         return super(AssetAdmin, self).save_model(request, obj, form, change)
 
     def get_queryset(self, request):
-        return super(AssetAdmin, self).get_queryset(request) .annotate(
+        return super(AssetAdmin, self).get_queryset(request).annotate(
             hedge_value=F('assetsnapshot__hedge_value'),
             hedge_value_abs=F('assetsnapshot__hedge_value_abs'),
             hedge_amount=F('assetsnapshot__hedge_amount'),
@@ -646,7 +646,7 @@ class AssetSnapshotAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
 @admin.register(models.FastBuyToken)
 class FastBuyTokenAdmin(admin.ModelAdmin):
-    list_display = ('created', 'asset', 'get_amount', 'status', )
+    list_display = ('created', 'asset', 'get_amount', 'status',)
     readonly_fields = ('get_amount', 'payment_request', 'otc_request')
     list_filter = ('status',)
 
@@ -784,7 +784,9 @@ class ManualTradeAdmin(admin.ModelAdmin):
 
 @admin.register(AlertTrigger)
 class AlertTriggerAdmin(admin.ModelAdmin):
-    list_display = ('created', 'asset', 'price', 'change_percent', 'cycle', 'interval', 'is_triggered',)
-    readonly_fields = ('created', 'asset', 'price', 'change_percent', 'cycle',)
+    list_display = (
+        'created', 'asset', 'price', 'change_percent', 'chanel', 'is_chanel_changed', 'cycle', 'interval',
+        'is_triggered',)
+    list_filter = ('asset', 'is_chanel_changed', 'is_triggered',)
+    readonly_fields = ('created', 'asset', 'price', 'change_percent', 'chanel', 'cycle',)
     search_fields = ('cycle',)
-
