@@ -1,3 +1,4 @@
+from decouple import config
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
@@ -14,6 +15,7 @@ from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 class UserSerializer(serializers.ModelSerializer):
     auth2fa = serializers.SerializerMethodField()
     show_staking = serializers.SerializerMethodField()
+    show_strategy_bot = serializers.SerializerMethodField()
 
     def get_chat_uuid(self, user: User):
         request = self.context['request']
@@ -28,6 +30,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_show_staking(self, user: User):
         return True
+
+    def get_show_strategy_bot(self, user: User):
+        return user.show_strategy_bot or config('STRATEGY_ENABLE', cast=bool, default=False)
 
     class Meta:
         model = User

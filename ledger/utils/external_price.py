@@ -6,7 +6,6 @@ from typing import Dict, List, Union
 
 import requests
 from django.conf import settings
-from django.core.cache import cache
 from django.utils import timezone
 from redis import Redis
 
@@ -133,9 +132,6 @@ def get_external_usdt_prices(coins: list, side, allow_stale: bool = False) -> Di
 
     if 'USDT' in coins:
         result['USDT'] = 1
-
-    # if set_bulk_cache:
-    #     cache.set(cache_key, result, PRICES_CACHE_TIMEOUT)
 
     return result
 
