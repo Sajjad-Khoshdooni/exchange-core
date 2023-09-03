@@ -273,12 +273,12 @@ class AssetOverviewAPIView(APIView):
 
             coin['price_usdt'] = get_symbol_presentation_amount(
                 symbol=coin + Asset.USDT,
-                amount=get_price(coin + Asset.USDT, side=SELL, allow_stale=True)
+                amount=get_price(coin + Asset.USDT, side=SELL, allow_stale=True) or 0
             )
 
             coin['price_irt'] = get_symbol_presentation_amount(
                 symbol=coin + Asset.IRT,
-                amount=get_price(coin + Asset.IRT, side=SELL, allow_stale=True)
+                amount=get_price(coin + Asset.IRT, side=SELL, allow_stale=True) or 0
             )
 
             coin['market_irt_enable'] = coin in get_irt_market_asset_symbols()
