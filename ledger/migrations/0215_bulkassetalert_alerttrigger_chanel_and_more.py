@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('subscription_type', models.CharField(choices=[('my_assets', 'my_assets'), ('all_coins', 'all_coins'), ('asset_categories', 'asset_categories')], max_length=20)),
+                ('subscription_type', models.CharField(choices=[('my_assets', 'my_assets'), ('all_coins', 'all_coins'), ('coin_categories', 'coin_categories')], max_length=20)),
             ],
         ),
         migrations.AddField(

@@ -54,12 +54,12 @@ class AssetAlert(models.Model):
 class BulkAssetAlert(models.Model):
     CATEGORY_MY_ASSETS = 'my_assets'
     CATEGORY_ALL_COINS = 'all_coins'
-    CATEGORY_ASSET_CATEGORIES = 'asset_categories'
+    CATEGORY_COIN_CATEGORIES = 'coin_categories'
 
     CATEGORIES = [
         (CATEGORY_MY_ASSETS, CATEGORY_MY_ASSETS),
         (CATEGORY_ALL_COINS, CATEGORY_ALL_COINS),
-        (CATEGORY_ASSET_CATEGORIES, CATEGORY_ASSET_CATEGORIES),
+        (CATEGORY_COIN_CATEGORIES, CATEGORY_COIN_CATEGORIES),
     ]
 
     created = models.DateTimeField(auto_now_add=True)

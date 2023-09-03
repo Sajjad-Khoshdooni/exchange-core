@@ -37,7 +37,7 @@ class BulkAssetAlertViewSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         subscription_type = attrs['subscription_type']
 
-        if subscription_type == BulkAssetAlert.CATEGORY_ASSET_CATEGORIES:
+        if subscription_type == BulkAssetAlert.CATEGORY_COIN_CATEGORIES:
             coin_category = attrs.get('coin_category', None)
             if not coin_category:
                 raise ValidationError({'coin_category': 'دسته بندی انتخاب نشده است.'})
