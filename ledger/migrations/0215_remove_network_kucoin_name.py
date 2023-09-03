@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ledger', '0215_merge_20230902_1330'),
+        ('ledger', '0214_networkasset_last_provider_update'),
     ]
 
     operations = [
