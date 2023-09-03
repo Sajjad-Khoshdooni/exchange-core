@@ -26,7 +26,7 @@ from ledger.utils.withdraw_verify import can_withdraw
 
 logger = logging.getLogger(__name__)
 
-MIN_WITHDRAW = 100_000
+MIN_WITHDRAW = 20_000
 MAX_WITHDRAW = 100_000_000
 
 
