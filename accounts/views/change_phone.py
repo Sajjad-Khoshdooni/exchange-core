@@ -18,7 +18,7 @@ class InitiateChangePhoneSerializer(serializers.Serializer):
         user = self.context['request'].user
         otp = data.get('otp')
         password = data.get('password')
-        totp = data.get('totp')
+        totp = data.get('totp', None)
         validate_password(password=password, user=user)
         otp_verification = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_CHANGE_PHONE, user=user)
         if not otp_verification:

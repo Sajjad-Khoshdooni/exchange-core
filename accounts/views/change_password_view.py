@@ -20,7 +20,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         password = data.get('password')
         old_pass = data.get('old_password')
         otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CHANGE_PASSWORD, user)
-        totp = data.get('totp')
+        totp = data.get('totp', None)
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است.'})
         otp_code.set_code_used()
