@@ -85,8 +85,8 @@ def send_notifications(asset_alerts, altered_coins):
         )
 
 
-def get_altered_coins_by_ratio(past_cycle_prices: dict, current_cycle: dict, current_cycle_count: int,
-                               interval: str) -> dict:
+def get_altered_coins(past_cycle_prices: dict, current_cycle: dict, current_cycle_count: int,
+                      interval: str) -> dict:
     if not past_cycle_prices:
         return {}
 
@@ -157,12 +157,11 @@ def get_past_cycle_by_number(cycle_number: int):
 
 def get_asset_alert_list(altered_coins: dict) -> set:
     asset_alerts = set()
-    all_assets = Asset.objects.filter(symbol__in=altered_coins.keys())
+    all_assets = Asset.live_objects.filter(symbol__in=altered_coins.keys())
     all_categories = CoinCategory.objects.all()
     category_map = {}
     for category in all_categories:
         category_map[category] = category.coins.filter(symbol__in=altered_coins.keys())
-
     for asset_alert in AssetAlert.objects.filter(asset__symbol__in=altered_coins.keys()):
         asset_alerts.add(
             AlertData(
@@ -170,7 +169,6 @@ def get_asset_alert_list(altered_coins: dict) -> set:
                 asset=asset_alert.asset,
             )
         )
-
     for bulk_asset_alert in BulkAssetAlert.objects.all():
         subscription_type = bulk_asset_alert.subscription_type
         if subscription_type == BulkAssetAlert.CATEGORY_ALL_COINS:
@@ -188,7 +186,6 @@ def get_asset_alert_list(altered_coins: dict) -> set:
                 user=bulk_asset_alert.user,
                 asset=asset
             ))
-
     return asset_alerts
 
 
@@ -216,18 +213,18 @@ def send_price_notifications():
     past_day_cycle = get_past_cycle_by_number((current_cycle_count + 2) % total_cycles)
 
     altered_coins = {
-        **get_altered_coins_by_ratio(past_five_minute_cycle, current_cycle_prices, current_cycle_count,
-                                     interval=AlertTrigger.FIVE_MIN),
-        **get_altered_coins_by_ratio(past_hour_cycle, current_cycle_prices, current_cycle_count,
-                                     interval=AlertTrigger.ONE_HOUR),
-        **get_altered_coins_by_ratio(past_three_hours_cycle, current_cycle_prices, current_cycle_count,
-                                     interval=AlertTrigger.THREE_HOURS),
-        **get_altered_coins_by_ratio(past_six_hours_cycle, current_cycle_prices, current_cycle_count,
-                                     interval=AlertTrigger.SIX_HOURS),
-        **get_altered_coins_by_ratio(past_twelve_hours_cycle, current_cycle_prices, current_cycle_count,
-                                     interval=AlertTrigger.TWELVE_HOURS),
-        **get_altered_coins_by_ratio(past_day_cycle, current_cycle_prices, current_cycle_count,
-                                     interval=AlertTrigger.ONE_DAY),
+        **get_altered_coins(past_five_minute_cycle, current_cycle_prices, current_cycle_count,
+                            interval=AlertTrigger.FIVE_MIN),
+        **get_altered_coins(past_hour_cycle, current_cycle_prices, current_cycle_count,
+                            interval=AlertTrigger.ONE_HOUR),
+        **get_altered_coins(past_three_hours_cycle, current_cycle_prices, current_cycle_count,
+                            interval=AlertTrigger.THREE_HOURS),
+        **get_altered_coins(past_six_hours_cycle, current_cycle_prices, current_cycle_count,
+                            interval=AlertTrigger.SIX_HOURS),
+        **get_altered_coins(past_twelve_hours_cycle, current_cycle_prices, current_cycle_count,
+                            interval=AlertTrigger.TWELVE_HOURS),
+        **get_altered_coins(past_day_cycle, current_cycle_prices, current_cycle_count,
+                            interval=AlertTrigger.ONE_DAY),
     }
 
     asset_alert_list = get_asset_alert_list(altered_coins)
