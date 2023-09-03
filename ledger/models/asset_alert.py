@@ -27,7 +27,7 @@ class AlertTrigger(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     price = get_amount_field()
-    chanel = models.IntegerField(default=None)
+    chanel = models.IntegerField(default=None, null=True)
     is_chanel_changed = models.BooleanField(default=False)
     change_percent = models.IntegerField(default=0)
     cycle = models.PositiveIntegerField()
