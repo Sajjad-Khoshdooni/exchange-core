@@ -17,7 +17,7 @@ CACHE_PREFIX = 'asset_alert'
 def get_current_prices() -> dict:
     coins = list(AssetAlert.objects.distinct('asset').values_list('asset__symbol', flat=True))
 
-    prices = get_external_usdt_prices(coins=coins, side=BUY, apply_otc_spread=True)
+    prices = get_external_usdt_prices(coins=coins, side=BUY)
 
     if USDT in prices.keys():
         prices[USDT] = get_external_price(coin=USDT, base_coin=IRT, side=BUY)
