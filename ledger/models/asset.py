@@ -9,6 +9,7 @@ from _base.settings import SYSTEM_ACCOUNT_ID, OTC_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.external_price import BUY, SELL
+from ledger.utils.fields import get_amount_field
 
 
 class InvalidAmount(Exception):
@@ -64,10 +65,12 @@ class Asset(models.Model):
 
     price_page = models.BooleanField(default=False)
 
+    price_alert_chanel_sensitivity = get_amount_field(null=True)
+
     distribution_factor = models.FloatField(default=0)
 
     class Meta:
-        ordering = ('-pin_to_top', '-trend', 'order', )
+        ordering = ('-pin_to_top', '-trend', 'order',)
 
     def __str__(self):
         return self.symbol
@@ -144,7 +147,7 @@ class Asset(models.Model):
 class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
-        fields = ('symbol', )
+        fields = ('symbol',)
 
 
 class AssetSerializerMini(serializers.ModelSerializer):

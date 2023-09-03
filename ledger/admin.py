@@ -20,7 +20,7 @@ from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
-from ledger.models.asset_alert import AssetAlert, AlertTrigger
+from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger import models
 from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet, \
     ManualTrade, Trx, NetworkAsset
@@ -44,13 +44,13 @@ class AssetAdmin(AdvancedAdmin):
         'trend': True,
     }
     list_display = (
-        'symbol', 'enable', 'get_hedge_value', 'get_hedge_value_abs', 'get_hedge_amount', 'get_calc_hedge_amount',
+        'symbol', 'enable', 'price_alert_chanel_sensitivity', 'get_hedge_value', 'get_hedge_value_abs', 'get_hedge_amount', 'get_calc_hedge_amount',
         'get_total_asset', 'get_users_balance', 'get_reserved_amount',
         'order', 'trend', 'trade_enable', 'hedge',
         'margin_enable', 'publish_date', 'spread_category', 'otc_status', 'price_page', 'get_distribution_factor'
     )
     list_filter = ('enable', 'trend', 'margin_enable', 'spread_category')
-    list_editable = ('enable', 'order', 'trend', 'trade_enable', 'margin_enable', 'hedge', 'price_page')
+    list_editable = ('enable', 'price_alert_chanel_sensitivity', 'order', 'trend', 'trade_enable', 'margin_enable', 'hedge', 'price_page')
     search_fields = ('symbol',)
     ordering = ('-enable', '-pin_to_top', '-trend', 'order')
     actions = ('setup_asset',)
@@ -63,7 +63,7 @@ class AssetAdmin(AdvancedAdmin):
         return super(AssetAdmin, self).save_model(request, obj, form, change)
 
     def get_queryset(self, request):
-        return super(AssetAdmin, self).get_queryset(request) .annotate(
+        return super(AssetAdmin, self).get_queryset(request).annotate(
             hedge_value=F('assetsnapshot__hedge_value'),
             hedge_value_abs=F('assetsnapshot__hedge_value_abs'),
             hedge_amount=F('assetsnapshot__hedge_amount'),
@@ -646,7 +646,7 @@ class AssetSnapshotAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
 @admin.register(models.FastBuyToken)
 class FastBuyTokenAdmin(admin.ModelAdmin):
-    list_display = ('created', 'asset', 'get_amount', 'status', )
+    list_display = ('created', 'asset', 'get_amount', 'status',)
     readonly_fields = ('get_amount', 'payment_request', 'otc_request')
     list_filter = ('status',)
 
@@ -717,6 +717,15 @@ class BalanceLockAdmin(admin.ModelAdmin):
     search_fields = ('wallet__account__user__phone', 'key')
 
 
+@admin.register(BulkAssetAlert)
+class BulkAssetAlertAdmin(admin.ModelAdmin):
+    list_display = ('created', 'user', 'subscription_type', 'coin_category',)
+    readonly_fields = ('created', 'user',)
+    search_fields = ('user__name', 'subscription_type', 'coin_category',)
+    list_filter = ('subscription_type', 'coin_category',)
+    raw_id_fields = ('user',)
+
+
 @admin.register(ReserveWallet)
 class ReserveWalletAdmin(admin.ModelAdmin):
     list_display = ('created', 'sender', 'receiver', 'amount', 'group_id', 'refund_completed', 'request_id')
@@ -775,7 +784,9 @@ class ManualTradeAdmin(admin.ModelAdmin):
 
 @admin.register(AlertTrigger)
 class AlertTriggerAdmin(admin.ModelAdmin):
-    list_display = ('created', 'asset', 'price', 'change_percent', 'cycle', 'interval', 'is_triggered',)
-    readonly_fields = ('created', 'asset', 'price', 'change_percent', 'cycle',)
+    list_display = (
+        'created', 'asset', 'price', 'change_percent', 'chanel', 'is_chanel_changed', 'cycle', 'interval',
+        'is_triggered',)
+    list_filter = ('asset', 'is_chanel_changed', 'is_triggered',)
+    readonly_fields = ('created', 'asset', 'price', 'change_percent', 'chanel', 'cycle',)
     search_fields = ('cycle',)
-
