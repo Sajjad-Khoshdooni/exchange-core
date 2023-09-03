@@ -2,13 +2,13 @@ import math
 from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
-from celery import shared_task
 
+from celery import shared_task
 from django.core.cache import cache
 from django.utils import timezone
 
 from accounts.models import Notification, User
-from ledger.models import CoinCategory, AssetAlert, BulkAssetAlert, AlertTrigger, Asset, Wallet
+from ledger.models import CoinCategory, AssetAlert, BulkAssetAlert, AlertTrigger, Asset
 from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get_external_price, BUY
 from ledger.utils.precision import get_presentation_amount
 
@@ -174,10 +174,10 @@ def get_asset_alert_list(altered_coins: dict) -> set:
         if subscription_type == BulkAssetAlert.CATEGORY_ALL_COINS:
             subscribed_coins = all_assets
         elif subscription_type == BulkAssetAlert.CATEGORY_MY_ASSETS:
-            subscribed_coins = Wallet.objects.filter(
-                account=bulk_asset_alert.user.get_account(),
-                asset__symbol__in=altered_coins.keys(),
-                balance__gt=0
+            subscribed_coins = Asset.objects.filter(
+                symbol__in=altered_coins.keys(),
+                wallet__account=bulk_asset_alert.user.get_account(),
+                wallet__gt=0
             )
         else:
             subscribed_coins = category_map[bulk_asset_alert.coin_category]
