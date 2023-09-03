@@ -155,9 +155,9 @@ def get_past_cycle_by_number(cycle_number: int):
 def get_asset_alert_list(altered_coins: dict) -> set:
     asset_alerts = set()
     all_assets = Asset.objects.filter(symbol__in=altered_coins.keys())
-    categories = CoinCategory.objects.all()
+    all_categories = CoinCategory.objects.all()
     category_map = {}
-    for category in categories:
+    for category in all_categories:
         category_map[category] = category.coins.filter(symbol__in=altered_coins.keys())
 
     for asset_alert in AssetAlert.objects.filter(asset__symbol__in=altered_coins.keys()):
@@ -168,21 +168,21 @@ def get_asset_alert_list(altered_coins: dict) -> set:
             )
         )
 
-    for asset_alert in BulkAssetAlert.objects.all():
-        subscription_type = asset_alert.subscription_type
+    for bulk_asset_alert in BulkAssetAlert.objects.all():
+        subscription_type = bulk_asset_alert.subscription_type
         if subscription_type == BulkAssetAlert.CATEGORY_ALL_COINS:
-            scope_coins = all_assets
+            subscribed_coins = all_assets
         elif subscription_type == BulkAssetAlert.CATEGORY_MY_ASSETS:
-            scope_coins = Wallet.objects.filter(
-                account=asset_alert.user.get_account(),
+            subscribed_coins = Wallet.objects.filter(
+                account=bulk_asset_alert.user.get_account(),
                 asset__symbol__in=altered_coins.keys(),
                 balance__gt=0
             )
         else:
-            scope_coins = category_map[asset_alert.coin_category]
-        for asset in scope_coins:
+            subscribed_coins = category_map[bulk_asset_alert.coin_category]
+        for asset in subscribed_coins:
             asset_alerts.add(AlertData(
-                user=asset_alert.user,
+                user=bulk_asset_alert.user,
                 asset=asset
             ))
 
