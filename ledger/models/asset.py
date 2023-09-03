@@ -1,17 +1,14 @@
 from datetime import datetime
-from decimal import Decimal
 from typing import Union
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Min, Max
 from rest_framework import serializers
 
 from _base.settings import SYSTEM_ACCOUNT_ID, OTC_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
-from ledger.utils.external_price import BUY, SELL, get_external_usdt_prices, get_external_price
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.external_price import BUY, SELL
 
 
 class InvalidAmount(Exception):
@@ -142,37 +139,6 @@ class Asset(models.Model):
             return '1000SHIB'
         else:
             return self.symbol
-
-    @staticmethod
-    def get_current_prices(coins, allow_stale: bool = False):
-        prices = get_external_usdt_prices(
-            coins=coins,
-            side=SELL,
-            apply_otc_spread=True,
-            allow_stale=allow_stale
-        )
-        market_prices = {}
-        from market.models import Order
-        for base_asset in ('IRT', 'USDT'):
-            market_prices[base_asset] = {
-                o['symbol__name'].replace(base_asset, ''): o['best_ask'] for o in Order.open_objects.filter(
-                    side=SELL,
-                    symbol__enable=True,
-                    symbol__name__in=map(lambda s: f'{s}{base_asset}', coins)
-                ).values('symbol__name').annotate(best_ask=Min('price'))
-            }
-        market_prices['USDT']['IRT'] = Decimal(1) / Order.open_objects.filter(
-            side=BUY,
-            symbol__enable=True,
-            symbol__name='USDTIRT'
-        ).aggregate(best_bid=Max('price'))['best_bid']
-
-        tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=SELL, allow_stale=allow_stale)
-
-        prices[Asset.IRT] = Decimal(1) / get_external_price(
-            coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=allow_stale)
-
-        return prices, market_prices, tether_irt
 
 
 class AssetSerializer(serializers.ModelSerializer):
