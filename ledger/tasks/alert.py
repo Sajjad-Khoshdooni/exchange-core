@@ -2,8 +2,8 @@ import math
 from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
-
 from celery import shared_task
+
 from django.core.cache import cache
 from django.utils import timezone
 
@@ -81,6 +81,7 @@ def send_notifications(asset_alerts, altered_coins):
             recipient=alert.user,
             title=title,
             message=message,
+            link=f'/price/{Asset.name}'
         )
 
 
