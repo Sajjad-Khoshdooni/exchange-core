@@ -5,7 +5,7 @@ from ledger import views
 asset_alert_router = DefaultRouter()
 asset_alert_router.register(r'', viewset=views.AssetAlertView)
 bulk_asset_alert_router = DefaultRouter()
-bulk_asset_alert_router.register(r'', viewset=views.BuketAssetAlertView)
+bulk_asset_alert_router.register(r'', viewset=views.BulkAssetAlertView)
 
 urlpatterns = [
     path('v1/assets/', views.AssetsViewSet.as_view({'get': 'list'})),
@@ -13,7 +13,7 @@ urlpatterns = [
     path('v1/networkassets/', views.NetworkAssetView.as_view()),
     path('v1/asset/overview/', views.AssetOverviewAPIView.as_view()),
     path('v1/assets/alert/', include(asset_alert_router.urls)),
-    path('v1/assets/bucket_alert/', include(bulk_asset_alert_router.urls)),
+    path('v1/assets/bulk_alert/', include(bulk_asset_alert_router.urls)),
     path('v1/networks/', views.BriefNetworkAssetsView.as_view()),
 
     path('v1/assets/reserve/', views.ReserveWalletCreateAPIView.as_view()),

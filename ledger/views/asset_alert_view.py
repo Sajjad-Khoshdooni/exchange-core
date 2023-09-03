@@ -97,7 +97,7 @@ class AssetAlertView(viewsets.ModelViewSet):
         return self.queryset.filter(user=self.request.user)
 
 
-class BuketAssetAlertView(viewsets.ModelViewSet):
+class BulkAssetAlertView(viewsets.ModelViewSet):
     serializer_class = BulkAssetAlertViewSerializer
     queryset = BulkAssetAlert.objects.all()
 
