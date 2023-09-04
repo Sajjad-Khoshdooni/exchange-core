@@ -67,7 +67,7 @@ def send_notifications(asset_alerts, altered_coins):
 
         interval_verbose = AlertTrigger.INTERVAL_VERBOSE_MAP[interval]
 
-        if interval == AlertTrigger.FIVE_MIN:
+        if interval == AlertTrigger.FIVE_MIN and not is_chanel_changed:
             title = f'{change_status} ناگهانی قیمت {alert.asset.name_fa}'
         else:
             title = f'{change_status} قیمت {alert.asset.name_fa}'
@@ -135,14 +135,15 @@ def get_altered_coins(past_cycle_prices: dict, current_cycle: dict, current_cycl
                 is_chanel_new = is_chanel_changed and not (
                             last_chanel_triggered_alert and last_chanel_triggered_alert.chanel == current_chanel)
 
-                is_interval_price_sent_recently = is_chanel_new or (hours and AlertTrigger.objects.filter(
-                    asset=asset,
-                    is_triggered=True,
-                    interval=interval,
-                    created__gte=timezone.now() - timedelta(hours=hours)
-                ).exists())
-
-                if is_chanel_new or not is_interval_price_sent_recently:
+                is_interval_price_sent_recently = None
+                if hours and not is_chanel_new:
+                    is_interval_price_sent_recently = AlertTrigger.objects.filter(
+                        asset=asset,
+                        is_triggered=True,
+                        interval=interval,
+                        created__gte=timezone.now() - timedelta(hours=hours)
+                    ).exists()
+                if is_chanel_new or is_interval_price_sent_recently is None or not is_interval_price_sent_recently:
                     changed_coins[coin] = [current_price, past_price, interval, is_chanel_new]
                     alert_trigger.is_triggered = True
                     alert_trigger.save(update_fields=['is_triggered'])
@@ -177,7 +178,7 @@ def get_asset_alert_list(altered_coins: dict) -> set:
             subscribed_coins = Asset.objects.filter(
                 symbol__in=altered_coins.keys(),
                 wallet__account=bulk_asset_alert.user.get_account(),
-                wallet__gt=0
+                wallet__balance__gt=0
             )
         else:
             subscribed_coins = category_map[bulk_asset_alert.coin_category]
