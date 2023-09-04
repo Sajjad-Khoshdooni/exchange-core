@@ -67,7 +67,7 @@ def send_notifications(asset_alerts, altered_coins):
 
         interval_verbose = AlertTrigger.INTERVAL_VERBOSE_MAP[interval]
 
-        if interval == AlertTrigger.FIVE_MIN:
+        if interval == AlertTrigger.FIVE_MIN and not is_chanel_changed:
             title = f'{change_status} ناگهانی قیمت {alert.asset.name_fa}'
         else:
             title = f'{change_status} قیمت {alert.asset.name_fa}'
@@ -83,6 +83,45 @@ def send_notifications(asset_alerts, altered_coins):
             message=message,
             link=f'/price/{alert.asset.name}'
         )
+
+
+def process_chanel_change(asset: Asset, current_chanel: int) -> bool:
+    last_chanel_triggered_alerts = AlertTrigger.objects.filter(
+        asset=asset,
+        is_chanel_changed=True,
+        is_triggered=True
+    ).order_by('-created')[:2]
+
+    is_chanel_new = not (
+            last_chanel_triggered_alerts and
+            (last_chanel_triggered_alerts[0].chanel == current_chanel or
+             (len(last_chanel_triggered_alerts) == 2 and
+              last_chanel_triggered_alerts[1].chanel == current_chanel))
+    )
+
+    return is_chanel_new
+
+
+def process_ratio_change(asset: Asset, interval) -> bool:
+    is_sent_recently = AlertTrigger.objects.filter(
+        asset=asset,
+        created__gte=timezone.now() - timedelta(hours=1),
+        is_triggered=True
+    ).exists()
+
+    if not is_sent_recently:
+        hours = INTERVAL_HOUR_TIME_MAP.get(interval, None)
+        is_interval_price_sent_recently = None
+        if hours:
+            is_interval_price_sent_recently = AlertTrigger.objects.filter(
+                asset=asset,
+                is_triggered=True,
+                interval=interval,
+                created__gte=timezone.now() - timedelta(hours=hours)
+            ).exists()
+        return is_interval_price_sent_recently is False
+    else:
+        return False
 
 
 def get_altered_coins(past_cycle_prices: dict, current_cycle: dict, current_cycle_count: int,
@@ -101,16 +140,19 @@ def get_altered_coins(past_cycle_prices: dict, current_cycle: dict, current_cycl
         asset = mapping_symbol.get(coin, None)
         if not asset:
             continue
+
         current_price = current_cycle[coin]
         past_price = past_cycle_prices[coin]
+        change_percent = math.floor(Decimal(current_price / past_price - Decimal(1)) * 100)
+        is_ratio_changed = abs(change_percent) > INTERVAL_CHANGE_PERCENT_SENSITIVITY_MAP[interval]
+
         chanel_sensitivity = asset.price_alert_chanel_sensitivity
         current_chanel = current_price // chanel_sensitivity if chanel_sensitivity else None
         past_chanel = past_price // chanel_sensitivity if chanel_sensitivity else None
         is_chanel_changed = abs(current_chanel - past_chanel) >= 1 if (
                 chanel_sensitivity and interval == AlertTrigger.FIVE_MIN) else False
 
-        change_percent = math.floor(Decimal(current_price / past_price - Decimal(1)) * 100)
-        if abs(change_percent) > INTERVAL_CHANGE_PERCENT_SENSITIVITY_MAP[interval] or is_chanel_changed:
+        if is_chanel_changed or is_ratio_changed:
             alert_trigger = AlertTrigger.objects.create(
                 asset=asset,
                 price=current_price,
@@ -120,38 +162,25 @@ def get_altered_coins(past_cycle_prices: dict, current_cycle: dict, current_cycl
                 is_chanel_changed=is_chanel_changed,
                 interval=interval
             )
-            is_sent_recently = AlertTrigger.objects.filter(
-                asset=asset,
-                created__gte=timezone.now() - timedelta(hours=1),
-                is_triggered=True
-            ).exists()
-            if not is_sent_recently:
-                hours = INTERVAL_HOUR_TIME_MAP.get(interval, None)
-                last_chanel_triggered_alert = AlertTrigger.objects.filter(
-                    asset=asset,
-                    is_chanel_changed=True,
-                    is_triggered=True
-                ).last()
-                is_chanel_new = is_chanel_changed and not (
-                            last_chanel_triggered_alert and last_chanel_triggered_alert.chanel == current_chanel)
 
-                is_interval_price_sent_recently = is_chanel_new or (hours and AlertTrigger.objects.filter(
-                    asset=asset,
-                    is_triggered=True,
-                    interval=interval,
-                    created__gte=timezone.now() - timedelta(hours=hours)
-                ).exists())
+            is_chanel_new = False
+            is_ratio_change_alerted = False
+            if is_chanel_changed:
+                is_chanel_new = process_chanel_change(asset=asset, current_chanel=current_chanel)
+            if is_ratio_changed:
+                is_ratio_change_alerted = process_ratio_change(asset=asset, interval=interval)
 
-                if is_chanel_new or not is_interval_price_sent_recently:
-                    changed_coins[coin] = [current_price, past_price, interval, is_chanel_new]
-                    alert_trigger.is_triggered = True
-                    alert_trigger.save(update_fields=['is_triggered'])
+            if is_chanel_new or is_ratio_change_alerted:
+                changed_coins[coin] = [current_price, past_price, interval, is_chanel_new]
+                alert_trigger.is_triggered = True
+                alert_trigger.save(update_fields=['is_triggered'])
 
     return changed_coins
 
 
 def get_past_cycle_by_number(cycle_number: int):
-    key = CACHE_PREFIX + str(cycle_number)
+    total_cycles = 24 * 12
+    key = CACHE_PREFIX + str(cycle_number % total_cycles)
     return cache.get(key)
 
 
@@ -177,7 +206,7 @@ def get_asset_alert_list(altered_coins: dict) -> set:
             subscribed_coins = Asset.objects.filter(
                 symbol__in=altered_coins.keys(),
                 wallet__account=bulk_asset_alert.user.get_account(),
-                wallet__gt=0
+                wallet__balance__gt=0
             )
         else:
             subscribed_coins = category_map[bulk_asset_alert.coin_category]
@@ -191,8 +220,6 @@ def get_asset_alert_list(altered_coins: dict) -> set:
 
 @shared_task(queue='notif-manager')
 def send_price_notifications():
-    total_cycles = 24 * 12
-
     now = timezone.now()
     current_cycle_count = (now.hour * 60 + now.minute) // 5
     current_cycle_prices = get_current_prices()
@@ -200,17 +227,17 @@ def send_price_notifications():
     key = CACHE_PREFIX + str(current_cycle_count)
     cache.set(key, current_cycle_prices, 3600 * 24 + 60 * 4)
 
-    past_five_minute_cycle = get_past_cycle_by_number((current_cycle_count - 1) % total_cycles)
+    past_five_minute_cycle = get_past_cycle_by_number(current_cycle_count - 1)
 
-    past_hour_cycle = get_past_cycle_by_number((current_cycle_count - 12) % total_cycles)
+    past_hour_cycle = get_past_cycle_by_number(current_cycle_count - 12)
 
-    past_three_hours_cycle = get_past_cycle_by_number((current_cycle_count - 12 * 3) % total_cycles)
+    past_three_hours_cycle = get_past_cycle_by_number(current_cycle_count - 12 * 3)
 
-    past_six_hours_cycle = get_past_cycle_by_number((current_cycle_count - 12 * 6) % total_cycles)
+    past_six_hours_cycle = get_past_cycle_by_number(current_cycle_count - 12 * 6)
 
-    past_twelve_hours_cycle = get_past_cycle_by_number((current_cycle_count - 12 * 12) % total_cycles)
+    past_twelve_hours_cycle = get_past_cycle_by_number(current_cycle_count - 12 * 12)
 
-    past_day_cycle = get_past_cycle_by_number((current_cycle_count + 2) % total_cycles)
+    past_day_cycle = get_past_cycle_by_number(current_cycle_count + 2)
 
     altered_coins = {
         **get_altered_coins(past_five_minute_cycle, current_cycle_prices, current_cycle_count,
