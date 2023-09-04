@@ -143,7 +143,8 @@ def get_altered_coins(past_cycle_prices: dict, current_cycle: dict, current_cycl
                         interval=interval,
                         created__gte=timezone.now() - timedelta(hours=hours)
                     ).exists()
-                if is_chanel_new or is_interval_price_sent_recently is None or not is_interval_price_sent_recently:
+
+                if is_chanel_new or is_interval_price_sent_recently == False:
                     changed_coins[coin] = [current_price, past_price, interval, is_chanel_new]
                     alert_trigger.is_triggered = True
                     alert_trigger.save(update_fields=['is_triggered'])
