@@ -177,7 +177,7 @@ def get_asset_alert_list(altered_coins: dict) -> set:
             subscribed_coins = Asset.objects.filter(
                 symbol__in=altered_coins.keys(),
                 wallet__account=bulk_asset_alert.user.get_account(),
-                wallet__gt=0
+                wallet__balance__gt=0
             )
         else:
             subscribed_coins = category_map[bulk_asset_alert.coin_category]
