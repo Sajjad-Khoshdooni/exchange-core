@@ -86,16 +86,17 @@ def send_notifications(asset_alerts, altered_coins):
 
 
 def process_chanel_change(asset: Asset, current_chanel: int) -> bool:
-    last_chanel_triggered_alert = AlertTrigger.objects.filter(
+    last_chanel_triggered_alerts = AlertTrigger.objects.filter(
         asset=asset,
         is_chanel_changed=True,
         is_triggered=True
-    ).all()[-2:]
+    ).order_by('-created')[:2]
 
     is_chanel_new = not (
-            last_chanel_triggered_alert and
-            (last_chanel_triggered_alert[0].chanel == current_chanel or
-             last_chanel_triggered_alert[1].chanel == current_chanel)
+            last_chanel_triggered_alerts and
+            (last_chanel_triggered_alerts[0].chanel == current_chanel or
+             (len(last_chanel_triggered_alerts) == 2 and
+              last_chanel_triggered_alerts[1].chanel == current_chanel))
     )
 
     return is_chanel_new
