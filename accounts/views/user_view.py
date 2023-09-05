@@ -17,7 +17,7 @@ from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 class UserSerializer(serializers.ModelSerializer):
     show_staking = serializers.SerializerMethodField()
     show_strategy_bot = serializers.SerializerMethodField()
-    is_auth2fa_active = serializers.SerializerMethodField()
+    is_2fa_active = serializers.SerializerMethodField()
 
     def get_chat_uuid(self, user: User):
         request = self.context['request']
@@ -27,7 +27,7 @@ class UserSerializer(serializers.ModelSerializer):
         else:
             return user.chat_uuid
 
-    def get_is_auth2fa_active(self, user: User):
+    def get_is_2fa_active(self, user: User):
         device = TOTPDevice.objects.filter(user=user).first()
         return device is not None and device.confirmed
 
@@ -41,7 +41,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'chat_uuid', 'is_auth2fa_active',
+            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'chat_uuid', 'is_2fa_active',
             'can_withdraw'
         )
         ref_name = "User"
