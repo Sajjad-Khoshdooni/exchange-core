@@ -1,10 +1,10 @@
 from accounts.models import User
 from ledger.models import Wallet, Asset
-from ledger.utils.external_price import get_external_price, BUY
+from ledger.utils.price import get_last_price
 
 
 def get_holders(coin: str, min_irt_vale: int = 10000):
-    price = get_external_price(coin, Asset.IRT, BUY)
+    price = get_last_price(coin + Asset.IRT)
     min_amount = min_irt_vale / price
     wallets = Wallet.objects.filter(asset__symbol=coin, balance__gte=min_amount)
     user_ids = set(wallets.values_list('account__user_id', flat=True))

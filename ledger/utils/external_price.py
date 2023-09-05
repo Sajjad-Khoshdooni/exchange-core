@@ -1,10 +1,8 @@
 import logging
 from dataclasses import dataclass
 from decimal import Decimal
-from json import JSONDecodeError
-from typing import Dict, List, Union
+from typing import List, Union
 
-import requests
 from django.conf import settings
 from django.utils import timezone
 from redis import Redis
@@ -121,108 +119,5 @@ def fetch_external_redis_prices(coins: Union[list, set], side: str = None, allow
     return results
 
 
-PRICES_CACHE_TIMEOUT = 30
-
-
-# todo: deprecated func
-def get_external_usdt_prices(coins: list, side, allow_stale: bool = False) -> Dict[str, Decimal]:
-
-    prices = fetch_external_redis_prices(coins, side, allow_stale=allow_stale)
-    result = {r.coin: r.price for r in prices if r.price}
-
-    if 'USDT' in coins:
-        result['USDT'] = 1
-
-    return result
-
-
-def _get_price_tether_irt_nobitex():
-    resp = requests.get(url="https://api.nobitex.ir/v2/orderbook/USDTIRT", timeout=10)
-    data = resp.json()
-    status = data['status']
-
-    if not data.get('asks'):
-        return
-
-    price = {'buy': data['asks'][1][0], 'sell': data['bids'][1][0]}
-    data = {'price': price, 'status': status}
-    return data
-
-
-def _get_raw_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
-    price = price_redis.hget('price:usdtirt', SIDE_MAP[side])
-    if price:
-        return Decimal(price)
-
-    if allow_stale:
-        from market.models import PairSymbol
-
-        symbol = PairSymbol.objects.get(name='USDTIRT')
-        return symbol.last_trade_price
-
-    try:
-        data = _get_price_tether_irt_nobitex()
-        if data['status'] != 'ok':
-            raise TypeError
-        price = Decimal(data['price'][side]) // 10
-
-    except (requests.exceptions.ConnectionError, TimeoutError, TypeError, JSONDecodeError, KeyError):
-        try:
-            from ledger.utils.provider import get_provider_requester
-            provider = get_provider_requester()
-            price = provider.get_price('USDTIRT', side=side)
-
-            if not price:
-                if allow_stale:
-                    return provider.get_price('USDTIRT', side=side, delay=DAY)
-                else:
-                    raise
-        except:
-            if allow_stale:
-                price = price_redis.hget('price:usdtirt:stale', _get_redis_side(side))
-                logger.error('usdt irt price fallback to stale')
-
-                if price:
-                    return Decimal(price)
-                else:
-                    raise
-            else:
-                raise
-
-    return price
-
-
-# todo: deprecated func
-def get_external_price(coin: str, base_coin: str, side: str, allow_stale: bool = False) -> Union[Decimal, None]:
-    assert side in (BUY, SELL)
-
-    from ledger.models import Asset
-    assert base_coin in (Asset.IRT, Asset.USDT)
-
-    if coin == base_coin:
-        return Decimal(1)
-
-    if (coin, base_coin) == (Asset.IRT, Asset.USDT):
-        return 1 / get_external_price(
-            coin=Asset.USDT,
-            base_coin=Asset.IRT,
-            side=get_other_side(side),
-            allow_stale=allow_stale
-        )
-
-    if coin != Asset.USDT:
-        prices = get_external_usdt_prices([coin], side, allow_stale=allow_stale) or {}
-        price_usdt = prices.get(coin)
-
-        if price_usdt is None:
-            return None
-
-    else:
-        price_usdt = 1
-
-    base_multiplier = 1
-
-    if base_coin == Asset.IRT:
-        base_multiplier = _get_raw_tether_irt_price(side, allow_stale)
-
-    return price_usdt * base_multiplier
+def fetch_external_depth(symbol: str, side: str) -> str:
+    return price_redis.hget(name=f'depth:{symbol.lower()}', key=_get_redis_side(side))

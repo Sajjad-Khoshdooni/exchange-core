@@ -8,8 +8,8 @@ from django.db.models import CheckConstraint, Q
 
 from ledger.models import Asset
 from ledger.utils.dto import NetworkInfo
-from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import get_amount_field
+from ledger.utils.price import get_last_price
 
 MIN_PRECISION_AMOUNT = Decimal('0.00000001')
 
@@ -65,7 +65,7 @@ class NetworkAsset(models.Model):
             withdraw_fee *= Decimal('1.5')
             withdraw_min = max(withdraw_min, 2 * withdraw_fee)
 
-            price = get_external_price(self.asset.symbol, base_coin=Asset.USDT, side=BUY, allow_stale=True)
+            price = get_last_price(self.asset.symbol + Asset.USDT)
 
             if price and withdraw_min:
                 multiplier = max(math.ceil(5 / (price * withdraw_min)), 1)  # withdraw_min >= 5$

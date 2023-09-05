@@ -25,3 +25,7 @@ class LargeAmountTrade(Exception):
 
 class AbruptDecrease(Exception):
     pass
+
+
+class SmallDepthError(Exception):
+    pass

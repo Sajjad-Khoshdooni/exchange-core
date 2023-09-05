@@ -4,13 +4,12 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from accounts.authentication import CustomTokenAuthentication
-from accounts.models import LoginActivity
 from financial.models import BankCard
 from financial.views.payment_view import PaymentRequestSerializer
 from ledger.models.asset import CoinField, Asset
 from ledger.models.fast_buy_token import FastBuyToken
-from ledger.utils.external_price import get_external_price, SELL, BUY
+from ledger.utils.external_price import SELL, BUY
+from ledger.utils.price import get_price
 
 
 class FastBuyTokenSerializer(serializers.ModelSerializer):
@@ -40,11 +39,10 @@ class FastBuyTokenSerializer(serializers.ModelSerializer):
         validated_data['card_pan'] = card_pan
         validated_data['payment_request'] = payment_request_serializer.create(validated_data)
         validated_data.pop('card_pan')
-        validated_data['price'] = get_external_price(
-            coin=asset.symbol,
-            base_coin=Asset.USDT,
+        validated_data['price'] = get_price(
+            asset.symbol + Asset.USDT,
             side=SELL
-        ) or 0
+        )
 
         return super().create(validated_data)
 

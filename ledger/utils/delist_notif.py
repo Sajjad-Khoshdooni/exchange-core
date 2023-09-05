@@ -3,7 +3,8 @@ from collections import defaultdict
 
 from accounts.models import *
 from ledger.models import *
-from ledger.utils.external_price import get_external_price, BUY
+from ledger.utils.external_price import BUY
+from ledger.utils.price import get_price
 
 assets = Asset.objects.filter(symbol__in='NWC, DC, RACA, 1M-KISHU, 1M-PIT, 1M-QUACK, 1M-VINU, 1000STARL, 1M-AKITA, SAMO, TON'.replace(' ', '').split(','))
 
@@ -46,9 +47,8 @@ for ws in holders.values():
 for u, ws in holders.items():
     value = 0
     for w in ws:
-        price = get_external_price(
-            coin=w.asset.symbol,
-            base_coin=Asset.USDT,
+        price = get_price(
+            w.asset.symbol + Asset.USDT,
             side=BUY,
             allow_stale=True,
         )

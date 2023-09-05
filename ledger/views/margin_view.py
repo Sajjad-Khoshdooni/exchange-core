@@ -14,9 +14,9 @@ from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowab
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet, CloseRequest
 from ledger.models.asset import CoinField, AssetSerializerMini
-from ledger.utils.external_price import get_external_price, SELL
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
+from ledger.utils.price import get_last_price
 
 
 class MarginInfoView(APIView):
@@ -52,7 +52,7 @@ class AssetMarginInfoView(APIView):
         margin_wallet = asset.get_wallet(account, Wallet.MARGIN)
         loan_wallet = asset.get_wallet(account, Wallet.LOAN)
 
-        price = get_external_price(asset.symbol, base_coin=Asset.USDT, side=SELL)
+        price = get_last_price(asset.symbol + Asset.USDT)
 
         if asset.symbol != Asset.USDT:
             price = price * Decimal('1.002')

@@ -1,12 +1,12 @@
 import logging
 from collections import defaultdict
+from dataclasses import dataclass
 from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
 from typing import Union
 from uuid import uuid4
 
-from dataclasses import dataclass
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum, UniqueConstraint
@@ -17,9 +17,10 @@ from accounts.models import Notification
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
-from ledger.utils.external_price import get_external_price, BUY, SELL, SIDE_VERBOSE
+from ledger.utils.external_price import BUY, SELL, SIDE_VERBOSE
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, decimal_to_str
+from ledger.utils.price import get_last_price, USDT_IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol, BaseTrade
 from market.utils.price import set_last_trade_price
@@ -307,14 +308,9 @@ class Order(models.Model):
         trades = []
         filled_orders = []
 
-        opposite_side = Order.get_opposite_side(self.side)
-        if settings.ZERO_USDT_HEDGE:
-            usdt_symbol_id = PairSymbol.objects.get(name='USDTIRT').id
-            tether_irt = Order.get_top_price(usdt_symbol_id, opposite_side)
-        else:
-            tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=opposite_side)
+        tether_irt = get_last_price(USDT_IRT)
 
-        hedging_usdt = settings.ZERO_USDT_HEDGE and symbol.name == 'USDTIRT'
+        hedging_usdt = settings.ZERO_USDT_HEDGE and symbol.name == USDT_IRT
 
         taker_is_system = self.wallet.account.is_system() or (
                 hedging_usdt and self.account_id == settings.TRADER_ACCOUNT_ID)

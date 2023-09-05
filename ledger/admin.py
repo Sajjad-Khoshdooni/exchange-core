@@ -15,17 +15,17 @@ from accounting.models import ReservedAsset
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.admin_guard.html_tags import anchor_tag
-from accounts.models import Account, User
+from accounts.models import Account
 from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
-from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet, \
+from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
     ManualTrade, Trx, NetworkAsset
+from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
-from ledger.utils.external_price import get_external_price, BUY
+from ledger.utils.external_price import BUY
 from ledger.utils.fields import DONE, PROCESS, PENDING
 from ledger.utils.precision import get_presentation_amount, humanize_presentation, get_symbol_presentation_amount
 from ledger.utils.precision import humanize_number
@@ -33,6 +33,7 @@ from ledger.utils.provider import get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor
 from market.utils.fix import create_symbols_for_asset
 from .models import Asset, BalanceLock
+from .utils.price import get_last_price
 from .utils.wallet_pipeline import WalletPipeline
 
 
@@ -361,20 +362,12 @@ class WalletAdmin(admin.ModelAdmin):
 
     @admin.display(description='irt value')
     def get_value_irt(self, wallet: models.Wallet):
-        price = get_external_price(
-            coin=wallet.asset.symbol,
-            base_coin=Asset.IRT,
-            side=BUY
-        ) or 0
+        price = get_last_price(wallet.asset.symbol + Asset.IRT) or 0
         return get_symbol_presentation_amount(wallet.asset.symbol + 'IRT', wallet.balance * price, trunc_zero=True)
 
     @admin.display(description='usdt value')
     def get_value_usdt(self, wallet: models.Wallet):
-        price = get_external_price(
-            coin=wallet.asset.symbol,
-            base_coin=Asset.USDT,
-            side=BUY
-        ) or 0
+        price = get_last_price(wallet.asset.symbol + Asset.USDT) or 0
         return get_symbol_presentation_amount(wallet.asset.symbol + 'USDT', wallet.balance * price, trunc_zero=True)
 
 

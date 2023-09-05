@@ -16,12 +16,11 @@ from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.views.jwt_views import DelegatedAccountMixin
 from ledger.models import Wallet, DepositAddress, NetworkAsset, Trx
 from ledger.models.asset import Asset
-from ledger.utils.external_price import get_external_price, BUY, SELL
+from ledger.utils.external_price import BUY, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.otc import get_otc_spread, spread_to_multiplier
 from ledger.utils.precision import get_presentation_amount, get_symbol_presentation_amount, \
     get_coin_presentation_balance
-from ledger.utils.price import get_prices, get_coins_symbols, get_last_prices
+from ledger.utils.price import get_prices, get_coins_symbols, get_last_prices, get_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -448,11 +447,9 @@ class ConvertDustView(APIView):
 
         with WalletPipeline() as pipeline:
             for wallet in spot_wallets:
-                price = get_external_price(
-                    coin=wallet.asset.symbol,
-                    base_coin=Asset.IRT,
+                price = get_price(
+                    wallet.asset.symbol + Asset.IRT,
                     side=BUY,
-                    allow_stale=True,
                 )
 
                 if price is None:
@@ -472,9 +469,7 @@ class ConvertDustView(APIView):
                         scope=Trx.DUST
                     )
 
-                    spread = get_otc_spread(coin=wallet.asset.symbol, side=BUY, base_coin=Asset.IRT)
-
-                    irt_amount += price * spread_to_multiplier(spread, side=BUY) * free
+                    irt_amount += price * free
 
                     any_converted = True
 

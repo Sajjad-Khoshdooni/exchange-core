@@ -1,11 +1,13 @@
 from decimal import Decimal
 from typing import List, Dict, Union
 
-from django.db.models import Min, Max
+from django.db.models import Min, Max, F
 
+from ledger.exceptions import SmallDepthError
 from ledger.models import Asset
 from ledger.utils.cache import cache_for
-from ledger.utils.external_price import fetch_external_redis_prices, BUY, SELL, get_other_side
+from ledger.utils.depth import get_base_price_and_spread, NoDepthError
+from ledger.utils.external_price import fetch_external_redis_prices, BUY, SELL, get_other_side, fetch_external_depth
 from ledger.utils.otc import spread_to_multiplier, get_otc_spread
 from market.models import Order, PairSymbol
 
@@ -127,10 +129,15 @@ def get_last_prices(symbols: List[str]):
     return last_prices
 
 
-def get_coins_symbols(coins: List[str]) -> List[str]:
+def get_coins_symbols(coins: List[str], only_base: str = None) -> List[str]:
     symbols = []
 
-    for base in (Asset.IRT, Asset.USDT):
+    if only_base:
+        bases = (only_base, )
+    else:
+        bases = (Asset.IRT, Asset.USDT)
+
+    for base in bases:
         symbols.extend([c + base for c in coins])
 
     return symbols
@@ -139,3 +146,51 @@ def get_coins_symbols(coins: List[str]) -> List[str]:
 def get_price(symbol: str, side: str, allow_stale: bool = False):
     prices = get_prices([symbol], side, allow_stale)
     return prices.get(symbol)
+
+
+def get_last_price(symbol: str) -> Decimal:
+    prices = get_last_prices([symbol])
+    return prices.get(symbol)
+
+
+def get_depth_price(symbol: str, side: str, amount: Decimal):
+    pair_symbol = PairSymbol.objects.filter(symbol=symbol).first()
+
+    if pair_symbol.enable:
+        cumulative_sum = Decimal(0)
+
+        open_orders = list(Order.open_objects.filter(symbol=symbol, side=side).annotate(
+            remaining=F('amount') - F('filled_amount')
+        ).order_by('price' if side == SELL else '-price'))
+
+        for order in open_orders:
+            if abs(order.price / open_orders[0].price - 1) > Decimal('0.05'):
+                raise SmallDepthError(cumulative_sum)
+
+            cumulative_sum += order.remaining
+
+            if cumulative_sum >= amount:
+                return order.price
+        else:
+            raise SmallDepthError(cumulative_sum)
+
+    else:
+        external_depth = fetch_external_depth(symbol, side)
+        try:
+            price, spread = get_base_price_and_spread(external_depth, amount)
+        except NoDepthError:
+            raise SmallDepthError()
+
+        coin, base_coin = get_symbol_parts(symbol)
+
+        extra_spread = get_otc_spread(
+            coin=coin,
+            base_coin=base_coin,
+            value=amount * price,
+            side=side,
+        )
+
+        if side == BUY:
+            extra_spread = -extra_spread
+
+        return price * (1 + spread + extra_spread)
