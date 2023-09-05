@@ -23,11 +23,13 @@ class DepositAddress(models.Model):
         if not address_key:
             address_dict = AddressRequester().create_wallet(account, architecture)
 
-            address_key = AddressKey.objects.create(
+            address_key, _ = AddressKey.objects.get_or_create(
                 account=account,
-                address=address_dict.get('address'),
-                public_address=address_dict.get('address'),
-                architecture=architecture
+                architecture=architecture,
+                defaults={
+                    'address': address_dict.get('address'),
+                    'public_address': address_dict.get('address'),
+                }
             )
 
         deposit_address = DepositAddress.objects.filter(address_key=address_key, network=network).first()
