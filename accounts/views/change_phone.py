@@ -25,7 +25,7 @@ class InitiateChangePhoneSerializer(serializers.Serializer):
             raise ValidationError('کد ارسال شده نامعتبر است.')
 
         if not user.is_2fa_valid(totp):
-            raise ValidationError({'totp': 'شناسه‌دوعاملی صحیح نمی‌باشد.'})
+            raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
         otp_verification.set_code_used()
         data['token'] = otp_verification.token
         return data

@@ -28,7 +28,7 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise ValidationError({'old_password': 'رمز عبور قبلی بدرستی وارد نشده است'})
 
         if not user.is_2fa_valid(totp):
-            raise ValidationError({'totp': 'شناسه‌دوعاملی صحیح نمی‌باشد.'})
+            raise ValidationError({'totp': 'شناسه ‌دوعاملی صحیح نمی‌باشد.'})
         otp_code.set_code_used()
         validate_password(password=password, user=user)
 
