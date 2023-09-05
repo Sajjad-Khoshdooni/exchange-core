@@ -38,15 +38,16 @@ class TOTPView(APIView):
         device = TOTPDevice.objects.filter(user=user).first()
         scope = request.data.get('scope', ACTIVATE if device is None or device.confirmed is False else DEACTIVATE)
         VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_2FA, user=user)
+        response_data = {}
         if scope == ACTIVATE:
             if device is None:
                 device = TOTPDevice.objects.create(user=user, confirmed=False)
             if device.confirmed is False:
                 device.key = default_key()
                 device.save(update_fields=['key'])
-                return Response({'config': device.config_url})
-            else:
-                return Response()
+                response_data['config'] = device.config_url
+
+        return Response(response_data)
 
     def put(self, request):
         user = request.user
