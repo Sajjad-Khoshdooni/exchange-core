@@ -34,16 +34,16 @@ class NotifyView(APIView):
             _type = attrs.get('content')
             if _type == SMS:
                 if attrs.get('content', None) is None and not (attrs.get('content', None) and attrs.get('content', None)):
-                    return serializers.ValidationError('one of the content or (template, param) should has value')
+                    raise serializers.ValidationError('one of the content or (template, param) should has value')
             elif _type == PUSH:
                 if attrs.get('content', None) is None or attrs.get('tittle', None) is None:
-                    return serializers.ValidationError('one of the content or (template, param) should has value')
+                    raise serializers.ValidationError('one of the content or (template, param) should has value')
             elif _type == EMAIL:
                 if attrs.get('content_html', None) is None or attrs.get('content', None) is None:
-                    return serializers.ValidationError('content_html, content should has value')
+                    raise serializers.ValidationError('content_html, content should has value')
             elif _type == MISSION:
                 if not attrs.get('mission_template_id', None):
-                    return serializers.ValidationError('mission_template_id, mission_template_id should has value')
+                    raise serializers.ValidationError('mission_template_id, mission_template_id should has value')
             return attrs
 
     def post(self, request):
@@ -104,4 +104,4 @@ class NotifyView(APIView):
         if created:
             return Response(status=status.HTTP_201_CREATED)
         else:
-            return Response(status=status.HTTP_200_OK)
+            return Response(status=status.HTTP_204_NO_CONTENT)
