@@ -19,7 +19,11 @@ class AddressBook(models.Model):
 
     @staticmethod
     def is_address_used_in_24h(address: str) -> bool:
-        return Transfer.objects.filter(out_address=address, created__gte=timezone.now() - timedelta(days=1)).exists()
+        return Transfer.objects.filter(
+            deposit=False,
+            out_address=address,
+            created__gte=timezone.now() - timedelta(days=1)
+        ).exists()
 
     def __str__(self):
         return self.name
