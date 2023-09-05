@@ -1,3 +1,4 @@
+from decouple import config
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
@@ -15,7 +16,8 @@ from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 
 class UserSerializer(serializers.ModelSerializer):
     show_staking = serializers.SerializerMethodField()
-    is_2fa_active = serializers.SerializerMethodField()
+    show_strategy_bot = serializers.SerializerMethodField()
+    is_auth2fa_active = serializers.SerializerMethodField()
 
     def get_chat_uuid(self, user: User):
         request = self.context['request']
@@ -25,19 +27,22 @@ class UserSerializer(serializers.ModelSerializer):
         else:
             return user.chat_uuid
 
-    def get_is_2fa_active(self, user: User):
+    def get_is_auth2fa_active(self, user: User):
         device = TOTPDevice.objects.filter(user=user).first()
         return device is not None and device.confirmed
 
     def get_show_staking(self, user: User):
         return True
 
+    def get_show_strategy_bot(self, user: User):
+        return user.show_strategy_bot or config('STRATEGY_ENABLE', cast=bool, default=False)
+
     class Meta:
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking',
-            'chat_uuid', 'is_2fa_active', 'can_withdraw'
+            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'chat_uuid', 'is_auth2fa_active',
+            'can_withdraw'
         )
         ref_name = "User"
 

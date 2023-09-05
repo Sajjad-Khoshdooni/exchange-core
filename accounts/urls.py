@@ -70,6 +70,8 @@ urlpatterns = [
 
     path('phone/',   views.ChangePhoneView.as_view()),
 
+    path('phone/change/', views.ChangePhoneBeforeVerifyView.as_view()),
+
     path('api/token/', CreateAuthToken.as_view()),
 
     path('referrals/overview/', views.ReferralOverviewAPIView.as_view()),

@@ -83,7 +83,7 @@ def get_prices(symbols: List[str], side: str, allow_stale: bool = False) -> Dict
             else:
                 ext_price = external_prices.get(coin)
 
-                if base == Asset.IRT:
+                if ext_price and base == Asset.IRT:
                     ext_price *= prices[USDT_IRT]
 
             if ext_price:
@@ -118,7 +118,7 @@ def get_last_prices(symbols: List[str]):
             else:
                 last_price = external_prices.get(coin)
 
-                if base == Asset.IRT:
+                if last_price and base == Asset.IRT:
                     last_price *= last_prices[USDT_IRT]
 
             if last_price:

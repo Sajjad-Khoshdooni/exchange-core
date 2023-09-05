@@ -7,7 +7,6 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
-from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from accounts.models import FirebaseToken, Attribution, AppStatus, VerificationCode, \
     UserFeedback, BulkNotification, EmailNotification

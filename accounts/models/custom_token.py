@@ -11,7 +11,7 @@ class CustomToken(Token):
         models.GenericIPAddressField(default='127.0.0.1'), default=list, blank=True, null=True
     )
     scopes = ArrayField(
-        models.CharField(choices=[(scope, scope) for scope in SCOPES], max_length=10), default=list, blank=True, null=True
+        models.CharField(choices=[(scope, scope) for scope in SCOPES], max_length=10), default=list([TRADE]), blank=True, null=True
     )
 
     throttle_exempted = models.BooleanField(default=False)

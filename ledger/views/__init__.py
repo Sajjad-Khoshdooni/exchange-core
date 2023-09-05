@@ -21,5 +21,5 @@ from .otc_history_view import OTCHistoryView
 from .withdraw_viewset import WithdrawViewSet
 from .coin_category_list_view import CoinCategoryListView
 from .wallets_overview import WalletsOverviewAPIView
-from .asset_alert_view import AssetAlertView
+from .asset_alert_view import AssetAlertView, BulkAssetAlertView
 from .transactions_view import RecentTransactionsView

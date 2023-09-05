@@ -1,13 +1,14 @@
 from django.core.exceptions import ValidationError
 from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
-from django.conf import settings
-
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models.phone_verification import VerificationCode
 from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
+
+ACTIVATE = 'activate'
+DEACTIVATE = 'deactivate'
 
 
 class TOTPSerializer(serializers.Serializer):
@@ -35,16 +36,17 @@ class TOTPView(APIView):
     def post(self, request):
         user = request.user
         device = TOTPDevice.objects.filter(user=user).first()
+        scope = request.data.get('scope', ACTIVATE if device is None or device.confirmed is False else DEACTIVATE)
         VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_2FA, user=user)
-        if device is None:
-            device = TOTPDevice.objects.create(user=user, confirmed=False)
-        if device.confirmed is False:
-            settings.OTP_TOTP_ISSUER = settings.BRAND_EN
-            device.key = default_key()
-            device.save(update_fields=['key'])
-            return Response(device.config_url)
-        else:
-            return Response({'msg': 'پیامک با موفقیت ارسال شد.'})
+        if scope == ACTIVATE:
+            if device is None:
+                device = TOTPDevice.objects.create(user=user, confirmed=False)
+            if device.confirmed is False:
+                device.key = default_key()
+                device.save(update_fields=['key'])
+                return Response({'config': device.config_url})
+            else:
+                return Response()
 
     def put(self, request):
         user = request.user

@@ -2,16 +2,18 @@ from rest_framework.routers import DefaultRouter
 from django.urls import path, include
 from ledger import views
 
-router = DefaultRouter()
-router.register(r'', viewset=views.AssetAlertView)
+asset_alert_router = DefaultRouter()
+asset_alert_router.register(r'', viewset=views.AssetAlertView)
+bulk_asset_alert_router = DefaultRouter()
+bulk_asset_alert_router.register(r'', viewset=views.BulkAssetAlertView)
 
 urlpatterns = [
     path('v1/assets/', views.AssetsViewSet.as_view({'get': 'list'})),
     path('v1/assets/categories/', views.CoinCategoryListView.as_view()),
     path('v1/networkassets/', views.NetworkAssetView.as_view()),
     path('v1/asset/overview/', views.AssetOverviewAPIView.as_view()),
-    path('v1/assets/alert/', include(router.urls)),
-
+    path('v1/assets/single-alert/', include(asset_alert_router.urls)),
+    path('v1/assets/bulk-alert/', include(bulk_asset_alert_router.urls)),
     path('v1/networks/', views.BriefNetworkAssetsView.as_view()),
 
     path('v1/assets/reserve/', views.ReserveWalletCreateAPIView.as_view()),

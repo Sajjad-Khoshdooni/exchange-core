@@ -6,7 +6,6 @@ from typing import Dict, List, Union
 
 import requests
 from django.conf import settings
-from django.core.cache import cache
 from django.utils import timezone
 from redis import Redis
 
@@ -127,29 +126,13 @@ PRICES_CACHE_TIMEOUT = 30
 
 
 # todo: deprecated func
-def get_external_usdt_prices(coins: list, side, allow_stale: bool = False, set_bulk_cache: bool = False,
-                             apply_otc_spread: bool = False) -> Dict[str, Decimal]:
-
-    # cache_key = 'prices:ext:%s' % side
-    #
-    # if allow_stale:
-    #     cached_result = cache.get(cache_key)
-    #     if cached_result is not None:
-    #         return cached_result
-
-    spreads = {}
-    if apply_otc_spread:
-        from ledger.utils.otc import get_all_otc_spreads
-        spreads = get_all_otc_spreads(side)
+def get_external_usdt_prices(coins: list, side, allow_stale: bool = False) -> Dict[str, Decimal]:
 
     prices = fetch_external_redis_prices(coins, side, allow_stale=allow_stale)
-    result = {r.coin: r.price * spreads.get(r.coin, 1) for r in prices if r.price}
+    result = {r.coin: r.price for r in prices if r.price}
 
     if 'USDT' in coins:
         result['USDT'] = 1
-
-    # if set_bulk_cache:
-    #     cache.set(cache_key, result, PRICES_CACHE_TIMEOUT)
 
     return result
 
