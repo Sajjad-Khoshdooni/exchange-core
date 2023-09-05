@@ -22,7 +22,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CHANGE_PASSWORD, user)
         totp = data.get('totp', None)
         if not otp_code:
-            raise ValidationError({'code': 'کد نامعتبر است.'})
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
 
         if not user.check_password(old_pass):
             raise ValidationError({'old_password': 'رمز عبور قبلی بدرستی وارد نشده است'})

@@ -102,7 +102,7 @@ class AuthTokenSerializer(serializers.ModelSerializer):
         sms_verification_code = VerificationCode.get_by_code(code=sms_code, phone=user.phone,
                                                              scope=VerificationCode.SCOPE_API_TOKEN, user=user)
         if not sms_verification_code:
-            raise ValidationError({'code': 'کد نامعتبر است.'})
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
         if not user.is_2fa_valid(totp):
             raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
         sms_verification_code.set_code_used()
@@ -132,7 +132,7 @@ class AuthTokenDestroySerializer(serializers.Serializer):
         sms_code = data.get('sms_code')
         verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_API_TOKEN, user)
         if not verification_code:
-            raise ValidationError({'code': 'کد نامعتبر است.'})
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
         totp = data.get('totp')
         if not user.is_2fa_valid(totp):
             raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})

@@ -60,7 +60,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_FIAT_WITHDRAW)
 
         if not otp_code:
-            raise ValidationError({'code': 'کد نامعتبر است'})
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
         if not user.is_2fa_valid(totp):
             raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
 
