@@ -14,10 +14,9 @@ from accounts.models import Notification
 from accounts.tasks.send_sms import send_message_by_kavenegar
 from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.telegram import send_support_message
+from accounts.utils.telegram import send_system_message
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from analytics.event.producer import get_kafka_producer
-from analytics.models import EventTracker
 from analytics.utils.dto import TransferEvent
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
@@ -122,6 +121,8 @@ class FiatWithdrawRequest(BaseTransfer):
         except ProviderError as e:
             self.comment = str(e)
             self.save(update_fields=['comment'])
+
+            send_system_message("Manual fiat withdraw", link=url_to_edit_object(self))
 
     def update_status(self):
         from financial.utils.withdraw import FiatWithdraw

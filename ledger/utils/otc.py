@@ -60,9 +60,7 @@ def get_asset_spread(coin, side: str, value: Decimal = None) -> Decimal:
 
     if category is None and asset.distribution_factor >= 0.2:
         if side == BUY:
-            spread *= 3
-        else:
-            spread *= 2
+            spread *= Decimal('1.5')
 
     return spread / 100
 
@@ -82,7 +80,7 @@ def get_market_spread(base_coin: str, side: str, value: Decimal = None) -> Decim
 
 
 @cache_for(30)
-def get_otc_spread(coin: str, side: str, value: Decimal = None, base_coin: str = None) -> Decimal:
+def get_otc_spread(coin: str, side: str, value: Decimal = None, base_coin: str = Asset.USDT) -> Decimal:
     spread = get_asset_spread(coin=coin, side=side, value=value)
     spread += get_market_spread(base_coin=base_coin, side=side, value=value)
 
@@ -94,15 +92,3 @@ def spread_to_multiplier(spread: Decimal, side: str):
         return 1 - spread
     else:
         return 1 + spread
-
-
-@cache_for(300)
-def get_all_otc_spreads(side):
-    queryset = Asset.live_objects.filter(trade_enable=True)
-
-    spreads = {}
-
-    for asset in queryset:
-        spreads[asset.symbol] = spread_to_multiplier(get_otc_spread(asset.symbol, side), side)
-
-    return spreads

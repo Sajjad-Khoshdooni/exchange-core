@@ -13,6 +13,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from ledger.models import Wallet
 from ledger.models.asset import Asset
 from ledger.utils.precision import get_presentation_amount, floor_precision
+from ledger.utils.price import get_coins_symbols, get_last_prices
 from stake.models import StakeRevenue
 
 logger = logging.getLogger(__name__)
@@ -23,13 +24,12 @@ class StakeOverviewAPIView(APIView):
     permission_classes = (IsAuthenticated,)
 
     @staticmethod
-    def aggregate_revenue_values(asset_revenues, external_prices, market_prices, tether_irt):
+    def aggregate_revenue_values(asset_revenues, prices):
         total_irt_value = total_usdt_value = Decimal(0)
         for asset_revenue in asset_revenues:
-            price_usdt = market_prices['USDT'].get(asset_revenue['symbol'], 0) or \
-                         external_prices.get(asset_revenue['symbol'], 0)
-            price_irt = market_prices['IRT'].get(asset_revenue['symbol'], 0) or \
-                        external_prices.get(asset_revenue['symbol'], 0) * tether_irt
+            coin = asset_revenue['symbol']
+            price_usdt = prices.get(coin + Asset.USDT, 0)
+            price_irt = prices.get(coin + Asset.IRT, 0)
 
             total_usdt_value += asset_revenue['total_revenue'] * price_usdt
             total_irt_value += asset_revenue['total_revenue'] * price_irt
@@ -43,7 +43,7 @@ class StakeOverviewAPIView(APIView):
 
         stake_wallets = Wallet.objects.filter(account=account, market=Wallet.STAKE).exclude(balance=0)
         coins = stake_wallets.values_list('asset__symbol', flat=True)
-        prices, market_prices, tether_irt = Asset.get_current_prices(coins)
+        prices = get_last_prices(get_coins_symbols(coins))
 
         assets_total_revenues = StakeRevenue.objects.filter(
             stake_request__account=account
@@ -63,8 +63,8 @@ class StakeOverviewAPIView(APIView):
         from ledger.views import WalletsOverviewAPIView
         return Response({
             'total': WalletsOverviewAPIView.aggregate_wallets_values(
-                stake_wallets, prices, market_prices, tether_irt
+                stake_wallets, prices
             ),
-            'total_revenue': self.aggregate_revenue_values(assets_total_revenues, prices, market_prices, tether_irt),
-            'last_revenue': self.aggregate_revenue_values(assets_last_revenues, prices, market_prices, tether_irt),
+            'total_revenue': self.aggregate_revenue_values(assets_total_revenues, prices),
+            'last_revenue': self.aggregate_revenue_values(assets_last_revenues, prices),
         })

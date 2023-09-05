@@ -12,7 +12,6 @@ from ledger.models import Network, Asset, DepositAddress, AddressKey, NetworkAss
 from ledger.models.transfer import Transfer
 from ledger.requester.architecture_requester import get_network_architecture
 from ledger.utils.external_price import get_external_price, SELL
-from ledger.utils.precision import is_zero_by_precision
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -123,8 +122,11 @@ class DepositSerializer(serializers.ModelSerializer):
         else:
             amount = Decimal(validated_data.get('amount')) / coin_mult
 
-            if is_zero_by_precision(amount):
-                raise ValidationError({'amount': 'small amount'})
+            if amount < network_asset.get_min_deposit():
+                raise ValidationError({
+                    'type': 'ignore',
+                    'reason': 'small amount'
+                })
 
             price_usdt = get_external_price(coin=asset.symbol, base_coin=Asset.USDT, side=SELL, allow_stale=True)
             price_irt = get_external_price(coin=asset.symbol, base_coin=Asset.IRT, side=SELL, allow_stale=True)
