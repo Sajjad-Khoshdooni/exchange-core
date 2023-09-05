@@ -1,12 +1,13 @@
 from rest_framework import serializers
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from accounts.authentication import CustomTokenAuthentication
 from accounts.models import SmsNotification, User, Notification, EmailNotification
+from gamify.models import UserMission
 
-SMS, EMAIL, PUSH = 'sms', 'email', 'push'
+SMS, EMAIL, PUSH, MISSION = 'sms', 'email', 'push', 'mission'
 
 
 class NotifyView(APIView):
@@ -19,6 +20,7 @@ class NotifyView(APIView):
                 (SMS, SMS),
                 (PUSH, PUSH),
                 (EMAIL, EMAIL),
+                (MISSION, MISSION)
             ])
         content = serializers.CharField(required=False)
         content_html = serializers.CharField(required=False)
@@ -26,6 +28,7 @@ class NotifyView(APIView):
         link = serializers.CharField(required=False, allow_blank=True)
         hidden = serializers.BooleanField(required=False, default=True)
         group_id = serializers.UUIDField()
+        mission_template_id = serializers.IntegerField(required=False, default=0)
 
         def validate(self, attrs):
             _type = attrs.get('content')
@@ -38,6 +41,9 @@ class NotifyView(APIView):
             elif _type == EMAIL:
                 if attrs.get('content_html', None) is None or attrs.get('content', None) is None:
                     return serializers.ValidationError('content_html, content should has value')
+            elif _type == MISSION:
+                if not attrs.get('mission_template_id', None):
+                    return serializers.ValidationError('mission_template_id, mission_template_id should has value')
             return attrs
 
     def post(self, request):
@@ -86,6 +92,11 @@ class NotifyView(APIView):
                     'content': data.get('content', None),
                     'content_html': data.get('content_html', None),
                 }
+            )
+        elif _type == MISSION:
+            _, created = UserMission.objects.get_or_create(
+                user=recipient,
+                mission_id=int(data['mission_template_id']),
             )
         else:
             raise NotImplementedError
