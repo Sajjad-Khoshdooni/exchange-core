@@ -62,7 +62,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         if not otp_code:
             raise ValidationError({'code': 'کد نامعتبر است'})
         if not user.is_2fa_valid(totp):
-            raise ValidationError({'totp': ' رمز موقت نامعتبر است.'})
+            raise ValidationError({'totp': 'شناسه‌دوعاملی صحیح نمی‌باشد.'})
 
         if amount < MIN_WITHDRAW:
             logger.info('FiatRequest rejected due to small amount. user=%s' % user.id)

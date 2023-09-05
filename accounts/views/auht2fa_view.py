@@ -22,12 +22,12 @@ class TOTPSerializer(serializers.Serializer):
         sms_verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_2FA, user)
         if not sms_verification_code:
             raise ValidationError({'sms_code': 'کد ارسال شده برای فعال سازی ورود دومرحله‌ای نامعتبر است.'})
-        sms_verification_code.set_code_used()
         device = TOTPDevice.objects.filter(user=user).first()
         if device is None:
             raise ValidationError({'device': 'ابتدا بارکد را دریافت کنید.'})
         if not device.verify_token(token):
-            raise ValidationError({'token': 'رمز موقت صحیح نمی‌باشد.'})
+            raise ValidationError({'token': 'شناسه‌دوعاملی صحیح نمی‌باشد.'})
+        sms_verification_code.set_code_used()
         return data
 
 
