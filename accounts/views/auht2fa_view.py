@@ -1,7 +1,5 @@
 from django.core.exceptions import ValidationError
 from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
-from django.conf import settings
-
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
