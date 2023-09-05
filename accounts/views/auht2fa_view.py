@@ -26,7 +26,7 @@ class TOTPSerializer(serializers.Serializer):
         if device is None:
             raise ValidationError({'device': 'ابتدا بارکد را دریافت کنید.'})
         if not device.verify_token(token):
-            raise ValidationError({'token': 'شناسه‌دوعاملی صحیح نمی‌باشد.'})
+            raise ValidationError({'token': 'شناسه ‌دوعاملی صحیح نمی‌باشد.'})
         sms_verification_code.set_code_used()
         return data
 

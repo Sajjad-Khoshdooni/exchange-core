@@ -48,7 +48,7 @@ class AddressBookCreateSerializer(serializers.ModelSerializer):
                 raise ValidationError({'code': 'کد نامعتبر است.'})
 
             if not user.is_2fa_valid(totp):
-                raise ValidationError({'totp': 'شناسه‌دوعاملی صحیح نمی‌باشد.'})
+                raise ValidationError({'totp': 'شناسه ‌دوعاملی صحیح نمی‌باشد.'})
             sms_verification_code.set_code_used()
         return {
             'account': account,
@@ -87,7 +87,7 @@ class AddressBookDestroySerializer(serializers.Serializer):
         verification_code.set_code_used()
         totp = data.get('totp')
         if not user.is_2fa_valid(totp):
-            raise ValidationError({'totp': 'شناسه‌دوعاملی صحیح نمی‌باشد.'})
+            raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
         return data
 
 

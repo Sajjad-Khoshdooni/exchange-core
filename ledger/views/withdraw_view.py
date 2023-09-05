@@ -81,7 +81,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
             if not otp_code:
                 raise ValidationError({'code': 'کد نامعتبر است.'})
             if not user.is_2fa_valid(totp):
-                raise ValidationError({'totp': 'شناسه‌دوعاملی صحیح نمی‌باشد.'})
+                raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
 
 
         network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)

@@ -60,7 +60,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
         user = User.objects.get(phone=otp_code.phone)
         if not user.is_2fa_valid(totp):
-            raise ValidationError({'totp': 'شناسه‌دوعاملی صحیح نمی‌باشد.'})
+            raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
 
         otp_code.set_token_used()
 
