@@ -26,6 +26,7 @@ class DepositAddress(models.Model):
             address_key, _ = AddressKey.objects.get_or_create(
                 account=account,
                 architecture=architecture,
+                deleted=False,
                 defaults={
                     'address': address_dict.get('address'),
                     'public_address': address_dict.get('address'),
