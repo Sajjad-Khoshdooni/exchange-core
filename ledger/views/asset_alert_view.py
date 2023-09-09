@@ -1,18 +1,19 @@
-from rest_framework import viewsets
-from rest_framework.views import APIView
 from rest_framework import serializers
-from rest_framework.response import Response
 from rest_framework import status
+from rest_framework import viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import RetrieveUpdateAPIView
+from rest_framework.response import Response
 
 from accounts.models import User
-from ledger.views.coin_category_list_view import CoinCategorySerializer
-from ledger.models.asset import AssetSerializerMini
 from ledger.models import AssetAlert, BulkAssetAlert
+from ledger.models.asset import AssetSerializerMini, CoinField
+from ledger.views.coin_category_list_view import CoinCategorySerializer
 
 
-class AssetAlertViewSerializer(serializers.ModelSerializer):
+class AssetAlertCreateSerializer(serializers.ModelSerializer):
+    coin = CoinField(source='asset', required=False)
+
     def validate(self, data):
         user = self.context['request'].user
         asset = data['asset']
@@ -24,7 +25,22 @@ class AssetAlertViewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AssetAlert
-        fields = ('asset',)
+        fields = ('coin',)
+
+
+class AssetAlertDeleteSerializer(serializers.ModelSerializer):
+    coin = CoinField(source='asset', required=False)
+
+    def validate(self, data):
+        user = self.context['request'].user
+        asset = data['asset']
+        if not AssetAlert.objects.filter(user=user, asset=asset).exists():
+            raise ValidationError({'asset': 'ارز دیجیتال انتخاب شده تحت‌نظر نمی‌باشد.'})
+        return data
+
+    class Meta:
+        model = AssetAlert
+        fields = ('coin',)
 
 
 class AssetAlertObjectSerializer(serializers.ModelSerializer):
@@ -72,7 +88,7 @@ class BulkAssetAlertObjectSerializer(serializers.ModelSerializer):
 
 
 class AssetAlertViewSet(viewsets.ModelViewSet):
-    serializer_class = AssetAlertViewSerializer
+    serializer_class = AssetAlertCreateSerializer
     queryset = AssetAlert.objects.all()
 
     def create(self, request, *args, **kwargs):
@@ -86,10 +102,15 @@ class AssetAlertViewSet(viewsets.ModelViewSet):
         serializer = AssetAlertObjectSerializer(queryset, many=True)
         return Response(serializer.data)
 
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = AssetAlertObjectSerializer(instance)
-        return Response(serializer.data)
+    def get_object(self):
+        serializer = AssetAlertDeleteSerializer(
+            data=self.request.data,
+            context={'request': self.request}
+        )
+        serializer.is_valid(raise_exception=True)
+        asset = serializer.validated_data.get('asset', None)
+        user = self.request.user
+        return self.get_queryset().get(user=user, asset=asset)
 
     def perform_create(self, serializer):
         serializer.save(
