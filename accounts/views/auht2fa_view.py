@@ -39,6 +39,7 @@ class TOTPView(APIView):
         scope = request.data.get('scope', ACTIVATE if device is None or device.confirmed is False else DEACTIVATE)
         VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_2FA, user=user)
         response_data = {}
+
         if scope == ACTIVATE:
             if device is None:
                 device = TOTPDevice.objects.create(user=user, confirmed=False)
