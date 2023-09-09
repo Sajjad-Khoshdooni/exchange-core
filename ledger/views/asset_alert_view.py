@@ -137,20 +137,6 @@ class PriceNotifSwitchSerializer(serializers.ModelSerializer):
         fields = ('is_price_notif_on',)
 
 
-class PriceNotifSwitchViews(APIView):
-    def post(self, request):
-        serializer = PriceNotifSwitchSerializer(
-            data=request.data,
-            context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({'msg': 'price notification status changed successfully'})
-
-    def get(self, request):
-        return Response({'is_price_notif_on': request.user.is_price_notif_on})
-
-
 class PriceNotifSwitchView(RetrieveUpdateAPIView):
     serializer_class = PriceNotifSwitchSerializer
 
