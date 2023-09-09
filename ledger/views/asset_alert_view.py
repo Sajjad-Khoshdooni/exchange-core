@@ -131,13 +131,13 @@ class PriceNotifSwitchSerializer(serializers.Serializer):
     status = serializers.BooleanField()
 
     def save(self, **kwargs):
-        user = self.context['request']
+        user = self.context['request'].user
         validated_data = self.validated_data
         user.is_price_notif_on = validated_data['status']
         user.save(update_fields=['is_price_notif_on'])
 
 
-class PriceNotifSwitch(APIView):
+class PriceNotifSwitchView(APIView):
     def post(self, request):
         serializer = PriceNotifSwitchSerializer(
             data=request.data,
@@ -145,6 +145,7 @@ class PriceNotifSwitch(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        return Response({'msg': 'price notification status changed successfully'})
 
     def get(self, request):
         return Response({'is_price_notif_on': request.user.is_price_notif_on})

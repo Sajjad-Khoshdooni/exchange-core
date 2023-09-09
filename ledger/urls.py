@@ -14,6 +14,8 @@ urlpatterns = [
     path('v1/asset/overview/', views.AssetOverviewAPIView.as_view()),
     path('v1/assets/single-alert/', include(asset_alert_router.urls)),
     path('v1/assets/bulk-alert/', include(bulk_asset_alert_router.urls)),
+    path('v1/assets/switch-alert-status/', views.PriceNotifSwitchView.as_view()),
+
     path('v1/networks/', views.BriefNetworkAssetsView.as_view()),
 
     path('v1/assets/reserve/', views.ReserveWalletCreateAPIView.as_view()),
