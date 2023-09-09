@@ -8,11 +8,13 @@ from rest_framework.generics import RetrieveUpdateAPIView
 
 from accounts.models import User
 from ledger.views.coin_category_list_view import CoinCategorySerializer
-from ledger.models.asset import AssetSerializerMini
+from ledger.models.asset import AssetSerializerMini, CoinField
 from ledger.models import AssetAlert, BulkAssetAlert
 
 
 class AssetAlertViewSerializer(serializers.ModelSerializer):
+    coin = CoinField(source='asset', required=False)
+
     def validate(self, data):
         user = self.context['request'].user
         asset = data['asset']
@@ -24,7 +26,7 @@ class AssetAlertViewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AssetAlert
-        fields = ('asset',)
+        fields = ('coin',)
 
 
 class AssetAlertObjectSerializer(serializers.ModelSerializer):
