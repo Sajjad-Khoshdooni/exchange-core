@@ -158,7 +158,7 @@ class User(AbstractUser):
 
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
 
-    is_price_notif_on = models.BooleanField(default=True)
+    is_price_notif_on = models.BooleanField(default=False)
 
     def __str__(self):
         name = self.get_full_name()
