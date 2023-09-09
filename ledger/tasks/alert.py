@@ -191,18 +191,19 @@ def get_asset_alert_list(altered_coins: dict) -> set:
     category_map = {}
     for category in all_categories:
         category_map[category] = category.coins.filter(symbol__in=altered_coins.keys())
-    for asset_alert in AssetAlert.objects.filter(asset__symbol__in=altered_coins.keys()):
-        if not asset_alert.user.is_price_notif_on:
-            continue
+    for asset_alert in AssetAlert.objects.filter(
+        asset__symbol__in=altered_coins.keys(),
+        user__is_price_notif_on=True
+    ):
         asset_alerts.add(
             AlertData(
                 user=asset_alert.user,
                 asset=asset_alert.asset,
             )
         )
-    for bulk_asset_alert in BulkAssetAlert.objects.all():
-        if not bulk_asset_alert.user.is_price_notif_on:
-            continue
+    for bulk_asset_alert in BulkAssetAlert.objects.filter(
+        user__is_price_notif_on=True
+    ):
         subscription_type = bulk_asset_alert.subscription_type
         if subscription_type == BulkAssetAlert.CATEGORY_ALL_COINS:
             subscribed_coins = all_assets

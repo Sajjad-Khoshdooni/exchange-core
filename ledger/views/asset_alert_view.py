@@ -4,7 +4,9 @@ from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import RetrieveUpdateAPIView
 
+from accounts.models import User
 from ledger.views.coin_category_list_view import CoinCategorySerializer
 from ledger.models.asset import AssetSerializerMini
 from ledger.models import AssetAlert, BulkAssetAlert
@@ -69,7 +71,7 @@ class BulkAssetAlertObjectSerializer(serializers.ModelSerializer):
         fields = ('subscription_type', 'coin_category',)
 
 
-class AssetAlertView(viewsets.ModelViewSet):
+class AssetAlertViewSet(viewsets.ModelViewSet):
     serializer_class = AssetAlertViewSerializer
     queryset = AssetAlert.objects.all()
 
@@ -98,7 +100,7 @@ class AssetAlertView(viewsets.ModelViewSet):
         return self.queryset.filter(user=self.request.user)
 
 
-class BulkAssetAlertView(viewsets.ModelViewSet):
+class BulkAssetAlertViewSet(viewsets.ModelViewSet):
     serializer_class = BulkAssetAlertViewSerializer
     queryset = BulkAssetAlert.objects.all()
 
@@ -127,17 +129,15 @@ class BulkAssetAlertView(viewsets.ModelViewSet):
         return self.queryset.filter(user=self.request.user)
 
 
-class PriceNotifSwitchSerializer(serializers.Serializer):
-    status = serializers.BooleanField()
+class PriceNotifSwitchSerializer(serializers.ModelSerializer):
+    is_price_notif_on = serializers.BooleanField()
 
-    def save(self, **kwargs):
-        user = self.context['request'].user
-        validated_data = self.validated_data
-        user.is_price_notif_on = validated_data['status']
-        user.save(update_fields=['is_price_notif_on'])
+    class Meta:
+        model = User
+        fields = ('is_price_notif_on',)
 
 
-class PriceNotifSwitchView(APIView):
+class PriceNotifSwitchViews(APIView):
     def post(self, request):
         serializer = PriceNotifSwitchSerializer(
             data=request.data,
@@ -149,3 +149,10 @@ class PriceNotifSwitchView(APIView):
 
     def get(self, request):
         return Response({'is_price_notif_on': request.user.is_price_notif_on})
+
+
+class PriceNotifSwitchView(RetrieveUpdateAPIView):
+    serializer_class = PriceNotifSwitchSerializer
+
+    def get_object(self):
+        return self.request.user
