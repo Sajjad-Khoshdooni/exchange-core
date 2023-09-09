@@ -35,11 +35,12 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
               price: Decimal = None, fill_type: str = Order.LIMIT, raise_exception: bool = True,
               market: str = Wallet.SPOT, order_type: str = Order.ORDINARY,
               parent_lock_group_id: Union[UUID, None] = None, stop_loss_id: Union[int, None] = None,
-              time_in_force: str = Order.GTC, pass_min_notional: bool = False) -> Union[Order, None]:
+              time_in_force: str = Order.GTC, pass_min_notional: bool = False,
+              variant: Union[str, None] = None, oco_id: Union[int, None] = None) -> Union[Order, None]:
 
     assert price or fill_type == Order.MARKET
 
-    wallet = symbol.asset.get_wallet(account, market=market)
+    wallet = symbol.asset.get_wallet(account, market=market, variant=variant)
     if fill_type == Order.MARKET:
         price = Order.get_market_price(symbol, Order.get_opposite_side(side))
         if not price:
@@ -84,6 +85,8 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
     additional_params = {'group_id': parent_lock_group_id} if parent_lock_group_id else {}
     if stop_loss_id:
         additional_params['stop_loss_id'] = stop_loss_id
+    if oco_id:
+        additional_params['oco_id'] = oco_id
 
     order = Order.objects.create(
         account=account,
@@ -98,8 +101,9 @@ def new_order(pipeline: WalletPipeline, symbol: PairSymbol, account: Account, si
         **additional_params
     )
 
-    is_stop_loss = parent_lock_group_id is not None
-    matched_trades = order.submit(pipeline, is_stop_loss=is_stop_loss)
+    is_stop_loss = bool(additional_params.get('stop_loss_id'))
+    is_oco = bool(additional_params.get('oco_id'))
+    matched_trades = order.submit(pipeline, is_stop_loss=is_stop_loss, is_oco=is_oco)
     extra = {} if matched_trades.trade_pairs else {'side': order.side}
     pipeline.add_market_cache_data(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
     if matched_trades and matched_trades.to_cancel_stoploss:

@@ -25,7 +25,7 @@ class ChangePhoneSerializer(serializers.ModelSerializer):
             raise ValidationError('کد ملی شما تایید شده است. امکان تغییر شماره موبایل وجود ندارد.')
 
         if not code:
-            raise ValidationError({'code': 'کد نامعتبر است.'})
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
 
         if User.objects.filter(phone=new_phone):
             raise ValidationError('شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.')
@@ -43,7 +43,7 @@ class ChangePhoneSerializer(serializers.ModelSerializer):
         fields = ('new_phone', 'code',)
 
 
-class ChangePhoneView(APIView):
+class ChangePhoneBeforeVerifyView(APIView):
 
     def patch(self, request):
 
@@ -65,4 +65,3 @@ class ChangePhoneView(APIView):
             basic_verify_user.delay(user.id)
 
         return Response({'msg': 'phone change successfully'})
-

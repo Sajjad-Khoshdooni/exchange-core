@@ -139,3 +139,9 @@ class ReferralTrxAdmin(admin.ModelAdmin):
 class StopLossAdmin(admin.ModelAdmin):
     list_display = ('created', 'wallet', 'symbol', 'fill_type', 'amount', 'filled_amount', 'trigger_price', 'price', 'side')
     readonly_fields = ('wallet', 'symbol', 'group_id', 'login_activity')
+
+
+@admin.register(OCO)
+class OCOAdmin(admin.ModelAdmin):
+    list_display = ('created', 'wallet', 'symbol', 'amount', 'price', 'stop_loss_trigger_price', 'stop_loss_price', 'side')
+    readonly_fields = ('wallet', 'symbol', 'group_id', 'login_activity')

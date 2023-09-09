@@ -118,3 +118,6 @@ class LoginActivity(models.Model):
         indexes = [
             models.Index(fields=['user', 'ip', 'browser', 'os'], name="login_activity_idx"),
         ]
+
+    def __str__(self):
+        return f'{self.device} {self.os}'
