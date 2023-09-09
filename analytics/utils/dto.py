@@ -11,7 +11,7 @@ class BaseEvent:
     created: datetime
     user_id: [int, None]
     event_id: uuid
-    login_activity_id: str = ''
+    login_activity_id: int = ''
 
     def serialize(self):
         pass
