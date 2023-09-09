@@ -67,6 +67,19 @@ def _check_price_dict_time_frame(data: dict, allow_stale: bool = False):
     return allow_stale or not data.get('t') or now - 30 <= float(data.get('t')) <= now
 
 
+def fetch_external_price(symbol, side: str, allow_stale: bool = False) -> Decimal:
+    side = _get_redis_side(side)
+    name = f'price:{symbol.lower()}'
+    price = price_redis.hget(name=name, key=side)
+
+    if not price and allow_stale:
+        name += ':stale'
+        price = price_redis.hget(name=name, key=side)
+
+    if price:
+        return Decimal(price)
+
+
 def fetch_external_redis_prices(coins: Union[list, set], side: str = None, allow_stale: bool = False) -> List[Price]:
     results = []
 
@@ -120,4 +133,8 @@ def fetch_external_redis_prices(coins: Union[list, set], side: str = None, allow
 
 
 def fetch_external_depth(symbol: str, side: str) -> str:
-    return price_redis.hget(name=f'depth:{symbol.lower()}', key=_get_redis_side(side))
+    key = _get_redis_side(side)
+    data = price_redis.hgetall(name=f'depth:{symbol.lower()}')
+
+    if data and _check_price_dict_time_frame(data):
+        return data[key]

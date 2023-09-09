@@ -20,7 +20,6 @@ from ledger.models.balance_lock import BalanceLock
 from ledger.utils.external_price import BUY, SELL, SIDE_VERBOSE
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, decimal_to_str
-from ledger.utils.price import get_last_price, USDT_IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol, BaseTrade
 from market.utils.price import set_last_trade_price
@@ -267,6 +266,7 @@ class Order(models.Model):
     def make_match(self, pipeline: WalletPipeline, overriding_fill_amount: Union[Decimal, None]) -> MatchedTrades:
         from market.utils.trade import register_transactions, TradesPair
         from market.models import Trade
+        from ledger.utils.price import get_last_price, USDT_IRT
 
         symbol = self.symbol
 

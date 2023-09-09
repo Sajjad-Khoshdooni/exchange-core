@@ -6,7 +6,6 @@ from django.db import models
 from rest_framework import serializers
 
 from _base.settings import SYSTEM_ACCOUNT_ID, OTC_ACCOUNT_ID
-from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.external_price import BUY, SELL
 from ledger.utils.fields import get_amount_field
@@ -81,9 +80,10 @@ class Asset(models.Model):
         else:
             return Asset.PRECISION
 
-    def get_wallet(self, account: Union[Account, int], market: str = Wallet.SPOT, variant: str = None,
+    def get_wallet(self, account, market: str = Wallet.SPOT, variant: str = None,
                    expiration: datetime = None):
         assert market in Wallet.MARKETS
+        from accounts.models import Account
 
         if isinstance(account, int):
             account_filter = {'account_id': account}

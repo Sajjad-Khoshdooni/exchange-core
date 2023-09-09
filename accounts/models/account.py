@@ -6,7 +6,6 @@ from django.db.models import UniqueConstraint, Q
 from django.utils import timezone
 
 from ledger.utils.external_price import BUY
-from ledger.utils.price import get_last_price
 
 
 class Account(models.Model):
@@ -88,6 +87,7 @@ class Account(models.Model):
 
     def get_total_balance_usdt(self, market: str, side: str):
         from ledger.models import Wallet, Asset
+        from ledger.utils.price import get_last_price
 
         wallets = Wallet.objects.filter(account=self, market=market).exclude(asset__symbol=Asset.IRT).prefetch_related('asset')
 
@@ -104,6 +104,7 @@ class Account(models.Model):
 
     def get_total_balance_irt(self, market: str = None, side: str = BUY):
         from ledger.models import Wallet, Asset
+        from ledger.utils.price import get_last_price
 
         wallets = Wallet.objects.filter(account=self).prefetch_related('asset')
 

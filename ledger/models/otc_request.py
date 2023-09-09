@@ -114,8 +114,15 @@ class OTCRequest(BaseTrade):
         else:
             coin_amount = pair.coin_amount
 
-        otc_request.price = get_depth_price(symbol.name, side=other_side, amount=coin_amount)
+        price = get_depth_price(symbol.name, side=other_side, amount=coin_amount)
+
+        if pair.coin_amount is None:
+            coin_amount = floor_precision(pair.base_amount / price, symbol.step_size)
+        else:
+            coin_amount = pair.coin_amount
+
         otc_request.amount = coin_amount
+        otc_request.price = price
 
         fee_info = get_fee_info(otc_request)
 

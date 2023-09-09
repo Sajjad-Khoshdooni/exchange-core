@@ -32,7 +32,7 @@ class FastBuyToken(models.Model):
         verbose_name = verbose_name_plural = 'خرید آنی'
 
     def __str__(self):
-        return '%s %s %s' % (self.payment_request.bank_card, self.asset, humanize_number(self.amount))
+        return '%s IRT (%s)' % (humanize_number(self.amount), self.asset)
 
     @property
     def user(self):
@@ -47,7 +47,7 @@ class FastBuyToken(models.Model):
                 account=self.user.get_account(),
                 from_asset=Asset.get('IRT'),
                 to_asset=self.asset,
-                from_amount=Decimal(payment.amount),
+                from_amount=payment.amount,
                 market=Wallet.SPOT
             )
             otc_request.login_activity = self.payment_request.login_activity
