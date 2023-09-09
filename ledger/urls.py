@@ -1,19 +1,24 @@
-from rest_framework.routers import DefaultRouter
-from django.urls import path, include
+from django.urls import path
 from ledger import views
+from django.urls import path
 
-asset_alert_router = DefaultRouter()
-asset_alert_router.register(r'', viewset=views.AssetAlertViewSet)
-bulk_asset_alert_router = DefaultRouter()
-bulk_asset_alert_router.register(r'', viewset=views.BulkAssetAlertViewSet)
+from ledger import views
 
 urlpatterns = [
     path('v1/assets/', views.AssetsViewSet.as_view({'get': 'list'})),
     path('v1/assets/categories/', views.CoinCategoryListView.as_view()),
     path('v1/networkassets/', views.NetworkAssetView.as_view()),
     path('v1/asset/overview/', views.AssetOverviewAPIView.as_view()),
-    path('v1/price/alert/single/', include(asset_alert_router.urls)),
-    path('v1/price/alert/bulk/', include(bulk_asset_alert_router.urls)),
+    path('v1/price/alert/single/', views.AssetAlertViewSet.as_view({
+        'post': 'create',
+        'get': 'list',
+        'delete': 'destroy',
+    })),
+    path('v1/price/alert/bulk/', views.BulkAssetAlertViewSet.as_view({
+        'post': 'create',
+        'get': 'list',
+        'delete': 'destroy'
+    })),
     path('v1/price/alert/switch/', views.PriceNotifSwitchView.as_view()),
 
     path('v1/networks/', views.BriefNetworkAssetsView.as_view()),
