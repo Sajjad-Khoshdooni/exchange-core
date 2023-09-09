@@ -13,7 +13,8 @@ from .change_password_view import ChangePasswordView
 from .quiz_passed_view import QuizPassedView
 from .email_verify_view import EmailOTPVerifyView, EmailVerifyView
 from .on_boarding_flow import OnBoardingFlowStatus
-from .change_phone_before_verify import ChangePhoneView
+from .change_phone import InitiateChangePhone, ChangePhoneView
+from .change_phone_before_verify import ChangePhoneBeforeVerifyView
 
 from .referral_view import ReferralReportAPIView, ReferralViewSet, ReferralOverviewAPIView, TradingFeeView
 from .prize_view import PrizeView
@@ -24,7 +25,7 @@ from .app_status_view import AppStatusView
 from .shahkar_view import ShahkarCheckView, ShahkarStatusView
 from .attribution_view import AttributionAPIView
 
-from .auht2fa_view import Create2FaQrCodeAPIView, Verify2FaVerificationAPIView
+from .auht2fa_view import TOTPView
 from .health_view import HealthView
 from .user_digest_view import UserDigestView
 from .feedback_view import UserFeedbackView

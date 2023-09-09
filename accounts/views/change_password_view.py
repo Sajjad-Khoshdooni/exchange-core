@@ -12,20 +12,24 @@ class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True)
     password = serializers.CharField(write_only=True)
     otp_code = serializers.CharField(write_only=True)
+    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
 
     def validate(self, data):
-
-        user = self.instance
+        user = self.context['request'].user
         code = data.get('otp_code')
         password = data.get('password')
         old_pass = data.get('old_password')
         otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CHANGE_PASSWORD, user)
-
+        totp = data.get('totp', None)
         if not otp_code:
-            raise ValidationError({'code': 'کد نامعتبر است.'})
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
+
         if not user.check_password(old_pass):
             raise ValidationError({'old_password': 'رمز عبور قبلی بدرستی وارد نشده است'})
 
+        if not user.is_2fa_valid(totp):
+            raise ValidationError({'totp': 'شناسه ‌دوعاملی صحیح نمی‌باشد.'})
+        otp_code.set_code_used()
         validate_password(password=password, user=user)
 
         return data
@@ -41,7 +45,6 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 
 class ChangePasswordView(APIView):
-
     def patch(self, request):
         user = self.request.user
 
