@@ -192,6 +192,8 @@ def get_asset_alert_list(altered_coins: dict) -> set:
     for category in all_categories:
         category_map[category] = category.coins.filter(symbol__in=altered_coins.keys())
     for asset_alert in AssetAlert.objects.filter(asset__symbol__in=altered_coins.keys()):
+        if not asset_alert.user.is_price_notif_on:
+            continue
         asset_alerts.add(
             AlertData(
                 user=asset_alert.user,
@@ -199,6 +201,8 @@ def get_asset_alert_list(altered_coins: dict) -> set:
             )
         )
     for bulk_asset_alert in BulkAssetAlert.objects.all():
+        if not bulk_asset_alert.user.is_price_notif_on:
+            continue
         subscription_type = bulk_asset_alert.subscription_type
         if subscription_type == BulkAssetAlert.CATEGORY_ALL_COINS:
             subscribed_coins = all_assets

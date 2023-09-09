@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.views import APIView
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework import status
@@ -124,3 +125,26 @@ class BulkAssetAlertView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)
+
+
+class PriceNotifSwitchSerializer(serializers.Serializer):
+    status = serializers.BooleanField()
+
+    def save(self, **kwargs):
+        user = self.context['request']
+        validated_data = self.validated_data
+        user.is_price_notif_on = validated_data['status']
+        user.save(update_fields=['is_price_notif_on'])
+
+
+class PriceNotifSwitch(APIView):
+    def post(self, request):
+        serializer = PriceNotifSwitchSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+    def get(self, request):
+        return Response({'is_price_notif_on': request.user.is_price_notif_on})
