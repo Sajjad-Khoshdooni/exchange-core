@@ -11,6 +11,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
+OTP_TOTP_THROTTLE_FACTOR = 1
 
 DEBUG = config('DEBUG', cast=bool, default=False)
 STAGING = config('STAGING', cast=bool, default=False)
@@ -373,6 +374,7 @@ TRADER_ACCOUNT_ID = config('TRADER_ACCOUNT_ID', cast=int, default=0)
 BRAND_EN = config('BRAND_EN', default='')
 BRAND = config('BRAND', default='')
 
+OTP_TOTP_ISSUER = BRAND_EN
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 2000
 
 TRADE_ENABLE = config('TRADE_ENABLE', cast=bool, default=True)
