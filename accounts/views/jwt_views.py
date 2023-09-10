@@ -18,6 +18,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenViewBase
 from accounts.authentication import CustomTokenAuthentication
 from accounts.models import Account, LoginActivity, RefreshToken as RefreshTokenModel
 from accounts.models import User
+from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.validation import set_login_activity
 
 logger = logging.getLogger(__name__)
@@ -162,6 +163,7 @@ class SessionTokenObtainPairSerializer(CustomTokenObtainPairSerializer):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
