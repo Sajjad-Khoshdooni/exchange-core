@@ -7,6 +7,9 @@ from rest_framework.views import APIView
 from accounts.models.phone_verification import VerificationCode
 from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
 
+ACTIVATE = 'activate'
+DEACTIVATE = 'deactivate'
+
 
 class TOTPSerializer(serializers.Serializer):
     token = serializers.CharField(write_only=True)
@@ -18,13 +21,13 @@ class TOTPSerializer(serializers.Serializer):
         sms_code = data.get('sms_code')
         sms_verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_2FA, user)
         if not sms_verification_code:
-            raise ValidationError({'sms_code': 'کد ارسال شده برای فعال سازی ورود دومرحله‌ای نامعتبر است.'})
-        sms_verification_code.set_code_used()
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
         device = TOTPDevice.objects.filter(user=user).first()
         if device is None:
             raise ValidationError({'device': 'ابتدا بارکد را دریافت کنید.'})
         if not device.verify_token(token):
-            raise ValidationError({'token': 'رمز موقت صحیح نمی‌باشد.'})
+            raise ValidationError({'token': 'شناسه ‌دوعاملی صحیح نمی‌باشد.'})
+        sms_verification_code.set_code_used()
         return data
 
 
@@ -33,15 +36,19 @@ class TOTPView(APIView):
     def post(self, request):
         user = request.user
         device = TOTPDevice.objects.filter(user=user).first()
+        scope = request.data.get('scope', ACTIVATE if device is None or device.confirmed is False else DEACTIVATE)
         VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_2FA, user=user)
-        if device is None:
-            device = TOTPDevice.objects.create(user=user, confirmed=False)
-        if device.confirmed is False:
-            device.key = default_key()
-            device.save(update_fields=['key'])
-            return Response(device.config_url)
-        else:
-            return Response({'msg': 'پیامک با موفقیت ارسال شد.'})
+        response_data = {}
+
+        if scope == ACTIVATE:
+            if device is None:
+                device = TOTPDevice.objects.create(user=user, confirmed=False)
+            if device.confirmed is False:
+                device.key = default_key()
+                device.save(update_fields=['key'])
+                response_data['config'] = device.config_url
+
+        return Response(response_data)
 
     def put(self, request):
         user = request.user
@@ -77,4 +84,4 @@ class TOTPView(APIView):
             send_2fa_deactivation_message(user=user)
             return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری غیرفعال شد.'})
         else:
-            return Response({'msg' : 'ورود دومرحله‌ای غیرفعال است.'})
+            return Response({'msg': 'ورود دومرحله‌ای غیرفعال است.'})

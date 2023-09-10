@@ -115,8 +115,9 @@ class VerificationCode(models.Model):
         if not settings.DEBUG_OR_TESTING_OR_STAGING:
             any_recent_code = VerificationCode.objects.filter(
                 phone=phone,
-                created__gte=timezone.now() - timedelta(minutes=2),
-            ).exists()
+                scope=scope,
+                created__gte=timezone.now() - timedelta(minutes=1),
+            ).count() >= 2
 
             if not settings.DEBUG_OR_TESTING_OR_STAGING and any_recent_code:
                 logger.info('[OTP] Ignored sending otp to kavenegar because of recent')
@@ -124,10 +125,11 @@ class VerificationCode(models.Model):
 
             prev_codes = VerificationCode.objects.filter(
                 phone=phone,
-                created__gte=timezone.now() - timedelta(minutes=15),
+                scope=scope,
+                created__gte=timezone.now() - timedelta(minutes=5),
             ).count()
 
-            if not settings.DEBUG_OR_TESTING_OR_STAGING and prev_codes >= 3:
+            if not settings.DEBUG_OR_TESTING_OR_STAGING and prev_codes >= 5:
                 logger.info('[OTP] Ignored sending otp to kavenegar because of multiple prev')
                 return
 

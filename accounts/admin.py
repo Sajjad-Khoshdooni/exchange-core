@@ -7,7 +7,6 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
-from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from accounts.models import FirebaseToken, Attribution, AppStatus, VerificationCode, \
     UserFeedback, BulkNotification, EmailNotification
@@ -31,7 +30,6 @@ from .models.sms_notification import SmsNotification
 from .models.user_feature_perm import UserFeaturePerm
 from .tasks import basic_verify_user
 from .utils.validation import gregorian_to_jalali_datetime_str
-from .verifiers.legal import is_48h_rule_passed
 
 MANUAL_VERIFY_CONDITION = Q(
     Q(first_name_verified=None) | Q(last_name_verified=None),
@@ -124,6 +122,8 @@ class AnotherUserFilter(SimpleListFilter):
 class UserCommentInLine(admin.TabularInline):
     model = UserComment
     extra = 1
+    fields = ('comment', 'created', )
+    readonly_fields = ('user', 'created')
 
 
 class UserFeatureInLine(admin.TabularInline):
@@ -177,7 +177,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'last_name_verified': M.superuser | M.is_none('last_name_verified'),
         'national_code_verified': M.superuser | ~M('national_code_verified'),
         'birth_date_verified': M.superuser | M.is_none('birth_date_verified'),
-        'withdraw_before_48h_option': True,
         'can_withdraw': True,
         'can_withdraw_crypto': True,
         'can_trade': True,
@@ -201,12 +200,12 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
             'fields': (
                 'is_active', 'is_staff', 'is_superuser',
                 'groups', 'user_permissions', 'show_margin', 'show_strategy_bot', 'show_staking', 'show_community',
-                'withdraw_before_48h_option', 'can_trade', 'can_withdraw', 'can_withdraw_crypto',
+                'can_trade', 'can_withdraw', 'can_withdraw_crypto',
                 'withdraw_limit_whitelist', 'withdraw_risk_level_multiplier', 'custom_crypto_withdraw_ceil'
             ),
         }),
         (_('Important dates'), {'fields': (
-            'get_last_login_jalali', 'get_date_joined_jalali', 'get_first_fiat_deposit_date_jalali',
+            'get_last_login_jalali', 'get_date_joined_jalali',
             'get_first_crypto_deposit_date_jalali', 'get_level_2_verify_datetime_jalali',
             'get_level_3_verify_datetime_jalali', 'get_selfie_image_uploaded',
             'margin_quiz_pass_date',
@@ -247,7 +246,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_payment_address', 'get_withdraw_address', 'get_otctrade_address', 'get_wallet',
         'get_sum_of_value_buy_sell',
         'get_selfie_image', 'get_level_2_verify_datetime_jalali', 'get_level_3_verify_datetime_jalali',
-        'get_first_fiat_deposit_date_jalali', 'get_first_crypto_deposit_date_jalali',
+        'get_first_crypto_deposit_date_jalali',
         'get_date_joined_jalali', 'get_last_login_jalali',
         'get_remaining_fiat_withdraw_limit', 'get_remaining_crypto_withdraw_limit', 'get_deposit_address',
         'get_bank_card_link', 'get_bank_account_link', 'get_transfer_link', 'get_finotech_request_link',
@@ -259,7 +258,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     )
     preserve_filters = ('archived', )
 
-    search_fields = (*UserAdmin.search_fields, 'national_code')
+    search_fields = (*UserAdmin.search_fields, 'national_code', 'phone')
 
     @admin.action(description='تایید نام کاربر', permissions=['view'])
     def verify_user_name(self, request, queryset):
@@ -273,7 +272,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     @admin.action(description='شروع احراز هویت پایه کاربر', permissions=['change'])
     def reevaluate_basic_verify(self, request, queryset):
-        to_verify_users = queryset.filter(level=User.LEVEL1).exclude(first_name='').exclude(last_name='')
+        to_verify_users = queryset.filter(level=User.LEVEL1)
 
         for user in to_verify_users:
             basic_verify_user.delay(user.id)
@@ -422,9 +421,21 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
     get_sum_of_value_buy_sell.short_description = 'مجموع معاملات'
 
+    @admin.display(description='تاریخ آخرین معامله')
     def get_last_trade(self, user: User):
-        return gregorian_to_jalali_datetime_str(Trade.objects.filter(account=user.get_account()).last().created)
-    get_last_trade.short_description = 'تاریخ آخرین معامله'
+        account = user.get_account()
+
+        dates = []
+        last_trade = Trade.objects.filter(account=account).order_by('id').last()
+        if last_trade:
+            dates.append(last_trade.created)
+
+        last_otc_trade = OTCTrade.objects.filter(otc_request__account=account).order_by('id').last()
+        if last_otc_trade:
+            dates.append(last_otc_trade.created)
+
+        if dates:
+            return gregorian_to_jalali_datetime_str(max(dates))
 
     def get_bank_card_link(self, user: User):
         link = url_to_admin_list(BankCard) + '?user={}'.format(user.id)
@@ -482,16 +493,6 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         return gregorian_to_jalali_datetime_str(user.level_3_verify_datetime)
 
     get_level_3_verify_datetime_jalali.short_description = 'تاریخ تایید سطح ۳'
-
-    @admin.display(description='تاریخ اولین واریز ریالی')
-    def get_first_fiat_deposit_date_jalali(self, user: User):
-        date = gregorian_to_jalali_datetime_str(user.first_fiat_deposit_date)
-        if is_48h_rule_passed(user):
-            color = 'green'
-        else:
-            color = 'red'
-
-        return mark_safe("<span style='color: %s'>%s</span>" % (color, date))
 
     @admin.display(description='تاریخ اولین واریز رمزارزی')
     def get_first_crypto_deposit_date_jalali(self, user: User):
@@ -663,9 +664,10 @@ class FinotechRequestUserFilter(SimpleListFilter):
 @admin.register(FinotechRequest)
 class FinotechRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'url', 'data', 'status_code')
-    list_filter = (FinotechRequestUserFilter, )
+    list_filter = (FinotechRequestUserFilter, 'status_code')
     ordering = ('-created', )
     readonly_fields = ('user', )
+    search_fields = ('url', )
 
 
 @admin.register(Notification)
@@ -712,10 +714,10 @@ class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
 
 @admin.register(LoginActivity)
 class LoginActivityAdmin(admin.ModelAdmin):
-    list_display = ('created', 'user', 'ip', 'device', 'os', 'browser', 'device_type', 'is_sign_up', 'native_app',
-                    'session')
+    list_display = ('created', 'user', 'ip', 'country', 'city', 'device', 'os', 'browser', 'device_type', 'is_sign_up',
+                    'native_app', 'session')
     search_fields = ('user__phone', 'ip', 'session__session_key')
-    readonly_fields = ('user', 'session', 'ip', )
+    readonly_fields = ('user', 'session', 'ip', 'refresh_token')
     list_filter = ('is_sign_up', 'native_app',)
 
 
@@ -738,7 +740,7 @@ class AppStatusAdmin(admin.ModelAdmin):
 
 @admin.register(VerificationCode)
 class VerificationCodeAdmin(admin.ModelAdmin):
-    list_display = ['phone', 'user', 'scope']
+    list_display = ('created', 'phone', 'user', 'scope', 'expiration', 'code_used')
     search_fields = ('user__phone', 'phone', 'user__first_name', 'user__last_name')
     list_filter = ('scope', )
     readonly_fields = ('user', )

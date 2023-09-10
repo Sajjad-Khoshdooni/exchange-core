@@ -24,7 +24,14 @@ if settings.DEBUG_OR_TESTING_OR_STAGING:
     TASK_MULTIPLIER = 5
 
 app.conf.beat_schedule = {
-
+    'price_alert': {
+        'task': 'ledger.tasks.alert.send_price_notifications',
+        'schedule':  60 * 3 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'notif-manager',
+            'expires': 90 * TASK_MULTIPLIER
+        }
+    },
     'update_network_fee': {
         'task': 'ledger.tasks.fee.update_network_fees',
         'schedule': crontab(minute="*/30"),
@@ -59,20 +66,29 @@ app.conf.beat_schedule = {
         },
     },
 
+    'update_distribution_factors': {
+        'task': 'ledger.tasks.distribution.update_distribution_factors',
+        'schedule': crontab(hour=21, minute=0),
+        'options': {
+            'queue': 'celery',
+            'expires': 36000
+        },
+    },
+
     'create_stake_revenue': {
-        'task': 'stake.tasks.stake_revenue.create_stake_revenue',
+        'task': 'stake.tasks.revenue.create_stake_revenue',
         'schedule': crontab(hour=22, minute=0),
         'options': {
             'queue': 'celery',
             'expires': 36000
         },
     },
-    'complete_stake_requests': {
-        'task': 'stake.tasks.stake_finish.finish_stakes',
-        'schedule': crontab(hour=21, minute=0),
+    'handle_stake_requests_status': {
+        'task': 'stake.tasks.status.handle_stake_requests_status',
+        'schedule': crontab(minute=30),
         'options': {
             'queue': 'celery',
-            'expires': 36000
+            'expires': 3600
         },
     },
 

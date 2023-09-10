@@ -6,7 +6,6 @@ from typing import Dict, List, Union
 
 import requests
 from django.conf import settings
-from django.core.cache import cache
 from django.utils import timezone
 from redis import Redis
 
@@ -55,14 +54,22 @@ SIDE_MAP = {
 }
 
 
-def _get_redis_price_key(coin: str):
+def _get_redis_price_key(coin: str, market: str = None):
+    prefix = 'price:'
+    if market:
+        prefix = prefix + 'f:'
+
     base = 'usdt'
-    return 'price:' + coin.lower() + base
+
+    return prefix + coin.lower() + base
 
 
-def _fetch_redis_prices(coins: list, side: str = None, allow_stale: bool = False) -> List[Price]:
+def _check_price_dict_time_frame(data: dict, allow_stale: bool = False):
     now = timezone.now().timestamp()
+    return allow_stale or not data.get('t') or now - 30 <= float(data.get('t')) <= now
 
+
+def fetch_external_redis_prices(coins: Union[list, set], side: str = None, allow_stale: bool = False) -> List[Price]:
     results = []
 
     if side:
@@ -72,27 +79,41 @@ def _fetch_redis_prices(coins: list, side: str = None, allow_stale: bool = False
 
     pipe = price_redis.pipeline(transaction=False)
     for c in coins:
-        name = _get_redis_price_key(c)
-        pipe.hgetall(name)
+        key = _get_redis_price_key(c)
+        pipe.hgetall(key)
+
+        key = _get_redis_price_key(c, market='futures')
+        pipe.hgetall(key)
 
     prices = pipe.execute()
 
     for i, c in enumerate(coins):
-        price_dict = prices[i] or {}
+        spot_price_dict = prices[2 * i] or {}
+        futures_price_dict = prices[2 * i + 1] or {}
 
-        if allow_stale and not price_dict:
+        if allow_stale and not spot_price_dict:
             name = _get_redis_price_key(c) + ':stale'
-            price_dict = price_redis.hgetall(name)
+            spot_price_dict = price_redis.hgetall(name)
 
             # logger.error('{} price fallback to stale'.format(c))
 
         for s in sides:
-            price = price_dict.get(SIDE_MAP[s])
+            price = spot_price_dict.get(SIDE_MAP[s])
 
             if price is not None:
                 price = Decimal(price)
 
-            if allow_stale or not price_dict.get('t') or now - 30 <= float(price_dict.get('t')) <= now:
+                futures_price = futures_price_dict.get(SIDE_MAP[s])
+
+                if futures_price is not None and _check_price_dict_time_frame(futures_price_dict, allow_stale=allow_stale):
+                    futures_price = Decimal(futures_price)
+
+                    if s == BUY:
+                        price = min(price, futures_price)
+                    else:
+                        price = max(price, futures_price)
+
+            if _check_price_dict_time_frame(spot_price_dict, allow_stale=allow_stale):
                 results.append(
                     Price(coin=c, price=price, side=s)
                 )
@@ -103,29 +124,14 @@ def _fetch_redis_prices(coins: list, side: str = None, allow_stale: bool = False
 PRICES_CACHE_TIMEOUT = 30
 
 
-def get_external_usdt_prices(coins: list, side, allow_stale: bool = False, set_bulk_cache: bool = False,
-                             apply_otc_spread: bool = False) -> Dict[str, Decimal]:
+# todo: deprecated func
+def get_external_usdt_prices(coins: list, side, allow_stale: bool = False) -> Dict[str, Decimal]:
 
-    cache_key = 'prices:ext:%s' % side
-
-    if allow_stale:
-        cached_result = cache.get(cache_key)
-        if cached_result is not None:
-            return cached_result
-
-    spreads = {}
-    if apply_otc_spread:
-        from ledger.utils.otc import get_all_otc_spreads
-        spreads = get_all_otc_spreads(side)
-
-    prices = _fetch_redis_prices(coins, side, allow_stale=allow_stale)
-    result = {r.coin: r.price * spreads.get(r.coin, 1) for r in prices if r.price}
+    prices = fetch_external_redis_prices(coins, side, allow_stale=allow_stale)
+    result = {r.coin: r.price for r in prices if r.price}
 
     if 'USDT' in coins:
         result['USDT'] = 1
-
-    if set_bulk_cache:
-        cache.set(cache_key, result, PRICES_CACHE_TIMEOUT)
 
     return result
 
@@ -186,6 +192,7 @@ def _get_raw_tether_irt_price(side: str, allow_stale: bool = False) -> Decimal:
     return price
 
 
+# todo: deprecated func
 def get_external_price(coin: str, base_coin: str, side: str, allow_stale: bool = False) -> Union[Decimal, None]:
     assert side in (BUY, SELL)
 

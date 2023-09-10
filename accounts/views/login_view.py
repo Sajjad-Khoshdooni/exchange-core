@@ -40,7 +40,10 @@ class LoginView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         totp = serializer.data.get('totp')
-        if user and user.is_2fa_valid(totp):
+        if user:
+            # todo: send unsuccessful login message
+            if not user.is_2fa_valid(totp):
+                return Response({'msg': 'totp required', 'code': -2}, status=status.HTTP_401_UNAUTHORIZED)
             login(request, user)
             login_activity = set_login_activity(request, user)
             if (not login_activity.is_sign_up and

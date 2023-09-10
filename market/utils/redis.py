@@ -1,5 +1,7 @@
 import json
 import logging
+
+from dataclasses import dataclass
 from datetime import timedelta
 from random import randint
 
@@ -8,7 +10,7 @@ from django.utils import timezone
 from redis import Redis
 
 from ledger.utils.external_price import BUY, SELL
-from ledger.utils.precision import floor_precision
+from ledger.utils.precision import floor_precision, get_presentation_amount
 
 prefix_top_price = 'market_top_price'
 prefix_top_depth_price = 'market_top_depth_price'
@@ -81,6 +83,23 @@ def get_as_dict(symbol_id, key):
     return as_dict
 
 
+@dataclass
+class MatchingOrderInfo:
+    updated_orders: list = None
+    trade_pairs: list = None
+    side: str = None
+    canceled: bool = None
+
+    def __post_init__(self):
+        if self.updated_orders is None:
+            self.updated_orders = []
+        if self.trade_pairs is None:
+            self.trade_pairs = []
+
+    def __bool__(self):
+        return bool(self.updated_orders and self.trade_pairs)
+
+
 class MarketStreamCache:
     _client = socket_server_redis
 
@@ -96,6 +115,8 @@ class MarketStreamCache:
 
     def __init__(self):
         self.market_pipeline = socket_server_redis.pipeline()
+        self._symbol = None
+        self._matching_orders_info = []
 
     def set_if_lower(self, k, v):
         return self._call(self.SET_IF_LOWER, **{k: v})
@@ -124,43 +145,43 @@ class MarketStreamCache:
             return cls._client.script_load(cls._funcs_dict[func_name])
         raise NotImplementedError
 
-    def update_bid_ask(self, symbol, side, canceled):
+    def update_bid_ask(self, side, canceled):
         from market.models import Order
         price_updated = {BUY: False, SELL: False}
         amount_updated = {BUY: False, SELL: False}
         top_orders = {}
         for order_type in (BUY, SELL):
             if side is None or order_type == side:
-                top_order = Order.get_top_price_amount(symbol.id, order_type)
+                top_order = Order.get_top_price_amount(self._symbol.id, order_type)
                 if not top_order:
-                    self.market_pipeline.delete(f'market:depth:price:{symbol.name}:{order_type}')
-                    self.market_pipeline.delete(f'market:depth:amount:{symbol.name}:{order_type}')
+                    self.market_pipeline.delete(f'market:depth:price:{self._symbol.name}:{order_type}')
+                    self.market_pipeline.delete(f'market:depth:amount:{self._symbol.name}:{order_type}')
                     continue
                 top_orders[f'{order_type}_price'] = str(top_order.price)
                 top_orders[f'{order_type}_amount'] = str(top_order.amount)
 
                 amount_updated[order_type] = self.set_if_not_equal(
-                    f'market:depth:amount:{symbol.name}:{order_type}', str(top_order.amount)
+                    f'market:depth:amount:{self._symbol.name}:{order_type}', str(top_order.amount)
                 )
 
                 if canceled:
-                    self.market_pipeline.set(f'market:depth:price:{symbol.name}:{order_type}', str(top_order.price))
+                    self.market_pipeline.set(f'market:depth:price:{self._symbol.name}:{order_type}', str(top_order.price))
                 else:
                     set_func = self.set_if_higher if order_type == BUY else self.set_if_lower
                     price_updated[order_type] = set_func(
-                        f'market:depth:price:{symbol.name}:{order_type}', str(top_order.price)
+                        f'market:depth:price:{self._symbol.name}:{order_type}', str(top_order.price)
                     )
             else:
                 missing_price_fallback = 0 if side == BUY else 'inf'
                 top_orders[f'{order_type}_price'] = str(
-                    self._client.get(f'market:depth:price:{symbol.name}:{order_type}') or missing_price_fallback
+                    self._client.get(f'market:depth:price:{self._symbol.name}:{order_type}') or missing_price_fallback
                 )
                 top_orders[f'{order_type}_amount'] = str(
-                    self._client.get(f'market:depth:amount:{symbol.name}:{order_type}') or 0
+                    self._client.get(f'market:depth:amount:{self._symbol.name}:{order_type}') or 0
                 )
 
         if canceled or any(price_updated.values()) or any(amount_updated.values()):
-            self.market_pipeline.publish(f'market:depth:{symbol.name}', json.dumps(top_orders))
+            self.market_pipeline.publish(f'market:depth:{self._symbol.name}', json.dumps(top_orders))
 
     def update_trades(self, trade_pairs):
         logger.info(f'publishing trades to socket server redis for {len(trade_pairs or [])}')
@@ -171,8 +192,8 @@ class MarketStreamCache:
         for pair in trade_pairs:
             maker_trade, taker_trade = pair
             is_buyer_maker = maker_trade.side == BUY
-            price = floor_precision(maker_trade.price, maker_trade.symbol.tick_size)
-            amount = floor_precision(maker_trade.amount, maker_trade.symbol.step_size)
+            price = get_presentation_amount(maker_trade.price, maker_trade.symbol.tick_size, trunc_zero=False)
+            amount = get_presentation_amount(maker_trade.amount, maker_trade.symbol.step_size)
             self.market_pipeline.publish(
                 f'market:trades:{maker_trade.symbol.name}',
                 f'{taker_trade.id}#{price}#{amount}#{maker_trade.client_order_id or maker_trade.order_id}#{taker_trade.client_order_id or taker_trade.order_id}#{is_buyer_maker}#{maker_trade.order_id}#{taker_trade.order_id}#{maker_trade.created}'
@@ -184,14 +205,35 @@ class MarketStreamCache:
             f'{order.client_order_id or order.id}-{order.side}-{order.price}-{order.status}'
         )
 
-    def execute(self, symbol, updated_orders, trade_pairs=None, side=None, canceled=False):
-        if trade_pairs is None:
-            trade_pairs = []
-        self.update_trades(trade_pairs)
-        self.update_bid_ask(symbol, side, canceled)
+    def add_order_info(self, symbol, updated_orders, trade_pairs=None, side=None, canceled=False):
+        if not self._symbol:
+            self._symbol = symbol
+        else:
+            assert self._symbol == symbol
 
-        for updated_order in updated_orders:
-            self.update_order_status(updated_order)
+        self._matching_orders_info.append(
+            MatchingOrderInfo(
+                updated_orders=updated_orders,
+                trade_pairs=trade_pairs or [],
+                side=side,
+                canceled=canceled
+            )
+        )
+
+    def execute(self):
+        if not self._symbol:
+            return
+
+        for info in self._matching_orders_info:
+            self.update_trades(info.trade_pairs)
+
+        sides = list(set(map(lambda i: i.side, self._matching_orders_info)))
+        side = sides[0] if len(sides) == 1 else None
+        self.update_bid_ask(side, any(map(lambda i: i.canceled, self._matching_orders_info)))
+
+        for info in self._matching_orders_info:
+            for updated_order in info.updated_orders:
+                self.update_order_status(updated_order)
 
         if self.market_pipeline:
             self.market_pipeline.execute()

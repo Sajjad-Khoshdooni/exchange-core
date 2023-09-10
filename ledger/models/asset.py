@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal
 from typing import Union
 
 from django.conf import settings
@@ -10,7 +9,7 @@ from _base.settings import SYSTEM_ACCOUNT_ID, OTC_ACCOUNT_ID
 from accounts.models import Account
 from ledger.models import Wallet
 from ledger.utils.external_price import BUY, SELL
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.fields import get_amount_field
 
 
 class InvalidAmount(Exception):
@@ -44,9 +43,6 @@ class Asset(models.Model):
     symbol = models.CharField(max_length=16, unique=True, db_index=True)
     original_symbol = models.CharField(max_length=16, blank=True)
 
-    price_precision_usdt = models.SmallIntegerField(default=2)
-    price_precision_irt = models.SmallIntegerField(default=0)
-
     enable = models.BooleanField(default=False)
     order = models.SmallIntegerField(default=0, db_index=True)
 
@@ -57,7 +53,7 @@ class Asset(models.Model):
     hedge = models.BooleanField(default=True)
 
     margin_enable = models.BooleanField(default=False)
-    spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.PROTECT, null=True, blank=True)
+    spread_category = models.ForeignKey('ledger.AssetSpreadCategory', on_delete=models.SET_NULL, null=True, blank=True)
 
     publish_date = models.DateTimeField(null=True, blank=True)
 
@@ -69,8 +65,12 @@ class Asset(models.Model):
 
     price_page = models.BooleanField(default=False)
 
+    price_alert_chanel_sensitivity = get_amount_field(null=True)
+
+    distribution_factor = models.FloatField(default=0)
+
     class Meta:
-        ordering = ('-pin_to_top', '-trend', 'order', )
+        ordering = ('-pin_to_top', '-trend', 'order',)
 
     def __str__(self):
         return self.symbol
@@ -96,6 +96,7 @@ class Asset(models.Model):
         elif isinstance(account, Account):
             account_filter = {'account': account}
             account_type = account.type
+
         else:
             raise NotImplementedError
 
@@ -106,7 +107,7 @@ class Asset(models.Model):
             **account_filter,
             defaults={
                 'check_balance': account_type == Account.ORDINARY,
-                'expiration': expiration
+                'expiration': expiration,
             }
         )
 
@@ -121,15 +122,6 @@ class Asset(models.Model):
 
     def is_trade_base(self):
         return self.symbol in (self.IRT, self.USDT)
-
-    def get_presentation_amount(self, amount: Decimal) -> str:
-        return get_presentation_amount(amount, self.get_precision())
-
-    def get_presentation_price_irt(self, price: Decimal) -> str:
-        return get_presentation_amount(price, self.price_precision_irt)
-
-    def get_presentation_price_usdt(self, price: Decimal) -> str:
-        return get_presentation_amount(price, self.price_precision_usdt)
 
     def get_original_symbol(self):
         return self.original_symbol or self.symbol
@@ -155,7 +147,7 @@ class Asset(models.Model):
 class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
-        fields = ('symbol', )
+        fields = ('symbol',)
 
 
 class AssetSerializerMini(serializers.ModelSerializer):

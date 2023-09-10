@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.conf import settings
-from django.db.models import Q, Min
+from django.db.models import Q
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
@@ -16,10 +16,12 @@ from _base.settings import SYSTEM_ACCOUNT_ID
 from accounts.views.jwt_views import DelegatedAccountMixin
 from ledger.models import Wallet, DepositAddress, NetworkAsset, Trx
 from ledger.models.asset import Asset
-from ledger.utils.external_price import get_external_price, get_external_usdt_prices, BUY, SELL
+from ledger.utils.external_price import get_external_price, BUY, SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
 from ledger.utils.otc import get_otc_spread, spread_to_multiplier
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.precision import get_presentation_amount, get_symbol_presentation_amount, \
+    get_coin_presentation_balance
+from ledger.utils.price import get_prices, get_coins_symbols, get_last_prices
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -77,7 +79,7 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not wallet:
             return '0'
 
-        return asset.get_presentation_amount(wallet.balance + self.get_debt(asset))
+        return get_coin_presentation_balance(asset.symbol, wallet.balance + self.get_debt(asset))
 
     def get_balance_irt(self, asset: Asset):
         balance = Decimal(self.get_balance(asset))
@@ -85,31 +87,23 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not balance:
             return 0
 
-        price = self.get_ext_price_irt(asset.symbol)
-        return asset.get_presentation_price_irt(balance * price)
-
-    def get_ext_price_irt(self, coin: str):
-        price = self.context.get('market_prices', {'IRT': {}})['IRT'].get(coin, 0)
-        if price:
-            return price
-        else:
-            price = self.context.get('prices', {}).get(coin, 0)
-
+        price = self._get_last_price_irt(asset.symbol)
         if not price:
-            price = get_external_price(coin=coin, base_coin=Asset.IRT, side=SELL, allow_stale=True) or 0
-        else:
-            price *= self.context.get('tether_irt', 0)
+            return
 
-        return price
+        return get_symbol_presentation_amount(asset.symbol + 'IRT', balance * price, trunc_zero=True)
 
-    def get_ext_price_usdt(self, coin: str):
-        price = self.context.get('market_prices', {'USDT': {}})['USDT'].get(coin, 0)
-        if not price:
-            price = self.context.get('prices', {}).get(coin, 0)
-        if not price:
-            price = get_external_price(coin=coin, base_coin=Asset.USDT, side=SELL, allow_stale=True) or 0
+    def _get_price_irt(self, coin: str):
+        return self.context['prices'].get(coin + Asset.IRT)
 
-        return price
+    def _get_price_usdt(self, coin: str):
+        return self.context['prices'].get(coin + Asset.USDT)
+
+    def _get_last_price_irt(self, coin: str):
+        return self.context['last_prices'].get(coin + Asset.IRT)
+
+    def _get_last_price_usdt(self, coin: str):
+        return self.context['last_prices'].get(coin + Asset.USDT)
 
     def get_balance_usdt(self, asset: Asset):
         balance = Decimal(self.get_balance(asset))
@@ -117,8 +111,11 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not balance:
             return 0
 
-        price = self.get_ext_price_usdt(asset.symbol)
-        return asset.get_presentation_price_usdt(balance * price)
+        price = self._get_last_price_usdt(asset.symbol)
+        if not price:
+            return
+
+        return get_symbol_presentation_amount(asset.symbol + 'USDT', balance * price, trunc_zero=True)
 
     def get_free(self, asset: Asset):
         wallet = self.get_wallet(asset)
@@ -127,7 +124,7 @@ class AssetListSerializer(serializers.ModelSerializer):
             return '0'
 
         free = max(Decimal(), wallet.get_free() + self.get_debt(asset))
-        return asset.get_presentation_amount(free)
+        return get_coin_presentation_balance(asset.symbol, free)
 
     def get_free_irt(self, asset: Asset):
         free = Decimal(self.get_free(asset))
@@ -135,8 +132,11 @@ class AssetListSerializer(serializers.ModelSerializer):
         if not free:
             return 0
 
-        price = self.get_ext_price_irt(asset.symbol)
-        return asset.get_presentation_price_irt(free * price)
+        price = self._get_last_price_irt(asset.symbol)
+        if not price:
+            return
+
+        return get_symbol_presentation_amount(asset.symbol + 'IRT', free * price, trunc_zero=True)
 
     def get_can_deposit(self, asset: Asset):
         if asset.symbol == Asset.IRT:
@@ -168,10 +168,16 @@ class AssetListSerializer(serializers.ModelSerializer):
         return Asset.PRECISION
 
     def get_price_irt(self, asset: Asset):
-        return asset.get_presentation_price_irt(self.get_ext_price_irt(asset.symbol))
+        return get_symbol_presentation_amount(
+            symbol=asset.symbol + 'IRT',
+            amount=self._get_price_irt(asset.symbol),
+        )
 
     def get_price_usdt(self, asset: Asset):
-        return asset.get_presentation_price_usdt(self.get_ext_price_usdt(asset.symbol))
+        return get_symbol_presentation_amount(
+            symbol=asset.symbol + 'USDT',
+            amount=self._get_price_usdt(asset.symbol),
+        )
 
     class Meta:
         model = Asset
@@ -194,6 +200,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
     withdraw_commission = serializers.SerializerMethodField()
     min_withdraw = serializers.SerializerMethodField()
     min_confirm = serializers.IntegerField(source='network.min_confirm')
+    min_deposit = serializers.SerializerMethodField()
 
     withdraw_precision = serializers.SerializerMethodField()
 
@@ -212,6 +219,9 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
     def get_min_withdraw(self, network_asset: NetworkAsset):
         return get_presentation_amount(network_asset.withdraw_min)
 
+    def get_min_deposit(self, network_asset: NetworkAsset):
+        return get_presentation_amount(network_asset.get_min_deposit())
+
     def get_withdraw_commission(self, network_asset: NetworkAsset):
         return get_presentation_amount(network_asset.withdraw_fee)
 
@@ -220,7 +230,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('network', 'address', 'can_deposit', 'can_withdraw', 'withdraw_commission', 'min_withdraw',
-                  'network_name', 'address_regex', 'withdraw_precision', 'need_memo', 'min_confirm')
+                  'min_deposit', 'network_name', 'address_regex', 'withdraw_precision', 'need_memo', 'min_confirm')
         model = NetworkAsset
 
 
@@ -261,24 +271,12 @@ class WalletViewSet(ModelViewSet, DelegatedAccountMixin):
 
         if self.action == 'list':
             coins = list(self.get_queryset().values_list('symbol', flat=True))
+        else:
+            coins = [self.get_object().symbol]
 
-            ctx['prices'] = get_external_usdt_prices(
-                coins=coins,
-                side=BUY,
-                set_bulk_cache=True,
-                apply_otc_spread=True
-            )
-            ctx['market_prices'] = {}
-            from market.models import Order
-            for base_asset in ('IRT', 'USDT'):
-                ctx['market_prices'][base_asset] = {
-                    o['symbol__name'].replace(base_asset, ''): o['best_ask'] for o in Order.open_objects.filter(
-                        side=SELL,
-                        symbol__enable=True,
-                        symbol__name__in=map(lambda s: f'{s}{base_asset}', coins)
-                    ).values('symbol__name').annotate(best_ask=Min('price'))
-                }
-            ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
+        symbols = get_coins_symbols(coins)
+        ctx['prices'] = get_prices(symbols, side=SELL, allow_stale=True)
+        ctx['last_prices'] = get_last_prices(symbols)
 
         return ctx
 
@@ -370,9 +368,12 @@ class WalletBalanceView(APIView, DelegatedAccountMixin):
             if debt_wallet:
                 free = max(Decimal(), free + debt_wallet.balance)
 
+        if asset.symbol == Asset.IRT:
+            free = int(free)
+
         return Response({
             'symbol': asset.symbol,
-            'balance': wallet.asset.get_presentation_amount(free),
+            'balance': get_presentation_amount(free),
         })
 
 
@@ -453,6 +454,9 @@ class ConvertDustView(APIView):
                     side=BUY,
                     allow_stale=True,
                 )
+
+                if price is None:
+                    continue
 
                 free = wallet.get_free()
                 free_irt_value = free * price

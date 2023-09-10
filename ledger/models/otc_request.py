@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
 
+from django.conf import settings
 from django.db import models
-from django.db.models import Avg, F, Sum, CheckConstraint, Q, Min
-
+from django.db.models import F, CheckConstraint, Q
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
@@ -96,17 +96,14 @@ class OTCRequest(BaseTrade):
             symbol=symbol,
             side=pair.side,
         )
-        other_side = get_other_side(pair.side)
-        usdt_irt_symbol = PairSymbol.objects.get(name='USDTIRT')
         from market.models import Order
-        usdt_irt_price = Order.get_top_price(usdt_irt_symbol.id, other_side)
+        other_side = get_other_side(pair.side)
+        usdt_irt_price = None
+        if settings.ZERO_USDT_HEDGE:
+            usdt_irt_symbol = PairSymbol.objects.get(name='USDTIRT')
+            usdt_irt_price = Order.get_top_price(usdt_irt_symbol.id, other_side)
         if not usdt_irt_price:
-            usdt_irt_price = get_external_price(
-                coin=Asset.USDT,
-                base_coin=Asset.IRT,
-                side=other_side,
-                allow_stale=True,
-            )
+            usdt_irt_price = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=other_side, allow_stale=True)
 
         if pair.base.symbol == Asset.USDT:
             otc_request.base_usdt_price = 1
@@ -125,7 +122,7 @@ class OTCRequest(BaseTrade):
 
             cumulative_sum = Decimal(0)
             for order in Order.open_objects.filter(symbol=symbol, side=other_side).annotate(
-                remaining=F('amount') - F('filled_amount')
+                    remaining=F('amount') - F('filled_amount')
             ).order_by('price' if other_side == SELL else '-price'):
                 cumulative_sum += order.remaining
                 if cumulative_sum >= coin_amount:

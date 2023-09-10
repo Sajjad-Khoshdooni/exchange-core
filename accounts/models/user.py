@@ -147,11 +147,6 @@ class User(AbstractUser):
 
     selfie_image_discard_text = models.TextField(blank=True, verbose_name='توضیحات رد کردن عکس سلفی')
 
-    withdraw_before_48h_option = models.BooleanField(
-        default=False,
-        verbose_name='امکان برداشت وجه پیش از سپری شدن ۴۸ ساعت از اولین واریز',
-    )
-
     can_withdraw = models.BooleanField(default=True)
     can_withdraw_crypto = models.BooleanField(default=True)
     can_trade = models.BooleanField(default=True)
@@ -179,7 +174,7 @@ class User(AbstractUser):
 
     def is_2fa_valid(self, totp):
         device = TOTPDevice.objects.filter(user=self).first()
-        return self.is_staff or device is None or not device.confirmed or device.verify_token(totp)
+        return device is None or not device.confirmed or device.verify_token(totp)
 
     def get_account(self) -> Account:
         if not self.id or self.is_anonymous:
@@ -187,6 +182,13 @@ class User(AbstractUser):
 
         account, _ = Account.objects.get_or_create(user=self)
         return account
+
+    @staticmethod
+    def mask(phone_number: str, length: int = 4):
+        first = phone_number[:length]
+        last = phone_number[-length:]
+        masked = first + '*' * len(phone_number[length:-length]) + last
+        return masked
 
     def suspend(self, duration: timedelta, reason: str):
         suspended_until = duration + timezone.now()
@@ -252,7 +254,7 @@ class User(AbstractUser):
             if self.level == User.LEVEL1:
                 if User.objects.filter(level__gte=User.LEVEL2, national_code=self.national_code).exclude(id=self.id):
                     self.national_code_verified = False
-                    self.save(update_fields=['national_code_verified'])
+                    self.save(update_fields=['verify_status', 'national_code_verified'])
                     return self.change_status(User.REJECTED, User.NATIONAL_CODE_DUPLICATED)
 
             self.level += 1

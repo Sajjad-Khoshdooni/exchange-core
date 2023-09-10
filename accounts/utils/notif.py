@@ -12,8 +12,6 @@ from accounts.models.email_notification import EmailNotification
 from accounts.utils import validation
 
 
-def send_one_time_notification(users, group_id: UUID):
-    pass
 def send_successful_change_phone_email(user: User):
     title = "تغییر شماره همراه"
     is_spam = EmailNotification.objects.filter(recipient=user, title=title,

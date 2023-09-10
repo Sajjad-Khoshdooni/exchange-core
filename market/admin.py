@@ -38,8 +38,8 @@ class UserTradeFilter(SimpleListFilter):
 
 @admin.register(PairSymbol)
 class PairSymbolAdmin(admin.ModelAdmin):
-    list_display = ('name', 'enable', 'taker_fee', 'maker_fee',)
-    list_editable = ('enable',)
+    list_display = ('name', 'enable', 'taker_fee', 'maker_fee', 'tick_size', 'step_size', 'strategy_enable')
+    list_editable = ('enable', 'strategy_enable')
     list_filter = ('enable', BaseAssetFilter,)
     readonly_fields = ('last_trade_time', 'last_trade_price')
     search_fields = ('name', )

@@ -27,6 +27,7 @@ urlpatterns = [
     path('otp/verify/', views.VerifyOTPView.as_view()),
     path('otp/send/', views.SendOTPView.as_view()),
 
+    path('user/stats/', views.UserStatisticsView.as_view()),
     path('user/', views.UserDetailView.as_view()),
 
     path('forget/init/', views.InitiateForgetPasswordView.as_view()),
@@ -69,6 +70,8 @@ urlpatterns = [
 
     path('phone/',   views.ChangePhoneView.as_view()),
 
+    path('phone/change/', views.ChangePhoneBeforeVerifyView.as_view()),
+
     path('api/token/', CreateAuthToken.as_view()),
 
     path('referrals/overview/', views.ReferralOverviewAPIView.as_view()),
@@ -92,8 +95,6 @@ urlpatterns = [
     path('prize/<int:pk>/', views.PrizeView.as_view({
         'patch': 'partial_update'
     })),
-
-    path('banner/', views.BannerAlertAPIView.as_view()),
 
     path('firebase/', views.FirebaseTokenView.as_view()),
 

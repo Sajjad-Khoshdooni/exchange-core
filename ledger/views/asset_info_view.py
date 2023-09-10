@@ -13,9 +13,12 @@ from rest_framework.viewsets import ModelViewSet
 
 from ledger.models import Asset, Wallet, NetworkAsset, CoinCategory
 from ledger.models.asset import AssetSerializerMini
-from ledger.utils.external_price import BUY, get_external_usdt_prices, get_external_price, SELL
+from ledger.utils.coins_info import get_coins_info
+from ledger.utils.external_price import SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.provider import CoinInfo, get_provider_requester
+from ledger.utils.precision import get_symbol_presentation_amount
+from ledger.utils.price import get_prices, get_coins_symbols, get_price
+from ledger.utils.provider import CoinInfo
 from multimedia.models import CoinPriceContent
 
 
@@ -59,26 +62,12 @@ class AssetSerializerBuilder(AssetSerializerMini):
         return self.context['cap_info'].get(asset.symbol, CoinInfo())
 
     def get_price_usdt(self, asset: Asset):
-        price = self.context.get('market_prices', {'USDT': {}})['USDT'].get(asset.symbol, 0)
-        if not price:
-            price = self.context.get('prices', {}).get(asset.symbol, 0)
-        if not price:
-            return
-
-        return asset.get_presentation_price_usdt(price)
+        price = self.context['prices'].get(asset.symbol + Asset.USDT, 0)
+        return get_symbol_presentation_amount(asset.symbol + Asset.USDT, price)
 
     def get_price_irt(self, asset: Asset):
-        price = self.context.get('market_prices', {'IRT': {}})['IRT'].get(asset.symbol, 0)
-        if price:
-            return asset.get_presentation_price_irt(price)
-        else:
-            price = self.context.get('prices', {}).get(asset.symbol, 0)
-        if not price:
-            return
-
-        tether_irt = self.context['tether_irt']
-        price = price * tether_irt
-        return asset.get_presentation_price_irt(price)
+        price = self.context['prices'].get(asset.symbol + Asset.IRT, 0)
+        return get_symbol_presentation_amount(asset.symbol + Asset.IRT, price)
 
     def get_min_withdraw_amount(self, asset: Asset):
         network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True, can_withdraw=True)
@@ -104,11 +93,11 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
     def get_high_24h(self, asset: Asset):
         cap = self.get_cap(asset)
-        return asset.get_presentation_price_usdt(Decimal(cap.high_24h))
+        return get_symbol_presentation_amount(asset.symbol + 'USDT',  Decimal(cap.high_24h))
 
     def get_low_24h(self, asset: Asset):
         cap = self.get_cap(asset)
-        return asset.get_presentation_price_usdt(Decimal(cap.low_24h))
+        return get_symbol_presentation_amount(asset.symbol + 'USDT', Decimal(cap.low_24h))
 
     def get_change_1h(self, asset: Asset):
         return self.get_cap(asset).change_1h
@@ -187,25 +176,9 @@ class AssetsViewSet(ModelViewSet):
         ctx['enable_irt_market_list'] = get_irt_market_asset_symbols()
 
         if self.get_options('prices') or self.get_options('extra_info'):
-            symbols = list(self.get_queryset().values_list('symbol', flat=True))
-            ctx['cap_info'] = get_provider_requester().get_coins_info(symbols)
-            ctx['prices'] = get_external_usdt_prices(
-                coins=symbols,
-                side=BUY,
-                allow_stale=True,
-                apply_otc_spread=True
-            )
-            ctx['market_prices'] = {}
-            from market.models import Order
-            for base_asset in ('IRT', 'USDT'):
-                ctx['market_prices'][base_asset] = {
-                    o['symbol__name'].replace(base_asset, ''): o['best_ask'] for o in Order.open_objects.filter(
-                        side=SELL,
-                        symbol__enable=True,
-                        symbol__name__in=map(lambda s: f'{s}{base_asset}', symbols)
-                    ).values('symbol__name').annotate(best_ask=Min('price'))
-                }
-            ctx['tether_irt'] = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=BUY, allow_stale=True)
+            coins = list(self.get_queryset().values_list('symbol', flat=True))
+            ctx['cap_info'] = get_coins_info()
+            ctx['prices'] = get_prices(get_coins_symbols(coins), side=SELL, allow_stale=True)
 
         return ctx
 
@@ -284,36 +257,32 @@ class AssetOverviewAPIView(APIView):
     permission_classes = []
 
     @classmethod
-    def set_price(cls, coins: list):
-        symbols = list(map(lambda c: c['symbol'], coins))
-        assets = Asset.objects.filter(symbol__in=symbols)
+    def set_price(cls, assets_info: list):
+        for asset_info in assets_info:
+            coin = asset_info['symbol']
 
-        asset_map = {a.symbol: a for a in assets}
-
-        for coin in coins:
-            symbol = coin['symbol']
-            asset = asset_map[symbol]
-
-            coin['price_usdt'] = asset.get_presentation_price_usdt(
-                get_external_price(coin=symbol, base_coin=Asset.USDT, side=BUY, allow_stale=True)
+            asset_info['price_usdt'] = get_symbol_presentation_amount(
+                symbol=coin + Asset.USDT,
+                amount=get_price(coin + Asset.USDT, side=SELL, allow_stale=True) or 0
             )
 
-            coin['price_irt'] = asset.get_presentation_price_irt(
-                get_external_price(coin=symbol, base_coin=Asset.IRT, side=BUY, allow_stale=True)
+            asset_info['price_irt'] = get_symbol_presentation_amount(
+                symbol=coin + Asset.IRT,
+                amount=get_price(coin + Asset.IRT, side=SELL, allow_stale=True) or 0
             )
 
-            coin['market_irt_enable'] = symbol in get_irt_market_asset_symbols()
-            coin.update(AssetSerializerMini(Asset.get(symbol=symbol)).data)
+            asset_info['market_irt_enable'] = coin in get_irt_market_asset_symbols()
+            asset_info.update(AssetSerializerMini(Asset.get(symbol=coin)).data)
 
     def get(self, request):
         limit = int(self.request.query_params.get('limit', default=3))
 
-        coins = list(Asset.live_objects.filter(
+        coins = set(Asset.live_objects.filter(
             otc_status=Asset.ACTIVE
         ).exclude(symbol=Asset.IRT).values_list('symbol', flat=True))
 
-        caps = get_provider_requester().get_coins_info(coins).values()
-        caps_dict = {c.coin: c for c in caps}
+        caps_dict = {c: cap for (c, cap) in get_coins_info().items() if c in coins}
+        caps = caps_dict.values()
 
         def coin_info_to_dict(info: CoinInfo):
             return {
@@ -329,7 +298,7 @@ class AssetOverviewAPIView(APIView):
         high_24h_change = list(map(coin_info_to_dict, sorted(caps, key=lambda cap: cap.change_24h, reverse=True)[:limit]))
         AssetOverviewAPIView.set_price(high_24h_change)
 
-        newest_coin_symbols = list(Asset.live_objects.filter(otc_status=Asset.ACTIVE).exclude(
+        newest_coin_symbols = list(Asset.live_objects.filter(symbol__in=caps_dict, otc_status=Asset.ACTIVE).exclude(
             symbol__in=['IRT', 'IOTA']
         ).order_by(F('publish_date').desc(nulls_last=True)).values_list('symbol', flat=True))[:limit]
 

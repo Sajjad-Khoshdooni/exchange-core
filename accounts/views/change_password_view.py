@@ -23,15 +23,16 @@ class ChangePasswordSerializer(serializers.Serializer):
         password = data.get('password')
         old_pass = data.get('old_password')
         otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CHANGE_PASSWORD, user)
-        totp = data.get('totp')
+        totp = data.get('totp', None)
         if not otp_code:
-            raise ValidationError({'code': 'کد نامعتبر است.'})
-        otp_code.set_code_used()
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
+
         if not user.check_password(old_pass):
             raise ValidationError({'old_password': 'رمز عبور قبلی بدرستی وارد نشده است'})
 
         if not user.is_2fa_valid(totp):
-            raise ValidationError({'totp': ' رمز موقت نامعتبر است.'})
+            raise ValidationError({'totp': 'شناسه ‌دوعاملی صحیح نمی‌باشد.'})
+        otp_code.set_code_used()
         validate_password(password=password, user=user)
 
         return data

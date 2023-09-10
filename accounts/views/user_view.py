@@ -1,3 +1,4 @@
+from decouple import config
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import RetrieveAPIView, get_object_or_404
@@ -10,15 +11,13 @@ from django.core.exceptions import ValidationError
 from accounts.models import VerificationCode
 from accounts.models import User, CustomToken
 from accounts.utils.hijack import get_hijacker_id
-from accounts.verifiers.legal import possible_time_for_withdraw
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 
 
 class UserSerializer(serializers.ModelSerializer):
-    possible_time_for_withdraw = serializers.SerializerMethodField()
-    chat_uuid = serializers.CharField()
     show_staking = serializers.SerializerMethodField()
-    is_auth2fa_active = serializers.SerializerMethodField()
+    show_strategy_bot = serializers.SerializerMethodField()
+    is_2fa_active = serializers.SerializerMethodField()
 
     def get_chat_uuid(self, user: User):
         request = self.context['request']
@@ -28,25 +27,24 @@ class UserSerializer(serializers.ModelSerializer):
         else:
             return user.chat_uuid
 
-
-    def get_is_auth2fa_active(self, user: User):
+    def get_is_2fa_active(self, user: User):
         device = TOTPDevice.objects.filter(user=user).first()
         return device is not None and device.confirmed
 
     def get_show_staking(self, user: User):
         return True
 
+    def get_show_strategy_bot(self, user: User):
+        return user.show_strategy_bot or config('STRATEGY_ENABLE', cast=bool, default=False)
+
     class Meta:
         model = User
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
-            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'possible_time_for_withdraw',
-            'chat_uuid', 'is_auth2fa_active', 'is_suspended', 'suspended_until'
+            'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'chat_uuid', 'is_2fa_active',
+            'can_withdraw', 'is_suspended', 'suspended_until'
         )
         ref_name = "User"
-
-    def get_possible_time_for_withdraw(self, user: User):
-        return possible_time_for_withdraw(user)
 
 
 class ProfileSerializer(UserSerializer):
@@ -87,13 +85,15 @@ class UserDetailView(RetrieveAPIView):
 
 
 class AuthTokenSerializer(serializers.ModelSerializer):
+    CHOICES = [(scope, scope) for scope in CustomToken.SCOPES]
     ip_list = serializers.CharField()
+    scopes = serializers.MultipleChoiceField(choices=CHOICES, required=False, allow_null=True, allow_blank=True)
     sms_code = serializers.CharField(write_only=True)
     totp = serializers.CharField(write_only=True, allow_null=True, allow_blank=True, required=False)
 
     class Meta:
         model = CustomToken
-        fields = ('ip_list', 'sms_code', 'totp')
+        fields = ('ip_list', 'scopes', 'sms_code', 'totp')
 
     def validate(self, data):
         user = self.context['request'].user
@@ -102,17 +102,18 @@ class AuthTokenSerializer(serializers.ModelSerializer):
         sms_verification_code = VerificationCode.get_by_code(code=sms_code, phone=user.phone,
                                                              scope=VerificationCode.SCOPE_API_TOKEN, user=user)
         if not sms_verification_code:
-            raise ValidationError({'code': 'کد نامعتبر است.'})
-        sms_verification_code.set_code_used()
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
         if not user.is_2fa_valid(totp):
-            raise ValidationError({'totp': 'رمز موقت صحیح نمی‌باشد.'})
+            raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
+        sms_verification_code.set_code_used()
         return data
 
     def create(self, validated_data):
         validated_data.pop('totp', None)
         validated_data.pop('sms_code', None)
         validated_data['user'] = self.context['request'].user
-        customtoken = CustomToken.objects.create(**validated_data)
+        scopes = list(validated_data.pop('scopes'))
+        customtoken = CustomToken.objects.create(scopes=scopes, **validated_data)
         return customtoken
 
     def update(self, instance, validated_data):
@@ -131,11 +132,11 @@ class AuthTokenDestroySerializer(serializers.Serializer):
         sms_code = data.get('sms_code')
         verification_code = VerificationCode.get_by_code(sms_code, user.phone, VerificationCode.SCOPE_API_TOKEN, user)
         if not verification_code:
-            raise ValidationError({'code': 'کد نامعتبر است.'})
-        verification_code.set_code_used()
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
         totp = data.get('totp')
         if not user.is_2fa_valid(totp):
-            raise ValidationError({'totp': ' رمز موقت نامعتبر است.'})
+            raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
+        verification_code.set_code_used()
         return data
 
 
@@ -148,6 +149,7 @@ class CreateAuthToken(APIView):
         return Response({
             'token': ('*' * (len(custom_token.key) - 4)) + custom_token.key[-4:],
             'user_id': request.user.pk,
+            'permissions': custom_token.scopes,
             'ip_white_list': custom_token.ip_list
         })
 
@@ -158,6 +160,7 @@ class CreateAuthToken(APIView):
             return Response({
                 'token': ('*' * (len(custom_token.key) - 4)) + custom_token.key[-4:],
                 'user_id': request.user.pk,
+                'permissions': custom_token.scopes,
                 'ip_white_list': custom_token.ip_list,
             })
         else:
@@ -171,6 +174,7 @@ class CreateAuthToken(APIView):
             return Response({
                 'token': token.key,
                 'user_id': request.user.pk,
+                'permissions': token.scopes,
                 'ip_white_list': token.ip_list,
             })
 
@@ -189,7 +193,7 @@ class CreateAuthToken(APIView):
         token_serializer = AuthTokenSerializer(
             instance=tokent,
             data=request.data,
-            partial=True
+            context={'request': request}
         )
         if token_serializer.is_valid():
             token_serializer.save()

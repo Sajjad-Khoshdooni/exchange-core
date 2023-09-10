@@ -1,14 +1,14 @@
 import re
+
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404, CreateAPIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from accounts.authentication import CustomTokenAuthentication
+from accounts.authentication import WithdrawTokenAuthentication
 from accounts.models import VerificationCode, LoginActivity
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
-from accounts.verifiers.legal import is_48h_rule_passed
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Transfer, NetworkAsset, AddressBook, DepositAddress
@@ -80,13 +80,10 @@ class WithdrawSerializer(serializers.ModelSerializer):
             code = attrs['code']
             otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CRYPTO_WITHDRAW)
             if not otp_code:
-                raise ValidationError({'code': 'کد نامعتبر است.'})
+                raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
             if not user.is_2fa_valid(totp):
-                raise ValidationError({'otp' : ' رمز موقت نامعتبر است.'})
+                raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
 
-
-        if not is_48h_rule_passed(user):
-            raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
 
         network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
         amount = attrs['amount']
@@ -173,7 +170,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
 
 class WithdrawView(CreateAPIView):
-    authentication_classes = (SessionAuthentication, CustomTokenAuthentication, JWTAuthentication)
+    authentication_classes = (SessionAuthentication, WithdrawTokenAuthentication, JWTAuthentication)
     throttle_classes = [BursAPIRateThrottle, SustainedAPIRateThrottle]
     serializer_class = WithdrawSerializer
     queryset = Transfer.objects.all()

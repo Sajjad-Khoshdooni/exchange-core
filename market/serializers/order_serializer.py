@@ -80,8 +80,11 @@ class OrderSerializer(serializers.ModelSerializer):
                 )
                 matched_trades = created_order.submit(pipeline)
 
-            extra = {} if matched_trades.trade_pairs else {'side': created_order.side}
-            MarketStreamCache().execute(symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra)
+                extra = {} if matched_trades.trade_pairs else {'side': created_order.side}
+                pipeline.add_market_cache_data(
+                    symbol, matched_trades.filled_orders, trade_pairs=matched_trades.trade_pairs, **extra
+                )
+
             filtered_trades = list(filter(lambda t: t.order_id == created_order.id, matched_trades.trades))
             filled_amount = Decimal(sum(map(lambda t: t.amount, filtered_trades)))
             created_order.filled_amount = filled_amount
@@ -204,7 +207,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
                   'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel',
-                  'client_order_id')
+                  'time_in_force', 'client_order_id')
         read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {
             'wallet': {'write_only': True, 'required': False},

@@ -14,7 +14,6 @@ from rest_framework.viewsets import ModelViewSet
 
 from accounts.models import VerificationCode, LoginActivity
 from accounts.permissions import IsBasicVerified
-from accounts.verifiers.legal import is_48h_rule_passed
 from financial.models import FiatWithdrawRequest, Gateway
 from financial.models.bank_card import BankAccount, BankAccountSerializer
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
@@ -26,7 +25,7 @@ from ledger.utils.withdraw_verify import can_withdraw
 
 logger = logging.getLogger(__name__)
 
-MIN_WITHDRAW = 100_000
+MIN_WITHDRAW = 20_000
 MAX_WITHDRAW = 100_000_000
 
 
@@ -54,10 +53,6 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         assert account.is_ordinary_user()
 
-        if not is_48h_rule_passed(user):
-            logger.info('FiatRequest rejected due to 48h rule. user=%s' % user.id)
-            raise ValidationError('از اولین واریز ریالی حداقل باید دو روز کاری بگذرد.')
-
         if not bank_account.verified:
             logger.info('FiatRequest rejected due to unverified bank account. user=%s' % user.id)
             raise ValidationError({'iban': 'شماره حساب تایید نشده است.'})
@@ -65,9 +60,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_FIAT_WITHDRAW)
 
         if not otp_code:
-            raise ValidationError({'code': 'کد نامعتبر است'})
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
         if not user.is_2fa_valid(totp):
-            raise ValidationError({'totp': ' رمز موقت نامعتبر است.'})
+            raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
 
         if amount < MIN_WITHDRAW:
             logger.info('FiatRequest rejected due to small amount. user=%s' % user.id)
