@@ -366,7 +366,7 @@ class WalletAdmin(admin.ModelAdmin):
 
     @admin.display(description='free', ordering='free')
     def get_free(self, wallet: models.Wallet):
-        return wallet.get_free()
+        return humanize_presentation(wallet.get_free())
 
     @admin.display(description='irt value', ordering='value')
     def get_value_irt(self, wallet: models.Wallet):
@@ -375,7 +375,7 @@ class WalletAdmin(admin.ModelAdmin):
             base_coin=Asset.IRT,
             side=BUY
         ) or 0
-        return get_symbol_presentation_amount(wallet.asset.symbol + 'IRT', wallet.balance * price, trunc_zero=True)
+        return humanize_presentation(price)
 
     @admin.display(description='usdt value', ordering='value')
     def get_value_usdt(self, wallet: models.Wallet):
@@ -384,7 +384,7 @@ class WalletAdmin(admin.ModelAdmin):
             base_coin=Asset.USDT,
             side=BUY
         ) or 0
-        return get_symbol_presentation_amount(wallet.asset.symbol + 'USDT', wallet.balance * price, trunc_zero=True)
+        return humanize_presentation(price)
 
 
 class TransferUserFilter(SimpleListFilter):
