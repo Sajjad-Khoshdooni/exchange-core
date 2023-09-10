@@ -206,10 +206,11 @@ class User(AbstractUser):
     def send_suspension_message(self, reason: str, duration: timedelta):
         from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
         from django.template import loader
+        duration = 'یک‌ روز' if duration == timedelta(days=1) else 'یک‌ ساعت'
         context = {
             'reason': reason,
             'brand': settings.BRAND,
-            'duration': 'یک‌ روز' if duration == timedelta(days=1) else 'یک‌ ساعت'
+            'duration': duration
         }
         content = loader.render_to_string('accounts/notif/sms/user_suspended_message.txt', context=context)
         Notification.send(
