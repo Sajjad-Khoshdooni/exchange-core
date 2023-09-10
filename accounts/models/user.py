@@ -210,6 +210,11 @@ class User(AbstractUser):
             'duration': 'یک‌ روز' if duration == timedelta(days=1) else 'یک‌ ساعت'
         }
         content = loader.render_to_string('accounts/notif/sms/user_suspended_message.txt', context=context)
+        Notification.send(
+            recipient=self,
+            title='محدودیت برداشت',
+            message=f'برداشت‌های شما به دلیل {reason} تا {duration} آینده محدود شده است.',
+        )
         send_kavenegar_exclusive_sms(self.phone, content=content)
 
     @property
