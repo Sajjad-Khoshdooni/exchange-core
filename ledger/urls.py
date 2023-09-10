@@ -1,6 +1,4 @@
 from django.urls import path
-from ledger import views
-from django.urls import path
 
 from ledger import views
 
