@@ -9,6 +9,9 @@ from accounts.models import VerificationCode
 from accounts.utils.notif import send_successful_change_phone_email
 from accounts.validators import mobile_number_validator
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class InitiateChangePhoneSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
