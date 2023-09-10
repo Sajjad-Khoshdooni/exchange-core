@@ -375,7 +375,7 @@ class WalletAdmin(admin.ModelAdmin):
             base_coin=Asset.IRT,
             side=BUY
         ) or 0
-        return humanize_presentation(price)
+        return humanize_presentation(wallet.balance * price)
 
     @admin.display(description='usdt value', ordering='value')
     def get_value_usdt(self, wallet: models.Wallet):
@@ -384,7 +384,7 @@ class WalletAdmin(admin.ModelAdmin):
             base_coin=Asset.USDT,
             side=BUY
         ) or 0
-        return humanize_presentation(price)
+        return humanize_presentation(wallet.balance * price)
 
 
 class TransferUserFilter(SimpleListFilter):
