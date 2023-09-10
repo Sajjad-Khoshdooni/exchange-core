@@ -161,6 +161,8 @@ class User(AbstractUser):
 
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
 
+    is_price_notif_on = models.BooleanField(default=False)
+
     suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
 
     def __str__(self):
