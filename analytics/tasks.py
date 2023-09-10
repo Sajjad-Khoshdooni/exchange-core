@@ -125,7 +125,7 @@ def trigger_transfer_event(threshold=1000):
             value_irt=transfer.irt_value,
             value_usdt=transfer.usdt_value,
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(transfer.id) + TransferEvent.type + 'crypto'),
-            login_activity_id=transfer.login_activity and transfer.login_activity.id or ''
+            login_activity_id=transfer.login_activity_id or ''
         )
 
         get_kafka_producer().produce(event, instance=transfer)
@@ -151,7 +151,7 @@ def trigger_fiat_transfer_event(threshold=1000):
             value_usdt=float(fiat_transfer.amount) / float(usdt_price),
             is_deposit=False,
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(fiat_transfer.id) + TransferEvent.type + 'fiat_withdraw'),
-            login_activity_id=fiat_transfer.login_activity and fiat_transfer.login_activity.id or ''
+            login_activity_id=fiat_transfer.login_activity_id or ''
         )
 
         get_kafka_producer().produce(event, instance=fiat_transfer)
@@ -209,7 +209,7 @@ def trigger_trade_event(threshold=1000):
             value_irt=trade.irt_value,
             event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(trade.id) + TradeEvent.type + 'trade'),
             side=trade.side,
-            login_activity_id=trade.login_activity and trade.login_activity.id or ''
+            login_activity_id=trade.login_activity_id or ''
         )
 
         get_kafka_producer().produce(event, instance=trade)
