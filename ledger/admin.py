@@ -357,13 +357,14 @@ class WalletAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         from accounting.models import AssetPrice
         qs = super(WalletAdmin, self).get_queryset(request)
-        asset_prices = AssetPrice.objects.filter(coin=OuterRef('symbol'))
+        asset_prices = AssetPrice.objects.filter(coin=OuterRef('asset__symbol'))
 
         return qs.annotate(
-            value=Subquery(asset_prices)
+            value=Subquery(asset_prices.values_list('price', flat=True)) * F('balance'),
+            free=F('balance') - F('locked')
         )
 
-    @admin.display(description='free')
+    @admin.display(description='free', ordering='free')
     def get_free(self, wallet: models.Wallet):
         return wallet.get_free()
 
