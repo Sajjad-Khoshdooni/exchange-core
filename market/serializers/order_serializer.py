@@ -1,5 +1,6 @@
 import logging
 from decimal import Decimal
+import types
 
 from django.conf import settings
 from django.db import transaction
@@ -39,6 +40,7 @@ class OrderSerializer(serializers.ModelSerializer):
     trigger_price = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
     allow_cancel = serializers.SerializerMethodField()
+    is_oco = serializers.SerializerMethodField()
 
     def to_representation(self, order: Order):
         data = super(OrderSerializer, self).to_representation(order)
@@ -76,7 +78,8 @@ class OrderSerializer(serializers.ModelSerializer):
         try:
             with WalletPipeline() as pipeline:
                 created_order = super(OrderSerializer, self).create(
-                    {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol, 'login_activity': login_activity}
+                    {**validated_data, 'account': wallet.account, 'wallet': wallet, 'symbol': symbol,
+                     'login_activity': login_activity}
                 )
                 matched_trades = created_order.submit(pipeline)
 
@@ -114,15 +117,16 @@ class OrderSerializer(serializers.ModelSerializer):
         if not symbol.enable and self.context['account'].id != settings.MARKET_MAKER_ACCOUNT_ID:
             raise ValidationError(_('{symbol} is not enable').format(symbol=symbol))
 
+        position = types.SimpleNamespace(variant=None)
         market = validated_data.pop('wallet')['market']
         if market == Wallet.MARGIN:
             check_margin_view_permission(self.context['account'], symbol.asset)
-
-            if symbol.base_asset.symbol == Asset.IRT:
-                raise ValidationError(_('{symbol} is not enable in margin trading').format(symbol=symbol))
+            position = symbol.get_margin_position(self.context['account'])
 
         validated_data['amount'] = self.post_validate_amount(symbol, validated_data['amount'])
-        wallet = symbol.asset.get_wallet(self.context['account'], market=market, variant=self.context['variant'])
+        wallet = symbol.asset.get_wallet(
+            self.context['account'], market=market, variant=position.variant or self.context['variant']
+        )
         min_order_size = Order.MIN_IRT_ORDER_SIZE if symbol.base_asset.symbol == IRT else Order.MIN_USDT_ORDER_SIZE
         self.validate_order_size(
             validated_data['amount'], validated_data['price'], min_order_size, symbol.base_asset.symbol
@@ -199,14 +203,17 @@ class OrderSerializer(serializers.ModelSerializer):
         return decimal_to_str(floor_precision(price, order.symbol.tick_size))
 
     def get_allow_cancel(self, instance: Order):
-        if instance.wallet.variant:
+        if instance.wallet.is_for_strategy:
             return False
         return True
+
+    def get_is_oco(self, instance: Order):
+        return bool(instance.oco)
 
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
-                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel',
+                  'filled_price', 'side', 'fill_type', 'status', 'market', 'trigger_price', 'allow_cancel', 'is_oco',
                   'time_in_force', 'client_order_id')
         read_only_fields = ('id', 'created', 'status')
         extra_kwargs = {

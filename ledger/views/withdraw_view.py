@@ -176,5 +176,8 @@ class WithdrawView(CreateAPIView):
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-        ctx['from_panel'] = not self.request.auth
+
+        login_activity = LoginActivity.from_request(self.request)
+
+        ctx['from_panel'] = bool(login_activity)
         return ctx

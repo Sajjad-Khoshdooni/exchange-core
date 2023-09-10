@@ -1,19 +1,26 @@
-from rest_framework.routers import DefaultRouter
-from django.urls import path, include
+from django.urls import path
 from ledger import views
+from django.urls import path
 
-asset_alert_router = DefaultRouter()
-asset_alert_router.register(r'', viewset=views.AssetAlertView)
-bulk_asset_alert_router = DefaultRouter()
-bulk_asset_alert_router.register(r'', viewset=views.BulkAssetAlertView)
+from ledger import views
 
 urlpatterns = [
     path('v1/assets/', views.AssetsViewSet.as_view({'get': 'list'})),
     path('v1/assets/categories/', views.CoinCategoryListView.as_view()),
     path('v1/networkassets/', views.NetworkAssetView.as_view()),
     path('v1/asset/overview/', views.AssetOverviewAPIView.as_view()),
-    path('v1/assets/single-alert/', include(asset_alert_router.urls)),
-    path('v1/assets/bulk-alert/', include(bulk_asset_alert_router.urls)),
+    path('v1/price/alert/single/', views.AssetAlertViewSet.as_view({
+        'post': 'create',
+        'get': 'list',
+        'delete': 'destroy',
+    })),
+    path('v1/price/alert/bulk/', views.BulkAssetAlertViewSet.as_view({
+        'post': 'create',
+        'get': 'list',
+        'delete': 'destroy'
+    })),
+    path('v1/price/alert/switch/', views.PriceNotifSwitchView.as_view()),
+
     path('v1/networks/', views.BriefNetworkAssetsView.as_view()),
 
     path('v1/assets/reserve/', views.ReserveWalletCreateAPIView.as_view()),
@@ -51,6 +58,10 @@ urlpatterns = [
     })),
 
     path('v1/margin/wallets/', views.MarginWalletViewSet.as_view({'get': 'list'})),
+    path('v2/margin/wallets/', views.MarginAssetViewSet.as_view({'get': 'list'})),
+    path('v2/margin/balance/', views.MarginBalanceAPIView.as_view()),
+    path('v2/margin/transfer-balance/', views.MarginTransferBalanceAPIView.as_view()),
+    path('v2/margin/positions/', views.MarginPositionViewSet.as_view({'get': 'list'})),
     path('v1/margin/close/', views.MarginClosePositionView.as_view()),
     path('v1/margin/loan/', views.MarginLoanViewSet.as_view({
         'get': 'list',

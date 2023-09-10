@@ -193,6 +193,7 @@ class AssetsViewSet(ModelViewSet):
             'name': self.request.query_params.get('name'),
             'can_deposit': self.request.query_params.get('can_deposit') == '1',
             'can_withdraw': self.request.query_params.get('can_withdraw') == '1',
+            'is_base': self.request.query_params.get('is_base') == '1',
         }
 
         return options[key]
@@ -217,6 +218,9 @@ class AssetsViewSet(ModelViewSet):
             else:
                 category = get_object_or_404(CoinCategory, name=category_name)
                 queryset = queryset.filter(coincategory=category)
+
+        if self.get_options('is_base'):
+            queryset = queryset.filter(symbol__in=(Asset.IRT, Asset.USDT))
 
         if self.get_options('trend'):
             queryset = queryset.filter(trend=True)
