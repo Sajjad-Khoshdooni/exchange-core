@@ -1,7 +1,6 @@
 import logging
 
 from decouple import config
-from django.utils.translation import activate
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -15,14 +14,10 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Toke
     TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenViewBase
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework.exceptions import AuthenticationFailed
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenViewBase
 
 from accounts.authentication import CustomTokenAuthentication
 from accounts.models import Account, LoginActivity, RefreshToken as RefreshTokenModel
 from accounts.models import User
-from accounts.models import Account, LoginActivity, RefreshToken as RefreshTokenModel
 from accounts.utils.validation import set_login_activity
 
 logger = logging.getLogger(__name__)
@@ -182,7 +177,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             totp = serializer.initial_data.get('totp')
             # todo: send unsuccessful login message
             if not user.is_2fa_valid(totp):
-                return Response({'msg': 'totp required', 'code': -2}, status=200)
+                return Response({'msg': 'totp required', 'code': -2}, status=status.HTTP_401_UNAUTHORIZED)
+
             login_activity = set_login_activity(
                 request,
                 user=serializer.user,
