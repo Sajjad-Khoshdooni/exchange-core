@@ -4,7 +4,7 @@ from uuid import uuid4
 from django import forms
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import F, Sum, Q
+from django.db.models import F, Sum, Q, OuterRef, Subquery
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
@@ -15,20 +15,19 @@ from accounting.models import ReservedAsset
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.admin_guard.html_tags import anchor_tag
-from accounts.models import Account, User
+from accounts.models import Account
 from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
-from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger import models
-from ledger.models import Asset, Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, BalanceLock, Wallet, \
+from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
     ManualTrade, Trx, NetworkAsset
+from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE, PROCESS, PENDING
 from ledger.utils.precision import get_presentation_amount, humanize_presentation, get_symbol_presentation_amount
-from ledger.utils.precision import humanize_number
 from ledger.utils.provider import get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor
 from market.utils.fix import create_symbols_for_asset
@@ -282,11 +281,11 @@ class OTCTradeAdmin(admin.ModelAdmin):
 
     @admin.display(description='value')
     def get_value(self, otc_trade: models.OTCTrade):
-        return humanize_number(round(otc_trade.otc_request.usdt_value, 2))
+        return humanize_presentation(round(otc_trade.otc_request.usdt_value, 2))
 
     @admin.display(description='value_irt')
     def get_value_irt(self, otc_trade: models.OTCTrade):
-        return humanize_number(round(otc_trade.otc_request.irt_value, 0))
+        return humanize_presentation(round(otc_trade.otc_request.irt_value, 0))
 
     @admin.action(description='Accept Trade')
     def accept_trade(self, request, queryset):
@@ -355,11 +354,21 @@ class WalletAdmin(admin.ModelAdmin):
     readonly_fields = ('account', 'asset', 'market', 'balance', 'locked', 'variant')
     search_fields = ('account__user__phone', 'asset__symbol')
 
-    @admin.display(description='free')
+    def get_queryset(self, request):
+        from accounting.models import AssetPrice
+        qs = super(WalletAdmin, self).get_queryset(request)
+        asset_prices = AssetPrice.objects.filter(coin=OuterRef('asset__symbol'))
+
+        return qs.annotate(
+            value=Subquery(asset_prices.values_list('price', flat=True)) * F('balance'),
+            free=F('balance') - F('locked')
+        )
+
+    @admin.display(description='free', ordering='free')
     def get_free(self, wallet: models.Wallet):
         return wallet.get_free()
 
-    @admin.display(description='irt value')
+    @admin.display(description='irt value', ordering='value')
     def get_value_irt(self, wallet: models.Wallet):
         price = get_external_price(
             coin=wallet.asset.symbol,
@@ -368,7 +377,7 @@ class WalletAdmin(admin.ModelAdmin):
         ) or 0
         return get_symbol_presentation_amount(wallet.asset.symbol + 'IRT', wallet.balance * price, trunc_zero=True)
 
-    @admin.display(description='usdt value')
+    @admin.display(description='usdt value', ordering='value')
     def get_value_usdt(self, wallet: models.Wallet):
         price = get_external_price(
             coin=wallet.asset.symbol,
@@ -651,7 +660,7 @@ class FastBuyTokenAdmin(admin.ModelAdmin):
     list_filter = ('status',)
 
     def get_amount(self, fast_buy_token: FastBuyToken):
-        return humanize_number(fast_buy_token.amount)
+        return humanize_presentation(fast_buy_token.amount)
 
     get_amount.short_description = 'مقدار'
 
@@ -687,7 +696,7 @@ class ManualTransactionForm(forms.ModelForm):
 @admin.register(ManualTransaction)
 class ManualTransactionAdmin(admin.ModelAdmin):
     form = ManualTransactionForm
-    list_display = ('created', 'wallet', 'type', 'status', 'amount')
+    list_display = ('created', 'wallet', 'type', 'status', 'get_amount_preview')
     list_filter = ('type', 'status')
     ordering = ('-created',)
     readonly_fields = ('group_id',)
@@ -700,6 +709,10 @@ class ManualTransactionAdmin(admin.ModelAdmin):
             trx.status = PROCESS
             trx.group_id = uuid4()
             trx.save()
+
+    @admin.display(description='amount', ordering='amount')
+    def get_amount_preview(self, mt: ManualTransaction):
+        return humanize_presentation(mt.amount)
 
 
 @admin.register(AssetAlert)

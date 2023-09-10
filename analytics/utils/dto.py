@@ -11,12 +11,13 @@ class BaseEvent:
     created: datetime
     user_id: [int, None]
     event_id: uuid
+    login_activity_id: int = ''
 
     def serialize(self):
         pass
 
 
-@dataclass
+@dataclass(kw_only=True)
 class UserEvent(BaseEvent):
     first_name: str
     last_name: str
@@ -38,6 +39,7 @@ class UserEvent(BaseEvent):
     def serialize(self):
         return {
             'user_id': self.user_id,
+            'login_activity_id': self.login_activity_id,
             'created': self.created.isoformat(),
             'v': self.v,
             'event_id': str(self.event_id),
@@ -60,7 +62,7 @@ class UserEvent(BaseEvent):
         }
 
 
-@dataclass
+@dataclass(kw_only=True)
 class TransferEvent(BaseEvent):
     id: int
     amount: Union[int, float, Decimal]
@@ -74,6 +76,7 @@ class TransferEvent(BaseEvent):
     def serialize(self):
         return {
             'id': self.id,
+            'login_activity_id': self.login_activity_id,
             'created': self.created.isoformat(),
             'v': self.v,
             'event_id': str(self.event_id),
@@ -88,7 +91,7 @@ class TransferEvent(BaseEvent):
         }
 
 
-@dataclass
+@dataclass(kw_only=True)
 class TradeEvent(BaseEvent):
     id: int
     amount: Union[int, float, Decimal]
@@ -99,10 +102,12 @@ class TradeEvent(BaseEvent):
     value_irt: Union[int, float, Decimal]
     value_usdt: Union[int, float, Decimal]
     type: ClassVar[str] = 'trade'
+    side: str
 
     def serialize(self):
         return {
             'id': self.id,
+            'login_activity_id': self.login_activity_id,
             'created': self.created.isoformat(),
             'v': self.v,
             'event_id': str(self.event_id),
@@ -115,11 +120,13 @@ class TradeEvent(BaseEvent):
             'market': self.market,
             'value_irt': float(self.value_irt),
             'value_usdt': float(self.value_usdt),
+            'side': self.side
         }
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LoginEvent(BaseEvent):
+    id: int
     device: str
     type: ClassVar[str] = 'login'
     is_signup: bool
@@ -135,6 +142,7 @@ class LoginEvent(BaseEvent):
     def serialize(self):
         return {
             'user_id': self.user_id,
+            'login_activity_id': self.login_activity_id,
             'created': self.created.isoformat(),
             'v': self.v,
             'event_id': str(self.event_id),
@@ -148,12 +156,13 @@ class LoginEvent(BaseEvent):
             'browser': self.browser,
             'city': self.city,
             'country': self.country,
-            'native_app': self.native_app
+            'native_app': self.native_app,
+            'id': self.id
 
         }
 
 
-@dataclass
+@dataclass(kw_only=True)
 class TrafficSourceEvent(BaseEvent):
     type: ClassVar[str] = 'traffic_source'
     utm_source: str
@@ -165,6 +174,7 @@ class TrafficSourceEvent(BaseEvent):
     def serialize(self):
         return {
             'user_id': self.user_id,
+            'login_activity_id': self.login_activity_id,
             'created': self.created.isoformat(),
             'v': self.v,
             'event_id': str(self.event_id),
@@ -177,7 +187,7 @@ class TrafficSourceEvent(BaseEvent):
         }
 
 
-@dataclass
+@dataclass(kw_only=True)
 class StakeRequestEvent(BaseEvent):
     type: ClassVar[str] = 'staking'
     stake_request_id: int
@@ -190,6 +200,7 @@ class StakeRequestEvent(BaseEvent):
     def serialize(self):
         return {
             'user_id': self.user_id,
+            'login_activity_id': self.login_activity_id,
             'created': self.created.isoformat(),
             'v': self.v,
             'event_id': str(self.event_id),
@@ -203,7 +214,7 @@ class StakeRequestEvent(BaseEvent):
         }
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PrizeEvent(BaseEvent):
     type: ClassVar[str] = 'prize'
     id: int
@@ -216,6 +227,7 @@ class PrizeEvent(BaseEvent):
     def serialize(self):
         return {
             'user_id': self.user_id,
+            'login_activity_id': self.login_activity_id,
             'created': self.created.isoformat(),
             'v': self.v,
             'event_id': str(self.event_id),
@@ -229,7 +241,7 @@ class PrizeEvent(BaseEvent):
         }
 
 
-@dataclass
+@dataclass(kw_only=True)
 class WalletEvent(BaseEvent):
     type: ClassVar[str] = 'wallet'
     id: int
@@ -242,6 +254,7 @@ class WalletEvent(BaseEvent):
     def serialize(self):
         return {
             'user_id': self.user_id,
+            'login_activity_id': self.login_activity_id,
             'created': self.created.isoformat(),
             'v': self.v,
             'event_id': str(self.event_id),
@@ -255,7 +268,7 @@ class WalletEvent(BaseEvent):
         }
 
 
-@dataclass
+@dataclass(kw_only=True)
 class TransactionEvent(BaseEvent):
     type: ClassVar[str] = 'transaction'
     id: int
@@ -268,6 +281,7 @@ class TransactionEvent(BaseEvent):
     def serialize(self):
         return {
             'created': self.created.isoformat(),
+            'login_activity_id': self.login_activity_id,
             'v': self.v,
             'event_id': str(self.event_id),
             'type': self.type,

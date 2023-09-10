@@ -115,7 +115,8 @@ class VerificationCode(models.Model):
         if not settings.DEBUG_OR_TESTING_OR_STAGING:
             any_recent_code = VerificationCode.objects.filter(
                 phone=phone,
-                created__gte=timezone.now() - timedelta(minutes=2),
+                scope=scope,
+                created__gte=timezone.now() - timedelta(minutes=1),
             ).exists()
 
             if not settings.DEBUG_OR_TESTING_OR_STAGING and any_recent_code:
@@ -124,6 +125,7 @@ class VerificationCode(models.Model):
 
             prev_codes = VerificationCode.objects.filter(
                 phone=phone,
+                scope=scope,
                 created__gte=timezone.now() - timedelta(minutes=15),
             ).count()
 
