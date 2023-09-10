@@ -11,6 +11,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from accounts.models.login_activity import LoginActivity
 from accounts.models.user import User
+from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.validation import set_login_activity
 from accounts.views.user_view import UserSerializer
 
@@ -30,6 +31,7 @@ class LoginSerializer(serializers.Serializer):
 
 class LoginView(APIView):
     permission_classes = []
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def post(self, request):
         if request.user.is_authenticated:
