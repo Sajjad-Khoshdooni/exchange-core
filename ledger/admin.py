@@ -4,7 +4,8 @@ from uuid import uuid4
 from django import forms
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import F, Sum, Q, OuterRef, Subquery
+from django.db.models import F, Sum, Q, OuterRef, Subquery, Value
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
@@ -360,7 +361,7 @@ class WalletAdmin(admin.ModelAdmin):
         asset_prices = AssetPrice.objects.filter(coin=OuterRef('asset__symbol'))
 
         return qs.annotate(
-            value=Subquery(asset_prices.values_list('price', flat=True)) * F('balance'),
+            value=Coalesce(Subquery(asset_prices.values_list('price', flat=True)), Value(0)) * F('balance'),
             free=F('balance') - F('locked')
         )
 
