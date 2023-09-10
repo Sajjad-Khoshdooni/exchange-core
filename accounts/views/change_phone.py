@@ -1,4 +1,5 @@
 from django.contrib.auth.password_validation import validate_password
+from datetime import timedelta
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -80,6 +81,7 @@ class ChangePhoneView(APIView):
         user.username = user.phone
         user.level = min(user.level, user.LEVEL2)
         user.national_code_phone_verified = False
+        user.suspend(timedelta(days=1), 'تغییر شماره‌ تلفن')
         user.save(update_fields=['level', 'national_code_phone_verified', 'phone', 'username'])
         send_successful_change_phone_email(user)
         return Response({'msg': 'شماره تلفن همراه با‌موفقیت تغییر کرد.'})

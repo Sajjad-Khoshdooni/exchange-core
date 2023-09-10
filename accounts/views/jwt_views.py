@@ -1,6 +1,8 @@
 import logging
 
 from decouple import config
+from django.utils.translation import activate
+from datetime import timedelta
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -185,6 +187,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 client_info=client_info,
                 refresh_token=serializer.validated_data['refresh']
             )
+
+            if (not login_activity.is_sign_up and
+                    LoginActivity.objects.filter(user=user, device=login_activity.device).count() == 1):
+                user.suspended(timedelta(hours=1), 'ورود از دستگاه‌جدید')
             if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
                                             ip=login_activity.ip).count() == 1:
                 LoginActivity.send_successful_login_message(login_activity)

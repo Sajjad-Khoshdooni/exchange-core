@@ -2,6 +2,7 @@ import uuid
 from decimal import Decimal
 from typing import Union
 from uuid import uuid4
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, UserManager
@@ -162,6 +163,8 @@ class User(AbstractUser):
 
     is_price_notif_on = models.BooleanField(default=False)
 
+    suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
+
     def __str__(self):
         name = self.get_full_name()
         super_name = super(User, self).__str__()
@@ -188,6 +191,39 @@ class User(AbstractUser):
         last = phone_number[-length:]
         masked = first + '*' * len(phone_number[length:-length]) + last
         return masked
+
+    def suspend(self, duration: timedelta, reason: str):
+        suspended_until = duration + timezone.now()
+        past_suspension = self.suspended_until
+        if not past_suspension:
+            self.suspended_until = suspended_until
+        else:
+            self.suspended_until = max(past_suspension, suspended_until)
+        self.save(update_fields=['suspended_until'])
+        if past_suspension != self.suspended_until:
+            self.send_suspension_message(reason, duration)
+
+    def send_suspension_message(self, reason: str, duration: timedelta):
+        from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
+        from django.template import loader
+        context = {
+            'reason': reason,
+            'brand': settings.BRAND,
+            'duration': 'یک‌ روز' if duration == timedelta(days=1) else 'یک‌ ساعت'
+        }
+        content = loader.render_to_string('accounts/notif/sms/user_suspended_message.txt', context=context)
+        Notification.send(
+            recipient=self,
+            title='محدودیت برداشت',
+            message=f'برداشت‌های شما به دلیل {reason} تا {duration} آینده محدود شده است.',
+        )
+        send_kavenegar_exclusive_sms(self.phone, content=content)
+
+    @property
+    def is_suspended(self):
+        if not self.suspended_until:
+            return False
+        return timezone.now() <= self.suspended_until
 
     @property
     def kyc_bank_card(self):

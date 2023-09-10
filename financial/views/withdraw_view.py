@@ -44,6 +44,8 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         if user.level < user.LEVEL2:
             raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
+        if user.is_suspended:
+            raise ValidationError('به ‌صورت موقت امکان‌ برداشت وجود ندارد.')
 
         amount = validated_data['amount']
         iban = validated_data['iban']
