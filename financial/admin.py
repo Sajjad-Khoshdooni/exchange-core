@@ -459,7 +459,7 @@ class BankPaymentUserFilter(SimpleListFilter):
 
 @admin.register(BankPaymentRequest)
 class BankPaymentRequestAdmin(ExportMixin, admin.ModelAdmin):
-    list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type', 'payment')
+    list_display = ('created', 'user', 'get_amount_preview', 'ref_id', 'destination_type', 'payment')
     readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview', 'payment')
     actions = ('accept_payment', 'clone_payment')
     list_filter = (BankPaymentRequestAcceptFilter, BankPaymentUserFilter)
@@ -476,7 +476,7 @@ class BankPaymentRequestAdmin(ExportMixin, admin.ModelAdmin):
         if req.receipt:
             return mark_safe("<img src='%s' width='200' height='200' />" % req.receipt.url)
 
-    @admin.display(description='amount preview')
+    @admin.display(description='amount preview', ordering='amount')
     def get_amount_preview(self, req: BankPaymentRequest):
         return req.amount and humanize_number(req.amount)
 
