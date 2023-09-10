@@ -4,7 +4,7 @@ from uuid import uuid4
 from django import forms
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import F, Sum, Q
+from django.db.models import F, Sum, Q, OuterRef, Subquery
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
@@ -354,27 +354,37 @@ class WalletAdmin(admin.ModelAdmin):
     readonly_fields = ('account', 'asset', 'market', 'balance', 'locked', 'variant')
     search_fields = ('account__user__phone', 'asset__symbol')
 
-    @admin.display(description='free')
-    def get_free(self, wallet: models.Wallet):
-        return wallet.get_free()
+    def get_queryset(self, request):
+        from accounting.models import AssetPrice
+        qs = super(WalletAdmin, self).get_queryset(request)
+        asset_prices = AssetPrice.objects.filter(coin=OuterRef('asset__symbol'))
 
-    @admin.display(description='irt value')
+        return qs.annotate(
+            value=Subquery(asset_prices.values_list('price', flat=True)) * F('balance'),
+            free=F('balance') - F('locked')
+        )
+
+    @admin.display(description='free', ordering='free')
+    def get_free(self, wallet: models.Wallet):
+        return humanize_presentation(wallet.get_free())
+
+    @admin.display(description='irt value', ordering='value')
     def get_value_irt(self, wallet: models.Wallet):
         price = get_external_price(
             coin=wallet.asset.symbol,
             base_coin=Asset.IRT,
             side=BUY
         ) or 0
-        return get_symbol_presentation_amount(wallet.asset.symbol + 'IRT', wallet.balance * price, trunc_zero=True)
+        return humanize_presentation(price)
 
-    @admin.display(description='usdt value')
+    @admin.display(description='usdt value', ordering='value')
     def get_value_usdt(self, wallet: models.Wallet):
         price = get_external_price(
             coin=wallet.asset.symbol,
             base_coin=Asset.USDT,
             side=BUY
         ) or 0
-        return get_symbol_presentation_amount(wallet.asset.symbol + 'USDT', wallet.balance * price, trunc_zero=True)
+        return humanize_presentation(price)
 
 
 class TransferUserFilter(SimpleListFilter):
