@@ -191,7 +191,9 @@ def get_asset_alert_list(altered_coins: dict) -> set:
     category_map = {}
     for category in all_categories:
         category_map[category] = category.coins.filter(symbol__in=altered_coins.keys())
-    for asset_alert in AssetAlert.objects.filter(asset__symbol__in=altered_coins.keys()):
+    for asset_alert in AssetAlert.objects.filter(
+        asset__symbol__in=altered_coins.keys()
+    ):
         asset_alerts.add(
             AlertData(
                 user=asset_alert.user,

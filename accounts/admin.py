@@ -226,11 +226,12 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         )}),
         (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)}),
         (_("کدهای دعوت کاربر"), {'fields': (
-            'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred')})
+            'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred')}),
+        (_('اطلاعات اضافی'), {'fields': ('is_price_notif_on',)})
     )
 
     list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
-                    'verify_status', 'promotion', 'get_source_medium', 'get_referrer_user')
+                    'verify_status', 'promotion', 'get_source_medium', 'get_referrer_user', 'is_price_notif_on',)
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'national_code_phone_verified', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
