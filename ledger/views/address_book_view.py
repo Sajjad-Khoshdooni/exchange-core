@@ -124,7 +124,7 @@ class AddressBookView(ModelViewSet):
         instance.deleted = True
         instance.save()
 
-        return Response({'msg': 'address book deleted'}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_serializer_context(self):
         return {
