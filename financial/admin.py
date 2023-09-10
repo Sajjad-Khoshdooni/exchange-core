@@ -24,6 +24,7 @@ from financial.tasks import verify_bank_card_task, verify_bank_account_task, pro
 from financial.utils.encryption import encrypt
 from financial.utils.payment_id_client import get_payment_id_client
 from financial.utils.withdraw import FiatWithdraw
+from gamify.utils import clone_model
 from ledger.utils.fields import PENDING
 from ledger.utils.precision import humanize_number
 from ledger.utils.withdraw_verify import RiskFactor
@@ -460,7 +461,7 @@ class BankPaymentUserFilter(SimpleListFilter):
 class BankPaymentRequestAdmin(ExportMixin, admin.ModelAdmin):
     list_display = ('created', 'user', 'amount', 'ref_id', 'destination_type', 'payment')
     readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview', 'payment')
-    actions = ('accept_payment', )
+    actions = ('accept_payment', 'clone_payment')
     list_filter = (BankPaymentRequestAcceptFilter, BankPaymentUserFilter)
     resource_classes = [BankPaymentRequestResource]
 
@@ -483,3 +484,9 @@ class BankPaymentRequestAdmin(ExportMixin, admin.ModelAdmin):
     def accept_payment(self, request, queryset):
         for q in queryset.filter(payment__isnull=True, user__isnull=False, destination_id__isnull=False).exclude(ref_id=''):
             q.create_payment()
+
+    @admin.action(description='Clone')
+    def clone_payment(self, request, queryset):
+        for q in queryset:
+            q.ref_id = ''
+            clone_model(q)
