@@ -15,6 +15,7 @@ from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
+from accounts.models import Consultation
 from accounts.models.user_feature_perm import UserFeaturePerm
 from analytics.event.producer import get_kafka_producer
 from accounts.models import Notification, Account
@@ -165,7 +166,6 @@ class User(AbstractUser):
 
     suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
 
-    is_consulted = models.BooleanField(default=False)
 
     def __str__(self):
         name = self.get_full_name()
@@ -175,6 +175,12 @@ class User(AbstractUser):
             return '%s %s' % (super_name, name)
         else:
             return super_name
+
+    @property
+    def is_consulted(self):
+        return Consultation.objects.filter(
+            consultee=self
+        ).exists()
 
     def is_2fa_valid(self, totp):
         device = TOTPDevice.objects.filter(user=self).first()
