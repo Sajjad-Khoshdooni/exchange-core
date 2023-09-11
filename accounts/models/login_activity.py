@@ -119,3 +119,6 @@ class LoginActivity(models.Model):
             models.Index(fields=['user', 'ip', 'browser', 'os'], name="login_activity_idx"),
             models.Index(fields=['user', 'device'], name='login_suspension_idx')
         ]
+
+    def __str__(self):
+        return f'{self.device} {self.os}'

@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('accounts', '0139_alter_notification_unique_together_and_more'),
-        ('ledger', '0202_merge_20230812_1701'),
+        ('ledger', '0201_merge_20230807_1140'),
     ]
 
     operations = [

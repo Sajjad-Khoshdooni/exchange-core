@@ -59,7 +59,6 @@ class FiatWithdraw:
         }
         return mapping[gateway.type](gateway, verbose)
 
-    # todo : check request_id='mt-%s' % obj.id
     def create_withdraw(self, transfer: BaseTransfer) -> Withdraw:
         raise NotImplementedError
 

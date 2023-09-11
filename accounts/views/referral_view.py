@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from accounts.models import Referral, Account
+from accounts.models import Referral, Account, User
 from ledger.utils.precision import floor_precision
 from market.models import ReferralTrx
 
@@ -39,6 +39,14 @@ class ReferralSerializer(serializers.ModelSerializer):
         return super(ReferralSerializer, self).to_internal_value(
             {'owner_share_percent': owner_share_percent, 'owner': self.context['account'].id}
         )
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+
+        if user.level < User.LEVEL2:
+            raise ValidationError('برای ساخت کد ریفرال، باید احراز هویت سطح ۲ داشته باشید.')
+
+        return super(ReferralSerializer, self).create(validated_data)
 
     @staticmethod
     def validate_owner_share_percent(value):
