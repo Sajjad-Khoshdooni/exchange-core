@@ -24,4 +24,5 @@ class Consultation(models.Model):
     comment = models.TextField(null=True, blank=True, verbose_name='نظر مشاور')
 
     class Meta:
-        verbose_name = 'درخواستهای مشاوره'
+        verbose_name_plural = 'درخواست ‌های مشاوره'
+        verbose_name = 'درخواست مشاوره'
