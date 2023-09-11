@@ -138,7 +138,7 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
     if not (session or refresh_token):
         raise ValueError
 
-    if client_info:
+    if client_info is not None:
         user_agent_data = get_login_user_agent_data_from_client_info(client_info)
     else:
         user_agent_data = get_login_user_agent_data_from_request(request)

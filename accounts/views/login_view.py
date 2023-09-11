@@ -3,6 +3,7 @@ import logging
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Q
 from django.utils import timezone
+from datetime import timedelta
 from rest_framework import serializers, status
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
@@ -47,6 +48,9 @@ class LoginView(APIView):
                 return Response({'msg': 'totp required', 'code': -2}, status=status.HTTP_401_UNAUTHORIZED)
             login(request, user)
             login_activity = set_login_activity(request, user)
+            if (not login_activity.is_sign_up and
+                    LoginActivity.objects.filter(user=user, device=login_activity.device).count() == 1):
+                user.suspend(timedelta(hours=1), 'ورود از دستگاه جدید')
             if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
                                             ip=login_activity.ip).count() == 1:
                 LoginActivity.send_successful_login_message(login_activity)

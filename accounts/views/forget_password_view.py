@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AnonymousUser
+from datetime import timedelta
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView
@@ -47,7 +48,7 @@ class InitiateForgetPasswordView(APIView):
 class ForgotPasswordSerializer(serializers.Serializer):
     token = serializers.UUIDField(write_only=True, required=True)
     password = serializers.CharField(required=True, write_only=True, validators=[password_validator])
-    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
+    totp = serializers.CharField(write_only=True, allow_null=True, allow_blank=True, required=False)
 
     def create(self, validated_data):
         token = validated_data.pop('token')
@@ -66,8 +67,10 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
         validate_password(password=password, user=user)
         user.set_password(password)
+        user.suspend(timedelta(days=1), 'فراموشی رمزعبور')
         user.save(update_fields=['password'])
 
+        otp_code.set_token_used()
         return user
 
 

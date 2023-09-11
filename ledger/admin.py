@@ -1,16 +1,19 @@
 from datetime import timedelta
+from decimal import Decimal
 from uuid import uuid4
 
 from django import forms
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import F, Sum, Q, OuterRef, Subquery
+from django.db.models import F, Sum, Q, OuterRef, Subquery, Value
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 from simple_history.admin import SimpleHistoryAdmin
 
+from accounting.models import AssetPrice
 from accounting.models import ReservedAsset
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
@@ -21,18 +24,18 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
+from ledger.models import Asset, BalanceLock
 from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
     ManualTrade, Trx, NetworkAsset
 from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import DONE, PROCESS, PENDING
-from ledger.utils.precision import get_presentation_amount, humanize_presentation, get_symbol_presentation_amount
+from ledger.utils.precision import get_presentation_amount, humanize_presentation
 from ledger.utils.provider import get_provider_requester
+from ledger.utils.wallet_pipeline import WalletPipeline
 from ledger.utils.withdraw_verify import RiskFactor
 from market.utils.fix import create_symbols_for_asset
-from .models import Asset, BalanceLock
-from .utils.wallet_pipeline import WalletPipeline
 
 
 @admin.register(models.Asset)
@@ -355,12 +358,13 @@ class WalletAdmin(admin.ModelAdmin):
     search_fields = ('account__user__phone', 'asset__symbol')
 
     def get_queryset(self, request):
-        from accounting.models import AssetPrice
         qs = super(WalletAdmin, self).get_queryset(request)
         asset_prices = AssetPrice.objects.filter(coin=OuterRef('asset__symbol'))
 
         return qs.annotate(
-            value=Subquery(asset_prices.values_list('price', flat=True)) * F('balance'),
+            value=Coalesce(
+                Subquery(asset_prices.values_list('price', flat=True)), Value(Decimal(0))
+            ) * F('balance'),
             free=F('balance') - F('locked')
         )
 
@@ -375,7 +379,7 @@ class WalletAdmin(admin.ModelAdmin):
             base_coin=Asset.IRT,
             side=BUY
         ) or 0
-        return humanize_presentation(price)
+        return humanize_presentation(wallet.balance * price)
 
     @admin.display(description='usdt value', ordering='value')
     def get_value_usdt(self, wallet: models.Wallet):
@@ -384,7 +388,7 @@ class WalletAdmin(admin.ModelAdmin):
             base_coin=Asset.USDT,
             side=BUY
         ) or 0
-        return humanize_presentation(price)
+        return humanize_presentation(wallet.balance * price)
 
 
 class TransferUserFilter(SimpleListFilter):
