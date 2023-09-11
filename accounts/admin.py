@@ -162,7 +162,6 @@ class UserReferredFilter(SimpleListFilter):
 
 @admin.register(Consultation)
 class ConsultationAdmin(admin.ModelAdmin):
-    # todo: truncate
     list_display = ('created', 'consultee', 'consulter', 'status', 'get_description',)
     readonly_fields = ('created',)
     raw_id_fields = ('consultee', 'consulter',)
