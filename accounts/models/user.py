@@ -165,6 +165,7 @@ class User(AbstractUser):
 
     suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
 
+
     def __str__(self):
         name = self.get_full_name()
         super_name = super(User, self).__str__()
@@ -173,6 +174,13 @@ class User(AbstractUser):
             return '%s %s' % (super_name, name)
         else:
             return super_name
+
+    @property
+    def is_consulted(self):
+        from accounts.models import Consultation
+        return Consultation.objects.filter(
+            consultee=self
+        ).exists()
 
     def is_2fa_valid(self, totp):
         device = TOTPDevice.objects.filter(user=self).first()

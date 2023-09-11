@@ -111,5 +111,7 @@ urlpatterns = [
 
     path('feedback/', views.UserFeedbackView.as_view()),
 
-    path('notify/', views.NotifyView.as_view())
+    path('notify/', views.NotifyView.as_view()),
+
+    path('consultation/', views.ConsultationView.as_view())
 ]
