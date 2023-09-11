@@ -92,8 +92,8 @@ class ChangePhoneView(APIView):
         user.level = min(user.level, user.LEVEL2)
         user.national_code_phone_verified = None
 
-        user.change_status(User.PENDING)
-        basic_verify_user.delay(user.id)
+        # user.change_status(User.PENDING)
+        # basic_verify_user.delay(user.id)
 
         user.suspend(timedelta(days=1), 'تغییر شماره‌ تلفن')
         user.save(update_fields=['level', 'national_code_phone_verified', 'phone', 'username'])
