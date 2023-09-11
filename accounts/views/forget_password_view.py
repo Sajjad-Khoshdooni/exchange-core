@@ -1,8 +1,7 @@
 from django.contrib.auth.models import AnonymousUser
 from datetime import timedelta
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView
+1from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 

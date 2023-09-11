@@ -13,14 +13,15 @@ class Consultation(models.Model):
                                   related_name='consulter_consultations')
 
     status = models.CharField(choices=[
-            (PENDING, PENDING),
-            (DONE, DONE)
-        ],
+        (PENDING, PENDING),
+        (DONE, DONE)
+    ],
         default=PENDING,
         max_length=15,
         verbose_name='وضعیت'
     )
-    description = models.TextField(null=True, blank=True, verbose_name='توضیحات')
+    description = models.TextField(null=True, blank=True, verbose_name='توضیحات کاربر')
+    comment = models.TextField(null=True, blank=True, verbose_name='نظر مشاور')
 
     class Meta:
         verbose_name = 'درخواستهای مشاوره'
