@@ -97,5 +97,8 @@ class ChangePhoneView(APIView):
 
         user.suspend(timedelta(days=1), 'تغییر شماره‌ تلفن')
         user.save(update_fields=['level', 'national_code_phone_verified', 'phone', 'username'])
+
+        logger.info(f'شماره تلفن همراه {user.get_full_name()}  با‌موفقیت تغییر کرد.')
+
         send_successful_change_phone_email(user)
         return Response({'msg': 'شماره تلفن همراه با‌موفقیت تغییر کرد.'})
