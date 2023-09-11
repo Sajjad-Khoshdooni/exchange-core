@@ -15,7 +15,6 @@ from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from accounts.models import Consultation
 from accounts.models.user_feature_perm import UserFeaturePerm
 from analytics.event.producer import get_kafka_producer
 from accounts.models import Notification, Account
@@ -178,6 +177,7 @@ class User(AbstractUser):
 
     @property
     def is_consulted(self):
+        from accounts.models import Consultation
         return Consultation.objects.filter(
             consultee=self
         ).exists()
