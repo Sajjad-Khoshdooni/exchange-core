@@ -42,7 +42,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'phone', 'email', 'first_name', 'last_name', 'level', 'margin_quiz_pass_date', 'is_staff',
             'show_margin', 'show_strategy_bot', 'show_community', 'show_staking', 'chat_uuid', 'is_2fa_active',
-            'can_withdraw', 'is_suspended', 'suspended_until'
+            'can_withdraw', 'is_suspended', 'suspended_until', 'is_consulted',
         )
         ref_name = "User"
 
