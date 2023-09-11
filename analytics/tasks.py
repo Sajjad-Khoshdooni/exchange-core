@@ -124,7 +124,8 @@ def trigger_transfer_event(threshold=1000):
             is_deposit=transfer.deposit,
             value_irt=transfer.irt_value,
             value_usdt=transfer.usdt_value,
-            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(transfer.id) + TransferEvent.type + 'crypto')
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(transfer.id) + TransferEvent.type + 'crypto'),
+            login_activity_id=transfer.login_activity_id or ''
         )
 
         get_kafka_producer().produce(event, instance=transfer)
@@ -149,7 +150,8 @@ def trigger_fiat_transfer_event(threshold=1000):
             value_irt=fiat_transfer.amount,
             value_usdt=float(fiat_transfer.amount) / float(usdt_price),
             is_deposit=False,
-            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(fiat_transfer.id) + TransferEvent.type + 'fiat_withdraw')
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(fiat_transfer.id) + TransferEvent.type + 'fiat_withdraw'),
+            login_activity_id=fiat_transfer.login_activity_id or ''
         )
 
         get_kafka_producer().produce(event, instance=fiat_transfer)
@@ -205,7 +207,9 @@ def trigger_trade_event(threshold=1000):
             created=trade.created,
             value_usdt=trade.usdt_value,
             value_irt=trade.irt_value,
-            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(trade.id) + TradeEvent.type + 'trade')
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(trade.id) + TradeEvent.type + 'trade'),
+            side=trade.side,
+            login_activity_id=trade.login_activity_id or ''
         )
 
         get_kafka_producer().produce(event, instance=trade)
@@ -239,7 +243,8 @@ def trigger_otc_trade(threshold=1000):
             created=otc_trade.created,
             value_usdt=req.usdt_value,
             value_irt=req.irt_value,
-            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(otc_trade.id) + TradeEvent.type + 'otc_trade')
+            event_id=uuid.uuid5(uuid.NAMESPACE_DNS, str(otc_trade.id) + TradeEvent.type + 'otc_trade'),
+            side=otc_trade.otc_request.side
         )
 
         get_kafka_producer().produce(event, instance=otc_trade)
@@ -253,6 +258,7 @@ def trigger_login_event(threshold=1000):
 
     for login_activity in login_activity_list:
         event = LoginEvent(
+            id=login_activity.id,
             user_id=login_activity.user_id,
             device=login_activity.device,
             is_signup=login_activity.is_sign_up,

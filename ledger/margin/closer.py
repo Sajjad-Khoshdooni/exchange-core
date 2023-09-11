@@ -109,12 +109,14 @@ class MarginCloser:
             self.info_log('fast repay %s %s' % (amount, asset))
 
             # todo: add reason field to margin loan
-            MarginLoan.new_loan(
-                account=self.account,
-                asset=margin_wallet.asset,
-                amount=amount,
-                loan_type=MarginLoan.REPAY
-            )
+            with WalletPipeline() as pipeline:
+                MarginLoan.new_loan(
+                    account=self.account,
+                    asset=margin_wallet.asset,
+                    amount=amount,
+                    loan_type=MarginLoan.REPAY,
+                    pipeline=pipeline
+                )
 
             price = get_last_price(asset.symbol + Asset.USDT)
             self._liquidated_value += amount * price
@@ -200,12 +202,14 @@ class MarginCloser:
             asset = wallet.asset
             amount = -wallet.balance
 
-            MarginLoan.new_loan(
-                account=self.account,
-                asset=asset,
-                amount=amount,
-                loan_type=MarginLoan.REPAY
-            )
+            with WalletPipeline() as pipeline:
+                MarginLoan.new_loan(
+                    account=self.account,
+                    asset=asset,
+                    amount=amount,
+                    loan_type=MarginLoan.REPAY,
+                    pipeline=pipeline
+                )
 
             price = get_last_price(asset.symbol + Asset.USDT)
             self._liquidated_value += amount * price

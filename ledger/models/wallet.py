@@ -36,9 +36,15 @@ class Wallet(models.Model):
     expiration = models.DateTimeField(null=True, blank=True)
     credit = get_amount_field(default=0)
 
+    @property
+    def is_for_strategy(self):
+        if not self.variant:
+            return False
+        return ReserveWallet.objects.filter(group_id=self.variant).exists()
+
     def __str__(self):
         market_verbose = dict(self.MARKET_CHOICES)[self.market]
-        return '%s Wallet %s [%s]' % (market_verbose, self.asset, self.account)
+        return '%s Wallet %s %s [%s] %s' % (market_verbose, self.asset, self.variant, self.account, self.balance)
 
     class Meta:
         constraints = [
@@ -67,13 +73,14 @@ class Wallet(models.Model):
     def get_free(self) -> Decimal:
         return self.balance - self.locked
 
-    def has_balance(self, amount: Decimal, raise_exception: bool = False, check_system_wallets: bool = False) -> bool:
+    def has_balance(self, amount: Decimal, raise_exception: bool = False, check_system_wallets: bool = False,
+                    pipeline_balance_diff=Decimal(0)) -> bool:
         assert amount >= 0 and self.market not in Wallet.NEGATIVE_MARKETS
 
         if not check_system_wallets and not self.check_balance:
             can = True
         else:
-            can = self.get_free() - amount >= -self.credit
+            can = self.get_free() + pipeline_balance_diff - amount >= -self.credit
 
         if raise_exception and not can:
             raise InsufficientBalance()

@@ -3,6 +3,7 @@ import logging
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Q
 from django.utils import timezone
+from datetime import timedelta
 from rest_framework import serializers, status
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
@@ -11,6 +12,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from accounts.models.login_activity import LoginActivity
 from accounts.models.user import User
+from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.validation import set_login_activity
 from accounts.views.user_view import UserSerializer
 
@@ -20,6 +22,7 @@ logger = logging.getLogger(__name__)
 class LoginSerializer(serializers.Serializer):
     login = serializers.CharField(required=True)
     password = serializers.CharField(required=True)
+    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
 
     def save(self, **kwargs):
         login = self.validated_data['login'].lower()
@@ -29,6 +32,7 @@ class LoginSerializer(serializers.Serializer):
 
 class LoginView(APIView):
     permission_classes = []
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def post(self, request):
         if request.user.is_authenticated:
@@ -36,11 +40,17 @@ class LoginView(APIView):
 
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         user = serializer.save()
+        totp = serializer.data.get('totp')
         if user:
+            # todo: send unsuccessful login message
+            if not user.is_2fa_valid(totp):
+                return Response({'msg': 'totp required', 'code': -2}, status=status.HTTP_401_UNAUTHORIZED)
             login(request, user)
             login_activity = set_login_activity(request, user)
+            if (not login_activity.is_sign_up and
+                    LoginActivity.objects.filter(user=user, device=login_activity.device).count() == 1):
+                user.suspend(timedelta(hours=1), 'ورود از دستگاه جدید')
             if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
                                             ip=login_activity.ip).count() == 1:
                 LoginActivity.send_successful_login_message(login_activity)
@@ -50,6 +60,7 @@ class LoginView(APIView):
             if user:
                 LoginActivity.send_unsuccessful_login_message(user)
             return Response({'msg': 'authentication failed', 'code': -1}, status=status.HTTP_401_UNAUTHORIZED)
+
 
 class LogoutView(APIView):
     def post(self, request):

@@ -19,6 +19,7 @@ USDT = 'USDT'
 IRT = 'IRT'
 
 BUY, SELL = 'buy', 'sell'
+LONG, SHORT = 'long', 'short'
 
 SIDE_VERBOSE = {
     BUY: 'خرید',

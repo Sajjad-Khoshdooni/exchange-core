@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from json import JSONDecodeError
 from math import log10
-from typing import List, Dict, Union
+from typing import List, Union
 
 import requests
 from decouple import config
@@ -295,8 +295,8 @@ class ProviderRequester:
 
 
 class MockProviderRequester(ProviderRequester):
-    def _collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 10) -> Response:
-        if config('IRAN_ACCESS_TIMEOUT_MODE', False):
+    def _collect_api(self, path: str, method: str = 'GET', data: dict = None, timeout: float = 10):
+        if config('IRAN_ACCESS_TIMEOUT_MODE', default=None):
             time.sleep(60)
             raise requests.exceptions.Timeout
 
@@ -324,6 +324,10 @@ class MockProviderRequester(ProviderRequester):
 
     def get_network_info(self, asset: str, network: str = None) -> List[NetworkInfo]:
         self._collect_api('/')
+
+        if not network:
+            network = 'TRX'
+
         return [
             NetworkInfo(
                 coin=asset,
@@ -352,14 +356,16 @@ class MockProviderRequester(ProviderRequester):
         self._collect_api('/')
         return WithdrawStatus(status=DONE, tx_id='tx')
 
-    def get_coins_info(self, coins: List[str] = None) -> Dict[str, CoinInfo]:
+    def get_coins_info(self, coins: List[str] = None) -> List[dict]:
         self._collect_api('/')
-        data = {}
-        for c in coins:
-            data[c] = CoinInfo(
-                coin=c,
-                weekly_trend_url='https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/825.svg?v=463140',
-                volume_24h=5
+        data = []
+        for c in Asset.objects.filter(enable=True):
+            data.append(
+                CoinInfo(
+                    coin=c.symbol,
+                    weekly_trend_url='https://s3.coinmarketcap.com/generated/sparklines/web/1d/2781/825.svg?v=463140',
+                    volume_24h=5
+                ).__dict__
             )
 
         return data

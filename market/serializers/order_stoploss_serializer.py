@@ -20,6 +20,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
     filled_price = serializers.SerializerMethodField()
     trigger_price = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
+    is_oco = serializers.SerializerMethodField()
     market = serializers.CharField(source='wallet.market', default=Wallet.SPOT)
     allow_cancel = serializers.SerializerMethodField()
 
@@ -37,7 +38,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
         return str(instance.id)
 
     def get_allow_cancel(self, instance: Union[Order, StopLoss]):
-        if instance.wallet.variant:
+        if instance.wallet.is_for_strategy:
             return False
         return True
 
@@ -48,6 +49,9 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
             else:
                 return StopLoss.FILLED if instance.filled_amount == instance.amount else StopLoss.TRIGGERED
         return instance.status
+
+    def get_is_oco(self, instance: Union[Order, StopLoss]):
+        return bool(instance.oco)
 
     def get_filled_amount(self, instance: Union[Order, StopLoss]):
         return decimal_to_str(floor_precision(instance.filled_amount, instance.symbol.step_size))
@@ -63,7 +67,7 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
         return f'آخرین قیمت {operator} {price}'
 
     def get_filled_price(self, instance: Union[Order, StopLoss]):
-        order = instance if isinstance(instance, Order) else instance.order_set.first()
+        order = instance if isinstance(instance, Order) else instance.order_set.all()[0]
         if not order:
             return None
         fills_amount, fills_value = self.context['trades'].get(order.id, (0, 0))
@@ -76,5 +80,5 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
-                  'filled_price', 'trigger_price', 'side', 'fill_type', 'status', 'market', 'allow_cancel')
+                  'filled_price', 'trigger_price', 'side', 'fill_type', 'status', 'market', 'allow_cancel', 'is_oco')
 

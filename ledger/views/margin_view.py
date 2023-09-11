@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -14,9 +15,11 @@ from ledger.exceptions import InsufficientBalance, InsufficientDebt, MaxBorrowab
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet, CloseRequest
 from ledger.models.asset import CoinField, AssetSerializerMini
+from ledger.models.margin import SymbolField
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.price import get_last_price
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 
 class MarginInfoView(APIView):
@@ -71,20 +74,27 @@ class AssetMarginInfoView(APIView):
 class MarginTransferSerializer(serializers.ModelSerializer):
     amount = get_serializer_amount_field()
     coin = CoinField(source='asset')
+    symbol = SymbolField(source='position_symbol')
     asset = AssetSerializerMini(read_only=True)
+
+    @staticmethod
+    def validate_coin(coin):
+        if coin.symbol not in (Asset.USDT, Asset.IRT):
+            raise ValidationError(_('Invalid coin to transfer'))
+        return coin
 
     def create(self, validated_data):
         user = self.context['request'].user
 
         asset = validated_data['asset']
-
         check_margin_view_permission(user.get_account(), asset)
+        print(validated_data)
 
         return super(MarginTransferSerializer, self).create(validated_data)
 
     class Meta:
         model = MarginTransfer
-        fields = ('created', 'amount', 'type', 'coin', 'asset')
+        fields = ('created', 'amount', 'type', 'coin', 'asset', 'symbol')
         read_only_fields = ('created', )
 
 
@@ -124,9 +134,11 @@ class MarginLoanSerializer(serializers.ModelSerializer):
             raise ValidationError('مقداری بزرگتر از صفر انتخاب کنید.')
 
         try:
-            return MarginLoan.new_loan(
-                **validated_data
-            )
+            with WalletPipeline() as pipeline:
+                return MarginLoan.new_loan(
+                    **validated_data,
+                    pipeline=pipeline
+                )
         except InsufficientDebt:
             raise ValidationError('میزان بدهی کمتر از مقدار بازپرداخت است.')
         except MaxBorrowableExceeds:

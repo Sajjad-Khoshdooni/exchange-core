@@ -77,8 +77,9 @@ class EmailVerificationCode(models.Model):
 
         any_recent_code = EmailVerificationCode.objects.filter(
             email=email,
-            created__gte=timezone.now() - timedelta(minutes=2),
-        ).exists()
+            scope=scope,
+            created__gte=timezone.now() - timedelta(minutes=1),
+        ).count() >= 4
 
         if any_recent_code:
             logger.info('[OTP] Ignored sending email otp because of recent')

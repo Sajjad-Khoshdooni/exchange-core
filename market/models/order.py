@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from accounting.models import TradeRevenue
 from accounts.models import Notification
-from ledger.models import Wallet
+from ledger.models import Wallet, Trx
 from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
 from ledger.utils.external_price import BUY, SELL, SIDE_VERBOSE
@@ -110,6 +110,7 @@ class Order(models.Model):
     client_order_id = models.CharField(max_length=36, null=True, blank=True)
 
     stop_loss = models.ForeignKey(to='market.StopLoss', on_delete=models.SET_NULL, null=True, blank=True)
+    oco = models.ForeignKey(to='market.OCO', on_delete=models.SET_NULL, null=True, blank=True)
 
     time_in_force = models.CharField(
         max_length=4,
@@ -123,6 +124,7 @@ class Order(models.Model):
         return f'({self.id}) {self.symbol}-{self.side} [p:{self.price:.2f}] (u:{self.unfilled_amount:.5f}/{self.amount:.5f})'
 
     class Meta:
+        ordering = ['status']
         indexes = [
             models.Index(fields=['symbol', 'type', 'status', 'created']),
             models.Index(fields=['symbol', 'status']),
@@ -145,12 +147,19 @@ class Order(models.Model):
                 name='market_order_unique_stop_loss',
                 fields=('stop_loss', 'status'),
             ),
+            UniqueConstraint(
+                name='market_order_unique_oco',
+                fields=('oco', 'status'),
+            ),
         ]
 
     objects = models.Manager()
     open_objects = OpenOrderManager()
 
     def cancel(self):
+        if self.oco:
+            self.oco.cancel_another(self.oco.STOPLOSS, delete_oco=True)
+
         # to increase performance
         if self.status != self.NEW:
             return
@@ -199,14 +208,31 @@ class Order(models.Model):
         return {'price__lte': price} if side == BUY else {'price__gte': price}
 
     @classmethod
-    def get_to_lock_wallet(cls, wallet, base_wallet, side) -> Wallet:
+    def get_to_lock_wallet(cls, wallet, base_wallet, side, lock_amount) -> Wallet:
+        if wallet.market == Wallet.MARGIN:
+            margin_cross_wallet = base_wallet.asset.get_wallet(
+                base_wallet.account, market=base_wallet.market, variant=None
+            )
+            margin_cross_wallet.has_balance(lock_amount, raise_exception=True)
+            return margin_cross_wallet
         return base_wallet if side == BUY else wallet
 
     @classmethod
-    def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str) -> Decimal:
+    def get_to_lock_amount(cls, amount: Decimal, price: Decimal, side: str, market: str) -> Decimal:
+        if market == Wallet.MARGIN:
+            return amount * price
         return amount * price if side == BUY else amount
 
-    def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False) -> MatchedTrades:
+    def handle_oco_updates(self, pipeline):
+        self.oco.cancel_another(self.oco.STOPLOSS)
+
+        if self.side == BUY and self.oco.releasable_lock:
+            oco = self.oco
+            pipeline.release_lock(key=self.group_id, amount=oco.releasable_lock)
+            oco.releasable_lock = Decimal(0)
+            oco.save(update_fields=['releasable_lock'])
+
+    def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False, is_oco: bool = False) -> MatchedTrades:
         PairSymbol.objects.select_for_update().get(id=self.symbol_id)
         overriding_fill_amount = None
         if is_stop_loss:
@@ -216,36 +242,22 @@ class Order(models.Model):
                     overriding_fill_amount = floor_precision(locked_amount / self.price, self.symbol.step_size)
                     if not overriding_fill_amount:
                         raise CancelOrder('Overriding fill amount is zero')
-        else:
+        elif not is_oco:
             overriding_fill_amount = self.acquire_lock(pipeline)
 
         matched_trades = self.make_match(pipeline, overriding_fill_amount)
-        to_cancel_stop_loss = []
         if matched_trades:
-            # trigger stop loss
             min_price = min(map(lambda t: t.price, matched_trades.trades))
             max_price = max(map(lambda t: t.price, matched_trades.trades))
             from market.models import StopLoss
-            to_trigger_stop_loss_qs = StopLoss.not_triggered_objects.filter(
-                Q(side=BUY, trigger_price__lte=max_price) | Q(side=SELL, trigger_price__gte=min_price),
-                symbol=self.symbol,
-            ).exclude(id=self.stop_loss_id)
-            log_prefix = 'MM %s {%s}: ' % (self.symbol.name, self.id)
-            logger.info(log_prefix + f'to trigger stop loss: {list(to_trigger_stop_loss_qs.values_list("id", flat=True))} {timezone.now()}')
-            for stop_loss in to_trigger_stop_loss_qs:
-                from market.utils.order_utils import trigger_stop_loss
-                triggered_price = min_price if stop_loss.side == SELL else max_price
-                logger.info(log_prefix + f'triggering stop loss on {self.symbol} ({stop_loss.id}, {stop_loss.side}) at {triggered_price}, {timezone.now()}')
-                to_cancel = trigger_stop_loss(pipeline, stop_loss, triggered_price)
-                if to_cancel:
-                    to_cancel_stop_loss.append(to_cancel)
-            if to_cancel_stop_loss:
-                matched_trades.to_cancel_stoploss = to_cancel_stop_loss
+            StopLoss.trigger(self, min_price, max_price, matched_trades, pipeline)
+            from ledger.models import MarginPosition
+            MarginPosition.check_for_liquidation(self, min_price, max_price, pipeline)
         return matched_trades
 
     def acquire_lock(self, pipeline: WalletPipeline):
-        to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side)
-        lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side)
+        lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side, self.wallet.market)
+        to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side, lock_amount)
 
         if self.side == BUY and self.fill_type == Order.MARKET:
             free_amount = to_lock_wallet.get_free()
@@ -260,7 +272,7 @@ class Order(models.Model):
             return floor_precision(lock_amount / self.price, self.symbol.step_size)
 
     def release_lock(self, pipeline: WalletPipeline, release_amount: Decimal):
-        release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side)
+        release_amount = Order.get_to_lock_amount(release_amount, self.price, self.side, self.wallet.market)
         pipeline.release_lock(key=self.group_id, amount=release_amount)
 
     def make_match(self, pipeline: WalletPipeline, overriding_fill_amount: Union[Decimal, None]) -> MatchedTrades:
@@ -315,6 +327,7 @@ class Order(models.Model):
         taker_is_system = self.wallet.account.is_system() or (
                 hedging_usdt and self.account_id == settings.TRADER_ACCOUNT_ID)
 
+        oco_orders = [self] if self.oco else []
         for maker_order in matching_orders:
             trade_price = maker_order.price
 
@@ -391,6 +404,9 @@ class Order(models.Model):
                     maker_order.save(update_fields=['status'])
                     filled_orders.append(maker_order)
 
+            if maker_order.oco:
+                oco_orders.append(maker_order)
+
             if unfilled_amount == 0:
                 self.status = Order.FILLED
 
@@ -413,6 +429,10 @@ class Order(models.Model):
             symbol.last_trade_price = trades[-1].price
             symbol.save(update_fields=['last_trade_time', 'last_trade_price'])
             set_last_trade_price(symbol)
+
+            for oco_order in oco_orders:
+                oco_order.handle_oco_updates(pipeline)
+
             trade_revenues = []
             for maker_trade, taker_trade in trade_pairs:
                 if maker_trade.trade_source in (Trade.SYSTEM_MAKER, Trade.SYSTEM_TAKER):

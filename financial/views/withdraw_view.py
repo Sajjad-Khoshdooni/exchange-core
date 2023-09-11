@@ -14,7 +14,6 @@ from rest_framework.viewsets import ModelViewSet
 
 from accounts.models import VerificationCode, LoginActivity
 from accounts.permissions import IsBasicVerified
-from accounts.utils.auth2fa import is_2fa_active_for_user, code_2fa_verifier
 from financial.models import FiatWithdrawRequest, Gateway
 from financial.models.bank_card import BankAccount, BankAccountSerializer
 from financial.utils.withdraw_limit import user_reached_fiat_withdraw_limit
@@ -33,7 +32,7 @@ MAX_WITHDRAW = 100_000_000
 class WithdrawRequestSerializer(serializers.ModelSerializer):
     iban = serializers.CharField(write_only=True)
     code = serializers.CharField(write_only=True)
-    code_2fa = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    totp = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
 
     def create(self, validated_data):
         request = self.context['request']
@@ -45,11 +44,13 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         if user.level < user.LEVEL2:
             raise ValidationError('برای برداشت ابتدا احراز هویت نمایید.')
+        if user.is_suspended:
+            raise ValidationError('به ‌صورت موقت امکان‌ برداشت وجود ندارد.')
 
         amount = validated_data['amount']
         iban = validated_data['iban']
         code = validated_data['code']
-
+        totp = validated_data.get('totp', None)
         bank_account = get_object_or_404(BankAccount, iban=iban, user=user, verified=True, deleted=False)
 
         assert account.is_ordinary_user()
@@ -61,11 +62,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
         otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_FIAT_WITHDRAW)
 
         if not otp_code:
-            raise ValidationError({'code': 'کد نامعتبر است'})
-
-        if is_2fa_active_for_user(user):
-            code_2fa = validated_data.get('code_2fa') or ''
-            code_2fa_verifier(user_token=user.auth2fa.token, code_2fa=code_2fa)
+            raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
+        if not user.is_2fa_valid(totp):
+            raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
 
         if amount < MIN_WITHDRAW:
             logger.info('FiatRequest rejected due to small amount. user=%s' % user.id)
@@ -132,7 +131,7 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FiatWithdrawRequest
-        fields = ('iban', 'amount', 'code', 'code_2fa')
+        fields = ('iban', 'amount', 'code', 'totp')
 
 
 class WithdrawRequestView(ModelViewSet):

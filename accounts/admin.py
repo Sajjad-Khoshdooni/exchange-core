@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.models import FirebaseToken, Attribution, AppStatus, Auth2Fa, VerificationCode, \
+from accounts.models import FirebaseToken, Attribution, AppStatus, VerificationCode, \
     UserFeedback, BulkNotification, EmailNotification
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
@@ -226,11 +226,13 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         )}),
         (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)}),
         (_("کدهای دعوت کاربر"), {'fields': (
-            'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred')})
+            'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred')}),
+        (_('اطلاعات اضافی'), {'fields': ('is_price_notif_on', 'is_suspended', 'suspended_until',)})
     )
 
     list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
-                    'verify_status', 'promotion', 'get_source_medium', 'get_referrer_user')
+                    'verify_status', 'promotion', 'get_source_medium', 'get_referrer_user', 'is_price_notif_on',
+                    'is_suspended',)
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'national_code_phone_verified', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
@@ -254,7 +256,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
-        'get_notifications_link', 'get_staking_link', 'get_prizes_link'
+        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended',
     )
     preserve_filters = ('archived', )
 
@@ -737,15 +739,6 @@ class AttributionAdmin(admin.ModelAdmin):
 @admin.register(AppStatus)
 class AppStatusAdmin(admin.ModelAdmin):
     list_display = ['latest_version', 'force_update_version', 'active']
-
-
-@admin.register(Auth2Fa)
-class Auth2FaAdmin(admin.ModelAdmin):
-    list_display = ['user', 'created', 'verified']
-    readonly_fields = ('created', )
-    fields = ('user', 'created', 'verified')
-    search_fields = ('user__phone',)
-
 
 @admin.register(VerificationCode)
 class VerificationCodeAdmin(admin.ModelAdmin):

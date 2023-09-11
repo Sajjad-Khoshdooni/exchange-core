@@ -2,6 +2,7 @@ import uuid
 from decimal import Decimal
 from typing import Union
 from uuid import uuid4
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, UserManager
@@ -12,6 +13,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from accounts.models.user_feature_perm import UserFeaturePerm
 from analytics.event.producer import get_kafka_producer
@@ -61,8 +63,8 @@ class User(AbstractUser):
         }
     )
 
-    first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام',)
-    last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی',)
+    first_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام', )
+    last_name_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه نام خانوادگی', )
 
     national_code = models.CharField(
         max_length=10,
@@ -71,11 +73,12 @@ class User(AbstractUser):
         db_index=True,
         validators=[national_card_code_validator],
     )
-    national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی',)
-    national_code_phone_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی و موبایل (شاهکار)',)
+    national_code_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه کد ملی', )
+    national_code_phone_verified = models.BooleanField(null=True, blank=True,
+                                                       verbose_name='تاییدیه کد ملی و موبایل (شاهکار)', )
 
-    birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد',)
-    birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد',)
+    birth_date = models.DateField(null=True, blank=True, verbose_name='تاریخ تولد', )
+    birth_date_verified = models.BooleanField(null=True, blank=True, verbose_name='تاییدیه تاریخ تولد', )
 
     level_2_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تایید سطح ۲')
     level_3_verify_datetime = models.DateTimeField(blank=True, null=True, verbose_name='تاریخ تایید سطح 3')
@@ -99,7 +102,7 @@ class User(AbstractUser):
     reject_reason = models.CharField(
         max_length=32,
         blank=True,
-        choices=((NATIONAL_CODE_DUPLICATED, NATIONAL_CODE_DUPLICATED), )
+        choices=((NATIONAL_CODE_DUPLICATED, NATIONAL_CODE_DUPLICATED),)
     )
 
     first_fiat_deposit_date = models.DateTimeField(blank=True, null=True, verbose_name='زمان اولین واریز ریالی')
@@ -158,6 +161,10 @@ class User(AbstractUser):
 
     custom_crypto_withdraw_ceil = models.PositiveBigIntegerField(null=True, blank=True)
 
+    is_price_notif_on = models.BooleanField(default=False)
+
+    suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
+
     def __str__(self):
         name = self.get_full_name()
         super_name = super(User, self).__str__()
@@ -167,12 +174,57 @@ class User(AbstractUser):
         else:
             return super_name
 
+    def is_2fa_valid(self, totp):
+        device = TOTPDevice.objects.filter(user=self).first()
+        return device is None or not device.confirmed or device.verify_token(totp)
+
     def get_account(self) -> Account:
         if not self.id or self.is_anonymous:
             return Account(user=self)
 
         account, _ = Account.objects.get_or_create(user=self)
         return account
+
+    @staticmethod
+    def mask(phone_number: str, length: int = 4):
+        first = phone_number[:length]
+        last = phone_number[-length:]
+        masked = first + '*' * len(phone_number[length:-length]) + last
+        return masked
+
+    def suspend(self, duration: timedelta, reason: str):
+        suspended_until = duration + timezone.now()
+        past_suspension = self.suspended_until
+        if not past_suspension:
+            self.suspended_until = suspended_until
+        else:
+            self.suspended_until = max(past_suspension, suspended_until)
+        self.save(update_fields=['suspended_until'])
+        if past_suspension != self.suspended_until:
+            self.send_suspension_message(reason, duration)
+
+    def send_suspension_message(self, reason: str, duration: timedelta):
+        from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
+        from django.template import loader
+        duration = 'یک‌ روز' if duration == timedelta(days=1) else 'یک‌ ساعت'
+        context = {
+            'reason': reason,
+            'brand': settings.BRAND,
+            'duration': duration
+        }
+        content = loader.render_to_string('accounts/notif/sms/user_suspended_message.txt', context=context)
+        Notification.send(
+            recipient=self,
+            title='محدودیت برداشت',
+            message=f'برداشت‌های شما به دلیل {reason} تا {duration} آینده محدود شده است.',
+        )
+        send_kavenegar_exclusive_sms(self.phone, content=content)
+
+    @property
+    def is_suspended(self):
+        if not self.suspended_until:
+            return False
+        return timezone.now() <= self.suspended_until
 
     @property
     def kyc_bank_card(self):
@@ -222,7 +274,8 @@ class User(AbstractUser):
                     self.level_3_verify_datetime = timezone.now()
 
                 self.archived = False
-                self.save(update_fields=['verify_status', 'level', 'level_2_verify_datetime', 'level_3_verify_datetime', 'archived'])
+                self.save(update_fields=['verify_status', 'level', 'level_2_verify_datetime', 'level_3_verify_datetime',
+                                         'archived'])
 
             if self.level == User.LEVEL2:
                 from gamify.utils import check_prize_achievements, Task
@@ -252,7 +305,7 @@ class User(AbstractUser):
     @property
     def primary_data_verified(self) -> bool:
         return self.first_name and self.first_name_verified and self.last_name and self.last_name_verified \
-               and self.birth_date and self.birth_date_verified
+            and self.birth_date and self.birth_date_verified
 
     def get_level2_verify_fields(self):
         from financial.models import BankCard

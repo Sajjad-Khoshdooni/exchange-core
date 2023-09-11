@@ -1,6 +1,6 @@
 from .address_key import AddressKey
 from .balance_lock import BalanceLock
-from .wallet import Wallet
+from .wallet import Wallet, ReserveWallet
 from .asset import Asset
 from .spread import AssetSpreadCategory, CategorySpread, MarketSpread
 from .network import Network
@@ -18,5 +18,6 @@ from .pnl import PNLHistory
 from .snapshot import AssetSnapshot, SystemSnapshot
 from .fast_buy_token import FastBuyToken
 from .manual_transaction import ManualTransaction
+from .position import MarginPosition
 from .manual_trade import ManualTrade
 from .asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert

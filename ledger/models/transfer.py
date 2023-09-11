@@ -259,7 +259,7 @@ class Transfer(models.Model):
             transfer.save(update_fields=['status'])
         else:
             send_system_message(
-                message='INIT withdraw %s' % transfer,
+                message='INIT %s' % transfer,
                 link=url_to_edit_object(transfer)
             )
 

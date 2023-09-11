@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ledger', '0214_networkasset_last_provider_update'),
+        ('ledger', '0215_bulkassetalert_alerttrigger_chanel_and_more'),
     ]
 
     operations = [
