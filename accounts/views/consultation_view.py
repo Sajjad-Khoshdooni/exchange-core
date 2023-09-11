@@ -16,6 +16,10 @@ class ConsultationSerializer(ModelSerializer):
     class Meta:
         model = Consultation
         fields = ('consultee', 'description',)
+        extra_kwargs = {
+            'consultee': {'write_only': True},
+            'description': {'write_only': True}
+        }
 
 
 class ConsultationView(CreateAPIView):
