@@ -216,7 +216,7 @@ class User(AbstractUser):
         Notification.send(
             recipient=self,
             title='محدودیت برداشت',
-            message=f'برداشت‌های شما به دلیل {reason} تا {duration} آینده محدود شده است.',
+            message=f'برداشت‌های رمزارزی شما به دلیل {reason} تا {duration} آینده محدود شده است.',
         )
         send_kavenegar_exclusive_sms(self.phone, content=content)
 
