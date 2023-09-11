@@ -9,7 +9,6 @@ from ledger.utils.depth import get_base_price_and_spread, NoDepthError
 from ledger.utils.external_price import fetch_external_redis_prices, BUY, SELL, get_other_side, fetch_external_depth, \
     IRT, USDT, fetch_external_price
 from ledger.utils.otc import spread_to_multiplier, get_otc_spread
-from market.models import Order, PairSymbol
 
 USDT_IRT = 'USDTIRT'
 
@@ -52,6 +51,7 @@ def get_all_otc_spreads(side):
 
 def get_prices(symbols: List[str], side: str, allow_stale: bool = False) -> Dict[str, Decimal]:
     assert side in (BUY, SELL)
+    from market.models import Order
 
     if USDT_IRT not in symbols:
         symbols.append(USDT_IRT)
@@ -100,6 +100,8 @@ def get_prices(symbols: List[str], side: str, allow_stale: bool = False) -> Dict
 
 
 def get_last_prices(symbols: List[str]):
+    from market.models import PairSymbol
+
     if USDT_IRT not in symbols:
         symbols.append(USDT_IRT)
 
@@ -162,6 +164,8 @@ def get_last_price(symbol: str) -> Decimal:
 
 
 def get_depth_price(symbol: str, side: str, amount: Decimal):
+    from market.models import Order, PairSymbol
+
     pair_symbol = PairSymbol.objects.filter(name=symbol).first()
 
     if pair_symbol.enable:
