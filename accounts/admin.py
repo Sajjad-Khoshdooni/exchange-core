@@ -9,7 +9,7 @@ from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounts.models import FirebaseToken, Attribution, AppStatus, VerificationCode, \
-    UserFeedback, BulkNotification, EmailNotification, Consultation
+    UserFeedback, BulkNotification, EmailNotification, Consultation, SystemConfig
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -177,6 +177,12 @@ class ConsultationAdmin(admin.ModelAdmin):
             return description[:n] + '...'
         else:
             return description
+
+
+@admin.register(SystemConfig)
+class SystemConfigAdmin(admin.ModelAdmin):
+    list_display = ('active', 'is_consultation_available',)
+    list_filter = ('active',)
 
 
 @admin.register(User)
@@ -648,7 +654,7 @@ class AccountAdmin(admin.ModelAdmin):
 
     def get_total_balance_irt_admin(self, account: Account):
         total_balance_irt = account.get_total_balance_irt(side=BUY)
-        
+
         return humanize_number(int(total_balance_irt))
 
     get_total_balance_irt_admin.short_description = 'دارایی به تومان'
