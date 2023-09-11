@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0142_merge_20230820_1416'),
+        ('accounts', '0142_historicaluser_is_price_notif_on_and_more'),
     ]
 
     operations = [
