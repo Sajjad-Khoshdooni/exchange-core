@@ -86,12 +86,15 @@ class ChangePhoneView(APIView):
         serializer = NewPhoneVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = request.user
+
         user.phone = serializer.validated_data['new_phone']
         user.username = user.phone
         user.level = min(user.level, user.LEVEL2)
         user.national_code_phone_verified = None
+
         user.change_status(User.PENDING)
         basic_verify_user.delay(user.id)
+
         user.suspend(timedelta(days=1), 'تغییر شماره‌ تلفن')
         user.save(update_fields=['level', 'national_code_phone_verified', 'phone', 'username'])
         send_successful_change_phone_email(user)
