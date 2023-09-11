@@ -11,13 +11,13 @@ class ConsultationSerializer(ModelSerializer):
         user = self.context['request'].user
         if user.is_consulted:
             raise ValidationError('کاربر قبلا مشاوره شده است.')
+        attrs['consultee'] = user
         return attrs
 
     class Meta:
         model = Consultation
-        fields = ('consultee', 'description',)
+        fields = ('description',)
         extra_kwargs = {
-            'consultee': {'write_only': True},
             'description': {'write_only': True}
         }
 
