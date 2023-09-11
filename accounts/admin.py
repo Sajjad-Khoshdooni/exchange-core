@@ -9,7 +9,7 @@ from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounts.models import FirebaseToken, Attribution, AppStatus, VerificationCode, \
-    UserFeedback, BulkNotification, EmailNotification
+    UserFeedback, BulkNotification, EmailNotification, Consultation, SystemConfig
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -160,6 +160,30 @@ class UserReferredFilter(SimpleListFilter):
             return queryset
 
 
+@admin.register(Consultation)
+class ConsultationAdmin(admin.ModelAdmin):
+    list_display = ('created', 'consultee', 'consulter', 'status', 'get_description',)
+    readonly_fields = ('created',)
+    raw_id_fields = ('consultee', 'consulter',)
+    list_filter = ('status',)
+    search_fields = ('consulter__phone', 'consulter__email', 'consultee__phone', 'consultee__email',)
+
+    @admin.display(description='description')
+    def get_description(self, consultation: Consultation):
+        n = 300
+        description = consultation.description
+        if len(description) > n:
+            return description[:n] + '...'
+        else:
+            return description
+
+
+@admin.register(SystemConfig)
+class SystemConfigAdmin(admin.ModelAdmin):
+    list_display = ('active', 'is_consultation_available',)
+    list_filter = ('active',)
+
+
 @admin.register(User)
 class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     default_edit_condition = M.superuser
@@ -227,7 +251,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)}),
         (_("کدهای دعوت کاربر"), {'fields': (
             'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred')}),
-        (_('اطلاعات اضافی'), {'fields': ('is_price_notif_on', 'is_suspended', 'suspended_until',)})
+        (_('اطلاعات اضافی'), {'fields': ('is_price_notif_on', 'is_suspended', 'suspended_until', 'is_consulted',)})
     )
 
     list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
@@ -236,7 +260,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     list_filter = (
         'archived', ManualNameVerifyFilter, 'level', 'national_code_phone_verified', 'date_joined', 'verify_status', 'level_2_verify_datetime',
         'level_3_verify_datetime', UserStatusFilter, UserNationalCodeFilter, AnotherUserFilter, UserPendingStatusFilter,
-        'is_staff', 'is_superuser', 'is_active', 'groups', UserReferredFilter
+        'is_staff', 'is_superuser', 'is_active', 'groups', UserReferredFilter,
     )
     inlines = [UserCommentInLine, UserFeatureInLine]
     ordering = ('-id', )
@@ -256,7 +280,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
-        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended',
+        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended', 'is_consulted',
     )
     preserve_filters = ('archived', )
 
@@ -629,7 +653,7 @@ class AccountAdmin(admin.ModelAdmin):
 
     def get_total_balance_irt_admin(self, account: Account):
         total_balance_irt = account.get_total_balance_irt(side=BUY)
-        
+
         return humanize_number(int(total_balance_irt))
 
     get_total_balance_irt_admin.short_description = 'دارایی به تومان'
