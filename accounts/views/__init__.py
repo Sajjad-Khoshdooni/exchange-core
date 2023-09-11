@@ -33,3 +33,4 @@ from .feedback_view import UserFeedbackView
 from .notify_view import NotifyView
 from .user_statistics_view import UserStatisticsView
 
+from .consultation_view import ConsultationView
