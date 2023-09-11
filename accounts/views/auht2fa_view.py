@@ -7,6 +7,8 @@ from rest_framework.views import APIView
 from accounts.models.phone_verification import VerificationCode
 from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
 
+from datetime import timedelta
+
 ACTIVATE = 'activate'
 DEACTIVATE = 'deactivate'
 
@@ -82,6 +84,7 @@ class TOTPView(APIView):
             device.confirmed = False
             device.save(update_fields=['confirmed'])
             send_2fa_deactivation_message(user=user)
+            user.suspend(duration=timedelta(days=1), reason='غیرفعال کردن شناسه ‌دوعاملی')
             return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری غیرفعال شد.'})
         else:
             return Response({'msg': 'ورود دومرحله‌ای غیرفعال است.'})
