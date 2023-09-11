@@ -9,7 +9,7 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 from django.core.exceptions import ValidationError
 
 from accounts.models import VerificationCode
-from accounts.models import User, CustomToken
+from accounts.models import User, CustomToken, SystemConfig
 from accounts.utils.hijack import get_hijacker_id
 from financial.models.bank_card import BankCardSerializer, BankAccountSerializer
 
@@ -18,6 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
     show_staking = serializers.SerializerMethodField()
     show_strategy_bot = serializers.SerializerMethodField()
     is_2fa_active = serializers.SerializerMethodField()
+    is_consultation_available = serializers.SerializerMethodField()
 
     def get_chat_uuid(self, user: User):
         request = self.context['request']
@@ -26,6 +27,9 @@ class UserSerializer(serializers.ModelSerializer):
             return ''
         else:
             return user.chat_uuid
+
+    def get_is_consultation_available(self, user: User):
+        return not user.is_consulted and SystemConfig.get_system_config().is_consultation_available
 
     def get_is_2fa_active(self, user: User):
         device = TOTPDevice.objects.filter(user=user).first()
