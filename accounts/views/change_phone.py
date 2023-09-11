@@ -5,6 +5,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.tasks import basic_verify_user
+from accounts.models import User
 from accounts.models import VerificationCode
 from accounts.utils.notif import send_successful_change_phone_email
 from accounts.validators import mobile_number_validator
@@ -52,6 +54,10 @@ class UserVerifySerializer(serializers.Serializer):
         token_verification = VerificationCode.get_by_token(token, VerificationCode.SCOPE_CHANGE_PHONE)
         if not token_verification:
             raise ValidationError('توکن نامعتبر است.')
+
+        if User.objects.filter(phone=new_phone):
+            raise ValidationError(
+                'شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.')
         token_verification.set_token_used()
         VerificationCode.send_otp_code(new_phone, VerificationCode.SCOPE_CHANGE_PHONE)
         return data
@@ -83,7 +89,9 @@ class ChangePhoneView(APIView):
         user.phone = serializer.validated_data['new_phone']
         user.username = user.phone
         user.level = min(user.level, user.LEVEL2)
-        user.national_code_phone_verified = False
+        user.national_code_phone_verified = None
+        user.change_status(User.PENDING)
+        basic_verify_user.delay(user.id)
         user.suspend(timedelta(days=1), 'تغییر شماره‌ تلفن')
         user.save(update_fields=['level', 'national_code_phone_verified', 'phone', 'username'])
         send_successful_change_phone_email(user)
