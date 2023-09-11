@@ -9,7 +9,7 @@ from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounts.models import FirebaseToken, Attribution, AppStatus, VerificationCode, \
-    UserFeedback, BulkNotification, EmailNotification
+    UserFeedback, BulkNotification, EmailNotification, Consultation
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -158,6 +158,25 @@ class UserReferredFilter(SimpleListFilter):
             return queryset.filter(account__referred_by__owner__user_id=owner_id)
         else:
             return queryset
+
+
+@admin.register(Consultation)
+class ConsultationAdmin(admin.ModelAdmin):
+    # todo: truncate
+    list_display = ('created', 'consultee', 'consulter', 'status', 'get_description',)
+    readonly_fields = ('created',)
+    raw_id_fields = ('consultee', 'consulter',)
+    list_filter = ('status',)
+    search_fields = ('consulter__phone', 'consulter__email', 'consultee__phone', 'consultee__email',)
+
+    @admin.display(description='description')
+    def get_description(self, consultation: Consultation):
+        n = 300
+        description = consultation.description
+        if len(description) > n:
+            return description[:n] + '...'
+        else:
+            return description
 
 
 @admin.register(User)
