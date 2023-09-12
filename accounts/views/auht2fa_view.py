@@ -1,13 +1,19 @@
-from django.core.exceptions import ValidationError
-from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import CreateAPIView
+from rest_framework.serializers import ModelSerializer
 
-from accounts.models.phone_verification import VerificationCode
-from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
+from django.core.exceptions import ValidationError
+from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
 
 from datetime import timedelta
+
+from accounts.models import Forget2FA
+from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
+from accounts.views.login_view import LoginSerializer
+from accounts.models.phone_verification import VerificationCode
+from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
 
 ACTIVATE = 'activate'
 DEACTIVATE = 'deactivate'
@@ -88,3 +94,37 @@ class TOTPView(APIView):
             return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری غیرفعال شد.'})
         else:
             return Response({'msg': 'ورود دومرحله‌ای غیرفعال است.'})
+
+
+class CustomLoginSerializer(LoginSerializer):
+
+    def validate(self, attrs):
+        login = attrs['login'].lower()
+        password = attrs['password']
+        user = authenticate(login=login, password=password)
+        if not user:
+            raise ValidationError({'user': 'نام کاربری یا رمز عبور نادرست است.'})
+        if user.is_2fa_valid(None):
+            raise ValidationError({'totp': 'شناسه دوعاملی غیرفعال می‌باشد.'})
+        return user
+
+
+class Forget2FASerializer(ModelSerializer):
+    user = CustomLoginSerializer(write_only=True)
+
+    class Meta:
+        model = Forget2FA
+        fields = ('user', 'selfie_image',)
+        extra_kwargs = {
+            'user': {'write_only': True},
+            'selfie_image': {'write_only': True, 'required': True}
+        }
+
+
+class Forget2FAView(CreateAPIView):
+    serializer_class = Forget2FASerializer
+    permission_classes = []
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
+
+    class Meta:
+        model = Forget2FA
