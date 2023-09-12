@@ -162,11 +162,10 @@ class UserReferredFilter(SimpleListFilter):
 
 @admin.register(Consultation)
 class ConsultationAdmin(admin.ModelAdmin):
-    list_display = ('created', 'consultee', 'consulter', 'status', 'get_description',)
+    list_display = ('created', 'user', 'consulter', 'status', 'get_description',)
     readonly_fields = ('created',)
-    raw_id_fields = ('consultee', 'consulter',)
     list_filter = ('status',)
-    search_fields = ('consulter__phone', 'consulter__email', 'consultee__phone', 'consultee__email',)
+    search_fields = ('user__phone', 'user__email',)
 
     @admin.display(description='description')
     def get_description(self, consultation: Consultation):

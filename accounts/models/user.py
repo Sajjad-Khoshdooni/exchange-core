@@ -179,7 +179,7 @@ class User(AbstractUser):
     def is_consulted(self):
         from accounts.models import Consultation
         return Consultation.objects.filter(
-            consultee=self
+            user=self
         ).exists()
 
     def is_2fa_valid(self, totp):

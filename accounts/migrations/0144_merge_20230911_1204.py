@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('accounts', '0141_historicaluser_suspended_until_user_suspended_until_and_more'),
         ('accounts', '0141_merge_20230802_1738'),
-        ('accounts', '0143_alter_customtoken_scopes'),
+        ('accounts', '0142_historicaluser_is_price_notif_on_and_more'),
     ]
 
     operations = [

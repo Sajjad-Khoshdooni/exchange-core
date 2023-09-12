@@ -1,25 +1,29 @@
 from django.db import models
+
 from accounts.models import User
+from ledger.utils.fields import get_status_field
 
 
 class Consultation(models.Model):
-    PENDING, DONE = 'pending', 'DONE'
-
     created = models.DateTimeField(auto_now_add=True)
-    consultee = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='کاربر متقاضی مشاوره',
-                                  related_name='consultee_consultations')
-    consulter = models.ForeignKey(User, limit_choices_to={'is_staff': True}, on_delete=models.PROTECT,
-                                  null=True, blank=True, verbose_name='مشاور',
-                                  related_name='consulter_consultations')
 
-    status = models.CharField(choices=[
-        (PENDING, PENDING),
-        (DONE, DONE)
-    ],
-        default=PENDING,
-        max_length=15,
-        verbose_name='وضعیت'
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='کاربر'
     )
+
+    consulter = models.ForeignKey(
+        User,
+        limit_choices_to={'is_staff': True},
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name='مشاور',
+        related_name='consulters'
+    )
+
+    status = get_status_field()
     description = models.TextField(null=True, blank=True, verbose_name='توضیحات کاربر')
     comment = models.TextField(null=True, blank=True, verbose_name='نظر مشاور')
 
