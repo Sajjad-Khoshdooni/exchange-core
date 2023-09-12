@@ -48,12 +48,22 @@ class AccountTradeHistoryView(ListAPIView):
             status=Trade.DONE,
         )
 
-        if self.request.query_params.get('agent') and self.request.query_params.get('strategy'):
-            reserve_wallet = ReserveWallet.objects.filter(
-                request_id=f'strategy:{self.request.query_params.get("strategy")}:{self.request.query_params.get("agent")}'
-            ).first()
-            orders = set(Order.objects.filter(wallet__variant=reserve_wallet.group_id, filled_amount__gt=Decimal('0')).
-                         values_list('id', flat=True))
+        strategy = self.request.query_params.get('strategy')
+        agent = self.request.query_params.get('agent')
+
+        if agent and strategy:
+            reserve_wallet = get_object_or_404(
+                ReserveWallet,
+                request_id=f'strategy:{strategy}:{agent}'
+            )
+
+            orders = set(
+                Order.objects.filter(
+                    wallet__variant=reserve_wallet and reserve_wallet.group_id,
+                    filled_amount__gt=Decimal('0')
+                ).values_list('id', flat=True)
+            )
+
             trades.filter(order_id__in=orders)
 
         market = self.request.query_params.get('market')
