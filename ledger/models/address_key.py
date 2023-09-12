@@ -8,6 +8,7 @@ class AddressKey(models.Model):
     public_address = models.CharField(max_length=256)
     architecture = models.CharField(max_length=16)
     created = models.DateTimeField(auto_now_add=True)
+    memo = models.CharField(max_length=256, blank=True, null=True)
 
     deleted = models.BooleanField(default=False)
 

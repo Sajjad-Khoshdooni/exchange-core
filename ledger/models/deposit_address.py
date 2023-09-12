@@ -30,6 +30,7 @@ class DepositAddress(models.Model):
                 defaults={
                     'address': address_dict.get('address'),
                     'public_address': address_dict.get('address'),
+                    'memo': address_dict.get('memo', '')
                 }
             )
 
