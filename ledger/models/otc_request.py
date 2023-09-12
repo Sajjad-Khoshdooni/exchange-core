@@ -107,9 +107,8 @@ class OTCRequest(BaseTrade):
             otc_request.base_usdt_price = 1 / usdt_irt_price
             otc_request.base_irt_price = 1
 
-        price = get_price(symbol.name, side=other_side)
-
         if pair.coin_amount is None:
+            price = get_price(symbol.name, side=other_side)
             coin_amount = floor_precision(pair.base_amount / price, symbol.step_size)
         else:
             coin_amount = pair.coin_amount
