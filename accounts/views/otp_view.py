@@ -14,6 +14,8 @@ class VerifyOTPSerializer(serializers.ModelSerializer):
         code = validated_data['code']
         scope = validated_data['scope']
 
+        if scope == VerificationCode.SCOPE_CHANGE_PHONE_INIT:
+            raise ValidationError({'restricted scope': 'change_phone_init'})
         otp_code = VerificationCode.get_by_code(
             code=code,
             phone=phone,
@@ -55,8 +57,8 @@ class OTPSerializer(serializers.ModelSerializer):
         scope = validated_data['scope']
         user = validated_data['user']
 
-        if scope == VerificationCode.SCOPE_CHANGE_PHONE_V1:
-            raise ValidationError('restricted scope')
+        if scope == VerificationCode.SCOPE_NEW_PHONE:
+            raise ValidationError({'restricted scope': 'new_phone'})
         if scope == VerificationCode.SCOPE_TELEPHONE:
             phone = user.telephone
 
