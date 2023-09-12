@@ -10,8 +10,8 @@ from accounts.models import Account
 from ledger.exceptions import InsufficientBalance
 from ledger.margin.margin_info import MarginInfo
 from ledger.models import Asset, Wallet, Trx
-from ledger.utils.external_price import SELL, get_external_price
 from ledger.utils.fields import get_amount_field, get_status_field, get_group_id_field, get_created_field, DONE, PENDING
+from ledger.utils.price import get_last_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
 
@@ -136,7 +136,7 @@ class MarginLoan(models.Model):
             )
         else:
             margin_info = MarginInfo.get(account)
-            price = get_external_price(asset.symbol, base_coin=Asset.USDT, side=SELL)
+            price = get_last_price(asset.symbol + Asset.USDT)
 
             # max_borrowable = margin_info.get_max_borrowable() / price
 

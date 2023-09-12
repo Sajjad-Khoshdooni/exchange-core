@@ -5,8 +5,8 @@ from decouple import config
 from django.db import transaction
 
 from ledger.models import Wallet, OTCTrade, OTCRequest, Asset, CloseRequest, MarginLoan, Trx
-from ledger.utils.external_price import get_external_price, SELL
 from ledger.utils.fields import PENDING, DONE
+from ledger.utils.price import get_last_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
 
@@ -118,7 +118,7 @@ class MarginCloser:
                     pipeline=pipeline
                 )
 
-            price = get_external_price(asset.symbol, base_coin=Asset.USDT, side=SELL)
+            price = get_last_price(asset.symbol + Asset.USDT)
             self._liquidated_value += amount * price
 
     def _provide_tether(self):
@@ -211,7 +211,7 @@ class MarginCloser:
                     pipeline=pipeline
                 )
 
-            price = get_external_price(coin=asset.symbol, base_coin=Asset.USDT, side=SELL)
+            price = get_last_price(asset.symbol + Asset.USDT)
             self._liquidated_value += amount * price
 
         if insurance_asked:

@@ -6,8 +6,9 @@ from dataclasses import dataclass
 from django.db import models
 
 from accounts.models import Account
-from ledger.utils.external_price import SHORT, LONG, BUY, SELL, get_external_price
+from ledger.utils.external_price import SHORT, LONG, BUY, SELL
 from ledger.utils.fields import get_amount_field
+from ledger.utils.price import get_last_price
 from market.models import PairSymbol
 
 
@@ -63,8 +64,7 @@ class MarginPosition(models.Model):
     def total_debt(self):
         if self.side == SHORT:
             from market.models import Order
-            price = Order.get_top_price(self.symbol.id, SELL) or \
-                    get_external_price(self.symbol.asset.symbol, base_coin=self.symbol.base_asset.symbol, side=BUY)
+            price = get_last_price(self.symbol.name)
         else:
             price = Decimal(1)
         return self.debt_amount * price

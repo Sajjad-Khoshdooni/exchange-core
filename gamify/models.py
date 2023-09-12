@@ -7,9 +7,9 @@ from django.utils import timezone
 
 from accounts.models import Notification, Account, User
 from ledger.models import Prize, Asset
-from ledger.utils.external_price import BUY, get_external_price
 from ledger.utils.fields import get_amount_field, get_created_field
 from ledger.utils.precision import humanize_number
+from ledger.utils.price import get_last_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -141,7 +141,7 @@ class Achievement(models.Model):
                 voucher_expiration = timezone.now() + timedelta(days=7)
 
         if not voucher:
-            price = get_external_price(Asset.SHIB, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
+            price = get_last_price(Asset.SHIB + Asset.USDT) or 0
             value = amount * price
 
         with WalletPipeline() as pipeline:

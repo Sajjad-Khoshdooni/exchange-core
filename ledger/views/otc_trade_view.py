@@ -10,12 +10,15 @@ from rest_framework.views import APIView
 
 from accounts.models import Account, LoginActivity
 from accounts.permissions import can_trade
-from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease, HedgeError, LargeAmountTrade
+from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease, HedgeError, LargeAmountTrade, \
+    SmallDepthError
 from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired
-from ledger.utils.external_price import BUY
+from ledger.utils.external_price import BUY, SIDE_VERBOSE
 from ledger.utils.fields import get_serializer_amount_field
+from ledger.utils.otc import get_trading_pair
+from ledger.utils.precision import get_presentation_amount
 
 
 class OTCInfoView(APIView):
@@ -159,6 +162,17 @@ class OTCRequestSerializer(serializers.ModelSerializer):
             raise ValidationError('ارزش معامله، حداکثر ۲ میلیارد تومان می‌تواند باشد.')
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست.'})
+        except SmallDepthError as exp:
+            max_amount = get_presentation_amount(exp.args[0], trunc_zero=True)
+            pair = get_trading_pair(from_asset, to_asset)
+            side_verbose = SIDE_VERBOSE[pair.side]
+
+            if max_amount == 0:
+                raise ValidationError('در حال حاضر امکان {} این رمزارز وجود ندارد.'.format(side_verbose))
+            else:
+                raise ValidationError(
+                    'حداکثر مقدار قابل {} این رمزارز {} {} است.'.format(side_verbose, max_amount, pair.coin)
+                )
 
     def get_expire(self, otc: OTCRequest):
         return otc.get_expire_time()

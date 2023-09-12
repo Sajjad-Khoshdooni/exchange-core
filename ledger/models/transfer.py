@@ -24,9 +24,9 @@ from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
-from ledger.utils.external_price import get_external_price, SELL
 from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
+from ledger.utils.price import get_last_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -162,18 +162,8 @@ class Transfer(models.Model):
 
         group_id = uuid4()
 
-        price_usdt = get_external_price(
-            coin=sender_wallet.asset.symbol,
-            base_coin=Asset.USDT,
-            side=SELL,
-            allow_stale=True,
-        ) or 0
-        price_irt = get_external_price(
-            coin=sender_wallet.asset.symbol,
-            base_coin=Asset.IRT,
-            side=SELL,
-            allow_stale=True,
-        ) or 0
+        price_usdt = get_last_price(sender_wallet.asset.symbol + Asset.USDT) or 0
+        price_irt = get_last_price(sender_wallet.asset.symbol + Asset.IRT) or 0
 
         with WalletPipeline() as pipeline:
             pipeline.new_trx(
@@ -242,18 +232,8 @@ class Transfer(models.Model):
 
         commission = network_asset.withdraw_fee
 
-        price_usdt = get_external_price(
-            coin=wallet.asset.symbol,
-            base_coin=Asset.USDT,
-            side=SELL,
-            allow_stale=True,
-        ) or 0
-        price_irt = get_external_price(
-            coin=wallet.asset.symbol,
-            base_coin=Asset.IRT,
-            side=SELL,
-            allow_stale=True,
-        ) or 0
+        price_irt = get_last_price(wallet.asset.symbol + Asset.IRT) or 0
+        price_usdt = get_last_price(wallet.asset.symbol + Asset.USDT) or 0
 
         with WalletPipeline() as pipeline:  # type: WalletPipeline
             transfer = Transfer.objects.create(

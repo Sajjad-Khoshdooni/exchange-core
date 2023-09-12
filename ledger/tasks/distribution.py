@@ -5,7 +5,7 @@ from django.db.models import Sum
 
 from accounts.models import Account
 from ledger.models import Wallet, Asset
-from ledger.utils.external_price import get_external_usdt_prices, BUY
+from ledger.utils.price import get_last_prices, get_coins_symbols
 
 
 def get_distribution_factor(nums: list) -> float:
@@ -39,11 +39,7 @@ def update_distribution_factors():
 
     assets = Asset.live_objects.all()
 
-    prices = get_external_usdt_prices(
-        coins=list(assets.values_list('symbol', flat=True)),
-        side=BUY,
-        allow_stale=True,
-    )
+    prices = get_last_prices(get_coins_symbols(list(assets.values_list('symbol', flat=True)), only_base=Asset.USDT))
 
     assets_list = list(assets)
 

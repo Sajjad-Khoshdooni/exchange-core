@@ -12,9 +12,9 @@ from rest_framework.viewsets import ModelViewSet
 from ledger.models import Wallet, MarginPosition
 from ledger.models.asset import Asset, AssetSerializerMini
 from ledger.utils.external_price import SELL
-from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.precision import get_symbol_presentation_amount
+from ledger.utils.price import get_last_price
 from market.models import Order, PairSymbol
 
 
@@ -45,7 +45,7 @@ class MarginAssetListSerializer(AssetSerializerMini):
         if not wallet:
             return '0'
 
-        price = get_external_price(coin=wallet.asset.symbol, base_coin=Asset.USDT, side=BUY, allow_stale=True)
+        price = get_last_price(wallet.asset.symbol + Asset.USDT)
         amount = wallet.balance * price
 
         return get_symbol_presentation_amount(asset.symbol + 'USDT', amount)
@@ -135,10 +135,8 @@ class MarginAssetSerializer(AssetSerializerMini):
         if asset.symbol == Asset.USDT:
             price = Decimal(1)
         else:
-            symbol_id = PairSymbol.get_by(f'{asset.symbol}{Asset.USDT}').id
             # TODO: use bulk symbols prices
-            price = Order.get_top_price(symbol_id, SELL) or \
-                    get_external_price(coin=asset.symbol, base_coin=Asset.USDT, side=SELL, allow_stale=True)
+            price = get_last_price(asset.symbol + Asset.USDT)
         amount = wallet['balance'] * price
         return get_symbol_presentation_amount(asset.symbol + 'USDT', amount)
 

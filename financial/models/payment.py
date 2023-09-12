@@ -16,10 +16,10 @@ from accounts.utils import email
 from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, Asset
-from ledger.utils.external_price import get_external_price
 from ledger.utils.fields import DONE
 from ledger.utils.fields import get_group_id_field, get_status_field
 from ledger.utils.precision import humanize_number, get_presentation_amount
+from ledger.utils.price import get_last_price, USDT_IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
@@ -191,7 +191,7 @@ def handle_payment_save(sender, instance, created, **kwargs):
     if instance.status != DONE or settings.DEBUG_OR_TESTING_OR_STAGING:
         return
 
-    usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
+    usdt_price = get_last_price(USDT_IRT)
 
     event = TransferEvent(
         id=instance.id,
