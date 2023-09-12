@@ -10,6 +10,7 @@ from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
 
 from datetime import timedelta
 
+from multimedia.fields import ImageField
 from accounts.models import Forget2FA
 from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
 from accounts.views.login_view import LoginSerializer
@@ -112,14 +113,11 @@ class CustomLoginSerializer(LoginSerializer):
 
 class Forget2FASerializer(ModelSerializer):
     user = CustomLoginSerializer(write_only=True)
+    selfie_image = ImageField(write_only=True)
 
     class Meta:
         model = Forget2FA
         fields = ('user', 'selfie_image',)
-        extra_kwargs = {
-            'user': {'write_only': True},
-            'selfie_image': {'write_only': True, 'required': True}
-        }
 
 
 class Forget2FAView(CreateAPIView):
