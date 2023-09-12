@@ -1,6 +1,8 @@
 from django.db import models
 from django.template.loader import render_to_string
 
+from datetime import timedelta
+
 from accounts.models import User
 from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
 
@@ -29,6 +31,7 @@ class Forget2FA(models.Model):
 
     def send_success_message(self):
         user = self.user
+        user.suspend(duration=timedelta(days=1), reason='فراموشی شناسه دوعاملی')
         context = {}
         content = render_to_string('accounts/notif/sms/2fa_forget_success', context=context)
         send_kavenegar_exclusive_sms(
