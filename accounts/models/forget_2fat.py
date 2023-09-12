@@ -1,4 +1,5 @@
 from django.db import models
+from django.template.loader import render_to_string
 
 from accounts.models import User
 from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
@@ -28,7 +29,8 @@ class Forget2FA(models.Model):
 
     def send_success_message(self):
         user = self.user
-
+        context = {}
+        content = render_to_string('accounts/notif/sms/2fa_forget_success', context=context)
         send_kavenegar_exclusive_sms(
             phone=user.phone,
             content=content
@@ -36,7 +38,8 @@ class Forget2FA(models.Model):
 
     def send_reject_message(self):
         user = self.user
-
+        context = {}
+        content = render_to_string('accounts/notif/sms/2fa_forget_reject', context=context)
         send_kavenegar_exclusive_sms(
             phone=user.phone,
             content=content
