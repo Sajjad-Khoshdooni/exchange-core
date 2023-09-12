@@ -18,4 +18,4 @@ class ConsultationView(CreateAPIView):
     serializer_class = ConsultationSerializer
 
     def perform_create(self, serializer):
-        serializer.save(consultee=self.request.user)
+        serializer.save(user=self.request.user)
