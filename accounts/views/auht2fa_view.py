@@ -44,7 +44,7 @@ class TOTPView(APIView):
 
         if scope == ACTIVATE:
             if device is None:
-                device = TOTPDevice.objects.create(user=user, confirmed=False)
+                device = TOTPDevice.objects.create(user=user, confirmed=False, name='main')
             if device.confirmed is False:
                 device.key = default_key()
                 device.save(update_fields=['key'])

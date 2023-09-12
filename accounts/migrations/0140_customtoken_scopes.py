@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='customtoken',
             name='scopes',
-            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(choices=[('withdraw', 'withdraw'), ('trade', 'trade')], max_length=10), blank=True, default=list, null=True, size=None),
+            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(choices=[('withdraw', 'withdraw'), ('trade', 'trade')], max_length=10), blank=True, default=['trade'], null=True, size=None),
         ),
     ]
