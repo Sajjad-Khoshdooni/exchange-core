@@ -41,7 +41,7 @@ class InitiateChangePhone(APIView):
     def post(self, request):
         serializer = InitiateChangePhoneSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        return Response(serializer.validated_data['token'])
+        return Response({'token': serializer.validated_data['token']})
 
 
 class UserVerifySerializer(serializers.Serializer):
