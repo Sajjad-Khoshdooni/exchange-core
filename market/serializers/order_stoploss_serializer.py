@@ -81,4 +81,3 @@ class OrderStopLossSerializer(serializers.ModelSerializer):
         model = Order
         fields = ('id', 'created', 'wallet', 'symbol', 'amount', 'filled_amount', 'filled_percent', 'price',
                   'filled_price', 'trigger_price', 'side', 'fill_type', 'status', 'market', 'allow_cancel', 'is_oco')
-
