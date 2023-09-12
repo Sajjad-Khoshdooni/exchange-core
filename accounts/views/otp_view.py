@@ -55,6 +55,8 @@ class OTPSerializer(serializers.ModelSerializer):
         scope = validated_data['scope']
         user = validated_data['user']
 
+        if scope == VerificationCode.SCOPE_CHANGE_PHONE_V1:
+            raise ValidationError('restricted scope')
         if scope == VerificationCode.SCOPE_TELEPHONE:
             phone = user.telephone
 
