@@ -167,6 +167,7 @@ def trigger_stop_loss(pipeline: WalletPipeline, stop_loss: StopLoss, triggered_p
     stop_loss.filled_amount += order.filled_amount
     stop_loss.save(update_fields=['filled_amount'])
     stop_loss.refresh_from_db()
+
     logger.info(f'filled order at {triggered_price} with amount: {order.filled_amount}, price: {order.price} for '
                 f'stop loss({stop_loss.id}) {stop_loss.filled_amount} {stop_loss.trigger_price} {stop_loss.price} '
                 f'{stop_loss.side} {timezone.now()}')

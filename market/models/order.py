@@ -235,6 +235,7 @@ class Order(models.Model):
     def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False, is_oco: bool = False) -> MatchedTrades:
         PairSymbol.objects.select_for_update().get(id=self.symbol_id)
         overriding_fill_amount = None
+
         if is_stop_loss:
             if self.side == BUY:
                 locked_amount = BalanceLock.objects.get(key=self.group_id).amount
@@ -242,6 +243,7 @@ class Order(models.Model):
                     overriding_fill_amount = floor_precision(locked_amount / self.price, self.symbol.step_size)
                     if not overriding_fill_amount:
                         raise CancelOrder('Overriding fill amount is zero')
+
         elif not is_oco:
             overriding_fill_amount = self.acquire_lock(pipeline)
 

@@ -47,6 +47,7 @@ class Gateway(models.Model):
     withdraw_api_key = models.CharField(max_length=1024, blank=True)
     withdraw_api_secret_encrypted = models.CharField(max_length=4096, blank=True)
     withdraw_api_password_encrypted = models.CharField(max_length=4096, blank=True)
+    withdraw_bank = models.CharField(max_length=128, blank=True)
 
     deposit_api_key = models.CharField(max_length=1024, blank=True)
     deposit_api_secret_encrypted = models.CharField(max_length=4096, blank=True)
