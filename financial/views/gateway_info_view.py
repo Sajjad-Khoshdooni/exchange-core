@@ -10,8 +10,6 @@ from financial.utils.user import get_today_fiat_deposits
 from ledger.utils.fields import DONE
 from ledger.utils.precision import get_presentation_amount
 
-system_config = SystemConfig.get_system_config()
-
 
 class GatewaySerializer(serializers.ModelSerializer):
     next_ach_time = serializers.SerializerMethodField()
@@ -23,12 +21,15 @@ class GatewaySerializer(serializers.ModelSerializer):
     ipg_withdraw_fee_percent = serializers.SerializerMethodField()
 
     def get_ipg_withdraw_fee_min(self, gateway):
+        system_config = SystemConfig.get_system_config()
         return system_config.ipg_withdraw_fee_min
 
     def get_ipg_withdraw_fee_max(self, gateway):
+        system_config = SystemConfig.get_system_config()
         return system_config.ipg_withdraw_fee_max
 
     def get_ipg_withdraw_fee_percent(self, gateway):
+        system_config = SystemConfig.get_system_config()
         return system_config.ipg_withdraw_fee_percent
 
     def get_next_ach_time(self, gateway):
