@@ -19,6 +19,7 @@ from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdra
     get_crypto_withdraw_irt_value
 from ledger.models import OTCTrade, DepositAddress, Prize, Transfer, Wallet
 from ledger.utils.external_price import BUY
+from ledger.utils.fields import PENDING
 from ledger.utils.precision import humanize_number
 from market.models import Trade, ReferralTrx, Order
 from stake.models import StakeRequest
@@ -186,17 +187,17 @@ class Forget2FAAdmin(admin.ModelAdmin):
 
     @admin.action(description='رد درخواست', permissions=['view'])
     def reject_requests(self, request, queryset):
-        qs = queryset.filter(status=Forget2FA.PENDING)
-        qs.update(status=Forget2FA.REJECTED)
+        qs = queryset.filter(status=PENDING)
+
         for forget_request in qs:
             forget_request.reject()
 
     @admin.action(description='تایید درخواست', permissions=['view'])
     def accept_requests(self, request, queryset):
-        qs = queryset.filter(status=Forget2FA.PENDING)
-        qs.update(status=Forget2FA.ACCEPTED)
+        qs = queryset.filter(status=PENDING)
+
         for forget_request in qs:
-            forget_request.aceept()
+            forget_request.accept()
 
 
 @admin.register(SystemConfig)
