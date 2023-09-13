@@ -16,6 +16,7 @@ class GatewaySerializer(serializers.ModelSerializer):
     pay_id_enable = serializers.SerializerMethodField()
     max_deposit_amount = serializers.SerializerMethodField()
     ipg_fee_percent = serializers.SerializerMethodField()
+
     ipg_withdraw_fee_min = serializers.SerializerMethodField()
     ipg_withdraw_fee_max = serializers.SerializerMethodField()
     ipg_withdraw_fee_percent = serializers.SerializerMethodField()
@@ -56,7 +57,7 @@ class GatewaySerializer(serializers.ModelSerializer):
         model = Gateway
         fields = (
             'id', 'min_deposit_amount', 'max_deposit_amount', 'next_ach_time', 'pay_id_enable', 'ipg_fee_min',
-            'ipg_fee_max', 'ipg_fee_percent'
+            'ipg_fee_max', 'ipg_fee_percent', 'ipg_withdraw_fee_min', 'ipg_withdraw_fee_max', 'ipg_withdraw_fee_percent',
         )
 
 
