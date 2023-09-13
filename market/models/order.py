@@ -207,14 +207,23 @@ class Order(models.Model):
     def get_price_filter(price, side):
         return {'price__lte': price} if side == BUY else {'price__gte': price}
 
-    @classmethod
-    def get_to_lock_wallet(cls, wallet, base_wallet, side, lock_amount) -> Wallet:
+    def get_to_lock_wallet(self, wallet, base_wallet, side, lock_amount) -> Wallet:
         if wallet.market == Wallet.MARGIN:
-            margin_cross_wallet = base_wallet.asset.get_wallet(
-                base_wallet.account, market=base_wallet.market, variant=None
-            )
-            margin_cross_wallet.has_balance(lock_amount, raise_exception=True)
-            return margin_cross_wallet
+
+            if side == SELL:
+                margin_cross_wallet = base_wallet.asset.get_wallet(
+                    base_wallet.account, market=base_wallet.market, variant=None
+                )
+                return margin_cross_wallet
+            else:
+                from ledger.models import MarginPosition
+
+                position = MarginPosition.objects.filter(
+                    account=wallet.account, symbol=self.symbol, status=MarginPosition.OPEN
+                ).first()
+
+                return position.margin_base_wallet
+
         return base_wallet if side == BUY else wallet
 
     @classmethod
@@ -255,6 +264,7 @@ class Order(models.Model):
             StopLoss.trigger(self, min_price, max_price, matched_trades, pipeline)
             from ledger.models import MarginPosition
             MarginPosition.check_for_liquidation(self, min_price, max_price, pipeline)
+
         return matched_trades
 
     def acquire_lock(self, pipeline: WalletPipeline):

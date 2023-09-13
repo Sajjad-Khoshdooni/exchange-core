@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Union
+from uuid import UUID
 
 from django.conf import settings
 from django.db import models
@@ -81,8 +82,9 @@ class Asset(models.Model):
         else:
             return Asset.PRECISION
 
-    def get_wallet(self, account: Union[Account, int], market: str = Wallet.SPOT, variant: str = None,
-                   expiration: datetime = None):
+    def get_wallet(self, account: Union[Account, int], market: str = Wallet.SPOT,
+                   variant: Union[str, None, UUID] = None, expiration: datetime = None):
+
         assert market in Wallet.MARKETS
 
         if isinstance(account, int):
