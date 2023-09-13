@@ -9,7 +9,7 @@ from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounts.models import FirebaseToken, Attribution, AppStatus, VerificationCode, \
-    UserFeedback, BulkNotification, EmailNotification, Consultation, SystemConfig
+    UserFeedback, BulkNotification, EmailNotification, Consultation, SystemConfig, Forget2FA
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -177,11 +177,32 @@ class ConsultationAdmin(admin.ModelAdmin):
             return description
 
 
+@admin.register(Forget2FA)
+class Forget2FAAdmin(admin.ModelAdmin):
+    list_display = ('created', 'status', 'user',)
+    readonly_fields = ('created', 'status', 'user', 'selfie_image')
+    raw_id_fields = ('user',)
+    actions = ('accept_requests', 'reject_requests',)
+
+    @admin.action(description='رد درخواست', permissions=['view'])
+    def reject_requests(self, request, queryset):
+        qs = queryset.filter(status=Forget2FA.PENDING)
+        qs.update(status=Forget2FA.REJECTED)
+        for forget_request in qs:
+            forget_request.reject()
+
+    @admin.action(description='تایید درخواست', permissions=['view'])
+    def accept_requests(self, request, queryset):
+        qs = queryset.filter(status=Forget2FA.PENDING)
+        qs.update(status=Forget2FA.ACCEPTED)
+        for forget_request in qs:
+            forget_request.aceept()
+
+
 @admin.register(SystemConfig)
 class SystemConfigAdmin(admin.ModelAdmin):
     list_display = ('active', 'is_consultation_available',)
     list_filter = ('active',)
-
 
 @admin.register(User)
 class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
