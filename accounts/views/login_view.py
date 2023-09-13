@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 class LoginSerializer(serializers.Serializer):
-    login = serializers.CharField(required=True)
-    password = serializers.CharField(required=True)
-    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False)
+    login = serializers.CharField(required=True, write_only=True)
+    password = serializers.CharField(required=True, write_only=True)
+    totp = serializers.CharField(allow_null=True, allow_blank=True, required=False, write_only=True)
 
     def save(self, **kwargs):
         login = self.validated_data['login'].lower()
