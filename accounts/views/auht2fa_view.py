@@ -119,6 +119,8 @@ class CustomLoginSerializer(serializers.Serializer):
 
 class Forget2FAInitView(CreateAPIView):
     serializer_class = CustomLoginSerializer
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
+    permission_classes = []
 
 
 class Forget2FASerializer(ModelSerializer):
