@@ -208,6 +208,7 @@ class User(AbstractUser):
         else:
             self.suspended_until = max(past_suspension, suspended_until)
         self.save(update_fields=['suspended_until'])
+
         if past_suspension != self.suspended_until:
             self.send_suspension_message(reason, duration)
 
