@@ -2,6 +2,7 @@ from django.db.models import Sum
 from rest_framework import serializers
 from rest_framework.generics import RetrieveAPIView
 
+from accounts.models import SystemConfig
 from accounts.models.user_feature_perm import UserFeaturePerm
 from financial.models import Gateway, Payment
 from financial.utils.ach import next_ach_clear_time
@@ -9,12 +10,26 @@ from financial.utils.user import get_today_fiat_deposits
 from ledger.utils.fields import DONE
 from ledger.utils.precision import get_presentation_amount
 
+system_config = SystemConfig.get_system_config()
+
 
 class GatewaySerializer(serializers.ModelSerializer):
     next_ach_time = serializers.SerializerMethodField()
     pay_id_enable = serializers.SerializerMethodField()
     max_deposit_amount = serializers.SerializerMethodField()
     ipg_fee_percent = serializers.SerializerMethodField()
+    ipg_withdraw_fee_min = serializers.SerializerMethodField()
+    ipg_withdraw_fee_max = serializers.SerializerMethodField()
+    ipg_withdraw_fee_percent = serializers.SerializerMethodField()
+
+    def get_ipg_withdraw_fee_min(self, gateway):
+        return system_config.ipg_withdraw_fee_min
+
+    def get_ipg_withdraw_fee_max(self, gateway):
+        return system_config.ipg_withdraw_fee_max
+
+    def get_ipg_withdraw_fee_percent(self, gateway):
+        return system_config.ipg_withdraw_fee_percent
 
     def get_next_ach_time(self, gateway):
         return next_ach_clear_time()

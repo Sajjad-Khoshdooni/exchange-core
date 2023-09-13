@@ -7,7 +7,7 @@ from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
 
-from accounts.models import User
+from accounts.models import User, SystemConfig
 from financial.models import BankCard, Payment, PaymentRequest
 from financial.utils.encryption import decrypt
 from ledger.models import FastBuyToken
@@ -83,6 +83,12 @@ class Gateway(models.Model):
     @property
     def payment_id_secret(self):
         return decrypt(self.payment_id_secret_encrypted)
+
+    @classmethod
+    def get_withdraw_fee(cls, amount):
+        config = SystemConfig.get_system_config()
+        return max(min(amount * config.ipg_withdraw_fee_percent, config.ipg_withdraw_fee_max),
+                   config.ipg_withdraw_fee_min)
 
     @classmethod
     def _find_best_deposit_gateway(cls, user: User = None, amount: Decimal = 0) -> 'Gateway':
