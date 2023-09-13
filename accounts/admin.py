@@ -189,14 +189,14 @@ class Forget2FAAdmin(admin.ModelAdmin):
         qs = queryset.filter(status=Forget2FA.PENDING)
         qs.update(status=Forget2FA.REJECTED)
         for forget_request in qs:
-            forget_request.send_reject_message()
+            forget_request.reject()
 
     @admin.action(description='تایید درخواست', permissions=['view'])
     def accept_requests(self, request, queryset):
         qs = queryset.filter(status=Forget2FA.PENDING)
         qs.update(status=Forget2FA.ACCEPTED)
         for forget_request in qs:
-            forget_request.send_success_message()
+            forget_request.aceept()
 
 
 @admin.register(SystemConfig)

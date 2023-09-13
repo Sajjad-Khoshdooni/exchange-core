@@ -1,10 +1,11 @@
 from django.db import models
 from django.template.loader import render_to_string
+from django.conf import settings
 
 from datetime import timedelta
 
+from accounts.models.sms_notification import SmsNotification
 from accounts.models import User
-from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
 
 
 class Forget2FA(models.Model):
@@ -29,22 +30,22 @@ class Forget2FA(models.Model):
         null=True
     )
 
-    def send_success_message(self):
+    def accept(self):
         user = self.user
         user.suspend(duration=timedelta(days=1), reason='فراموشی شناسه دوعاملی')
-        context = {}
+        context = {'brand': settings.BRAND}
         content = render_to_string('accounts/notif/sms/2fa_forget_success', context=context)
-        send_kavenegar_exclusive_sms(
-            phone=user.phone,
+        SmsNotification.objects.create(
+            recipient=user,
             content=content
         )
 
-    def send_reject_message(self):
+    def reject(self):
         user = self.user
-        context = {}
+        context = {'brand': settings.BRAND}
         content = render_to_string('accounts/notif/sms/2fa_forget_reject', context=context)
-        send_kavenegar_exclusive_sms(
-            phone=user.phone,
+        SmsNotification.objects.create(
+            recipient=user,
             content=content
         )
 
