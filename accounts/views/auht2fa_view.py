@@ -132,7 +132,7 @@ class Forget2FASerializer(ModelSerializer):
 
     class Meta:
         model = Forget2FA
-        fields = ('user', 'selfie_image',)
+        fields = ('token', 'selfie_image',)
 
 
 class Forget2FAView(CreateAPIView):
