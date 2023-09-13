@@ -1,6 +1,7 @@
 import math
 from datetime import datetime
 from decimal import Decimal
+from typing import Union
 
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -44,7 +45,10 @@ class NetworkAsset(models.Model):
     def can_withdraw_enabled(self) -> bool:
         return self.network.can_withdraw and self.can_withdraw and self.hedger_withdraw_enable
 
-    def get_min_deposit(self) -> Decimal:
+    def get_min_deposit(self) -> Union[Decimal, None]:
+        if self.deposit_min == MIN_PRECISION_AMOUNT:
+            return
+
         return self.deposit_min
 
     def __str__(self):
