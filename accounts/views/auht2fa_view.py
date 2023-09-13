@@ -98,7 +98,9 @@ class TOTPView(APIView):
             return Response({'msg': 'ورود دومرحله‌ای غیرفعال است.'})
 
 
-class CustomLoginSerializer(LoginSerializer):
+class CustomLoginSerializer(serializers.Serializer):
+    login = serializers.CharField(required=True, write_only=True)
+    password = serializers.CharField(required=True, write_only=True)
 
     def validate(self, attrs):
         login = attrs['login'].lower()
@@ -117,6 +119,8 @@ class CustomLoginSerializer(LoginSerializer):
 
 class Forget2FAInitView(CreateAPIView):
     serializer_class = CustomLoginSerializer
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
+    permission_classes = []
 
 
 class Forget2FASerializer(ModelSerializer):
