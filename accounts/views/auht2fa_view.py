@@ -128,7 +128,7 @@ class Forget2FASerializer(ModelSerializer):
     selfie_image = ImageField(write_only=True)
 
     def validate(self, attrs):
-        token = attrs['token']
+        token = attrs.pop('token')
         verification_code = VerificationCode.get_by_token(token=token, scope=VerificationCode.SCOPE_FORGET_2FA)
         if not verification_code:
             raise ValidationError({'token': 'توکن نامعتبر است.'})
