@@ -3,6 +3,8 @@ from django.db import models
 from ledger.requester.address_requester import AddressRequester
 from ledger.models.address_key import AddressKey
 from ledger.requester.architecture_requester import get_network_architecture
+from ledger.utils.consts import MEMO_NETWORKS
+from django.db.models import UniqueConstraint, Q
 
 
 class DepositAddress(models.Model):
@@ -50,7 +52,15 @@ class DepositAddress(models.Model):
         UpdateTrxHistory().update_history(deposit_address=self)
 
     class Meta:
-        unique_together = (
-            ('network', 'address'),
-            # ('network', 'address_key'),
-        )
+        constraints = [
+            UniqueConstraint(
+                fields=['network', 'address'],
+                name="ledger_depositaddress_unique_network_address",
+                condition=~Q(network__in=MEMO_NETWORKS),
+            ),
+            UniqueConstraint(
+                fields=['network', 'address_key'],
+                name="ledger_depositaddress_unique_network_addresskey",
+                condition=Q(network__in=MEMO_NETWORKS),
+            ),
+        ]

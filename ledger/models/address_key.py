@@ -1,6 +1,8 @@
 from django.db import models
 from django.db.models import UniqueConstraint, Q
 
+from ledger.utils.consts import MEMO_NETWORKS
+
 
 class AddressKey(models.Model):
     account = models.ForeignKey('accounts.account', on_delete=models.PROTECT)
@@ -8,19 +10,27 @@ class AddressKey(models.Model):
     public_address = models.CharField(max_length=256)
     architecture = models.CharField(max_length=16)
     created = models.DateTimeField(auto_now_add=True)
-    memo = models.CharField(max_length=256, blank=True, null=True)
+    memo = models.CharField(max_length=256, blank=True, null=True, unique=True)
 
     deleted = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ('account', 'address')
-
         constraints = [
             UniqueConstraint(
                 fields=['account', 'architecture'],
                 name="ledger_addresskey_unique_account_architecture",
                 condition=Q(deleted=False),
-            )
+            ),
+            UniqueConstraint(
+                fields=['account', 'address'],
+                name="none_memo_unique_account_address",
+                condition=~Q(architecture__in=MEMO_NETWORKS),
+            ),
+            UniqueConstraint(
+                fields=['account', 'address', 'memo'],
+                name="none_memo_unique_account_address_memo",
+                condition=Q(architecture__in=MEMO_NETWORKS),
+            ),
         ]
 
     def __str__(self):
