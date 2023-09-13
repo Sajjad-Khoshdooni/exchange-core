@@ -119,6 +119,7 @@ class CustomLoginSerializer(serializers.Serializer):
 
 class Forget2FAInitView(CreateAPIView):
     serializer_class = CustomLoginSerializer
+    permission_classes = []
 
 
 class Forget2FASerializer(ModelSerializer):
