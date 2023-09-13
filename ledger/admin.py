@@ -255,7 +255,7 @@ class OTCRequestUserFilter(SimpleListFilter):
 class OTCRequestAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount', 'fee_revenue')
     readonly_fields = ('account', 'login_activity')
-    search_fields = ('token',)
+    search_fields = ('token', 'symbol__name')
     list_filter = (OTCRequestUserFilter,)
 
 

@@ -67,7 +67,9 @@ class OrderSerializer(serializers.ModelSerializer):
             validated_data['price'] = self.post_validate_price(symbol, validated_data['price'])
 
         elif validated_data['fill_type'] == Order.MARKET:
+            # todo: for stop loss orders we should consider trigger price instead of current top price
             validated_data['price'] = Order.get_market_price(symbol, Order.get_opposite_side(validated_data['side']))
+
             if not validated_data['price']:
                 raise Exception('Empty order book')
 

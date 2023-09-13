@@ -202,12 +202,15 @@ class MarginAssetViewSet(ModelViewSet):
 
 
 class MarginBalanceAPIView(APIView):
-
+    """
+    loanable balance
+    """
     def get(self, request: Request):
         symbol_name = request.query_params.get('symbol')
         symbol = PairSymbol.objects.filter(name=symbol_name, enable=True, asset__margin_enable=True).first()
         if not symbol:
             raise ValidationError(_('{symbol} is not enable').format(symbol=symbol_name))
+
         side = request.query_params.get('side')
         if side == SELL:
             margin_cross_wallet = symbol.base_asset.get_wallet(request.user.account, market=Wallet.MARGIN, variant=None)
@@ -235,17 +238,23 @@ class MarginTransferBalanceAPIView(APIView):
         if transfer_type in (MarginTransfer.MARGIN_TO_POSITION, MarginTransfer.MARGIN_TO_SPOT):
             base_asset = Asset.get(request.query_params.get('symbol'))
             margin_cross_wallet = base_asset.get_wallet(request.user.account, market=Wallet.MARGIN, variant=None)
+
             return Response({
                 'asset': base_asset.symbol,
                 'balance': get_presentation_amount(margin_cross_wallet.get_free())
             })
+
         elif transfer_type == MarginTransfer.POSITION_TO_MARGIN:
             symbol_name = request.query_params.get('symbol')
             symbol = PairSymbol.objects.filter(name=symbol_name, enable=True, asset__margin_enable=True).first()
+
             if not symbol:
                 raise ValidationError(_('{symbol} is not enable').format(symbol=symbol_name))
+
             position = MarginPosition.objects.filter(
-                account=request.user.account, symbol=symbol, status=MarginPosition.OPEN).first()
+                account=request.user.account, symbol=symbol, status=MarginPosition.OPEN
+            ).first()
+
             if not position:
                 return Response({'asset': symbol.asset.symbol, 'balance': get_presentation_amount(Decimal(0))})
 
