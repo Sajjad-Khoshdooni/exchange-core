@@ -110,10 +110,25 @@ class CustomLoginSerializer(LoginSerializer):
             raise ValidationError({'totp': 'شناسه دوعاملی غیرفعال می‌باشد.'})
         return user
 
+    def save(self, **kwargs):
+        user = self.validated_data
+        VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_FORGET_2FA, user=user)
+
+
+class Forget2FAInitView(CreateAPIView):
+    serializer_class = CustomLoginSerializer
+
 
 class Forget2FASerializer(ModelSerializer):
-    user = CustomLoginSerializer(write_only=True)
+    token = serializers.CharField(write_only=True)
     selfie_image = ImageField(write_only=True)
+
+    def validate(self, attrs):
+        token = attrs['token']
+        verification_code = VerificationCode.get_by_token(token=token, scope=VerificationCode.SCOPE_FORGET_2FA)
+        if not verification_code:
+            raise ValidationError({'token': 'توکن نامعتبر است.'})
+        return attrs
 
     class Meta:
         model = Forget2FA
