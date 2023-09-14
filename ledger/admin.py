@@ -553,6 +553,7 @@ class CloseRequestAdmin(admin.ModelAdmin):
 class AddressBookAdmin(admin.ModelAdmin):
     list_display = ('name', 'account', 'network', 'address', 'asset',)
     search_fields = ('address', 'name')
+    readonly_fields = ('account', )
 
 
 class PrizeUserFilter(admin.SimpleListFilter):
