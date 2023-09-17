@@ -90,11 +90,9 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
             logger.info('FiatRequest rejected due to max withdraw limit reached. user=%s' % user.id)
             raise ValidationError({'amount': 'شما به سقف برداشت ریالی خود رسیده اید.'})
 
-        # fee_amount = min(4000, int(amount * 0.01))
-        fee_amount = 5000
-        withdraw_amount = amount - fee_amount
-
         gateway = Gateway.get_active_withdraw()
+        fee_amount = gateway.get_withdraw_fee(amount=amount)
+        withdraw_amount = amount - fee_amount
 
         try:
             with WalletPipeline() as pipeline:  # type: WalletPipeline

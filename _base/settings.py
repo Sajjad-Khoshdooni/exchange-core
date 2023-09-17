@@ -285,7 +285,8 @@ REST_FRAMEWORK = {
         # 'sustained_api': '20000/day',
         'burst_api': '200/min',
         'sustained_api': '200000/day',
-    }
+    },
+    'EXCEPTION_HANDLER': 'accounts.throttle.custom_exception_handler'
 }
 
 if config('JWT_PRIVATE_KEY', None):
