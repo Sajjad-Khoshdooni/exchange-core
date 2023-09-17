@@ -58,13 +58,25 @@ class OTCInfoView(APIView):
             else:
                 to_amount = Decimal(1)
 
-        otc = OTCRequest.get_otc_request(
-            account=Account.get_for(self.request.user),
-            from_asset=from_asset,
-            to_asset=to_asset,
-            from_amount=from_amount,
-            to_amount=to_amount
-        )
+        try:
+            otc = OTCRequest.get_otc_request(
+                account=Account.get_for(self.request.user),
+                from_asset=from_asset,
+                to_asset=to_asset,
+                from_amount=from_amount,
+                to_amount=to_amount
+            )
+        except SmallDepthError as exp:
+            max_amount = get_presentation_amount(exp.args[0])
+            pair = get_trading_pair(from_asset, to_asset)
+            side_verbose = SIDE_VERBOSE[pair.side]
+
+            if max_amount == 0:
+                raise ValidationError(f'در حال حاضر امکان {side_verbose} این رمزارز وجود ندارد.')
+            else:
+                raise ValidationError(
+                    f'حداکثر مقدار قابل {side_verbose} این رمزارز {max_amount} {pair.coin} است.'
+                )
 
         risky = False
         category = otc.symbol.asset.spread_category
