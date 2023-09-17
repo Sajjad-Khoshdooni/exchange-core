@@ -163,7 +163,7 @@ class UserReferredFilter(SimpleListFilter):
 @admin.register(Consultation)
 class ConsultationAdmin(admin.ModelAdmin):
     list_display = ('created', 'user', 'consulter', 'status', 'get_description',)
-    readonly_fields = ('created',)
+    readonly_fields = ('created', 'user')
     list_filter = ('status',)
     search_fields = ('user__phone', 'user__email',)
 
