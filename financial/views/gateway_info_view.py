@@ -23,15 +23,15 @@ class GatewaySerializer(serializers.ModelSerializer):
 
     def get_withdraw_fee_min(self, gateway):
         system_config = SystemConfig.get_system_config()
-        return system_config.ipg_withdraw_fee_min
+        return system_config.withdraw_fee_min
 
     def get_withdraw_fee_max(self, gateway):
         system_config = SystemConfig.get_system_config()
-        return system_config.ipg_withdraw_fee_max
+        return system_config.withdraw_fee_max
 
     def get_withdraw_fee_percent(self, gateway):
         system_config = SystemConfig.get_system_config()
-        return system_config.ipg_withdraw_fee_percent
+        return system_config.withdraw_fee_percent
 
     def get_next_ach_time(self, gateway):
         return next_ach_clear_time()

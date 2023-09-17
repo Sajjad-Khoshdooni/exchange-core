@@ -179,8 +179,8 @@ class ConsultationAdmin(admin.ModelAdmin):
 
 @admin.register(SystemConfig)
 class SystemConfigAdmin(admin.ModelAdmin):
-    list_display = ('active', 'is_consultation_available', 'ipg_withdraw_fee_min', 'ipg_withdraw_fee_max',
-                    'ipg_withdraw_fee_percent')
+    list_display = ('active', 'is_consultation_available', 'withdraw_fee_min', 'withdraw_fee_max',
+                    'withdraw_fee_percent')
     list_filter = ('active',)
 
 
