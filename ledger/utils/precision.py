@@ -25,7 +25,7 @@ def ceil_precision(amount: Decimal, precision: int = 0):
     return amount.quantize(step, rounding=ROUND_UP)
 
 
-def floor_precision(amount: Decimal, precision: int = 0):
+def floor_precision(amount: Decimal, precision: int = 0) -> Decimal:
     step = precision_to_step(precision)
     return amount.quantize(step, rounding=ROUND_DOWN)
 
