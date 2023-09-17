@@ -17,7 +17,7 @@ from ledger.models.otc_trade import TokenExpired
 from ledger.utils.external_price import BUY, SIDE_VERBOSE
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.otc import get_trading_pair
-from ledger.utils.precision import get_symbol_presentation_amount
+from ledger.utils.precision import get_symbol_presentation_amount, get_symbol_presentation_price
 
 
 class OTCInfoView(APIView):
@@ -87,7 +87,7 @@ class OTCInfoView(APIView):
             'base_asset': otc.symbol.base_asset.symbol,
             'asset': otc.symbol.asset.symbol,
             'side': otc.side,
-            'price': otc.price,
+            'price': get_symbol_presentation_price(otc.symbol.name, otc.price),
             'to_price': otc.price if otc.side == BUY else 1 / otc.price,
             'risky': risky,
         })
