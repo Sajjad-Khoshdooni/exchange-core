@@ -9,6 +9,7 @@ from ledger.utils.depth import get_base_price_and_spread, NoDepthError
 from ledger.utils.external_price import fetch_external_redis_prices, BUY, SELL, get_other_side, fetch_external_depth, \
     IRT, USDT, fetch_external_price
 from ledger.utils.otc import spread_to_multiplier, get_otc_spread
+from ledger.utils.precision import get_symbol_presentation_amount
 
 USDT_IRT = 'USDTIRT'
 
@@ -218,4 +219,4 @@ def get_depth_price(symbol: str, side: str, amount: Decimal):
         if side == BUY:
             extra_spread = -extra_spread
 
-        return price * base_price * (1 + spread + extra_spread)
+        return get_symbol_presentation_amount(pair_symbol.symbol, price * base_price * (1 + spread + extra_spread))
