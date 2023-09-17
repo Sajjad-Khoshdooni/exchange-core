@@ -87,7 +87,7 @@ class Gateway(models.Model):
     @classmethod
     def get_withdraw_fee(cls, amount):
         config = SystemConfig.get_system_config()
-        return max(min(amount * config.ipg_withdraw_fee_percent, config.ipg_withdraw_fee_max),
+        return max(min(amount * config.ipg_withdraw_fee_percent // 100, config.ipg_withdraw_fee_max),
                    config.ipg_withdraw_fee_min)
 
     @classmethod
