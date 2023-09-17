@@ -187,6 +187,13 @@ def get_depth_price(symbol: str, side: str, amount: Decimal):
             raise SmallDepthError(cumulative_sum)
 
     else:
+        coin, base = get_symbol_parts(symbol)
+        base_price = 1
+
+        if base == IRT and coin != USDT:
+            symbol = f'{coin}USDT'
+            base_price = get_price(USDT_IRT, side)
+
         external_depth = fetch_external_depth(symbol, side)
 
         if external_depth:
@@ -195,27 +202,15 @@ def get_depth_price(symbol: str, side: str, amount: Decimal):
             except NoDepthError as exp:
                 raise SmallDepthError(exp.args[0])
         else:
-            coin, base = get_symbol_parts(symbol)
-
-            if base == IRT and coin != USDT:
-                coin_price = fetch_external_price(f'{coin}USDT', side)
-                if not coin_price:
-                    raise SmallDepthError(0)
-
-                price = coin_price * get_depth_price(USDT_IRT, side, amount=amount / coin_price)
-            else:
-                price = fetch_external_price(symbol, side)
+            price = get_price(f'{coin}USDT', side)
+            if not price:
+                raise SmallDepthError(0)
 
             spread = 0
 
-        if not price:
-            raise SmallDepthError(0)
-
-        coin, base_coin = get_symbol_parts(symbol)
-
         extra_spread = get_otc_spread(
             coin=coin,
-            base_coin=base_coin,
+            base_coin=USDT,
             value=amount * price,
             side=side,
         )
@@ -223,4 +218,4 @@ def get_depth_price(symbol: str, side: str, amount: Decimal):
         if side == BUY:
             extra_spread = -extra_spread
 
-        return price * (1 + spread + extra_spread)
+        return price * base_price * (1 + spread + extra_spread)
