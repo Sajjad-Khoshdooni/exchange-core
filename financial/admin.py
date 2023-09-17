@@ -224,7 +224,8 @@ class PaymentUserFilter(SimpleListFilter):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('created', 'get_amount', 'get_fee', 'status', 'ref_id', 'ref_status', 'get_user',)
+    list_display = ('created', 'get_amount', 'get_fee', 'status', 'ref_id', 'ref_status',
+                    'get_card_pan', 'get_user',)
     list_filter = (PaymentUserFilter, 'status', )
     search_fields = ('ref_id', 'paymentrequest__bank_card__card_pan', 'amount',
                      'paymentrequest__authority', 'paymentrequest__bank_card__user__phone')
@@ -242,6 +243,12 @@ class PaymentAdmin(admin.ModelAdmin):
     def get_user(self, payment: Payment):
         link = url_to_edit_object(payment.user)
         return mark_safe("<a href='%s'>%s</a>" % (link, payment.user.phone))
+
+    @admin.display(description='شماره کارت')
+    def get_card_pan(self, payment: Payment):
+        if payment.paymentrequest:
+            link = url_to_edit_object(payment.paymentrequest.bank_card)
+            return mark_safe("<a href='%s'>%s</a>" % (link, payment.paymentrequest.bank_card.card_pan))
 
 
 class BankCardUserFilter(SimpleListFilter):
