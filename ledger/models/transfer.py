@@ -278,10 +278,11 @@ class Transfer(models.Model):
             transfer.status = Transfer.PROCESSING
             transfer.save(update_fields=['status'])
         else:
-            send_system_message(
-                message='INIT %s' % transfer,
-                link=url_to_edit_object(transfer)
-            )
+            # send_system_message(
+            #     message='INIT %s' % transfer,
+            #     link=url_to_edit_object(transfer)
+            # )
+            pass
 
         return transfer
 
