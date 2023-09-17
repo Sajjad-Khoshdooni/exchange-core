@@ -31,7 +31,7 @@ class GatewaySerializer(serializers.ModelSerializer):
 
     def get_withdraw_fee_percent(self, gateway):
         system_config = SystemConfig.get_system_config()
-        return system_config.withdraw_fee_percent
+        return get_presentation_amount(system_config.withdraw_fee_percent)
 
     def get_next_ach_time(self, gateway):
         return next_ach_clear_time()
