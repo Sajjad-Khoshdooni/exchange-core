@@ -207,7 +207,8 @@ class Order(models.Model):
     def get_price_filter(price, side):
         return {'price__lte': price} if side == BUY else {'price__gte': price}
 
-    def get_to_lock_wallet(self, wallet, base_wallet, side, lock_amount) -> Wallet:
+    @staticmethod
+    def get_to_lock_wallet(wallet, base_wallet, side, symbol) -> Wallet:
         if wallet.market == Wallet.MARGIN:
 
             if side == SELL:
@@ -219,7 +220,7 @@ class Order(models.Model):
                 from ledger.models import MarginPosition
 
                 position = MarginPosition.objects.filter(
-                    account=wallet.account, symbol=self.symbol, status=MarginPosition.OPEN
+                    account=wallet.account, symbol=symbol, status=MarginPosition.OPEN
                 ).first()
 
                 return position.margin_base_wallet
@@ -269,7 +270,7 @@ class Order(models.Model):
 
     def acquire_lock(self, pipeline: WalletPipeline):
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side, self.wallet.market)
-        to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side, lock_amount)
+        to_lock_wallet = Order.get_to_lock_wallet(self.wallet, self.base_wallet, self.side, self.symbol)
 
         if self.side == BUY and self.fill_type == Order.MARKET:
             free_amount = to_lock_wallet.get_free()
