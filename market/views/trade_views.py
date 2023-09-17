@@ -64,7 +64,7 @@ class AccountTradeHistoryView(ListAPIView):
                 ).values_list('id', flat=True)
             )
 
-            trades.filter(order_id__in=orders)
+            trades = trades.filter(order_id__in=orders)
 
         market = self.request.query_params.get('market')
         if market:
