@@ -1,10 +1,27 @@
 import logging
 
+from rest_framework.exceptions import Throttled
 from rest_framework.throttling import UserRateThrottle
 
+
 from accounts.authentication import CustomTokenAuthentication
+from rest_framework.views import exception_handler
 
 logger = logging.getLogger(__name__)
+
+
+class CustomThrottle(Throttled):
+    extra_detail_singular = ('تا {wait} ثانیه بعد قادر به ارسال درخواست نمی‌باشید.')
+    extra_detail_plural = ('تا {wait} ثانیه بعد قادر به ارسال درخواست نمی‌باشید.')
+
+
+def custom_exception_handler(exc, context):
+    if isinstance(exc, Throttled):
+        exc = CustomThrottle(exc.wait)
+
+    response = exception_handler(exc, context)
+
+    return response
 
 
 class CustomUserRateThrottle(UserRateThrottle):
