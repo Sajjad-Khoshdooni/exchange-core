@@ -17,6 +17,10 @@ class TradingPair:
     coin_amount: Decimal
     base_amount: Decimal
 
+    @property
+    def symbol(self) -> str:
+        return f'{self.coin}{self.base}'
+
 
 def get_trading_pair(from_asset: Asset, to_asset: Asset, from_amount: Decimal = None, to_amount: Decimal = None) -> TradingPair:
 

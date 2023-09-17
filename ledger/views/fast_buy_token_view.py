@@ -13,7 +13,7 @@ from ledger.models import OTCRequest, Wallet
 from ledger.models.asset import CoinField, Asset
 from ledger.models.fast_buy_token import FastBuyToken
 from ledger.utils.external_price import SELL, BUY
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.precision import get_presentation_amount, get_symbol_presentation_amount
 from ledger.utils.price import get_price
 
 
@@ -52,7 +52,7 @@ class FastBuyTokenSerializer(serializers.ModelSerializer):
                 market=Wallet.SPOT
             )
         except SmallDepthError as exp:
-            max_amount = get_presentation_amount(exp.args[0])
+            max_amount = get_symbol_presentation_amount(f'{asset}IRT', exp.args[0])
             if max_amount == 0:
                 raise ValidationError('در حال حاضر امکان خرید این رمزارز وجود ندارد.')
             else:

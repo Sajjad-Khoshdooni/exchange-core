@@ -13,7 +13,7 @@ from ledger.models import Wallet, MarginPosition
 from ledger.models.asset import Asset, AssetSerializerMini
 from ledger.utils.external_price import SELL
 from ledger.utils.precision import get_presentation_amount
-from ledger.utils.precision import get_symbol_presentation_amount
+from ledger.utils.precision import get_symbol_presentation_price
 from ledger.utils.price import get_last_price
 from market.models import Order, PairSymbol
 
@@ -48,7 +48,7 @@ class MarginAssetListSerializer(AssetSerializerMini):
         price = get_last_price(wallet.asset.symbol + Asset.USDT)
         amount = wallet.balance * price
 
-        return get_symbol_presentation_amount(asset.symbol + 'USDT', amount)
+        return get_symbol_presentation_price(asset.symbol + 'USDT', amount)
 
     def get_free(self, asset: Asset):
         wallet = self.get_wallet(asset)
@@ -138,7 +138,7 @@ class MarginAssetSerializer(AssetSerializerMini):
             # TODO: use bulk symbols prices
             price = get_last_price(asset.symbol + Asset.USDT)
         amount = wallet['balance'] * price
-        return get_symbol_presentation_amount(asset.symbol + 'USDT', amount)
+        return get_symbol_presentation_price(asset.symbol + 'USDT', amount)
 
     def get_free(self, asset: Asset):
         wallet = self.get_wallet(asset)

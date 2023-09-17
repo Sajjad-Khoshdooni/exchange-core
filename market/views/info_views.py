@@ -3,7 +3,7 @@ from rest_framework.generics import ListAPIView
 
 from ledger.models.asset import Asset
 from ledger.utils.external_price import SELL, BUY
-from ledger.utils.precision import get_symbol_presentation_amount
+from ledger.utils.precision import get_symbol_presentation_price
 from ledger.utils.price import get_prices
 
 
@@ -14,12 +14,12 @@ class AssetListSerializer(serializers.ModelSerializer):
     def get_ask(self, asset: Asset):
         symbol = asset.symbol + Asset.IRT
         asks = self.context['asks']
-        return get_symbol_presentation_amount(symbol, asks.get(symbol))
+        return get_symbol_presentation_price(symbol, asks.get(symbol))
 
     def get_bid(self, asset: Asset):
         symbol = asset.symbol + Asset.IRT
         bids = self.context['bids']
-        return get_symbol_presentation_amount(symbol, bids.get(symbol))
+        return get_symbol_presentation_price(symbol, bids.get(symbol))
 
     class Meta:
         model = Asset

@@ -108,13 +108,24 @@ def get_symbols_tick_size() -> dict:
     return dict(PairSymbol.objects.values_list('name', 'tick_size'))
 
 
-def get_symbol_presentation_amount(symbol: str, amount: Decimal, trunc_zero: bool = False):
+@cache_for(60)
+def get_symbols_step_size() -> dict:
+    from market.models import PairSymbol
+    return dict(PairSymbol.objects.values_list('name', 'step_size'))
+
+
+def get_symbol_presentation_price(symbol: str, amount: Decimal, trunc_zero: bool = False):
     if symbol == 'IRTUSDT':
         precision = 8
     else:
         precision = get_symbols_tick_size().get(symbol, 0)
 
     return get_presentation_amount(amount, precision, trunc_zero=trunc_zero)
+
+
+def get_symbol_presentation_amount(symbol: str, amount: Decimal):
+    precision = get_symbols_step_size().get(symbol, 0)
+    return get_presentation_amount(amount, precision, trunc_zero=True)
 
 
 def get_coin_presentation_balance(coin: str, balance: Decimal):
