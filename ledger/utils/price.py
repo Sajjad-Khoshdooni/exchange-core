@@ -219,4 +219,4 @@ def get_depth_price(symbol: str, side: str, amount: Decimal):
         if side == BUY:
             extra_spread = -extra_spread
 
-        return get_symbol_presentation_amount(pair_symbol.symbol, price * base_price * (1 + spread + extra_spread))
+        return get_symbol_presentation_amount(pair_symbol.name, price * base_price * (1 + spread + extra_spread))
