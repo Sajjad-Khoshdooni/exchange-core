@@ -9,7 +9,7 @@ from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounts.models import FirebaseToken, Attribution, AppStatus, VerificationCode, \
-    UserFeedback, BulkNotification, EmailNotification, Consultation, SystemConfig
+    UserFeedback, BulkNotification, EmailNotification, Consultation, SystemConfig, Forget2FA
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -19,6 +19,7 @@ from financial.utils.withdraw_limit import FIAT_WITHDRAW_LIMIT, get_fiat_withdra
     get_crypto_withdraw_irt_value
 from ledger.models import OTCTrade, DepositAddress, Prize, Transfer, Wallet
 from ledger.utils.external_price import BUY
+from ledger.utils.fields import PENDING
 from ledger.utils.precision import humanize_number
 from market.models import Trade, ReferralTrx, Order
 from stake.models import StakeRequest
@@ -177,11 +178,33 @@ class ConsultationAdmin(admin.ModelAdmin):
             return description
 
 
+@admin.register(Forget2FA)
+class Forget2FAAdmin(admin.ModelAdmin):
+    list_display = ('created', 'status', 'user',)
+    readonly_fields = ('created', 'status', 'user', 'selfie_image')
+    raw_id_fields = ('user',)
+    actions = ('accept_requests', 'reject_requests',)
+
+    @admin.action(description='رد درخواست', permissions=['view'])
+    def reject_requests(self, request, queryset):
+        qs = queryset.filter(status=PENDING)
+
+        for forget_request in qs:
+            forget_request.reject()
+
+    @admin.action(description='تایید درخواست', permissions=['view'])
+    def accept_requests(self, request, queryset):
+        qs = queryset.filter(status=PENDING)
+
+        for forget_request in qs:
+            forget_request.accept()
+
+
 @admin.register(SystemConfig)
 class SystemConfigAdmin(admin.ModelAdmin):
-    list_display = ('active', 'is_consultation_available',)
+    list_display = ('active', 'is_consultation_available', 'withdraw_fee_min', 'withdraw_fee_max',
+                    'withdraw_fee_percent')
     list_filter = ('active',)
-
 
 @admin.register(User)
 class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):

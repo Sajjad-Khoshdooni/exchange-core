@@ -20,9 +20,9 @@ from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from financial.models import BankAccount
 from ledger.models import Trx, Asset
-from ledger.utils.external_price import get_external_price
 from ledger.utils.fields import get_group_id_field
 from ledger.utils.precision import humanize_number
+from ledger.utils.price import get_last_price, USDT_IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -241,7 +241,7 @@ def handle_withdraw_request_save(sender, instance, created, **kwargs):
     if instance.status != FiatWithdrawRequest.DONE or settings.DEBUG_OR_TESTING_OR_STAGING:
         return
 
-    usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
+    usdt_price = get_last_price(USDT_IRT)
 
     event = TransferEvent(
         id=instance.id,

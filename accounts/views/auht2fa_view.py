@@ -1,13 +1,21 @@
-from django.core.exceptions import ValidationError
-from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
+from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import CreateAPIView
+from rest_framework.serializers import ModelSerializer
 
-from accounts.models.phone_verification import VerificationCode
-from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
+from django.core.exceptions import ValidationError
+from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
 
 from datetime import timedelta
+
+from multimedia.fields import ImageField
+from accounts.models import Forget2FA
+from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
+from accounts.views.login_view import LoginSerializer
+from accounts.models.phone_verification import VerificationCode
+from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
 
 ACTIVATE = 'activate'
 DEACTIVATE = 'deactivate'
@@ -88,3 +96,61 @@ class TOTPView(APIView):
             return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری غیرفعال شد.'})
         else:
             return Response({'msg': 'ورود دومرحله‌ای غیرفعال است.'})
+
+
+class CustomLoginSerializer(serializers.Serializer):
+    login = serializers.CharField(required=True, write_only=True)
+    password = serializers.CharField(required=True, write_only=True)
+
+    def validate(self, attrs):
+        login = attrs['login'].lower()
+        password = attrs['password']
+        user = authenticate(login=login, password=password)
+        if not user:
+            raise ValidationError({'user': 'نام کاربری یا رمز عبور نادرست است.'})
+        if user.is_2fa_valid(None):
+            raise ValidationError({'totp': 'شناسه دوعاملی غیرفعال می‌باشد.'})
+        return user
+
+    def save(self, **kwargs):
+        user = self.validated_data
+        VerificationCode.send_otp_code(phone=user.phone, scope=VerificationCode.SCOPE_FORGET_2FA, user=user)
+
+
+class Forget2FAInitView(CreateAPIView):
+    serializer_class = CustomLoginSerializer
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
+    permission_classes = []
+
+    def post(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return Response({'msg': 'user is already authenticated'})
+
+        return self.create(request, *args, **kwargs)
+
+
+
+class Forget2FASerializer(ModelSerializer):
+    token = serializers.CharField(write_only=True)
+    selfie_image = ImageField(write_only=True)
+
+    def validate(self, attrs):
+        token = attrs.pop('token')
+        verification_code = VerificationCode.get_by_token(token=token, scope=VerificationCode.SCOPE_FORGET_2FA)
+        if not verification_code:
+            raise ValidationError({'token': 'توکن نامعتبر است.'})
+        attrs['user'] = verification_code.user
+        return attrs
+
+    class Meta:
+        model = Forget2FA
+        fields = ('token', 'selfie_image',)
+
+
+class Forget2FAView(CreateAPIView):
+    serializer_class = Forget2FASerializer
+    permission_classes = []
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
+
+    class Meta:
+        model = Forget2FA

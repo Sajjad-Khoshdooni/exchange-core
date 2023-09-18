@@ -1,6 +1,7 @@
 import math
 from datetime import datetime
 from decimal import Decimal
+from typing import Union
 
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -8,8 +9,8 @@ from django.db.models import CheckConstraint, Q
 
 from ledger.models import Asset
 from ledger.utils.dto import NetworkInfo
-from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import get_amount_field
+from ledger.utils.price import get_last_price
 
 MIN_PRECISION_AMOUNT = Decimal('0.00000001')
 
@@ -44,7 +45,10 @@ class NetworkAsset(models.Model):
     def can_withdraw_enabled(self) -> bool:
         return self.network.can_withdraw and self.can_withdraw and self.hedger_withdraw_enable
 
-    def get_min_deposit(self) -> Decimal:
+    def get_min_deposit(self) -> Union[Decimal, None]:
+        if self.deposit_min == MIN_PRECISION_AMOUNT:
+            return
+
         return self.deposit_min
 
     def __str__(self):
@@ -65,7 +69,7 @@ class NetworkAsset(models.Model):
             withdraw_fee *= Decimal('1.5')
             withdraw_min = max(withdraw_min, 2 * withdraw_fee)
 
-            price = get_external_price(self.asset.symbol, base_coin=Asset.USDT, side=BUY, allow_stale=True)
+            price = get_last_price(self.asset.symbol + Asset.USDT)
 
             if price and withdraw_min:
                 multiplier = max(math.ceil(5 / (price * withdraw_min)), 1)  # withdraw_min >= 5$

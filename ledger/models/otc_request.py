@@ -1,19 +1,19 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from django.conf import settings
 from django.db import models
-from django.db.models import F, CheckConstraint, Q
+from django.db.models import CheckConstraint, Q
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from accounts.models import Account
 from ledger.exceptions import SmallAmountTrade, LargeAmountTrade
 from ledger.models import Asset, Wallet
-from ledger.utils.external_price import get_external_price, get_other_side, BUY, SELL
+from ledger.utils.external_price import get_other_side, BUY
 from ledger.utils.fields import get_amount_field
-from ledger.utils.otc import get_trading_pair, get_otc_spread, spread_to_multiplier
-from ledger.utils.precision import ceil_precision, floor_precision
+from ledger.utils.otc import get_trading_pair
+from ledger.utils.precision import floor_precision
+from ledger.utils.price import get_depth_price, get_price, USDT_IRT
 from ledger.utils.random import secure_uuid4
 from market.consts import OTC_MIN_HARD_FIAT_VALUE, OTC_MAX_HARD_FIAT_VALUE
 from market.models import BaseTrade
@@ -96,14 +96,9 @@ class OTCRequest(BaseTrade):
             symbol=symbol,
             side=pair.side,
         )
-        from market.models import Order
         other_side = get_other_side(pair.side)
-        usdt_irt_price = None
-        if settings.ZERO_USDT_HEDGE:
-            usdt_irt_symbol = PairSymbol.objects.get(name='USDTIRT')
-            usdt_irt_price = Order.get_top_price(usdt_irt_symbol.id, other_side)
-        if not usdt_irt_price:
-            usdt_irt_price = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=other_side, allow_stale=True)
+
+        usdt_irt_price = get_price(USDT_IRT, side=other_side, allow_stale=True)
 
         if pair.base.symbol == Asset.USDT:
             otc_request.base_usdt_price = 1
@@ -112,55 +107,21 @@ class OTCRequest(BaseTrade):
             otc_request.base_usdt_price = 1 / usdt_irt_price
             otc_request.base_irt_price = 1
 
-        coin_price = None
-        if symbol.enable:
-            symbol_price = Order.get_top_price(symbol.id, other_side)
-            if pair.coin_amount is None:
-                coin_amount = floor_precision(pair.base_amount / symbol_price, symbol.step_size)
-            else:
-                coin_amount = pair.coin_amount
-
-            cumulative_sum = Decimal(0)
-            for order in Order.open_objects.filter(symbol=symbol, side=other_side).annotate(
-                    remaining=F('amount') - F('filled_amount')
-            ).order_by('price' if other_side == SELL else '-price'):
-                cumulative_sum += order.remaining
-                if cumulative_sum >= coin_amount:
-                    coin_price = order.price
-                    otc_request.price = ceil_precision(coin_price, symbol.tick_size)
-                    break
-
-        if not symbol.enable or not coin_price:
-            if pair.base_amount is not None:
-                trade_value = pair.base_amount * otc_request.base_usdt_price
-            else:
-                coin_usdt_price = get_external_price(
-                    coin=pair.coin.symbol,
-                    base_coin=Asset.USDT,
-                    side=other_side,
-                )
-                trade_value = pair.coin_amount * coin_usdt_price
-
-            spread = get_otc_spread(
-                coin=pair.coin.symbol,
-                base_coin=pair.base.symbol,
-                value=trade_value,
-                side=other_side
-            )
-
-            coin_price = get_external_price(
-                coin=pair.coin.symbol,
-                base_coin=pair.base.symbol,
-                side=other_side,
-            )
-            otc_request.price = ceil_precision(coin_price * spread_to_multiplier(spread, other_side), symbol.tick_size)
-
-        if pair.coin_amount is not None:
-            amount = pair.coin_amount
+        if pair.coin_amount is None:
+            price = get_price(symbol.name, side=other_side)
+            coin_amount = floor_precision(pair.base_amount / price, symbol.step_size)
         else:
-            amount = pair.base_amount / otc_request.price
+            coin_amount = pair.coin_amount
 
-        otc_request.amount = floor_precision(amount, symbol.step_size)
+        price = get_depth_price(symbol.name, side=other_side, amount=coin_amount)
+
+        if pair.coin_amount is None:
+            coin_amount = floor_precision(pair.base_amount / price, symbol.step_size)
+        else:
+            coin_amount = pair.coin_amount
+
+        otc_request.amount = coin_amount
+        otc_request.price = price
 
         fee_info = get_fee_info(otc_request)
 

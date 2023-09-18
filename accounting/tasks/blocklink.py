@@ -6,9 +6,9 @@ from django.db.models import Sum, F
 
 from accounting.models import PeriodicFetcher, BlocklinkIncome, BlocklinkDustCost
 from accounting.requester.blocklink_income import blocklink_income_request
-from ledger.models import Transfer
-from ledger.utils.external_price import get_external_price, BUY
+from ledger.models import Transfer, Asset
 from ledger.utils.precision import is_zero_by_precision
+from ledger.utils.price import get_last_price
 
 
 def blocklink_income_fetcher(start: datetime, end: datetime):
@@ -16,7 +16,7 @@ def blocklink_income_fetcher(start: datetime, end: datetime):
 
     for network, data_list in resp.items():
         network_coin = 'BNB' if network == 'BSC' else network
-        price = get_external_price(coin=network_coin, base_coin='USDT', side=BUY, allow_stale=True)
+        price = get_last_price(network_coin + Asset.USDT)
 
         for data in data_list:
             coin = data['coin']

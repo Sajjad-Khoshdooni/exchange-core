@@ -26,7 +26,8 @@ class InitiateChangePhoneSerializer(serializers.Serializer):
         password = data.get('password')
         totp = data.get('totp', None)
         validate_password(password=password, user=user)
-        otp_verification = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_CHANGE_PHONE, user=user)
+        otp_verification = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_CHANGE_PHONE_INIT,
+                                                        user=user)
         if not otp_verification:
             raise ValidationError('کد ارسال شده نامعتبر است.')
 
@@ -41,7 +42,7 @@ class InitiateChangePhone(APIView):
     def post(self, request):
         serializer = InitiateChangePhoneSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        return Response(serializer.validated_data['token'])
+        return Response({'token': serializer.validated_data['token']})
 
 
 class UserVerifySerializer(serializers.Serializer):
@@ -51,7 +52,7 @@ class UserVerifySerializer(serializers.Serializer):
     def validate(self, data):
         new_phone = data.get('new_phone')
         token = data.get('token')
-        token_verification = VerificationCode.get_by_token(token, VerificationCode.SCOPE_CHANGE_PHONE)
+        token_verification = VerificationCode.get_by_token(token, VerificationCode.SCOPE_CHANGE_PHONE_INIT)
         if not token_verification:
             raise ValidationError('توکن نامعتبر است.')
 
@@ -59,7 +60,7 @@ class UserVerifySerializer(serializers.Serializer):
             raise ValidationError(
                 'شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.')
         token_verification.set_token_used()
-        VerificationCode.send_otp_code(new_phone, VerificationCode.SCOPE_CHANGE_PHONE)
+        VerificationCode.send_otp_code(new_phone, VerificationCode.SCOPE_NEW_PHONE)
         return data
 
 
@@ -68,7 +69,7 @@ class NewPhoneVerifySerializer(serializers.Serializer):
 
     def validate(self, data):
         token = data.get('token')
-        token_verification = VerificationCode.get_by_token(token, VerificationCode.SCOPE_CHANGE_PHONE)
+        token_verification = VerificationCode.get_by_token(token, VerificationCode.SCOPE_NEW_PHONE)
         if not token_verification:
             raise ValidationError('توکن نامعتبر است.')
         token_verification.set_token_used()

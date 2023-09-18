@@ -200,16 +200,17 @@ class User(AbstractUser):
         masked = first + '*' * len(phone_number[length:-length]) + last
         return masked
 
-    def suspend(self, duration: timedelta, reason: str):
+    def suspend(self, duration: timedelta, reason: str = None):
         suspended_until = duration + timezone.now()
         past_suspension = self.suspended_until
         if not past_suspension:
             self.suspended_until = suspended_until
         else:
             self.suspended_until = max(past_suspension, suspended_until)
+
         self.save(update_fields=['suspended_until'])
 
-        if past_suspension != self.suspended_until:
+        if reason and past_suspension != self.suspended_until:
             self.send_suspension_message(reason, duration)
 
     def send_suspension_message(self, reason: str, duration: timedelta):

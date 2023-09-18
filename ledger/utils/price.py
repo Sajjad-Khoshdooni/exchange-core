@@ -1,13 +1,15 @@
 from decimal import Decimal
 from typing import List, Dict, Union
 
-from django.db.models import Min, Max
+from django.db.models import Min, Max, F
 
-from ledger.models import Asset
+from ledger.exceptions import SmallDepthError
 from ledger.utils.cache import cache_for
-from ledger.utils.external_price import fetch_external_redis_prices, BUY, SELL, get_other_side
+from ledger.utils.depth import get_base_price_and_spread, NoDepthError
+from ledger.utils.external_price import fetch_external_redis_prices, BUY, SELL, get_other_side, fetch_external_depth, \
+    IRT, USDT, fetch_external_price
 from ledger.utils.otc import spread_to_multiplier, get_otc_spread
-from market.models import Order, PairSymbol
+from ledger.utils.precision import floor_precision, ceil_precision
 
 USDT_IRT = 'USDTIRT'
 
@@ -33,12 +35,14 @@ def get_symbol_parts(symbol: str):
 
 @cache_for(300)
 def get_all_otc_spreads(side):
+    from ledger.models import Asset
+
     queryset = Asset.live_objects.filter(trade_enable=True)
 
     spreads = {}
 
     for asset in queryset:
-        for base in (Asset.IRT, Asset.USDT):
+        for base in (IRT, USDT):
             spreads[asset.symbol + base] = spread_to_multiplier(
                 get_otc_spread(asset.symbol, side, base_coin=base), side
             )
@@ -48,6 +52,7 @@ def get_all_otc_spreads(side):
 
 def get_prices(symbols: List[str], side: str, allow_stale: bool = False) -> Dict[str, Decimal]:
     assert side in (BUY, SELL)
+    from market.models import Order
 
     if USDT_IRT not in symbols:
         symbols.append(USDT_IRT)
@@ -62,6 +67,9 @@ def get_prices(symbols: List[str], side: str, allow_stale: bool = False) -> Dict
         symbol__enable=True,
         symbol__name__in=symbols
     ).values('symbol__name').annotate(p=annotate_func('price')).values_list('symbol__name', 'p'))
+
+    if USDT_IRT not in prices:
+        prices[USDT_IRT] = fetch_external_price(USDT_IRT, side=side)
 
     if len(symbols) != len(prices):
         otc_spreads = get_all_otc_spreads(side)
@@ -83,7 +91,7 @@ def get_prices(symbols: List[str], side: str, allow_stale: bool = False) -> Dict
             else:
                 ext_price = external_prices.get(coin)
 
-                if ext_price and base == Asset.IRT:
+                if ext_price and base == IRT:
                     ext_price *= prices[USDT_IRT]
 
             if ext_price:
@@ -93,6 +101,8 @@ def get_prices(symbols: List[str], side: str, allow_stale: bool = False) -> Dict
 
 
 def get_last_prices(symbols: List[str]):
+    from market.models import PairSymbol
+
     if USDT_IRT not in symbols:
         symbols.append(USDT_IRT)
 
@@ -101,6 +111,9 @@ def get_last_prices(symbols: List[str]):
         enable=True,
         last_trade_price__isnull=False,
     ).values_list('name', 'last_trade_price'))
+
+    if USDT_IRT not in last_prices:
+        last_prices[USDT_IRT] = fetch_external_price(USDT_IRT, side=SELL)
 
     remaining_symbols = set(symbols) - set(last_prices)
 
@@ -118,7 +131,7 @@ def get_last_prices(symbols: List[str]):
             else:
                 last_price = external_prices.get(coin)
 
-                if last_price and base == Asset.IRT:
+                if last_price and base == IRT:
                     last_price *= last_prices[USDT_IRT]
 
             if last_price:
@@ -127,10 +140,15 @@ def get_last_prices(symbols: List[str]):
     return last_prices
 
 
-def get_coins_symbols(coins: List[str]) -> List[str]:
+def get_coins_symbols(coins: List[str], only_base: str = None) -> List[str]:
     symbols = []
 
-    for base in (Asset.IRT, Asset.USDT):
+    if only_base:
+        bases = (only_base, )
+    else:
+        bases = (IRT, USDT)
+
+    for base in bases:
         symbols.extend([c + base for c in coins])
 
     return symbols
@@ -139,3 +157,71 @@ def get_coins_symbols(coins: List[str]) -> List[str]:
 def get_price(symbol: str, side: str, allow_stale: bool = False):
     prices = get_prices([symbol], side, allow_stale)
     return prices.get(symbol)
+
+
+def get_last_price(symbol: str) -> Decimal:
+    prices = get_last_prices([symbol])
+    return prices.get(symbol)
+
+
+def get_depth_price(symbol: str, side: str, amount: Decimal) -> Decimal:
+    from market.models import Order, PairSymbol
+
+    pair_symbol = PairSymbol.objects.filter(name=symbol).first()
+
+    if pair_symbol.enable:
+        cumulative_sum = Decimal(0)
+
+        open_orders = list(Order.open_objects.filter(symbol=pair_symbol, side=side).annotate(
+            remaining=F('amount') - F('filled_amount')
+        ).order_by('price' if side == SELL else '-price'))
+
+        for order in open_orders:
+            if abs(order.price / open_orders[0].price - 1) > Decimal('0.05'):
+                raise SmallDepthError(cumulative_sum)
+
+            cumulative_sum += order.remaining
+
+            if cumulative_sum >= amount:
+                return order.price
+        else:
+            raise SmallDepthError(cumulative_sum)
+
+    else:
+        coin, base = get_symbol_parts(symbol)
+        base_price = 1
+
+        if base == IRT and coin != USDT:
+            symbol = f'{coin}USDT'
+            base_price = get_price(USDT_IRT, side)
+
+        external_depth = fetch_external_depth(symbol, side)
+
+        if external_depth:
+            try:
+                price, spread = get_base_price_and_spread(external_depth, amount)
+            except NoDepthError as exp:
+                raise SmallDepthError(exp.args[0])
+        else:
+            price = get_price(f'{coin}USDT', side)
+            if not price:
+                raise SmallDepthError(0)
+
+            spread = 0
+
+        extra_spread = get_otc_spread(
+            coin=coin,
+            base_coin=USDT,
+            value=amount * price,
+            side=side,
+        )
+
+        if side == BUY:
+            extra_spread = -extra_spread
+            tick_size_fitter = floor_precision
+        else:
+            tick_size_fitter = ceil_precision
+
+        price = price * base_price * (1 + spread + extra_spread)
+
+        return tick_size_fitter(price, pair_symbol.tick_size)

@@ -16,7 +16,7 @@ from ledger.models.asset import AssetSerializerMini
 from ledger.utils.coins_info import get_coins_info
 from ledger.utils.external_price import SELL
 from ledger.utils.fields import get_irt_market_asset_symbols
-from ledger.utils.precision import get_symbol_presentation_amount
+from ledger.utils.precision import get_symbol_presentation_price
 from ledger.utils.price import get_prices, get_coins_symbols, get_price
 from ledger.utils.provider import CoinInfo
 from multimedia.models import CoinPriceContent
@@ -63,11 +63,11 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
     def get_price_usdt(self, asset: Asset):
         price = self.context['prices'].get(asset.symbol + Asset.USDT, 0)
-        return get_symbol_presentation_amount(asset.symbol + Asset.USDT, price)
+        return get_symbol_presentation_price(asset.symbol + Asset.USDT, price)
 
     def get_price_irt(self, asset: Asset):
         price = self.context['prices'].get(asset.symbol + Asset.IRT, 0)
-        return get_symbol_presentation_amount(asset.symbol + Asset.IRT, price)
+        return get_symbol_presentation_price(asset.symbol + Asset.IRT, price)
 
     def get_min_withdraw_amount(self, asset: Asset):
         network_assets = NetworkAsset.objects.filter(asset=asset, network__can_withdraw=True, can_withdraw=True)
@@ -93,11 +93,11 @@ class AssetSerializerBuilder(AssetSerializerMini):
 
     def get_high_24h(self, asset: Asset):
         cap = self.get_cap(asset)
-        return get_symbol_presentation_amount(asset.symbol + 'USDT',  Decimal(cap.high_24h))
+        return get_symbol_presentation_price(asset.symbol + 'USDT',  Decimal(cap.high_24h))
 
     def get_low_24h(self, asset: Asset):
         cap = self.get_cap(asset)
-        return get_symbol_presentation_amount(asset.symbol + 'USDT', Decimal(cap.low_24h))
+        return get_symbol_presentation_price(asset.symbol + 'USDT', Decimal(cap.low_24h))
 
     def get_change_1h(self, asset: Asset):
         return self.get_cap(asset).change_1h
@@ -265,12 +265,12 @@ class AssetOverviewAPIView(APIView):
         for asset_info in assets_info:
             coin = asset_info['symbol']
 
-            asset_info['price_usdt'] = get_symbol_presentation_amount(
+            asset_info['price_usdt'] = get_symbol_presentation_price(
                 symbol=coin + Asset.USDT,
                 amount=get_price(coin + Asset.USDT, side=SELL, allow_stale=True) or 0
             )
 
-            asset_info['price_irt'] = get_symbol_presentation_amount(
+            asset_info['price_irt'] = get_symbol_presentation_price(
                 symbol=coin + Asset.IRT,
                 amount=get_price(coin + Asset.IRT, side=SELL, allow_stale=True) or 0
             )

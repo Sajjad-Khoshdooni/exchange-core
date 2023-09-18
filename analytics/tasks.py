@@ -12,8 +12,8 @@ from analytics.utils.dto import LoginEvent, TransferEvent, TrafficSourceEvent, S
     TradeEvent, UserEvent, WalletEvent, TransactionEvent
 from financial.models import FiatWithdrawRequest, Payment
 from ledger.models import Transfer, Prize, OTCTrade, FastBuyToken, Wallet, Trx
-from ledger.utils.external_price import get_external_price
 from ledger.utils.fields import DONE
+from ledger.utils.price import get_last_price, USDT_IRT
 from market.models import Trade
 from stake.models import StakeRequest
 
@@ -132,7 +132,7 @@ def trigger_transfer_event(threshold=1000):
 
 
 def trigger_fiat_transfer_event(threshold=1000):
-    usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
+    usdt_price = get_last_price(USDT_IRT)
     tracker, _ = EventTracker.objects.get_or_create(type=EventTracker.FIAT_WITHDRAW)
     fiat_transfer_list = FiatWithdrawRequest.objects.filter(
         id__gt=tracker.last_id,
@@ -162,7 +162,7 @@ def trigger_payment_event(threshold=1000):
     payment_list = Payment.objects.filter(
         id__gt=tracker.last_id, status=DONE
     ).order_by('id')[:threshold]
-    usdt_price = get_external_price(coin='USDT', base_coin='IRT', side='buy')
+    usdt_price = get_last_price(USDT_IRT)
 
     for payment in payment_list:
         event = TransferEvent(

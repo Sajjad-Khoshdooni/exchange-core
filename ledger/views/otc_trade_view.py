@@ -1,6 +1,5 @@
 from decimal import Decimal, InvalidOperation
 
-from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, get_object_or_404
@@ -10,12 +9,15 @@ from rest_framework.views import APIView
 
 from accounts.models import Account, LoginActivity
 from accounts.permissions import can_trade
-from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease, HedgeError, LargeAmountTrade
+from ledger.exceptions import InsufficientBalance, SmallAmountTrade, AbruptDecrease, HedgeError, LargeAmountTrade, \
+    SmallDepthError
 from ledger.models import OTCRequest, Asset, OTCTrade, Wallet
 from ledger.models.asset import InvalidAmount
 from ledger.models.otc_trade import TokenExpired
-from ledger.utils.external_price import BUY
+from ledger.utils.external_price import BUY, SIDE_VERBOSE
 from ledger.utils.fields import get_serializer_amount_field
+from ledger.utils.otc import get_trading_pair
+from ledger.utils.precision import get_symbol_presentation_amount, get_symbol_presentation_price
 
 
 class OTCInfoView(APIView):
@@ -55,13 +57,25 @@ class OTCInfoView(APIView):
             else:
                 to_amount = Decimal(1)
 
-        otc = OTCRequest.get_otc_request(
-            account=Account.get_for(self.request.user),
-            from_asset=from_asset,
-            to_asset=to_asset,
-            from_amount=from_amount,
-            to_amount=to_amount
-        )
+        try:
+            otc = OTCRequest.get_otc_request(
+                account=Account.get_for(self.request.user),
+                from_asset=from_asset,
+                to_asset=to_asset,
+                from_amount=from_amount,
+                to_amount=to_amount
+            )
+        except SmallDepthError as exp:
+            pair = get_trading_pair(from_asset, to_asset)
+            max_amount = get_symbol_presentation_amount(pair.symbol, exp.args[0])
+            side_verbose = SIDE_VERBOSE[pair.side]
+
+            if max_amount == 0:
+                raise ValidationError(f'در حال حاضر امکان {side_verbose} این رمزارز وجود ندارد.')
+            else:
+                raise ValidationError(
+                    f'حداکثر مقدار قابل {side_verbose} این رمزارز {max_amount} {pair.coin} است.'
+                )
 
         risky = False
         category = otc.symbol.asset.spread_category
@@ -73,7 +87,7 @@ class OTCInfoView(APIView):
             'base_asset': otc.symbol.base_asset.symbol,
             'asset': otc.symbol.asset.symbol,
             'side': otc.side,
-            'price': otc.price,
+            'price': get_symbol_presentation_price(otc.symbol.name, otc.price),
             'to_price': otc.price if otc.side == BUY else 1 / otc.price,
             'risky': risky,
         })
@@ -159,6 +173,17 @@ class OTCRequestSerializer(serializers.ModelSerializer):
             raise ValidationError('ارزش معامله، حداکثر ۲ میلیارد تومان می‌تواند باشد.')
         except InsufficientBalance:
             raise ValidationError({'amount': 'موجودی کافی نیست.'})
+        except SmallDepthError as exp:
+            pair = get_trading_pair(from_asset, to_asset)
+            max_amount = get_symbol_presentation_amount(pair.symbol, exp.args[0])
+            side_verbose = SIDE_VERBOSE[pair.side]
+
+            if max_amount == 0:
+                raise ValidationError('در حال حاضر امکان {} این رمزارز وجود ندارد.'.format(side_verbose))
+            else:
+                raise ValidationError(
+                    'حداکثر مقدار قابل {} این رمزارز {} {} است.'.format(side_verbose, max_amount, pair.coin)
+                )
 
     def get_expire(self, otc: OTCRequest):
         return otc.get_expire_time()
