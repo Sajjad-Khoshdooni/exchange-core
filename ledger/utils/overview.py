@@ -9,6 +9,7 @@ from ledger.margin.closer import MARGIN_INSURANCE_ACCOUNT
 from ledger.models import Wallet, Prize, Asset
 from ledger.requester.internal_assets_requester import InternalAssetsRequester
 from ledger.utils.cache import cache_for
+from ledger.utils.price import USDT_IRT
 from ledger.utils.provider import get_provider_requester, BINANCE
 
 
@@ -98,7 +99,7 @@ class AssetOverview:
             status=FiatWithdrawRequest.PENDING
         ).aggregate(amount=Sum('amount'))['amount'] or 0
 
-        return value - pending_withdraws * self.prices['IRT']
+        return value - pending_withdraws / self.prices[USDT_IRT]
 
     def get_all_prize_value(self) -> Decimal:
         return Prize.objects.filter(

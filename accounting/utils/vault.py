@@ -186,7 +186,7 @@ def update_asset_prices(now: datetime, prices: dict):
     for symbol, price in prices.items():
         coin, base = get_symbol_parts(symbol)
         if base == Asset.USDT:
-            _prices[coin] = prices
+            _prices[coin] = price
 
     existing_assets = AssetPrice.objects.filter(coin__in=_prices)
     existing_coins = set(existing_assets.values_list('coin', flat=True))

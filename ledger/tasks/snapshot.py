@@ -5,6 +5,7 @@ from celery import shared_task
 
 from ledger.models import SystemSnapshot, Asset, AssetSnapshot
 from ledger.utils.overview import AssetOverview
+from ledger.utils.price import USDT_IRT
 
 
 @shared_task(queue='history')
@@ -13,7 +14,7 @@ def create_snapshot(now: datetime, prices: dict):
 
     system_snapshot = SystemSnapshot(
         created=now,
-        usdt_price=1 / prices['IRT'],
+        usdt_price=prices[USDT_IRT],
         hedge=overview.get_total_hedge_value(),
         cum_hedge=overview.get_total_cumulative_hedge_value(),
 
