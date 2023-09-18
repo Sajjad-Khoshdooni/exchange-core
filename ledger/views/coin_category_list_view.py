@@ -7,7 +7,7 @@ from ledger.models import CoinCategory
 class CoinCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = CoinCategory
-        fields = ('name', 'title', 'description')
+        fields = ('name', 'title', 'description', 'header')
 
 
 class CoinCategoryListView(ListAPIView):
