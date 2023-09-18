@@ -184,6 +184,7 @@ class Forget2FAAdmin(admin.ModelAdmin):
     readonly_fields = ('created', 'status', 'user', 'selfie_image')
     raw_id_fields = ('user',)
     actions = ('accept_requests', 'reject_requests',)
+    list_filter = ('status', )
 
     @admin.action(description='رد درخواست', permissions=['view'])
     def reject_requests(self, request, queryset):
