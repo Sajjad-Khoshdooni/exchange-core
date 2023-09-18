@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.tasks import basic_verify_user
+from accounts.models import Notification
 from accounts.models import User
 from accounts.models import VerificationCode
 from accounts.utils.notif import send_successful_change_phone_email
@@ -56,9 +57,6 @@ class UserVerifySerializer(serializers.Serializer):
         if not token_verification:
             raise ValidationError('توکن نامعتبر است.')
 
-        if User.objects.filter(phone=new_phone):
-            raise ValidationError(
-                'شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.')
         token_verification.set_token_used()
         VerificationCode.send_otp_code(new_phone, VerificationCode.SCOPE_NEW_PHONE)
         return data
@@ -72,9 +70,23 @@ class NewPhoneVerifySerializer(serializers.Serializer):
         token_verification = VerificationCode.get_by_token(token, VerificationCode.SCOPE_NEW_PHONE)
         if not token_verification:
             raise ValidationError('توکن نامعتبر است.')
+
+        new_phone = token_verification.phone
+        if User.objects.filter(phone=new_phone):
+            raise ValidationError(
+                'شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.')
+
         token_verification.set_token_used()
-        data['new_phone'] = token_verification.phone
+        data['new_phone'] = new_phone
         return data
+
+
+def send_level_down_message(user: User):
+    Notification.send(
+        recipient=user,
+        title="تغییر سطح کاربری",
+        message="سطح کاربری شما به دلیل تغییر شماره تلفن، به سطح 2 کاهش یافت."
+    )
 
 
 class ChangePhoneView(APIView):
@@ -90,7 +102,11 @@ class ChangePhoneView(APIView):
 
         user.phone = serializer.validated_data['new_phone']
         user.username = user.phone
-        user.level = min(user.level, user.LEVEL2)
+        new_level = min(user.level, user.LEVEL2)
+        if new_level != user.level:
+            send_level_down_message(user)
+
+        user.level = new_level
         user.national_code_phone_verified = None
 
         # user.change_status(User.PENDING)
