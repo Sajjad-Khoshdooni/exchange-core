@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.tasks import basic_verify_user
+from accounts.models import Notification
 from accounts.models import User
 from accounts.models import VerificationCode
 from accounts.utils.notif import send_successful_change_phone_email
@@ -80,6 +81,14 @@ class NewPhoneVerifySerializer(serializers.Serializer):
         return data
 
 
+def send_level_down_message(user: User):
+    Notification.send(
+        recipient=user,
+        title="تغییر سطح کاربری",
+        message="سطح کاربری شما به دلیل تغییر شماره تلفن، به سطح 2 کاهش یافت."
+    )
+
+
 class ChangePhoneView(APIView):
     def post(self, request):
         serializer = UserVerifySerializer(data=request.data)
@@ -93,7 +102,11 @@ class ChangePhoneView(APIView):
 
         user.phone = serializer.validated_data['new_phone']
         user.username = user.phone
-        user.level = min(user.level, user.LEVEL2)
+        new_level = min(user.level, user.LEVEL2)
+        if new_level != user.level:
+            send_level_down_message(user)
+
+        user.level = new_level
         user.national_code_phone_verified = None
 
         # user.change_status(User.PENDING)
