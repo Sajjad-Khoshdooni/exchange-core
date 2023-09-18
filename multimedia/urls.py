@@ -6,6 +6,6 @@ urlpatterns = [
     path('image/', ImageCreateView.as_view()),
     path('banners/', BannerListView.as_view()),
     path('sections/', SectionsView.as_view()),
-    path('article/<slug:str>-<id:uuid>', ArticleView.as_view()),
+    path('article/<str:slug>-<str:uuid>', ArticleView.as_view()),
     path('article/', ArticleSearchView.as_view())
 ]

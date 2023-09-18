@@ -68,6 +68,8 @@ INSTALLED_APPS = [
 
     'tinymce',
     'import_export',
+
+    'django_quill',
 ]
 
 

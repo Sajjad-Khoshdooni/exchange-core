@@ -1,8 +1,8 @@
+import uuid
+
 from django.db import models
 from django.utils.text import slugify
-
-import uuid
-from tinymce.models import HTMLField
+from django_quill.fields import QuillField
 
 from multimedia.models import Image
 
@@ -27,4 +27,4 @@ class Article(BaseItem):
     uuid = models.UUIDField(default=uuid.uuid4(), editable=False)
     parent_section = models.ForeignKey(Section, on_delete=models.CASCADE)
     is_pinned = models.BooleanField(default=False)
-    content = HTMLField()
+    content = QuillField()

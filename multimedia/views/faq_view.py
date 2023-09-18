@@ -52,7 +52,7 @@ class ArticleView(RetrieveAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         slug = kwargs.get('slug', '')
-        uuid = kwargs.get('id', '')
+        uuid = kwargs.get('uuid', '')
 
         instance = get_object_or_404(Article, uuid=uuid, slug=slug)
 
