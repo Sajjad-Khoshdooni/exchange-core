@@ -15,7 +15,7 @@ class Section(models.Model):
 
     description = models.TextField(blank=True)
 
-    id = models.UUIDField(default=uuid.uuid4(), editable=False)
+    uuid = models.UUIDField(default=uuid.uuid4(), editable=False)
     slug = models.SlugField(max_length=255)
 
     def save(self, *args, **kwargs):
