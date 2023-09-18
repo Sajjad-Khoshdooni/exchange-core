@@ -73,3 +73,14 @@ class ArticleSearchView(ListAPIView):
 
     class Meta:
         model = Article
+
+
+class PinnedArticlesView(ListAPIView):
+    serializer_class = ArticleMiniSerializer(many=True)
+    paginate_by = 10
+
+    def get_queryset(self):
+        return super().get_queryset().filter(is_pinned=True)
+
+    class Meta:
+        model = Article
