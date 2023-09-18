@@ -56,9 +56,6 @@ class UserVerifySerializer(serializers.Serializer):
         if not token_verification:
             raise ValidationError('توکن نامعتبر است.')
 
-        if User.objects.filter(phone=new_phone):
-            raise ValidationError(
-                'شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.')
         token_verification.set_token_used()
         VerificationCode.send_otp_code(new_phone, VerificationCode.SCOPE_NEW_PHONE)
         return data
@@ -72,8 +69,14 @@ class NewPhoneVerifySerializer(serializers.Serializer):
         token_verification = VerificationCode.get_by_token(token, VerificationCode.SCOPE_NEW_PHONE)
         if not token_verification:
             raise ValidationError('توکن نامعتبر است.')
+
+        new_phone = token_verification.phone
+        if User.objects.filter(phone=new_phone):
+            raise ValidationError(
+                'شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.')
+
         token_verification.set_token_used()
-        data['new_phone'] = token_verification.phone
+        data['new_phone'] = new_phone
         return data
 
 
