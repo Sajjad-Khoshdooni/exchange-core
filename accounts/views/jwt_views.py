@@ -142,6 +142,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         account = Account.objects.get(user_id=user.pk)
         token['account_id'] = account.id
+        token['password_changed_at'] = user.password_changed_at and user.password_changed_at.isoformat()
 
         refresh_token_model, _ = RefreshTokenModel.objects.get_or_create(token=str(token))
 

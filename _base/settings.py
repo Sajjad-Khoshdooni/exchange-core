@@ -86,6 +86,7 @@ MIDDLEWARE = [
     'django_user_agents.middleware.UserAgentMiddleware',
 
     'accounts.middleware.SetLocaleMiddleware',
+    'accounts.middleware.JWTExpiryByPasswordMiddleware',
     'django_otp.middleware.OTPMiddleware'
 ]
 

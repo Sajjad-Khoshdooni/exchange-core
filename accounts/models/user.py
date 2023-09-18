@@ -165,6 +165,8 @@ class User(AbstractUser):
 
     suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
 
+    password_changed_at = models.DateTimeField(blank=True, null=True)
+
 
     def __str__(self):
         name = self.get_full_name()
@@ -361,6 +363,13 @@ class User(AbstractUser):
     def save(self, *args, **kwargs):
         old = self.id and User.objects.get(id=self.id)
         super(User, self).save(*args, **kwargs)
+
+        if old and old.password != self.password:
+            self.password_changed_at = timezone.now()
+            update_fields = kwargs.get('update_fields', [])
+            if update_fields:
+                update_fields.append('password_changed_at')
+                kwargs['update_fields'] = update_fields
 
         if self.level == self.LEVEL2 and self.verify_status == self.PENDING:
             if self.national_code_phone_verified and self.selfie_image_verified:
