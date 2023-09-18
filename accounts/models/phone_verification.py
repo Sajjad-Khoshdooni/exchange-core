@@ -41,6 +41,9 @@ class VerificationCode(models.Model):
         (SCOPE_ADDRESS_BOOK, SCOPE_ADDRESS_BOOK), (SCOPE_NEW_PHONE, SCOPE_NEW_PHONE), (SCOPE_FORGET_2FA, SCOPE_FORGET_2FA)
     ]
 
+    RESTRICTED_SEND_SCOPES = [SCOPE_NEW_PHONE, SCOPE_FORGET_2FA]
+    RESTRICTED_VERIFY_SCOPES = [SCOPE_CHANGE_PHONE_INIT]
+
     created = models.DateTimeField(auto_now_add=True)
     expiration = models.DateTimeField(default=fifteen_minutes_later_datetime)
 

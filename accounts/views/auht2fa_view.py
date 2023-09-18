@@ -122,6 +122,13 @@ class Forget2FAInitView(CreateAPIView):
     throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
     permission_classes = []
 
+    def post(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return Response({'msg': 'user is already authenticated'})
+
+        return self.create(request, *args, **kwargs)
+
+
 
 class Forget2FASerializer(ModelSerializer):
     token = serializers.CharField(write_only=True)
