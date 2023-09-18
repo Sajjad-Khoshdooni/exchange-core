@@ -122,7 +122,8 @@ class DepositSerializer(serializers.ModelSerializer):
         else:
             amount = Decimal(validated_data.get('amount')) / coin_mult
 
-            if amount < network_asset.get_min_deposit():
+            min_deposit = network_asset.get_min_deposit()
+            if min_deposit and amount < min_deposit:
                 raise ValidationError({
                     'type': 'ignore',
                     'reason': 'small amount'
