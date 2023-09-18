@@ -21,4 +21,3 @@ class Section(models.Model):
     def save(self, *args, **kwargs):
         self.slug = slugify(self.title_en)
         super().save(*args, **kwargs)
-

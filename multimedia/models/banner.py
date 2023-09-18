@@ -14,11 +14,11 @@ class Banner(models.Model):
     limit = models.CharField(
         max_length=16,
         blank=True,
-        choices=((ONLY_DESKTOP, ONLY_DESKTOP), )
+        choices=((ONLY_DESKTOP, ONLY_DESKTOP),)
     )
 
     def __str__(self):
         return self.image.url
 
     class Meta:
-        ordering = ('order', )
+        ordering = ('order',)
