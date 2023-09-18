@@ -7,7 +7,7 @@ from django.conf import settings
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', '_base.settings')
 
-app = Celery('exchange_core', broker=config('RABBITMQ_URL', default='pyamqp://guest@localhost//'))
+app = Celery(config('CELERY_VHOST', default='exchange_core'), broker=config('RABBITMQ_URL', default='pyamqp://guest@localhost//'))
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.
