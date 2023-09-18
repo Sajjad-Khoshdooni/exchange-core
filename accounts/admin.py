@@ -181,7 +181,8 @@ class ConsultationAdmin(admin.ModelAdmin):
 @admin.register(Forget2FA)
 class Forget2FAAdmin(admin.ModelAdmin):
     list_display = ('created', 'status', 'user',)
-    readonly_fields = ('created', 'status', 'user', 'selfie_image')
+    readonly_fields = ('created', 'status', 'user', 'get_selfie_image',)
+    exclude = ('selfie_image',)
     raw_id_fields = ('user',)
     actions = ('accept_requests', 'reject_requests',)
 
@@ -198,6 +199,12 @@ class Forget2FAAdmin(admin.ModelAdmin):
 
         for forget_request in qs:
             forget_request.accept()
+
+    def get_selfie_image(self, forget_request: Forget2FA):
+        return mark_safe("<img src='%s' width='200' height='200' />" % forget_request.selfie_image.
+                         get_absolute_image_url())
+
+    get_selfie_image.short_description = 'عکس سلفی'
 
 
 @admin.register(SystemConfig)

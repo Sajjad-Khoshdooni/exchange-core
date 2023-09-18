@@ -165,7 +165,6 @@ class User(AbstractUser):
 
     suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
 
-
     def __str__(self):
         name = self.get_full_name()
         super_name = super(User, self).__str__()
