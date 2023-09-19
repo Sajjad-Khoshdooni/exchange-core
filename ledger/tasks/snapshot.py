@@ -48,7 +48,7 @@ def create_snapshot(now: datetime, prices: dict):
         asset = s.asset
 
         s.updated = now
-        s.price = prices.get(asset.symbol, 0)
+        s.price = prices.get(asset.symbol + Asset.USDT, 0)
         s.hedge_amount = overview.get_hedge_amount(asset.symbol)
         s.hedge_value = overview.get_hedge_value(asset.symbol)
         s.hedge_value_abs = abs(s.hedge_value)
