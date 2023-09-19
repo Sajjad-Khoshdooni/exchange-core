@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 from ledger.utils.fields import get_group_id_field
 
@@ -14,8 +15,13 @@ class EmailNotification(models.Model):
 
     group_id = get_group_id_field(null=True, db_index=True, default=None)
 
+    @staticmethod
+    def is_spam(recipient, title: str) -> bool:
+        return EmailNotification.objects.filter(recipient=recipient, title=title,
+                                                created__gte=timezone.now() - timezone.timedelta(minutes=5)).exists()
+
     class Meta:
-        ordering = ('-created', )
+        ordering = ('-created',)
         unique_together = ('recipient', 'group_id')
         indexes = [
             models.Index(fields=['recipient', 'title', 'created'], name="email_notification_idx"),
