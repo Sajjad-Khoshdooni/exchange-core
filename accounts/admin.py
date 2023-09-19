@@ -213,7 +213,9 @@ class Forget2FAAdmin(BaseChangeAdmin):
 
 
 @admin.register(ChangePhone)
-class ChangePhoneAdmin(admin.ModelAdmin):
+class ChangePhoneAdmin(BaseChangeAdmin):
+    readonly_fields = ('created', 'status', 'user', 'get_selfie_image', 'new_phone',)
+
     pass
 
 
