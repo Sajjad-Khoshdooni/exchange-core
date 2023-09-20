@@ -100,7 +100,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
 
-    actions = ('resend_withdraw_request', 'accept_withdraw_request', 'reject_withdraw_request', 'refund')
+    actions = ('accept_withdraw_request', 'reject_withdraw_request', 'refund')
 
     @admin.display(description='نام و نام خانوادگی')
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
@@ -143,23 +143,9 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     get_withdraw_request_receive_time.short_description = 'زمان تقریبی واریز'
 
-    @admin.action(description='ارسال مجدد درخواست', permissions=['view'])
-    def resend_withdraw_request(self, request, queryset):
-        valid_qs = queryset.filter(
-            status=FiatWithdrawRequest.PROCESSING,
-            created__lt=timezone.now() - timedelta(seconds=FiatWithdrawRequest.FREEZE_TIME)
-        )
-
-        for fiat_withdraw in valid_qs:
-            fiat_withdraw.create_withdraw_request()
-
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw_request(self, request, queryset):
-        valid_qs = queryset.filter(status=FiatWithdrawRequest.INIT)
-
-        for fiat_withdraw in valid_qs:
-            fiat_withdraw.change_status(FiatWithdrawRequest.PROCESSING)
-            process_withdraw(fiat_withdraw.id)
+        queryset.filter(status=FiatWithdrawRequest.INIT).update(FiatWithdrawRequest.PROCESSING)
 
     @admin.action(description='رد برداشت', permissions=['view'])
     def reject_withdraw_request(self, request, queryset):
