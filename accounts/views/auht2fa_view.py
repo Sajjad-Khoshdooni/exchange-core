@@ -13,7 +13,6 @@ from datetime import timedelta
 from multimedia.fields import ImageField
 from accounts.models import Forget2FA
 from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
-from accounts.views.login_view import LoginSerializer
 from accounts.models.phone_verification import VerificationCode
 from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
 
@@ -127,7 +126,6 @@ class Forget2FAInitView(CreateAPIView):
             return Response({'msg': 'user is already authenticated'})
 
         return self.create(request, *args, **kwargs)
-
 
 
 class Forget2FASerializer(ModelSerializer):

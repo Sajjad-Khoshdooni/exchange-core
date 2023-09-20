@@ -9,7 +9,7 @@ from jalali_date.admin import ModelAdminJalaliMixin
 from simple_history.admin import SimpleHistoryAdmin
 
 from accounts.models import FirebaseToken, Attribution, AppStatus, VerificationCode, \
-    UserFeedback, BulkNotification, EmailNotification, Consultation, SystemConfig, Forget2FA
+    UserFeedback, BulkNotification, EmailNotification, Consultation, SystemConfig, Forget2FA, ChangePhone
 from accounts.models import UserComment, TrafficSource, Referral
 from accounts.utils.admin import url_to_admin_list, url_to_edit_object
 from financial.models.bank_card import BankCard, BankAccount
@@ -178,8 +178,7 @@ class ConsultationAdmin(admin.ModelAdmin):
             return description
 
 
-@admin.register(Forget2FA)
-class Forget2FAAdmin(admin.ModelAdmin):
+class BaseChangeAdmin(admin.ModelAdmin):
     list_display = ('created', 'status', 'user',)
     readonly_fields = ('created', 'status', 'user', 'get_selfie_image',)
     exclude = ('selfie_image',)
@@ -206,6 +205,18 @@ class Forget2FAAdmin(admin.ModelAdmin):
                          get_absolute_image_url())
 
     get_selfie_image.short_description = 'عکس سلفی'
+
+
+@admin.register(Forget2FA)
+class Forget2FAAdmin(BaseChangeAdmin):
+    pass
+
+
+@admin.register(ChangePhone)
+class ChangePhoneAdmin(BaseChangeAdmin):
+    readonly_fields = ('created', 'status', 'user', 'get_selfie_image', 'new_phone',)
+
+    pass
 
 
 @admin.register(SystemConfig)
