@@ -145,7 +145,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw_request(self, request, queryset):
-        queryset.filter(status=FiatWithdrawRequest.INIT).update(FiatWithdrawRequest.PROCESSING)
+        queryset.filter(status=FiatWithdrawRequest.INIT).update(status=FiatWithdrawRequest.PROCESSING)
 
     @admin.action(description='رد برداشت', permissions=['view'])
     def reject_withdraw_request(self, request, queryset):
