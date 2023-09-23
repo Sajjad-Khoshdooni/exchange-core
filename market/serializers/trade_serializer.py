@@ -17,13 +17,9 @@ class AccountTradeSerializer(serializers.ModelSerializer):
 
     def to_representation(self, trade: Trade):
         data = super(AccountTradeSerializer, self).to_representation(trade)
-        amount = get_presentation_amount(Decimal(data['amount']), trade.symbol.step_size)
-        if not amount:
-            amount = get_presentation_amount(trade.symbol.min_trade_quantity, trade.symbol.step_size)
-        data['amount'] = str(amount)
-
-        data['price'] = get_presentation_amount(Decimal(data['price']), trade.symbol.tick_size, trunc_zero=False)
-        data['base_amount'] = get_presentation_amount(Decimal(data['base_amount']), trade.symbol.tick_size)
+        data['amount'] = get_presentation_amount(data['amount'])
+        data['price'] = get_presentation_amount(data['price'])
+        data['base_amount'] = get_presentation_amount(data['base_amount'])
 
         if 'fee_amount' in data:
             data['fee_amount'] = get_presentation_amount(data['fee_amount'])
@@ -33,7 +29,8 @@ class AccountTradeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Trade
-        fields = ('created', 'asset', 'base_asset', 'side', 'amount', 'price', 'base_amount', 'fee_amount', 'market')
+        fields = ('id', 'created', 'asset', 'base_asset', 'side', 'amount', 'price', 'base_amount', 'fee_amount',
+                  'market')
 
 
 class TradeSerializer(serializers.ModelSerializer):

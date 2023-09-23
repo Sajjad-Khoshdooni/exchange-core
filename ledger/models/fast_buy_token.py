@@ -7,7 +7,7 @@ from accounts.models import Notification
 from ledger.models import OTCRequest, Asset, Wallet, OTCTrade
 from ledger.utils.fields import DONE
 from ledger.utils.fields import get_amount_field
-from ledger.utils.precision import humanize_number
+from ledger.utils.precision import humanize_number, humanize_presentation
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class FastBuyToken(models.Model):
         verbose_name = verbose_name_plural = 'خرید آنی'
 
     def __str__(self):
-        return '%s %s %s' % (self.payment_request.bank_card, self.asset, humanize_number(self.amount))
+        return '%s IRT (%s)' % (humanize_number(self.amount), self.asset)
 
     @property
     def user(self):
@@ -47,7 +47,7 @@ class FastBuyToken(models.Model):
                 account=self.user.get_account(),
                 from_asset=Asset.get('IRT'),
                 to_asset=self.asset,
-                from_amount=Decimal(payment.amount),
+                from_amount=payment.amount,
                 market=Wallet.SPOT
             )
             otc_request.login_activity = self.payment_request.login_activity
@@ -64,7 +64,7 @@ class FastBuyToken(models.Model):
                 Notification.send(
                     recipient=self.user,
                     title='خرید آنی {}'.format(self.asset.name_fa),
-                    message='خرید {} {} با موفقیت انجام شد.'.format(self.amount, self.asset.name_fa),
+                    message='خرید {} {} با موفقیت انجام شد.'.format(humanize_presentation(otc_request.amount), self.asset.name_fa),
                     level=Notification.SUCCESS
                 )
                 return otc_trade

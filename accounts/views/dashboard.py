@@ -4,9 +4,11 @@ from django.db.models import Q
 from django.shortcuts import render
 from decouple import config
 
+from accounts.models import Forget2FA
 from accounts.models.user import User
 from financial.models.withdraw_request import FiatWithdrawRequest
 from ledger.models import Transfer
+from ledger.utils.fields import PENDING
 
 
 @staff_member_required
@@ -38,6 +40,7 @@ def dashboard(request):
         crypto_withdraw_count = Transfer.objects.filter(deposit=False, status=Transfer.INIT).count()
 
         context = {
+            'brand': settings.BRAND,
             'user_count': user_count,
             'pending_or_reject_level_2_users': pending_or_reject_level_2_users,
             'pending_level_3_users': pending_level_3_users,
@@ -45,8 +48,8 @@ def dashboard(request):
             'process_withdraw_requests': process_withdraw_requests,
             'archived_users': users.filter(archived=True).count(),
             'shahkar_rejected': users.filter(level=User.LEVEL2, national_code_phone_verified=False).count(),
-            'brand': settings.BRAND,
             'crypto_withdraw_count': crypto_withdraw_count,
+            'forget_2fa_count': Forget2FA.objects.filter(status=PENDING).count(),
         }
 
         return render(request, 'accounts/dashboard.html', context)

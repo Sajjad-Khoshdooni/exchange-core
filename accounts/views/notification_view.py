@@ -66,7 +66,7 @@ class NotificationViewSet(ModelViewSet):
             limit = parse_positive_int(query_params.get('limit'), default=20)
             offset = parse_positive_int(query_params.get('offset'), default=0)
 
-            return notifications[offset:limit]
+            return notifications[offset:limit + offset]
 
         return notifications
 

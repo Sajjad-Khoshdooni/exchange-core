@@ -18,9 +18,10 @@ from ledger.exceptions import HedgeError
 from ledger.models import Asset, Transfer
 from ledger.utils.cache import get_cache_func_key
 from ledger.utils.dto import MarketInfo, NetworkInfo, WithdrawStatus, CoinInfo
-from ledger.utils.external_price import SELL, BUY, get_external_price
+from ledger.utils.external_price import SELL, BUY
 from ledger.utils.fields import DONE
 from ledger.utils.precision import floor_precision
+from ledger.utils.price import get_price
 
 TRADE, BORROW, LIQUIDATION, WITHDRAW, HEDGE, PROVIDE_BASE, FAKE = \
     'trade', 'borrow', 'liquid', 'withdraw', 'hedge', 'prv-base', 'fake'
@@ -135,9 +136,8 @@ class ProviderRequester:
 
             order_amount = round(buy_amount, round_digits)
 
-            price = get_external_price(
-                coin=asset.symbol,
-                base_coin=Asset.USDT,
+            price = get_price(
+                asset.symbol + Asset.USDT,
                 side=BUY
             )
             min_notional = market_info.min_notional * Decimal('1.1')

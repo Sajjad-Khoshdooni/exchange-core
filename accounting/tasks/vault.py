@@ -5,27 +5,13 @@ from accounting.utils.vault import update_provider_vaults, update_hot_wallet_vau
     update_asset_prices, update_cold_wallet_vaults, update_reserved_assets_value, update_bank_vaults
 from ledger.models import Asset
 from ledger.tasks import create_snapshot
-from ledger.utils.external_price import SELL, get_external_price, get_external_usdt_prices
+from ledger.utils.price import get_coins_symbols, get_last_prices
 
 
 @shared_task(queue='vault')
 def update_vaults():
-    assets = Asset.live_objects.all()
-
-    irt_usdt = get_external_price(
-        coin=Asset.IRT,
-        base_coin=Asset.USDT,
-        side=SELL,
-        allow_stale=True
-    )
-
-    prices = get_external_usdt_prices(
-        coins=list(assets.values_list('symbol', flat=True)),
-        side=SELL,
-        allow_stale=True,
-    )
-    prices['IRT'] = irt_usdt
-
+    coins = Asset.live_objects.all().values_list('symbol', flat=True)
+    prices = get_last_prices(get_coins_symbols(coins))
     now = timezone.now().replace(second=0, microsecond=0)
 
     update_provider_vaults(now, prices)

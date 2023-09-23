@@ -34,7 +34,7 @@ class OCO(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     symbol = models.ForeignKey('market.PairSymbol', on_delete=models.PROTECT)
     amount = get_amount_field()
-    releasable_lock = get_amount_field()
+    releasable_lock = get_amount_field()  # todo: can be deleted
     stop_loss_price = get_amount_field()
     stop_loss_trigger_price = get_amount_field()
     price = get_amount_field(null=True)

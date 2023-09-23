@@ -17,6 +17,10 @@ class TradingPair:
     coin_amount: Decimal
     base_amount: Decimal
 
+    @property
+    def symbol(self) -> str:
+        return f'{self.coin}{self.base}'
+
 
 def get_trading_pair(from_asset: Asset, to_asset: Asset, from_amount: Decimal = None, to_amount: Decimal = None) -> TradingPair:
 
@@ -53,7 +57,7 @@ def get_asset_spread(coin, side: str, value: Decimal = None) -> Decimal:
     asset_spread = CategorySpread.objects.filter(category=category, step__lte=step, side=side).order_by('-step').first()
 
     if not asset_spread:
-        logger.warning("No category spread defined for %s step = %s, side = %s" % (category, step, side))
+        # logger.warning("No category spread defined for %s step = %s, side = %s" % (category, step, side))
         asset_spread = CategorySpread()
 
     spread = asset_spread.spread

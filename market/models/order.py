@@ -1,12 +1,12 @@
 import logging
 from collections import defaultdict
+from dataclasses import dataclass
 from decimal import Decimal
 from itertools import groupby
 from math import floor, log10
 from typing import Union
 from uuid import uuid4
 
-from dataclasses import dataclass
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import F, Q, Max, Min, CheckConstraint, QuerySet, Sum, UniqueConstraint
@@ -17,7 +17,7 @@ from accounts.models import Notification
 from ledger.models import Wallet, Trx
 from ledger.models.asset import Asset
 from ledger.models.balance_lock import BalanceLock
-from ledger.utils.external_price import get_external_price, BUY, SELL, SIDE_VERBOSE
+from ledger.utils.external_price import BUY, SELL, SIDE_VERBOSE
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.precision import floor_precision, decimal_to_str
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -207,14 +207,24 @@ class Order(models.Model):
     def get_price_filter(price, side):
         return {'price__lte': price} if side == BUY else {'price__gte': price}
 
-    @classmethod
-    def get_to_lock_wallet(cls, wallet, base_wallet, side, lock_amount) -> Wallet:
+    @staticmethod
+    def get_to_lock_wallet(wallet, base_wallet, side, symbol) -> Wallet:
         if wallet.market == Wallet.MARGIN:
-            margin_cross_wallet = base_wallet.asset.get_wallet(
-                base_wallet.account, market=base_wallet.market, variant=None
-            )
-            margin_cross_wallet.has_balance(lock_amount, raise_exception=True)
-            return margin_cross_wallet
+
+            if side == SELL:
+                margin_cross_wallet = base_wallet.asset.get_wallet(
+                    base_wallet.account, market=base_wallet.market, variant=None
+                )
+                return margin_cross_wallet
+            else:
+                from ledger.models import MarginPosition
+
+                position = MarginPosition.objects.filter(
+                    account=wallet.account, symbol=symbol, status=MarginPosition.OPEN
+                ).first()
+
+                return position.margin_base_wallet
+
         return base_wallet if side == BUY else wallet
 
     @classmethod
@@ -235,6 +245,7 @@ class Order(models.Model):
     def submit(self, pipeline: WalletPipeline, is_stop_loss: bool = False, is_oco: bool = False) -> MatchedTrades:
         PairSymbol.objects.select_for_update().get(id=self.symbol_id)
         overriding_fill_amount = None
+
         if is_stop_loss:
             if self.side == BUY:
                 locked_amount = BalanceLock.objects.get(key=self.group_id).amount
@@ -242,6 +253,7 @@ class Order(models.Model):
                     overriding_fill_amount = floor_precision(locked_amount / self.price, self.symbol.step_size)
                     if not overriding_fill_amount:
                         raise CancelOrder('Overriding fill amount is zero')
+
         elif not is_oco:
             overriding_fill_amount = self.acquire_lock(pipeline)
 
@@ -253,11 +265,12 @@ class Order(models.Model):
             StopLoss.trigger(self, min_price, max_price, matched_trades, pipeline)
             from ledger.models import MarginPosition
             MarginPosition.check_for_liquidation(self, min_price, max_price, pipeline)
+
         return matched_trades
 
     def acquire_lock(self, pipeline: WalletPipeline):
         lock_amount = Order.get_to_lock_amount(self.amount, self.price, self.side, self.wallet.market)
-        to_lock_wallet = self.get_to_lock_wallet(self.wallet, self.base_wallet, self.side, lock_amount)
+        to_lock_wallet = Order.get_to_lock_wallet(self.wallet, self.base_wallet, self.side, self.symbol)
 
         if self.side == BUY and self.fill_type == Order.MARKET:
             free_amount = to_lock_wallet.get_free()
@@ -278,6 +291,7 @@ class Order(models.Model):
     def make_match(self, pipeline: WalletPipeline, overriding_fill_amount: Union[Decimal, None]) -> MatchedTrades:
         from market.utils.trade import register_transactions, TradesPair
         from market.models import Trade
+        from ledger.utils.price import get_last_price, USDT_IRT
 
         symbol = self.symbol
 
@@ -319,14 +333,9 @@ class Order(models.Model):
         trades = []
         filled_orders = []
 
-        opposite_side = Order.get_opposite_side(self.side)
-        if settings.ZERO_USDT_HEDGE:
-            usdt_symbol_id = PairSymbol.objects.get(name='USDTIRT').id
-            tether_irt = Order.get_top_price(usdt_symbol_id, opposite_side)
-        else:
-            tether_irt = get_external_price(coin=Asset.USDT, base_coin=Asset.IRT, side=opposite_side)
+        tether_irt = get_last_price(USDT_IRT)
 
-        hedging_usdt = settings.ZERO_USDT_HEDGE and symbol.name == 'USDTIRT'
+        hedging_usdt = settings.ZERO_USDT_HEDGE and symbol.name == USDT_IRT
 
         taker_is_system = self.wallet.account.is_system() or (
                 hedging_usdt and self.account_id == settings.TRADER_ACCOUNT_ID)

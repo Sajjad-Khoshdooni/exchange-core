@@ -2,6 +2,7 @@ from django.db.models import Sum
 from rest_framework import serializers
 from rest_framework.generics import RetrieveAPIView
 
+from accounts.models import SystemConfig
 from accounts.models.user_feature_perm import UserFeaturePerm
 from financial.models import Gateway, Payment
 from financial.utils.ach import next_ach_clear_time
@@ -15,6 +16,22 @@ class GatewaySerializer(serializers.ModelSerializer):
     pay_id_enable = serializers.SerializerMethodField()
     max_deposit_amount = serializers.SerializerMethodField()
     ipg_fee_percent = serializers.SerializerMethodField()
+
+    withdraw_fee_min = serializers.SerializerMethodField()
+    withdraw_fee_max = serializers.SerializerMethodField()
+    withdraw_fee_percent = serializers.SerializerMethodField()
+
+    def get_withdraw_fee_min(self, gateway):
+        system_config = SystemConfig.get_system_config()
+        return system_config.withdraw_fee_min
+
+    def get_withdraw_fee_max(self, gateway):
+        system_config = SystemConfig.get_system_config()
+        return system_config.withdraw_fee_max
+
+    def get_withdraw_fee_percent(self, gateway):
+        system_config = SystemConfig.get_system_config()
+        return get_presentation_amount(system_config.withdraw_fee_percent)
 
     def get_next_ach_time(self, gateway):
         return next_ach_clear_time()
@@ -40,7 +57,7 @@ class GatewaySerializer(serializers.ModelSerializer):
         model = Gateway
         fields = (
             'id', 'min_deposit_amount', 'max_deposit_amount', 'next_ach_time', 'pay_id_enable', 'ipg_fee_min',
-            'ipg_fee_max', 'ipg_fee_percent'
+            'ipg_fee_max', 'ipg_fee_percent', 'withdraw_fee_min', 'withdraw_fee_max', 'withdraw_fee_percent',
         )
 
 

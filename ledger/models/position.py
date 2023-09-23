@@ -6,8 +6,9 @@ from dataclasses import dataclass
 from django.db import models
 
 from accounts.models import Account
-from ledger.utils.external_price import SHORT, LONG, BUY, SELL, get_external_price
+from ledger.utils.external_price import SHORT, LONG, BUY, SELL
 from ledger.utils.fields import get_amount_field
+from ledger.utils.price import get_last_price
 from market.models import PairSymbol
 
 
@@ -57,14 +58,13 @@ class MarginPosition(models.Model):
 
     @property
     def withdrawable_base_asset(self):
-        return self.total_balance - self.total_debt
+        return self.total_balance - self.total_debt * 2
 
     @property
     def total_debt(self):
         if self.side == SHORT:
             from market.models import Order
-            price = Order.get_top_price(self.symbol.id, SELL) or \
-                    get_external_price(self.symbol.asset.symbol, base_coin=self.symbol.base_asset.symbol, side=BUY)
+            price = get_last_price(self.symbol.name)
         else:
             price = Decimal(1)
         return self.debt_amount * price
@@ -107,7 +107,10 @@ class MarginPosition(models.Model):
     def liquidate(self, pipeline):
         from market.utils.order_utils import Order, new_order
         from ledger.models import Trx, Wallet
+
         to_close_amount = self.debt_amount - pipeline.get_wallet_balance_diff(self.loan_wallet.id)
+
+        # todo: fix min_notional, tick_size and other errors, better to specify as liquidation trade
         liquidation_order = new_order(
             pipeline=pipeline,
             symbol=self.symbol,
@@ -118,14 +121,17 @@ class MarginPosition(models.Model):
             market=Wallet.MARGIN,
             variant=self.variant
         )
+
         margin_cross_wallet = self.margin_base_wallet.asset.get_wallet(self.account, market=Wallet.MARGIN, variant=None)
+
         remaining_balance = self.margin_base_wallet.balance + pipeline.get_wallet_balance_diff(
             self.margin_base_wallet.id)
+
         pipeline.new_trx(
             self.margin_base_wallet,
             margin_cross_wallet,
             remaining_balance,
-            Trx.MARGIN_TRANSFER,
+            Trx.MARGIN_TRANSFER,  # todo: liquidation transfer
             liquidation_order.group_id
         )
         self.amount = Decimal(0)
@@ -139,7 +145,8 @@ class MarginPosition(models.Model):
             liquidation_price__lte=max_price,
             status=cls.OPEN,
             symbol=order.symbol,
-        ).order_by('-liquidation_price')
+        ).order_by('liquidation_price')
+
         for position in to_liquid_short_positions:
             position.liquidate(pipeline)
 
@@ -149,6 +156,7 @@ class MarginPosition(models.Model):
             status=cls.OPEN,
             symbol=order.symbol,
         ).order_by('liquidation_price')
+
         for position in to_liquid_long_positions:
             position.liquidate(pipeline)
 

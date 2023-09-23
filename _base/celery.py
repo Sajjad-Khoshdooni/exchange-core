@@ -119,6 +119,15 @@ app.conf.beat_schedule = {
         },
     },
 
+    'update_fiat_withdraws': {
+        'task': 'financial.tasks.withdraw.update_withdraws',
+        'schedule': 10 * TASK_MULTIPLIER,
+        'options': {
+            'queue': 'finance',
+            'expires': 10 * TASK_MULTIPLIER
+        },
+    },
+
     'update_withdraw_status': {
         'task': 'financial.tasks.withdraw.update_withdraw_status',
         'schedule': 300 * TASK_MULTIPLIER,

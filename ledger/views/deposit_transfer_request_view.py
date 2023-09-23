@@ -10,8 +10,9 @@ from rest_framework.generics import CreateAPIView, get_object_or_404
 from accounts.authentication import CustomTokenAuthentication
 from ledger.models import Network, Asset, DepositAddress, AddressKey, NetworkAsset
 from ledger.models.transfer import Transfer
-from ledger.requester.architecture_requester import get_network_architecture, is_network_memo_base
-from ledger.utils.external_price import get_external_price, SELL
+from ledger.requester.architecture_requester import get_network_architecture
+from ledger.requester.architecture_requester import is_network_memo_base
+from ledger.utils.price import get_last_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
@@ -134,14 +135,15 @@ class DepositSerializer(serializers.ModelSerializer):
         else:
             amount = Decimal(validated_data.get('amount')) / coin_mult
 
-            if amount < network_asset.get_min_deposit():
+            min_deposit = network_asset.get_min_deposit()
+            if min_deposit and amount < min_deposit:
                 raise ValidationError({
                     'type': 'ignore',
                     'reason': 'small amount'
                 })
 
-            price_usdt = get_external_price(coin=asset.symbol, base_coin=Asset.USDT, side=SELL, allow_stale=True)
-            price_irt = get_external_price(coin=asset.symbol, base_coin=Asset.IRT, side=SELL, allow_stale=True)
+            price_usdt = get_last_price(asset.symbol + Asset.USDT)
+            price_irt = get_last_price(asset.symbol + Asset.IRT)
 
             with WalletPipeline() as pipeline:
                 transfer, _ = Transfer.objects.get_or_create(

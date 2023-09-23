@@ -100,7 +100,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     list_display = ('bank_account', 'created', 'get_user', 'status', 'amount', 'gateway', 'ref_id')
 
-    actions = ('resend_withdraw_request', 'accept_withdraw_request', 'reject_withdraw_request', 'refund')
+    actions = ('accept_withdraw_request', 'reject_withdraw_request', 'refund')
 
     @admin.display(description='نام و نام خانوادگی')
     def get_withdraw_request_user(self, withdraw_request: FiatWithdrawRequest):
@@ -143,23 +143,9 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     get_withdraw_request_receive_time.short_description = 'زمان تقریبی واریز'
 
-    @admin.action(description='ارسال مجدد درخواست', permissions=['view'])
-    def resend_withdraw_request(self, request, queryset):
-        valid_qs = queryset.filter(
-            status=FiatWithdrawRequest.PROCESSING,
-            created__lt=timezone.now() - timedelta(seconds=FiatWithdrawRequest.FREEZE_TIME)
-        )
-
-        for fiat_withdraw in valid_qs:
-            fiat_withdraw.create_withdraw_request()
-
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw_request(self, request, queryset):
-        valid_qs = queryset.filter(status=FiatWithdrawRequest.INIT)
-
-        for fiat_withdraw in valid_qs:
-            fiat_withdraw.change_status(FiatWithdrawRequest.PROCESSING)
-            process_withdraw(fiat_withdraw.id)
+        queryset.filter(status=FiatWithdrawRequest.INIT).update(status=FiatWithdrawRequest.PROCESSING)
 
     @admin.action(description='رد برداشت', permissions=['view'])
     def reject_withdraw_request(self, request, queryset):
@@ -224,7 +210,8 @@ class PaymentUserFilter(SimpleListFilter):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('created', 'get_amount', 'get_fee', 'status', 'ref_id', 'ref_status', 'get_user',)
+    list_display = ('created', 'get_amount', 'get_fee', 'status', 'ref_id', 'ref_status',
+                    'get_card_pan', 'get_user',)
     list_filter = (PaymentUserFilter, 'status', )
     search_fields = ('ref_id', 'paymentrequest__bank_card__card_pan', 'amount',
                      'paymentrequest__authority', 'paymentrequest__bank_card__user__phone')
@@ -242,6 +229,12 @@ class PaymentAdmin(admin.ModelAdmin):
     def get_user(self, payment: Payment):
         link = url_to_edit_object(payment.user)
         return mark_safe("<a href='%s'>%s</a>" % (link, payment.user.phone))
+
+    @admin.display(description='شماره کارت')
+    def get_card_pan(self, payment: Payment):
+        if payment.paymentrequest:
+            link = url_to_edit_object(payment.paymentrequest.bank_card)
+            return mark_safe("<a href='%s'>%s</a>" % (link, payment.paymentrequest.bank_card.card_pan))
 
 
 class BankCardUserFilter(SimpleListFilter):

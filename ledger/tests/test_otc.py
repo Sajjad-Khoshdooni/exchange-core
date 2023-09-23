@@ -39,7 +39,7 @@ class OTCTestCase(TestCase):
             'to_asset': 'BTC',
             'from_amount': 10,
         })
-        print(resp.data)
+
         self.assertEqual(resp.status_code, 201)
 
         token = resp.data['token']
@@ -120,14 +120,6 @@ class OTCTestCase(TestCase):
             'from_asset': 'USDT',
             'to_asset': 'BTC',
             'from_amount': 10,
-        })
-        print(resp.data)
-        self.assertEqual(resp.status_code, 201)
-
-        token = resp.data['token']
-
-        resp = self.client.post('/api/v1/trade/otc/', {
-            'token': token,
         })
 
         self.assertEqual(resp.status_code, 400)
