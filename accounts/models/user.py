@@ -362,6 +362,12 @@ class User(AbstractUser):
         old = self.id and User.objects.get(id=self.id)
         super(User, self).save(*args, **kwargs)
 
+        from accounts.models import LoginActivity
+        if old and old.password != self.password:
+            for login_Activity in (LoginActivity.objects.filter(user=self)
+                    .exclude(refresh_token__isnull=True, session__isnull=True)):
+                login_Activity.destroy()
+
         if self.level == self.LEVEL2 and self.verify_status == self.PENDING:
             if self.national_code_phone_verified and self.selfie_image_verified:
                 self.change_status(self.VERIFIED)

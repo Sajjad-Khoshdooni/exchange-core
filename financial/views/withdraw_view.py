@@ -120,8 +120,6 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
 
         if auto_verify_fiat_withdraw(withdraw_request) and not settings.DEBUG_OR_TESTING_OR_STAGING:
             withdraw_request.change_status(FiatWithdrawRequest.PROCESSING)
-            from financial.tasks import process_withdraw
-            process_withdraw.s(withdraw_request.id).apply_async(countdown=FiatWithdrawRequest.FREEZE_TIME)
 
         return withdraw_request
 
