@@ -11,7 +11,7 @@ from multimedia.models import Section, Article
 class ArticleMiniSerializer(serializers.ModelSerializer):
     class Meta:
         model = Article
-        fields = ('id', 'title', 'slug', 'uuid',)
+        fields = ('id', 'title', 'slug',)
 
 
 class ArticleSerializer(serializers.ModelSerializer):
@@ -57,7 +57,7 @@ class ArticleView(RetrieveAPIView):
     def get_object(self):
         kwargs = self.kwargs
         slug = kwargs.get('slug', '')
-
+        print(slug)
         return get_object_or_404(Article, slug=slug)
 
 
