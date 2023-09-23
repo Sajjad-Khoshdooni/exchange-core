@@ -18,9 +18,12 @@ class BaseItem(models.Model):
 
 
 class Section(BaseItem):
-    parent = models.ForeignKey('self', on_delete=models.CASCADE, blank=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True)
     icon = Image()
     description = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.title
 
 
 class Article(BaseItem):

@@ -32,3 +32,8 @@ class CoinPriceContentAdmin(SimpleHistoryAdmin):
 class ArticleAdmin(admin.ModelAdmin):
     pass
 
+@admin.register(Section)
+class SectionAdmin(admin.ModelAdmin):
+    exclude = ('slug',)
+    pass
+
