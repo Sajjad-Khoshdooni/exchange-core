@@ -10,8 +10,7 @@ from rest_framework.generics import CreateAPIView, get_object_or_404
 from accounts.authentication import CustomTokenAuthentication
 from ledger.models import Network, Asset, DepositAddress, AddressKey, NetworkAsset
 from ledger.models.transfer import Transfer
-from ledger.requester.architecture_requester import get_network_architecture
-from ledger.utils.consts import MEMO_NETWORKS
+from ledger.requester.architecture_requester import get_network_architecture, is_network_memo_base
 from ledger.utils.external_price import get_external_price, SELL
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -41,7 +40,7 @@ class DepositSerializer(serializers.ModelSerializer):
             raise ValidationError({'receiver_address': 'old deposit address not supported'})
 
         if not deposit_address:
-            if network in MEMO_NETWORKS:
+            if is_network_memo_base(network):
                 if not memo:
                     raise ValidationError({'memo': 'null memo for memo networks error'})
                 address_key = get_object_or_404(

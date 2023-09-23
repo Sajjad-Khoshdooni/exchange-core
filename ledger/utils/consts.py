@@ -1,1 +1,0 @@
-MEMO_NETWORKS = ['BNB']
