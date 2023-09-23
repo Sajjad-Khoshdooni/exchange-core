@@ -16,14 +16,14 @@ class BaseItem(models.Model):
         self.slug = slugify(self.title_en)
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return self.title
+
 
 class Section(BaseItem):
     parent = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True)
     icon = Image()
     description = models.TextField(blank=True)
-
-    def __str__(self):
-        return self.title
 
 
 class Article(BaseItem):
