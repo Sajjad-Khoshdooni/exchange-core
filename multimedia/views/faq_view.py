@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
-from django.contrib.postgres.search import SearchVector
+from django.contrib.postgres.search import TrigramWordSimilarity, SearchVector
 
 from multimedia.models import Section, Article
 
@@ -70,9 +70,10 @@ class ArticleSearchView(ListAPIView):
         search_parameter = self.request.query_params.get('q', '')
         if not search_parameter:
             return Response({}, status=404)
-        return super().get_queryset().annotate(
-            search=SearchVector('title', 'content'),
+        qs = super().get_queryset().annotate(
+            search=SearchVector('title', 'title_en', 'content',)
         ).filter(search=search_parameter)
+        return qs
 
 
 class PinnedArticlesView(ListAPIView):

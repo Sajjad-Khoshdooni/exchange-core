@@ -8,8 +8,8 @@ from multimedia.models import Image
 
 
 class BaseItem(models.Model):
-    title = models.CharField(max_length=30)
-    title_en = models.CharField(max_length=30)
+    title = models.TextField(max_length=30)
+    title_en = models.TextField(max_length=30)
     slug = models.SlugField(max_length=255, unique=True, db_index=True, editable=False)
 
     def save(self, *args, **kwargs):
