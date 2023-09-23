@@ -7,9 +7,8 @@ from django.db.models import F, Sum, Case, When, Value as V
 
 from accounts.models import Account
 from ledger.models import Wallet, Asset, Trx
-from ledger.utils.external_price import get_external_price, BUY
 from ledger.utils.fields import get_amount_field
-
+from ledger.utils.price import get_last_price
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,7 @@ class PNLHistory(models.Model):
     def calculate_amounts_in_usdt(account_wallets: dict, account_input_outputs: dict, last_snapshot_balance: Decimal,
                                   usdt_price: Decimal):
         def get_price(coin: str):
-            return get_external_price(coin=coin, base_coin=Asset.USDT, side=BUY, allow_stale=True) or 0
+            return get_last_price(coin + Asset.USDT) or 0
 
         snapshot_balance = sum(map(
             lambda coin_amount: Decimal(get_price(coin_amount[0])) * coin_amount[1], account_wallets.items()

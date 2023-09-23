@@ -19,6 +19,7 @@ class ImageCreateView(CreateAPIView):
     parser_classes = (FormParser, MultiPartParser, FileUploadParser)
     serializer_class = ImageSerializer
     queryset = Image.objects.all()
+    permission_classes = []
 
     def post(self, request, *args, **kwargs):
         return super(ImageCreateView, self).post(request, *args, **kwargs)

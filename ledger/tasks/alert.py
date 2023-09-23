@@ -9,8 +9,9 @@ from django.utils import timezone
 
 from accounts.models import Notification, User
 from ledger.models import CoinCategory, AssetAlert, BulkAssetAlert, AlertTrigger, Asset
-from ledger.utils.external_price import get_external_usdt_prices, USDT, IRT, get_external_price, BUY
+from ledger.utils.external_price import BUY
 from ledger.utils.precision import get_presentation_amount
+from ledger.utils.price import USDT_IRT, get_prices, get_symbol_parts, get_coins_symbols
 
 CACHE_PREFIX = 'asset_alert'
 
@@ -48,13 +49,10 @@ class AlertData:
 
 def get_current_prices() -> dict:
     coins = list(Asset.objects.values_list('symbol', flat=True))
+    symbols = get_coins_symbols(coins, only_base=Asset.USDT)
+    symbols.append(USDT_IRT)
 
-    prices = get_external_usdt_prices(coins=coins, side=BUY)
-
-    if USDT in prices.keys():
-        prices[USDT] = get_external_price(coin=USDT, base_coin=IRT, side=BUY)
-
-    return prices
+    return get_prices(symbols, side=BUY)
 
 
 def send_notifications(asset_alerts, altered_coins):
@@ -136,13 +134,13 @@ def get_altered_coins(past_cycle_prices: dict, current_cycle: dict, current_cycl
 
     changed_coins = {}
 
-    for coin in past_cycle_prices.keys() & current_cycle.keys():
-        asset = mapping_symbol.get(coin, None)
+    for symbol in past_cycle_prices.keys() & current_cycle.keys():
+        asset = mapping_symbol.get(symbol, None)
         if not asset:
             continue
 
-        current_price = current_cycle[coin]
-        past_price = past_cycle_prices[coin]
+        current_price = current_cycle[symbol]
+        past_price = past_cycle_prices[symbol]
         change_percent = math.floor(Decimal(current_price / past_price - Decimal(1)) * 100)
         is_ratio_changed = abs(change_percent) > INTERVAL_CHANGE_PERCENT_SENSITIVITY_MAP[interval]
 
@@ -171,6 +169,7 @@ def get_altered_coins(past_cycle_prices: dict, current_cycle: dict, current_cycl
                 is_ratio_change_alerted = process_ratio_change(asset=asset, interval=interval)
 
             if is_chanel_new or is_ratio_change_alerted:
+                coin, base_coin = get_symbol_parts(symbol)
                 changed_coins[coin] = [current_price, past_price, interval, is_chanel_new]
                 alert_trigger.is_triggered = True
                 alert_trigger.save(update_fields=['is_triggered'])
@@ -189,10 +188,13 @@ def get_asset_alert_list(altered_coins: dict) -> set:
     all_assets = Asset.live_objects.filter(symbol__in=altered_coins.keys())
     all_categories = CoinCategory.objects.all()
     category_map = {}
+
     for category in all_categories:
         category_map[category] = category.coins.filter(symbol__in=altered_coins.keys())
+
     for asset_alert in AssetAlert.objects.filter(
-        asset__symbol__in=altered_coins.keys()
+        asset__symbol__in=altered_coins.keys(),
+        user__is_price_notif_on=True,
     ):
         asset_alerts.add(
             AlertData(
@@ -200,8 +202,12 @@ def get_asset_alert_list(altered_coins: dict) -> set:
                 asset=asset_alert.asset,
             )
         )
-    for bulk_asset_alert in BulkAssetAlert.objects.all():
+
+    for bulk_asset_alert in BulkAssetAlert.objects.filter(
+        user__is_price_notif_on=True
+    ):
         subscription_type = bulk_asset_alert.subscription_type
+
         if subscription_type == BulkAssetAlert.CATEGORY_ALL_COINS:
             subscribed_coins = all_assets
         elif subscription_type == BulkAssetAlert.CATEGORY_MY_ASSETS:
@@ -212,11 +218,13 @@ def get_asset_alert_list(altered_coins: dict) -> set:
             )
         else:
             subscribed_coins = category_map[bulk_asset_alert.coin_category]
+
         for asset in subscribed_coins:
             asset_alerts.add(AlertData(
                 user=bulk_asset_alert.user,
                 asset=asset
             ))
+
     return asset_alerts
 
 

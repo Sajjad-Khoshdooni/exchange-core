@@ -1,9 +1,9 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from ledger.models import Asset
-from ledger.utils.external_price import BUY, get_external_price
+from ledger.utils.external_price import BUY
 from ledger.utils.fields import get_group_id_field, get_amount_field, get_status_field
+from ledger.utils.price import get_last_price, USDT_IRT
 from market.models import BaseTrade
 
 
@@ -21,11 +21,7 @@ class ManualTrade(models.Model):
     status = get_status_field()
 
     def clean(self):
-        current_price = get_external_price(
-            coin=Asset.USDT,
-            base_coin=Asset.IRT,
-            side=BUY
-        )
+        current_price = get_last_price(USDT_IRT) or 0
 
         if abs(self.price / current_price - 1) > 0.1:
             raise ValidationError('Invalid price! current is %s' % current_price)

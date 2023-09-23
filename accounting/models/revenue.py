@@ -1,10 +1,8 @@
 from django.conf import settings
 from django.db import models
 
-from ledger.models import Asset
-from ledger.utils.external_price import BUY, get_external_price, get_other_side, SELL
+from ledger.utils.external_price import SELL
 from ledger.utils.fields import get_amount_field, get_group_id_field
-from ledger.utils.otc import get_asset_spread, spread_to_multiplier, get_market_spread
 from market.models import BaseTrade
 
 

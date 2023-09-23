@@ -12,6 +12,8 @@ class CoinCategory(models.Model):
     description = models.TextField(blank=True)
     order = models.SmallIntegerField(default=0, db_index=True)
 
+    header = models.CharField(max_length=128, blank=True)
+
     class Meta:
         verbose_name_plural = verbose_name = 'گروه‌بندی نمایش رمزارزها'
         ordering = ('order', )

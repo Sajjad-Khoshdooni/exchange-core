@@ -1,13 +1,11 @@
 from decimal import Decimal
 
-from django.db.models import Q
-from django.db.models.functions import Coalesce
-
 from accounts.models import User
 from financial.models import Payment, FiatWithdrawRequest
 from ledger.models import Wallet, Asset
-from ledger.utils.external_price import get_external_price, SELL, BUY
+from ledger.utils.external_price import SELL, BUY
 from ledger.utils.fields import DONE
+from ledger.utils.price import get_price
 
 
 def get_user_irt_net_deposit(user: User) -> int:
@@ -51,6 +49,6 @@ def check_withdraw_laundering(wallet: Wallet, amount: Decimal) -> bool:
 
     total_irt_value = wallet.account.get_total_balance_irt(side=SELL)
 
-    price = get_external_price(wallet.asset.symbol, base_coin=Asset.IRT, side=BUY, allow_stale=True)
+    price = get_price(wallet.asset.symbol + Asset.IRT, side=BUY, allow_stale=True)
 
     return amount * price <= total_irt_value - net_irt_deposit

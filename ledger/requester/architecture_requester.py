@@ -6,7 +6,7 @@ from ledger.utils.cache import cache_for
 
 
 @cache_for(3600)
-def get_network_architecture(network: str):
+def get_network_detail(network: str):
     if settings.DEBUG_OR_TESTING:
         return network
 
@@ -17,4 +17,12 @@ def get_network_architecture(network: str):
     header = {
         'Authorization': settings.BLOCKLINK_TOKEN
     }
-    return requests.get(url=url, params=data, headers=header, timeout=10).json().get('architecture')
+    return requests.get(url=url, params=data, headers=header, timeout=10).json()
+
+
+def get_network_architecture(network: str):
+    return get_network_detail(network).get('architecture')
+
+
+def is_network_memo_base(network: str):
+    return get_network_detail(network).get('is_memo_base', False)

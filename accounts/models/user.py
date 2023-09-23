@@ -165,7 +165,6 @@ class User(AbstractUser):
 
     suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
 
-
     def __str__(self):
         name = self.get_full_name()
         super_name = super(User, self).__str__()
@@ -200,16 +199,17 @@ class User(AbstractUser):
         masked = first + '*' * len(phone_number[length:-length]) + last
         return masked
 
-    def suspend(self, duration: timedelta, reason: str):
+    def suspend(self, duration: timedelta, reason: str = None):
         suspended_until = duration + timezone.now()
         past_suspension = self.suspended_until
         if not past_suspension:
             self.suspended_until = suspended_until
         else:
             self.suspended_until = max(past_suspension, suspended_until)
+
         self.save(update_fields=['suspended_until'])
 
-        if past_suspension != self.suspended_until:
+        if reason and past_suspension != self.suspended_until:
             self.send_suspension_message(reason, duration)
 
     def send_suspension_message(self, reason: str, duration: timedelta):
@@ -361,6 +361,12 @@ class User(AbstractUser):
     def save(self, *args, **kwargs):
         old = self.id and User.objects.get(id=self.id)
         super(User, self).save(*args, **kwargs)
+
+        from accounts.models import LoginActivity
+        if old and old.password != self.password:
+            for login_Activity in (LoginActivity.objects.filter(user=self)
+                    .exclude(refresh_token__isnull=True, session__isnull=True)):
+                login_Activity.destroy()
 
         if self.level == self.LEVEL2 and self.verify_status == self.PENDING:
             if self.national_code_phone_verified and self.selfie_image_verified:

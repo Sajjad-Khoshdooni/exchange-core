@@ -1,17 +1,17 @@
+import logging
+
 from django.contrib.auth.password_validation import validate_password
-from datetime import timedelta
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.tasks import basic_verify_user
+from accounts.models import ChangePhone
 from accounts.models import User
 from accounts.models import VerificationCode
-from accounts.utils.notif import send_successful_change_phone_email
 from accounts.validators import mobile_number_validator
+from multimedia.models import Image
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -26,7 +26,8 @@ class InitiateChangePhoneSerializer(serializers.Serializer):
         password = data.get('password')
         totp = data.get('totp', None)
         validate_password(password=password, user=user)
-        otp_verification = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_CHANGE_PHONE, user=user)
+        otp_verification = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_CHANGE_PHONE_INIT,
+                                                        user=user)
         if not otp_verification:
             raise ValidationError('کد ارسال شده نامعتبر است.')
 
@@ -41,7 +42,7 @@ class InitiateChangePhone(APIView):
     def post(self, request):
         serializer = InitiateChangePhoneSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        return Response(serializer.validated_data['token'])
+        return Response({'token': serializer.validated_data['token']})
 
 
 class UserVerifySerializer(serializers.Serializer):
@@ -51,29 +52,46 @@ class UserVerifySerializer(serializers.Serializer):
     def validate(self, data):
         new_phone = data.get('new_phone')
         token = data.get('token')
-        token_verification = VerificationCode.get_by_token(token, VerificationCode.SCOPE_CHANGE_PHONE)
+        token_verification = VerificationCode.get_by_token(token, VerificationCode.SCOPE_CHANGE_PHONE_INIT)
         if not token_verification:
             raise ValidationError('توکن نامعتبر است.')
 
-        if User.objects.filter(phone=new_phone):
-            raise ValidationError(
-                'شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.')
         token_verification.set_token_used()
-        VerificationCode.send_otp_code(new_phone, VerificationCode.SCOPE_CHANGE_PHONE)
+        VerificationCode.send_otp_code(new_phone, VerificationCode.SCOPE_NEW_PHONE)
         return data
 
 
 class NewPhoneVerifySerializer(serializers.Serializer):
     token = serializers.CharField(write_only=True)
+    selfie_image = Image()
 
     def validate(self, data):
-        token = data.get('token')
-        token_verification = VerificationCode.get_by_token(token, VerificationCode.SCOPE_CHANGE_PHONE)
+        token = data.pop('token')
+        user = self.context['request'].user
+
+        token_verification = VerificationCode.get_by_token(token, VerificationCode.SCOPE_NEW_PHONE)
         if not token_verification:
             raise ValidationError('توکن نامعتبر است.')
-        token_verification.set_token_used()
-        data['new_phone'] = token_verification.phone
+
+        new_phone = token_verification.phone
+        if User.objects.filter(phone=new_phone):
+            raise ValidationError(
+                'شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.')
+
+        if not ChangePhone.is_request_eligible(user=user, new_phone=new_phone):
+            raise ValidationError(
+                'درخواست تغییر شماره موبایل دیگری با همین شماره موبایل توسط کاربر دیگری در حال پردازش می‌باشد.'
+            )
+
+        data['new_phone'] = new_phone
         return data
+
+    def save(self, **kwargs):
+        user = self.context['request'].user
+        ChangePhone.objects.create(
+            user=user,
+            **self.validated_data
+        )
 
 
 class ChangePhoneView(APIView):
@@ -83,22 +101,11 @@ class ChangePhoneView(APIView):
         return Response({'msg': 'کد باموفقیت ارسال شد.'})
 
     def put(self, request):
-        serializer = NewPhoneVerifySerializer(data=request.data)
+        serializer = NewPhoneVerifySerializer(
+            data=request.data,
+            context={'request': request}
+        )
         serializer.is_valid(raise_exception=True)
-        user = request.user
+        serializer.save()
 
-        user.phone = serializer.validated_data['new_phone']
-        user.username = user.phone
-        user.level = min(user.level, user.LEVEL2)
-        user.national_code_phone_verified = None
-
-        # user.change_status(User.PENDING)
-        # basic_verify_user.delay(user.id)
-
-        user.suspend(timedelta(days=1), 'تغییر شماره‌ تلفن')
-        user.save(update_fields=['level', 'national_code_phone_verified', 'phone', 'username'])
-
-        logger.info(f'شماره تلفن همراه {user.get_full_name()}  با‌موفقیت تغییر کرد.')
-
-        send_successful_change_phone_email(user)
-        return Response({'msg': 'شماره تلفن همراه با‌موفقیت تغییر کرد.'})
+        return Response({'msg': 'درخواست تغییر شماره موبایل با موفقیت ثبت شد.'}, status=200)

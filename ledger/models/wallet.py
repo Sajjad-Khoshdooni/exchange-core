@@ -5,7 +5,6 @@ from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint, Q, F, UniqueConstraint
 
-from accounts.models import Account
 from ledger.exceptions import InsufficientBalance, InsufficientDebt
 from ledger.utils.fields import get_amount_field, get_group_id_field
 from ledger.utils.wallet_pipeline import WalletPipeline
@@ -104,6 +103,7 @@ class Wallet(models.Model):
 
     def airdrop(self, amount: Decimal, i_am_sure: bool = False):
         assert settings.DEBUG_OR_TESTING or i_am_sure
+        from accounts.models import Account
 
         from ledger.models import Trx
         from uuid import uuid4
@@ -120,6 +120,7 @@ class Wallet(models.Model):
     def seize_funds(self, amount: Decimal = None):
         from ledger.models import Trx
         from uuid import uuid4
+        from accounts.models import Account
 
         with WalletPipeline() as pipeline:
             pipeline.new_trx(

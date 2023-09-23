@@ -10,6 +10,7 @@ from financial.models import Gateway
 from financial.utils.withdraw import FiatWithdraw
 from ledger.models import Asset
 from ledger.utils.overview import get_internal_asset_deposits
+from ledger.utils.price import USDT_IRT, get_symbol_parts
 from ledger.utils.provider import get_provider_requester
 
 logger = logging.getLogger(__name__)
@@ -60,16 +61,13 @@ def update_provider_vaults(now: datetime, prices: dict):
 
             for coin, balance in balances.items():
                 balance = Decimal(balance)
-                price = prices.get(coin, 0)
-
-                value = balance * price
 
                 vault_data.append(
                     VaultData(
                         coin=coin,
                         balance=balance,
-                        value_usdt=value,
-                        value_irt=value / prices['IRT']
+                        value_usdt=balance * prices.get(coin + Asset.USDT, 0),
+                        value_irt=balance * prices.get(coin + Asset.IRT, 0)
                     )
                 )
 
@@ -95,14 +93,13 @@ def update_hot_wallet_vault(now: datetime, prices: dict):
     vault_data = []
 
     for coin, amount in data.items():
-        value = amount * prices.get(coin, 0)
 
         vault_data.append(
             VaultData(
                 coin=coin,
                 balance=amount,
-                value_usdt=value,
-                value_irt=value / prices['IRT']
+                value_usdt=amount * prices.get(coin + Asset.USDT, 0),
+                value_irt=amount * prices.get(coin + Asset.IRT, 0),
             )
         )
 
@@ -131,7 +128,7 @@ def update_gateway_vaults(now: datetime, prices: dict):
                 VaultData(
                     coin=Asset.IRT,
                     balance=amount,
-                    value_usdt=amount * prices['IRT'],
+                    value_usdt=amount / prices[USDT_IRT],
                     value_irt=amount
                 )
             ])
@@ -143,9 +140,8 @@ def update_cold_wallet_vaults(now: datetime, prices: dict):
     logger.info('updating cold & manual wallet vaults')
 
     for vault_item in VaultItem.objects.filter(vault__type__in=(Vault.COLD_WALLET, Vault.MANUAL)):
-        price = prices.get(vault_item.coin, 0)
-        vault_item.value_usdt = vault_item.balance * price
-        vault_item.value_irt = vault_item.value_usdt / prices['IRT']
+        vault_item.value_usdt = vault_item.balance * prices.get(vault_item.coin + Asset.USDT, 0)
+        vault_item.value_irt = vault_item.value_usdt * prices.get(vault_item.coin + Asset.IRT, 0)
         vault_item.save(update_fields=['value_usdt', 'value_irt'])
 
     for vault in Vault.objects.filter(type__in=(Vault.COLD_WALLET, Vault.MANUAL)):
@@ -171,7 +167,7 @@ def update_bank_vaults(now: datetime, prices: dict):
             VaultData(
                 coin=Asset.IRT,
                 balance=amount,
-                value_usdt=amount * prices['IRT'],
+                value_usdt=amount / prices[USDT_IRT],
                 value_irt=amount
             )
         ])
@@ -179,33 +175,38 @@ def update_bank_vaults(now: datetime, prices: dict):
 
 def update_reserved_assets_value(now: datetime, prices: dict):
     for res in ReservedAsset.objects.all():
-        res.value_usdt = res.amount * prices.get(res.coin, 0)
-        res.value_irt = res.value_usdt / prices['IRT']
+        res.value_usdt = res.amount * prices.get(res.coin + Asset.USDT, 0)
+        res.value_irt = res.amount * prices.get(res.coin + Asset.IRT, 0)
         res.save(update_fields=['value_usdt', 'value_irt'])
 
 
 def update_asset_prices(now: datetime, prices: dict):
     logger.info('updating asset prices')
+    _prices = {}
+    for symbol, price in prices.items():
+        coin, base = get_symbol_parts(symbol)
+        if base == Asset.USDT:
+            _prices[coin] = price
 
-    existing_assets = AssetPrice.objects.filter(coin__in=prices)
+    existing_assets = AssetPrice.objects.filter(coin__in=_prices)
     existing_coins = set(existing_assets.values_list('coin', flat=True))
 
     now = timezone.now()
 
     missing_assets = []
-    for coin in set(prices) - existing_coins:
+    for coin in set(_prices) - existing_coins:
         missing_assets.append(
             AssetPrice(
                 updated=now,
                 coin=coin,
-                price=prices.get(coin)
+                price=_prices.get(coin)
             )
         )
 
     AssetPrice.objects.bulk_create(missing_assets)
 
     for asset in existing_assets:
-        asset.price = prices.get(asset.coin)
+        asset.price = _prices.get(asset.coin)
         asset.updated = now
 
     AssetPrice.objects.bulk_update(existing_assets, ['price', 'updated'])

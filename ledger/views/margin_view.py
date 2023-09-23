@@ -1,7 +1,7 @@
 from decimal import Decimal
 
-from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.translation import gettext_lazy as _
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
@@ -16,9 +16,9 @@ from ledger.margin.margin_info import MarginInfo
 from ledger.models import MarginTransfer, Asset, MarginLoan, Wallet, CloseRequest
 from ledger.models.asset import CoinField, AssetSerializerMini
 from ledger.models.margin import SymbolField
-from ledger.utils.external_price import get_external_price, SELL
 from ledger.utils.fields import get_serializer_amount_field
 from ledger.utils.margin import check_margin_view_permission
+from ledger.utils.price import get_last_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 
 
@@ -55,7 +55,7 @@ class AssetMarginInfoView(APIView):
         margin_wallet = asset.get_wallet(account, Wallet.MARGIN)
         loan_wallet = asset.get_wallet(account, Wallet.LOAN)
 
-        price = get_external_price(asset.symbol, base_coin=Asset.USDT, side=SELL)
+        price = get_last_price(asset.symbol + Asset.USDT)
 
         if asset.symbol != Asset.USDT:
             price = price * Decimal('1.002')
