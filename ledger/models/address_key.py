@@ -24,7 +24,7 @@ class AddressKey(models.Model):
             UniqueConstraint(
                 fields=['memo', 'architecture'],
                 name="ledger_addresskey_unique_memo_architecture",
-                condition=Q(mamo__isnull=False),
+                condition=~Q(memo=''),
             ),
         ]
 
