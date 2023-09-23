@@ -622,13 +622,31 @@ class CategorySpreadAdmin(admin.ModelAdmin):
     list_filter = ('category', 'side', 'step')
 
 
+class SystemSnapshotVerifiedFilter(admin.SimpleListFilter):
+    title = 'verified'
+    parameter_name = 'verified'
+
+    def lookups(self, request, model_admin):
+        return [(1, 'بله'), (0, 'نه')]
+
+    def queryset(self, request, queryset):
+        verified = request.GET.get('verified')
+        if verified is None:
+            return queryset
+        elif verified == '1':
+            last_obj = models.SystemSnapshot.objects.last()
+            return queryset.filter(Q(verified=True) | Q(verified=False, id=last_obj and last_obj.id))
+        else:
+            return queryset.filter(verified=False)
+
+
 @admin.register(models.SystemSnapshot)
 class SystemSnapshotAdmin(admin.ModelAdmin):
     list_display = ('created', 'total', 'users', 'exchange', 'hedge', 'reserved', 'prize', 'verified')
     ordering = ('-created',)
     actions = ('reject_histories', 'verify_histories')
     readonly_fields = ('created',)
-    list_filter = ('verified',)
+    list_filter = (SystemSnapshotVerifiedFilter,)
 
     @admin.action(description='رد', permissions=['change'])
     def reject_histories(self, request, queryset):

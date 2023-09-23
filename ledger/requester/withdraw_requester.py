@@ -9,13 +9,14 @@ class RequestWithdraw:
             'Authorization': config('BLOCKLINK_TOKEN')
         }
 
-    def withdraw_from_hot_wallet(self, receiver_address, amount, network, asset, transfer_id):
+    def withdraw_from_hot_wallet(self, receiver_address, amount, network, asset, transfer_id, memo=''):
         data = {
             'receiver_address': receiver_address,
             'amount': amount,
             'network': network,
             'coin': asset,
-            'requester_id': transfer_id  # todo: use transfer_id
+            'requester_id': transfer_id,  # todo: use transfer_id
+            'memo': memo
         }
 
         url = config('BLOCKLINK_BASE_URL', default='https://blocklink.raastin.com') + '/api/v1/withdraw/'

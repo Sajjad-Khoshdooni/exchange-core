@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from celery import shared_task
 from django.db import transaction
+from django.utils import timezone
 
 from financial.models import FiatWithdrawRequest, Gateway
 
@@ -25,3 +28,14 @@ def update_withdraw_status():
 
     for withdraw in to_update:
         withdraw.update_status()
+
+
+@shared_task(queue='finance')
+def update_withdraws():
+    withdraws = FiatWithdrawRequest.objects.filter(
+        status=FiatWithdrawRequest.PROCESSING,
+        created__lt=timezone.now() - timedelta(seconds=FiatWithdrawRequest.FREEZE_TIME)
+    )
+
+    for fiat_withdraw in withdraws:
+        process_withdraw.delay(fiat_withdraw.id)

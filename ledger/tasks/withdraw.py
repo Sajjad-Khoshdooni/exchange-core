@@ -75,7 +75,8 @@ def create_withdraw(transfer_id: int):
         amount=transfer.amount * coin_mult,
         network=transfer.network.symbol,
         asset=asset.get_original_symbol(),
-        transfer_id=transfer.id
+        transfer_id=transfer.id,
+        memo=transfer.memo
     )
 
     resp_data = response.json()

@@ -1,7 +1,7 @@
 from django.db import models
 
-from ledger.requester.address_requester import AddressRequester
 from ledger.models.address_key import AddressKey
+from ledger.requester.address_requester import AddressRequester
 from ledger.requester.architecture_requester import get_network_architecture
 
 
@@ -30,6 +30,7 @@ class DepositAddress(models.Model):
                 defaults={
                     'address': address_dict.get('address'),
                     'public_address': address_dict.get('address'),
+                    'memo': address_dict.get('memo') or ''
                 }
             )
 
@@ -49,7 +50,4 @@ class DepositAddress(models.Model):
         UpdateTrxHistory().update_history(deposit_address=self)
 
     class Meta:
-        unique_together = (
-            ('network', 'address'),
-            # ('network', 'address_key'),
-        )
+        unique_together = ('address_key', 'network', 'address')

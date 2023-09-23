@@ -18,4 +18,4 @@ from .email_notification import EmailNotification
 from .refresh_token import RefreshToken
 from .system_config import SystemConfig
 from .consultation import Consultation
-from .forget_2fa import Forget2FA
+from .change_requests import Forget2FA, ChangePhone

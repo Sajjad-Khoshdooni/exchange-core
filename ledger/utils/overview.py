@@ -74,7 +74,7 @@ class AssetOverview:
         if not amount:
             return Decimal(0)
 
-        price = self.prices.get(coin, 0)
+        price = self.prices.get(coin + Asset.USDT, 0)
         return amount * price
 
     def get_users_asset_amount(self, coin: str) -> Decimal:
@@ -86,7 +86,7 @@ class AssetOverview:
         if not balance:
             return Decimal(0)
 
-        price = self.prices.get(coin, 0)
+        price = self.prices.get(coin + Asset.USDT, 0)
         return balance * price
 
     def get_all_users_asset_value(self) -> Decimal:
