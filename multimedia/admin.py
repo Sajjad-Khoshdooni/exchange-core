@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.db.models import F
 from simple_history.admin import SimpleHistoryAdmin
 
-from multimedia.models import Image, Banner, CoinPriceContent
+from multimedia.models import Image, Banner, CoinPriceContent, Article, Section
 
 
 @admin.register(Image)
@@ -26,3 +26,16 @@ class BannerAdmin(admin.ModelAdmin):
 @admin.register(CoinPriceContent)
 class CoinPriceContentAdmin(SimpleHistoryAdmin):
     pass
+
+
+@admin.register(Article)
+class ArticleAdmin(admin.ModelAdmin):
+    list_display = ('title',)
+    readonly_fields = ('slug',)
+
+
+@admin.register(Section)
+class SectionAdmin(admin.ModelAdmin):
+    list_display = ('title',)
+    readonly_fields = ('slug',)
+
