@@ -34,7 +34,7 @@ class DepositSerializer(serializers.ModelSerializer):
         sender_address = validated_data.get('sender_address')
         receiver_address = validated_data.get('receiver_address')
         network = Network.objects.get(symbol=network_symbol)
-        memo = validated_data.get('memo', '')
+        memo = validated_data.get('memo') or ''
         deposit_address = DepositAddress.objects.filter(network=network, address=receiver_address).first()
 
         if deposit_address and deposit_address.address_key.deleted:
