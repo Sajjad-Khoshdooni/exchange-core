@@ -25,8 +25,16 @@ class Section(BaseItem):
     icon = Image()
     description = models.TextField(blank=True)
 
+    class Meta:
+        verbose_name = 'بخش'
+        verbose_name_plural = 'بخش‌ ها'
+
 
 class Article(BaseItem):
     parent_section = models.ForeignKey(Section, on_delete=models.CASCADE)
     is_pinned = models.BooleanField(default=False)
     content = QuillField()
+
+    class Meta:
+        verbose_name = 'مقاله'
+        verbose_name_plural = 'مقاله ها'
