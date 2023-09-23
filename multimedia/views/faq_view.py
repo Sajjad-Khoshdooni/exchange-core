@@ -11,7 +11,7 @@ from multimedia.models import Section, Article
 class ArticleMiniSerializer(serializers.ModelSerializer):
     class Meta:
         model = Article
-        fields = ('title', 'slug', 'uuid',)
+        fields = ('id', 'title', 'slug', 'uuid',)
 
 
 class ArticleSerializer(serializers.ModelSerializer):
@@ -22,13 +22,13 @@ class ArticleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Article
-        fields = ('title', 'content')
+        fields = ('id', 'slug', 'title', 'content')
 
 
 class SectionMiniSerializer(serializers.ModelSerializer):
     class Meta:
         model = Section
-        fields = ('title', 'slug',)
+        fields = ('id', 'title', 'slug',)
 
 
 class SectionSerializer(serializers.ModelSerializer):
@@ -43,7 +43,7 @@ class SectionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Section
-        fields = ('icon', 'title', 'description', 'slug', 'parent', 'articles',)
+        fields = ('id', 'icon', 'title', 'description', 'slug', 'parent', 'articles',)
 
 
 class SectionsView(ListAPIView):
@@ -54,15 +54,11 @@ class SectionsView(ListAPIView):
 class ArticleView(RetrieveAPIView):
     serializer_class = ArticleSerializer
 
-    def retrieve(self, request, *args, **kwargs):
+    def get_object(self):
+        kwargs = self.kwargs
         slug = kwargs.get('slug', '')
-        uuid = kwargs.get('uuid', '')
 
-        instance = get_object_or_404(Article, uuid=uuid, slug=slug)
-
-        serializer = self.get_serializer(instance=instance)
-
-        return Response(serializer.data)
+        return get_object_or_404(Article, slug=slug)
 
 
 class ArticleSearchView(ListAPIView):
@@ -71,7 +67,9 @@ class ArticleSearchView(ListAPIView):
     paginate_by = 10
 
     def get_queryset(self):
-        search_parameter = self.request.query_params.get('search', '')
+        search_parameter = self.request.query_params.get('q', '')
+        if not search_parameter:
+            return Response({}, status=404)
         return super().get_queryset().annotate(
             search=SearchVector('title', 'content'),
         ).filter(search=search_parameter)

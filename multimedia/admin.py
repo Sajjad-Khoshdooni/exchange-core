@@ -31,7 +31,7 @@ class CoinPriceContentAdmin(SimpleHistoryAdmin):
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
     list_display = ('title',)
-    exclude = ('slug',)
+    readonly_fields = ('slug',)
 
 
 @admin.register(Section)
