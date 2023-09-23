@@ -13,7 +13,7 @@ class BaseItem(models.Model):
     slug = models.SlugField(max_length=255, unique=True, db_index=True, editable=False)
 
     def save(self, *args, **kwargs):
-        self.slug = slugify(self.title_en + str(uuid.uuid4()))
+        self.slug = slugify(self.title_en + '-' + str(uuid.uuid4()))
         super().save(*args, **kwargs)
 
     def __str__(self):
