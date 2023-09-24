@@ -76,7 +76,8 @@ class NewPhoneVerifySerializer(serializers.Serializer):
         new_phone = token_verification.phone
         if User.objects.filter(phone=new_phone):
             raise ValidationError(
-                'شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.')
+                'شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.'
+            )
 
         if not ChangePhone.is_request_eligible(user=user, new_phone=new_phone):
             raise ValidationError(
@@ -88,7 +89,8 @@ class NewPhoneVerifySerializer(serializers.Serializer):
 
     def save(self, **kwargs):
         user = self.context['request'].user
-        ChangePhone.objects.create(
+
+        return ChangePhone.objects.create(
             user=user,
             **self.validated_data
         )
