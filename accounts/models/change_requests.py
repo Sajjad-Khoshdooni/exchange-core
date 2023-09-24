@@ -113,8 +113,6 @@ class ChangePhone(BaseChangeRequest):
         user.suspend(timedelta(days=1), 'تغییر شماره‌ تلفن')
         user.save(update_fields=['national_code_phone_verified', 'phone', 'username'])
 
-        logger.info(f'شماره تلفن همراه {user.get_full_name()}  با‌موفقیت تغییر کرد.')
-
         send_successful_change_phone_email(user)
 
     def reject(self):
@@ -125,8 +123,7 @@ class ChangePhone(BaseChangeRequest):
         return not ChangePhone.objects.filter(
             new_phone=new_phone,
             status=PENDING,
-            user__ne=user
-        ).exists()
+        ).exclude(user=user).exists()
 
     class Meta:
         verbose_name = 'درخواست تغییر شماره موبایل'
