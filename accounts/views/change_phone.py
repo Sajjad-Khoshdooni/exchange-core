@@ -10,6 +10,7 @@ from accounts.models import ChangePhone
 from accounts.models import User
 from accounts.models import VerificationCode
 from accounts.validators import mobile_number_validator
+from ledger.utils.fields import PENDING
 
 from multimedia.fields import ImageField
 
@@ -80,9 +81,9 @@ class NewPhoneVerifySerializer(serializers.Serializer):
                 'شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.'
             )
 
-        if not ChangePhone.is_request_eligible(user=user, new_phone=new_phone):
+        if not ChangePhone.objects.filter(new_phone=new_phone, status=PENDING):
             raise ValidationError(
-                'درخواست تغییر شماره موبایل دیگری با همین شماره موبایل توسط کاربر دیگری در حال پردازش می‌باشد.'
+                'امکان تغییر به این شماره موبایل در حال حاضر وجود ندارد.'
             )
 
         data['new_phone'] = new_phone

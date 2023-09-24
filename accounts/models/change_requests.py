@@ -1,18 +1,16 @@
+import logging
+from datetime import timedelta
+
+from django.conf import settings
 from django.db import models, transaction
 from django.template.loader import render_to_string
-from django.conf import settings
-
-from datetime import timedelta
-import logging
-
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from accounts.models.sms_notification import SmsNotification
 from accounts.models import User
+from accounts.models.sms_notification import SmsNotification
 from accounts.utils.notif import send_successful_change_phone_email, send_change_phone_rejection_email
 from accounts.utils.validation import PHONE_MAX_LENGTH
 from accounts.validators import mobile_number_validator
-
 from ledger.utils.fields import PENDING, get_status_field, CANCELED, DONE
 
 logger = logging.getLogger(__name__)
@@ -92,7 +90,6 @@ class ChangePhone(BaseChangeRequest):
         max_length=PHONE_MAX_LENGTH,
         validators=[mobile_number_validator],
         verbose_name='شماره موبایل جدید',
-        unique=True,
         db_index=True,
         null=True,
         blank=True,
@@ -105,25 +102,13 @@ class ChangePhone(BaseChangeRequest):
         user.phone = new_phone
         user.username = new_phone
 
-        user.national_code_phone_verified = None
-
-        # user.change_status(User.PENDING)
-        # basic_verify_user.delay(user.id)
-
         user.suspend(timedelta(days=1), 'تغییر شماره‌ تلفن')
-        user.save(update_fields=['national_code_phone_verified', 'phone', 'username'])
+        user.save(update_fields=['phone', 'username'])
 
         send_successful_change_phone_email(user)
 
     def reject(self):
         send_change_phone_rejection_email(self.user)
-
-    @staticmethod
-    def is_request_eligible(user: User, new_phone: str):
-        return not ChangePhone.objects.filter(
-            new_phone=new_phone,
-            status=PENDING,
-        ).exclude(user=user).exists()
 
     class Meta:
         verbose_name = 'درخواست تغییر شماره موبایل'
