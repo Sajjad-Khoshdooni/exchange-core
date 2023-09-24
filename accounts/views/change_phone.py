@@ -81,12 +81,13 @@ class NewPhoneVerifySerializer(serializers.Serializer):
                 'شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.'
             )
 
-        if not ChangePhone.objects.filter(new_phone=new_phone, status=PENDING):
+        if ChangePhone.objects.filter(new_phone=new_phone, status=PENDING):
             raise ValidationError(
                 'امکان تغییر به این شماره موبایل در حال حاضر وجود ندارد.'
             )
 
         data['new_phone'] = new_phone
+
         return data
 
     def save(self, **kwargs):

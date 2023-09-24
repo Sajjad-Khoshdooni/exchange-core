@@ -214,9 +214,8 @@ class Forget2FAAdmin(BaseChangeAdmin):
 
 @admin.register(ChangePhone)
 class ChangePhoneAdmin(BaseChangeAdmin):
+    list_display = ('created', 'status', 'user', 'new_phone')
     readonly_fields = ('created', 'status', 'user', 'get_selfie_image', 'new_phone',)
-
-    pass
 
 
 @admin.register(SystemConfig)
