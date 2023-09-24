@@ -10,7 +10,8 @@ from accounts.models import ChangePhone
 from accounts.models import User
 from accounts.models import VerificationCode
 from accounts.validators import mobile_number_validator
-from multimedia.models import Image
+
+from multimedia.fields import ImageField
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ class UserVerifySerializer(serializers.Serializer):
 
 class NewPhoneVerifySerializer(serializers.Serializer):
     token = serializers.CharField(write_only=True)
-    selfie_image = Image()
+    selfie_image = ImageField(write_only=True)
 
     def validate(self, data):
         token = data.pop('token')
