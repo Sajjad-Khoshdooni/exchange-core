@@ -1,5 +1,6 @@
 import re
 
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
@@ -9,6 +10,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from accounts.authentication import WithdrawTokenAuthentication
 from accounts.models import VerificationCode, LoginActivity
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
+from accounts.utils.validation import persian_timedelta
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Transfer, NetworkAsset, AddressBook, DepositAddress
@@ -37,8 +39,14 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         if not can_withdraw(user.get_account(), request) or not user.can_withdraw_crypto:
             raise ValidationError('امکان برداشت وجود ندارد.')
+
         if user.is_suspended:
-            raise ValidationError('به ‌صورت موقت امکان ‌برداشت وجود ندارد.')
+            td = persian_timedelta(user.suspended_until - timezone.now())
+
+            raise ValidationError(
+                f'به دلیل افزایش امنیت حساب‌ کاربری شما، امکان ‌برداشت تا {td} دیگر وجود ندارد.'
+            )
+
         account = user.get_account()
         from_panel = self.context.get('from_panel')
         asset = attrs.get('asset')
