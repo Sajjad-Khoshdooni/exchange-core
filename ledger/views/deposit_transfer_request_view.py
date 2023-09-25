@@ -23,7 +23,7 @@ class DepositSerializer(serializers.ModelSerializer):
     sender_address = serializers.CharField(max_length=256, write_only=True)
     receiver_address = serializers.CharField(max_length=256, write_only=True)
     coin = serializers.CharField(max_length=8, write_only=True)
-    memo = serializers.CharField(max_length=256, write_only=True)
+    memo = serializers.CharField(max_length=256, write_only=True, allow_blank=True, allow_null=True)
 
     class Meta:
         model = Transfer
@@ -44,6 +44,7 @@ class DepositSerializer(serializers.ModelSerializer):
             if is_network_memo_base(network):
                 if not memo:
                     raise ValidationError({'memo': 'null memo for memo networks error'})
+
                 address_key = get_object_or_404(
                     AddressKey,
                     address=receiver_address,
