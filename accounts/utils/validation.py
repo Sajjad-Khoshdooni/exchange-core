@@ -53,8 +53,56 @@ def gregorian_to_jalali_date_str(date: datetime.date):
 
 def gregorian_to_jalali_datetime(d: datetime):
     d = d.astimezone()
-    return jdatetime.datetime.fromgregorian(year=d.year, month=d.month, day=d.day, hour=d.hour, minute=d.minute,
-                                            second=d.second)
+    return jdatetime.datetime.fromgregorian(
+        year=d.year,
+        month=d.month,
+        day=d.day,
+        hour=d.hour,
+        minute=d.minute,
+        second=d.second
+    )
+
+
+PERSIAN_DIGIT_MAP = {
+    '0': '۰',
+    '1': '۱',
+    '2': '۲',
+    '3': '۳',
+    '4': '۴',
+    '5': '۵',
+    '6': '۶',
+    '7': '۷',
+    '8': '۸',
+    '9': '۹',
+}
+
+
+def get_persian_number(num) -> str:
+    return ''.join(map(lambda c: PERSIAN_DIGIT_MAP.get(c, c), str(num)))
+
+
+def persian_timedelta(d: timedelta) -> str:
+    parts = []
+
+    if d.days > 0:
+        parts.append(f'{get_persian_number(d.days)} روز')
+
+    seconds = d.seconds
+    hours = seconds // 3600
+    seconds -= hours * 3600
+    minutes = seconds // 60
+    seconds -= minutes * 60
+
+    if hours > 0:
+        parts.append(f'{get_persian_number(hours)} ساعت')
+
+    if minutes > 0:
+        parts.append(f'{get_persian_number(minutes)} دقیقه')
+
+    if d.days == 0 and d.seconds < 300:
+        parts.append(f'{get_persian_number(seconds)} ثانیه')
+
+    return ' و '.join(parts)
 
 
 def gregorian_to_jalali_datetime_str(d: datetime):
