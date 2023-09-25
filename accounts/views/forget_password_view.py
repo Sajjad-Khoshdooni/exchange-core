@@ -67,7 +67,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
         validate_password(password=password, user=user)
         user.set_password(password)
-        user.suspend(timedelta(days=1), 'فراموشی رمزعبور')
+        user.suspend(timedelta(days=1), 'فراموشی رمز عبور')
         user.save(update_fields=['password'])
 
         otp_code.set_token_used()

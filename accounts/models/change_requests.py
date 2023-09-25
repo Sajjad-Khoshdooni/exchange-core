@@ -1,18 +1,22 @@
-from django.db import models, transaction
-from django.template.loader import render_to_string
-from django.conf import settings
-
+import logging
 from datetime import timedelta
 
+from django.conf import settings
+from django.db import models, transaction
+from django.template.loader import render_to_string
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from accounts.models.sms_notification import SmsNotification
 from accounts.models import User
+from accounts.models.sms_notification import SmsNotification
+from accounts.utils.notif import send_successful_change_phone_email, send_change_phone_rejection_email
+from accounts.utils.validation import PHONE_MAX_LENGTH
+from accounts.validators import mobile_number_validator
 from ledger.utils.fields import PENDING, get_status_field, CANCELED, DONE
 
+logger = logging.getLogger(__name__)
 
-class Forget2FA(models.Model):
 
+class BaseChangeRequest(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     status = get_status_field()
 
@@ -25,6 +29,18 @@ class Forget2FA(models.Model):
         blank=True,
         null=True
     )
+
+    def accept(self):
+        pass
+
+    def reject(self):
+        pass
+
+    class Meta:
+        abstract = True
+
+
+class Forget2FA(BaseChangeRequest):
 
     def accept(self):
         assert self.status == PENDING
@@ -56,7 +72,6 @@ class Forget2FA(models.Model):
         content = render_to_string('accounts/notif/sms/2fa_forget_reject', context=context)
 
         with transaction.atomic():
-
             SmsNotification.objects.create(
                 recipient=user,
                 content=content
@@ -68,3 +83,33 @@ class Forget2FA(models.Model):
     class Meta:
         verbose_name = 'درخواست فراموشی شناسه دوعاملی'
         verbose_name_plural = 'درخواست‌های فراموشی شناسه دوعاملی'
+
+
+class ChangePhone(BaseChangeRequest):
+    new_phone = models.CharField(
+        max_length=PHONE_MAX_LENGTH,
+        validators=[mobile_number_validator],
+        verbose_name='شماره موبایل جدید',
+        db_index=True,
+        null=True,
+        blank=True,
+    )
+
+    def accept(self):
+        user = self.user
+        new_phone = self.new_phone
+
+        user.phone = new_phone
+        user.username = new_phone
+
+        user.suspend(timedelta(days=1), 'تغییر شماره‌ تلفن')
+        user.save(update_fields=['phone', 'username'])
+
+        send_successful_change_phone_email(user)
+
+    def reject(self):
+        send_change_phone_rejection_email(self.user)
+
+    class Meta:
+        verbose_name = 'درخواست تغییر شماره موبایل'
+        verbose_name_plural = 'درخواست‌های تغییر شماره موبایل'

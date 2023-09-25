@@ -1,8 +1,11 @@
 from django.urls import path
 
-from multimedia.views import ImageCreateView, BannerListView
+from multimedia.views import ImageCreateView, BannerListView, SectionsView, ArticleView, ArticleSearchView
 
 urlpatterns = [
     path('image/', ImageCreateView.as_view()),
     path('banners/', BannerListView.as_view()),
+    path('faq/sections/', SectionsView.as_view()),
+    path('faq/articles/<str:slug>/', ArticleView.as_view()),
+    path('faq/articles/', ArticleSearchView.as_view())
 ]

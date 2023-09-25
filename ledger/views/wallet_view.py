@@ -192,6 +192,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
     network = serializers.CharField(source='network.symbol')
     network_name = serializers.CharField(source='network.name')
     address = serializers.SerializerMethodField()
+    memo = serializers.SerializerMethodField()
     can_deposit = serializers.SerializerMethodField()
     can_withdraw = serializers.SerializerMethodField()
     address_regex = serializers.CharField(source='network.address_regex')
@@ -213,7 +214,13 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
 
     def get_address(self, network_asset: NetworkAsset):
         addresses = self.context.get('addresses', {})
-        return addresses.get(network_asset.network.symbol)
+        address_data = addresses.get(network_asset.network.symbol)
+        return address_data and address_data[0]
+
+    def get_memo(self, network_asset: NetworkAsset):
+        addresses = self.context.get('addresses', {})
+        address_data = addresses.get(network_asset.network.symbol)
+        return address_data and address_data[1]
 
     def get_min_withdraw(self, network_asset: NetworkAsset):
         return get_presentation_amount(network_asset.withdraw_min)
@@ -228,7 +235,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return network_asset.withdraw_precision
 
     class Meta:
-        fields = ('network', 'address', 'can_deposit', 'can_withdraw', 'withdraw_commission', 'min_withdraw',
+        fields = ('network', 'address', 'memo', 'can_deposit', 'can_withdraw', 'withdraw_commission', 'min_withdraw',
                   'min_deposit', 'network_name', 'address_regex', 'withdraw_precision', 'need_memo', 'min_confirm')
         model = NetworkAsset
 
@@ -241,10 +248,13 @@ class AssetRetrieveSerializer(AssetListSerializer):
 
         account = self.context['request'].user.get_account()
 
-        deposit_addresses = DepositAddress.objects.filter(address_key__account=account, address_key__deleted=False)
+        deposit_addresses = DepositAddress.objects.filter(
+            address_key__account=account,
+            address_key__deleted=False
+        ).prefetch_related('address_key')
 
         address_mapping = {
-            deposit.network.symbol: deposit.address for deposit in deposit_addresses
+            deposit.network.symbol: (deposit.address, deposit.address_key.memo) for deposit in deposit_addresses
         }
 
         serializer = NetworkAssetSerializer(network_assets, many=True, context={

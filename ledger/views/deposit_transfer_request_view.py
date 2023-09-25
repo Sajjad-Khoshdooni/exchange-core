@@ -11,6 +11,7 @@ from accounts.authentication import CustomTokenAuthentication
 from ledger.models import Network, Asset, DepositAddress, AddressKey, NetworkAsset
 from ledger.models.transfer import Transfer
 from ledger.requester.architecture_requester import get_network_architecture
+from ledger.requester.architecture_requester import is_network_memo_base
 from ledger.utils.price import get_last_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -22,29 +23,41 @@ class DepositSerializer(serializers.ModelSerializer):
     sender_address = serializers.CharField(max_length=256, write_only=True)
     receiver_address = serializers.CharField(max_length=256, write_only=True)
     coin = serializers.CharField(max_length=8, write_only=True)
+    memo = serializers.CharField(max_length=256, write_only=True)
 
     class Meta:
         model = Transfer
-        fields = ['status', 'amount', 'trx_hash', 'network', 'sender_address', 'receiver_address', 'coin']
+        fields = ['status', 'amount', 'trx_hash', 'network', 'sender_address', 'receiver_address', 'coin', 'memo']
 
     def create(self, validated_data):
         network_symbol = validated_data.get('network')
         sender_address = validated_data.get('sender_address')
         receiver_address = validated_data.get('receiver_address')
         network = Network.objects.get(symbol=network_symbol)
-
+        memo = validated_data.get('memo') or ''
         deposit_address = DepositAddress.objects.filter(network=network, address=receiver_address).first()
 
         if deposit_address and deposit_address.address_key.deleted:
             raise ValidationError({'receiver_address': 'old deposit address not supported'})
 
         if not deposit_address:
-            address_key = get_object_or_404(
-                AddressKey,
-                address=receiver_address,
-                architecture=get_network_architecture(network),
-                deleted=False
-            )
+            if is_network_memo_base(network):
+                if not memo:
+                    raise ValidationError({'memo': 'null memo for memo networks error'})
+                address_key = get_object_or_404(
+                    AddressKey,
+                    address=receiver_address,
+                    architecture=get_network_architecture(network),
+                    deleted=False,
+                    memo=memo
+                )
+            else:
+                address_key = get_object_or_404(
+                    AddressKey,
+                    address=receiver_address,
+                    architecture=get_network_architecture(network),
+                    deleted=False
+                )
             deposit_address, _ = DepositAddress.objects.get_or_create(
                 address=receiver_address,
                 network=network,
@@ -144,6 +157,7 @@ class DepositSerializer(serializers.ModelSerializer):
                         'amount': amount,
                         'usdt_value': amount * price_usdt,
                         'irt_value': amount * price_irt,
+                        'memo': memo
                     }
                 )
 

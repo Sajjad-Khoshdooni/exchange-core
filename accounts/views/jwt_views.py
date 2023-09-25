@@ -192,6 +192,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
             if (not login_activity.is_sign_up and
                     LoginActivity.objects.filter(user=user, device=login_activity.device).count() == 1):
+
                 user.suspend(timedelta(hours=1), 'ورود از دستگاه جدید')
             if LoginActivity.objects.filter(user=user, browser=login_activity.browser, os=login_activity.os,
                                             ip=login_activity.ip).count() == 1:
