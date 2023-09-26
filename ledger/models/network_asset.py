@@ -46,9 +46,6 @@ class NetworkAsset(models.Model):
         return self.network.can_withdraw and self.can_withdraw and self.hedger_withdraw_enable
 
     def get_min_deposit(self) -> Union[Decimal, None]:
-        if self.deposit_min == MIN_PRECISION_AMOUNT:
-            return
-
         return self.deposit_min
 
     def __str__(self):

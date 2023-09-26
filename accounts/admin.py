@@ -294,7 +294,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         (_('اطلاعات اضافی'), {'fields': ('is_price_notif_on', 'is_suspended', 'suspended_until', 'is_consulted',)})
     )
 
-    list_display = ('username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
+    list_display = ('get_date_joined_jalali', 'username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
                     'verify_status', 'promotion', 'get_source_medium', 'get_referrer_user', 'is_price_notif_on',
                     'is_suspended',)
     list_filter = (

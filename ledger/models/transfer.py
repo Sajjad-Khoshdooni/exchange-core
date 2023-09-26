@@ -24,6 +24,7 @@ from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
+from ledger.requester.architecture_requester import is_network_memo_base
 from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_last_price
@@ -142,10 +143,14 @@ class Transfer(models.Model):
             check_prize_achievements(receiver.account, Task.DEPOSIT)
 
     @classmethod
-    def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str) \
-            -> Union['Transfer', None]:
+    def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str,
+                           memo: str = None) -> Union['Transfer', None]:
 
-        if not DepositAddress.objects.filter(address=address).exists():
+        queryset = DepositAddress.objects.filter(address=address)
+        if is_network_memo_base(network.symbol) and memo:
+            queryset = queryset.filter(address_key__memo=memo)
+
+        if not queryset.exists() or is_network_memo_base(network.symbol) and not memo:
             return
 
         sender_deposit_address = DepositAddress.get_deposit_address(
@@ -153,7 +158,7 @@ class Transfer(models.Model):
             network=network
         )
 
-        receiver_account = DepositAddress.objects.filter(address=address).first().address_key.account
+        receiver_account = queryset.first().address_key.account
         receiver_deposit_address = DepositAddress.get_deposit_address(
             account=receiver_account,
             network=network
@@ -221,7 +226,8 @@ class Transfer(models.Model):
             sender_wallet=wallet,
             network=network,
             amount=amount,
-            address=address
+            address=address,
+            memo=memo
         )
 
         if fast_forward:
