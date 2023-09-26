@@ -182,6 +182,7 @@ class Transfer(models.Model):
             sender_transfer = Transfer.objects.create(
                 status=Transfer.DONE,
                 deposit_address=sender_deposit_address,
+                memo=memo,
                 wallet=sender_wallet,
                 network=network,
                 amount=amount,
@@ -197,6 +198,7 @@ class Transfer(models.Model):
             receiver_transfer = Transfer.objects.create(
                 status=Transfer.DONE,
                 deposit_address=receiver_deposit_address,
+                memo=memo,
                 wallet=receiver_wallet,
                 network=network,
                 amount=amount,
