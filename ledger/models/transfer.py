@@ -147,10 +147,11 @@ class Transfer(models.Model):
                            memo: str = None) -> Union['Transfer', None]:
 
         queryset = DepositAddress.objects.filter(address=address)
+
         if is_network_memo_base(network.symbol) and memo:
             queryset = queryset.filter(address_key__memo=memo)
 
-        if not queryset.exists() or is_network_memo_base(network.symbol) and not memo:
+        if not queryset.exists() or (is_network_memo_base(network.symbol) and not memo):
             return
 
         sender_deposit_address = DepositAddress.get_deposit_address(
