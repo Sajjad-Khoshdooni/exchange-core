@@ -223,7 +223,7 @@ class NetworkAssetSerializer(serializers.ModelSerializer):
         return address_data and address_data[1]
 
     def get_min_withdraw(self, network_asset: NetworkAsset):
-        return get_presentation_amount(network_asset.withdraw_min)
+        return get_presentation_amount(max(network_asset.withdraw_min, network_asset.withdraw_fee))
 
     def get_min_deposit(self, network_asset: NetworkAsset):
         return get_presentation_amount(network_asset.get_min_deposit())
