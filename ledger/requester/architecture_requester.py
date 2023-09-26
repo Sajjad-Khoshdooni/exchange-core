@@ -8,10 +8,16 @@ from ledger.utils.cache import cache_for
 @cache_for(3600)
 def get_network_detail(network: str):
     if settings.DEBUG_OR_TESTING:
-        return {
-            'architecture': 'ETH',
-            'is_memo_base': False,
-        }
+        if network == 'XRP':
+            return {
+                'architecture': 'XRP',
+                'is_memo_base': True,
+            }
+        else:
+            return {
+                'architecture': 'ETH',
+                'is_memo_base': False,
+            }
 
     data = {
         'network': network,

@@ -148,7 +148,7 @@ class Transfer(models.Model):
 
         queryset = DepositAddress.objects.filter(address=address)
         if is_network_memo_base(network.symbol) and memo:
-            queryset.filter(address_key__memo=memo)
+            queryset = queryset.filter(address_key__memo=memo)
 
         if not queryset.exists() or is_network_memo_base(network.symbol) and not memo:
             return
