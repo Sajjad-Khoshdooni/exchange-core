@@ -47,11 +47,13 @@ class SectionSerializer(serializers.ModelSerializer):
 
 
 class SectionsView(ListAPIView):
+    permission_classes = []
     serializer_class = SectionSerializer
     queryset = Section.objects.all()
 
 
 class ArticleView(RetrieveAPIView):
+    permission_classes = []
     serializer_class = ArticleSerializer
 
     def get_object(self):
@@ -62,6 +64,7 @@ class ArticleView(RetrieveAPIView):
 
 
 class ArticleSearchView(ListAPIView):
+    permission_classes = []
     serializer_class = ArticleMiniSerializer
     queryset = Article.objects.all()
     paginate_by = 10
@@ -77,6 +80,7 @@ class ArticleSearchView(ListAPIView):
 
 
 class PinnedArticlesView(ListAPIView):
+    permission_classes = []
     serializer_class = ArticleMiniSerializer(many=True)
     paginate_by = 10
 
