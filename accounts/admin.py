@@ -757,13 +757,15 @@ class SmsNotificationAdmin(admin.ModelAdmin):
     list_display = ('created', 'recipient', 'content', 'sent')
     search_fields = ('recipient__phone', 'group_id')
     readonly_fields = ('recipient', 'group_id')
+    list_filter = ('sent', )
 
 
 @admin.register(EmailNotification)
 class EmailNotificationAdmin(admin.ModelAdmin):
     list_display = ('created', 'recipient', 'title', 'sent')
-    search_fields = ('recipient__phone', 'group_id')
+    search_fields = ('recipient__phone', 'group_id', 'title')
     readonly_fields = ('recipient', 'group_id')
+    list_filter = ('sent', )
 
 
 @admin.register(UserComment)
