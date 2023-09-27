@@ -87,12 +87,12 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         if from_panel:
             code = attrs['code']
-            otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CRYPTO_WITHDRAW)
+            otp_code = VerificationCode.get_by_code(code, user.phone, VerificationCode.SCOPE_CRYPTO_WITHDRAW, user=user)
             if not otp_code:
                 raise ValidationError({'code': 'کد پیامک  نامعتبر است.'})
+
             if not user.is_2fa_valid(totp):
                 raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
-
 
         network_asset = get_object_or_404(NetworkAsset, asset=asset, network=network)
         amount = attrs['amount']

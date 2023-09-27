@@ -15,9 +15,8 @@ from django.dispatch import receiver
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
-from accounts.models import Account, Notification
+from accounts.models import Account, Notification, EmailNotification
 from accounts.utils import email
-from accounts.utils.push_notif import send_push_notif_to_user
 from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
@@ -293,8 +292,6 @@ class Transfer(models.Model):
                 title=title,
                 message=message
             )
-
-            send_push_notif_to_user(user=user, title=title, body=message)
 
             if user_email:
                 email.send_email_by_template(
