@@ -164,7 +164,7 @@ class User(AbstractUser):
     is_price_notif_on = models.BooleanField(default=False)
 
     suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
-    suspension_reason = models.CharField(max_length=30, blank=True, null=True)
+    suspension_reason = models.CharField(max_length=128, blank=True, null=True)
 
 
     def __str__(self):
