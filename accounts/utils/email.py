@@ -5,6 +5,7 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from decouple import config
 
+from accounts.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -80,8 +81,8 @@ TEMPLATES = {
 }
 
 
-def send_email_by_template(recipient: str, template: str, context: dict = None):
-    if not recipient:
+def send_email_by_template(recipient: User, template: str, context: dict = None):
+    if not recipient.email:
         return
 
     data = TEMPLATES[template]

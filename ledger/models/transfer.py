@@ -15,8 +15,9 @@ from django.dispatch import receiver
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
-from accounts.models import Account, Notification, EmailNotification
+from accounts.models import Account, Notification
 from accounts.utils import email
+from accounts.utils.email import send_email_by_template
 from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
@@ -293,20 +294,19 @@ class Transfer(models.Model):
                 message=message
             )
 
-            if user_email:
-                email.send_email_by_template(
-                    recipient=user_email,
-                    template=template,
-                    context={
-                        'amount': humanize_number(self.amount),
-                        'wallet_asset': self.wallet.asset.symbol,
-                        'withdraw_address': self.out_address,
-                        'trx_hash': self.trx_hash,
-                        'brand': settings.BRAND,
-                        'panel_url': settings.PANEL_URL,
-                        'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
-                    }
-                )
+            send_email_by_template(
+                recipient=user,
+                template=template,
+                context={
+                    'amount': humanize_number(self.amount),
+                    'wallet_asset': self.wallet.asset.symbol,
+                    'withdraw_address': self.out_address,
+                    'trx_hash': self.trx_hash,
+                    'brand': settings.BRAND,
+                    'panel_url': settings.PANEL_URL,
+                    'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
+                }
+            )
 
     def accept(self, tx_id: str):
         with WalletPipeline() as pipeline:  # type: WalletPipeline

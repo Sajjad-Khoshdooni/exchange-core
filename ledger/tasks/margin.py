@@ -84,6 +84,6 @@ def alert_liquidation(account: Account):
     )
 
     email.send_email_by_template(
-        recipient=user.email,
+        recipient=user,
         template=SCOPE_MARGIN_LIQUIDATION_FINISHED,
     )

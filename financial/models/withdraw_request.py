@@ -174,7 +174,7 @@ class FiatWithdrawRequest(BaseTransfer):
         )
 
         email.send_email_by_template(
-            recipient=user.email,
+            recipient=user,
             template=email_template,
             context={
                 'estimated_receive_time': self.receive_datetime or None,
