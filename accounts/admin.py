@@ -291,7 +291,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)}),
         (_("کدهای دعوت کاربر"), {'fields': (
             'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred')}),
-        (_('اطلاعات اضافی'), {'fields': ('is_price_notif_on', 'is_suspended', 'suspended_until', 'is_consulted',)})
+        (_('اطلاعات اضافی'), {'fields': ('is_price_notif_on', 'is_suspended', 'suspended_until', 'suspension_reason', 'is_consulted',)})
     )
 
     list_display = ('get_date_joined_jalali', 'username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
@@ -320,7 +320,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
-        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended', 'is_consulted',
+        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended', 'is_consulted', 'suspension_reason',
     )
     preserve_filters = ('archived', )
 
