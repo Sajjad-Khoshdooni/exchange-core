@@ -99,8 +99,8 @@ class Payment(models.Model):
     def alert_payment(self):
         user = self.user
         title = 'واریز وجه با موفقیت انجام شد'
-        payment_amont = humanize_number(get_presentation_amount(Decimal(self.amount)))
-        description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amont)
+        payment_amount = humanize_number(get_presentation_amount(Decimal(self.amount)))
+        description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amount)
 
         Notification.send(
             recipient=user,
@@ -113,7 +113,7 @@ class Payment(models.Model):
             recipient=user,
             template=email.SCOPE_PAYMENT,
             context={
-                'payment_amount': payment_amont,
+                'payment_amount': payment_amount,
                 'brand': settings.BRAND,
                 'panel_url': settings.PANEL_URL,
                 'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
