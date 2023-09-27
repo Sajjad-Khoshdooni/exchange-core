@@ -17,8 +17,11 @@ class EmailNotification(models.Model):
 
     @staticmethod
     def is_spam(recipient, title: str) -> bool:
-        return EmailNotification.objects.filter(recipient=recipient, title=title,
-                                                created__gte=timezone.now() - timezone.timedelta(minutes=5)).exists()
+        return EmailNotification.objects.filter(
+            recipient=recipient,
+            title=title,
+            created__gte=timezone.now() - timezone.timedelta(minutes=5)
+        ).exists()
 
     class Meta:
         ordering = ('-created',)

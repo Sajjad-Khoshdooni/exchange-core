@@ -97,6 +97,22 @@ def send_email_by_template(recipient: User, template: str, context: dict = None)
     )
 
 
+def send_raw_email_by_template(email: str, template: str, context: dict = None):
+    data = TEMPLATES[template]
+
+    body_html = render_to_string(data['html'], context or {})
+    body_txt = render_to_string(data['text'], context or {})
+
+    from accounts.models import EmailNotification
+
+    send_email(
+        subject=data['subject'],
+        body_html=body_html,
+        body_text=body_txt,
+        to=[email],
+    )
+
+
 def send_email(subject: str, body_html: str, body_text: str, to: list, transactional: bool = True,
                purpose: str = 'Notification'):
 

@@ -1,14 +1,14 @@
 import logging
 from datetime import timedelta
 
+from decouple import config
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
-from decouple import config
 
 from accounts.models import User
-from accounts.utils.email import send_email_by_template
+from accounts.utils.email import send_raw_email_by_template
 from accounts.utils.validation import generate_random_code, fifteen_minutes_later_datetime, MINUTES
 
 logger = logging.getLogger(__name__)
@@ -100,8 +100,8 @@ class EmailVerificationCode(models.Model):
 
         template = EmailVerificationCode.TEMPLATES[scope]
 
-        send_email_by_template(
-            recipient=email,
+        send_raw_email_by_template(
+            email,
             template=template,
             context={
                 'otp_code': otp_code.code,

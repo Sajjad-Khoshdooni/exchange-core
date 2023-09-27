@@ -7,7 +7,6 @@ from django.template import loader
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import AccessToken
 
-from accounts.models.email_notification import EmailNotification
 from accounts.utils import validation
 
 
@@ -92,11 +91,14 @@ class LoginActivity(models.Model):
         content = loader.render_to_string(
             'accounts/notif/email/login_successful_message.txt',
             context=context)
+
+        from accounts.models import EmailNotification
         EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
 
     @staticmethod
     def send_unsuccessful_login_message(user):
         title = "ورود ناموفق"
+        from accounts.models import EmailNotification
         is_spam = EmailNotification.objects.filter(recipient=user, title=title,
                                                    created__gte=timezone.now() - timezone.timedelta(minutes=5)).exists()
         if not is_spam:

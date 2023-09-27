@@ -142,7 +142,7 @@ class Transfer(models.Model):
 
     @classmethod
     def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str,
-                           memo: str = None) -> Union['Transfer', None]:
+                           memo: str = '') -> Union['Transfer', None]:
 
         queryset = DepositAddress.objects.filter(address=address)
 
