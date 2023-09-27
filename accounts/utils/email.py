@@ -5,7 +5,6 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from decouple import config
 
-from accounts.models import EmailNotification
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +88,8 @@ def send_email_by_template(recipient: str, template: str, context: dict = None):
 
     body_html = render_to_string(data['html'], context or {})
     body_txt = render_to_string(data['text'], context or {})
+
+    from accounts.models import EmailNotification
 
     EmailNotification.objects.create(
         recipient=recipient, title=data['subject'], content=body_txt, content_html=body_html
