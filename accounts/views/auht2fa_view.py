@@ -10,11 +10,11 @@ from django_otp.plugins.otp_totp.models import TOTPDevice, default_key
 
 from datetime import timedelta
 
+from accounts.utils.validation import get_jalali_now
 from multimedia.fields import ImageField
-from accounts.models import Forget2FA
+from accounts.models import Forget2FA, EmailNotification
 from accounts.throttle import SustainedRateThrottle, BurstRateThrottle
 from accounts.models.phone_verification import VerificationCode
-from accounts.utils.notif import send_2fa_deactivation_message, send_2fa_activation_message
 
 ACTIVATE = 'activate'
 DEACTIVATE = 'deactivate'
@@ -72,7 +72,15 @@ class TOTPView(APIView):
         if not device.confirmed:
             device.confirmed = True
             device.save(update_fields=['confirmed'])
-            send_2fa_activation_message(user=user)
+
+            EmailNotification.send_by_template(
+                recipient=user,
+                template='2fa_activation',
+                context={
+                    'now': get_jalali_now(),
+                }
+            )
+
             return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری فعال شد.'})
         else:
             return Response({'msg': 'ورود دو مرحله‌ای فعال می باشد.'})
@@ -87,10 +95,19 @@ class TOTPView(APIView):
         )
         totp_de_active_serializer.is_valid(raise_exception=True)
         device = TOTPDevice.objects.filter(user=user).first()
+
         if device.confirmed:
             device.confirmed = False
             device.save(update_fields=['confirmed'])
-            send_2fa_deactivation_message(user=user)
+
+            EmailNotification.send_by_template(
+                recipient=user,
+                template='2fa_deactivation',
+                context={
+                    'now': get_jalali_now(),
+                }
+            )
+
             user.suspend(duration=timedelta(days=1), reason='غیرفعال کردن شناسه ‌دوعاملی')
             return Response({'msg': 'ورود دومرحله‌ای باموفقیت برای حساب کاربری غیرفعال شد.'})
         else:

@@ -1,4 +1,6 @@
 import logging
+from dataclasses import dataclass
+from django.template import loader
 
 import requests
 from django.conf import settings
@@ -152,3 +154,28 @@ def send_email(subject: str, body_html: str, body_text: str, to: list, transacti
         return
 
     return data
+
+
+@dataclass
+class EmailInfo:
+    title: str
+    body: str
+    body_html: str
+
+
+def load_email_template(template: str, context: dict = None) -> EmailInfo:
+    body_html = loader.render_to_string(
+        f'accounts/notif/email/{template}/body.html',
+        context=context)
+
+    body = loader.render_to_string(
+        f'accounts/notif/email/{template}/body.txt',
+        context=context)
+
+    title = loader.render_to_string(f'accounts/notif/email/{template}/title.txt') + ' | ' + settings.BRAND
+
+    return EmailInfo(
+        title=title,
+        body=body,
+        body_html=body_html,
+    )

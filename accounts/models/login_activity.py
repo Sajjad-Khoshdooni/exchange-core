@@ -7,7 +7,9 @@ from django.template import loader
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import AccessToken
 
+from accounts.models import EmailNotification
 from accounts.utils import validation
+from accounts.utils.validation import get_jalali_now
 
 
 class LoginActivity(models.Model):
@@ -75,45 +77,31 @@ class LoginActivity(models.Model):
 
     @staticmethod
     def send_successful_login_message(login_activity):
-        user = login_activity.user
-        title = "ورود با دستگاه و آی‌پی جدید"
-        context = {
-            'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
-            'country': login_activity.country,
-            'city': login_activity.city,
-            'ip': login_activity.ip,
-            'brand': settings.BRAND,
-            'site_url': settings.PANEL_URL
-        }
-        content_html = loader.render_to_string(
-            'accounts/notif/email/login_successful_message.html',
-            context=context)
-        content = loader.render_to_string(
-            'accounts/notif/email/login_successful_message.txt',
-            context=context)
-
-        from accounts.models import EmailNotification
-        EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
-
-    @staticmethod
-    def send_unsuccessful_login_message(user):
-        title = "ورود ناموفق"
-        from accounts.models import EmailNotification
-        is_spam = EmailNotification.objects.filter(recipient=user, title=title,
-                                                   created__gte=timezone.now() - timezone.timedelta(minutes=5)).exists()
-        if not is_spam:
-            context = {
-                'now': validation.gregorian_to_jalali_datetime_str(timezone.now()),
+        EmailNotification.send_by_template(
+            recipient=login_activity.user,
+            template='2fa_activation',
+            context={
+                'now': get_jalali_now(),
+                'country': login_activity.country,
+                'city': login_activity.city,
+                'ip': login_activity.ip,
                 'brand': settings.BRAND,
                 'site_url': settings.PANEL_URL
             }
-            content_html = loader.render_to_string(
-                'accounts/notif/email/login_unsuccessful_message.html',
-                context=context)
-            content = loader.render_to_string(
-                'accounts/notif/email/login_unsuccessful_message.txt',
-                context=context)
-            EmailNotification.objects.create(recipient=user, title=title, content=content, content_html=content_html)
+        )
+
+    @staticmethod
+    def send_unsuccessful_login_message(user):
+        EmailNotification.send_by_template(
+            recipient=user,
+            template='2fa_deactivation',
+            check_spam=True,
+            context={
+                'now': get_jalali_now(),
+                'brand': settings.BRAND,
+                'site_url': settings.PANEL_URL
+            }
+        )
 
     class Meta:
         verbose_name_plural = verbose_name = "تاریخچه ورود به حساب"

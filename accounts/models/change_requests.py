@@ -6,10 +6,9 @@ from django.db import models, transaction
 from django.template.loader import render_to_string
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from accounts.models import User
+from accounts.models import User, EmailNotification
 from accounts.models.sms_notification import SmsNotification
-from accounts.utils.notif import send_successful_change_phone_email, send_change_phone_rejection_email
-from accounts.utils.validation import PHONE_MAX_LENGTH
+from accounts.utils.validation import PHONE_MAX_LENGTH, get_jalali_now
 from accounts.validators import mobile_number_validator
 from ledger.utils.fields import PENDING, get_status_field, CANCELED, DONE
 
@@ -105,10 +104,22 @@ class ChangePhone(BaseChangeRequest):
         user.suspend(timedelta(days=1), 'تغییر شماره‌ تلفن')
         user.save(update_fields=['phone', 'username'])
 
-        send_successful_change_phone_email(user)
+        EmailNotification.send_by_template(
+            recipient=user,
+            template='change_phone_successful',
+            context={
+                'now': get_jalali_now(),
+            }
+        )
 
     def reject(self):
-        send_change_phone_rejection_email(self.user)
+        EmailNotification.send_by_template(
+            recipient=self.user,
+            template='change_phone_rejection',
+            context={
+                'now': get_jalali_now(),
+            }
+        )
 
     class Meta:
         verbose_name = 'درخواست تغییر شماره موبایل'

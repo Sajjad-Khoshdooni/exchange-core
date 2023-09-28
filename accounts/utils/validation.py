@@ -209,3 +209,7 @@ def set_login_activity(request, user, is_sign_up: bool = False, client_info: dic
         }
     )
     return login_activity
+
+
+def get_jalali_now():
+    return gregorian_to_jalali_datetime_str(timezone.now())
