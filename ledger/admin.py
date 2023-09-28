@@ -30,7 +30,7 @@ from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
 from ledger.utils.fields import DONE, PROCESS, PENDING
-from ledger.utils.precision import get_presentation_amount, humanize_presentation
+from ledger.utils.precision import get_presentation_amount, humanize_number
 from ledger.utils.provider import get_provider_requester
 from ledger.utils.withdraw_verify import RiskFactor
 from market.utils.fix import create_symbols_for_asset
@@ -82,7 +82,7 @@ class AssetAdmin(AdvancedAdmin):
         if users_amount is None:
             return
 
-        return humanize_presentation(users_amount)
+        return humanize_number(users_amount)
 
     @admin.display(description='total assets')
     def get_total_asset(self, asset: Asset):
@@ -91,7 +91,7 @@ class AssetAdmin(AdvancedAdmin):
         if total_amount is None:
             return
 
-        return humanize_presentation(total_amount)
+        return humanize_number(total_amount)
 
     @admin.display(description='hedge amount')
     def get_hedge_amount(self, asset: Asset):
@@ -100,7 +100,7 @@ class AssetAdmin(AdvancedAdmin):
         if hedge_amount is None:
             return
 
-        return humanize_presentation(hedge_amount)
+        return humanize_number(hedge_amount)
 
     @admin.display(description='calc hedge amount')
     def get_calc_hedge_amount(self, asset: Asset):
@@ -109,7 +109,7 @@ class AssetAdmin(AdvancedAdmin):
         if calc_hedge_amount is None:
             return
 
-        return humanize_presentation(calc_hedge_amount)
+        return humanize_number(calc_hedge_amount)
 
     @admin.display(description='dist factor', ordering='distribution_factor')
     def get_distribution_factor(self, asset: Asset):
@@ -128,7 +128,7 @@ class AssetAdmin(AdvancedAdmin):
 
         hedge_value = round(hedge_value, 2)
 
-        return humanize_presentation(hedge_value)
+        return humanize_number(hedge_value)
 
     @admin.display(description='hedge value abs', ordering='hedge_value_abs')
     def get_hedge_value_abs(self, asset: Asset):
@@ -139,7 +139,7 @@ class AssetAdmin(AdvancedAdmin):
 
         hedge_value_abs = round(hedge_value_abs, 2)
 
-        return humanize_presentation(hedge_value_abs)
+        return humanize_number(hedge_value_abs)
 
     @admin.action(description='setup asset', permissions=['view'])
     def setup_asset(self, request, queryset):
@@ -285,11 +285,11 @@ class OTCTradeAdmin(admin.ModelAdmin):
 
     @admin.display(description='value')
     def get_value(self, otc_trade: models.OTCTrade):
-        return humanize_presentation(round(otc_trade.otc_request.usdt_value, 2))
+        return humanize_number(round(otc_trade.otc_request.usdt_value, 2))
 
     @admin.display(description='value_irt')
     def get_value_irt(self, otc_trade: models.OTCTrade):
-        return humanize_presentation(round(otc_trade.otc_request.irt_value, 0))
+        return humanize_number(round(otc_trade.otc_request.irt_value, 0))
 
     @admin.action(description='Accept Trade')
     def accept_trade(self, request, queryset):
@@ -371,17 +371,17 @@ class WalletAdmin(admin.ModelAdmin):
 
     @admin.display(description='free', ordering='free')
     def get_free(self, wallet: models.Wallet):
-        return humanize_presentation(wallet.get_free())
+        return humanize_number(wallet.get_free())
 
     @admin.display(description='irt value', ordering='value')
     def get_value_irt(self, wallet: models.Wallet):
         price = get_last_price(wallet.asset.symbol + Asset.IRT) or 0
-        return humanize_presentation(wallet.balance * price)
+        return humanize_number(wallet.balance * price)
 
     @admin.display(description='usdt value', ordering='value')
     def get_value_usdt(self, wallet: models.Wallet):
         price = get_last_price(wallet.asset.symbol + Asset.USDT) or 0
-        return humanize_presentation(wallet.balance * price)
+        return humanize_number(wallet.balance * price)
 
 
 class TransferUserFilter(SimpleListFilter):
@@ -676,7 +676,7 @@ class FastBuyTokenAdmin(admin.ModelAdmin):
     list_filter = ('status',)
 
     def get_amount(self, fast_buy_token: FastBuyToken):
-        return humanize_presentation(fast_buy_token.amount)
+        return humanize_number(fast_buy_token.amount)
 
     get_amount.short_description = 'مقدار'
 
@@ -728,7 +728,7 @@ class ManualTransactionAdmin(admin.ModelAdmin):
 
     @admin.display(description='amount', ordering='amount')
     def get_amount_preview(self, mt: ManualTransaction):
-        return humanize_presentation(mt.amount)
+        return humanize_number(mt.amount)
 
 
 @admin.register(AssetAlert)

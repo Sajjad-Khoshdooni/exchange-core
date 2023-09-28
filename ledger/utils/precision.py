@@ -79,23 +79,14 @@ def get_presentation_amount(amount: Decimal, precision: int = None, trunc_zero: 
 
 
 def humanize_number(num):
-    if isinstance(num, int):
-        num = str(num)
-
-    if isinstance(num, str):
-        num = Decimal(num)
-
-    return '{:,f}'.format(num)
+    num = get_presentation_amount(num, precision=8)
+    return '{:,f}'.format(Decimal(num))
 
 
 def normalize_fraction(d: Decimal):
     normalized = d.normalize()
     sign, digit, exponent = normalized.as_tuple()
     return normalized if exponent <= 0 else normalized.quantize(1)
-
-
-def humanize_presentation(num):
-    return humanize_number(get_presentation_amount(num, precision=8))
 
 
 def is_zero_by_precision(amount: Decimal, precision: int = AMOUNT_PRECISION):

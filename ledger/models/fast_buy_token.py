@@ -7,7 +7,7 @@ from accounts.models import Notification
 from ledger.models import OTCRequest, Asset, Wallet, OTCTrade
 from ledger.utils.fields import DONE
 from ledger.utils.fields import get_amount_field
-from ledger.utils.precision import humanize_number, humanize_presentation
+from ledger.utils.precision import humanize_number, humanize_number
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class FastBuyToken(models.Model):
                 Notification.send(
                     recipient=self.user,
                     title='خرید آنی {}'.format(self.asset.name_fa),
-                    message='خرید {} {} با موفقیت انجام شد.'.format(humanize_presentation(otc_request.amount), self.asset.name_fa),
+                    message='خرید {} {} با موفقیت انجام شد.'.format(humanize_number(otc_request.amount), self.asset.name_fa),
                     level=Notification.SUCCESS
                 )
                 return otc_trade
