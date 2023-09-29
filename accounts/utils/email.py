@@ -1,116 +1,21 @@
 import logging
 from dataclasses import dataclass
-from django.template import loader
 
 import requests
-from django.conf import settings
-from django.template.loader import render_to_string
 from decouple import config
-
-from accounts.models import User
+from django.conf import settings
+from django.template import loader
 
 logger = logging.getLogger(__name__)
 
 
-SCOPE_VERIFY_EMAIL = 'verify_email'
-SCOPE_WITHDRAW_EMAIL = 'withdraw_email'
-SCOPE_DEPOSIT_EMAIL = 'deposit_email'
-SCOPE_SUCCESSFUL_FIAT_WITHDRAW = 'successful_fiat_withdraw_email'
-SCOPE_CANCEL_FIAT_WITHDRAW = 'cancel_fiat_withdraw_email'
-SCOPE_PAYMENT = 'payment_email'
-
-SCOPE_MARGIN_UNDER_LIQUIDATION = 'margin_under_liquidation'
-SCOPE_MARGIN_LIQUIDATION_FINISHED = 'margin_liquidation_finished'
-
-SCOPE_DONE_STAKE = 'done_stake'
-SCOPE_CANCEL_STAKE = 'cancel_stake'
-
-SCOPE_2FA_ACTIVATE = 'activate_2fa'
-
-TEMPLATES = {
-    SCOPE_VERIFY_EMAIL: {
-        'subject':  '{} | کد تایید ایمیل'.format(settings.BRAND),
-        'html': 'accounts/email/verify_email.min.html',
-        'text': 'accounts/text/verify_email.txt',
-    },
-    SCOPE_WITHDRAW_EMAIL: {
-        'subject': '{} | اطلاع‌رسانی برداشت رمزارزی'.format(settings.BRAND),
-        'html': 'accounts/email/withdraw_email.min.html',
-        'text': 'accounts/text/withdraw_email.txt',
-    },
-    SCOPE_SUCCESSFUL_FIAT_WITHDRAW: {
-        'subject': '{} | اطلاع‌رسانی برداشت ریالی'.format(settings.BRAND),
-        'html': 'accounts/email/successful_fiat_withdraw_email.min.html',
-        'text': 'accounts/text/successful_fiat_withdraw_email.txt',
-    },
-    SCOPE_CANCEL_FIAT_WITHDRAW: {
-        'subject': '{} | اطلاع‌رسانی لغو برداشت ریالی '.format(settings.BRAND),
-        'html': 'accounts/email/cancel_fiat_withdraw_email.min.html',
-        'text': 'accounts/text/cancel_fiat_withdraw_email.txt',
-    },
-    SCOPE_DEPOSIT_EMAIL: {
-        'subject': '{} | اطلاع‌رسانی واریز رمزارزی '.format(settings.BRAND),
-        'html': 'accounts/email/deposit_email.min.html',
-        'text': 'accounts/text/deposit_email.txt',
-    },
-    SCOPE_PAYMENT: {
-        'subject': '{} | اطلاع‌رسانی واریز ریالی'.format(settings.BRAND),
-        'html': 'accounts/email/payment_email.min.html',
-        'text': 'accounts/text/payment_email.txt',
-    },
-    SCOPE_MARGIN_LIQUIDATION_FINISHED: {
-        'subject': '{} | تسویه خودکار حساب تعهدی'.format(settings.BRAND),
-        'html': 'accounts/email/margin_liquidation_finished.min.html',
-        'text': 'accounts/text/margin_liquidation_finished.txt',
-    },
-
-    SCOPE_2FA_ACTIVATE: {
-        'subject': '{} | فعال سازی رمز دوعاملی'.format(settings.BRAND),
-        'html': 'accounts/email/activate_2fa_email.min.html',
-        'text': 'accounts/text/activate_2fa.txt',
-    },
-
-    'cancel_stake': {
-        'subject': '{} | اطلاع‌رسانی لغو staking'.format(settings.BRAND),
-        'html': 'accounts/email/cancel_staking_email.min.html',
-        'text': 'accounts/text/cancel_staking.txt',
-    },
-    'done_stake': {
-            'subject': '{} | اطلاع‌رسانی تایید staking'.format(settings.BRAND),
-            'html': 'accounts/email/done_staking_email.min.html',
-            'text': 'accounts/text/done_staking.txt',
-        },
-}
-
-
-def send_email_by_template(recipient: User, template: str, context: dict = None):
-    if not recipient.email:
-        return
-
-    data = TEMPLATES[template]
-
-    body_html = render_to_string(data['html'], context or {})
-    body_txt = render_to_string(data['text'], context or {})
-
-    from accounts.models import EmailNotification
-
-    EmailNotification.objects.create(
-        recipient=recipient, title=data['subject'], content=body_txt, content_html=body_html
-    )
-
-
 def send_raw_email_by_template(email: str, template: str, context: dict = None):
-    data = TEMPLATES[template]
-
-    body_html = render_to_string(data['html'], context or {})
-    body_txt = render_to_string(data['text'], context or {})
-
-    from accounts.models import EmailNotification
+    email_info = load_email_template(template, context)
 
     send_email(
-        subject=data['subject'],
-        body_html=body_html,
-        body_text=body_txt,
+        subject=email_info.title,
+        body_html=email_info.body_html,
+        body_text=email_info.body,
         to=[email],
     )
 

@@ -10,10 +10,8 @@ from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils import timezone
 
-from accounts.models import Account
+from accounts.models import Account, EmailNotification
 from accounts.models import Notification
-from accounts.utils import email
-from accounts.utils.email import send_email_by_template
 from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, Asset
@@ -109,9 +107,9 @@ class Payment(models.Model):
             level=Notification.SUCCESS
         )
 
-        send_email_by_template(
+        EmailNotification.send_by_template(
             recipient=user,
-            template=email.SCOPE_PAYMENT,
+            template='fiat_deposit_successful',
             context={
                 'payment_amount': payment_amount,
                 'brand': settings.BRAND,

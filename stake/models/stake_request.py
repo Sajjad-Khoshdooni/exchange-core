@@ -5,9 +5,8 @@ from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
 
-from accounts.models import Account, User
+from accounts.models import Account, User, EmailNotification
 from accounts.tasks import send_message_by_kavenegar
-from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet, Trx
@@ -59,10 +58,10 @@ class StakeRequest(models.Model):
         return self.amount + locked_revenue
 
     def send_email_for_staking(self, user: User, template: str):
-        email.send_email_by_template(
+        EmailNotification.send_by_template(
             recipient=user,
             template=template,
-            context={'asset': self.stake_option.asset.name_fa, 'amount': self.amount},
+            context={'coin': self.stake_option.asset.name_fa, 'amount': self.amount},
         )
 
     def change_status(self, new_status: str):
@@ -123,7 +122,7 @@ class StakeRequest(models.Model):
                 self.status = new_status
                 self.save()
 
-            self.send_email_for_staking(account.user, template=email.SCOPE_CANCEL_STAKE)
+            self.send_email_for_staking(account.user, template='staking_canceled')
 
         elif (old_status, new_status) == (self.DONE, self.FINISHED):
             spot_wallet = asset.get_wallet(account)
@@ -152,7 +151,7 @@ class StakeRequest(models.Model):
         elif (old_status, new_status) in [(self.PROCESS, self.DONE), (self.PENDING, self.DONE)]:
             self.status = new_status
             self.save()
-            self.send_email_for_staking(account.user, template=email.SCOPE_DONE_STAKE)
+            self.send_email_for_staking(account.user, template='staking_activated')
 
             send_message_by_kavenegar(
                 phone=account.user.phone,
