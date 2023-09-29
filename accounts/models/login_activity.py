@@ -3,12 +3,10 @@ from typing import Union
 from django.conf import settings
 from django.contrib.sessions.models import Session
 from django.db import models, transaction
-from django.template import loader
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import AccessToken
 
 from accounts.models import EmailNotification
-from accounts.utils import validation
 from accounts.utils.validation import get_jalali_now
 
 

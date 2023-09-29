@@ -107,6 +107,7 @@ class ChangePhone(BaseChangeRequest):
         EmailNotification.send_by_template(
             recipient=user,
             template='change_phone_successful',
+            check_spam=True,
             context={
                 'now': get_jalali_now(),
             }
@@ -116,6 +117,7 @@ class ChangePhone(BaseChangeRequest):
         EmailNotification.send_by_template(
             recipient=self.user,
             template='change_phone_rejection',
+            check_spam=True,
             context={
                 'now': get_jalali_now(),
             }

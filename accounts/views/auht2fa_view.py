@@ -76,6 +76,7 @@ class TOTPView(APIView):
             EmailNotification.send_by_template(
                 recipient=user,
                 template='2fa_activation',
+                check_spam=True,
                 context={
                     'now': get_jalali_now(),
                 }
@@ -103,6 +104,7 @@ class TOTPView(APIView):
             EmailNotification.send_by_template(
                 recipient=user,
                 template='2fa_deactivation',
+                check_spam=True,
                 context={
                     'now': get_jalali_now(),
                 }
