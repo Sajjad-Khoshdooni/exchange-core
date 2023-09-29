@@ -77,7 +77,7 @@ class LoginActivity(models.Model):
     def send_successful_login_message(login_activity):
         EmailNotification.send_by_template(
             recipient=login_activity.user,
-            template='2fa_activation',
+            template='login_new_device',
             context={
                 'now': get_jalali_now(),
                 'country': login_activity.country,
@@ -92,7 +92,7 @@ class LoginActivity(models.Model):
     def send_unsuccessful_login_message(user):
         EmailNotification.send_by_template(
             recipient=user,
-            template='2fa_deactivation',
+            template='login_unsuccessful',
             check_spam=True,
             context={
                 'now': get_jalali_now(),

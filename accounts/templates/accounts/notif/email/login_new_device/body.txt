@@ -2,6 +2,7 @@
 تاریخ: {{now}}
 آی‌پی: {{ip}}
 {% if  country != "" and city != "" %} مکان: {{country}} / {{city}} {% endif %}
+
 تغییر رمز عبور:
 {{site_url}}/account/security
 {{brand}}
