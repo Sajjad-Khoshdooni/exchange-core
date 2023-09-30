@@ -26,7 +26,7 @@ class EmailVerificationCode(models.Model):
 
     TEMPLATES = {
         # SCOPE_FORGET_PASSWORD: 'accounts/email/forget_password',
-        SCOPE_VERIFY_EMAIL: 'verify_email',
+        SCOPE_VERIFY_EMAIL: 'otp',
     }
 
     created = models.DateTimeField(auto_now_add=True)
