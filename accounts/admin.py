@@ -1,3 +1,4 @@
+from decouple import config
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
@@ -680,11 +681,17 @@ class AccountAdmin(admin.ModelAdmin):
     fieldsets = (
         ('اطلاعات', {'fields': (
             'name', 'user', 'type', 'primary', 'owned', 'trade_volume_irt', 'get_wallet',
-            'get_total_balance_irt_admin', 'get_total_balance_usdt_admin', 'referred_by'
+            'get_total_balance_irt_admin', 'get_total_balance_usdt_admin', 'referred_by',
+            'get_bots'
         )}),
     )
     readonly_fields = ('user', 'get_wallet', 'get_total_balance_irt_admin', 'get_total_balance_usdt_admin',
-                       'trade_volume_irt', 'referred_by')
+                       'trade_volume_irt', 'referred_by', 'get_bots')
+
+    def get_bots(self, account: Account):
+        link = config('STRATEGY_HOST_URL', 'https://strategy-api.raastin.com') + '/admin/bot/agent/?account_id={}'.format(account.id)
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+    get_bots.short_description = 'لیست ربات‌ها'
 
     def get_wallet(self, account: Account):
         link = url_to_admin_list(Wallet) + '?account={}'.format(account.id)
