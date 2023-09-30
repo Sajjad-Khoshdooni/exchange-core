@@ -5,22 +5,34 @@ import requests
 from decouple import config
 from django.conf import settings
 from django.template import loader
+from django.template.loader import render_to_string
 
 logger = logging.getLogger(__name__)
 
 
-def send_raw_email_by_template(email: str, template: str, context: dict = None):
-    email_info = load_email_template(template, context)
+@dataclass
+class EmailInfo:
+    title: str
+    body: str
+    body_html: str
 
-    send_email(
-        subject=email_info.title,
-        body_html=email_info.body_html,
-        body_text=email_info.body,
-        to=[email],
+
+def send_email(email: str, info: EmailInfo):
+    return _send_email(
+        subject=info.title,
+        body_html=render_to_string("accounts/notif/base/email_template.min.html", {
+            'title': info.title,
+            'body_html': info.body_html,
+            'brand': settings.BRAND,
+            'panel_url': settings.PANEL_URL,
+            'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
+        }),
+        body_text=info.body,
+        to=[email]
     )
 
 
-def send_email(subject: str, body_html: str, body_text: str, to: list, transactional: bool = True,
+def _send_email(subject: str, body_html: str, body_text: str, to: list, transactional: bool = True,
                purpose: str = 'Notification'):
 
     if settings.DEBUG_OR_TESTING_OR_STAGING:
@@ -59,13 +71,6 @@ def send_email(subject: str, body_html: str, body_text: str, to: list, transacti
         return
 
     return data
-
-
-@dataclass
-class EmailInfo:
-    title: str
-    body: str
-    body_html: str
 
 
 def load_email_template(template: str, context: dict = None) -> EmailInfo:
