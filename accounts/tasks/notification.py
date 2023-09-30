@@ -86,7 +86,7 @@ def send_email_notifications():
 
         resp = send_email(
             subject=email_notif.title,
-            body_html=render_to_string('accounts/email/email_template.min.html', {
+            body_html=render_to_string('accounts/notif/base/email_template.min.html', {
                 'title': email_notif.title,
                 'body_html': email_notif.content_html,
                 'brand': settings.BRAND,
@@ -99,4 +99,3 @@ def send_email_notifications():
         if resp:
             email_notif.sent = True
             email_notif.save(update_fields=['sent'])
-

@@ -1,3 +1,5 @@
+import requests
+
 
 def get_client_ip(request) -> str:
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -6,3 +8,16 @@ def get_client_ip(request) -> str:
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
+
+
+def get_ip_data(ip):
+
+    try:
+        resp = requests.post(
+            url='http://ip-api.com/json/{ip}'.format(ip=ip),
+            timeout=1
+        )
+        return resp.json()
+
+    except:
+        return {}

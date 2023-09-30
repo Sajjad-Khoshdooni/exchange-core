@@ -4,7 +4,6 @@ from decouple import config
 from django.contrib.auth import login
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
-from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -12,12 +11,11 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.authentication import is_app
 from accounts.models import User, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
-from accounts.utils.validation import set_login_activity
+from accounts.utils.login import set_login_activity
 from accounts.validators import mobile_number_validator, password_validator
 
 logger = logging.getLogger(__name__)

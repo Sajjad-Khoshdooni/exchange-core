@@ -9,7 +9,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
-from accounts.models import Account
+from accounts.models import Account, EmailNotification
 from accounts.models import Notification
 from accounts.tasks.send_sms import send_message_by_kavenegar
 from accounts.utils import email
@@ -150,14 +150,14 @@ class FiatWithdrawRequest(BaseTransfer):
             )
             level = Notification.SUCCESS
             template = 'withdraw-accepted'
-            email_template = email.SCOPE_SUCCESSFUL_FIAT_WITHDRAW
+            email_template = 'fiat_withdraw_successful'
 
         elif self.status == self.CANCELED:
             title = 'درخواست برداشت شما لغو شد.'
             description = ''
             level = Notification.ERROR
             template = 'withdraw-rejected'
-            email_template = email.SCOPE_CANCEL_FIAT_WITHDRAW
+            email_template = 'fiat_withdraw_unsuccessful'
         else:
             return
 
@@ -173,11 +173,11 @@ class FiatWithdrawRequest(BaseTransfer):
             token=humanize_number(self.amount)
         )
 
-        email.send_email_by_template(
+        EmailNotification.send_by_template(
             recipient=user,
             template=email_template,
             context={
-                'estimated_receive_time': self.receive_datetime or None,
+                'estimated_receive_time': self.receive_datetime,
             }
         )
 
