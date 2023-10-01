@@ -27,7 +27,7 @@ class Section(BaseItem):
 
     class Meta:
         verbose_name = 'بخش'
-        verbose_name_plural = 'بخش‌ ها'
+        verbose_name_plural = 'بخش‌‌ها'
 
 
 class Article(BaseItem):
@@ -37,4 +37,4 @@ class Article(BaseItem):
 
     class Meta:
         verbose_name = 'مقاله'
-        verbose_name_plural = 'مقاله ها'
+        verbose_name_plural = 'مقاله‌ها'
