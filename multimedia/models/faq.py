@@ -8,9 +8,9 @@ from multimedia.models import Image
 
 
 class BaseItem(models.Model):
-    title = models.TextField(max_length=30)
-    title_en = models.TextField(max_length=30)
-    slug = models.SlugField(max_length=255, unique=True, db_index=True, editable=False)
+    title = models.TextField(max_length=256)
+    title_en = models.TextField(max_length=256)
+    slug = models.SlugField(max_length=1024, unique=True, db_index=True, editable=False)
 
     def save(self, *args, **kwargs):
         if not self.slug:
