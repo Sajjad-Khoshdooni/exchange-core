@@ -3,10 +3,12 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import models, transaction
+from django.db.models import Q
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from accounts.models import User, EmailNotification, Notification
+from accounts.models import User, EmailNotification, Notification, LoginActivity
 from accounts.models.sms_notification import SmsNotification
 from accounts.utils.validation import PHONE_MAX_LENGTH, get_jalali_now
 from accounts.validators import mobile_number_validator
@@ -123,6 +125,12 @@ class ChangePhone(BaseChangeRequest):
 
             self.status = DONE
             self.save(update_fields=['status'])
+
+            logins = LoginActivity.objects.filter(
+                Q(session__isnull=False, session__expire_date__gt=timezone.now()) |
+                Q(refresh_token__isnull=False),
+                user=self.user
+            )
 
     def reject(self):
         with transaction.atomic():
