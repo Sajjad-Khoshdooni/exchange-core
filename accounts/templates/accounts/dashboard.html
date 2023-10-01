@@ -52,9 +52,14 @@
             ({{ archived_users }}) کاربران بایگانی شده
         </a>
         <br>
-        <a type="button" href="/admin/accounts/forget2fa/?status=pending"
+        <a type="button" href="/admin/accounts/forget2fa/?status__exact=pending"
            class="btn btn-secondary btn-lg btn-block" target="_blank">
             ({{ forget_2fa_count }}) درخواست‌های فراموشی شناسه دوعاملی
+        </a>
+        <br>
+        <a type="button" href="/admin/accounts/changephone/?status__exact=pending"
+           class="btn btn-warning btn-lg btn-block" target="_blank">
+            ({{ phone_change_count }}) درخواست‌های تغییر شماره موبایل
         </a>
         <br>
     </div>

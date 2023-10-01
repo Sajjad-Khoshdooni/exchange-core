@@ -1,9 +1,8 @@
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from django.contrib.postgres.search import SearchVector
 from rest_framework import serializers
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
-
-from django.contrib.postgres.search import TrigramWordSimilarity, SearchVector
 
 from multimedia.models import Section, Article
 
@@ -16,13 +15,24 @@ class ArticleMiniSerializer(serializers.ModelSerializer):
 
 class ArticleSerializer(serializers.ModelSerializer):
     content = serializers.SerializerMethodField()
+    parents = serializers.SerializerMethodField()
 
     def get_content(self, article: Article):
         return article.content.html
 
+    def get_parents(self, article: Article):
+        parents = []
+        parent = article.parent_section
+
+        while parent:
+            parents.append(SectionMiniSerializer(parent).data)
+            parent = parent.parent
+
+        return reversed(parents)
+
     class Meta:
         model = Article
-        fields = ('id', 'slug', 'title', 'content')
+        fields = ('id', 'slug', 'title', 'content', 'parents')
 
 
 class SectionMiniSerializer(serializers.ModelSerializer):

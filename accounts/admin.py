@@ -191,15 +191,15 @@ class BaseChangeAdmin(admin.ModelAdmin):
     def reject_requests(self, request, queryset):
         qs = queryset.filter(status=PENDING)
 
-        for forget_request in qs:
-            forget_request.reject()
+        for req in qs:
+            req.reject()
 
     @admin.action(description='تایید درخواست', permissions=['view'])
     def accept_requests(self, request, queryset):
         qs = queryset.filter(status=PENDING)
 
-        for forget_request in qs:
-            forget_request.accept()
+        for req in qs:
+            req.accept()
 
     def get_selfie_image(self, forget_request: Forget2FA):
         return mark_safe("<img src='%s' width='200' height='200' />" % forget_request.selfie_image.
@@ -293,7 +293,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)}),
         (_("کدهای دعوت کاربر"), {'fields': (
             'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred')}),
-        (_('اطلاعات اضافی'), {'fields': ('is_price_notif_on', 'is_suspended', 'suspended_until', 'is_consulted',)})
+        (_('اطلاعات اضافی'), {'fields': ('is_price_notif_on', 'is_suspended', 'suspended_until', 'suspension_reason', 'is_consulted',)})
     )
 
     list_display = ('get_date_joined_jalali', 'username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
@@ -322,7 +322,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
-        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended', 'is_consulted', 'get_bots'
+        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended', 'is_consulted',
+        'suspension_reason', 'get_bots_link'
     )
     preserve_filters = ('archived', )
 
@@ -401,11 +402,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_order_link.short_description = 'سفارشات'
 
-    def get_bots(self, user: User):
+    def get_bots_link(self, user: User):
         link = (config('STRATEGY_HOST_URL', 'https://strategy-api.raastin.com') +
                 '/admin/bot/agent/?account_id={}'.format(user.get_account().id))
         return mark_safe("<a href='%s'>دیدن</a>" % link)
-    get_bots.short_description = 'لیست ربات‌ها'
+    get_bots_link.short_description = 'لیست ربات‌ها'
 
     def get_open_order_address(self, user: User):
         link = url_to_admin_list(Order) +'?status=new&user={}'.format(user.id)

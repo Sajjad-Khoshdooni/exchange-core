@@ -3,10 +3,12 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import models, transaction
+from django.db.models import Q
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from accounts.models import User, EmailNotification
+from accounts.models import User, EmailNotification, Notification, LoginActivity
 from accounts.models.sms_notification import SmsNotification
 from accounts.utils.validation import PHONE_MAX_LENGTH, get_jalali_now
 from accounts.validators import mobile_number_validator
@@ -95,33 +97,64 @@ class ChangePhone(BaseChangeRequest):
     )
 
     def accept(self):
-        user = self.user
-        new_phone = self.new_phone
+        with transaction.atomic():
+            user = self.user
+            new_phone = self.new_phone
 
-        user.phone = new_phone
-        user.username = new_phone
+            user.phone = new_phone
+            user.username = new_phone
 
-        user.suspend(timedelta(days=1), 'تغییر شماره‌ تلفن')
-        user.save(update_fields=['phone', 'username'])
+            user.suspend(timedelta(days=1), 'تغییر شماره‌ موبایل')
+            user.save(update_fields=['phone', 'username'])
 
-        EmailNotification.send_by_template(
-            recipient=user,
-            template='change_phone_successful',
-            check_spam=True,
-            context={
-                'now': get_jalali_now(),
-            }
-        )
+            EmailNotification.send_by_template(
+                recipient=user,
+                template='change_phone_successful',
+                check_spam=True,
+                context={
+                    'now': get_jalali_now(),
+                }
+            )
+
+            Notification.send(
+                recipient=user,
+                title='تغییر شماره موبایل',
+                message='شماره موبایل شما با موفقیت تغییر یافت.',
+                link='/account'
+            )
+
+            self.status = DONE
+            self.save(update_fields=['status'])
+
+            logins = LoginActivity.objects.filter(
+                Q(session__isnull=False, session__expire_date__gt=timezone.now()) |
+                Q(refresh_token__isnull=False),
+                user=self.user
+            )
+
+            for login in logins:
+                login.destroy()
 
     def reject(self):
-        EmailNotification.send_by_template(
-            recipient=self.user,
-            template='change_phone_rejection',
-            check_spam=True,
-            context={
-                'now': get_jalali_now(),
-            }
-        )
+        with transaction.atomic():
+            EmailNotification.send_by_template(
+                recipient=self.user,
+                template='change_phone_rejection',
+                check_spam=True,
+                context={
+                    'now': get_jalali_now(),
+                }
+            )
+
+            Notification.send(
+                recipient=self.user,
+                title='تغییر شماره موبایل',
+                message='درخواست تغییر شماره موبایل شما پذیرفته نشد.',
+                link='/account'
+            )
+
+            self.status = CANCELED
+            self.save(update_fields=['status'])
 
     class Meta:
         verbose_name = 'درخواست تغییر شماره موبایل'

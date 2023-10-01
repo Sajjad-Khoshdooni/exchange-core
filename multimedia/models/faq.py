@@ -13,7 +13,9 @@ class BaseItem(models.Model):
     slug = models.SlugField(max_length=255, unique=True, db_index=True, editable=False)
 
     def save(self, *args, **kwargs):
-        self.slug = slugify(self.title_en + '-' + str(uuid.uuid4()))
+        if not self.slug:
+            self.slug = slugify(self.title_en + '-' + str(uuid.uuid4()))
+
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -27,7 +29,7 @@ class Section(BaseItem):
 
     class Meta:
         verbose_name = 'بخش'
-        verbose_name_plural = 'بخش‌ ها'
+        verbose_name_plural = 'بخش‌‌ها'
 
 
 class Article(BaseItem):
@@ -37,4 +39,4 @@ class Article(BaseItem):
 
     class Meta:
         verbose_name = 'مقاله'
-        verbose_name_plural = 'مقاله ها'
+        verbose_name_plural = 'مقاله‌ها'

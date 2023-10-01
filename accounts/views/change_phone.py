@@ -27,16 +27,30 @@ class InitiateChangePhoneSerializer(serializers.Serializer):
         otp = data.get('otp')
         password = data.get('password')
         totp = data.get('totp', None)
+
         validate_password(password=password, user=user)
-        otp_verification = VerificationCode.get_by_code(otp, user.phone, VerificationCode.SCOPE_CHANGE_PHONE_INIT,
-                                                        user=user)
+
+        otp_verification = VerificationCode.get_by_code(
+            code=otp,
+            phone=user.phone,
+            scope=VerificationCode.SCOPE_CHANGE_PHONE_INIT,
+            user=user
+        )
+
         if not otp_verification:
             raise ValidationError('کد ارسال شده نامعتبر است.')
 
         if not user.is_2fa_valid(totp):
             raise ValidationError({'totp': 'شناسه‌ دوعاملی صحیح نمی‌باشد.'})
+
+        if ChangePhone.objects.filter(status=PENDING, user=user):
+            raise ValidationError(
+                'شما در حال حاضر درخواست تایید نشده‌ای دارید. لطفا تا تایید یا رد درخواست‌تان منتظر بمانید.'
+            )
+
         otp_verification.set_code_used()
         data['token'] = otp_verification.token
+
         return data
 
 
@@ -81,7 +95,7 @@ class NewPhoneVerifySerializer(serializers.Serializer):
                 'شما با این شماره موبایل قبلا ثبت نام کرده‌اید. لطفا خارج شوید و با این شماره موبایل دوباره وارد شوید.'
             )
 
-        if ChangePhone.objects.filter(new_phone=new_phone, status=PENDING):
+        if ChangePhone.objects.filter(new_phone=new_phone, status=PENDING).exclude(user=user):
             raise ValidationError(
                 'امکان تغییر به این شماره موبایل در حال حاضر وجود ندارد.'
             )
