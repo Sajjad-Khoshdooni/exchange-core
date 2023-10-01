@@ -132,6 +132,9 @@ class ChangePhone(BaseChangeRequest):
                 user=self.user
             )
 
+            for login in logins:
+                login.destroy()
+
     def reject(self):
         with transaction.atomic():
             EmailNotification.send_by_template(
