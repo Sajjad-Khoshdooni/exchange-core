@@ -238,15 +238,10 @@ def send_price_notifications():
     cache.set(key, current_cycle_prices, 3600 * 24 + 60 * 4)
 
     past_five_minute_cycle = get_past_cycle_by_number(current_cycle_count - 1)
-
     past_hour_cycle = get_past_cycle_by_number(current_cycle_count - 12)
-
     past_three_hours_cycle = get_past_cycle_by_number(current_cycle_count - 12 * 3)
-
     past_six_hours_cycle = get_past_cycle_by_number(current_cycle_count - 12 * 6)
-
     past_twelve_hours_cycle = get_past_cycle_by_number(current_cycle_count - 12 * 12)
-
     past_day_cycle = get_past_cycle_by_number(current_cycle_count + 2)
 
     altered_coins = {
