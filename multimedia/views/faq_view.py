@@ -16,13 +16,24 @@ class ArticleMiniSerializer(serializers.ModelSerializer):
 
 class ArticleSerializer(serializers.ModelSerializer):
     content = serializers.SerializerMethodField()
+    parents = serializers.SerializerMethodField()
 
     def get_content(self, article: Article):
         return article.content.html
 
+    def get_parents(self, article: Article):
+        parents = []
+        parent = article.parent_section
+
+        while parent:
+            parents.append(SectionMiniSerializer(parent).data)
+            parent = parent.parent
+
+        return reversed(parents)
+
     class Meta:
         model = Article
-        fields = ('id', 'slug', 'title', 'content')
+        fields = ('id', 'slug', 'title', 'content', 'parents')
 
 
 class SectionMiniSerializer(serializers.ModelSerializer):
