@@ -283,7 +283,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                 'get_open_order_address', 'get_deposit_address', 'get_bank_card_link',
                 'get_bank_account_link', 'get_finotech_request_link', 'get_staking_link',
                 'get_user_with_same_national_code', 'get_referred_user', 'get_login_activity_link',
-                'get_notifications_link', 'get_prizes_link', 'get_bots'
+                'get_notifications_link', 'get_prizes_link', 'get_bots_link'
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
