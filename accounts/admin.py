@@ -198,8 +198,8 @@ class BaseChangeAdmin(admin.ModelAdmin):
     def accept_requests(self, request, queryset):
         qs = queryset.filter(status=PENDING)
 
-        for forget_request in qs:
-            forget_request.accept()
+        for req in qs:
+            req.accept()
 
     def get_selfie_image(self, forget_request: Forget2FA):
         return mark_safe("<img src='%s' width='200' height='200' />" % forget_request.selfie_image.
