@@ -1,9 +1,8 @@
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from django.contrib.postgres.search import SearchVector
 from rest_framework import serializers
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
-
-from django.contrib.postgres.search import TrigramWordSimilarity, SearchVector
 
 from multimedia.models import Section, Article
 
