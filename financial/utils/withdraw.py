@@ -503,12 +503,17 @@ class JibitChannel(FiatWithdraw):
 
         transfer = data['transfers'][0]
 
-        channel_status = transfer['state']
         tracking_id = transfer['bankTransferID'] or ''
+
+        channel_status = transfer['state']
+        status = mapping_status.get(channel_status, self.PENDING)
+
+        if tracking_id and status == self.PENDING:
+            status = self.DONE
 
         return Withdraw(
             tracking_id=tracking_id,
-            status=mapping_status.get(channel_status, self.PENDING),
+            status=status,
         )
 
     def get_total_wallet_irt_value(self) -> int:

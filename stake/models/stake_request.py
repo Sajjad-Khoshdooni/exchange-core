@@ -5,9 +5,8 @@ from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
 
-from accounts.models import Account
+from accounts.models import Account, User, EmailNotification
 from accounts.tasks import send_message_by_kavenegar
-from accounts.utils import email
 from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.models import Wallet, Trx
@@ -58,21 +57,17 @@ class StakeRequest(models.Model):
 
         return self.amount + locked_revenue
 
-    def send_email_for_staking(self, user_email: str, template: str):
-        if user_email:
-            email.send_email_by_template(
-                recipient=user_email,
-                template=template,
-                context={'asset': self.stake_option.asset.name_fa, 'amount': self.amount},
-            )
-        else:
-            return
+    def send_email_for_staking(self, user: User, template: str):
+        EmailNotification.send_by_template(
+            recipient=user,
+            template=template,
+            context={'coin': self.stake_option.asset.name_fa, 'amount': self.amount},
+        )
 
     def change_status(self, new_status: str):
         old_status = self.status
         account = self.account
         asset = self.stake_option.asset
-        user_email = account.user.email
 
         valid_change_status = [
             (self.PROCESS, self.PENDING), (self.PROCESS, self.DONE), (self.PROCESS, self.CANCEL_COMPLETE),
@@ -127,7 +122,7 @@ class StakeRequest(models.Model):
                 self.status = new_status
                 self.save()
 
-            self.send_email_for_staking(user_email=user_email, template=email.SCOPE_CANCEL_STAKE)
+            self.send_email_for_staking(account.user, template='staking_canceled')
 
         elif (old_status, new_status) == (self.DONE, self.FINISHED):
             spot_wallet = asset.get_wallet(account)
@@ -156,7 +151,7 @@ class StakeRequest(models.Model):
         elif (old_status, new_status) in [(self.PROCESS, self.DONE), (self.PENDING, self.DONE)]:
             self.status = new_status
             self.save()
-            self.send_email_for_staking(user_email=user_email, template=email.SCOPE_DONE_STAKE)
+            self.send_email_for_staking(account.user, template='staking_activated')
 
             send_message_by_kavenegar(
                 phone=account.user.phone,

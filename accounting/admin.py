@@ -6,6 +6,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from accounting.models import Account, AccountTransaction, TransactionAttachment, Vault, VaultItem, ReservedAsset, \
     AssetPrice, TradeRevenue, PeriodicFetcher, BlocklinkIncome, BlocklinkDustCost
 from accounting.models.provider_income import ProviderIncome
+from gamify.utils import clone_model
 from ledger.utils.precision import humanize_number
 
 
@@ -35,10 +36,16 @@ class AccountTransactionAdmin(admin.ModelAdmin):
     readonly_fields = ('created', 'get_amount')
     inlines = (TransactionAttachmentTabularInline, )
     list_filter = ('account__name', 'type')
+    actions = ('clone_trx', )
 
     @admin.display(description='مقدار', ordering='amount')
     def get_amount(self, trx: AccountTransaction):
         return trx.amount and humanize_number(trx.amount)
+
+    @admin.action(description='Clone', permissions=['change'])
+    def clone_trx(self, request, queryset):
+        for trx in queryset:
+            clone_model(trx)
 
 
 @admin.register(Vault)

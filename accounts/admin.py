@@ -1,3 +1,4 @@
+from decouple import config
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
@@ -224,6 +225,7 @@ class SystemConfigAdmin(admin.ModelAdmin):
                     'withdraw_fee_percent')
     list_filter = ('active',)
 
+
 @admin.register(User)
 class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, UserAdmin):
     default_edit_condition = M.superuser
@@ -281,7 +283,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
                 'get_open_order_address', 'get_deposit_address', 'get_bank_card_link',
                 'get_bank_account_link', 'get_finotech_request_link', 'get_staking_link',
                 'get_user_with_same_national_code', 'get_referred_user', 'get_login_activity_link',
-                'get_notifications_link', 'get_prizes_link',
+                'get_notifications_link', 'get_prizes_link', 'get_bots'
             )
         }),
         (_('اطلاعات مالی کاربر'), {'fields': (
@@ -320,7 +322,8 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_fill_order_address', 'selfie_image_verifier', 'get_revenue_of_referral', 'get_referred_count',
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
-        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended', 'is_consulted', 'suspension_reason',
+        'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended', 'is_consulted',
+        'suspension_reason', 'get_bots_link'
     )
     preserve_filters = ('archived', )
 
@@ -398,6 +401,12 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         link = url_to_admin_list(Order) + '?user={}'.format(user.id)
         return mark_safe("<a href='%s'>دیدن</a>" % link)
     get_order_link.short_description = 'سفارشات'
+
+    def get_bots_link(self, user: User):
+        link = (config('STRATEGY_HOST_URL', 'https://strategy-api.raastin.com') +
+                '/admin/bot/agent/?account_id={}'.format(user.get_account().id))
+        return mark_safe("<a href='%s'>دیدن</a>" % link)
+    get_bots_link.short_description = 'لیست ربات‌ها'
 
     def get_open_order_address(self, user: User):
         link = url_to_admin_list(Order) +'?status=new&user={}'.format(user.id)
@@ -680,11 +689,11 @@ class AccountAdmin(admin.ModelAdmin):
     fieldsets = (
         ('اطلاعات', {'fields': (
             'name', 'user', 'type', 'primary', 'owned', 'trade_volume_irt', 'get_wallet',
-            'get_total_balance_irt_admin', 'get_total_balance_usdt_admin', 'referred_by'
+            'get_total_balance_irt_admin', 'get_total_balance_usdt_admin', 'referred_by',
         )}),
     )
     readonly_fields = ('user', 'get_wallet', 'get_total_balance_irt_admin', 'get_total_balance_usdt_admin',
-                       'trade_volume_irt', 'referred_by')
+                       'trade_volume_irt', 'referred_by',)
 
     def get_wallet(self, account: Account):
         link = url_to_admin_list(Wallet) + '?account={}'.format(account.id)
@@ -757,13 +766,15 @@ class SmsNotificationAdmin(admin.ModelAdmin):
     list_display = ('created', 'recipient', 'content', 'sent')
     search_fields = ('recipient__phone', 'group_id')
     readonly_fields = ('recipient', 'group_id')
+    list_filter = ('sent', )
 
 
 @admin.register(EmailNotification)
 class EmailNotificationAdmin(admin.ModelAdmin):
     list_display = ('created', 'recipient', 'title', 'sent')
-    search_fields = ('recipient__phone', 'group_id')
+    search_fields = ('recipient__phone', 'group_id', 'title')
     readonly_fields = ('recipient', 'group_id')
+    list_filter = ('sent', )
 
 
 @admin.register(UserComment)

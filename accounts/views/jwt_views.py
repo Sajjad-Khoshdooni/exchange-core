@@ -21,7 +21,7 @@ from accounts.authentication import CustomTokenAuthentication
 from accounts.models import Account, LoginActivity, RefreshToken as RefreshTokenModel
 from accounts.models import User
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
-from accounts.utils.validation import set_login_activity
+from accounts.utils.login import set_login_activity
 
 logger = logging.getLogger(__name__)
 

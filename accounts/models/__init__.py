@@ -1,6 +1,7 @@
 from .notification import Notification, BulkNotification
 from .account import Account
 from .user import User
+from .email_notification import EmailNotification
 from .finotech import FinotechRequest
 from .phone_verification import VerificationCode
 from .user_comment import UserComment
@@ -14,7 +15,6 @@ from .attribution import Attribution
 from .feedback import UserFeedback
 from .sms_notification import SmsNotification
 from .login_activity import LoginActivity
-from .email_notification import EmailNotification
 from .refresh_token import RefreshToken
 from .system_config import SystemConfig
 from .consultation import Consultation

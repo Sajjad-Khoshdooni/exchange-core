@@ -10,9 +10,8 @@ from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils import timezone
 
-from accounts.models import Account
+from accounts.models import Account, EmailNotification
 from accounts.models import Notification
-from accounts.utils import email
 from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, Asset
@@ -97,10 +96,9 @@ class Payment(models.Model):
 
     def alert_payment(self):
         user = self.user
-        user_email = user.email
         title = 'واریز وجه با موفقیت انجام شد'
-        payment_amont = humanize_number(get_presentation_amount(Decimal(self.amount)))
-        description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amont)
+        payment_amount = humanize_number(get_presentation_amount(Decimal(self.amount)))
+        description = 'مبلغ {} تومان به حساب شما واریز شد'.format(payment_amount)
 
         Notification.send(
             recipient=user,
@@ -109,17 +107,16 @@ class Payment(models.Model):
             level=Notification.SUCCESS
         )
 
-        if user_email:
-            email.send_email_by_template(
-                recipient=user_email,
-                template=email.SCOPE_PAYMENT,
-                context={
-                    'payment_amount': payment_amont,
-                    'brand': settings.BRAND,
-                    'panel_url': settings.PANEL_URL,
-                    'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
-                }
-            )
+        EmailNotification.send_by_template(
+            recipient=user,
+            template='fiat_deposit_successful',
+            context={
+                'payment_amount': payment_amount,
+                'brand': settings.BRAND,
+                'panel_url': settings.PANEL_URL,
+                'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
+            }
+        )
 
     def accept(self, pipeline: WalletPipeline, ref_id: int = None):
         asset = Asset.get(Asset.IRT)

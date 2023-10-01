@@ -1,9 +1,8 @@
 import logging
-from decimal import Decimal
 import types
+from decimal import Decimal
 
 from django.conf import settings
-from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _, to_locale, get_language
 from rest_framework import serializers
@@ -13,14 +12,13 @@ from rest_framework.generics import get_object_or_404
 from accounts.models import LoginActivity
 from accounts.permissions import can_trade
 from ledger.exceptions import InsufficientBalance
-from ledger.models import Wallet, Asset, CloseRequest
+from ledger.models import Wallet, Asset
+from ledger.utils.external_price import IRT
 from ledger.utils.margin import check_margin_view_permission
 from ledger.utils.precision import floor_precision, get_precision, humanize_number, get_presentation_amount, \
     decimal_to_str
-from ledger.utils.external_price import IRT
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import Order, PairSymbol
-from market.utils.redis import MarketStreamCache
 
 logger = logging.getLogger(__name__)
 

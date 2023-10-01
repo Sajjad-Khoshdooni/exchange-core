@@ -12,7 +12,7 @@ def handle_stake_requests_status():
 
     to_start_stake_requests = StakeRequest.objects.filter(
         status=StakeRequest.PROCESS,
-        created__lte=now - timedelta(days=3)
+        created__lte=now - timedelta(days=3) + timedelta(hours=1)
     )
     for stake_request in to_start_stake_requests:
         stake_request.change_status(StakeRequest.DONE)
@@ -27,7 +27,7 @@ def handle_stake_requests_status():
 
     to_cancel_stake_requests = StakeRequest.objects.filter(
         status=StakeRequest.CANCEL_PROCESS,
-        cancel_request_at__lte=now - timedelta(days=3)
+        cancel_request_at__lte=now - timedelta(days=3) + timedelta(hours=1)
     )
 
     for stake_request in to_cancel_stake_requests:

@@ -9,11 +9,13 @@ from accounts.authentication import CustomTokenAuthentication
 from accounts.throttle import BursAPIRateThrottle, SustainedAPIRateThrottle
 from ledger.models import Transfer
 from ledger.models.asset import AssetSerializerMini
+from ledger.utils.precision import get_presentation_amount
 
 
 class TransferSerializer(serializers.ModelSerializer):
     link = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
+    fee_amount = serializers.SerializerMethodField()
     network = serializers.SerializerMethodField()
     asset = AssetSerializerMini(source='wallet.asset', read_only=True)
     is_internal = serializers.SerializerMethodField()
@@ -23,7 +25,10 @@ class TransferSerializer(serializers.ModelSerializer):
         return transfer.get_explorer_link()
 
     def get_amount(self, transfer: Transfer):
-        return transfer.total_amount - transfer.fee_amount
+        return get_presentation_amount(transfer.amount)
+
+    def get_fee_amount(self, transfer: Transfer):
+        return get_presentation_amount(transfer.fee_amount)
 
     def get_network(self, transfer: Transfer):
         return transfer.network.symbol

@@ -2,7 +2,7 @@ from django.test import Client
 from django.test import TestCase
 
 from accounts.models import User
-from accounts.utils.validation import set_login_activity
+from accounts.utils.login import set_login_activity
 from ledger.models import Asset
 from ledger.utils.precision import get_presentation_amount
 from ledger.utils.test import new_account, new_address_book, generate_otp_code, new_network, new_network_asset

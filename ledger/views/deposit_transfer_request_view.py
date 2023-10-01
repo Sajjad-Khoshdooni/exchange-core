@@ -35,30 +35,30 @@ class DepositSerializer(serializers.ModelSerializer):
         receiver_address = validated_data.get('receiver_address')
         network = Network.objects.get(symbol=network_symbol)
         memo = validated_data.get('memo') or ''
-        deposit_address = DepositAddress.objects.filter(network=network, address=receiver_address).first()
+
+        need_memo = is_network_memo_base(network)
+
+        if (need_memo and not memo) or (not need_memo and memo):
+            raise ValidationError({'memo': 'null memo for memo networks error'})
+
+        deposit_address = DepositAddress.objects.filter(
+            network=network,
+            address=receiver_address,
+            address_key__memo=memo
+        ).first()
 
         if deposit_address and deposit_address.address_key.deleted:
             raise ValidationError({'receiver_address': 'old deposit address not supported'})
 
         if not deposit_address:
-            if is_network_memo_base(network):
-                if not memo:
-                    raise ValidationError({'memo': 'null memo for memo networks error'})
+            address_key = get_object_or_404(
+                AddressKey,
+                address=receiver_address,
+                architecture=get_network_architecture(network),
+                deleted=False,
+                memo=memo
+            )
 
-                address_key = get_object_or_404(
-                    AddressKey,
-                    address=receiver_address,
-                    architecture=get_network_architecture(network),
-                    deleted=False,
-                    memo=memo
-                )
-            else:
-                address_key = get_object_or_404(
-                    AddressKey,
-                    address=receiver_address,
-                    architecture=get_network_architecture(network),
-                    deleted=False
-                )
             deposit_address, _ = DepositAddress.objects.get_or_create(
                 address=receiver_address,
                 network=network,

@@ -15,11 +15,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
-from accounts.models import Account, Notification
-from accounts.utils import email
-from accounts.utils.admin import url_to_edit_object
-from accounts.utils.push_notif import send_push_notif_to_user
-from accounts.utils.telegram import send_system_message
+from accounts.models import Account, Notification, EmailNotification
 from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
@@ -144,7 +140,7 @@ class Transfer(models.Model):
 
     @classmethod
     def check_fast_forward(cls, sender_wallet: Wallet, network: Network, amount: Decimal, address: str,
-                           memo: str = None) -> Union['Transfer', None]:
+                           memo: str = '') -> Union['Transfer', None]:
 
         queryset = DepositAddress.objects.filter(address=address)
 
@@ -182,6 +178,7 @@ class Transfer(models.Model):
             sender_transfer = Transfer.objects.create(
                 status=Transfer.DONE,
                 deposit_address=sender_deposit_address,
+                memo=memo,
                 wallet=sender_wallet,
                 network=network,
                 amount=amount,
@@ -197,6 +194,7 @@ class Transfer(models.Model):
             receiver_transfer = Transfer.objects.create(
                 status=Transfer.DONE,
                 deposit_address=receiver_deposit_address,
+                memo=memo,
                 wallet=receiver_wallet,
                 network=network,
                 amount=amount,
@@ -277,16 +275,15 @@ class Transfer(models.Model):
         user = self.wallet.account.user
 
         if self.status == Transfer.DONE and user and user.is_active:
-            user_email = self.wallet.account.user.email
             if self.deposit:
-                title = 'دریافت شد: %s %s' % (humanize_number(self.amount), self.wallet.asset.symbol)
+                title = 'دریافت شد: %s %s' % (humanize_number(self.amount), self.wallet.asset.name_fa)
                 message = 'از ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
-                template = email.SCOPE_DEPOSIT_EMAIL
+                template = 'crypto_deposit_successful'
 
             else:
-                title = 'ارسال شد: %s %s' % (humanize_number(self.amount), self.wallet.asset.symbol)
+                title = 'ارسال شد: %s %s' % (humanize_number(self.amount), self.wallet.asset.name_fa)
                 message = 'به ادرس %s...%s ' % (self.out_address[-8:], self.out_address[:9])
-                template = email.SCOPE_WITHDRAW_EMAIL
+                template = 'crypto_withdraw_successful'
 
             Notification.send(
                 recipient=self.wallet.account.user,
@@ -294,22 +291,19 @@ class Transfer(models.Model):
                 message=message
             )
 
-            send_push_notif_to_user(user=user, title=title, body=message)
-
-            if user_email:
-                email.send_email_by_template(
-                    recipient=user_email,
-                    template=template,
-                    context={
-                        'amount': humanize_number(self.amount),
-                        'wallet_asset': self.wallet.asset.symbol,
-                        'withdraw_address': self.out_address,
-                        'trx_hash': self.trx_hash,
-                        'brand': settings.BRAND,
-                        'panel_url': settings.PANEL_URL,
-                        'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
-                    }
-                )
+            EmailNotification.send_by_template(
+                recipient=user,
+                template=template,
+                context={
+                    'amount': humanize_number(self.amount),
+                    'coin': self.wallet.asset.symbol,
+                    'out_address': self.out_address,
+                    'trx_hash': self.trx_hash,
+                    'brand': settings.BRAND,
+                    'panel_url': settings.PANEL_URL,
+                    'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
+                }
+            )
 
     def accept(self, tx_id: str):
         with WalletPipeline() as pipeline:  # type: WalletPipeline

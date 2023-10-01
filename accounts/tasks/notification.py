@@ -8,7 +8,7 @@ from django.template.loader import render_to_string
 from accounts.models import Notification, BulkNotification, User, EmailNotification
 from accounts.models.sms_notification import SmsNotification
 from accounts.tasks.send_sms import send_kavenegar_exclusive_sms
-from accounts.utils.email import send_email
+from accounts.utils.email import send_email, EmailInfo
 from accounts.utils.push_notif import send_push_notif_to_user
 from ledger.utils.fields import PENDING, DONE
 
@@ -84,19 +84,12 @@ def send_email_notifications():
             logger.info(f'SendingMailIgnoredDueToNullEmail user:{email_notif.recipient.id}')
             continue
 
-        resp = send_email(
-            subject=email_notif.title,
-            body_html=render_to_string('accounts/email/email_template.min.html', {
-                'title': email_notif.title,
-                'body_html': email_notif.content_html,
-                'brand': settings.BRAND,
-                'panel_url': settings.PANEL_URL,
-                'logo_elastic_url': config('LOGO_ELASTIC_URL', ''),
-            }),
-            body_text=email_notif.content,
-            to=[email_notif.recipient.email]
+        email_info = EmailInfo(
+            title=email_notif.title,
+            body_html=email_notif.content_html,
+            body=email_notif.content
         )
-        if resp:
+
+        if send_email(email_notif.recipient.email, email_info):
             email_notif.sent = True
             email_notif.save(update_fields=['sent'])
-

@@ -58,6 +58,7 @@ class WalletPipeline(Atomic):
             key = UUID(key)
 
         assert isinstance(key, UUID)
+        assert key not in self._locks
 
         if not wallet.check_balance:
             return
