@@ -164,6 +164,8 @@ class User(AbstractUser):
     is_price_notif_on = models.BooleanField(default=False)
 
     suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
+    suspension_reason = models.CharField(max_length=128, blank=True, null=True)
+
 
     def __str__(self):
         name = self.get_full_name()
@@ -207,9 +209,9 @@ class User(AbstractUser):
         else:
             self.suspended_until = max(past_suspension, suspended_until)
 
-        self.save(update_fields=['suspended_until'])
-
         if reason and past_suspension != self.suspended_until:
+            self.suspension_reason = reason
+            self.save(update_fields=['suspended_until', 'suspension_reason'])
             self.send_suspension_message(reason, duration)
 
     def send_suspension_message(self, reason: str, duration: timedelta):
