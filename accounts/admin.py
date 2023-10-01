@@ -190,8 +190,8 @@ class BaseChangeAdmin(admin.ModelAdmin):
     def reject_requests(self, request, queryset):
         qs = queryset.filter(status=PENDING)
 
-        for forget_request in qs:
-            forget_request.reject()
+        for req in qs:
+            req.reject()
 
     @admin.action(description='تایید درخواست', permissions=['view'])
     def accept_requests(self, request, queryset):
