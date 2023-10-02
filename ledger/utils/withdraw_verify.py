@@ -206,7 +206,7 @@ def get_withdraw_system_risks(transfer: Transfer) -> list:
         created__gte=timezone.now() - timedelta(days=3)
     ).count()
 
-    if transfer_counts > SAFE_CURRENT_TRANSFERS_COUNT:
+    if current_day_withdraw_value > 50 and transfer_counts > SAFE_CURRENT_TRANSFERS_COUNT:
         risks.append(
             RiskFactor(
                 reason=RiskFactor.HIGH_TRANSFERS_COUNT,
