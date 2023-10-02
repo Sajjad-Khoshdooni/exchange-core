@@ -136,7 +136,7 @@ def get_altered_coins(past_cycle_prices: dict, current_cycle: dict, current_cycl
     changed_coins = {}
 
     for symbol in past_cycle_prices.keys() & current_cycle.keys():
-        asset = mapping_symbol.get(symbol[:], None)
+        asset = mapping_symbol.get(symbol, None)
         if not asset:
             continue
 
