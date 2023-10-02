@@ -130,7 +130,8 @@ def get_altered_coins(past_cycle_prices: dict, current_cycle: dict, current_cycl
     mapping_symbol = {}
 
     for asset in Asset.live_objects.exclude(symbol=Asset.IRT):
-        mapping_symbol[asset.symbol] = asset
+        symbol = asset.symbol
+        mapping_symbol[asset.symbol + Asset.USDT if symbol != Asset.USDT else Asset.IRT] = asset
 
     changed_coins = {}
 
