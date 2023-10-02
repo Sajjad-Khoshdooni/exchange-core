@@ -108,10 +108,11 @@ class FiatWithdrawRequest(BaseTransfer):
 
         api_handler = FiatWithdraw.get_withdraw_channel(self.gateway)
 
+        self.withdraw_datetime = timezone.now()
+
         try:
             withdraw = api_handler.create_withdraw(transfer=self)
             self.ref_id = withdraw.tracking_id
-            self.withdraw_datetime = timezone.now()
             self.receive_datetime = withdraw.receive_datetime
             self.comment = withdraw.message
 
@@ -120,7 +121,7 @@ class FiatWithdrawRequest(BaseTransfer):
 
         except ProviderError as e:
             self.comment = str(e)
-            self.save(update_fields=['comment'])
+            self.save(update_fields=['comment', 'withdraw_datetime'])
 
             send_system_message("Manual fiat withdraw", link=url_to_edit_object(self))
 

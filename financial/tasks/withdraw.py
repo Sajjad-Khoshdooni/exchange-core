@@ -35,6 +35,9 @@ def update_withdraws():
     withdraws = FiatWithdrawRequest.objects.filter(
         status=FiatWithdrawRequest.PROCESSING,
         created__lt=timezone.now() - timedelta(seconds=FiatWithdrawRequest.FREEZE_TIME)
+    ).exclude(
+        withdraw_datetime__isnull=False,
+        withdraw_datetime__gte=timezone.now() - timedelta(minutes=10)
     )
 
     for fiat_withdraw in withdraws:
