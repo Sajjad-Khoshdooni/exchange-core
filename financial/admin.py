@@ -16,7 +16,7 @@ from accounts.admin_guard.admin import AdvancedAdmin
 from accounts.models import User
 from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
-from accounts.utils.validation import gregorian_to_jalali_date_str
+from accounts.utils.validation import gregorian_to_jalali_date_str, gregorian_to_jalali_datetime
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
     FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, \
     GeneralBankAccount, BankPaymentRequest
@@ -136,10 +136,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
         if withdraw.receive_datetime:
-            return ('زمان : %s تاریخ %s' % (
-                withdraw.receive_datetime.time().strftime("%H:%M"),
-                gregorian_to_jalali_date_str(withdraw.receive_datetime.date())
-            ))
+            return str(gregorian_to_jalali_datetime(withdraw.receive_datetime.astimezone()))
 
     get_withdraw_request_receive_time.short_description = 'زمان تقریبی واریز'
 

@@ -1,6 +1,7 @@
 import logging
 
-from decouple import config
+from decouple import config, Csv
+from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
@@ -30,7 +31,9 @@ class InitiateSignupView(APIView):
     throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
 
     def post(self, request):
-        print('signup/init app ip: %s' % get_client_ip(request))
+        if settings.DEBUG_OR_TESTING_OR_STAGING:
+            if self.request.get_host().split(':')[0] in config('SIGNUP_CLOSED_DOMAINS', cast=Csv(), default=''):
+                raise ValidationError('امکان ثبت‌نام وجود ندارد.')
 
         if request.user.is_authenticated:
             return Response({'msg': 'already logged in', 'code': 1})

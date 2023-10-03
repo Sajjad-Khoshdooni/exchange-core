@@ -35,8 +35,9 @@ class AccountTransactionAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'get_amount', 'type', 'reason')
     readonly_fields = ('created', 'get_amount')
     inlines = (TransactionAttachmentTabularInline, )
-    list_filter = ('account__name', 'type')
+    list_filter = ('account__name', 'type', 'account')
     actions = ('clone_trx', )
+    search_fields = ('reason', )
 
     @admin.display(description='مقدار', ordering='amount')
     def get_amount(self, trx: AccountTransaction):
