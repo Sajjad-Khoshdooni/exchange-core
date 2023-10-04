@@ -63,7 +63,7 @@ def send_notifications(asset_alerts, altered_coins):
         percent = math.floor(abs(new_price / old_price - Decimal(1)) * 100)
         change_status = 'افزایش' if new_price > old_price else 'کاهش'
         new_price = get_symbol_presentation_price(
-            symbol=alert.asset.symbol + Asset.IRT if not is_usdt_based else Asset.USDT,
+            symbol=alert.asset.symbol + Asset.USDT if is_usdt_based else Asset.IRT,
             amount=new_price,
             trunc_zero=True
         )
