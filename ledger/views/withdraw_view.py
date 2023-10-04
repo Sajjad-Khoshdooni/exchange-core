@@ -203,9 +203,10 @@ class WithdrawView(CreateAPIView):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = FeedBackCategory
-        fields = ('category',)
+        fields = ('category', 'id',)
         extra_kwargs = {
-            'category': {'read_only': True}
+            'category': {'read_only': True},
+            'id': {'read_only': True}
         }
 
 
@@ -215,12 +216,17 @@ class FeedbackCategories(ListAPIView):
 
 
 class FeedBackSerializer(serializers.ModelSerializer):
+
+    def validate(self, attrs):
+        attrs['user'] = self.context['request'].user
+        return attrs
+
     class Meta:
         model = WithdrawFeedback
         fields = ('category', 'description',)
         extra_kwargs = {
             'category': {'required': True, 'write_only': True},
-            'description': {'required': False, 'write_only': True}
+            'description': {'required': False, 'write_only': True},
         }
 
 
