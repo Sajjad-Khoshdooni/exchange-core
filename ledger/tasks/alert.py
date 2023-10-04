@@ -10,7 +10,7 @@ from django.utils import timezone
 from accounts.models import Notification, User
 from ledger.models import CoinCategory, AssetAlert, BulkAssetAlert, AlertTrigger, Asset
 from ledger.utils.external_price import BUY
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.precision import get_symbol_presentation_price
 from ledger.utils.price import USDT_IRT, get_prices, get_symbol_parts, get_coins_symbols
 
 CACHE_PREFIX = 'asset_alert'
@@ -57,11 +57,16 @@ def get_current_prices() -> dict:
 
 def send_notifications(asset_alerts, altered_coins):
     for alert in asset_alerts:
-        base_coin = 'تتر' if alert.asset.symbol != alert.asset.USDT else 'تومان'
+        is_usdt_based = alert.asset.symbol == Asset.IRT
+        base_coin = 'تتر' if is_usdt_based else 'تومان'
         new_price, old_price, interval, is_chanel_changed = altered_coins[alert.asset.symbol]
         percent = math.floor(abs(new_price / old_price - Decimal(1)) * 100)
         change_status = 'افزایش' if new_price > old_price else 'کاهش'
-        new_price = get_presentation_amount(new_price, precision=8)
+        new_price = get_symbol_presentation_price(
+            alert.asset.symbol +
+            Asset.IRT if not is_usdt_based else Asset.USDT,
+            new_price, trunc_zero=True
+        )
 
         interval_verbose = AlertTrigger.INTERVAL_VERBOSE_MAP[interval]
 
