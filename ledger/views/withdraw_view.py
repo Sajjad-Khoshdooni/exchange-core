@@ -4,7 +4,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import get_object_or_404, CreateAPIView
+from rest_framework.generics import get_object_or_404, CreateAPIView, ListAPIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.authentication import WithdrawTokenAuthentication
@@ -14,6 +14,7 @@ from accounts.utils.validation import persian_timedelta
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Transfer, NetworkAsset, AddressBook, DepositAddress
+from ledger.models import WithdrawFeedback, FeedBackCategory
 from ledger.models.asset import CoinField
 from ledger.models.network import NetworkField
 from ledger.requester.architecture_requester import is_network_memo_base
@@ -98,7 +99,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
         amount = attrs['amount']
 
         if not network_asset.can_withdraw_enabled():
-            raise ValidationError('در حال حاضر امکان برداشت {} روی شبکه {} وجود ندارد.'.format(asset.symbol, network.symbol))
+            raise ValidationError(
+                'در حال حاضر امکان برداشت {} روی شبکه {} وجود ندارد.'.format(asset.symbol, network.symbol))
 
         if get_precision(amount) > network_asset.withdraw_precision:
             raise ValidationError('مقدار وارد شده اشتباه است.')
@@ -196,3 +198,31 @@ class WithdrawView(CreateAPIView):
         ctx = super().get_serializer_context()
         ctx['from_panel'] = not isinstance(self.request.successful_authenticator, WithdrawTokenAuthentication)
         return ctx
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FeedBackCategory
+        fields = ('category',)
+        extra_kwargs = {
+            'category': {'read_only': True}
+        }
+
+
+class FeedbackCategories(ListAPIView):
+    queryset = FeedBackCategory.objects.all()
+    serializer_class = CategorySerializer
+
+
+class FeedBackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WithdrawFeedback
+        fields = ('category', 'description',)
+        extra_kwargs = {
+            'category': {'required': True, 'write_only': True},
+            'description': {'required': False, 'write_only': True}
+        }
+
+
+class WithdrawFeedbackView(CreateAPIView):
+    serializer_class = FeedBackSerializer
