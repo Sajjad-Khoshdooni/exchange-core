@@ -32,6 +32,8 @@ class InitiateSignupView(APIView):
 
     def post(self, request):
         if settings.DEBUG_OR_TESTING_OR_STAGING:
+            print('hhhhhhhhhhhhhhhhhhhhhhhhhhhhhh')
+            print(self.request.get_host())
             if self.request.get_host().split(':')[0] in config('SIGNUP_CLOSED_DOMAINS', cast=Csv(), default=''):
                 raise ValidationError('امکان ثبت‌نام وجود ندارد.')
 
