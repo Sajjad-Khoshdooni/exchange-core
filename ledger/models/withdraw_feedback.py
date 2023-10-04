@@ -4,6 +4,9 @@ from django.db import models
 class FeedBackCategory(models.Model):
     category = models.CharField(max_length=128)
 
+    def __str__(self):
+        return self.category
+
     class Meta:
         verbose_name = 'دسته‌بندی بازخورد برداشت'
         verbose_name_plural = 'دسته‌بندی‌های بازخورد برداشت'

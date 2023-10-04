@@ -175,8 +175,16 @@ class AssetAdmin(AdvancedAdmin):
 
             create_symbols_for_asset(asset)
 
+
 @admin.register(FeedBackCategory)
 class FeedBackCategoryAdmin(admin.ModelAdmin):
+    list_display = ('category',)
+
+
+@admin.register(WithdrawFeedback)
+class WithdrawFeedbackAdmin(admin.ModelAdmin):
+    list_display = ('category', 'description',)
+    readonly_fields = ('created',)
 
 
 @admin.register(models.Network)
