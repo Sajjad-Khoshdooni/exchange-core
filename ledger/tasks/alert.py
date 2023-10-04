@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
-
+from random import choices
 from celery import shared_task
 from django.core.cache import cache
 from django.utils import timezone
@@ -199,8 +199,8 @@ def get_asset_alert_list(altered_coins: dict) -> set:
         category_map[category] = category.coins.filter(symbol__in=altered_coins.keys())
 
     for asset_alert in AssetAlert.objects.filter(
-        asset__symbol__in=altered_coins.keys(),
-        user__is_price_notif_on=True,
+            asset__symbol__in=altered_coins.keys(),
+            user__is_price_notif_on=True,
     ):
         asset_alerts.add(
             AlertData(
@@ -210,7 +210,7 @@ def get_asset_alert_list(altered_coins: dict) -> set:
         )
 
     for bulk_asset_alert in BulkAssetAlert.objects.filter(
-        user__is_price_notif_on=True
+            user__is_price_notif_on=True
     ):
         subscription_type = bulk_asset_alert.subscription_type
 
@@ -234,7 +234,7 @@ def get_asset_alert_list(altered_coins: dict) -> set:
     return asset_alerts
 
 
-@shared_task(queue='notif-manager')
+@shared_task(queue="notif-manager")
 def send_price_notifications():
     now = timezone.now()
     current_cycle_count = (now.hour * 60 + now.minute) // 5
@@ -268,3 +268,7 @@ def send_price_notifications():
     asset_alert_list = get_asset_alert_list(altered_coins)
 
     send_notifications(asset_alert_list, altered_coins)
+
+    prob = 0.1
+    if choices([True, False], weights=[0.1, 1-prob])[0]:
+        AlertTrigger.objects.filter(created__lte=timezone.now() - timedelta(days=10)).delete()
