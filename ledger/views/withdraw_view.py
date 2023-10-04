@@ -224,5 +224,5 @@ class FeedBackSerializer(serializers.ModelSerializer):
         }
 
 
-class WithdrawFeedbackView(CreateAPIView):
+class WithdrawFeedbackSubmitView(CreateAPIView):
     serializer_class = FeedBackSerializer
