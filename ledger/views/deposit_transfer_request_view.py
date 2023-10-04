@@ -176,7 +176,7 @@ class DepositSerializer(serializers.ModelSerializer):
                     user.first_crypto_deposit_date = timezone.now()
                     user.save(update_fields=['first_crypto_deposit_date'])
 
-            transfer.alert_user()
+                transfer.alert_user()
 
             return transfer
 
