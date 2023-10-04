@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
-
+from random import randint
 from celery import shared_task
 from django.core.cache import cache
 from django.utils import timezone
@@ -234,7 +234,7 @@ def get_asset_alert_list(altered_coins: dict) -> set:
     return asset_alerts
 
 
-@shared_task(queue='notif-manager')
+@shared_task(queue="notif-manager")
 def send_price_notifications():
     now = timezone.now()
     current_cycle_count = (now.hour * 60 + now.minute) // 5
@@ -268,3 +268,6 @@ def send_price_notifications():
     asset_alert_list = get_asset_alert_list(altered_coins)
 
     send_notifications(asset_alert_list, altered_coins)
+
+    if randint(1, 100) < 10:
+        AlertTrigger.objects.filter(created__lte=timezone.now() - timedelta(days=10)).delete()
