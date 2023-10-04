@@ -57,7 +57,7 @@ def get_current_prices() -> dict:
 
 def send_notifications(asset_alerts, altered_coins):
     for alert in asset_alerts:
-        is_usdt_based = alert.asset.symbol == Asset.IRT
+        is_usdt_based = alert.asset.symbol != Asset.USDT
         base_coin = 'تتر' if is_usdt_based else 'تومان'
         new_price, old_price, interval, is_chanel_changed = altered_coins[alert.asset.symbol]
         percent = math.floor(abs(new_price / old_price - Decimal(1)) * 100)
