@@ -11,7 +11,6 @@ from accounts.authentication import CustomTokenAuthentication
 from ledger.models import Network, Asset, DepositAddress, AddressKey, NetworkAsset
 from ledger.models.transfer import Transfer
 from ledger.requester.architecture_requester import get_network_architecture
-from ledger.requester.architecture_requester import is_network_memo_base
 from ledger.utils.price import get_last_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 
@@ -36,7 +35,7 @@ class DepositSerializer(serializers.ModelSerializer):
         network = Network.objects.get(symbol=network_symbol)
         memo = validated_data.get('memo') or ''
 
-        need_memo = is_network_memo_base(network)
+        need_memo = network.need_memo
 
         if (need_memo and not memo) or (not need_memo and memo):
             raise ValidationError({'memo': 'null memo for memo networks error'})
