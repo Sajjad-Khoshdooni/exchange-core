@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
-
+from random import randint
 from celery import shared_task
 from django.core.cache import cache
 from django.utils import timezone
@@ -10,7 +10,7 @@ from django.utils import timezone
 from accounts.models import Notification, User
 from ledger.models import CoinCategory, AssetAlert, BulkAssetAlert, AlertTrigger, Asset
 from ledger.utils.external_price import BUY
-from ledger.utils.precision import get_presentation_amount
+from ledger.utils.precision import get_symbol_presentation_price
 from ledger.utils.price import USDT_IRT, get_prices, get_symbol_parts, get_coins_symbols
 
 CACHE_PREFIX = 'asset_alert'
@@ -57,11 +57,16 @@ def get_current_prices() -> dict:
 
 def send_notifications(asset_alerts, altered_coins):
     for alert in asset_alerts:
-        base_coin = 'تتر' if alert.asset.symbol != alert.asset.USDT else 'تومان'
+        is_usdt_based = alert.asset.symbol != Asset.USDT
+        base_coin = 'تتر' if is_usdt_based else 'تومان'
         new_price, old_price, interval, is_chanel_changed = altered_coins[alert.asset.symbol]
         percent = math.floor(abs(new_price / old_price - Decimal(1)) * 100)
         change_status = 'افزایش' if new_price > old_price else 'کاهش'
-        new_price = get_presentation_amount(new_price, precision=8)
+        new_price = get_symbol_presentation_price(
+            symbol=alert.asset.symbol + Asset.USDT if is_usdt_based else Asset.IRT,
+            amount=new_price,
+            trunc_zero=True
+        )
 
         interval_verbose = AlertTrigger.INTERVAL_VERBOSE_MAP[interval]
 
@@ -229,7 +234,7 @@ def get_asset_alert_list(altered_coins: dict) -> set:
     return asset_alerts
 
 
-@shared_task(queue='notif-manager')
+@shared_task(queue="notif-manager")
 def send_price_notifications():
     now = timezone.now()
     current_cycle_count = (now.hour * 60 + now.minute) // 5
@@ -263,3 +268,6 @@ def send_price_notifications():
     asset_alert_list = get_asset_alert_list(altered_coins)
 
     send_notifications(asset_alert_list, altered_coins)
+
+    if randint(1, 100) < 10:
+        AlertTrigger.objects.filter(created__lte=timezone.now() - timedelta(days=10)).delete()
