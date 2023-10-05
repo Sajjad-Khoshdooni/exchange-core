@@ -3,7 +3,7 @@ from django.db import models
 from accounts.models import User
 
 
-class FeedBackCategory(models.Model):
+class FeedbackCategory(models.Model):
     category = models.CharField(max_length=128, unique=True)
 
     def __str__(self):
@@ -16,7 +16,7 @@ class FeedBackCategory(models.Model):
 
 class WithdrawFeedback(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    category = models.ForeignKey(FeedBackCategory, on_delete=models.PROTECT)
+    category = models.ForeignKey(FeedbackCategory, on_delete=models.PROTECT)
     description = models.TextField(blank=True, null=True)
     user = models.ForeignKey(User, on_delete=models.PROTECT)
 

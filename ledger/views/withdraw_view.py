@@ -14,7 +14,7 @@ from accounts.utils.validation import persian_timedelta
 from financial.utils.withdraw_limit import user_reached_crypto_withdraw_limit
 from ledger.exceptions import InsufficientBalance
 from ledger.models import Asset, Transfer, NetworkAsset, AddressBook, DepositAddress
-from ledger.models import WithdrawFeedback, FeedBackCategory
+from ledger.models import WithdrawFeedback, FeedbackCategory
 from ledger.models.asset import CoinField
 from ledger.models.network import NetworkField
 from ledger.requester.architecture_requester import is_network_memo_base
@@ -202,7 +202,7 @@ class WithdrawView(CreateAPIView):
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
-        model = FeedBackCategory
+        model = FeedbackCategory
         fields = ('category', 'id',)
         extra_kwargs = {
             'category': {'read_only': True},
@@ -211,11 +211,11 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class FeedbackCategories(ListAPIView):
-    queryset = FeedBackCategory.objects.all()
+    queryset = FeedbackCategory.objects.all()
     serializer_class = CategorySerializer
 
 
-class FeedBackSerializer(serializers.ModelSerializer):
+class FeedbackSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         attrs['user'] = self.context['request'].user
@@ -231,4 +231,4 @@ class FeedBackSerializer(serializers.ModelSerializer):
 
 
 class WithdrawFeedbackSubmitView(CreateAPIView):
-    serializer_class = FeedBackSerializer
+    serializer_class = FeedbackSerializer

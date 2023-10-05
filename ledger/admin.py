@@ -25,7 +25,7 @@ from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
 from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
-    ManualTrade, Trx, NetworkAsset, FeedBackCategory, WithdrawFeedback
+    ManualTrade, Trx, NetworkAsset, FeedbackCategory, WithdrawFeedback
 from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
@@ -176,8 +176,8 @@ class AssetAdmin(AdvancedAdmin):
             create_symbols_for_asset(asset)
 
 
-@admin.register(FeedBackCategory)
-class FeedBackCategoryAdmin(admin.ModelAdmin):
+@admin.register(FeedbackCategory)
+class FeedbackCategoryAdmin(admin.ModelAdmin):
     list_display = ('category',)
 
 
