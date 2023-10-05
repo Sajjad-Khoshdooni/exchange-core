@@ -26,12 +26,14 @@ def get_network_detail(network: str):
     header = {
         'Authorization': settings.BLOCKLINK_TOKEN
     }
-    return requests.get(url=url, params=data, headers=header, timeout=10).json()
+
+    resp = requests.get(url=url, params=data, headers=header, timeout=10)
+
+    if not resp.ok:
+        return {}
+
+    return resp.json()
 
 
 def get_network_architecture(network: str):
     return get_network_detail(network).get('architecture')
-
-
-def is_network_memo_base(network: str):
-    return get_network_detail(network).get('is_memo_base', False)

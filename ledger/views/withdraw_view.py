@@ -17,7 +17,6 @@ from ledger.models import Asset, Transfer, NetworkAsset, AddressBook, DepositAdd
 from ledger.models import WithdrawFeedback, FeedbackCategory
 from ledger.models.asset import CoinField
 from ledger.models.network import NetworkField
-from ledger.requester.architecture_requester import is_network_memo_base
 from ledger.utils.laundering import check_withdraw_laundering
 from ledger.utils.precision import get_precision
 from ledger.utils.price import get_last_price
@@ -116,7 +115,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
         my_deposit_addresses = DepositAddress.objects.filter(address=address, address_key__account=account)
 
-        if is_network_memo_base(network.symbol):
+        if network.need_memo:
             if not memo:
                 my_deposit_addresses = DepositAddress.objects.none()
             else:

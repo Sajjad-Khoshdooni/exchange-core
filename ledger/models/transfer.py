@@ -20,7 +20,6 @@ from analytics.event.producer import get_kafka_producer
 from analytics.utils.dto import TransferEvent
 from ledger.models import Trx, NetworkAsset, Asset, DepositAddress
 from ledger.models import Wallet, Network
-from ledger.requester.architecture_requester import is_network_memo_base
 from ledger.utils.fields import get_amount_field, get_address_field
 from ledger.utils.precision import humanize_number
 from ledger.utils.price import get_last_price
@@ -144,10 +143,10 @@ class Transfer(models.Model):
 
         queryset = DepositAddress.objects.filter(address=address)
 
-        if is_network_memo_base(network.symbol) and memo:
+        if network.need_memo and memo:
             queryset = queryset.filter(address_key__memo=memo)
 
-        if not queryset.exists() or (is_network_memo_base(network.symbol) and not memo):
+        if not queryset.exists() or (network.need_memo and not memo):
             return
 
         sender_deposit_address = DepositAddress.get_deposit_address(

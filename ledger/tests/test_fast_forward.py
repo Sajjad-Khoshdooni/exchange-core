@@ -9,20 +9,19 @@ from ledger.utils.test import new_account, set_price
 
 class FastForwardTestCase(TestCase):
     def new_network(self) -> Network:
-        symbol = 'ETH'
-        name = 'ETH'
-        address_regex = '[1-9]'
-        network = Network.objects.create(symbol=symbol, name=name, address_regex=address_regex)
-
-        return network
+        return Network.objects.create(
+            symbol='ETH',
+            name='ETH',
+            address_regex=r'\w+'
+        )
 
     def new_memo_network(self) -> Network:
-        symbol = 'XRP'
-        name = 'XRP'
-        address_regex = '[1-9]'
-        network = Network.objects.create(symbol=symbol, name=name, address_regex=address_regex)
-
-        return network
+        return Network.objects.create(
+            symbol='XRP',
+            name='XRP',
+            address_regex=r'\w+',
+            need_memo=True
+        )
 
     def setUp(self) -> None:
         self.network = self.new_network()
