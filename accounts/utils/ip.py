@@ -1,4 +1,5 @@
 import requests
+from django.conf import settings
 
 
 def get_client_ip(request) -> str:
@@ -11,6 +12,8 @@ def get_client_ip(request) -> str:
 
 
 def get_ip_data(ip):
+    if settings.DEBUG_OR_TESTING:
+        return {}
 
     try:
         resp = requests.post(
