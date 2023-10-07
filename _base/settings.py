@@ -65,10 +65,10 @@ INSTALLED_APPS = [
     'jalali_date',
     'stake',
     'gamify',
+    'health',
 
     'tinymce',
     'import_export',
-
     'django_quill',
 ]
 
