@@ -2,7 +2,8 @@ from typing import Type
 
 from django.db import models
 
-from health.alert.types import ALERTS, Status, BaseAlertHandler
+from health.alert import ALERTS
+from health.alert.types import Status, BaseAlertHandler
 from ledger.utils.fields import get_amount_field
 
 

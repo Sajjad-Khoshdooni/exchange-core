@@ -9,7 +9,7 @@ from accounting.models.vault import VaultData, AssetPrice, VaultItem, ReservedAs
 from financial.models import Gateway
 from financial.utils.withdraw import FiatWithdraw
 from ledger.models import Asset
-from ledger.utils.overview import get_internal_asset_deposits
+from ledger.requester.internal_assets_requester import get_internal_asset_deposits
 from ledger.utils.price import USDT_IRT, get_symbol_parts
 from ledger.utils.provider import get_provider_requester
 
