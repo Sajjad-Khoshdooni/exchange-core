@@ -32,7 +32,7 @@ class Status:
 
         return Status(
             type=status_type,
-            description=' ; '.join(map(str, alerts[:5])),
+            description='; '.join(map(str, alerts[:5])),
             count=len(alerts)
         )
 
