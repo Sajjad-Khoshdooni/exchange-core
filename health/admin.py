@@ -9,7 +9,7 @@ from health.models import AlertType
 @admin.register(AlertType)
 class AlertTypeAdmin(admin.ModelAdmin):
     list_display = ('type', 'get_status', 'warning_threshold', 'error_threshold')
-    readonly_fields = ('get_type_help', )
+    readonly_fields = ('get_status', 'get_description', 'get_type_help', )
 
     @admin.display(description='status', )
     def get_status(self, alert_type: AlertType):
@@ -22,3 +22,9 @@ class AlertTypeAdmin(admin.ModelAdmin):
     @admin.display(description='type_help')
     def get_type_help(self, alert_type: AlertType):
         return mark_safe(get_table_html(['type', ('help', 'threshold help')], [{'type': a.NAME, 'help': a.HELP} for a in ALERTS.values()]))
+
+    @admin.display(description='description')
+    def get_description(self, alert_type: AlertType):
+        status = alert_type.get_status()
+        return status.description
+

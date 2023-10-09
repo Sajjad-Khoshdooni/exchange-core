@@ -107,7 +107,7 @@ class AssetHedgeAlert(BaseAlertHandler):
     HELP = 'max asset hedge'
 
     def get_alerting(self, threshold: Decimal) -> list:
-        assets = Asset.live_objects.annotate(
+        assets = Asset.live_objects.filter(hedge=True).annotate(
             hedge_value_abs=F('assetsnapshot__hedge_value_abs'),
         ).filter(hedge_value_abs__gte=threshold)
 
