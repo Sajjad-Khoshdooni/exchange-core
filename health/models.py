@@ -57,7 +57,7 @@ class AlertType(models.Model):
 
         emojis = {Status.OK: '🟢', Status.WARNING: '🟠', Status.ERROR: '🔴'}
 
-        message = f'{emojis[new.status]} {new.status.upper()}: {self.type}.'
+        message = f"{emojis[new.status]} {new.status.upper()}: {self.type.replace('_', ' ').capitalize()}."
 
         if new.status != Status.OK:
             message += f'\n   More ({new.count}): {new.description}'
