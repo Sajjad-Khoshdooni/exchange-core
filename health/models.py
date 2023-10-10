@@ -2,6 +2,7 @@ from typing import Type
 
 from django.db import models
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
 from accounts.utils.admin import url_to_admin_list
 from accounts.utils.telegram import send_system_message
@@ -9,6 +10,7 @@ from accounts.utils.validation import timedelta_message
 from health.alert import ALERTS
 from health.alert.types import Status, BaseAlertHandler
 from ledger.utils.fields import get_amount_field
+from ledger.utils.precision import humanize_number
 
 
 class AlertType(models.Model):
@@ -24,7 +26,7 @@ class AlertType(models.Model):
         return alert.get_status()
 
     def __str__(self):
-        return f'{self.type} warning_th = {self.warning_threshold}, error_th = {self.error_threshold}'
+        return f'{self.type} wt: {humanize_number(self.warning_threshold)}, et: {humanize_number(self.error_threshold)}'
 
     def check_trigger(self, status: Status):
         last = AlertTrigger.objects.filter(alert_type=self).first()
@@ -73,6 +75,8 @@ class AlertType(models.Model):
 
 
 class AlertTrigger(models.Model):
+    history = HistoricalRecords()
+
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 

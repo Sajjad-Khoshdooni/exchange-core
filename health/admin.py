@@ -1,9 +1,10 @@
 from django.contrib import admin
 from django.utils.safestring import mark_safe
+from simple_history.admin import SimpleHistoryAdmin
 
 from accounts.admin_guard.utils.html import get_table_html
 from health.alert import ALERTS
-from health.models import AlertType
+from health.models import AlertType, AlertTrigger
 
 
 @admin.register(AlertType)
@@ -28,3 +29,8 @@ class AlertTypeAdmin(admin.ModelAdmin):
         status = alert_type.get_status()
         return status.description
 
+
+@admin.register(AlertTrigger)
+class AlertTriggerAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
+    list_display = ('updated', 'alert_type', 'status', 'count')
+    list_filter = ('alert_type', 'status')
