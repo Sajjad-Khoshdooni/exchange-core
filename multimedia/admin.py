@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.db.models import F
+from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
 from multimedia.models import Image, Banner, CoinPriceContent, Article, Section
@@ -7,8 +8,13 @@ from multimedia.models import Image, Banner, CoinPriceContent, Article, Section
 
 @admin.register(Image)
 class ImageAdmin(admin.ModelAdmin):
-    list_display = ('uuid', 'image')
-    search_fields = ('uuid', )
+    list_display = ('uuid', 'get_selfie_image', 'image')
+    search_fields = ('uuid',)
+
+    def get_selfie_image(self, image: Image):
+        return mark_safe("<img src='%s' width='200' height='200' />" % image.get_absolute_image_url())
+
+    get_selfie_image.short_description = 'عکس'
 
 
 @admin.register(Banner)
@@ -38,4 +44,3 @@ class ArticleAdmin(admin.ModelAdmin):
 class SectionAdmin(admin.ModelAdmin):
     list_display = ('title',)
     readonly_fields = ('slug',)
-

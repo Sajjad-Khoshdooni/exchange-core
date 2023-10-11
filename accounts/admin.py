@@ -27,6 +27,7 @@ from stake.models import StakeRequest
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
+from .models.change_requests import BaseChangeRequest
 from .models.login_activity import LoginActivity
 from .models.sms_notification import SmsNotification
 from .models.user_feature_perm import UserFeaturePerm
@@ -186,6 +187,11 @@ class BaseChangeAdmin(admin.ModelAdmin):
     actions = ('accept_requests', 'reject_requests',)
     list_filter = ('status', )
 
+    def selfie_image(self, request: BaseChangeRequest):
+        return request.selfie_image
+
+    selfie_image.short_description = 'Selfie'
+
     @admin.action(description='رد درخواست', permissions=['view'])
     def reject_requests(self, request, queryset):
         qs = queryset.filter(status=PENDING)
@@ -199,12 +205,6 @@ class BaseChangeAdmin(admin.ModelAdmin):
 
         for req in qs:
             req.accept()
-    #
-    # def get_selfie_image(self, forget_request: Forget2FA):
-    #     return mark_safe("<img src='%s' width='200' height='200' />" % forget_request.selfie_image.
-    #                      get_absolute_image_url())
-    #
-    # get_selfie_image.short_description = 'عکس سلفی'
 
 
 @admin.register(Forget2FA)
