@@ -180,7 +180,7 @@ class PriceNotifSwitchView(RetrieveUpdateAPIView):
             serializer.save()
             user = self.request.user
             if not AssetAlert.objects.filter(user=user).exists():
-                for asset in Asset.objects.filter(symbol_in=BASE_ALERT_PACKAGE):
+                for asset in Asset.objects.filter(symbol__in=BASE_ALERT_PACKAGE):
                     AssetAlert.objects.create(
                         user=user,
                         asset=asset
