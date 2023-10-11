@@ -13,18 +13,6 @@ from ledger.utils.price import USDT_IRT
 from ledger.utils.provider import get_provider_requester, BINANCE
 
 
-@cache_for(60)
-def get_internal_asset_deposits() -> dict:
-    assets = InternalAssetsRequester().get_assets()
-
-    if not assets:
-        return {}
-
-    return {
-        asset['coin']: Decimal(asset['amount']) for asset in assets
-    }
-
-
 class AssetOverview:
     def __init__(self, prices: dict):
         self.provider = get_provider_requester()

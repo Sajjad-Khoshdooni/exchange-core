@@ -135,18 +135,19 @@ def get_altered_coins(past_cycle_prices: dict, current_cycle: dict, current_cycl
     mapping_symbol = {}
 
     for asset in Asset.live_objects.exclude(symbol=Asset.IRT):
-        symbol = asset.symbol
-        mapping_symbol[asset.symbol + Asset.USDT if symbol != Asset.USDT else Asset.IRT] = asset
+        coin = asset.symbol
+        base_coin = Asset.USDT if coin != Asset.USDT else Asset.IRT
+        mapping_symbol[coin + base_coin] = asset
 
     changed_coins = {}
 
-    for symbol in past_cycle_prices.keys() & current_cycle.keys():
-        asset = mapping_symbol.get(symbol, None)
+    for coin in past_cycle_prices.keys() & current_cycle.keys():
+        asset = mapping_symbol.get(coin, None)
         if not asset:
             continue
 
-        current_price = current_cycle[symbol]
-        past_price = past_cycle_prices[symbol]
+        current_price = current_cycle[coin]
+        past_price = past_cycle_prices[coin]
         change_percent = math.floor(Decimal(current_price / past_price - Decimal(1)) * 100)
         is_ratio_changed = abs(change_percent) > INTERVAL_CHANGE_PERCENT_SENSITIVITY_MAP[interval]
 
@@ -175,7 +176,7 @@ def get_altered_coins(past_cycle_prices: dict, current_cycle: dict, current_cycl
                 is_ratio_change_alerted = process_ratio_change(asset=asset, interval=interval)
 
             if is_chanel_new or is_ratio_change_alerted:
-                coin, base_coin = get_symbol_parts(symbol)
+                coin, base_coin = get_symbol_parts(coin)
                 changed_coins[coin] = [current_price, past_price, interval, is_chanel_new]
                 alert_trigger.is_triggered = True
                 alert_trigger.save(update_fields=['is_triggered'])

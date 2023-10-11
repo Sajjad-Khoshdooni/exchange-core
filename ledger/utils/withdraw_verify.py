@@ -1,16 +1,19 @@
 import dataclasses
 from datetime import timedelta
+from typing import List
 
 from django.conf import settings
 from django.db.models import Sum, Max
 from django.utils import timezone
 
+from accounts.admin_guard.utils.html import get_table_html
 from accounts.models import Account, User
 from accounts.models.login_activity import LoginActivity
 from accounts.utils.hijack import get_hijacker_id
 from financial.models import Payment
 from ledger.models import Transfer, Wallet
 from ledger.utils.external_price import BUY
+from ledger.utils.precision import humanize_number
 
 FATA_SAFE_DEBT_IRT_VALUE = -3_000_000
 FATA_RISKY_DEBT_IRT_VALUE = -10_000_000
@@ -64,6 +67,19 @@ class RiskFactor:
     expected: float
     whitelist: bool = False
     type: str = TYPE_SYSTEM
+
+
+def get_risks_html(risks: List[RiskFactor]):
+    data = []
+
+    for risk in risks:
+        risk_dict = risk.__dict__
+        risk_dict['value'] = humanize_number(risk_dict['value'])
+        risk_dict['expected'] = humanize_number(risk_dict['expected'])
+
+        data.append(risk_dict)
+
+    return get_table_html(RiskFactor.__dict__['__annotations__'].keys(), data)
 
 
 def get_withdraw_fata_risks(transfer: Transfer) -> list:
