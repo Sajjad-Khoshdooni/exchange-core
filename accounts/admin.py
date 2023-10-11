@@ -182,7 +182,6 @@ class ConsultationAdmin(admin.ModelAdmin):
 class BaseChangeAdmin(admin.ModelAdmin):
     list_display = ('created', 'status', 'user',)
     readonly_fields = ('created', 'status', 'user', 'selfie_image',)
-    exclude = ('selfie_image',)
     raw_id_fields = ('user',)
     actions = ('accept_requests', 'reject_requests',)
     list_filter = ('status', )
