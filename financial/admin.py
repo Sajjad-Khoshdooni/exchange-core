@@ -13,6 +13,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from accounting.models import VaultItem, Vault
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
+from accounts.admin_guard.utils.html import get_table_html
 from accounts.models import User
 from accounts.models.user_feature_perm import UserFeaturePerm
 from accounts.utils.admin import url_to_edit_object
@@ -27,7 +28,7 @@ from financial.utils.withdraw import FiatWithdraw
 from gamify.utils import clone_model
 from ledger.utils.fields import PENDING
 from ledger.utils.precision import humanize_number
-from ledger.utils.withdraw_verify import RiskFactor
+from ledger.utils.withdraw_verify import RiskFactor, get_risks_html
 
 
 @admin.register(Gateway)
@@ -119,20 +120,10 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
     def get_risks(self, transfer):
         if not transfer.risks:
             return
-        html = '<table dir="ltr"><tr><th>Factor</th><th>Value</th><th>Expected</th><th>Whitelist</th></tr>'
 
-        for risk in transfer.risks:
-            risk_dict = RiskFactor(**risk).__dict__
-            risk_dict['value'] = humanize_number(risk_dict['value'])
-            risk_dict['expected'] = humanize_number(risk_dict['expected'])
+        risks = [RiskFactor(**r) for r in transfer.risks]
 
-            html += '<tr><td>{reason}</td><td>{value}</td><td>{expected}</td><td>{whitelist}</td></tr>'.format(
-                **risk_dict
-            )
-
-        html += '</table>'
-
-        return mark_safe(html)
+        return mark_safe(get_risks_html(risks))
 
     def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
         if withdraw.receive_datetime:

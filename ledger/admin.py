@@ -32,7 +32,7 @@ from ledger.utils.external_price import BUY
 from ledger.utils.fields import DONE, PROCESS, PENDING
 from ledger.utils.precision import get_presentation_amount, humanize_number
 from ledger.utils.provider import get_provider_requester
-from ledger.utils.withdraw_verify import RiskFactor
+from ledger.utils.withdraw_verify import RiskFactor, get_risks_html
 from market.utils.fix import create_symbols_for_asset
 from .models import Asset, BalanceLock
 from .utils.price import get_last_price
@@ -201,10 +201,10 @@ class NetworkAdmin(admin.ModelAdmin):
 class NetworkAssetAdmin(admin.ModelAdmin):
     list_display = ('network', 'asset', 'get_withdraw_fee', 'get_withdraw_min', 'get_withdraw_max', 'get_deposit_min',
                     'can_deposit', 'can_withdraw', 'allow_provider_withdraw', 'hedger_withdraw_enable',
-                    'update_fee_with_provider', 'last_provider_update')
+                    'update_fee_with_provider', 'last_provider_update', 'expected_hw_balance')
     search_fields = ('asset__symbol',)
     list_editable = ('can_deposit', 'can_withdraw', 'allow_provider_withdraw', 'hedger_withdraw_enable',
-                     'update_fee_with_provider')
+                     'update_fee_with_provider', 'expected_hw_balance')
     list_filter = ('network', 'allow_provider_withdraw', 'hedger_withdraw_enable', 'update_fee_with_provider')
 
     @admin.display(description='withdraw_fee', ordering='withdraw_fee')
@@ -490,16 +490,10 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     def get_risks(self, transfer):
         if not transfer.risks:
             return
-        html = '<table dir="ltr"><tr><th>Factor</th><th>Value</th><th>Expected</th><th>Whitelist</th><th>Type</th></tr>'
 
-        for risk in transfer.risks:
-            html += '<tr><td>{reason}</td><td>{value}</td><td>{expected}</td><td>{whitelist}</td><td>{type}</td></tr>'.format(
-                **RiskFactor(**risk).__dict__
-            )
+        risks = [RiskFactor(**r) for r in transfer.risks]
 
-        html += '</table>'
-
-        return mark_safe(html)
+        return mark_safe(get_risks_html(risks))
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw(self, request, queryset):

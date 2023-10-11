@@ -98,6 +98,31 @@ def persian_timedelta(d: timedelta) -> str:
     return ' و '.join(parts)
 
 
+def timedelta_message(d: timedelta, ignore_seconds: bool = False) -> str:
+    parts = []
+
+    if d.days > 0:
+        parts.append(f'{d.days} days')
+
+    seconds = d.seconds
+    hours = seconds // 3600
+    seconds -= hours * 3600
+    minutes = seconds // 60
+    seconds -= minutes * 60
+
+    if hours > 0:
+        parts.append(f'{hours} hours')
+
+    if minutes > 0:
+        parts.append(f'{minutes} minutes')
+
+    if not ignore_seconds:
+        if d.days == 0 and d.seconds < 300:
+            parts.append(f'{seconds} seconds')
+
+    return ' and '.join(parts)
+
+
 def gregorian_to_jalali_datetime_str(d: datetime):
     return gregorian_to_jalali_datetime(d).strftime('%Y/%m/%d %H:%M:%S')
 

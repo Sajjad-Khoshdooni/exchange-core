@@ -39,6 +39,8 @@ class NetworkAsset(models.Model):
         validators=(MinValueValidator(MIN_PRECISION_AMOUNT),),
     )
 
+    expected_hw_balance = get_amount_field(default=0)
+
     def can_deposit_enabled(self) -> bool:
         return self.network.can_deposit and self.can_deposit and self.hedger_deposit_enable
 

@@ -18,7 +18,7 @@ NOBITEX = 'nobitex'
 USDT = 'USDT'
 IRT = 'IRT'
 
-BUY, SELL = 'buy', 'sell'
+SIDES = BUY, SELL = 'buy', 'sell'
 LONG, SHORT = 'long', 'short'
 
 SIDE_VERBOSE = {
@@ -87,7 +87,7 @@ def fetch_external_redis_prices(coins: Union[list, set], side: str = None, allow
     if side:
         sides = [side]
     else:
-        sides = [BUY, SELL]
+        sides = SIDES
 
     pipe = price_redis.pipeline(transaction=False)
     for c in coins:
