@@ -8,7 +8,8 @@ from multimedia.models import Image, Banner, CoinPriceContent, Article, Section
 
 @admin.register(Image)
 class ImageAdmin(admin.ModelAdmin):
-    list_display = ('uuid', 'get_selfie_image', 'image')
+    list_display = ('uuid', 'image',)
+    readonly_fields = ('get_selfie_image',)
     search_fields = ('uuid',)
 
     def get_selfie_image(self, image: Image):
