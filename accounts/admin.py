@@ -186,7 +186,10 @@ class BaseChangeAdmin(admin.ModelAdmin):
     list_filter = ('status', )
 
     def get_selfie_image_display(self, obj):
-        return "مشاهده عکس سلفی"
+        return "عکس سلفی"
+
+    def link_selfie_image_display(self, obj):
+        return "برای مشاهده کلیک کنید"
 
     @admin.action(description='رد درخواست', permissions=['view'])
     def reject_requests(self, request, queryset):
