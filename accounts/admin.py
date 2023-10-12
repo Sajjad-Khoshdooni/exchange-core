@@ -186,10 +186,8 @@ class BaseChangeAdmin(admin.ModelAdmin):
     exclude = ('selfie_image',)
     list_filter = ('status', )
 
-    def get_selfie_image(self, request: BaseChangeRequest):
-        return request.selfie_image
-
-    get_selfie_image.short_description = 'Selfie'
+    def get_selfie_image_display(self, obj):
+        return "مشاهده عکس سلفی"
 
     @admin.action(description='رد درخواست', permissions=['view'])
     def reject_requests(self, request, queryset):
