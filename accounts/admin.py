@@ -183,13 +183,10 @@ class ConsultationAdmin(admin.ModelAdmin):
 class BaseChangeAdmin(admin.ModelAdmin):
     raw_id_fields = ('user',)
     actions = ('accept_requests', 'reject_requests',)
-    exclude = ('selfie_image',)
     list_filter = ('status', )
 
-    def get_selfie_image(self, request: BaseChangeRequest):
-        return request.selfie_image
-
-    get_selfie_image.short_description = 'Selfie'
+    def get_selfie_image_display(self, obj):
+        return "مشاهده عکس سلفی"
 
     @admin.action(description='رد درخواست', permissions=['view'])
     def reject_requests(self, request, queryset):
@@ -209,13 +206,13 @@ class BaseChangeAdmin(admin.ModelAdmin):
 @admin.register(Forget2FA)
 class Forget2FAAdmin(BaseChangeAdmin):
     list_display = ('created', 'status', 'user',)
-    readonly_fields = ('created', 'status', 'user', 'get_selfie_image',)
+    readonly_fields = ('created', 'status', 'user', 'selfie_image',)
 
 
 @admin.register(ChangePhone)
 class ChangePhoneAdmin(BaseChangeAdmin):
     list_display = ('created', 'status', 'user', 'new_phone')
-    readonly_fields = ('created', 'status', 'user', 'new_phone', 'get_selfie_image',)
+    readonly_fields = ('created', 'status', 'user', 'new_phone', 'selfie_image',)
 
 
 @admin.register(SystemConfig)
