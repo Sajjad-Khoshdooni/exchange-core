@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django.db import models
 from django.db.models import F
@@ -5,7 +6,6 @@ from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
 from multimedia.models import Image, Banner, CoinPriceContent, Article, Section
-from django import forms
 
 
 @admin.register(Image)
