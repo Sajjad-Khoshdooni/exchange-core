@@ -326,7 +326,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
         'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended', 'is_consulted',
-        'suspension_reason', 'get_bots_link'
+        'suspension_reason', 'get_bots_link', 'is_2fa_active'
     )
     preserve_filters = ('archived', )
 
@@ -378,7 +378,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     def unarchive_users(self, request, queryset):
         queryset.update(archived=False)
 
-    @admin.display(description='2fa')
+    @admin.display(description='2fa', boolean=True)
     def is_2fa_active(self, user: User):
         return user.is_2fa_active()
 
