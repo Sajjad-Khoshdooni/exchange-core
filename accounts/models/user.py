@@ -183,9 +183,15 @@ class User(AbstractUser):
             user=self
         ).exists()
 
-    def is_2fa_valid(self, totp):
-        device = TOTPDevice.objects.filter(user=self).first()
-        return device is None or not device.confirmed or device.verify_token(totp)
+    def is_2fa_active(self):
+        return TOTPDevice.objects.filter(user=self, confirmed=True).exists()
+
+    def is_2fa_valid(self, totp: str):
+        if not self.is_2fa_active():
+            return True
+
+        device = TOTPDevice.objects.filter(user=self, confirmed=True).first()
+        return device.verify_token(totp)
 
     def get_account(self) -> Account:
         if not self.id or self.is_anonymous:

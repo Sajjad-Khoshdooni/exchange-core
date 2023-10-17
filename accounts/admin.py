@@ -292,8 +292,11 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         )}),
         (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)}),
         (_("کدهای دعوت کاربر"), {'fields': (
-            'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred')}),
-        (_('اطلاعات اضافی'), {'fields': ('is_price_notif_on', 'is_suspended', 'suspended_until', 'suspension_reason', 'is_consulted',)})
+            'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred'
+        )}),
+        (_('اطلاعات اضافی'), {'fields': (
+            'is_price_notif_on', 'is_suspended', 'suspended_until', 'suspension_reason', 'is_consulted', 'is_2fa_active'
+        )})
     )
 
     list_display = ('get_date_joined_jalali', 'username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
@@ -374,6 +377,10 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     @admin.action(description='خارج کردن از بایگانی', permissions=['view'])
     def unarchive_users(self, request, queryset):
         queryset.update(archived=False)
+
+    @admin.display(description='2fa')
+    def is_2fa_active(self, user: User):
+        return user.is_2fa_active()
 
     def save_model(self, request, user: User, form, change):
         old_user = User.objects.get(id=user.id)
