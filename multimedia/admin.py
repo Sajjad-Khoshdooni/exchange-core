@@ -1,9 +1,11 @@
 from django.contrib import admin
+from django.db import models
 from django.db.models import F
 from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
 from multimedia.models import Image, Banner, CoinPriceContent, Article, Section
+from django import forms
 
 
 @admin.register(Image)
@@ -37,11 +39,18 @@ class CoinPriceContentAdmin(SimpleHistoryAdmin):
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    list_display = ('title',)
-    readonly_fields = ('slug',)
+    list_display = ('title', 'title_en', 'parent', 'order')
+    list_editable = ('order', )
+    formfield_overrides = {
+        models.TextField: {'widget': forms.Textarea(attrs={'rows': 1})},
+    }
 
 
 @admin.register(Section)
 class SectionAdmin(admin.ModelAdmin):
-    list_display = ('title',)
-    readonly_fields = ('slug',)
+    list_display = ('title', 'slug', 'order')
+    list_editable = ('order', )
+
+    formfield_overrides = {
+        models.TextField: {'widget': forms.Textarea(attrs={'rows': 1})},
+    }

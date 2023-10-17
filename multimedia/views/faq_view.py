@@ -22,7 +22,7 @@ class ArticleSerializer(serializers.ModelSerializer):
 
     def get_parents(self, article: Article):
         parents = []
-        parent = article.parent_section
+        parent = article.parent
 
         while parent:
             parents.append(SectionMiniSerializer(parent).data)
@@ -47,7 +47,7 @@ class SectionSerializer(serializers.ModelSerializer):
     articles = serializers.SerializerMethodField()
 
     def get_articles(self, section: Section):
-        queryset = Article.objects.filter(parent_section=section)
+        queryset = Article.objects.filter(parent=section)
         serializer = ArticleMiniSerializer(queryset, many=True)
         return serializer.data
 
