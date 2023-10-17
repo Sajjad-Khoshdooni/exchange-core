@@ -69,7 +69,6 @@ class ArticleView(RetrieveAPIView):
     def get_object(self):
         kwargs = self.kwargs
         slug = kwargs.get('slug', '')
-        print(slug)
         return get_object_or_404(Article, slug=slug)
 
 

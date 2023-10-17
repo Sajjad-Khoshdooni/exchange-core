@@ -10,7 +10,7 @@ from multimedia.models import Image
 class BaseItem(models.Model):
     title = models.TextField(max_length=256)
     title_en = models.TextField(max_length=256)
-    slug = models.SlugField(max_length=1024, unique=True, db_index=True)
+    slug = models.SlugField(max_length=1024, unique=True, db_index=True, blank=True)
 
     def __str__(self):
         return self.title
