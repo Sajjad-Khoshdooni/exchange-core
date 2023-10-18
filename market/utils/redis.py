@@ -198,12 +198,14 @@ class MarketStreamCache:
                 f'market:trades:{maker_trade.symbol.name}',
                 f'{taker_trade.id}#{price}#{amount}#{maker_trade.client_order_id or maker_trade.order_id}#{taker_trade.client_order_id or taker_trade.order_id}#{is_buyer_maker}#{maker_trade.order_id}#{taker_trade.order_id}#{maker_trade.created}'
             )
+            logger.info(f'publishing taker_trade:{taker_trade.id}, maker_trade:{maker_trade.id} to socket server redis')
 
     def update_order_status(self, order):
         self.market_pipeline.publish(
             f'market:orders:status:{order.symbol.name}',
             f'{order.client_order_id or order.id}-{order.side}-{order.price}-{order.status}'
         )
+        logger.info(f'publishing order:{order.id} to socket server redis')
 
     def add_order_info(self, symbol, updated_orders, trade_pairs=None, side=None, canceled=False):
         if not self._symbol:
