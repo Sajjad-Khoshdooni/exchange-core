@@ -43,7 +43,6 @@ class SectionMiniSerializer(serializers.ModelSerializer):
 
 class SectionSerializer(serializers.ModelSerializer):
     parent = SectionMiniSerializer()
-    icon = serializers.ImageField()
     articles = serializers.SerializerMethodField()
 
     def get_articles(self, section: Section):
