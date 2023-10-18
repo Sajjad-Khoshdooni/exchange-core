@@ -15,10 +15,12 @@ class BaseItem(models.Model):
 
 
 class Section(BaseItem):
+    ICONS = 'getting-started', 'signup', 'accounts', 'transfer', 'trade', 'earn'
+
     parent = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True)
     description = models.TextField(blank=True)
     order = models.PositiveSmallIntegerField(default=0)
-    icon = models.CharField(max_length=256, blank=True)
+    icon = models.CharField(max_length=256, blank=True, choices=[(i, i) for i in ICONS])
 
     def save(self, *args, **kwargs):
         if not self.slug:
