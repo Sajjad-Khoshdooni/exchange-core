@@ -80,12 +80,13 @@ class ArticleSearchView(ListAPIView):
 
     def get_queryset(self):
         search_parameter = self.request.query_params.get('q', '')
+
         if not search_parameter:
             return Response({}, status=404)
-        qs = super().get_queryset().annotate(
+
+        return super().get_queryset().annotate(
             search=SearchVector('title', 'title_en', 'content',)
         ).filter(search=search_parameter)
-        return qs
 
 
 class PinnedArticlesView(ListAPIView):

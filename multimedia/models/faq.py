@@ -13,6 +13,9 @@ class BaseItem(models.Model):
     def __str__(self):
         return self.title
 
+    class Meta:
+        abstract = True
+
 
 class Section(BaseItem):
     ICONS = 'getting-started', 'signup', 'accounts', 'transfer', 'trade', 'earn'
