@@ -42,7 +42,7 @@ class Article(BaseItem):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title_en + '-' + str(uuid.uuid4()))
+            self.slug = slugify(self.title_en + '-' + uuid.uuid4().hex)
 
         super().save(*args, **kwargs)
 
