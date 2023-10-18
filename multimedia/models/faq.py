@@ -4,8 +4,6 @@ from django.db import models
 from django.utils.text import slugify
 from django_quill.fields import QuillField
 
-from multimedia.models import Image
-
 
 class BaseItem(models.Model):
     title = models.TextField(max_length=256)
@@ -18,9 +16,9 @@ class BaseItem(models.Model):
 
 class Section(BaseItem):
     parent = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True)
-    icon = Image()
     description = models.TextField(blank=True)
     order = models.PositiveSmallIntegerField(default=0)
+    icon = models.CharField(max_length=256, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.slug:

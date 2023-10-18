@@ -53,7 +53,7 @@ class SectionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Section
-        fields = ('id', 'icon', 'title', 'description', 'slug', 'parent', 'articles',)
+        fields = ('id', 'title', 'description', 'icon', 'slug', 'parent', 'articles',)
 
 
 class SectionsView(ListAPIView):
