@@ -190,6 +190,7 @@ class MarketStreamCache:
         # if not socket_server_redis.exists(f'ws:market:orders:{account_id}'):
         #     return
         for pair in trade_pairs:
+            logger.info(f'publishing trade:{pair.id} to socket server redis')
             maker_trade, taker_trade = pair
             is_buyer_maker = maker_trade.side == BUY
             price = get_presentation_amount(maker_trade.price, maker_trade.symbol.tick_size, trunc_zero=False)
@@ -200,6 +201,8 @@ class MarketStreamCache:
             )
 
     def update_order_status(self, order):
+        logger.info(f'publishing order:{order.id} to socket server redis')
+
         self.market_pipeline.publish(
             f'market:orders:status:{order.symbol.name}',
             f'{order.client_order_id or order.id}-{order.side}-{order.price}-{order.status}'
