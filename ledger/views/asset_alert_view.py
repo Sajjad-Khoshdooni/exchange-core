@@ -150,7 +150,13 @@ class AssetAlertViewSet(viewsets.ModelViewSet):
         )
 
     def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
+        coin = self.request.query_params.get('coin')
+        queryset = self.queryset.filter(user=self.request.user)
+
+        if coin:
+            queryset = queryset.filter(asset__symbol=coin)
+
+        return queryset
 
 
 class BulkAssetAlertViewSet(viewsets.ModelViewSet):
