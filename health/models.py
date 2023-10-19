@@ -37,7 +37,7 @@ class AlertType(models.Model):
             new_trigger, _ = AlertTrigger.objects.update_or_create(
                 alert_type=self,
                 defaults={
-                    'last_ok_time': timezone.now() if not last or last.ok else last.last_ok_time,
+                    'last_ok_time': timezone.now() if not last or last.status == Status.OK else last.last_ok_time,
                     'status': status.type,
                     'count': status.count,
                     'description': status.description,
