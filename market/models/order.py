@@ -83,8 +83,9 @@ class Order(models.Model):
     DEPTH = 'depth'
     BOT = 'bot'
     ORDINARY = None
+    LIQUIDATION = 'liquid'
 
-    TYPE_CHOICES = ((DEPTH, 'depth'), (BOT, 'bot'), (ORDINARY, 'ordinary'))
+    TYPE_CHOICES = ((DEPTH, 'depth'), (BOT, 'bot'), (ORDINARY, 'ordinary'), (LIQUIDATION, LIQUIDATION))
 
     type = models.CharField(
         max_length=8,
@@ -220,7 +221,7 @@ class Order(models.Model):
                 from ledger.models import MarginPosition
 
                 position = MarginPosition.objects.filter(
-                    account=wallet.account, symbol=symbol, status=MarginPosition.OPEN
+                    account=wallet.account, symbol=symbol, status__in=[MarginPosition.OPEN, MarginPosition.TERMINATING]
                 ).first()
 
                 return position.margin_base_wallet
@@ -277,7 +278,11 @@ class Order(models.Model):
             if free_amount > Decimal('0.95') * lock_amount:
                 lock_amount = min(lock_amount, free_amount)
 
-        to_lock_wallet.has_balance(lock_amount, raise_exception=True)
+        to_lock_wallet.has_balance(
+            lock_amount,
+            raise_exception=True,
+            pipeline_balance_diff=pipeline.get_wallet_free_balance_diff(to_lock_wallet.id)
+        )
 
         pipeline.new_lock(key=self.group_id, wallet=to_lock_wallet, amount=lock_amount, reason=WalletPipeline.TRADE)
 

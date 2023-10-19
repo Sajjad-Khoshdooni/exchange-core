@@ -25,7 +25,7 @@ from accounts.utils.validation import gregorian_to_jalali_datetime_str
 from financial.models import Payment
 from ledger import models
 from ledger.models import Prize, CoinCategory, FastBuyToken, Network, ManualTransaction, Wallet, \
-    ManualTrade, Trx, NetworkAsset
+    ManualTrade, Trx, NetworkAsset, MarginPosition
 from ledger.models.asset_alert import AssetAlert, AlertTrigger, BulkAssetAlert
 from ledger.models.wallet import ReserveWallet
 from ledger.utils.external_price import BUY
@@ -349,7 +349,7 @@ class BalanceLockInline(admin.TabularInline):
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
     list_display = ('created', 'account', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt',
-                    'credit')
+                    'credit', 'variant')
     inlines = [BalanceLockInline]
     list_filter = [
         ('asset', RelatedDropdownFilter),
@@ -813,3 +813,8 @@ class AlertTriggerAdmin(admin.ModelAdmin):
     list_filter = ('asset', 'is_chanel_changed', 'is_triggered',)
     readonly_fields = ('created', 'asset', 'price', 'change_percent', 'chanel', 'cycle',)
     search_fields = ('cycle',)
+
+
+@admin.register(MarginPosition)
+class MarginPositionAdmin(admin.ModelAdmin):
+    list_display = ('created',)

@@ -77,6 +77,10 @@ class MarginTransferSerializer(serializers.ModelSerializer):
     symbol = SymbolField(source='position_symbol')
     asset = AssetSerializerMini(read_only=True)
 
+    def validate(self, attrs):
+        self.validate_coin(attrs['asset'])
+        return attrs
+
     @staticmethod
     def validate_coin(coin):
         if coin.symbol not in (Asset.USDT, Asset.IRT):
@@ -88,7 +92,7 @@ class MarginTransferSerializer(serializers.ModelSerializer):
 
         asset = validated_data['asset']
         check_margin_view_permission(user.get_account(), asset)
-        print(validated_data)
+        # print(validated_data)
 
         return super(MarginTransferSerializer, self).create(validated_data)
 

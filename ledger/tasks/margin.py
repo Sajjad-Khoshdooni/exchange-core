@@ -1,7 +1,8 @@
+import uuid
 import logging
 from decimal import Decimal
-
 from celery import shared_task
+from django.utils import timezone
 
 from accounts.models import Account, Notification, EmailNotification
 from accounts.tasks import send_message_by_kavenegar
@@ -9,8 +10,9 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_support_message
 from ledger.margin.margin_info import MARGIN_CALL_ML_THRESHOLD, LIQUIDATION_ML_THRESHOLD, \
     MARGIN_CALL_ML_ALERTING_RESOLVE_THRESHOLD, get_bulk_margin_info
-from ledger.models import Wallet
+from ledger.models import Wallet, MarginPosition, Trx
 from ledger.models.margin import CloseRequest
+from ledger.utils.wallet_pipeline import WalletPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -85,3 +87,20 @@ def alert_liquidation(account: Account):
         recipient=user,
         template='margin_liquidated'
     )
+
+
+@shared_task(queue='margin')
+def collect_margin_interest():
+    now = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    group_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"{now}:{int(now.hour) % 8}")
+
+    with WalletPipeline() as pipeline:
+        for position in MarginPosition.objects.filter(status=MarginPosition.OPEN):
+            pipeline.new_trx(
+                position.loan_wallet,
+                position.get_margin_pool_wallet(),
+                abs(position.debt_amount) * MarginPosition.DEFAULT_INTEREST_FEE_PERCENTAGE,
+                Trx.MARGIN_INTEREST,
+                group_id,
+            )
+            position.update_liquidation_price(pipeline)

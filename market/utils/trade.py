@@ -4,7 +4,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 from django.conf import settings
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Q
 from django.utils import timezone
 
 from accounts.models import Referral
@@ -186,26 +186,36 @@ def _register_margin_transaction(pipeline: WalletPipeline, pair: TradesPair, loa
                 trade_amount = min(position.amount, trade_amount)
             if not trade_amount:
                 continue
+
             trade_value = trade_price * trade_amount
+
             if not position.has_enough_margin(trade_value):
-                margin_cross_wallet = order.base_wallet.asset.get_wallet(
-                    order.base_wallet.account, market=order.base_wallet.market, variant=None
-                )
-                margin_cross_wallet.has_balance(trade_value, raise_exception=True)
-                pipeline.new_trx(
-                    group_id=uuid4(),
-                    sender=margin_cross_wallet,
-                    receiver=order.base_wallet,
-                    amount=trade_value,
-                    scope=Trx.MARGIN_TRANSFER
-                )
+                if loan_type == MarginLoan.BORROW:
+                    margin_wallet = order.base_wallet.asset.get_wallet(
+                        order.base_wallet.account, market=order.base_wallet.market, variant=None
+                    )
+                    pipeline.new_trx(
+                        group_id=uuid4(),
+                        sender=margin_wallet,
+                        receiver=order.base_wallet,
+                        amount=trade_value,
+                        scope=Trx.MARGIN_TRANSFER
+                    )
+                elif loan_type == MarginLoan.REPAY:
+                    margin_wallet = order.base_wallet.asset.get_wallet(
+                        order.base_wallet.account, market=order.base_wallet.market, variant=order.wallet.variant
+                    )
+
+                else:
+                    raise NotImplementedError
+
             MarginLoan.new_loan(
                 account=order.account,
                 asset=order.symbol.asset,
                 amount=trade_amount,
                 loan_type=loan_type,
                 pipeline=pipeline,
-                variant=order.wallet.variant
+                variant=order.wallet.variant,
             )
             fee_amount = floor_precision(trade.fee_amount,
                                          Trade.fee_amount.field.decimal_places) if trade.fee_amount else Decimal(0)
