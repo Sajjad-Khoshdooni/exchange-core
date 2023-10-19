@@ -10,59 +10,11 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='article',
-            name='baseitem_ptr',
+        migrations.DeleteModel(
+            name='Section'
         ),
-        migrations.RemoveField(
-            model_name='section',
-            name='baseitem_ptr',
-        ),
-        migrations.AddField(
-            model_name='article',
-            name='id',
-            field=models.BigAutoField(auto_created=True, default=0, primary_key=True, serialize=False, verbose_name='ID'),
-            preserve_default=False,
-        ),
-        migrations.AddField(
-            model_name='article',
-            name='slug',
-            field=models.SlugField(blank=True, max_length=1024, unique=True),
-        ),
-        migrations.AddField(
-            model_name='article',
-            name='title',
-            field=models.TextField(default='', max_length=256),
-            preserve_default=False,
-        ),
-        migrations.AddField(
-            model_name='article',
-            name='title_en',
-            field=models.TextField(default='', max_length=256),
-            preserve_default=False,
-        ),
-        migrations.AddField(
-            model_name='section',
-            name='id',
-            field=models.BigAutoField(auto_created=True, default='', primary_key=True, serialize=False, verbose_name='ID'),
-            preserve_default=False,
-        ),
-        migrations.AddField(
-            model_name='section',
-            name='slug',
-            field=models.SlugField(blank=True, max_length=1024, unique=True),
-        ),
-        migrations.AddField(
-            model_name='section',
-            name='title',
-            field=models.TextField(default='', max_length=256),
-            preserve_default=False,
-        ),
-        migrations.AddField(
-            model_name='section',
-            name='title_en',
-            field=models.TextField(default='', max_length=256),
-            preserve_default=False,
+        migrations.DeleteModel(
+            name='Article'
         ),
         migrations.DeleteModel(
             name='BaseItem',
