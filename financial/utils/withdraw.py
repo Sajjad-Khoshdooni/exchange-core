@@ -552,8 +552,8 @@ class JibimoChannel(FiatWithdraw):
         if not gateway.batch_id:
             resp = self.collect_api('/v2/batch-pay/create', method='POST', data={
                 "title": "raastin_withdraw",
-                "matching": True,
-                "conversion": True,
+                "matching": False,
+                "conversion": False,
                 "validation": "active_account",
                 "pay_after_validation": True
             })
