@@ -65,10 +65,10 @@ class MarketMakerRequester:
 
         if resp.status_code == 404:
             logger.warning(f'MarketMaker Missing Order:{origin_id}')
-            send_system_message(
-                f'Market maker missing order:{origin_id}',
-                link=url_to_admin_list(Trade, filters={'id': origin_id})
-            )
+            # send_system_message(
+            #     f'Market maker missing order:{origin_id}',
+            #     link=url_to_admin_list(Trade, filters={'id': origin_id})
+            # )
 
         return resp.data
 
