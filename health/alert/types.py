@@ -113,6 +113,17 @@ class UnhandledFiatWithdrawAlert(BaseAlertHandler):
         )
 
 
+class LongPendingFiatWithdrawAlert(BaseAlertHandler):
+    NAME = 'long_pending_fiat_withdraw'
+    HELP = 'time passed from now in minutes'
+
+    def get_alerting(self, threshold: Decimal):
+        return FiatWithdrawRequest.objects.filter(
+            status__in=[FiatWithdrawRequest.PENDING],
+            created__lt=timezone.now() - timedelta(minutes=int(threshold)),
+        )
+
+
 class CanceledOTCAlert(BaseAlertHandler):
     NAME = 'canceled_otc'
     HELP = 'time passed from now in minutes'
