@@ -121,7 +121,7 @@ class JibitClient(BaseClient):
             'merchantReferenceNumber': self.get_client_ref(user),
             'userFullName': user.get_full_name(),
             'userIbans': ibans,
-            'userMobile': '09121234567',
+            'userMobile': user.phone,
         })
 
         if resp.status_code == 400:
