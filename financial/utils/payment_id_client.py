@@ -111,16 +111,20 @@ class JibitClient(BaseClient):
 
         host_url = settings.HOST_URL
 
-        ibans = list(BankAccount.objects.filter(user=user, verified=True).values_list('iban', flat=True))
+        bank_accounts = BankAccount.objects.filter(user=user, verified=True)
+        ibans = list(bank_accounts.values_list('iban', flat=True))
+
+        owner = bank_accounts[0].owners[0]
+        owner_full_name = owner['firstName'] + ' ' + owner['lastName']
 
         group_id = uuid.uuid4()
 
         resp = self._collect_api('/v1/paymentIds', method='POST', data={
             'callbackUrl': host_url + f'/api/v1/finance/paymentId/callback/jibit/',
             'merchantReferenceNumber': str(group_id),
-            'userFullName': user.get_full_name(),
+            'userFullName': owner_full_name,
             'userIbans': ibans,
-            'userMobile': user.phone,
+            'userMobile': '09121234567',
         })
 
         assert resp.success
