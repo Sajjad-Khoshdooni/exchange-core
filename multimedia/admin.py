@@ -62,9 +62,10 @@ class ArticleAdmin(admin.ModelAdmin):
 
 @admin.register(Section)
 class SectionAdmin(admin.ModelAdmin):
-    list_display = ('title', 'slug', 'order')
+    list_display = ('title', 'slug', 'order', 'parent')
     list_editable = ('order', )
-    ordering = ('parent', 'order')
+    ordering = ('-parent', 'order')
+    list_filter = ('parent', )
 
     formfield_overrides = {
         models.TextField: {'widget': forms.Textarea(attrs={'rows': 1})},
