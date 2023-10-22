@@ -162,7 +162,7 @@ class JibitClient(BaseClient):
         payment_id.provider_status = resp.data['registryStatus'],
         payment_id.provider_reason = resp.data.get('failReason') or '',
 
-        payment_id.save(update_fields=['verified'])
+        payment_id.save(update_fields=['verified', 'provider_status', 'provider_reason'])
 
     def _create_and_verify_payment_data(self, data: dict):
         merchant_ref = data['merchantReferenceNumber']
