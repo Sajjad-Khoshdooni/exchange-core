@@ -167,7 +167,12 @@ class User(AbstractUser):
     suspension_reason = models.CharField(max_length=128, blank=True, null=True)
 
     def __str__(self):
-        return self.username
+        name = self.username
+
+        if self.get_full_name():
+            name += ' ' + self.get_full_name()
+
+        return name
 
     @property
     def is_consulted(self):
