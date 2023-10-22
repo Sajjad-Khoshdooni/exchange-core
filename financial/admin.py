@@ -86,16 +86,18 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
     fieldsets = (
         ('اطلاعات درخواست', {'fields': ('created', 'status', 'amount', 'fee_amount', 'ref_id', 'bank_account',
-         'get_withdraw_request_receive_time', 'gateway', 'get_risks')}),
-        ('اطلاعات کاربر', {'fields': ('get_withdraw_request_iban', 'get_withdraw_request_user',
-                                      'get_user')}),
+         'get_withdraw_request_withdraw_time', 'get_withdraw_request_receive_time', 'gateway', 'get_risks')}),
+        ('اطلاعات کاربر', {'fields': (
+            'get_withdraw_request_iban', 'get_withdraw_request_user', 'get_user', 'login_activity'
+        )}),
         ('نظر', {'fields': ('comment',)})
     )
     list_filter = ('status', UserRialWithdrawRequestFilter, )
     ordering = ('-created', )
     readonly_fields = (
         'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount', 'get_risks',
-        'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user', 'login_activity'
+        'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user', 'login_activity',
+        'get_withdraw_request_receive_time'
     )
     search_fields = ('bank_account__iban', 'bank_account__user__phone')
 
@@ -125,11 +127,15 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
 
         return mark_safe(get_risks_html(risks))
 
+    @admin.display(description='زمان تقریبی واریز')
     def get_withdraw_request_receive_time(self, withdraw: FiatWithdrawRequest):
         if withdraw.receive_datetime:
             return str(gregorian_to_jalali_datetime(withdraw.receive_datetime.astimezone()))
 
-    get_withdraw_request_receive_time.short_description = 'زمان تقریبی واریز'
+    @admin.display(description='زمان فراخوانی برداشت')
+    def get_withdraw_request_withdraw_time(self, withdraw: FiatWithdrawRequest):
+        if withdraw.withdraw_datetime:
+            return str(gregorian_to_jalali_datetime(withdraw.withdraw_datetime.astimezone()))
 
     @admin.action(description='تایید برداشت', permissions=['view'])
     def accept_withdraw_request(self, request, queryset):

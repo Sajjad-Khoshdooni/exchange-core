@@ -7,11 +7,8 @@ from django.conf import settings
 from django.core.cache import cache
 from urllib3.exceptions import ReadTimeoutError
 
-from accounts.utils.admin import url_to_admin_list
-from accounts.utils.telegram import send_system_message
 from accounts.verifiers.jibit import Response
 from ledger.utils.cache import get_cache_func_key
-from market.models import Trade
 
 logger = logging.getLogger(__name__)
 

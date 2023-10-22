@@ -383,13 +383,13 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         return user.is_2fa_active()
 
     def save_model(self, request, user: User, form, change):
-        old_user = User.objects.get(id=user.id)
+        old_user = User.objects.filter(id=user.id).first()
 
         if not request.user.is_superuser:
-            if not old_user.is_superuser and user.is_superuser:
+            if (not old_user or not old_user.is_superuser) and user.is_superuser:
                 raise Exception('Dangerous action happened!')
 
-        if not old_user.selfie_image_verified and user.selfie_image_verified:
+        if old_user and not old_user.selfie_image_verified and user.selfie_image_verified:
             user.selfie_image_verifier = request.user
 
         return super(CustomUserAdmin, self).save_model(request, user, form, change)

@@ -166,15 +166,8 @@ class User(AbstractUser):
     suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
     suspension_reason = models.CharField(max_length=128, blank=True, null=True)
 
-
     def __str__(self):
-        name = self.get_full_name()
-        super_name = super(User, self).__str__()
-
-        if name:
-            return '%s %s' % (super_name, name)
-        else:
-            return super_name
+        return self.username
 
     @property
     def is_consulted(self):
