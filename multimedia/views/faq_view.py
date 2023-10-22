@@ -14,11 +14,8 @@ class ArticleMiniSerializer(serializers.ModelSerializer):
 
 
 class ArticleSerializer(serializers.ModelSerializer):
-    content = serializers.SerializerMethodField()
+    content = serializers.CharField(source='_content_html')
     parents = serializers.SerializerMethodField()
-
-    def get_content(self, article: Article):
-        return article.content.html
 
     def get_parents(self, article: Article):
         parents = []
@@ -84,7 +81,9 @@ class ArticleSearchView(ListAPIView):
             return Response({}, status=404)
 
         return super().get_queryset().annotate(
-            search=SearchVector('title', 'title_en', 'content',)
+            search=SearchVector(
+                'title', 'title_en', '_content_text', 'parent__title', 'parent__title_en', 'parent__description'
+            )
         ).filter(search=search_parameter)
 
 

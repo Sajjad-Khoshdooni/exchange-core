@@ -1,8 +1,11 @@
 import uuid
 
+from ckeditor.fields import RichTextField
 from django.db import models
 from django.utils.text import slugify
 from django_quill.fields import QuillField
+
+from multimedia.utils.custom_tags import post_render_html, get_text_of_html
 
 
 class BaseItem(models.Model):
@@ -42,6 +45,14 @@ class Article(BaseItem):
     is_pinned = models.BooleanField(default=False)
     order = models.PositiveSmallIntegerField(default=0)
     content = QuillField()
+    _content_html = models.TextField(blank=True)
+    _content_text = models.TextField(blank=True)
+
+    def refresh(self):
+        html = self.content.html
+        self._content_html = post_render_html(html)
+        self._content_text = get_text_of_html(self._content_html)
+        self.save(update_fields=['_content_html', '_content_text'])
 
     def save(self, *args, **kwargs):
         if not self.slug:

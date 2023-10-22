@@ -6,6 +6,7 @@ from django.utils.safestring import mark_safe
 from simple_history.admin import SimpleHistoryAdmin
 
 from multimedia.models import Image, Banner, CoinPriceContent, Article, Section
+from multimedia.utils.custom_tags import post_render_html, get_text_of_html
 
 
 @admin.register(Image)
@@ -46,6 +47,17 @@ class ArticleAdmin(admin.ModelAdmin):
     formfield_overrides = {
         models.TextField: {'widget': forms.Textarea(attrs={'rows': 1})},
     }
+    actions = ('refresh_article', )
+    exclude = ('_content_html', '_content_text')
+
+    def save_model(self, request, obj: Article, form, change):
+        obj.save()
+        obj.refresh()
+
+    @admin.action(description='Refresh')
+    def refresh_article(self, request, queryset):
+        for article in queryset:
+            article.refresh()
 
 
 @admin.register(Section)
