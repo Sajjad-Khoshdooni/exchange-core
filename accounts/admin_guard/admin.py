@@ -23,7 +23,7 @@ class AdvancedAdmin(ModelAdmin):
     fields_view_conditions = {}
     fields_edit_conditions = {}
 
-    __fieldsets__ = {}
+    __fieldsets__ = None
 
     __readonly_fields__ = [
         # 'get_list_item_initializer',
@@ -59,6 +59,10 @@ class AdvancedAdmin(ModelAdmin):
 
     def get_fieldsets(self, request, obj=None):
         add_mode = self.get_add_mode(request)
+
+        if self.__fieldsets__ is None:
+            self.__fieldsets__ = {}
+
         if self.__fieldsets__.get(add_mode) is None:
             self.__fieldsets__[add_mode] = super(AdvancedAdmin, self).get_fieldsets(request, obj)
 
