@@ -1,5 +1,6 @@
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.text import slugify
 from django_quill.fields import QuillField
@@ -32,6 +33,10 @@ class Section(BaseItem):
             self.slug = slugify(self.title_en)
 
         super().save(*args, **kwargs)
+
+    def clean(self):
+        if self.parent and self.parent == self:
+            raise ValidationError('Circular dependency')
 
     class Meta:
         verbose_name = 'بخش'
