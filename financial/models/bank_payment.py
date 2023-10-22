@@ -40,7 +40,6 @@ class BankPaymentRequest(models.Model):
             raise ValidationError('users mismatch')
 
     def get_fee(self):
-        return 0
         if self.destination_type == self.JIBIMO:
             return int(self.amount * Decimal('0.000545'))
 
