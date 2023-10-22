@@ -446,11 +446,12 @@ class BankPaymentUserFilter(SimpleListFilter):
 
 @admin.register(BankPaymentRequest)
 class BankPaymentRequestAdmin(ExportMixin, admin.ModelAdmin):
-    list_display = ('created', 'user', 'get_amount_preview', 'ref_id', 'destination_type', 'payment')
+    list_display = ('created', 'user', 'get_amount_preview', 'ref_id', 'destination_id', 'destination_type', 'payment')
     readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview', 'payment')
     actions = ('accept_payment', 'clone_payment')
     list_filter = (BankPaymentRequestAcceptFilter, BankPaymentUserFilter)
     resource_classes = [BankPaymentRequestResource]
+    list_editable = ('destination_id', 'ref_id')
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "user":
