@@ -159,6 +159,9 @@ class JibitClient(BaseClient):
         )
 
         payment_id.verified = resp.data['registryStatus'] == 'VERIFIED'
+        payment_id.provider_status = resp.data['registryStatus'],
+        payment_id.provider_reason = resp.data.get('failReason') or '',
+
         payment_id.save(update_fields=['verified'])
 
     def _create_and_verify_payment_data(self, data: dict):
