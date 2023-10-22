@@ -1,4 +1,5 @@
 import logging
+import uuid
 from datetime import timedelta
 from decimal import Decimal
 from json import JSONDecodeError
@@ -103,10 +104,6 @@ class JibitClient(BaseClient):
 
         return Response(data=resp_json, success=resp.ok, status_code=resp.status_code)
     
-    @classmethod
-    def get_client_ref(cls, user: User):
-        return f'u-{user.id}'
-
     def create_payment_id(self, user: User) -> PaymentId:
         existing = PaymentId.objects.filter(user=user, gateway=self.gateway).first()
         if existing:
@@ -116,16 +113,15 @@ class JibitClient(BaseClient):
 
         ibans = list(BankAccount.objects.filter(user=user, verified=True).values_list('iban', flat=True))
 
+        group_id = uuid.uuid4()
+
         resp = self._collect_api('/v1/paymentIds', method='POST', data={
             'callbackUrl': host_url + f'/api/v1/finance/paymentId/callback/jibit/',
-            'merchantReferenceNumber': self.get_client_ref(user),
+            'merchantReferenceNumber': str(group_id),
             'userFullName': user.get_full_name(),
             'userIbans': ibans,
             'userMobile': user.phone,
         })
-
-        if resp.status_code == 400:
-            resp = self.get_pay_id_data(user)
 
         assert resp.success
 
@@ -142,8 +138,11 @@ class JibitClient(BaseClient):
             user=user,
             gateway=self.gateway,
             pay_id=resp.data['payId'],
+            group_id=group_id,
             verified=resp.data['registryStatus'] == 'VERIFIED',
-            destination=destination
+            destination=destination,
+            provider_status=resp.data['registryStatus'],
+            provider_reason=resp.data.get('failReason') or '',
         )
 
         if not payment_id.verified:
@@ -154,13 +153,10 @@ class JibitClient(BaseClient):
     def update_payment_id(self, payment_id: PaymentId):
         raise NotImplementedError
 
-    def get_pay_id_data(self, user: User) -> Response:
-        return self._collect_api(
-            path=f'/v1/paymentIds/{self.get_client_ref(user)}',
-        )
-
     def check_payment_id_status(self, payment_id: PaymentId):
-        resp = self.get_pay_id_data(payment_id.user)
+        resp = self._collect_api(
+            path=f'/v1/paymentIds/{payment_id.group_id}',
+        )
 
         payment_id.verified = resp.data['registryStatus'] == 'VERIFIED'
         payment_id.save(update_fields=['verified'])
