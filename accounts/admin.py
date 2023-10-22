@@ -31,6 +31,7 @@ from .models.login_activity import LoginActivity
 from .models.sms_notification import SmsNotification
 from .models.user_feature_perm import UserFeaturePerm
 from .tasks import basic_verify_user
+from .utils.mask import get_masked_phone
 from .utils.validation import gregorian_to_jalali_datetime_str
 
 MANUAL_VERIFY_CONDITION = Q(
@@ -299,7 +300,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         )})
     )
 
-    list_display = ('get_date_joined_jalali', 'username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
+    list_display = ('get_date_joined_jalali', 'get_masked_username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
                     'verify_status', 'promotion', 'get_source_medium', 'get_referrer_user', 'is_price_notif_on',
                     'is_suspended',)
     list_filter = (
@@ -381,6 +382,12 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     @admin.display(description='2fa', boolean=True)
     def is_2fa_active(self, user: User):
         return user.is_2fa_active()
+
+    @admin.display(description='username')
+    def get_masked_username(self, user: User):
+        return mark_safe(
+            f'<span dir="ltr">{get_masked_phone(user.username)}</span>'
+        )
 
     def save_model(self, request, user: User, form, change):
         old_user = User.objects.filter(id=user.id).first()

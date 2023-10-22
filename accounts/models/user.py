@@ -198,13 +198,6 @@ class User(AbstractUser):
         account, _ = Account.objects.get_or_create(user=self)
         return account
 
-    @staticmethod
-    def mask(phone_number: str, length: int = 4):
-        first = phone_number[:length]
-        last = phone_number[-length:]
-        masked = first + '*' * len(phone_number[length:-length]) + last
-        return masked
-
     def suspend(self, duration: timedelta, reason: str = None):
         suspended_until = duration + timezone.now()
         past_suspension = self.suspended_until
