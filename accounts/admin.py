@@ -183,7 +183,7 @@ class ConsultationAdmin(admin.ModelAdmin):
     @admin.display(description='user')
     def get_masked_username(self, consultation: Consultation):
         return mark_safe(
-            f'<span dir="ltr">{get_masked_phone(consultation.user)}</span>'
+            f'<span dir="ltr">{consultation.user}</span>'
         )
 
 
