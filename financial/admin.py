@@ -112,7 +112,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
     @admin.display(description='کاربر')
     def get_user(self, withdraw_request: FiatWithdrawRequest):
         link = url_to_edit_object(withdraw_request.bank_account.user)
-        return mark_safe("<a href='%s'>%s</a>" % (link, withdraw_request.bank_account.user.phone))
+        return mark_safe("<a href='%s'>%s</a>" % (link, withdraw_request.bank_account.user.get_masked_detail()))
 
     @admin.display(description='شماره شبا')
     def get_withdraw_request_iban(self, withdraw_request: FiatWithdrawRequest):
@@ -250,7 +250,7 @@ class BankCardUserFilter(SimpleListFilter):
 class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     default_edit_condition = M.superuser
 
-    list_display = ('created', 'card_pan', 'user', 'verified', 'deleted')
+    list_display = ('created', 'card_pan', 'get_masked_username', 'verified', 'deleted')
     list_filter = (BankCardUserFilter,)
     search_fields = ('card_pan', )
     readonly_fields = ('user', )
@@ -283,6 +283,12 @@ class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
             if user.level == User.LEVEL1 and user.verify_status == User.PENDING:
                 user.change_status(User.REJECTED)
+
+    @admin.display(description='user')
+    def get_masked_username(self, bank_card: BankCard):
+        return mark_safe(
+            f'<span dir="ltr">{bank_card.user.get_masked_detail()}</span>'
+        )
 
 
 class BankUserFilter(SimpleListFilter):
