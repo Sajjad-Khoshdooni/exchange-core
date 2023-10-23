@@ -182,7 +182,7 @@ class ConsultationAdmin(admin.ModelAdmin):
     @admin.display(description='user')
     def get_masked_username(self, consultation: Consultation):
         return mark_safe(
-            f'<span dir="ltr">{get_masked_phone(consultation.user.get_masked_detail())}</span>'
+            f'<span dir="ltr">{get_masked_phone(consultation.user)}</span>'
         )
 
 
@@ -221,7 +221,7 @@ class Forget2FAAdmin(BaseChangeAdmin):
     @admin.display(description='user')
     def get_masked_username(self, forget_2fa: Forget2FA):
         return mark_safe(
-            f'<span dir="ltr">{forget_2fa.user.get_masked_detail()}</span>'
+            f'<span dir="ltr">{forget_2fa.user}</span>'
         )
 
 
@@ -233,7 +233,7 @@ class ChangePhoneAdmin(BaseChangeAdmin):
     @admin.display(description='user')
     def get_masked_username(self, change_phone: ChangePhone):
         return mark_safe(
-            f'<span dir="ltr">{change_phone.user.get_masked_detail()}</span>'
+            f'<span dir="ltr">{change_phone.user}</span>'
         )
 
 
@@ -747,7 +747,7 @@ class AccountAdmin(admin.ModelAdmin):
     @admin.display(description='user')
     def get_masked_username(self, account: Account):
         return mark_safe(
-            f'<span dir="ltr">{account.user.get_masked_detail()}</span>'
+            f'<span dir="ltr">{account.user}</span>'
         )
 
 
@@ -760,7 +760,7 @@ class ReferralAdmin(admin.ModelAdmin):
     @admin.display(description='user')
     def get_masked_username(self, referral: Referral):
         return mark_safe(
-            f'<span dir="ltr">{referral.owner.get_masked_detail()}</span>'
+            f'<span dir="ltr">{referral.owner}</span>'
         )
 
 
@@ -798,7 +798,7 @@ class NotificationAdmin(admin.ModelAdmin):
     @admin.display(description='user')
     def get_masked_username(self, notification: Notification):
         return mark_safe(
-            f'<span dir="ltr">{notification.recipient.get_masked_detail()}</span>'
+            f'<span dir="ltr">{notification.recipient}</span>'
         )
 
 
@@ -833,7 +833,7 @@ class UserCommentAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     @admin.display(description='user')
     def get_masked_username(self, user_comment: UserComment):
         return mark_safe(
-            f'<span dir="ltr">{user_comment.user.get_masked_detail()}</span>'
+            f'<span dir="ltr">{user_comment.user}</span>'
         )
 
 
@@ -846,7 +846,7 @@ class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
     @admin.display(description='user')
     def get_masked_username(self, traffic_source: TrafficSource):
         return mark_safe(
-            f'<span dir="ltr">{traffic_source.user.get_masked_detail()}</span>'
+            f'<span dir="ltr">{traffic_source.user}</span>'
         )
 
 
@@ -861,7 +861,7 @@ class LoginActivityAdmin(admin.ModelAdmin):
     @admin.display(description='user')
     def get_masked_username(self, login_activity: LoginActivity):
         return mark_safe(
-            f'<span dir="ltr">{login_activity.user.get_masked_detail()}</span>'
+            f'<span dir="ltr">{login_activity.user()}</span>'
         )
 
 

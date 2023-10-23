@@ -254,10 +254,16 @@ class OTCRequestUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount', 'fee_revenue')
+    list_display = ('created', 'get_masked_username', 'symbol', 'side', 'price', 'amount', 'fee_amount', 'fee_revenue')
     readonly_fields = ('account', 'login_activity')
     search_fields = ('token', 'symbol__name')
     list_filter = (OTCRequestUserFilter,)
+
+    @admin.display(description='user')
+    def get_masked_username(self, otc_request: models.OTCRequest):
+        return mark_safe(
+            f'<span dir="ltr">{otc_request.account.user}</span>'
+        )
 
 
 class OTCUserFilter(SimpleListFilter):
@@ -455,7 +461,7 @@ class TransferAdmin(SimpleHistoryAdmin, AdvancedAdmin):
 
         if user:
             link = url_to_edit_object(user)
-            return anchor_tag(user.phone, link)
+            return mark_safe("<span dir=\"ltr\"> <a href='%s'>%s</a></span>" % (link, user))
 
     @admin.display(description='Remaining 48h')
     def get_remaining_time_to_pass_48h(self, transfer: models.Transfer):
@@ -561,7 +567,7 @@ class PrizeUserFilter(admin.SimpleListFilter):
 
 @admin.register(models.Prize)
 class PrizeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'achievement', 'account', 'get_asset_amount', 'redeemed', 'value')
+    list_display = ('created', 'achievement', 'get_masked_username', 'get_asset_amount', 'redeemed', 'value')
     readonly_fields = ('account', 'asset',)
     list_filter = ('achievement', 'redeemed', PrizeUserFilter)
 
@@ -569,6 +575,12 @@ class PrizeAdmin(admin.ModelAdmin):
         return '%s %s' % (get_presentation_amount(prize.amount), prize.asset)
 
     get_asset_amount.short_description = 'مقدار'
+
+    @admin.display(description='user')
+    def get_masked_username(self, prize: models.Prize):
+        return mark_safe(
+            f'<span dir="ltr">{prize.account.user}</span>'
+        )
 
 
 @admin.register(models.CoinCategory)
@@ -605,8 +617,14 @@ class MarketSpreadAdmin(admin.ModelAdmin):
 
 @admin.register(models.PNLHistory)
 class PNLHistoryAdmin(admin.ModelAdmin):
-    list_display = ('date', 'account', 'market', 'base_asset', 'snapshot_balance', 'profit')
+    list_display = ('date', 'get_masked_username', 'market', 'base_asset', 'snapshot_balance', 'profit')
     readonly_fields = ('date', 'account', 'market', 'base_asset', 'snapshot_balance', 'profit')
+
+    @admin.display(description='user')
+    def get_masked_username(self, pnl_history: models.PNLHistory):
+        return mark_safe(
+            f'<span dir="ltr">{pnl_history.account.user}</span>'
+        )
 
 
 @admin.register(models.CategorySpread)
@@ -735,7 +753,7 @@ class AssetAlertAdmin(admin.ModelAdmin):
     @admin.display(description='username')
     def get_masked_username(self, alert: AssetAlert):
         return mark_safe(
-            f'<span dir="ltr">{alert.user.get_masked_detail()}</span>'
+            f'<span dir="ltr">{alert.user}</span>'
         )
 
 

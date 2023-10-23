@@ -168,14 +168,6 @@ class User(AbstractUser):
     suspension_reason = models.CharField(max_length=128, blank=True, null=True)
 
     def __str__(self):
-        name = self.username
-
-        if self.get_full_name():
-            name += ' ' + self.get_full_name()
-
-        return name
-
-    def get_masked_detail(self):
         name = get_masked_phone(self.username)
 
         if self.get_full_name():

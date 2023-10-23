@@ -85,20 +85,6 @@ class Account(models.Model):
         else:
             return str(self.user)
 
-    def get_masked_detail(self):
-        if self.type == self.SYSTEM:
-            name = 'system'
-
-            if self.name:
-                name += ' - %s' % self.name
-
-            return name
-
-        elif self.type == self.OUT:
-            return 'out'
-        else:
-            return self.user.get_masked_detail()
-
     def get_total_balance_usdt(self, market: str, side: str):
         from ledger.models import Wallet, Asset
         from ledger.utils.price import get_last_price

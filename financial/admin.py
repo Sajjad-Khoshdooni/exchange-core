@@ -112,7 +112,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
     @admin.display(description='کاربر')
     def get_user(self, withdraw_request: FiatWithdrawRequest):
         link = url_to_edit_object(withdraw_request.bank_account.user)
-        return mark_safe("<span dir=\"ltr\"> <a href='%s'>%s</a></span>" % (link, withdraw_request.bank_account.user.get_masked_detail()))
+        return mark_safe("<span dir=\"ltr\"> <a href='%s'>%s</a></span>" % (link, withdraw_request.bank_account.user))
 
     @admin.display(description='شماره شبا')
     def get_withdraw_request_iban(self, withdraw_request: FiatWithdrawRequest):
@@ -222,7 +222,7 @@ class PaymentAdmin(admin.ModelAdmin):
     @admin.display(description='کاربر')
     def get_user(self, payment: Payment):
         link = url_to_edit_object(payment.user)
-        return mark_safe("<span dir=\"ltr\"> <a href='%s'>%s</a></span>" % (link, payment.user.get_masked_detail()))
+        return mark_safe("<span dir=\"ltr\"> <a href='%s'>%s</a></span>" % (link, payment.user))
 
     @admin.display(description='شماره کارت')
     def get_card_pan(self, payment: Payment):
@@ -287,7 +287,7 @@ class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     @admin.display(description='user')
     def get_masked_username(self, bank_card: BankCard):
         return mark_safe(
-            f'<span dir="ltr">{bank_card.user.get_masked_detail()}</span>'
+            f'<span dir="ltr">{bank_card.user}</span>'
         )
 
 
@@ -347,7 +347,7 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     @admin.display(description='user')
     def get_masked_username(self, bank_account: BankAccount):
         return mark_safe(
-            f'<span dir="ltr">{bank_account.user.get_masked_detail()}</span>'
+            f'<span dir="ltr">{bank_account.user}</span>'
         )
 
 
