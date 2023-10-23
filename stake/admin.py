@@ -78,7 +78,7 @@ class StakeRequestAdmin(admin.ModelAdmin):
     def get_user(self, stake_request: StakeRequest):
         user = stake_request.account.user
         link = url_to_admin_list(User) + '{}/change'.format(user.id)
-        return mark_safe("<a href='%s'>%s</a>" % (link, user))
+        return mark_safe("<span dir=\"ltr\"> <a href='%s'>%s</a></span>" % (link, user))
     get_user.short_description = 'user'
 
     @admin.action(description='بردن به حالت در انتظار', permissions=['view'])
@@ -118,7 +118,7 @@ class StakeRevenueAdmin(admin.ModelAdmin):
     def get_user(self, stake_revenue: StakeRevenue):
         user = stake_revenue.stake_request.account.user
         link = url_to_admin_list(User) + '{}/change'.format(user.id)
-        return mark_safe("<a href='%s'>%s</a>" % (link, user))
+        return mark_safe("<span dir=\"ltr\"> <a href='%s'>%s</a></span>" % (link, user))
     get_user.short_description = 'user'
 
     def get_stake_option_apr(self, stake_revenue: StakeRevenue):
