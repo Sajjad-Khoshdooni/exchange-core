@@ -1,9 +1,12 @@
+import logging
 from datetime import datetime
 
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import Attribution
+
+logger = logging.getLogger(__name__)
 
 
 class AttributionAPIView(APIView):
@@ -12,6 +15,9 @@ class AttributionAPIView(APIView):
 
     def get(self, request):
         params = request.query_params
+        logger.info('New attribution', extra={
+            'params': params
+        })
 
         clicked_at = None
         if params.get('clicked_at'):
