@@ -735,7 +735,7 @@ class AssetAlertAdmin(admin.ModelAdmin):
     @admin.display(description='username')
     def get_masked_username(self, alert: AssetAlert):
         return mark_safe(
-            f'<span dir="ltr">{get_masked_phone(alert.user.__str__())}</span>'
+            f'<span dir="ltr">{alert.user.get_masked_detail()}</span>'
         )
 
 
