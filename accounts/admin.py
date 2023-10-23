@@ -212,7 +212,7 @@ class BaseChangeAdmin(admin.ModelAdmin):
 
 @admin.register(Forget2FA)
 class Forget2FAAdmin(BaseChangeAdmin):
-    list_display = ('created', 'status', 'user', 'get_masked_username',)
+    list_display = ('created', 'status', 'get_masked_username',)
     readonly_fields = ('created', 'status', 'user', 'selfie_image',)
 
     @admin.display(description='user')
@@ -224,7 +224,7 @@ class Forget2FAAdmin(BaseChangeAdmin):
 
 @admin.register(ChangePhone)
 class ChangePhoneAdmin(BaseChangeAdmin):
-    list_display = ('created', 'status', 'user', 'new_phone')
+    list_display = ('created', 'status', 'get_masked_username', 'new_phone')
     readonly_fields = ('created', 'status', 'user', 'new_phone', 'selfie_image',)
 
     @admin.display(description='user')
