@@ -97,7 +97,7 @@ class FiatWithdrawRequestAdmin(SimpleHistoryAdmin):
     readonly_fields = (
         'created', 'bank_account', 'amount', 'get_withdraw_request_iban', 'fee_amount', 'get_risks',
         'get_withdraw_request_user', 'get_withdraw_request_receive_time', 'get_user', 'login_activity',
-        'get_withdraw_request_receive_time'
+        'get_withdraw_request_receive_time', 'get_withdraw_request_withdraw_time'
     )
     search_fields = ('bank_account__iban', 'bank_account__user__phone')
 
