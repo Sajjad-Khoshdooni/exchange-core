@@ -14,15 +14,12 @@ class ArticleMiniSerializer(serializers.ModelSerializer):
 
 
 class ArticleSerializer(serializers.ModelSerializer):
-    content = serializers.SerializerMethodField()
+    content = serializers.CharField(source='_content_html')
     parents = serializers.SerializerMethodField()
-
-    def get_content(self, article: Article):
-        return article.content.html
 
     def get_parents(self, article: Article):
         parents = []
-        parent = article.parent_section
+        parent = article.parent
 
         while parent:
             parents.append(SectionMiniSerializer(parent).data)
@@ -43,17 +40,16 @@ class SectionMiniSerializer(serializers.ModelSerializer):
 
 class SectionSerializer(serializers.ModelSerializer):
     parent = SectionMiniSerializer()
-    icon = serializers.ImageField()
     articles = serializers.SerializerMethodField()
 
     def get_articles(self, section: Section):
-        queryset = Article.objects.filter(parent_section=section)
+        queryset = Article.objects.filter(parent=section)
         serializer = ArticleMiniSerializer(queryset, many=True)
         return serializer.data
 
     class Meta:
         model = Section
-        fields = ('id', 'icon', 'title', 'description', 'slug', 'parent', 'articles',)
+        fields = ('id', 'title', 'description', 'icon', 'slug', 'parent', 'articles',)
 
 
 class SectionsView(ListAPIView):
@@ -69,7 +65,6 @@ class ArticleView(RetrieveAPIView):
     def get_object(self):
         kwargs = self.kwargs
         slug = kwargs.get('slug', '')
-        print(slug)
         return get_object_or_404(Article, slug=slug)
 
 
@@ -81,21 +76,21 @@ class ArticleSearchView(ListAPIView):
 
     def get_queryset(self):
         search_parameter = self.request.query_params.get('q', '')
+
         if not search_parameter:
             return Response({}, status=404)
-        qs = super().get_queryset().annotate(
-            search=SearchVector('title', 'title_en', 'content',)
+
+        return super().get_queryset().annotate(
+            search=SearchVector(
+                'title', 'title_en', '_content_text', 'parent__title', 'parent__title_en', 'parent__description'
+            )
         ).filter(search=search_parameter)
-        return qs
 
 
 class PinnedArticlesView(ListAPIView):
     permission_classes = []
-    serializer_class = ArticleMiniSerializer(many=True)
+    serializer_class = ArticleMiniSerializer
     paginate_by = 10
 
     def get_queryset(self):
-        return super().get_queryset().filter(is_pinned=True)
-
-    class Meta:
-        model = Article
+        return Article.objects.filter(parent__parent_id=self.kwargs['pk'], is_pinned=True)
