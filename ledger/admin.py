@@ -13,6 +13,7 @@ from django.utils.translation import gettext_lazy as _
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 from simple_history.admin import SimpleHistoryAdmin
 
+from accounts.utils.mask import get_masked_phone
 from accounting.models import AssetPrice
 from accounting.models import ReservedAsset
 from accounts.admin_guard import M
@@ -727,9 +728,15 @@ class ManualTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(AssetAlert)
 class AssetAlertAdmin(admin.ModelAdmin):
-    list_display = ('user', 'asset',)
+    list_display = ('get_masked_username', 'asset',)
     search_fields = ['user__username', 'asset__symbol']
     raw_id_fields = ['user']
+
+    @admin.display(description='username')
+    def get_masked_username(self, alert: AssetAlert):
+        return mark_safe(
+            f'<span dir="ltr">{get_masked_phone(alert.user.__str__())}</span>'
+        )
 
 
 @admin.register(BalanceLock)
