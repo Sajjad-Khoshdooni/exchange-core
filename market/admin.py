@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
+from django.utils.safestring import mark_safe
 
 from ledger.utils.precision import get_presentation_amount
 from market.models import *
@@ -83,7 +84,7 @@ class UserFilter(SimpleListFilter):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount',
-                    'wallet')
+                    'get_masked_wallet')
     list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
     readonly_fields = ('wallet', 'symbol', 'account', 'stop_loss', 'login_activity')
 
@@ -92,6 +93,12 @@ class OrderAdmin(admin.ModelAdmin):
         return created.strftime('%S.%f')[:-3]
 
     created_at_millis.short_description = 'Created Second'
+
+    @admin.display(description='wallet')
+    def get_masked_wallet(self, order_obj: Order):
+        return mark_safe(
+            f'<span dir="ltr">{order_obj.wallet}</span>'
+        )
 
 
 @admin.register(CancelRequest)
@@ -137,8 +144,14 @@ class ReferralTrxAdmin(admin.ModelAdmin):
 
 @admin.register(StopLoss)
 class StopLossAdmin(admin.ModelAdmin):
-    list_display = ('created', 'wallet', 'symbol', 'fill_type', 'amount', 'filled_amount', 'trigger_price', 'price', 'side')
+    list_display = ('created', 'get_masked_wallet', 'symbol', 'fill_type', 'amount', 'filled_amount', 'trigger_price', 'price', 'side')
     readonly_fields = ('wallet', 'symbol', 'group_id', 'login_activity')
+
+    @admin.display(description='wallet')
+    def get_masked_wallet(self, stopLoss: StopLoss):
+        return mark_safe(
+            f'<span dir="ltr">{stopLoss.wallet}</span>'
+        )
 
 
 @admin.register(OCO)
