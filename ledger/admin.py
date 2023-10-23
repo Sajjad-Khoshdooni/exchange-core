@@ -316,11 +316,23 @@ class OTCTradeAdmin(admin.ModelAdmin):
 
 @admin.register(models.Trx)
 class TrxAdmin(admin.ModelAdmin):
-    list_display = ('created', 'sender', 'receiver', 'amount', 'scope', 'group_id')
+    list_display = ('created', 'get_masked_sender', 'get_masked_receiver', 'amount', 'scope', 'group_id')
     search_fields = (
         'sender__asset__symbol', 'sender__account__user__phone', 'receiver__account__user__phone', 'group_id')
     readonly_fields = ('sender', 'receiver',)
     list_filter = ('scope',)
+
+    @admin.display(description='sender')
+    def get_masked_sender(self, trx: Trx):
+        return mark_safe(
+            f'<span dir="ltr">{trx.sender}</span>'
+        )
+
+    @admin.display(description='reciever')
+    def get_masked_receiver(self, trx: Trx):
+        return mark_safe(
+            f'<span dir="ltr">{trx.receiver}</span>'
+        )
 
 
 class WalletUserFilter(SimpleListFilter):
@@ -355,7 +367,7 @@ class BalanceLockInline(admin.TabularInline):
 
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
-    list_display = ('created', 'account', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt',
+    list_display = ('created', 'get_masked_username', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt',
                     'credit')
     inlines = [BalanceLockInline]
     list_filter = [
@@ -389,6 +401,12 @@ class WalletAdmin(admin.ModelAdmin):
     def get_value_usdt(self, wallet: models.Wallet):
         price = get_last_price(wallet.asset.symbol + Asset.USDT) or 0
         return humanize_number(wallet.balance * price)
+
+    @admin.display(description='user')
+    def get_masked_username(self, wallet: Wallet):
+        return mark_safe(
+            f'<span dir="ltr">{wallet.account}</span>'
+        )
 
 
 class TransferUserFilter(SimpleListFilter):
@@ -545,9 +563,15 @@ class CloseRequestAdmin(admin.ModelAdmin):
 
 @admin.register(models.AddressBook)
 class AddressBookAdmin(admin.ModelAdmin):
-    list_display = ('name', 'account', 'network', 'address', 'asset',)
+    list_display = ('name', 'get_masked_username', 'network', 'address', 'asset',)
     search_fields = ('address', 'name')
     readonly_fields = ('account', 'network', 'address', 'asset')
+
+    @admin.display(description='user')
+    def get_masked_username(self, address_book: models.AddressBook):
+        return mark_safe(
+            f'<span dir="ltr">{address_book.account}</span>'
+        )
 
 
 class PrizeUserFilter(admin.SimpleListFilter):
