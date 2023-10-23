@@ -702,7 +702,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ('user', 'type', 'name', 'trade_volume_irt')
+    list_display = ('get_masked_username', 'type', 'name', 'trade_volume_irt')
     search_fields = ('user__phone', )
     list_filter = ('type', 'primary')
 
@@ -732,6 +732,12 @@ class AccountAdmin(admin.ModelAdmin):
         return humanize_number(int(total_blance_usdt))
 
     get_total_balance_usdt_admin.short_description = 'دارایی به تتر'
+
+    @admin.display(description='user')
+    def get_masked_username(self, account: Account):
+        return mark_safe(
+            f'<span dir="ltr">{account.user.get_masked_detail()}</span>'
+        )
 
 
 @admin.register(Referral)
