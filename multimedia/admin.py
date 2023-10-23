@@ -40,8 +40,8 @@ class CoinPriceContentAdmin(SimpleHistoryAdmin):
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    list_display = ('title', 'title_en', 'parent', 'order')
-    list_editable = ('order', )
+    list_display = ('title', 'title_en', 'parent', 'order', 'is_pinned')
+    list_editable = ('order', 'is_pinned')
     ordering = ('parent', 'order')
     list_filter = ('parent', 'is_pinned')
     formfield_overrides = {
