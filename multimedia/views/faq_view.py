@@ -89,11 +89,8 @@ class ArticleSearchView(ListAPIView):
 
 class PinnedArticlesView(ListAPIView):
     permission_classes = []
-    serializer_class = ArticleMiniSerializer(many=True)
+    serializer_class = ArticleMiniSerializer
     paginate_by = 10
 
     def get_queryset(self):
-        return super().get_queryset().filter(is_pinned=True)
-
-    class Meta:
-        model = Article
+        return Article.objects.filter(parent__parent_id=self.kwargs['pk'], is_pinned=True)

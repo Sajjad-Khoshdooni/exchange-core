@@ -3,7 +3,7 @@ import re
 from bs4 import BeautifulSoup
 
 
-VIDEO_REGEX = re.compile(r'VIDEO \s*([^ ]+)\s*([^ ]+)')
+VIDEO_REGEX = re.compile(r'VIDEO\s+([^ ]+)\s+([^ ]+)')
 REPLACE_WITH = '<video style="width: 100%" controls poster="{1}"><source src="{0}" type="video/mp4" />مرورگر شما قابلیت نمایش ویدیو را ندارد.</video>'
 
 EMPTY_STYLE_REGEX = re.compile(r' style=\"\s*\"')

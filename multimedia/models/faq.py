@@ -48,7 +48,7 @@ class Article(BaseItem):
     parent = models.ForeignKey(Section, on_delete=models.CASCADE)
     is_pinned = models.BooleanField(default=False)
     order = models.PositiveSmallIntegerField(default=0)
-    content = QuillField()
+    content = QuillField(blank=True)
     _content_html = models.TextField(blank=True)
     _content_text = models.TextField(blank=True)
 
