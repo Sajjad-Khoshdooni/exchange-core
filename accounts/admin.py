@@ -165,7 +165,7 @@ class UserReferredFilter(SimpleListFilter):
 
 @admin.register(Consultation)
 class ConsultationAdmin(admin.ModelAdmin):
-    list_display = ('created', 'user', 'consulter', 'status', 'get_description',)
+    list_display = ('created', 'get_masked_username', 'consulter', 'status', 'get_description',)
     readonly_fields = ('created', 'user')
     list_filter = ('status',)
     search_fields = ('user__phone', 'user__email',)
@@ -178,6 +178,12 @@ class ConsultationAdmin(admin.ModelAdmin):
             return description[:n] + '...'
         else:
             return description
+
+    @admin.display(description='user')
+    def get_masked_username(self, consultation: Consultation):
+        return mark_safe(
+            f'<span dir="ltr">{get_masked_phone(consultation.user.get_masked_detail())}</span>'
+        )
 
 
 class BaseChangeAdmin(admin.ModelAdmin):
