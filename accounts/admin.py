@@ -27,6 +27,7 @@ from stake.models import StakeRequest
 from .admin_guard import M
 from .admin_guard.admin import AdvancedAdmin
 from .models import User, Account, Notification, FinotechRequest
+from .models.change_requests import BaseChangeRequest
 from .models.login_activity import LoginActivity
 from .models.sms_notification import SmsNotification
 from .models.user_feature_perm import UserFeaturePerm
@@ -181,12 +182,12 @@ class ConsultationAdmin(admin.ModelAdmin):
 
 
 class BaseChangeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'status', 'user',)
-    readonly_fields = ('created', 'status', 'user', 'get_selfie_image',)
-    exclude = ('selfie_image',)
     raw_id_fields = ('user',)
     actions = ('accept_requests', 'reject_requests',)
     list_filter = ('status', )
+
+    def get_selfie_image_display(self, obj):
+        return "عکس سلفی"
 
     @admin.action(description='رد درخواست', permissions=['view'])
     def reject_requests(self, request, queryset):
@@ -202,22 +203,17 @@ class BaseChangeAdmin(admin.ModelAdmin):
         for req in qs:
             req.accept()
 
-    def get_selfie_image(self, forget_request: Forget2FA):
-        return mark_safe("<img src='%s' width='200' height='200' />" % forget_request.selfie_image.
-                         get_absolute_image_url())
-
-    get_selfie_image.short_description = 'عکس سلفی'
-
 
 @admin.register(Forget2FA)
 class Forget2FAAdmin(BaseChangeAdmin):
-    pass
+    list_display = ('created', 'status', 'user',)
+    readonly_fields = ('created', 'status', 'user', 'selfie_image',)
 
 
 @admin.register(ChangePhone)
 class ChangePhoneAdmin(BaseChangeAdmin):
     list_display = ('created', 'status', 'user', 'new_phone')
-    readonly_fields = ('created', 'status', 'user', 'get_selfie_image', 'new_phone',)
+    readonly_fields = ('created', 'status', 'user', 'new_phone', 'selfie_image',)
 
 
 @admin.register(SystemConfig)
