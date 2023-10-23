@@ -858,7 +858,7 @@ class LoginActivityAdmin(admin.ModelAdmin):
     @admin.display(description='user')
     def get_masked_username(self, login_activity: LoginActivity):
         return mark_safe(
-            f'<span dir="ltr">{login_activity.user()}</span>'
+            f'<span dir="ltr">{login_activity.user}</span>'
         )
 
 
