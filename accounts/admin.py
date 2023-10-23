@@ -187,7 +187,7 @@ class ConsultationAdmin(admin.ModelAdmin):
 
 
 class BaseChangeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'status', 'user',)
+    list_display = ('created', 'status', 'get_masked_username',)
     readonly_fields = ('created', 'status', 'user', 'get_selfie_image',)
     exclude = ('selfie_image',)
     raw_id_fields = ('user',)
@@ -217,13 +217,24 @@ class BaseChangeAdmin(admin.ModelAdmin):
 
 @admin.register(Forget2FA)
 class Forget2FAAdmin(BaseChangeAdmin):
-    pass
+
+    @admin.display(description='user')
+    def get_masked_username(self, forget_2fa: Forget2FA):
+        return mark_safe(
+            f'<span dir="ltr">{forget_2fa.user.get_masked_detail()}</span>'
+        )
 
 
 @admin.register(ChangePhone)
 class ChangePhoneAdmin(BaseChangeAdmin):
     list_display = ('created', 'status', 'user', 'new_phone')
     readonly_fields = ('created', 'status', 'user', 'get_selfie_image', 'new_phone',)
+
+    @admin.display(description='user')
+    def get_masked_username(self, change_phone: ChangePhone):
+        return mark_safe(
+            f'<span dir="ltr">{change_phone.user.get_masked_detail()}</span>'
+        )
 
 
 @admin.register(SystemConfig)
@@ -742,9 +753,15 @@ class AccountAdmin(admin.ModelAdmin):
 
 @admin.register(Referral)
 class ReferralAdmin(admin.ModelAdmin):
-    list_display = ('owner', 'code', 'owner_share_percent')
+    list_display = ('get_masked_username', 'code', 'owner_share_percent')
     search_fields = ('code', 'owner__user__phone')
     readonly_fields = ('owner', )
+
+    @admin.display(description='user')
+    def get_masked_username(self, referral: Referral):
+        return mark_safe(
+            f'<span dir="ltr">{referral.owner.get_masked_detail()}</span>'
+        )
 
 
 class FinotechRequestUserFilter(SimpleListFilter):
@@ -773,10 +790,16 @@ class FinotechRequestAdmin(admin.ModelAdmin):
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ('created', 'recipient', 'level', 'title', 'message', 'push_status')
+    list_display = ('created', 'get_masked_username', 'level', 'title', 'message', 'push_status')
     list_filter = ('level', )
     search_fields = ('title', 'message', 'group_id', 'recipient__phone')
     readonly_fields = ('recipient', 'group_id')
+
+    @admin.display(description='user')
+    def get_masked_username(self, notification: Notification):
+        return mark_safe(
+            f'<span dir="ltr">{notification.recipient.get_masked_detail()}</span>'
+        )
 
 
 @admin.register(BulkNotification)
@@ -805,23 +828,41 @@ class EmailNotificationAdmin(admin.ModelAdmin):
 
 @admin.register(UserComment)
 class UserCommentAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
-    list_display = ['user', 'created']
+    list_display = ['get_masked_username', 'created']
+
+    @admin.display(description='user')
+    def get_masked_username(self, user_comment: UserComment):
+        return mark_safe(
+            f'<span dir="ltr">{user_comment.user.get_masked_detail()}</span>'
+        )
 
 
 @admin.register(TrafficSource)
 class TrafficSourceAdmin(SimpleHistoryAdmin, admin.ModelAdmin):
-    list_display = ['user', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
+    list_display = ['get_masked_username', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
     search_fields = ['user__phone', 'gps_adid', 'ip']
     readonly_fields = ('user', )
+
+    @admin.display(description='user')
+    def get_masked_username(self, traffic_source: TrafficSource):
+        return mark_safe(
+            f'<span dir="ltr">{traffic_source.user.get_masked_detail()}</span>'
+        )
 
 
 @admin.register(LoginActivity)
 class LoginActivityAdmin(admin.ModelAdmin):
-    list_display = ('created', 'user', 'ip', 'country', 'city', 'device', 'os', 'browser', 'device_type', 'is_sign_up',
+    list_display = ('created', 'get_masked_username', 'ip', 'country', 'city', 'device', 'os', 'browser', 'device_type', 'is_sign_up',
                     'native_app', 'session')
     search_fields = ('user__phone', 'ip', 'session__session_key')
     readonly_fields = ('user', 'session', 'ip', 'refresh_token')
     list_filter = ('is_sign_up', 'native_app',)
+
+    @admin.display(description='user')
+    def get_masked_username(self, login_activity: LoginActivity):
+        return mark_safe(
+            f'<span dir="ltr">{login_activity.user.get_masked_detail()}</span>'
+        )
 
 
 @admin.register(FirebaseToken)
