@@ -54,12 +54,19 @@ class AdvancedAdmin(ModelAdmin):
         self.request = request
         return super(AdvancedAdmin, self).add_view(request, form_url, extra_context)
 
+    def get_add_mode(self, request):
+        return request.path.endswith('/add/')
+
     def get_fieldsets(self, request, obj=None):
+        add_mode = self.get_add_mode(request)
 
         if self.__fieldsets__ is None:
-            self.__fieldsets__ = super(AdvancedAdmin, self).get_fieldsets(request, obj)
+            self.__fieldsets__ = {}
 
-        fieldset = copy.deepcopy(self.__fieldsets__)
+        if self.__fieldsets__.get(add_mode) is None:
+            self.__fieldsets__[add_mode] = super(AdvancedAdmin, self).get_fieldsets(request, obj)
+
+        fieldset = copy.deepcopy(self.__fieldsets__[add_mode])
 
         # removing fields with conditions
         to_remove_fields = self.get_to_remove_fields(request, obj)

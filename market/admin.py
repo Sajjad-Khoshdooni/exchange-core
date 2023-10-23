@@ -111,7 +111,7 @@ class TradeAdmin(admin.ModelAdmin):
     list_display = ('created', 'created_at_millis', 'account', 'symbol', 'side', 'price', 'amount', 'fee_amount',
                     'fee_revenue', 'get_value_irt', 'get_value_usdt')
     list_filter = ('trade_source', UserTradeFilter, 'symbol')
-    readonly_fields = ('symbol', 'order_id', 'account')
+    readonly_fields = ('symbol', 'order_id', 'account', 'login_activity', 'group_id')
     search_fields = ('symbol__name', )
 
     def created_at_millis(self, instance):

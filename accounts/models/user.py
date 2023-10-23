@@ -166,15 +166,13 @@ class User(AbstractUser):
     suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
     suspension_reason = models.CharField(max_length=128, blank=True, null=True)
 
-
     def __str__(self):
-        name = self.get_full_name()
-        super_name = super(User, self).__str__()
+        name = self.username
 
-        if name:
-            return '%s %s' % (super_name, name)
-        else:
-            return super_name
+        if self.get_full_name():
+            name += ' ' + self.get_full_name()
+
+        return name
 
     @property
     def is_consulted(self):
@@ -183,9 +181,15 @@ class User(AbstractUser):
             user=self
         ).exists()
 
-    def is_2fa_valid(self, totp):
-        device = TOTPDevice.objects.filter(user=self).first()
-        return device is None or not device.confirmed or device.verify_token(totp)
+    def is_2fa_active(self):
+        return TOTPDevice.objects.filter(user=self, confirmed=True).exists()
+
+    def is_2fa_valid(self, totp: str):
+        if not self.is_2fa_active():
+            return True
+
+        device = TOTPDevice.objects.filter(user=self, confirmed=True).first()
+        return device.verify_token(totp)
 
     def get_account(self) -> Account:
         if not self.id or self.is_anonymous:
@@ -193,13 +197,6 @@ class User(AbstractUser):
 
         account, _ = Account.objects.get_or_create(user=self)
         return account
-
-    @staticmethod
-    def mask(phone_number: str, length: int = 4):
-        first = phone_number[:length]
-        last = phone_number[-length:]
-        masked = first + '*' * len(phone_number[length:-length]) + last
-        return masked
 
     def suspend(self, duration: timedelta, reason: str = None):
         suspended_until = duration + timezone.now()

@@ -32,6 +32,7 @@ from .models.login_activity import LoginActivity
 from .models.sms_notification import SmsNotification
 from .models.user_feature_perm import UserFeaturePerm
 from .tasks import basic_verify_user
+from .utils.mask import get_masked_phone
 from .utils.validation import gregorian_to_jalali_datetime_str
 
 MANUAL_VERIFY_CONDITION = Q(
@@ -288,11 +289,14 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         )}),
         (_("جایزه‌های دریافتی"), {'fields': ('get_user_prizes',)}),
         (_("کدهای دعوت کاربر"), {'fields': (
-            'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred')}),
-        (_('اطلاعات اضافی'), {'fields': ('is_price_notif_on', 'is_suspended', 'suspended_until', 'suspension_reason', 'is_consulted',)})
+            'get_revenue_of_referral', 'get_referred_count', 'get_revenue_of_referred'
+        )}),
+        (_('اطلاعات اضافی'), {'fields': (
+            'is_price_notif_on', 'is_suspended', 'suspended_until', 'suspension_reason', 'is_consulted', 'is_2fa_active'
+        )})
     )
 
-    list_display = ('get_date_joined_jalali', 'username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
+    list_display = ('get_date_joined_jalali', 'get_masked_username', 'first_name', 'last_name', 'level', 'archived', 'get_user_reject_reason',
                     'verify_status', 'promotion', 'get_source_medium', 'get_referrer_user', 'is_price_notif_on',
                     'is_suspended',)
     list_filter = (
@@ -319,7 +323,7 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
         'get_revenue_of_referred', 'get_open_order_address', 'get_selfie_image_uploaded', 'get_referred_user',
         'get_login_activity_link', 'get_last_trade', 'get_total_balance_irt_admin', 'get_order_link',
         'get_notifications_link', 'get_staking_link', 'get_prizes_link', 'is_suspended', 'is_consulted',
-        'suspension_reason', 'get_bots_link'
+        'suspension_reason', 'get_bots_link', 'is_2fa_active'
     )
     preserve_filters = ('archived', )
 
@@ -371,14 +375,24 @@ class CustomUserAdmin(ModelAdminJalaliMixin, SimpleHistoryAdmin, AdvancedAdmin, 
     def unarchive_users(self, request, queryset):
         queryset.update(archived=False)
 
+    @admin.display(description='2fa', boolean=True)
+    def is_2fa_active(self, user: User):
+        return user.is_2fa_active()
+
+    @admin.display(description='username')
+    def get_masked_username(self, user: User):
+        return mark_safe(
+            f'<span dir="ltr">{get_masked_phone(user.username)}</span>'
+        )
+
     def save_model(self, request, user: User, form, change):
-        old_user = User.objects.get(id=user.id)
+        old_user = User.objects.filter(id=user.id).first()
 
         if not request.user.is_superuser:
-            if not old_user.is_superuser and user.is_superuser:
+            if (not old_user or not old_user.is_superuser) and user.is_superuser:
                 raise Exception('Dangerous action happened!')
 
-        if not old_user.selfie_image_verified and user.selfie_image_verified:
+        if old_user and not old_user.selfie_image_verified and user.selfie_image_verified:
             user.selfie_image_verifier = request.user
 
         return super(CustomUserAdmin, self).save_model(request, user, form, change)

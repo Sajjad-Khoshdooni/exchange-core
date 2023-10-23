@@ -101,6 +101,7 @@ class OTCTrade(models.Model):
                 hedged=True
             )
 
+
             fok_success = otc_trade.try_fok_fill(pipeline)
 
             if not fok_success:
@@ -270,6 +271,8 @@ class OTCTrade(models.Model):
 
                 if hedged:
                     hedge_key = _key
+
+                if hedged or not req.symbol.asset.hedge:
                     self.get_pending_hedge_trades().update(hedged=True)
 
             from accounting.models.revenue import TradeRevenue

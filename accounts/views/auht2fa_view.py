@@ -124,10 +124,13 @@ class CustomLoginSerializer(serializers.Serializer):
         login = attrs['login'].lower()
         password = attrs['password']
         user = authenticate(login=login, password=password)
+
         if not user:
             raise ValidationError({'user': 'نام کاربری یا رمز عبور نادرست است.'})
-        if user.is_2fa_valid(None):
+
+        if not user.is_2fa_active():
             raise ValidationError({'totp': 'شناسه دوعاملی غیرفعال می‌باشد.'})
+
         return user
 
     def save(self, **kwargs):

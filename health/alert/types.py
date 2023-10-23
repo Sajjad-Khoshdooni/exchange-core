@@ -75,9 +75,31 @@ class UnhandledCryptoWithdrawAlert(BaseAlertHandler):
 
     def get_alerting(self, threshold: Decimal):
         return Transfer.objects.filter(
+            deposit=False,
+            accepted_datetime__isnull=False,
             status__in=[Transfer.PROCESSING, Transfer.PENDING],
-            created__lt=timezone.now() - timedelta(minutes=int(threshold)),
+            trx_hash__isnull=True,
+            accepted_datetime__lt=timezone.now() - timedelta(minutes=int(threshold)),
         )
+
+
+class CryptoLongConfirmationAlert(BaseAlertHandler):
+    NAME = 'crypto_long_confirmation'
+    HELP = 'multiplier to Network\'s expected_confirmation_minutes'
+
+    def get_alerting(self, threshold: Decimal):
+        transfers = Transfer.objects.filter(
+            status=Transfer.PENDING,
+            trx_hash__isnull=False,
+            accepted_datetime__isnull=False,
+        ).prefetch_related('network')
+
+        now = timezone.now()
+
+        return list(filter(
+            lambda t: t.accepted_datetime < now - timedelta(minutes=int(threshold * t.network.expected_confirmation_minutes)),
+            transfers
+        ))
 
 
 class UnhandledFiatWithdrawAlert(BaseAlertHandler):
@@ -87,6 +109,17 @@ class UnhandledFiatWithdrawAlert(BaseAlertHandler):
     def get_alerting(self, threshold: Decimal):
         return FiatWithdrawRequest.objects.filter(
             status__in=[FiatWithdrawRequest.PROCESSING],
+            created__lt=timezone.now() - timedelta(minutes=int(threshold)),
+        )
+
+
+class LongPendingFiatWithdrawAlert(BaseAlertHandler):
+    NAME = 'long_pending_fiat_withdraw'
+    HELP = 'time passed from now in minutes'
+
+    def get_alerting(self, threshold: Decimal):
+        return FiatWithdrawRequest.objects.filter(
+            status__in=[FiatWithdrawRequest.PENDING],
             created__lt=timezone.now() - timedelta(minutes=int(threshold)),
         )
 

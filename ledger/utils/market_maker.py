@@ -59,6 +59,14 @@ class MarketMakerRequester:
 
     def get_trade_hedge_info(self, origin_id: str) -> dict:
         resp = self.collect_api(f'/api/v1/trades/{origin_id}/')
+
+        if resp.status_code == 404:
+            logger.warning(f'MarketMaker Missing Order:{origin_id}')
+            # send_system_message(
+            #     f'Market maker missing order:{origin_id}',
+            #     link=url_to_admin_list(Trade, filters={'id': origin_id})
+            # )
+
         return resp.data
 
 
