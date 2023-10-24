@@ -13,6 +13,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from accounting.models import VaultItem, Vault
 from accounts.admin_guard import M
 from accounts.admin_guard.admin import AdvancedAdmin
+from accounts.admin_guard.html_tags import anchor_tag
 from accounts.admin_guard.utils.html import get_table_html
 from accounts.models import User
 from accounts.models.user_feature_perm import UserFeaturePerm
@@ -20,7 +21,7 @@ from accounts.utils.admin import url_to_edit_object
 from accounts.utils.validation import gregorian_to_jalali_date_str, gregorian_to_jalali_datetime
 from financial.models import Gateway, PaymentRequest, Payment, BankCard, BankAccount, \
     FiatWithdrawRequest, ManualTransfer, MarketingSource, MarketingCost, PaymentIdRequest, PaymentId, \
-    GeneralBankAccount, BankPaymentRequest
+    GeneralBankAccount, BankPaymentRequest, BankPaymentRequestReceipt
 from financial.tasks import verify_bank_card_task, verify_bank_account_task, process_withdraw
 from financial.utils.encryption import encrypt
 from financial.utils.payment_id_client import get_payment_id_client
@@ -456,25 +457,48 @@ class BankPaymentUserFilter(SimpleListFilter):
             return queryset
 
 
+@admin.register(BankPaymentRequestReceipt)
+class BankPaymentRequestReceiptAdmin(ExportMixin, admin.ModelAdmin):
+    list_display = ('id', 'payment_request',)
+    readonly_fields = ('get_receipt_preview', )
+
+    @admin.display(description='receipt preview')
+    def get_receipt_preview(self, req: BankPaymentRequestReceipt):
+        if req.receipt:
+            return mark_safe("<img src='%s' width='400'/>" % req.receipt.url)
+
+
+class BankPaymentRequestReceiptInline(admin.TabularInline):
+    fields = ('receipt', 'get_receipt_preview')
+    readonly_fields = ('get_receipt_preview', )
+
+    @admin.display(description='receipt preview')
+    def get_receipt_preview(self, req: BankPaymentRequestReceipt):
+        if req.receipt:
+            return anchor_tag(
+                title="<img src='%s' width='100'/>" % req.receipt.url,
+                url=url_to_edit_object(req)
+            )
+
+    model = BankPaymentRequestReceipt
+    extra = 0
+
+
 @admin.register(BankPaymentRequest)
 class BankPaymentRequestAdmin(ExportMixin, admin.ModelAdmin):
     list_display = ('created', 'user', 'get_amount_preview', 'ref_id', 'destination_id', 'destination_type', 'payment')
-    readonly_fields = ('group_id', 'get_receipt_preview', 'get_amount_preview', 'payment')
+    readonly_fields = ('group_id', 'get_amount_preview', 'payment')
     actions = ('accept_payment', 'clone_payment')
     list_filter = (BankPaymentRequestAcceptFilter, BankPaymentUserFilter)
     resource_classes = [BankPaymentRequestResource]
     list_editable = ('destination_id', 'ref_id')
+    inlines = (BankPaymentRequestReceiptInline, )
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "user":
             kwargs["queryset"] = User.objects.filter(userfeatureperm__feature=UserFeaturePerm.BANK_PAYMENT)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-    @admin.display(description='receipt preview')
-    def get_receipt_preview(self, req: BankPaymentRequest):
-        if req.receipt:
-            return mark_safe("<img src='%s' width='200' height='200' />" % req.receipt.url)
 
     @admin.display(description='amount preview', ordering='amount')
     def get_amount_preview(self, req: BankPaymentRequest):
