@@ -251,7 +251,7 @@ class BankCardUserFilter(SimpleListFilter):
 class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     default_edit_condition = M.superuser
 
-    list_display = ('created', 'card_pan', 'get_masked_username', 'verified', 'deleted')
+    list_display = ('created', 'card_pan', 'get_username', 'verified', 'deleted')
     list_filter = (BankCardUserFilter,)
     search_fields = ('card_pan', )
     readonly_fields = ('user', )
@@ -286,7 +286,7 @@ class BankCardAdmin(SimpleHistoryAdmin, AdvancedAdmin):
                 user.change_status(User.REJECTED)
 
     @admin.display(description='user')
-    def get_masked_username(self, bank_card: BankCard):
+    def get_username(self, bank_card: BankCard):
         return mark_safe(
             f'<span dir="ltr">{bank_card.user}</span>'
         )
@@ -311,7 +311,7 @@ class BankUserFilter(SimpleListFilter):
 class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
     default_edit_condition = M.superuser
 
-    list_display = ('created', 'iban', 'get_masked_username', 'verified', 'deleted')
+    list_display = ('created', 'iban', 'get_username', 'verified', 'deleted')
     list_filter = (BankUserFilter, )
     search_fields = ('iban', )
     readonly_fields = ('user', )
@@ -346,7 +346,7 @@ class BankAccountAdmin(SimpleHistoryAdmin, AdvancedAdmin):
                 user.change_status(User.REJECTED)
 
     @admin.display(description='user')
-    def get_masked_username(self, bank_account: BankAccount):
+    def get_username(self, bank_account: BankAccount):
         return mark_safe(
             f'<span dir="ltr">{bank_account.user}</span>'
         )

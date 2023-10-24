@@ -9,6 +9,7 @@ from ledger.utils.fields import PENDING, DONE
 from ledger.utils.price import get_last_price
 from ledger.utils.wallet_pipeline import WalletPipeline
 from market.models import PairSymbol
+from market.models.pair_symbol import DEFAULT_TAKER_FEE
 
 logger = logging.getLogger(__name__)
 
@@ -160,7 +161,7 @@ class MarginCloser:
 
                 symbol = PairSymbol.objects.get(asset=wallet.asset, base_asset=self.tether)
                 to_buy = -wallet.balance
-                to_buy = to_buy / (1 - symbol.taker_fee)
+                to_buy = to_buy / (1 - DEFAULT_TAKER_FEE)
 
                 request = OTCRequest.new_trade(
                     self.account,

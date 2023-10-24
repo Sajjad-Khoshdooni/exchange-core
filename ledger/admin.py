@@ -264,13 +264,13 @@ class OTCRequestUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCRequest)
 class OTCRequestAdmin(admin.ModelAdmin):
-    list_display = ('created', 'get_masked_username', 'symbol', 'side', 'price', 'amount', 'fee_amount', 'fee_revenue')
+    list_display = ('created', 'get_username', 'symbol', 'side', 'price', 'amount', 'fee_amount', 'fee_revenue')
     readonly_fields = ('account', 'login_activity')
     search_fields = ('token', 'symbol__name')
     list_filter = (OTCRequestUserFilter,)
 
     @admin.display(description='user')
-    def get_masked_username(self, otc_request: models.OTCRequest):
+    def get_username(self, otc_request: models.OTCRequest):
         return mark_safe(
             f'<span dir="ltr">{otc_request.account.user}</span>'
         )
@@ -293,11 +293,11 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'get_masked_username', 'otc_request', 'status', 'get_value', 'get_value_irt',
+    list_display = ('created', 'get_username', 'otc_request', 'status', 'get_value', 'get_value_irt',
                     'execution_type', 'gap_revenue', 'hedged')
     list_filter = (OTCUserFilter, 'status', 'execution_type', 'hedged')
     search_fields = ('group_id', 'order_id', 'otc_request__symbol__asset__symbol', 'otc_request__account__user__phone')
-    readonly_fields = ('otc_request', 'get_masked_username')
+    readonly_fields = ('otc_request', 'get_username')
     actions = ('accept_trade', 'accept_trade_without_hedge', 'cancel_trade')
 
     def get_queryset(self, request):
@@ -312,7 +312,7 @@ class OTCTradeAdmin(admin.ModelAdmin):
         return humanize_number(round(otc_trade.otc_request.irt_value, 0))
 
     @admin.display(description='user')
-    def get_masked_username(self, otc_trade: models.OTCTrade):
+    def get_username(self, otc_trade: models.OTCTrade):
         return anchor_tag(
             title=f'<span dir="ltr">{otc_trade.otc_request.account.user}</span>',
             url=url_to_edit_object(otc_trade.otc_request.account.user)
@@ -387,7 +387,7 @@ class BalanceLockInline(admin.TabularInline):
 
 @admin.register(models.Wallet)
 class WalletAdmin(admin.ModelAdmin):
-    list_display = ('created', 'get_masked_username', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt',
+    list_display = ('created', 'get_username', 'asset', 'market', 'get_free', 'locked', 'get_value_usdt', 'get_value_irt',
                     'credit')
     inlines = [BalanceLockInline]
     list_filter = [
@@ -423,7 +423,7 @@ class WalletAdmin(admin.ModelAdmin):
         return humanize_number(wallet.balance * price)
 
     @admin.display(description='user')
-    def get_masked_username(self, wallet: Wallet):
+    def get_username(self, wallet: Wallet):
         return mark_safe(
             f'<span dir="ltr">{wallet.account}</span>'
         )
@@ -583,12 +583,12 @@ class CloseRequestAdmin(admin.ModelAdmin):
 
 @admin.register(models.AddressBook)
 class AddressBookAdmin(admin.ModelAdmin):
-    list_display = ('name', 'get_masked_username', 'network', 'address', 'asset',)
+    list_display = ('name', 'get_username', 'network', 'address', 'asset',)
     search_fields = ('address', 'name')
     readonly_fields = ('account', 'network', 'address', 'asset')
 
     @admin.display(description='user')
-    def get_masked_username(self, address_book: models.AddressBook):
+    def get_username(self, address_book: models.AddressBook):
         return mark_safe(
             f'<span dir="ltr">{address_book.account}</span>'
         )
@@ -611,7 +611,7 @@ class PrizeUserFilter(admin.SimpleListFilter):
 
 @admin.register(models.Prize)
 class PrizeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'achievement', 'get_masked_username', 'get_asset_amount', 'redeemed', 'value')
+    list_display = ('created', 'achievement', 'get_username', 'get_asset_amount', 'redeemed', 'value')
     readonly_fields = ('account', 'asset',)
     list_filter = ('achievement', 'redeemed', PrizeUserFilter)
 
@@ -621,7 +621,7 @@ class PrizeAdmin(admin.ModelAdmin):
     get_asset_amount.short_description = 'مقدار'
 
     @admin.display(description='user')
-    def get_masked_username(self, prize: models.Prize):
+    def get_username(self, prize: models.Prize):
         return mark_safe(
             f'<span dir="ltr">{prize.account.user}</span>'
         )
@@ -661,11 +661,11 @@ class MarketSpreadAdmin(admin.ModelAdmin):
 
 @admin.register(models.PNLHistory)
 class PNLHistoryAdmin(admin.ModelAdmin):
-    list_display = ('date', 'get_masked_username', 'market', 'base_asset', 'snapshot_balance', 'profit')
+    list_display = ('date', 'get_username', 'market', 'base_asset', 'snapshot_balance', 'profit')
     readonly_fields = ('date', 'account', 'market', 'base_asset', 'snapshot_balance', 'profit')
 
     @admin.display(description='user')
-    def get_masked_username(self, pnl_history: models.PNLHistory):
+    def get_username(self, pnl_history: models.PNLHistory):
         return mark_safe(
             f'<span dir="ltr">{pnl_history.account.user}</span>'
         )
@@ -790,12 +790,12 @@ class ManualTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(AssetAlert)
 class AssetAlertAdmin(admin.ModelAdmin):
-    list_display = ('get_masked_username', 'asset',)
+    list_display = ('get_username', 'asset',)
     search_fields = ['user__username', 'asset__symbol']
     raw_id_fields = ['user']
 
     @admin.display(description='username')
-    def get_masked_username(self, alert: AssetAlert):
+    def get_username(self, alert: AssetAlert):
         return mark_safe(
             f'<span dir="ltr">{alert.user}</span>'
         )

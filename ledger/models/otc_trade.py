@@ -101,7 +101,6 @@ class OTCTrade(models.Model):
                 hedged=True
             )
 
-
             fok_success = otc_trade.try_fok_fill(pipeline)
 
             if not fok_success:
