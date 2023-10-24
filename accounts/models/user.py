@@ -23,6 +23,7 @@ from analytics.utils.dto import UserEvent
 from accounts.utils.telegram import send_support_message
 from accounts.utils.validation import PHONE_MAX_LENGTH
 from accounts.validators import mobile_number_validator, national_card_code_validator, telephone_number_validator
+from accounts.utils.mask import get_masked_phone
 
 
 class CustomUserManager(UserManager):
@@ -167,7 +168,7 @@ class User(AbstractUser):
     suspension_reason = models.CharField(max_length=128, blank=True, null=True)
 
     def __str__(self):
-        name = self.username
+        name = get_masked_phone(self.username)
 
         if self.get_full_name():
             name += ' ' + self.get_full_name()
