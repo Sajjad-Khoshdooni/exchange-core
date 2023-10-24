@@ -13,7 +13,6 @@ from django.utils.translation import gettext_lazy as _
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
 from simple_history.admin import SimpleHistoryAdmin
 
-from accounts.utils.mask import get_masked_phone
 from accounting.models import AssetPrice
 from accounting.models import ReservedAsset
 from accounts.admin_guard import M
@@ -294,12 +293,15 @@ class OTCUserFilter(SimpleListFilter):
 
 @admin.register(models.OTCTrade)
 class OTCTradeAdmin(admin.ModelAdmin):
-    list_display = ('created', 'otc_request', 'status', 'get_value', 'get_value_irt', 'execution_type', 'gap_revenue',
-                    'hedged')
+    list_display = ('created', 'get_masked_username', 'otc_request', 'status', 'get_value', 'get_value_irt',
+                    'execution_type', 'gap_revenue', 'hedged')
     list_filter = (OTCUserFilter, 'status', 'execution_type', 'hedged')
     search_fields = ('group_id', 'order_id', 'otc_request__symbol__asset__symbol', 'otc_request__account__user__phone')
-    readonly_fields = ('otc_request',)
+    readonly_fields = ('otc_request', 'get_masked_username')
     actions = ('accept_trade', 'accept_trade_without_hedge', 'cancel_trade')
+
+    def get_queryset(self, request):
+        return super(OTCTradeAdmin, self).get_queryset(request).prefetch_related('otc_request__account__user')
 
     @admin.display(description='value')
     def get_value(self, otc_trade: models.OTCTrade):
@@ -308,6 +310,13 @@ class OTCTradeAdmin(admin.ModelAdmin):
     @admin.display(description='value_irt')
     def get_value_irt(self, otc_trade: models.OTCTrade):
         return humanize_number(round(otc_trade.otc_request.irt_value, 0))
+
+    @admin.display(description='user')
+    def get_masked_username(self, otc_trade: models.OTCTrade):
+        return anchor_tag(
+            title=f'<span dir="ltr">{otc_trade.otc_request.account.user}</span>',
+            url=url_to_edit_object(otc_trade.otc_request.account.user)
+        )
 
     @admin.action(description='Accept Trade')
     def accept_trade(self, request, queryset):

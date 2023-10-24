@@ -9,7 +9,7 @@ from django.db.models import F, Sum
 from _base.settings import OTC_ACCOUNT_ID
 from accounting.models import TradeRevenue
 from accounts.models import Account
-from accounts.utils.admin import url_to_admin_list, url_to_edit_object
+from accounts.utils.admin import url_to_edit_object
 from accounts.utils.telegram import send_system_message
 from ledger.exceptions import HedgeError
 from ledger.models import OTCRequest, Trx, Wallet, Asset
