@@ -925,17 +925,12 @@ class CompanyAdmin(admin.ModelAdmin):
         for req in qs:
             req.reject()
 
-    # todo: filter
     @admin.action(description='رد اطلاعات', permissions=['view'])
     def accept_requests(self, request, queryset):
-        qs = queryset.filter(status=PENDING)
-
-        for req in qs:
+        for req in queryset:
             req.accept()
 
     @admin.action(description='رد اطلاعات', permissions=['view'])
     def fetch_company_info(self, request, queryset):
-        qs = queryset
-
-        for req in qs:
+        for req in queryset:
             req.verify_and_fetch_company_data()
