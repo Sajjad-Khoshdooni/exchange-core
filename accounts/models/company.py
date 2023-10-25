@@ -3,8 +3,6 @@ import json
 
 from django.db import models
 
-from accounts.verifiers.finotech import ServerError
-from accounts.verifiers.zibal import ZibalRequester
 from accounts.validators import company_national_id_validator
 
 import logging
@@ -21,13 +19,13 @@ class State(Enum):
 
 
 class Company(models.Model):
-    name = models.CharField(null=True, blank=True)
+    name = models.CharField(null=True, blank=True, max_length=128)
     address = models.TextField(null=True, blank=True)
-    postal_code = models.CharField(null=True, blank=True)
-    registration_id = models.CharField(null=True, blank=True, unique=True)
-    company_registration_date = models.DateField(null=True, blank=True)
-    national_id = models.CharField(validators=[company_national_id_validator], unique=True)
-    is_active = models.BooleanField(null=True, blank=True)
+    postal_code = models.CharField(null=True, blank=True, max_length=128)
+    registration_id = models.CharField(null=True, blank=True, unique=True, max_length=128)
+    company_registration_date = models.CharField(null=True, blank=True, max_length=128)
+    national_id = models.CharField(validators=[company_national_id_validator], unique=True, max_length=10)
+    is_active = models.BooleanField(null=True, blank=True, default=False)
     company_documents = models.OneToOneField(
         to='multimedia.File',
         on_delete=models.PROTECT,
@@ -37,12 +35,16 @@ class Company(models.Model):
         null=True
     )
     fetched_data = models.JSONField(null=True, blank=True)
-    docs_state = models.CharField(choices=[(tag.name, tag.value) for tag in State], default=State.INITIALIZED)
-    information_state = models.CharField(choices=[(tag.name, tag.value) for tag in State], default=State.INITIALIZED)
+    docs_state = models.CharField(choices=[(tag.name, tag.value) for tag in State], default=State.INITIALIZED,
+                                  max_length=128)
+    information_state = models.CharField(choices=[(tag.name, tag.value) for tag in State], default=State.INITIALIZED,
+                                         max_length=128)
 
     is_verified = models.BooleanField(null=True, blank=True, default=False)
 
     def verify_and_fetch_company_data(self, retry: int = 2):
+        from accounts.verifiers.finotech import ServerError
+        from accounts.verifiers.zibal import ZibalRequester
         requester = ZibalRequester(user=self.user)
         try:
             data = requester.company_information(self.national_id).data
@@ -52,9 +54,11 @@ class Company(models.Model):
                 self.postal_code = data.postal_code
                 self.registration_id = data.registration_id
                 self.is_active = data.status == 'فعال'
+                self.company_registration_date = data.establishment_date
                 self.fetched_data = json.dumps(data, default=lambda o: o.__dict__)
                 self.save(
-                    update_fields=['name, address', 'postal_code', 'registration_id', 'fetched_data', 'is_active'])
+                    update_fields=['name, address', 'postal_code', 'registration_id', 'fetched_data', 'is_active',
+                                   'company_registration_date',])
         except (TimeoutError, ServerError):
             if retry == 0:
                 logger.error('company information retrieval timeout')
