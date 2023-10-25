@@ -71,3 +71,8 @@ def password_validator(password: str, user=None):
 
 def is_phone(phone: str) -> bool:
     return bool(re.match(PHONE_REGEX, phone))
+
+
+def company_national_id_validator(value):
+    if not re.match(r'^\d{10}$', value):
+        raise ValidationError('شناسه ملی شرکت به درستی وارد نشده‌است.')
