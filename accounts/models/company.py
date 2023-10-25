@@ -55,7 +55,8 @@ class Company(models.Model):
                 self.registration_id = data.registration_id
                 self.is_active = data.status == 'فعال'
                 self.fetched_data = json.dumps(data, default=lambda o: o.__dict__)
-                self.save(update_fields=['name, address', 'postal_code', 'registration_id', 'fetched_data', 'is_active'])
+                self.save(
+                    update_fields=['name, address', 'postal_code', 'registration_id', 'fetched_data', 'is_active'])
         except (TimeoutError, ServerError):
             if retry == 0:
                 logger.error('company information retrieval timeout')
