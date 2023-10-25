@@ -6,9 +6,11 @@ from accounts.validators import company_national_id_validator
 
 
 class CompanyState(Enum):
-    INITIAL = 'initial'
-    PARTIALLY_VERIFIED = 'partially_verified'
-    FULLY_VERIFIED = 'verified'
+    INITIALIZED = 'initial'
+    PENDING = 'pending'
+    DOCS_REJECTED = 'docs_rejected'
+    WRONG_NATIONAL_ID = 'wrong_national_id'
+    VERIFIED = 'verified'
 
 
 class Company(models.Model):
@@ -18,9 +20,16 @@ class Company(models.Model):
     registration_number = models.PositiveIntegerField(null=True, blank=True, unique=True)
     company_registration_date = models.DateField(null=True, blank=True)
     national_id = models.CharField(validators=[company_national_id_validator], unique=True)
-    state = models.CharField(choices=[(tag.name, tag.value) for tag in CompanyState])
+    company_documents = models.OneToOneField(
+        to='multimedia.File',
+        on_delete=models.PROTECT,
+        verbose_name='مدارک شرکت',
+        related_name='+',
+        blank=True,
+        null=True
+    )
+    state = models.CharField(choices=[(tag.name, tag.value) for tag in CompanyState], default=CompanyState.INITIALIZED)
 
     class Meta:
         verbose_name = 'شرکت'
         verbose_name_plural = 'شرکت‌ها'
-
