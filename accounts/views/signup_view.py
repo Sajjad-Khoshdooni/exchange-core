@@ -12,12 +12,12 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.models import User, TrafficSource, Referral
+from accounts.models import User, Company, TrafficSource, Referral
 from accounts.models.phone_verification import VerificationCode
 from accounts.throttle import BurstRateThrottle, SustainedRateThrottle
 from accounts.utils.ip import get_client_ip
 from accounts.utils.login import set_login_activity
-from accounts.validators import mobile_number_validator, password_validator, company_national_id_validator
+from accounts.validators import mobile_number_validator, password_validator
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +58,7 @@ class SignupSerializer(serializers.Serializer):
     referral_code = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
     promotion = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
     source = serializers.CharField(allow_null=True, required=False, write_only=True, allow_blank=True)
-    company_national_id = serializers.CharField(allow_null=True, allow_blank=True, write_only=True, required=False,
-                                                validators=[company_national_id_validator])
+    company_national_id = serializers.CharField(allow_null=True, allow_blank=True, write_only=True, required=False)
 
     @staticmethod
     def validate_referral_code(code):
@@ -76,9 +75,9 @@ class SignupSerializer(serializers.Serializer):
         if not otp_code:
             raise ValidationError({'token': 'توکن نامعتبر است.'})
 
-        if User.objects.filter(phone=otp_code.phone).exists():
+        if (User.objects.filter(phone=otp_code.phone).exists() or
+                Company.objects.filter(national_id=company_national_id).exists()):
             raise ValidationError({'phone': 'شما قبلا در سیستم ثبت‌نام کرده‌اید. لطفا از قسمت ورود، وارد شوید.'})
-
         validate_password(password=password)
 
         phone = otp_code.phone

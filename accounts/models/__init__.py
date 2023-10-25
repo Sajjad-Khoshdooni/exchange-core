@@ -19,3 +19,4 @@ from .refresh_token import RefreshToken
 from .system_config import SystemConfig
 from .consultation import Consultation
 from .change_requests import Forget2FA, ChangePhone
+from .company import Company
