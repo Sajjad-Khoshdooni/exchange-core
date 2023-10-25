@@ -83,10 +83,12 @@ class SignupSerializer(serializers.Serializer):
         phone = otp_code.phone
         promotion = validated_data.get('promotion') or ''
 
+        company = Company.objects.create(national_id=company_national_id) if company_national_id else None
         user = User.objects.create_user(
             username=phone,
             phone=phone,
-            promotion=promotion
+            promotion=promotion,
+            company=company
         )
 
         with transaction.atomic():

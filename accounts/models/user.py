@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Union
 from uuid import uuid4
 from datetime import timedelta
+from enum import Enum
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, UserManager
@@ -17,7 +18,7 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from accounts.models.user_feature_perm import UserFeaturePerm
 from analytics.event.producer import get_kafka_producer
-from accounts.models import Notification, Account
+from accounts.models import Notification, Account, Company
 from accounts.utils.admin import url_to_edit_object
 from analytics.utils.dto import UserEvent
 from accounts.utils.telegram import send_support_message
@@ -29,6 +30,11 @@ from accounts.utils.mask import get_masked_phone
 class CustomUserManager(UserManager):
     def create_superuser(self, email=None, password=None, **extra_fields):
         return super(CustomUserManager, self).create_superuser(extra_fields['phone'], email, password, **extra_fields)
+
+
+class UserType(Enum):
+    CORPORATION = 'corporation'
+    PERSONAL = 'personal'
 
 
 class User(AbstractUser):
@@ -167,6 +173,8 @@ class User(AbstractUser):
     suspended_until = models.DateTimeField(null=True, blank=True, verbose_name='زمان تعلیق شدن کاربر')
     suspension_reason = models.CharField(max_length=128, blank=True, null=True)
 
+    company = models.ForeignKey(Company, on_delete=models.PROTECT, null=True, blank=True)
+
     def __str__(self):
         name = get_masked_phone(self.username)
 
@@ -181,6 +189,13 @@ class User(AbstractUser):
         return Consultation.objects.filter(
             user=self
         ).exists()
+
+    @property
+    def user_type(self):
+        if self.company is None:
+            return UserType.PERSONAL
+        else:
+            return UserType.CORPORATION
 
     def is_2fa_active(self):
         return TOTPDevice.objects.filter(user=self, confirmed=True).exists()
