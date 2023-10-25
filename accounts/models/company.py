@@ -1,9 +1,10 @@
 from enum import Enum
 import json
 
-from django.db import models
+from django.db import models, transaction
 
 from accounts.validators import company_national_id_validator
+from accounts.models import EmailNotification, Notification
 
 import logging
 
@@ -68,12 +69,36 @@ class Company(models.Model):
                 return self.verify_and_fetch_company_data(retry - 1)
 
     def accept(self):
-        self.is_verified = True
-        self.save(update_fields=['is_verified'])
+        with transaction.atomic():
+            self.is_verified = True
+            self.save(update_fields=['is_verified'])
+            EmailNotification.objects.create(
+                recipient=self.user,
+                title='',
+                content='',
+                content_html=''
+            )
+            Notification.objects.create(
+                recipient=self.user,
+                title='',
+                message=''
+            )
 
     def reject(self):
-        self.is_verified = False
-        self.save(update_fields=['is_verified'])
+        with transaction.atomic():
+            self.is_verified = False
+            self.save(update_fields=['is_verified'])
+            EmailNotification.objects.create(
+                recipient=self.user,
+                title='',
+                content='',
+                content_html=''
+            )
+            Notification.objects.create(
+                recipient=self.user,
+                title='',
+                message=''
+            )
 
     class Meta:
         verbose_name = 'شرکت'
