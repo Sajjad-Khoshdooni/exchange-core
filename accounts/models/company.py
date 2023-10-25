@@ -40,6 +40,10 @@ class Company(models.Model):
     docs_state = models.CharField(choices=[(tag.name, tag.value) for tag in State], default=State.INITIALIZED)
     information_state = models.CharField(choices=[(tag.name, tag.value) for tag in State], default=State.INITIALIZED)
 
+    @property
+    def is_verified(self):
+        return self.docs_state == State.VERIFIED and self.information_state == State.VERIFIED
+
     def verify_and_fetch_company_data(self, retry: int = 2):
         requester = ZibalRequester(user=self.user)
         try:
