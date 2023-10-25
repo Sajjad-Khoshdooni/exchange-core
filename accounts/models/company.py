@@ -27,6 +27,7 @@ class Company(models.Model):
     registration_id = models.CharField(null=True, blank=True, unique=True)
     company_registration_date = models.DateField(null=True, blank=True)
     national_id = models.CharField(validators=[company_national_id_validator], unique=True)
+    is_active = models.BooleanField(null=True, blank=True)
     company_documents = models.OneToOneField(
         to='multimedia.File',
         on_delete=models.PROTECT,
@@ -36,13 +37,10 @@ class Company(models.Model):
         null=True
     )
     fetched_data = models.JSONField(null=True, blank=True)
-    is_active = models.BooleanField(null=True, blank=True)
     docs_state = models.CharField(choices=[(tag.name, tag.value) for tag in State], default=State.INITIALIZED)
     information_state = models.CharField(choices=[(tag.name, tag.value) for tag in State], default=State.INITIALIZED)
 
-    @property
-    def is_verified(self):
-        return self.docs_state == State.VERIFIED and self.information_state == State.VERIFIED
+    is_verified = models.BooleanField(null=True, blank=True, default=False)
 
     def verify_and_fetch_company_data(self, retry: int = 2):
         requester = ZibalRequester(user=self.user)
@@ -66,10 +64,12 @@ class Company(models.Model):
                 return self.verify_and_fetch_company_data(retry - 1)
 
     def accept(self):
-        pass
+        self.is_verified = True
+        self.save(update_fields=['is_verified'])
 
     def reject(self):
-        pass
+        self.is_verified = False
+        self.save(update_fields=['is_verified'])
 
     class Meta:
         verbose_name = 'شرکت'
