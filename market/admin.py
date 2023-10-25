@@ -83,8 +83,7 @@ class UserFilter(SimpleListFilter):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount',
-                    'get_masked_wallet')
+    list_display = ('created', 'created_at_millis', 'type', 'symbol', 'side', 'fill_type', 'status', 'price', 'amount')
     list_filter = (TypeFilter, UserFilter, 'side', 'fill_type', 'status', 'symbol')
     readonly_fields = ('wallet', 'symbol', 'account', 'stop_loss', 'login_activity')
 
@@ -93,12 +92,6 @@ class OrderAdmin(admin.ModelAdmin):
         return created.strftime('%S.%f')[:-3]
 
     created_at_millis.short_description = 'Created Second'
-
-    @admin.display(description='wallet')
-    def get_masked_wallet(self, order_obj: Order):
-        return mark_safe(
-            f'<span dir="ltr">{order_obj.wallet}</span>'
-        )
 
 
 @admin.register(CancelRequest)
